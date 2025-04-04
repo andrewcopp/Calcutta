@@ -10,6 +10,22 @@ This application manages March Madness investment pools where players:
 - Earn points based on their teams' tournament performance
 - Compete for the highest total points
 
+## Technical Stack
+
+### Frontend
+- React - Single page application for user interface
+- Modern React patterns (hooks, context)
+- Responsive design for mobile compatibility
+
+### Backend
+- Go - RESTful API server
+- Clean architecture principles
+- JWT authentication
+
+### Database
+- PostgreSQL - Relational database
+- Structured data model for users, teams, bids, and scoring
+
 ## Documentation
 
 - [Complete Rules and Examples](docs/rules.md)
