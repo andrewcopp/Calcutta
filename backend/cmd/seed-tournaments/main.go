@@ -91,7 +91,7 @@ func main() {
 			stats.failedFiles++
 			errorMsg := fmt.Sprintf("Error processing file %s: %v", file.Name(), err)
 			stats.errors = append(stats.errors, errorMsg)
-			log.Printf(errorMsg)
+			log.Printf("%s", errorMsg)
 			continue
 		}
 

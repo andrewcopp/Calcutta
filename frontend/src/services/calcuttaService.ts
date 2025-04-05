@@ -1,4 +1,4 @@
-import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam } from '../types/calcutta';
+import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, School } from '../types/calcutta';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
