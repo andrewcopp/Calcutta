@@ -1,24 +1,34 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
-	"calcutta/internal/models"
+	"calcutta/internal/repositories"
+
+	_ "github.com/lib/pq"
 )
 
-var schools = []models.School{
-	{ID: "550e8400-e29b-41d4-a716-446655440000", Name: "Duke"},
-	{ID: "550e8400-e29b-41d4-a716-446655440001", Name: "North Carolina"},
-	{ID: "550e8400-e29b-41d4-a716-446655440002", Name: "Kansas"},
-	{ID: "550e8400-e29b-41d4-a716-446655440003", Name: "Kentucky"},
-	{ID: "550e8400-e29b-41d4-a716-446655440004", Name: "Gonzaga"},
-	{ID: "550e8400-e29b-41d4-a716-446655440005", Name: "Villanova"},
-	{ID: "550e8400-e29b-41d4-a716-446655440006", Name: "Michigan"},
-	{ID: "550e8400-e29b-41d4-a716-446655440007", Name: "UCLA"},
-	{ID: "550e8400-e29b-41d4-a716-446655440008", Name: "Arizona"},
-	{ID: "550e8400-e29b-41d4-a716-446655440009", Name: "Baylor"},
+var schoolRepo *repositories.SchoolRepository
+
+func init() {
+	// Get database connection string from environment
+	connString := os.Getenv("DATABASE_URL")
+	if connString == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
+	}
+
+	// Connect to database
+	db, err := sql.Open("postgres", connString)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	// Initialize repositories
+	schoolRepo = repositories.NewSchoolRepository(db)
 }
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
@@ -46,6 +56,13 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func schoolsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	schools, err := schoolRepo.GetAll(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	json.NewEncoder(w).Encode(schools)
 }
 
