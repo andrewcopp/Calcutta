@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Load environment variables from .env file
-if [ -f ../.env ]; then
-  export $(grep -v '^#' ../.env | xargs)
+if [ -f ../../.env ]; then
+  export $(grep -v '^#' ../../.env | xargs)
 fi
 
 # Override DB_HOST to use localhost
@@ -13,4 +13,4 @@ export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT
 
 # Run the server
 echo "Starting server..."
-go run cmd/server/main.go 
+go run ../../cmd/server/main.go 
