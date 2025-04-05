@@ -9,11 +9,10 @@ COPY go.mod ./
 # Download dependencies
 RUN go mod download
 
-# Copy the source code
-COPY . .
+# The source code will be mounted as a volume in development
+# COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main cmd/server/main.go
+EXPOSE 8080
 
-# Run the binary
-CMD ["/app/main"] 
+# The command will be overridden by docker-compose.yml in development
+CMD ["go", "run", "cmd/server/main.go"] 

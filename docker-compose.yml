@@ -19,11 +19,14 @@ services:
     build: ./backend
     ports:
       - "8080:8080"
+    volumes:
+      - ./backend:/app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
       - NODE_ENV=${NODE_ENV}
     depends_on:
       - db
+    command: go run cmd/server/main.go
 
   db:
     image: postgres:16-alpine

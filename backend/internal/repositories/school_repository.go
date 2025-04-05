@@ -44,3 +44,22 @@ func (r *SchoolRepository) GetAll(ctx context.Context) ([]models.School, error) 
 
 	return schools, nil
 }
+
+// GetByID returns a school by ID
+func (r *SchoolRepository) GetByID(ctx context.Context, id string) (models.School, error) {
+	var school models.School
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, name
+		FROM schools
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id).Scan(&school.ID, &school.Name)
+
+	if err == sql.ErrNoRows {
+		return models.School{}, nil
+	}
+	if err != nil {
+		return models.School{}, err
+	}
+
+	return school, nil
+}

@@ -40,3 +40,42 @@
 button {
   font-size: calc(10px + 2vmin);
 }
+
+.tournament-list {
+  margin: 20px auto;
+  max-width: 800px;
+}
+
+.tournament-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tournament-table th,
+.tournament-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.tournament-table th {
+  background-color: #4a90e2;
+  color: white;
+  font-weight: bold;
+}
+
+.tournament-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.tournament-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.tournament-table tr:last-child td {
+  border-bottom: none;
+}
