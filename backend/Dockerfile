@@ -3,8 +3,7 @@ FROM golang:1.24
 WORKDIR /app
 
 # Copy go mod files
-COPY go.mod ./
-# COPY go.sum ./ # Uncomment this when you have a go.sum file
+COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download

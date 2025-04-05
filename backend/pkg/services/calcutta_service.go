@@ -39,7 +39,7 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 	}
 
 	// Rule 5: Total bids cannot exceed starting budget of $100
-	totalBids := 0
+	totalBids := 0.0
 	for _, team := range teams {
 		totalBids += team.Bid
 	}
@@ -69,7 +69,7 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 // CalculateOwnershipPercentage calculates the ownership percentage for a team
 func (s *CalcuttaService) CalculateOwnershipPercentage(team *models.CalcuttaEntryTeam, allTeams []*models.CalcuttaEntryTeam) float64 {
 	// Rule 8: Ownership percentage = (Player's bid on team) ÷ (Total bids on team)
-	totalBids := 0
+	totalBids := 0.0
 	for _, t := range allTeams {
 		if t.TeamID == team.TeamID {
 			totalBids += t.Bid

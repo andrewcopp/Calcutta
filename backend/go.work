@@ -1,13 +1,13 @@
 go 1.24
 
 use (
-	/Users/andrewcopp/Developer/Calcutta/backend
-	/Users/andrewcopp/Developer/Calcutta/backend/cmd/migrate
-	/Users/andrewcopp/Developer/Calcutta/backend/cmd/seed-calcuttas
-	/Users/andrewcopp/Developer/Calcutta/backend/cmd/seed-schools
-	/Users/andrewcopp/Developer/Calcutta/backend/cmd/seed-tournaments
-	/Users/andrewcopp/Developer/Calcutta/backend/internal/db
-	/Users/andrewcopp/Developer/Calcutta/backend/pkg/common
-	/Users/andrewcopp/Developer/Calcutta/backend/pkg/models
-	/Users/andrewcopp/Developer/Calcutta/backend/pkg/services
+	.
+	./cmd/migrate
+	./cmd/seed-calcuttas
+	./cmd/seed-schools
+	./cmd/seed-tournaments
+	./internal/db
+	./pkg/common
+	./pkg/models
+	./pkg/services
 )
