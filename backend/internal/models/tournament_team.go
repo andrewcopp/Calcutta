@@ -18,8 +18,8 @@ type TournamentTeam struct {
 	Deleted      *time.Time `json:"deleted,omitempty"`
 }
 
-// TournamentTeamConfig holds configuration for tournament team validation
-type TournamentTeamConfig struct {
+// TournamentConfig holds configuration for tournament rules and validation
+type TournamentConfig struct {
 	MinSeed int
 	MaxSeed int
 	MinByes int
@@ -28,9 +28,9 @@ type TournamentTeamConfig struct {
 	MaxWins int
 }
 
-// DefaultTournamentTeamConfig returns the default configuration for tournament team validation
-func DefaultTournamentTeamConfig() *TournamentTeamConfig {
-	return &TournamentTeamConfig{
+// DefaultTournamentConfig returns the default configuration for tournament rules
+func DefaultTournamentConfig() *TournamentConfig {
+	return &TournamentConfig{
 		MinSeed: 1,
 		MaxSeed: 16,
 		MinByes: 0,
@@ -40,10 +40,10 @@ func DefaultTournamentTeamConfig() *TournamentTeamConfig {
 	}
 }
 
-// Validate checks if the TournamentTeam is valid using the provided configuration
-func (t *TournamentTeam) Validate(config *TournamentTeamConfig) error {
+// Validate checks if the TournamentTeam is valid using the provided tournament configuration
+func (t *TournamentTeam) Validate(config *TournamentConfig) error {
 	if config == nil {
-		config = DefaultTournamentTeamConfig()
+		config = DefaultTournamentConfig()
 	}
 
 	if t.Seed < config.MinSeed || t.Seed > config.MaxSeed {
@@ -61,7 +61,7 @@ func (t *TournamentTeam) Validate(config *TournamentTeamConfig) error {
 	return nil
 }
 
-// ValidateDefault checks if the TournamentTeam is valid using default configuration
+// ValidateDefault checks if the TournamentTeam is valid using default tournament configuration
 func (t *TournamentTeam) ValidateDefault() error {
-	return t.Validate(DefaultTournamentTeamConfig())
+	return t.Validate(DefaultTournamentConfig())
 }

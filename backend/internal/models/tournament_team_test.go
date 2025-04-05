@@ -7,12 +7,12 @@ import (
 
 func TestTournamentTeam_Validate(t *testing.T) {
 	now := time.Now()
-	defaultConfig := DefaultTournamentTeamConfig()
+	defaultConfig := DefaultTournamentConfig()
 
 	tests := []struct {
 		name    string
 		team    *TournamentTeam
-		config  *TournamentTeamConfig
+		config  *TournamentConfig
 		wantErr bool
 	}{
 		{
@@ -147,7 +147,7 @@ func TestTournamentTeam_Validate(t *testing.T) {
 				Created:      now,
 				Updated:      now,
 			},
-			config: &TournamentTeamConfig{
+			config: &TournamentConfig{
 				MinSeed: 1,
 				MaxSeed: 20,
 				MinByes: 0,
