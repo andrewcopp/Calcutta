@@ -4,24 +4,21 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"calcutta/internal/models"
 )
 
-type School struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-var schools = []School{
-	{"550e8400-e29b-41d4-a716-446655440000", "Duke"},
-	{"550e8400-e29b-41d4-a716-446655440001", "North Carolina"},
-	{"550e8400-e29b-41d4-a716-446655440002", "Kansas"},
-	{"550e8400-e29b-41d4-a716-446655440003", "Kentucky"},
-	{"550e8400-e29b-41d4-a716-446655440004", "Gonzaga"},
-	{"550e8400-e29b-41d4-a716-446655440005", "Villanova"},
-	{"550e8400-e29b-41d4-a716-446655440006", "Michigan"},
-	{"550e8400-e29b-41d4-a716-446655440007", "UCLA"},
-	{"550e8400-e29b-41d4-a716-446655440008", "Arizona"},
-	{"550e8400-e29b-41d4-a716-446655440009", "Baylor"},
+var schools = []models.School{
+	{ID: "550e8400-e29b-41d4-a716-446655440000", Name: "Duke"},
+	{ID: "550e8400-e29b-41d4-a716-446655440001", Name: "North Carolina"},
+	{ID: "550e8400-e29b-41d4-a716-446655440002", Name: "Kansas"},
+	{ID: "550e8400-e29b-41d4-a716-446655440003", Name: "Kentucky"},
+	{ID: "550e8400-e29b-41d4-a716-446655440004", Name: "Gonzaga"},
+	{ID: "550e8400-e29b-41d4-a716-446655440005", Name: "Villanova"},
+	{ID: "550e8400-e29b-41d4-a716-446655440006", Name: "Michigan"},
+	{ID: "550e8400-e29b-41d4-a716-446655440007", Name: "UCLA"},
+	{ID: "550e8400-e29b-41d4-a716-446655440008", Name: "Arizona"},
+	{ID: "550e8400-e29b-41d4-a716-446655440009", Name: "Baylor"},
 }
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
