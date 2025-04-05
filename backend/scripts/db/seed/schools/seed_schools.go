@@ -30,7 +30,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database connection: %v", err)
+		}
+	}()
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
@@ -57,7 +61,9 @@ func main() {
 	// Clear existing schools
 	_, err = tx.Exec("DELETE FROM schools")
 	if err != nil {
-		tx.Rollback()
+		if rbErr := tx.Rollback(); rbErr != nil {
+			log.Printf("Error rolling back transaction: %v", rbErr)
+		}
 		log.Fatalf("Failed to clear existing schools: %v", err)
 	}
 
@@ -69,7 +75,9 @@ func main() {
 			VALUES ($1, $2, $3, $4)
 		`, uuid.New().String(), schoolName, now, now)
 		if err != nil {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Printf("Error rolling back transaction: %v", rbErr)
+			}
 			log.Fatalf("Failed to insert school %s: %v", schoolName, err)
 		}
 		fmt.Printf("Inserted school: %s\n", schoolName)
