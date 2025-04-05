@@ -1,7 +1,7 @@
 package models
 
-// Team represents a college basketball team in a tournament
-type Team struct {
+// TournamentTeam represents a team participating in a tournament
+type TournamentTeam struct {
 	ID           string `json:"id"`
 	SchoolID     string `json:"schoolId"`
 	TournamentID string `json:"tournamentId"`

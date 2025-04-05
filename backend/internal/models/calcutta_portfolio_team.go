@@ -4,7 +4,7 @@ package models
 type CalcuttaPortfolioTeam struct {
 	ID                  string  `json:"id"`
 	PortfolioID         string  `json:"portfolioId"`
-	TeamID              string  `json:"teamId"`
+	TeamID              string  `json:"teamId"` // References TournamentTeam
 	OwnershipPercentage float64 `json:"ownershipPercentage"`
 	PointsEarned        int     `json:"pointsEarned"`
 }
