@@ -16,62 +16,62 @@ func NewCalcuttaService() *CalcuttaService {
 }
 
 // ValidateEntry validates all bids for an entry according to the rules
-func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, bids []*models.CalcuttaEntryBid) error {
+func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {
 	// Rule 1: All bids are sealed until the tournament begins
 	// This is handled at the API level, not in the service
 
 	// Rule 2: Players must bid on a minimum of 3 teams
-	if len(bids) < 3 {
+	if len(teams) < 3 {
 		return errors.New("players must bid on a minimum of 3 teams")
 	}
 
 	// Rule 3: Players may bid on a maximum of 10 teams
-	if len(bids) > 10 {
+	if len(teams) > 10 {
 		return errors.New("players may bid on a maximum of 10 teams")
 	}
 
 	// Rule 4: Maximum bid on any single team is $50
-	for _, bid := range bids {
-		if bid.Amount > 50 {
+	for _, team := range teams {
+		if team.Amount > 50 {
 			return errors.New("maximum bid on any single team is $50")
 		}
 	}
 
 	// Rule 5: Total bids cannot exceed starting budget of $100
 	totalBids := 0
-	for _, bid := range bids {
-		totalBids += bid.Amount
+	for _, team := range teams {
+		totalBids += team.Amount
 	}
 	if totalBids > 100 {
 		return errors.New("total bids cannot exceed starting budget of $100")
 	}
 
 	// Rule 6: Minimum bid on any team is $1
-	for _, bid := range bids {
-		if bid.Amount < 1 {
+	for _, team := range teams {
+		if team.Amount < 1 {
 			return errors.New("minimum bid on any team is $1")
 		}
 	}
 
 	// Rule 7: Players cannot bid on the same team multiple times
 	teamBids := make(map[string]bool)
-	for _, bid := range bids {
-		if teamBids[bid.TeamID] {
+	for _, team := range teams {
+		if teamBids[team.TeamID] {
 			return errors.New("players cannot bid on the same team multiple times")
 		}
-		teamBids[bid.TeamID] = true
+		teamBids[team.TeamID] = true
 	}
 
 	return nil
 }
 
 // CalculateOwnershipPercentage calculates the ownership percentage for a team
-func (s *CalcuttaService) CalculateOwnershipPercentage(bid *models.CalcuttaEntryBid, allBids []*models.CalcuttaEntryBid) float64 {
+func (s *CalcuttaService) CalculateOwnershipPercentage(team *models.CalcuttaEntryTeam, allTeams []*models.CalcuttaEntryTeam) float64 {
 	// Rule 8: Ownership percentage = (Player's bid on team) ÷ (Total bids on team)
 	totalBids := 0
-	for _, b := range allBids {
-		if b.TeamID == bid.TeamID {
-			totalBids += b.Amount
+	for _, t := range allTeams {
+		if t.TeamID == team.TeamID {
+			totalBids += t.Amount
 		}
 	}
 
@@ -79,7 +79,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(bid *models.CalcuttaEntry
 		return 0
 	}
 
-	return float64(bid.Amount) / float64(totalBids)
+	return float64(team.Amount) / float64(totalBids)
 }
 
 // CalculatePoints calculates the points earned by a team based on its performance

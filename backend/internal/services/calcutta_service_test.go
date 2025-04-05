@@ -13,167 +13,167 @@ func TestValidateEntry(t *testing.T) {
 		CalcuttaID: "calcutta1",
 	}
 
-	// Test case 1: Valid entry (three bids)
-	bids := []*models.CalcuttaEntryBid{
+	// Test case 1: Valid entry (three teams)
+	teams := []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
 			Amount:  20,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
 			Amount:  30,
 		},
 		{
-			ID:      "bid3",
+			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
 			Amount:  40,
 		},
 	}
-	err := service.ValidateEntry(entry, bids)
+	err := service.ValidateEntry(entry, teams)
 	if err != nil {
 		t.Errorf("Expected no error for valid entry, got: %v", err)
 	}
 
 	// Test case 2: Invalid entry (less than 3 teams)
-	bids = []*models.CalcuttaEntryBid{
+	teams = []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
 			Amount:  20,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
 			Amount:  30,
 		},
 	}
-	err = service.ValidateEntry(entry, bids)
+	err = service.ValidateEntry(entry, teams)
 	if err == nil {
 		t.Error("Expected error for less than 3 teams, got nil")
 	}
 
 	// Test case 3: Invalid entry (more than 10 teams)
-	bids = make([]*models.CalcuttaEntryBid, 11)
+	teams = make([]*models.CalcuttaEntryTeam, 11)
 	for i := 0; i < 11; i++ {
-		bids[i] = &models.CalcuttaEntryBid{
-			ID:      "bid" + string(rune('1'+i)),
+		teams[i] = &models.CalcuttaEntryTeam{
+			ID:      "team" + string(rune('1'+i)),
 			EntryID: "entry1",
 			TeamID:  "team" + string(rune('1'+i)),
 			Amount:  10,
 		}
 	}
-	err = service.ValidateEntry(entry, bids)
+	err = service.ValidateEntry(entry, teams)
 	if err == nil {
 		t.Error("Expected error for more than 10 teams, got nil")
 	}
 
 	// Test case 4: Invalid entry (more than $50 on a single team)
-	bids = []*models.CalcuttaEntryBid{
+	teams = []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
 			Amount:  51,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
 			Amount:  20,
 		},
 		{
-			ID:      "bid3",
+			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
 			Amount:  20,
 		},
 	}
-	err = service.ValidateEntry(entry, bids)
+	err = service.ValidateEntry(entry, teams)
 	if err == nil {
 		t.Error("Expected error for more than $50 on a single team, got nil")
 	}
 
 	// Test case 5: Invalid entry (total bids exceed $100)
-	bids = []*models.CalcuttaEntryBid{
+	teams = []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
 			Amount:  50,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
 			Amount:  51,
 		},
 		{
-			ID:      "bid3",
+			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
 			Amount:  1,
 		},
 	}
-	err = service.ValidateEntry(entry, bids)
+	err = service.ValidateEntry(entry, teams)
 	if err == nil {
 		t.Error("Expected error for total bids exceeding $100, got nil")
 	}
 
 	// Test case 6: Invalid entry (less than $1 on a team)
-	bids = []*models.CalcuttaEntryBid{
+	teams = []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
 			Amount:  20,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
 			Amount:  30,
 		},
 		{
-			ID:      "bid3",
+			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
 			Amount:  0,
 		},
 	}
-	err = service.ValidateEntry(entry, bids)
+	err = service.ValidateEntry(entry, teams)
 	if err == nil {
 		t.Error("Expected error for less than $1 on a team, got nil")
 	}
 
 	// Test case 7: Invalid entry (bidding on the same team multiple times)
-	bids = []*models.CalcuttaEntryBid{
+	teams = []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
 			Amount:  20,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
 			Amount:  30,
 		},
 		{
-			ID:      "bid3",
+			ID:      "team3",
 			EntryID: "entry1",
-			TeamID:  "team1", // Same team as bid1
+			TeamID:  "team1", // Same team as team1
 			Amount:  10,
 		},
 	}
-	err = service.ValidateEntry(entry, bids)
+	err = service.ValidateEntry(entry, teams)
 	if err == nil {
 		t.Error("Expected error for bidding on the same team multiple times, got nil")
 	}
@@ -183,63 +183,59 @@ func TestCalculateOwnershipPercentage(t *testing.T) {
 	service := NewCalcuttaService()
 
 	// Example 1 from rules.md
-	bid := &models.CalcuttaEntryBid{
-		ID:      "bid1",
+	team := &models.CalcuttaEntryTeam{
+		ID:      "team1",
 		EntryID: "entry1",
 		TeamID:  "teamA",
 		Amount:  20,
 	}
-	allBids := []*models.CalcuttaEntryBid{
+	allTeams := []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "teamA",
 			Amount:  20,
 		},
 		{
-			ID:      "bid2",
+			ID:      "team2",
 			EntryID: "entry2",
 			TeamID:  "teamA",
 			Amount:  30,
 		},
 		{
-			ID:      "bid3",
+			ID:      "team3",
 			EntryID: "entry3",
 			TeamID:  "teamA",
 			Amount:  50,
 		},
 	}
-	percentage := service.CalculateOwnershipPercentage(bid, allBids)
+
+	percentage := service.CalculateOwnershipPercentage(team, allTeams)
 	expectedPercentage := 0.2 // 20/100
 	if percentage != expectedPercentage {
-		t.Errorf("Expected ownership percentage of %v, got %v", expectedPercentage, percentage)
+		t.Errorf("Expected percentage %v, got %v", expectedPercentage, percentage)
 	}
 
-	// Example 2 from rules.md
-	bid = &models.CalcuttaEntryBid{
-		ID:      "bid1",
+	// Test case: No bids on team
+	team = &models.CalcuttaEntryTeam{
+		ID:      "team1",
 		EntryID: "entry1",
-		TeamID:  "teamA",
-		Amount:  40,
+		TeamID:  "teamB",
+		Amount:  20,
 	}
-	allBids = []*models.CalcuttaEntryBid{
+	allTeams = []*models.CalcuttaEntryTeam{
 		{
-			ID:      "bid1",
+			ID:      "team1",
 			EntryID: "entry1",
-			TeamID:  "teamA",
-			Amount:  40,
-		},
-		{
-			ID:      "bid2",
-			EntryID: "entry2",
-			TeamID:  "teamA",
-			Amount:  60,
+			TeamID:  "teamB",
+			Amount:  20,
 		},
 	}
-	percentage = service.CalculateOwnershipPercentage(bid, allBids)
-	expectedPercentage = 0.4 // 40/100
+
+	percentage = service.CalculateOwnershipPercentage(team, allTeams)
+	expectedPercentage = 1.0 // 20/20
 	if percentage != expectedPercentage {
-		t.Errorf("Expected ownership percentage of %v, got %v", expectedPercentage, percentage)
+		t.Errorf("Expected percentage %v, got %v", expectedPercentage, percentage)
 	}
 }
 
