@@ -32,7 +32,7 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 
 	// Rule 4: Maximum bid on any single team is $50
 	for _, team := range teams {
-		if team.Amount > 50 {
+		if team.Bid > 50 {
 			return errors.New("maximum bid on any single team is $50")
 		}
 	}
@@ -40,7 +40,7 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 	// Rule 5: Total bids cannot exceed starting budget of $100
 	totalBids := 0
 	for _, team := range teams {
-		totalBids += team.Amount
+		totalBids += team.Bid
 	}
 	if totalBids > 100 {
 		return errors.New("total bids cannot exceed starting budget of $100")
@@ -48,7 +48,7 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 
 	// Rule 6: Minimum bid on any team is $1
 	for _, team := range teams {
-		if team.Amount < 1 {
+		if team.Bid < 1 {
 			return errors.New("minimum bid on any team is $1")
 		}
 	}
@@ -71,7 +71,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team *models.CalcuttaEntr
 	totalBids := 0
 	for _, t := range allTeams {
 		if t.TeamID == team.TeamID {
-			totalBids += t.Amount
+			totalBids += t.Bid
 		}
 	}
 
@@ -79,7 +79,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team *models.CalcuttaEntr
 		return 0
 	}
 
-	return float64(team.Amount) / float64(totalBids)
+	return float64(team.Bid) / float64(totalBids)
 }
 
 // CalculatePoints calculates the points earned by a team based on its performance

@@ -19,19 +19,19 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
-			Amount:  20,
+			Bid:     20,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
-			Amount:  30,
+			Bid:     30,
 		},
 		{
 			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
-			Amount:  40,
+			Bid:     40,
 		},
 	}
 	err := service.ValidateEntry(entry, teams)
@@ -45,13 +45,13 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
-			Amount:  20,
+			Bid:     20,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
-			Amount:  30,
+			Bid:     30,
 		},
 	}
 	err = service.ValidateEntry(entry, teams)
@@ -66,7 +66,7 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team" + string(rune('1'+i)),
 			EntryID: "entry1",
 			TeamID:  "team" + string(rune('1'+i)),
-			Amount:  10,
+			Bid:     10,
 		}
 	}
 	err = service.ValidateEntry(entry, teams)
@@ -80,19 +80,19 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
-			Amount:  51,
+			Bid:     51,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
-			Amount:  20,
+			Bid:     20,
 		},
 		{
 			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
-			Amount:  20,
+			Bid:     20,
 		},
 	}
 	err = service.ValidateEntry(entry, teams)
@@ -106,19 +106,19 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
-			Amount:  50,
+			Bid:     50,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
-			Amount:  51,
+			Bid:     51,
 		},
 		{
 			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
-			Amount:  1,
+			Bid:     1,
 		},
 	}
 	err = service.ValidateEntry(entry, teams)
@@ -132,19 +132,19 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
-			Amount:  20,
+			Bid:     20,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
-			Amount:  30,
+			Bid:     30,
 		},
 		{
 			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team3",
-			Amount:  0,
+			Bid:     0,
 		},
 	}
 	err = service.ValidateEntry(entry, teams)
@@ -158,19 +158,19 @@ func TestValidateEntry(t *testing.T) {
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "team1",
-			Amount:  20,
+			Bid:     20,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry1",
 			TeamID:  "team2",
-			Amount:  30,
+			Bid:     30,
 		},
 		{
 			ID:      "team3",
 			EntryID: "entry1",
 			TeamID:  "team1", // Same team as team1
-			Amount:  10,
+			Bid:     10,
 		},
 	}
 	err = service.ValidateEntry(entry, teams)
@@ -187,26 +187,26 @@ func TestCalculateOwnershipPercentage(t *testing.T) {
 		ID:      "team1",
 		EntryID: "entry1",
 		TeamID:  "teamA",
-		Amount:  20,
+		Bid:     20,
 	}
 	allTeams := []*models.CalcuttaEntryTeam{
 		{
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "teamA",
-			Amount:  20,
+			Bid:     20,
 		},
 		{
 			ID:      "team2",
 			EntryID: "entry2",
 			TeamID:  "teamA",
-			Amount:  30,
+			Bid:     30,
 		},
 		{
 			ID:      "team3",
 			EntryID: "entry3",
 			TeamID:  "teamA",
-			Amount:  50,
+			Bid:     50,
 		},
 	}
 
@@ -221,14 +221,14 @@ func TestCalculateOwnershipPercentage(t *testing.T) {
 		ID:      "team1",
 		EntryID: "entry1",
 		TeamID:  "teamB",
-		Amount:  20,
+		Bid:     20,
 	}
 	allTeams = []*models.CalcuttaEntryTeam{
 		{
 			ID:      "team1",
 			EntryID: "entry1",
 			TeamID:  "teamB",
-			Amount:  20,
+			Bid:     20,
 		},
 	}
 
