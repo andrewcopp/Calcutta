@@ -7,9 +7,11 @@ import (
 
 func TestValidateEntry(t *testing.T) {
 	service := NewCalcuttaService()
+	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
-		UserID:     "user1",
+		Name:       "Test User",
+		UserID:     &userID,
 		CalcuttaID: "calcutta1",
 	}
 
