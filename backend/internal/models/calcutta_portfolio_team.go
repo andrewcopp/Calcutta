@@ -6,5 +6,5 @@ type CalcuttaPortfolioTeam struct {
 	PortfolioID         string  `json:"portfolioId"`
 	TeamID              string  `json:"teamId"` // References TournamentTeam
 	OwnershipPercentage float64 `json:"ownershipPercentage"`
-	PointsEarned        int     `json:"pointsEarned"`
+	PointsEarned        float64 `json:"pointsEarned"`
 }

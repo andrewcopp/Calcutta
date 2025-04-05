@@ -295,7 +295,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         0,
 	}
 	points := service.CalculatePoints(team, rounds)
-	expectedPoints := 0
+	expectedPoints := 0.0
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team eliminated in First Four, got %v", expectedPoints, points)
 	}
@@ -309,7 +309,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         1,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 0 // First Four Win (no points)
+	expectedPoints = 0.0 // First Four Win (no points)
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team winning First Four but losing in First Round, got %v", expectedPoints, points)
 	}
@@ -323,7 +323,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         0,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 0 // First Round Loss with bye (no points)
+	expectedPoints = 0.0 // First Round Loss with bye (no points)
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team with bye losing in First Round, got %v", expectedPoints, points)
 	}
@@ -337,7 +337,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         2,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 50 // First Round Winner
+	expectedPoints = 50.0 // First Round Winner
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team making Sweet 16, got %v", expectedPoints, points)
 	}
@@ -351,7 +351,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         3,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 150 // Round of 32 Winner
+	expectedPoints = 150.0 // Round of 32 Winner
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team making Elite 8, got %v", expectedPoints, points)
 	}
@@ -365,7 +365,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         4,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 300 // Sweet 16 Winner
+	expectedPoints = 300.0 // Sweet 16 Winner
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team making Final Four, got %v", expectedPoints, points)
 	}
@@ -379,7 +379,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         5,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 500 // Elite 8 Winner
+	expectedPoints = 500.0 // Elite 8 Winner
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team making Championship Game, got %v", expectedPoints, points)
 	}
@@ -393,7 +393,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         7, // First Four team needs 7 wins to win the tournament
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 1050
+	expectedPoints = 1050.0
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team winning tournament, got %v", expectedPoints, points)
 	}
@@ -407,7 +407,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         2,
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 150 // Round of 32 Winner (1 bye + 2 wins = 3 total)
+	expectedPoints = 150.0 // Round of 32 Winner (1 bye + 2 wins = 3 total)
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team with bye making Elite 8, got %v", expectedPoints, points)
 	}
@@ -421,7 +421,7 @@ func TestCalculatePoints(t *testing.T) {
 		Wins:         6, // Team with bye needs 6 wins to win the tournament
 	}
 	points = service.CalculatePoints(team, rounds)
-	expectedPoints = 1050 // Tournament Winner
+	expectedPoints = 1050.0 // Tournament Winner
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for team with bye winning tournament, got %v", expectedPoints, points)
 	}
@@ -439,34 +439,34 @@ func TestCalculatePlayerPoints(t *testing.T) {
 			PortfolioID:         "portfolio1",
 			TeamID:              "team1",
 			OwnershipPercentage: 0.25,
-			PointsEarned:        125,
+			PointsEarned:        125.0,
 		},
 		{
 			ID:                  "portfolioTeam2",
 			PortfolioID:         "portfolio1",
 			TeamID:              "team2",
 			OwnershipPercentage: 0.15,
-			PointsEarned:        0,
+			PointsEarned:        0.0,
 		},
 		{
 			ID:                  "portfolioTeam3",
 			PortfolioID:         "portfolio1",
 			TeamID:              "team3",
 			OwnershipPercentage: 0.1,
-			PointsEarned:        15,
+			PointsEarned:        15.0,
 		},
 		{
 			ID:                  "portfolioTeam4",
 			PortfolioID:         "portfolio2", // Different portfolio
 			TeamID:              "team4",
 			OwnershipPercentage: 0.5,
-			PointsEarned:        500,
+			PointsEarned:        500.0,
 		},
 	}
 
 	// Example 2 from rules.md
 	points := service.CalculatePlayerPoints(portfolio, portfolioTeams)
-	expectedPoints := 140 // 125 + 0 + 15
+	expectedPoints := 140.0 // 125 + 0 + 15
 	if points != expectedPoints {
 		t.Errorf("Expected %v points for player, got %v", expectedPoints, points)
 	}
