@@ -16,6 +16,13 @@ export interface CalcuttaEntry {
   updated: string;
 }
 
+export interface School {
+  id: string;
+  name: string;
+  created: string;
+  updated: string;
+}
+
 export interface CalcuttaEntryTeam {
   id: string;
   entryId: string;

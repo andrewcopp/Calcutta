@@ -247,10 +247,27 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 // GetEntryTeams retrieves all teams for a Calcutta entry
 func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {
 	query := `
-		SELECT id, entry_id, team_id, bid, created_at, updated_at, deleted_at
-		FROM calcutta_entry_teams
-		WHERE entry_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC
+		SELECT 
+			cet.id, 
+			cet.entry_id, 
+			cet.team_id, 
+			cet.bid, 
+			cet.created_at, 
+			cet.updated_at, 
+			cet.deleted_at,
+			tt.id as team_id,
+			tt.school_id,
+			tt.tournament_id,
+			tt.seed,
+			tt.byes,
+			tt.wins,
+			tt.created_at as team_created_at,
+			tt.updated_at as team_updated_at,
+			tt.deleted_at as team_deleted_at
+		FROM calcutta_entry_teams cet
+		JOIN tournament_teams tt ON cet.team_id = tt.id
+		WHERE cet.entry_id = $1 AND cet.deleted_at IS NULL
+		ORDER BY cet.created_at DESC
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, entryID)
@@ -265,6 +282,12 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 		var createdAt, updatedAt time.Time
 		var deletedAt sql.NullTime
 
+		// Team fields
+		var teamID, schoolID, tournamentID string
+		var seed, byes, wins int
+		var teamCreatedAt, teamUpdatedAt time.Time
+		var teamDeletedAt sql.NullTime
+
 		err := rows.Scan(
 			&team.ID,
 			&team.EntryID,
@@ -273,6 +296,15 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			&createdAt,
 			&updatedAt,
 			&deletedAt,
+			&teamID,
+			&schoolID,
+			&tournamentID,
+			&seed,
+			&byes,
+			&wins,
+			&teamCreatedAt,
+			&teamUpdatedAt,
+			&teamDeletedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -282,6 +314,21 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 		team.Updated = updatedAt
 		if deletedAt.Valid {
 			team.Deleted = &deletedAt.Time
+		}
+
+		// Create the nested team object
+		team.Team = &models.TournamentTeam{
+			ID:           teamID,
+			SchoolID:     schoolID,
+			TournamentID: tournamentID,
+			Seed:         seed,
+			Byes:         byes,
+			Wins:         wins,
+			Created:      teamCreatedAt,
+			Updated:      teamUpdatedAt,
+		}
+		if teamDeletedAt.Valid {
+			team.Team.Deleted = &teamDeletedAt.Time
 		}
 
 		teams = append(teams, team)

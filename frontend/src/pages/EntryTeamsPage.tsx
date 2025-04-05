@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalcuttaEntryTeam } from '../types/calcutta';
+import { CalcuttaEntryTeam, School } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
   const [teams, setTeams] = useState<CalcuttaEntryTeam[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTeams = async () => {
+    const fetchData = async () => {
       if (!entryId || !calcuttaId) {
         setError('Missing required parameters');
         setLoading(false);
@@ -18,16 +19,33 @@ export function EntryTeamsPage() {
       }
       
       try {
-        const data = await calcuttaService.getEntryTeams(entryId, calcuttaId);
-        setTeams(data);
+        const [teamsData, schoolsData] = await Promise.all([
+          calcuttaService.getEntryTeams(entryId, calcuttaId),
+          calcuttaService.getSchools()
+        ]);
+
+        // Create a map of schools by ID for quick lookup
+        const schoolMap = new Map(schoolsData.map(school => [school.id, school]));
+
+        // Associate schools with teams
+        const teamsWithSchools = teamsData.map(team => ({
+          ...team,
+          team: team.team ? {
+            ...team.team,
+            school: schoolMap.get(team.team.schoolId)
+          } : undefined
+        }));
+
+        setTeams(teamsWithSchools);
+        setSchools(schoolsData);
         setLoading(false);
       } catch (err) {
-        setError('Failed to fetch teams');
+        setError('Failed to fetch data');
         setLoading(false);
       }
     };
 
-    fetchTeams();
+    fetchData();
   }, [entryId, calcuttaId]);
 
   if (loading) {

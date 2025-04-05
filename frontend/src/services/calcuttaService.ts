@@ -25,5 +25,13 @@ export const calcuttaService = {
       throw new Error('Failed to fetch entry teams');
     }
     return response.json();
+  },
+
+  async getSchools(): Promise<School[]> {
+    const response = await fetch(`${API_BASE_URL}/schools`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch schools');
+    }
+    return response.json();
   }
 }; 
