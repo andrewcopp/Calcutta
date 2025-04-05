@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 // TournamentTeam represents a team participating in a tournament
 type TournamentTeam struct {
@@ -13,4 +16,12 @@ type TournamentTeam struct {
 	Created      time.Time  `json:"created"`
 	Updated      time.Time  `json:"updated"`
 	Deleted      *time.Time `json:"deleted,omitempty"`
+}
+
+// Validate checks if the TournamentTeam is valid
+func (t *TournamentTeam) Validate() error {
+	if t.Seed < 1 || t.Seed > 16 {
+		return errors.New("seed must be between 1 and 16")
+	}
+	return nil
 }
