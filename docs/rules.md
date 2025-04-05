@@ -16,8 +16,9 @@ The March Madness Investment Pool (Calcutta) is an alternative to traditional br
 4. Maximum bid on any single team is $50
 5. Total bids cannot exceed starting budget of $100
 6. Minimum bid on any team is $1
-7. Ownership percentage = (Player's bid on team) ÷ (Total bids on team)
-8. All bids become public once the tournament begins
+7. Players cannot bid on the same team multiple times
+8. Ownership percentage = (Player's bid on team) ÷ (Total bids on team)
+9. All bids become public once the tournament begins
 
 ## Scoring System
 Teams earn cumulative points for advancing in the tournament:
