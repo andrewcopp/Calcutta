@@ -7,13 +7,12 @@ import (
 	"net/http"
 	"os"
 
-	"calcutta/internal/repositories"
-
+	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 	_ "github.com/lib/pq"
 )
 
-var schoolRepo *repositories.SchoolRepository
-var tournamentRepo *repositories.TournamentRepository
+var schoolRepo *services.SchoolRepository
+var tournamentRepo *services.TournamentRepository
 
 func init() {
 	// Get database connection string from environment
@@ -29,8 +28,8 @@ func init() {
 	}
 
 	// Initialize repositories
-	schoolRepo = repositories.NewSchoolRepository(db)
-	tournamentRepo = repositories.NewTournamentRepository(db)
+	schoolRepo = services.NewSchoolRepository(db)
+	tournamentRepo = services.NewTournamentRepository(db)
 }
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
