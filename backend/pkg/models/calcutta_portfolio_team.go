@@ -8,7 +8,9 @@ type CalcuttaPortfolioTeam struct {
 	PortfolioID         string     `json:"portfolioId"`
 	TeamID              string     `json:"teamId"` // References TournamentTeam
 	OwnershipPercentage float64    `json:"ownershipPercentage"`
-	PointsEarned        float64    `json:"pointsEarned"`
+	ActualPoints        float64    `json:"actualPoints"`
+	ExpectedPoints      float64    `json:"expectedPoints"`
+	PredictedPoints     float64    `json:"predictedPoints"`
 	Created             time.Time  `json:"created"`
 	Updated             time.Time  `json:"updated"`
 	Deleted             *time.Time `json:"deleted,omitempty"`

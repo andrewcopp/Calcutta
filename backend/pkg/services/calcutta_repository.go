@@ -28,6 +28,8 @@ type CalcuttaRepositoryInterface interface {
 	GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error)
 	CreatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error
 	CreatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error
+	GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
+	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
 }
 
 // CalcuttaRepository handles data access for Calcutta entities
@@ -364,7 +366,9 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 // GetPortfolio retrieves a portfolio by ID
 func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error) {
 	query := `
-		SELECT id, entry_id, created_at, updated_at, deleted_at
+		SELECT 
+			id, entry_id, maximum_points,
+			created_at, updated_at, deleted_at
 		FROM calcutta_portfolios
 		WHERE id = $1 AND deleted_at IS NULL
 	`
@@ -376,6 +380,7 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&portfolio.ID,
 		&portfolio.EntryID,
+		&portfolio.MaximumPoints,
 		&createdAt,
 		&updatedAt,
 		&deletedAt,
@@ -399,9 +404,19 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 // GetPortfolioTeams retrieves all teams for a portfolio
 func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error) {
 	query := `
-		SELECT id, portfolio_id, team_id, ownership_percentage, points_earned, created_at, updated_at, deleted_at
-		FROM calcutta_portfolio_teams
-		WHERE portfolio_id = $1 AND deleted_at IS NULL
+		SELECT 
+			cpt.id, 
+			cpt.portfolio_id, 
+			cpt.team_id, 
+			cpt.ownership_percentage, 
+			cpt.actual_points, 
+			cpt.expected_points, 
+			cpt.predicted_points, 
+			cpt.created_at, 
+			cpt.updated_at, 
+			cpt.deleted_at
+		FROM calcutta_portfolio_teams cpt
+		WHERE cpt.portfolio_id = $1 AND cpt.deleted_at IS NULL
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, portfolioID)
@@ -421,7 +436,9 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			&team.PortfolioID,
 			&team.TeamID,
 			&team.OwnershipPercentage,
-			&team.PointsEarned,
+			&team.ActualPoints,
+			&team.ExpectedPoints,
+			&team.PredictedPoints,
 			&createdAt,
 			&updatedAt,
 			&deletedAt,
@@ -450,13 +467,15 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 func (r *CalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
 	query := `
 		UPDATE calcutta_portfolio_teams
-		SET ownership_percentage = $1, points_earned = $2, updated_at = $3
-		WHERE id = $4 AND deleted_at IS NULL
+		SET ownership_percentage = $1, actual_points = $2, expected_points = $3, predicted_points = $4, updated_at = $5
+		WHERE id = $6 AND deleted_at IS NULL
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
 		team.OwnershipPercentage,
-		team.PointsEarned,
+		team.ActualPoints,
+		team.ExpectedPoints,
+		team.PredictedPoints,
 		team.Updated,
 		team.ID,
 	)
@@ -527,11 +546,12 @@ func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID s
 func (r *CalcuttaRepository) UpdatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {
 	query := `
 		UPDATE calcutta_portfolios
-		SET updated_at = $1
-		WHERE id = $2 AND deleted_at IS NULL
+		SET maximum_points = $1, updated_at = $2
+		WHERE id = $3 AND deleted_at IS NULL
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
+		portfolio.MaximumPoints,
 		portfolio.Updated,
 		portfolio.ID,
 	)
@@ -638,11 +658,14 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 	return entry, nil
 }
 
-// CreatePortfolio creates a new portfolio for an entry
+// CreatePortfolio creates a new portfolio
 func (r *CalcuttaRepository) CreatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {
 	query := `
-		INSERT INTO calcutta_portfolios (id, entry_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO calcutta_portfolios (
+			id, entry_id, maximum_points, 
+			created_at, updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 
 	portfolio.ID = uuid.New().String()
@@ -653,6 +676,7 @@ func (r *CalcuttaRepository) CreatePortfolio(ctx context.Context, portfolio *mod
 	_, err := r.db.ExecContext(ctx, query,
 		portfolio.ID,
 		portfolio.EntryID,
+		portfolio.MaximumPoints,
 		portfolio.Created,
 		portfolio.Updated,
 	)
@@ -663,21 +687,122 @@ func (r *CalcuttaRepository) CreatePortfolio(ctx context.Context, portfolio *mod
 // CreatePortfolioTeam creates a new portfolio team
 func (r *CalcuttaRepository) CreatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
 	query := `
-		INSERT INTO calcutta_portfolio_teams (id, portfolio_id, team_id, ownership_percentage, points_earned, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO calcutta_portfolio_teams (
+			id, portfolio_id, team_id, ownership_percentage, actual_points, 
+			expected_points, predicted_points, created_at, updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	team.ID = uuid.New().String()
+	now := time.Now()
+	team.Created = now
+	team.Updated = now
 
 	_, err := r.db.ExecContext(ctx, query,
 		team.ID,
 		team.PortfolioID,
 		team.TeamID,
 		team.OwnershipPercentage,
-		team.PointsEarned,
+		team.ActualPoints,
+		team.ExpectedPoints,
+		team.PredictedPoints,
 		team.Created,
 		team.Updated,
 	)
 
 	return err
+}
+
+// GetPortfolios retrieves all portfolios for a Calcutta entry
+func (r *CalcuttaRepository) GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
+	query := `
+		SELECT 
+			id, entry_id, maximum_points,
+			created_at, updated_at, deleted_at
+		FROM calcutta_portfolios
+		WHERE entry_id = $1 AND deleted_at IS NULL
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, entryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var portfolios []*models.CalcuttaPortfolio
+	for rows.Next() {
+		portfolio := &models.CalcuttaPortfolio{}
+		var createdAt, updatedAt time.Time
+		var deletedAt sql.NullTime
+
+		err := rows.Scan(
+			&portfolio.ID,
+			&portfolio.EntryID,
+			&portfolio.MaximumPoints,
+			&createdAt,
+			&updatedAt,
+			&deletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		portfolio.Created = createdAt
+		portfolio.Updated = updatedAt
+		if deletedAt.Valid {
+			portfolio.Deleted = &deletedAt.Time
+		}
+
+		portfolios = append(portfolios, portfolio)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return portfolios, nil
+}
+
+// GetTournamentTeam retrieves a tournament team by ID
+func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
+	query := `
+		SELECT 
+			id, school_id, tournament_id, seed, byes, wins, eliminated,
+			created_at, updated_at, deleted_at
+		FROM tournament_teams
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+
+	team := &models.TournamentTeam{}
+	var createdAt, updatedAt time.Time
+	var deletedAt sql.NullTime
+
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&team.ID,
+		&team.SchoolID,
+		&team.TournamentID,
+		&team.Seed,
+		&team.Byes,
+		&team.Wins,
+		&team.Eliminated,
+		&createdAt,
+		&updatedAt,
+		&deletedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("tournament team not found")
+		}
+		return nil, err
+	}
+
+	team.Created = createdAt
+	team.Updated = updatedAt
+	if deletedAt.Valid {
+		team.Deleted = &deletedAt.Time
+	}
+
+	return team, nil
 }

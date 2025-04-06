@@ -12,6 +12,7 @@ export interface CalcuttaEntry {
   name: string;
   calcuttaId: string;
   userId?: string;
+  totalPoints?: number;
   created: string;
   updated: string;
 }
@@ -30,6 +31,40 @@ export interface CalcuttaEntryTeam {
   bid: number;
   created: string;
   updated: string;
+  team?: {
+    id: string;
+    schoolId: string;
+    seed?: number;
+    byes?: number;
+    wins?: number;
+    eliminated?: boolean;
+    school?: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
+export interface CalcuttaPortfolio {
+  id: string;
+  entryId: string;
+  maximumPoints: number;
+  created: string;
+  updated: string;
+  deleted?: string;
+}
+
+export interface CalcuttaPortfolioTeam {
+  id: string;
+  portfolioId: string;
+  teamId: string;
+  ownershipPercentage: number;
+  actualPoints: number;
+  expectedPoints: number;
+  predictedPoints: number;
+  created: string;
+  updated: string;
+  deleted?: string;
   team?: {
     id: string;
     schoolId: string;

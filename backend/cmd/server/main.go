@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/andrewcopp/Calcutta/backend/pkg/services"
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
@@ -239,6 +242,95 @@ func portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(teams)
+}
+
+func setupRoutes(r *mux.Router, calcuttaService *services.CalcuttaService) {
+	// ... existing routes ...
+
+	// Portfolio routes
+	r.HandleFunc("/api/portfolios/{id}/calculate-scores", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		portfolioID := vars["id"]
+
+		err := calcuttaService.CalculatePortfolioScores(r.Context(), portfolioID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}).Methods("POST")
+
+	r.HandleFunc("/api/portfolios/{id}/teams/{teamId}/scores", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		portfolioID := vars["id"]
+		teamID := vars["teamId"]
+
+		var request struct {
+			ExpectedPoints  float64 `json:"expectedPoints"`
+			PredictedPoints float64 `json:"predictedPoints"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		teams, err := calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var portfolioTeam *models.CalcuttaPortfolioTeam
+		for _, team := range teams {
+			if team.TeamID == teamID {
+				portfolioTeam = team
+				break
+			}
+		}
+
+		if portfolioTeam == nil {
+			http.Error(w, "Portfolio team not found", http.StatusNotFound)
+			return
+		}
+
+		portfolioTeam.ExpectedPoints = request.ExpectedPoints
+		portfolioTeam.PredictedPoints = request.PredictedPoints
+		portfolioTeam.Updated = time.Now()
+
+		err = calcuttaService.UpdatePortfolioTeam(r.Context(), portfolioTeam)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}).Methods("PUT")
+
+	r.HandleFunc("/api/portfolios/{id}/maximum-score", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		portfolioID := vars["id"]
+
+		var request struct {
+			MaximumPoints float64 `json:"maximumPoints"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err := calcuttaService.UpdatePortfolioScores(r.Context(), portfolioID, request.MaximumPoints)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}).Methods("PUT")
+
+	// ... existing routes ...
 }
 
 func main() {

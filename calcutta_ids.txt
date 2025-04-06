@@ -1,0 +1,13 @@
+                  id                  |                                             name                                             
+--------------------------------------+----------------------------------------------------------------------------------------------
+ 79433596-2883-4f5d-aa9d-d6305a3ed8e5 | Investment Pool 2017: Don't Call It a Calcutta (the Better-Than-Brackets Sensation Returns!)
+ b3bc4f1a-03d5-4ac7-b759-01edbe6d9dbf | Investment Pool 2018: Don't Call It a Calcutta (the Better-Than-Brackets Sensation Returns!)
+ dec08860-64a0-4068-89e9-8f8cc6aed97f | Investment Pool 2019: Don't Call It a Calcutta (we been here for years)                     +
+                                      | 
+ 413358cc-57c3-48d0-8a3e-93ec0d1828b3 | Third Month Crazy Time: Non-Calcutta Investment Pool 2021
+ be137a53-6203-4702-a8f7-f91e48bf1c35 | Third Month Crazy Time: Walczak Investment Pool 2022
+ 55141b23-800b-459e-99c1-aa380eb5b8c2 | Safer Than a Small Regional Bank: Walczak Investment Pool 2023
+ 2a6112ed-0a6d-4786-97b6-672f58012672 | Smarter Than Flying Boeing: Investment Pool 2024
+ 3309241b-4a18-4383-b43d-3cd411a11278 | A Momentary Break from The Horrors: Investment Pool 2025
+(8 rows)
+

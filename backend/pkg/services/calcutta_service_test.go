@@ -77,6 +77,14 @@ func (m *MockCalcuttaRepository) CreatePortfolioTeam(ctx context.Context, team *
 	return nil
 }
 
+func (m *MockCalcuttaRepository) GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
+	return nil, nil
+}
+
+func (m *MockCalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
+	return nil, nil
+}
+
 func TestValidateEntry(t *testing.T) {
 	mockRepo := &MockCalcuttaRepository{}
 	service := NewCalcuttaService(mockRepo)
@@ -517,28 +525,28 @@ func TestCalculatePlayerPoints(t *testing.T) {
 			PortfolioID:         "portfolio1",
 			TeamID:              "team1",
 			OwnershipPercentage: 0.25,
-			PointsEarned:        125.0,
+			ActualPoints:        125.0,
 		},
 		{
 			ID:                  "portfolioTeam2",
 			PortfolioID:         "portfolio1",
 			TeamID:              "team2",
 			OwnershipPercentage: 0.15,
-			PointsEarned:        0.0,
+			ActualPoints:        0.0,
 		},
 		{
 			ID:                  "portfolioTeam3",
 			PortfolioID:         "portfolio1",
 			TeamID:              "team3",
 			OwnershipPercentage: 0.1,
-			PointsEarned:        15.0,
+			ActualPoints:        15.0,
 		},
 		{
 			ID:                  "portfolioTeam4",
 			PortfolioID:         "portfolio2", // Different portfolio
 			TeamID:              "team4",
 			OwnershipPercentage: 0.5,
-			PointsEarned:        500.0,
+			ActualPoints:        500.0,
 		},
 	}
 

@@ -162,14 +162,14 @@ func main() {
 				ownershipPercentage := calcuttaService.CalculateOwnershipPercentage(portfolioTeam, allEntryTeams)
 
 				// Calculate points earned
-				pointsEarned := 0.0
+				actualPoints := 0.0
 				if points, ok := teamPoints[portfolioTeam.TeamID]; ok {
-					pointsEarned = points * ownershipPercentage
+					actualPoints = points * ownershipPercentage
 				}
 
 				// Update portfolio team
 				portfolioTeam.OwnershipPercentage = ownershipPercentage
-				portfolioTeam.PointsEarned = pointsEarned
+				portfolioTeam.ActualPoints = actualPoints
 				portfolioTeam.Updated = now
 
 				err = calcuttaRepo.UpdatePortfolioTeam(context.Background(), portfolioTeam)

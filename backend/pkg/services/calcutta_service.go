@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
@@ -42,7 +43,7 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 	// Rule 5: Total bids cannot exceed starting budget of $100
 	totalBids := 0.0
 	for _, team := range teams {
-		totalBids += team.Bid
+		totalBids += float64(team.Bid)
 	}
 	if totalBids > 100 {
 		return errors.New("total bids cannot exceed starting budget of $100")
@@ -78,7 +79,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team interface{}, allTeam
 	switch t := team.(type) {
 	case *models.CalcuttaEntryTeam:
 		teamID = t.TeamID
-		bid = t.Bid
+		bid = float64(t.Bid)
 	case *models.CalcuttaPortfolioTeam:
 		teamID = t.TeamID
 		// For portfolio teams, we need to find the corresponding entry team to get the bid
@@ -90,7 +91,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team interface{}, allTeam
 		// Now find the specific entry team for this entry
 		for _, et := range allTeams {
 			if et.TeamID == t.TeamID && et.EntryID == portfolio.EntryID {
-				bid = et.Bid
+				bid = float64(et.Bid)
 				break
 			}
 		}
@@ -101,7 +102,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team interface{}, allTeam
 	// Calculate total bids for this team
 	for _, t := range allTeams {
 		if t.TeamID == teamID {
-			totalBids += t.Bid
+			totalBids += float64(t.Bid)
 		}
 	}
 
@@ -154,8 +155,135 @@ func (s *CalcuttaService) CalculatePlayerPoints(portfolio *models.CalcuttaPortfo
 	totalPoints := 0.0
 	for _, portfolioTeam := range portfolioTeams {
 		if portfolioTeam.PortfolioID == portfolio.ID {
-			totalPoints += portfolioTeam.PointsEarned
+			totalPoints += portfolioTeam.ActualPoints
 		}
 	}
 	return totalPoints
+}
+
+// CalculateTotalBids calculates the total bids for a Calcutta entry
+func (s *CalcuttaService) CalculateTotalBids(ctx context.Context, entryID string) (float64, error) {
+	teams, err := s.repo.GetEntryTeams(ctx, entryID)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalBids float64
+	for _, team := range teams {
+		totalBids += float64(team.Bid)
+	}
+
+	return totalBids, nil
+}
+
+// CreatePortfolio creates a new portfolio for a Calcutta entry
+func (s *CalcuttaService) CreatePortfolio(ctx context.Context, entryID string) (*models.CalcuttaPortfolio, error) {
+	teams, err := s.repo.GetEntryTeams(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+
+	totalBids, err := s.CalculateTotalBids(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+
+	portfolio := &models.CalcuttaPortfolio{
+		EntryID: entryID,
+	}
+
+	err = s.repo.CreatePortfolio(ctx, portfolio)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range teams {
+		ownershipPercentage := float64(t.Bid) / totalBids
+		portfolioTeam := &models.CalcuttaPortfolioTeam{
+			PortfolioID:         portfolio.ID,
+			TeamID:              t.TeamID,
+			OwnershipPercentage: ownershipPercentage,
+		}
+
+		err = s.repo.CreatePortfolioTeam(ctx, portfolioTeam)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return portfolio, nil
+}
+
+// UpdatePortfolioScores updates the maximum possible score for a portfolio
+func (s *CalcuttaService) UpdatePortfolioScores(ctx context.Context, portfolioID string, maxPoints float64) error {
+	portfolio, err := s.repo.GetPortfolio(ctx, portfolioID)
+	if err != nil {
+		return err
+	}
+
+	portfolio.MaximumPoints = maxPoints
+	portfolio.Updated = time.Now()
+
+	return s.repo.UpdatePortfolio(ctx, portfolio)
+}
+
+// CalculatePortfolioScores calculates and updates the scores for a portfolio
+func (s *CalcuttaService) CalculatePortfolioScores(ctx context.Context, portfolioID string) error {
+	teams, err := s.repo.GetPortfolioTeams(ctx, portfolioID)
+	if err != nil {
+		return err
+	}
+
+	var maxPoints float64
+	now := time.Now()
+
+	for _, portfolioTeam := range teams {
+		// Get the tournament team information
+		tournamentTeam, err := s.repo.GetTournamentTeam(ctx, portfolioTeam.TeamID)
+		if err != nil {
+			return err
+		}
+
+		// Calculate expected value score based on current performance
+		expectedScore := float64(tournamentTeam.Wins) * portfolioTeam.OwnershipPercentage
+
+		// Calculate predicted future score based on team's seed and current performance
+		predictedScore := float64(tournamentTeam.Wins+tournamentTeam.Byes-1) * portfolioTeam.OwnershipPercentage
+
+		// Update the portfolio team's scores
+		portfolioTeam.ExpectedPoints = expectedScore
+		portfolioTeam.PredictedPoints = predictedScore
+		portfolioTeam.Updated = now
+
+		err = s.repo.UpdatePortfolioTeam(ctx, portfolioTeam)
+		if err != nil {
+			return err
+		}
+
+		// Add to maximum possible score if team is not eliminated
+		if !tournamentTeam.Eliminated {
+			maxPoints += float64(tournamentTeam.Wins+tournamentTeam.Byes) * portfolioTeam.OwnershipPercentage
+		}
+	}
+
+	// Update the portfolio's maximum possible score
+	portfolio, err := s.repo.GetPortfolio(ctx, portfolioID)
+	if err != nil {
+		return err
+	}
+
+	portfolio.MaximumPoints = maxPoints
+	portfolio.Updated = now
+
+	return s.repo.UpdatePortfolio(ctx, portfolio)
+}
+
+// GetPortfolioTeams retrieves all teams for a portfolio
+func (s *CalcuttaService) GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error) {
+	return s.repo.GetPortfolioTeams(ctx, portfolioID)
+}
+
+// UpdatePortfolioTeam updates a portfolio team
+func (s *CalcuttaService) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
+	return s.repo.UpdatePortfolioTeam(ctx, team)
 }

@@ -1,4 +1,4 @@
-import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, School } from '../types/calcutta';
+import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School } from '../types/calcutta';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -33,5 +33,66 @@ export const calcuttaService = {
       throw new Error('Failed to fetch schools');
     }
     return response.json();
-  }
+  },
+
+  async getPortfoliosByEntry(entryId: string): Promise<CalcuttaPortfolio[]> {
+    const response = await fetch(`${API_BASE_URL}/entries/${entryId}/portfolios`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch portfolios');
+    }
+    return response.json();
+  },
+
+  async getPortfolioTeams(portfolioId: string): Promise<CalcuttaPortfolioTeam[]> {
+    const response = await fetch(`${API_BASE_URL}/portfolios/${portfolioId}/teams`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch portfolio teams');
+    }
+    return response.json();
+  },
+
+  async calculatePortfolioScores(portfolioId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/portfolios/${portfolioId}/calculate-scores`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to calculate portfolio scores');
+    }
+  },
+
+  async updatePortfolioTeamScores(
+    portfolioId: string,
+    teamId: string,
+    expectedPoints: number,
+    predictedPoints: number
+  ): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/portfolios/${portfolioId}/teams/${teamId}/scores`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        expectedPoints,
+        predictedPoints,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update portfolio team scores');
+    }
+  },
+
+  async updatePortfolioMaximumScore(portfolioId: string, maximumPoints: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/portfolios/${portfolioId}/maximum-score`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        maximumPoints,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update portfolio maximum score');
+    }
+  },
 }; 
