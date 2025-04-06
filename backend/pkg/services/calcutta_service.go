@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -80,22 +81,26 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team interface{}, allTeam
 	case *models.CalcuttaEntryTeam:
 		teamID = t.TeamID
 		bid = float64(t.Bid)
+		log.Printf("Entry team bid: %f for team %s", bid, teamID)
 	case *models.CalcuttaPortfolioTeam:
 		teamID = t.TeamID
 		// For portfolio teams, we need to find the corresponding entry team to get the bid
 		// First, get the portfolio to find the entry ID
 		portfolio, err := s.repo.GetPortfolio(context.Background(), t.PortfolioID)
 		if err != nil {
+			log.Printf("Error getting portfolio: %v", err)
 			return 0
 		}
 		// Now find the specific entry team for this entry
 		for _, et := range allTeams {
 			if et.TeamID == t.TeamID && et.EntryID == portfolio.EntryID {
 				bid = float64(et.Bid)
+				log.Printf("Found matching entry team with bid: %f for team %s", bid, teamID)
 				break
 			}
 		}
 	default:
+		log.Printf("Unknown team type")
 		return 0
 	}
 
@@ -103,14 +108,18 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team interface{}, allTeam
 	for _, t := range allTeams {
 		if t.TeamID == teamID {
 			totalBids += float64(t.Bid)
+			log.Printf("Adding bid %f to total bids for team %s", float64(t.Bid), teamID)
 		}
 	}
 
 	if totalBids == 0 {
+		log.Printf("Total bids is 0 for team %s", teamID)
 		return 0
 	}
 
-	return bid / totalBids
+	ownershipPercentage := bid / totalBids
+	log.Printf("Final ownership percentage: %f (bid: %f / total bids: %f) for team %s", ownershipPercentage, bid, totalBids, teamID)
+	return ownershipPercentage
 }
 
 // CalculatePoints calculates the points earned by a team based on its performance
@@ -286,4 +295,122 @@ func (s *CalcuttaService) GetPortfolioTeams(ctx context.Context, portfolioID str
 // UpdatePortfolioTeam updates a portfolio team
 func (s *CalcuttaService) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
 	return s.repo.UpdatePortfolioTeam(ctx, team)
+}
+
+// RecalculatePortfolio recalculates the portfolio for a calcutta entry
+func (s *CalcuttaService) RecalculatePortfolio(ctx context.Context, calcuttaID string) error {
+	log.Printf("Starting portfolio recalculation for calcutta %s", calcuttaID)
+
+	// Get all entries for this calcutta
+	entries, err := s.repo.GetEntries(ctx, calcuttaID)
+	if err != nil {
+		log.Printf("Error getting entries: %v", err)
+		return err
+	}
+	log.Printf("Found %d entries to process", len(entries))
+
+	// For each entry, process its portfolios
+	for _, entry := range entries {
+		log.Printf("Processing entry %s", entry.ID)
+
+		// Get all portfolios for this entry
+		portfolios, err := s.repo.GetPortfolios(ctx, entry.ID)
+		if err != nil {
+			log.Printf("Error getting portfolios for entry %s: %v", entry.ID, err)
+			return err
+		}
+		log.Printf("Found %d portfolios for entry %s", len(portfolios), entry.ID)
+
+		// For each portfolio, recalculate the points
+		for _, portfolio := range portfolios {
+			log.Printf("Processing portfolio %s for entry %s", portfolio.ID, portfolio.EntryID)
+
+			// Get all teams in this portfolio
+			portfolioTeams, err := s.repo.GetPortfolioTeams(ctx, portfolio.ID)
+			if err != nil {
+				log.Printf("Error getting portfolio teams: %v", err)
+				return err
+			}
+			log.Printf("Found %d teams in portfolio", len(portfolioTeams))
+
+			// Get all entry teams for this calcutta to calculate ownership percentages
+			allEntryTeams, err := s.repo.GetEntries(ctx, calcuttaID)
+			if err != nil {
+				log.Printf("Error getting all entries: %v", err)
+				return err
+			}
+
+			// Get entry teams for each entry
+			var allTeams []*models.CalcuttaEntryTeam
+			for _, entry := range allEntryTeams {
+				entryTeams, err := s.repo.GetEntryTeams(ctx, entry.ID)
+				if err != nil {
+					log.Printf("Error getting entry teams for entry %s: %v", entry.ID, err)
+					return err
+				}
+				allTeams = append(allTeams, entryTeams...)
+			}
+			log.Printf("Found %d total entry teams across all entries", len(allTeams))
+
+			// For each team in the portfolio, recalculate points
+			for _, portfolioTeam := range portfolioTeams {
+				log.Printf("Processing team %s in portfolio", portfolioTeam.TeamID)
+
+				// Get the tournament team to calculate points
+				tournamentTeam, err := s.repo.GetTournamentTeam(ctx, portfolioTeam.TeamID)
+				if err != nil {
+					log.Printf("Error getting tournament team: %v", err)
+					return err
+				}
+				log.Printf("Tournament team: Wins=%d, Byes=%d, Eliminated=%v",
+					tournamentTeam.Wins, tournamentTeam.Byes, tournamentTeam.Eliminated)
+
+				// Calculate points based on team performance
+				teamPoints := s.CalculatePoints(tournamentTeam, nil)
+				log.Printf("Calculated team points: %f", teamPoints)
+
+				// Find the corresponding entry team and calculate total bids for this team
+				var entryTeamBid float64
+				totalBidsForTeam := 0.0
+
+				// Calculate total bids for this team across all entries
+				for _, et := range allTeams {
+					if et.TeamID == portfolioTeam.TeamID {
+						totalBidsForTeam += float64(et.Bid)
+						// If this is our entry's bid, store it
+						if et.EntryID == portfolio.EntryID {
+							entryTeamBid = float64(et.Bid)
+							log.Printf("Found entry team bid: %f", entryTeamBid)
+						}
+					}
+				}
+
+				log.Printf("Total bids for team %s: %f", portfolioTeam.TeamID, totalBidsForTeam)
+
+				// Calculate ownership percentage
+				ownershipPercentage := 0.0
+				if totalBidsForTeam > 0 {
+					ownershipPercentage = entryTeamBid / totalBidsForTeam
+				}
+				log.Printf("Calculated ownership percentage: %f (bid: %f / total bids: %f)",
+					ownershipPercentage, entryTeamBid, totalBidsForTeam)
+
+				// Update the portfolio team with new points and ownership percentage
+				oldPoints := portfolioTeam.ActualPoints
+				portfolioTeam.OwnershipPercentage = ownershipPercentage
+				portfolioTeam.ActualPoints = teamPoints * ownershipPercentage
+				log.Printf("Updating points from %f to %f (team points %f * ownership %f)",
+					oldPoints, portfolioTeam.ActualPoints, teamPoints, ownershipPercentage)
+
+				if err := s.repo.UpdatePortfolioTeam(ctx, portfolioTeam); err != nil {
+					log.Printf("Error updating portfolio team: %v", err)
+					return err
+				}
+				log.Printf("Successfully updated portfolio team points")
+			}
+		}
+	}
+
+	log.Printf("Completed portfolio recalculation for calcutta %s", calcuttaID)
+	return nil
 }
