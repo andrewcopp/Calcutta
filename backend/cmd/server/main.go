@@ -40,7 +40,7 @@ func init() {
 	// Initialize services
 	schoolService = services.NewSchoolService(schoolRepo)
 	tournamentService = services.NewTournamentService(tournamentRepo)
-	calcuttaService = services.NewCalcuttaService()
+	calcuttaService = services.NewCalcuttaService(calcuttaRepo)
 }
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
