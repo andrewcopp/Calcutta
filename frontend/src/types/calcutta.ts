@@ -73,4 +73,17 @@ export interface CalcuttaPortfolioTeam {
       name: string;
     };
   };
+}
+
+export interface TournamentTeam {
+  id: string;
+  schoolId: string;
+  seed: number;
+  region: string;
+  byes: number;
+  wins: number;
+  eliminated: boolean;
+  school?: School;
+  created: string;
+  updated: string;
 } 

@@ -52,7 +52,7 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 	// Find the team with the most wins in the tournament
 	// In a typical tournament, the winner will have the maximum number of wins
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT tt.id, tt.tournament_id, tt.school_id, tt.seed, tt.byes, tt.wins, tt.created_at, tt.updated_at
+		SELECT tt.id, tt.tournament_id, tt.school_id, tt.seed, tt.byes, tt.wins, tt.eliminated, tt.created_at, tt.updated_at
 		FROM tournament_teams tt
 		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 		ORDER BY tt.wins DESC
@@ -68,7 +68,7 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 	}
 
 	var team models.TournamentTeam
-	if err := rows.Scan(&team.ID, &team.TournamentID, &team.SchoolID, &team.Seed, &team.Byes, &team.Wins, &team.Created, &team.Updated); err != nil {
+	if err := rows.Scan(&team.ID, &team.TournamentID, &team.SchoolID, &team.Seed, &team.Byes, &team.Wins, &team.Eliminated, &team.Created, &team.Updated); err != nil {
 		return nil, err
 	}
 
@@ -125,7 +125,7 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 // GetTeams returns all teams for a tournament
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
 	query := `
-		SELECT id, tournament_id, school_id, seed, byes, wins, created_at, updated_at
+		SELECT id, tournament_id, school_id, seed, byes, wins, eliminated, created_at, updated_at
 		FROM tournament_teams
 		WHERE tournament_id = $1 AND deleted_at IS NULL
 		ORDER BY seed ASC
@@ -149,6 +149,7 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			&team.Seed,
 			&team.Byes,
 			&team.Wins,
+			&team.Eliminated,
 			&createdAt,
 			&updatedAt,
 		)
@@ -167,4 +168,112 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 	}
 
 	return teams, nil
+}
+
+// UpdateTournamentTeam updates a tournament team in the database
+func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error {
+	query := `
+		UPDATE tournament_teams
+		SET wins = $1, byes = $2, eliminated = $3, updated_at = NOW()
+		WHERE id = $4 AND deleted_at IS NULL
+	`
+
+	_, err := r.db.ExecContext(ctx, query, team.Wins, team.Byes, team.Eliminated, team.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetGameByID returns a tournament game by ID
+func (r *TournamentRepository) GetGameByID(ctx context.Context, id string) (*models.TournamentGame, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, tournament_id, team1_id, team2_id, tipoff_time, sort_order, team1_score, team2_score, next_game_id, next_game_slot, is_final, created_at, updated_at
+		FROM tournament_games
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, nil // No game found
+	}
+
+	var game models.TournamentGame
+	if err := rows.Scan(
+		&game.ID,
+		&game.TournamentID,
+		&game.Team1ID,
+		&game.Team2ID,
+		&game.TipoffTime,
+		&game.SortOrder,
+		&game.Team1Score,
+		&game.Team2Score,
+		&game.NextGameID,
+		&game.NextGameSlot,
+		&game.IsFinal,
+		&game.Created,
+		&game.Updated,
+	); err != nil {
+		return nil, err
+	}
+
+	return &game, nil
+}
+
+// GetGamesByTournamentID returns all games for a tournament
+func (r *TournamentRepository) GetGamesByTournamentID(ctx context.Context, tournamentID string) ([]*models.TournamentGame, error) {
+	// First, get the game to find its tournament ID
+	game, err := r.GetGameByID(ctx, tournamentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if game == nil {
+		return nil, nil // Game not found
+	}
+
+	// Get all games for the tournament
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, tournament_id, team1_id, team2_id, tipoff_time, sort_order, team1_score, team2_score, next_game_id, next_game_slot, is_final, created_at, updated_at
+		FROM tournament_games
+		WHERE tournament_id = $1 AND deleted_at IS NULL
+		ORDER BY sort_order ASC
+	`, game.TournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var games []*models.TournamentGame
+	for rows.Next() {
+		var game models.TournamentGame
+		if err := rows.Scan(
+			&game.ID,
+			&game.TournamentID,
+			&game.Team1ID,
+			&game.Team2ID,
+			&game.TipoffTime,
+			&game.SortOrder,
+			&game.Team1Score,
+			&game.Team2Score,
+			&game.NextGameID,
+			&game.NextGameSlot,
+			&game.IsFinal,
+			&game.Created,
+			&game.Updated,
+		); err != nil {
+			return nil, err
+		}
+		games = append(games, &game)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return games, nil
 }

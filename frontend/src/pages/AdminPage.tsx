@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchTournaments } from '../services/tournamentService';
 import { Tournament } from '../types/tournament';
 import { TournamentTeam } from '../types/calcutta';
-import { fetchTournamentTeams, updateTournamentTeam } from '../services/adminService';
+import { fetchTournamentTeams, updateTournamentTeam, recalculatePortfolios } from '../services/adminService';
 
-export function AdminPage() {
+export const AdminPage: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string | null>(null);
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   useEffect(() => {
     const loadTournaments = async () => {
@@ -68,6 +69,21 @@ export function AdminPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecalculatePortfolios = async () => {
+    if (!selectedTournament) return;
+    
+    setRecalculating(true);
+    setError(null);
+    try {
+      await recalculatePortfolios(selectedTournament);
+      alert('Portfolios recalculated successfully!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setRecalculating(false);
     }
   };
 
@@ -179,6 +195,18 @@ export function AdminPage() {
           No teams found for this tournament.
         </div>
       )}
+
+      {selectedTournament && (
+        <div className="mt-4">
+          <button
+            onClick={handleRecalculatePortfolios}
+            disabled={recalculating}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          >
+            {recalculating ? 'Recalculating...' : 'Recalculate Portfolios'}
+          </button>
+        </div>
+      )}
     </div>
   );
-} 
+}; 

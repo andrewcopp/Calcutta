@@ -35,3 +35,36 @@ func (s *TournamentService) GetTournamentByID(ctx context.Context, id string) (*
 func (s *TournamentService) GetWinningTeam(ctx context.Context, tournamentID string) (*models.TournamentTeam, error) {
 	return s.repo.GetWinningTeam(ctx, tournamentID)
 }
+
+// GetRound determines the round number for a game by traversing the tournament bracket
+// This is a more accurate implementation than what can be done in the model layer
+func (s *TournamentService) GetRound(ctx context.Context, gameID string, totalRounds int) (int, error) {
+	// Get all games for the tournament
+	games, err := s.repo.GetGamesByTournamentID(ctx, gameID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Create a map of games for quick lookup
+	gamesMap := make(map[string]*models.TournamentGame)
+	for _, game := range games {
+		gamesMap[game.ID] = game
+	}
+
+	// Get the game from the map
+	game, exists := gamesMap[gameID]
+	if !exists {
+		return 0, nil // Game not found
+	}
+
+	// Use the model's GetRound method to determine the round
+	return game.GetRound(gamesMap, totalRounds), nil
+}
+
+// GetGame retrieves a game by ID
+// This would be implemented in the actual service layer
+func (s *TournamentService) GetGame(gameID string) (*models.TournamentGame, error) {
+	// In a real implementation, we would fetch the game from the database
+	// For now, we'll return a placeholder
+	return &models.TournamentGame{}, nil
+}

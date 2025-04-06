@@ -461,6 +461,47 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func recalculatePortfoliosHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers explicitly for this handler
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Max-Age", "3600")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight requests
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Extract tournament ID from URL path
+	vars := mux.Vars(r)
+	tournamentID := vars["id"]
+	if tournamentID == "" {
+		http.Error(w, "Tournament ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get all calcuttas for this tournament
+	calcuttas, err := calcuttaRepo.GetCalcuttasByTournament(r.Context(), tournamentID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Recalculate portfolios for each calcutta
+	for _, calcutta := range calcuttas {
+		if err := calcuttaService.RecalculatePortfolio(r.Context(), calcutta.ID); err != nil {
+			log.Printf("Error recalculating portfolio for calcutta %s: %v", calcutta.ID, err)
+			continue
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	r := mux.NewRouter()
 
@@ -479,6 +520,7 @@ func main() {
 	r.HandleFunc("/api/entries/{id}/teams", entryTeamsHandler)
 	r.HandleFunc("/api/entries/{id}/portfolios", portfoliosHandler)
 	r.HandleFunc("/api/portfolios/{id}/teams", portfolioTeamsHandler)
+	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", recalculatePortfoliosHandler).Methods("POST", "OPTIONS")
 
 	setupRoutes(r, calcuttaService)
 

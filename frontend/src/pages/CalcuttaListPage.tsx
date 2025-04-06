@@ -33,7 +33,15 @@ export function CalcuttaListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Calcuttas</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Calcuttas</h1>
+        <Link
+          to="/admin"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Admin Dashboard
+        </Link>
+      </div>
       <div className="grid gap-4">
         {calcuttas.map((calcutta) => (
           <Link

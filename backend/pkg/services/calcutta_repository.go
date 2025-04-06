@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -30,6 +31,7 @@ type CalcuttaRepositoryInterface interface {
 	CreatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error
 	GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
 	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
+	GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error)
 }
 
 // CalcuttaRepository handles data access for Calcutta entities
@@ -471,6 +473,9 @@ func (r *CalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *mode
 		WHERE id = $6 AND deleted_at IS NULL
 	`
 
+	log.Printf("Updating portfolio team %s with ownership=%f, actual_points=%f, expected_points=%f, predicted_points=%f",
+		team.ID, team.OwnershipPercentage, team.ActualPoints, team.ExpectedPoints, team.PredictedPoints)
+
 	result, err := r.db.ExecContext(ctx, query,
 		team.OwnershipPercentage,
 		team.ActualPoints,
@@ -480,18 +485,22 @@ func (r *CalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *mode
 		team.ID,
 	)
 	if err != nil {
+		log.Printf("Error executing update for portfolio team %s: %v", team.ID, err)
 		return err
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
+		log.Printf("Error getting rows affected for portfolio team %s: %v", team.ID, err)
 		return err
 	}
 
 	if rowsAffected == 0 {
+		log.Printf("No rows updated for portfolio team %s", team.ID)
 		return errors.New("portfolio team not found")
 	}
 
+	log.Printf("Successfully updated portfolio team %s (rows affected: %d)", team.ID, rowsAffected)
 	return nil
 }
 
@@ -805,4 +814,29 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 	}
 
 	return team, nil
+}
+
+func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
+	query := `
+		SELECT c.id, c.tournament_id, c.created_at, c.updated_at, c.deleted_at
+		FROM calcuttas c
+		WHERE c.tournament_id = $1 AND c.deleted_at IS NULL
+	`
+	rows, err := r.db.QueryContext(ctx, query, tournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var calcuttas []*models.Calcutta
+	for rows.Next() {
+		calcutta := &models.Calcutta{}
+		err := rows.Scan(&calcutta.ID, &calcutta.TournamentID, &calcutta.Created, &calcutta.Updated, &calcutta.Deleted)
+		if err != nil {
+			return nil, err
+		}
+		calcuttas = append(calcuttas, calcutta)
+	}
+
+	return calcuttas, nil
 }
