@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -8,12 +9,12 @@ import (
 
 // CalcuttaService handles business logic for Calcutta auctions
 type CalcuttaService struct {
-	// In a real implementation, this would have repositories for data access
+	repo CalcuttaRepositoryInterface
 }
 
 // NewCalcuttaService creates a new CalcuttaService
-func NewCalcuttaService() *CalcuttaService {
-	return &CalcuttaService{}
+func NewCalcuttaService(repo CalcuttaRepositoryInterface) *CalcuttaService {
+	return &CalcuttaService{repo: repo}
 }
 
 // ValidateEntry validates all bids for an entry according to the rules
@@ -67,11 +68,39 @@ func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*mo
 }
 
 // CalculateOwnershipPercentage calculates the ownership percentage for a team
-func (s *CalcuttaService) CalculateOwnershipPercentage(team *models.CalcuttaEntryTeam, allTeams []*models.CalcuttaEntryTeam) float64 {
+func (s *CalcuttaService) CalculateOwnershipPercentage(team interface{}, allTeams []*models.CalcuttaEntryTeam) float64 {
 	// Rule 8: Ownership percentage = (Player's bid on team) ÷ (Total bids on team)
 	totalBids := 0.0
+	var teamID string
+	var bid float64
+
+	// Extract team ID and bid based on type
+	switch t := team.(type) {
+	case *models.CalcuttaEntryTeam:
+		teamID = t.TeamID
+		bid = t.Bid
+	case *models.CalcuttaPortfolioTeam:
+		teamID = t.TeamID
+		// For portfolio teams, we need to find the corresponding entry team to get the bid
+		// First, get the portfolio to find the entry ID
+		portfolio, err := s.repo.GetPortfolio(context.Background(), t.PortfolioID)
+		if err != nil {
+			return 0
+		}
+		// Now find the specific entry team for this entry
+		for _, et := range allTeams {
+			if et.TeamID == t.TeamID && et.EntryID == portfolio.EntryID {
+				bid = et.Bid
+				break
+			}
+		}
+	default:
+		return 0
+	}
+
+	// Calculate total bids for this team
 	for _, t := range allTeams {
-		if t.TeamID == team.TeamID {
+		if t.TeamID == teamID {
 			totalBids += t.Bid
 		}
 	}
@@ -80,7 +109,7 @@ func (s *CalcuttaService) CalculateOwnershipPercentage(team *models.CalcuttaEntr
 		return 0
 	}
 
-	return float64(team.Bid) / float64(totalBids)
+	return bid / totalBids
 }
 
 // CalculatePoints calculates the points earned by a team based on its performance

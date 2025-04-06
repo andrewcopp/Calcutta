@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
@@ -119,4 +120,51 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 	}
 
 	return &tournament, nil
+}
+
+// GetTeams returns all teams for a tournament
+func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
+	query := `
+		SELECT id, tournament_id, school_id, seed, byes, wins, created_at, updated_at
+		FROM tournament_teams
+		WHERE tournament_id = $1 AND deleted_at IS NULL
+		ORDER BY seed ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, tournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var teams []*models.TournamentTeam
+	for rows.Next() {
+		team := &models.TournamentTeam{}
+		var createdAt, updatedAt time.Time
+
+		err := rows.Scan(
+			&team.ID,
+			&team.TournamentID,
+			&team.SchoolID,
+			&team.Seed,
+			&team.Byes,
+			&team.Wins,
+			&createdAt,
+			&updatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		team.Created = createdAt
+		team.Updated = updatedAt
+
+		teams = append(teams, team)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return teams, nil
 }

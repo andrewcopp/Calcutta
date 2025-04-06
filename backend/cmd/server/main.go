@@ -201,6 +201,46 @@ func calcuttaEntryTeamHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(teams)
 }
 
+func portfoliosHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract entry ID from URL path
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+	entryID := pathParts[3]
+
+	portfolios, err := calcuttaRepo.GetPortfoliosByEntry(r.Context(), entryID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(portfolios)
+}
+
+func portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract portfolio ID from URL path
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+	portfolioID := pathParts[3]
+
+	teams, err := calcuttaRepo.GetPortfolioTeams(r.Context(), portfolioID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(teams)
+}
+
 func main() {
 	// Define routes
 	http.HandleFunc("/api/health", enableCORS(healthHandler))
@@ -217,7 +257,22 @@ func main() {
 			http.NotFound(w, r)
 		}
 	})
-	http.HandleFunc("/api/entries/", enableCORS(entryTeamsHandler))
+	http.HandleFunc("/api/entries/", func(w http.ResponseWriter, r *http.Request) {
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) >= 5 && pathParts[4] == "portfolios" {
+			enableCORS(portfoliosHandler)(w, r)
+		} else {
+			enableCORS(entryTeamsHandler)(w, r)
+		}
+	})
+	http.HandleFunc("/api/portfolios/", func(w http.ResponseWriter, r *http.Request) {
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) >= 5 && pathParts[4] == "teams" {
+			enableCORS(portfolioTeamsHandler)(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
 
 	// Start server
 	port := os.Getenv("PORT")
