@@ -21,11 +21,10 @@ import (
 
 // TournamentData represents tournament data extracted from a Calcutta CSV file
 type TournamentData struct {
-	SchoolName      string
-	Seed            int
-	Region          string
-	PointsScored    int
-	TotalInvestment int
+	SchoolName   string
+	Seed         int
+	Region       string
+	PointsScored int
 }
 
 // Track unmapped school names for future reference
@@ -219,14 +218,12 @@ func processCalcuttaFile(db *sql.DB, filepath, year string) error {
 		// Parse data
 		seed, _ := strconv.Atoi(row[1])
 		points, _ := strconv.Atoi(row[3])
-		investment, _ := strconv.Atoi(row[4])
 
 		data := TournamentData{
-			SchoolName:      schoolName,
-			Seed:            seed,
-			Region:          row[2],
-			PointsScored:    points,
-			TotalInvestment: investment,
+			SchoolName:   schoolName,
+			Seed:         seed,
+			Region:       row[2],
+			PointsScored: points,
 		}
 
 		// Find or create school
@@ -295,71 +292,6 @@ func processCalcuttaFile(db *sql.DB, filepath, year string) error {
 	return nil
 }
 
-func parseTournamentTeamRow(row []string) (*TournamentData, error) {
-	if len(row) < 5 {
-		return nil, fmt.Errorf("row has insufficient columns: %d", len(row))
-	}
-
-	// Skip rows with "Play-in losers"
-	if row[0] == "Play-in losers" {
-		return nil, fmt.Errorf("skipping Play-in losers row")
-	}
-
-	// Skip rows with empty points values
-	if row[3] == "" {
-		return nil, fmt.Errorf("skipping row with empty points value")
-	}
-
-	// Skip rows that represent totals
-	if strings.Contains(strings.ToUpper(row[0]), "TOTAL") {
-		return nil, fmt.Errorf("skipping total row")
-	}
-
-	// Parse investment to check if it's a total row
-	investment, err := strconv.Atoi(row[4])
-	if err != nil {
-		return nil, fmt.Errorf("invalid investment value: %v", err)
-	}
-
-	data := &TournamentData{
-		SchoolName: row[0],
-	}
-
-	// Parse seed - handle empty string case
-	if row[1] == "" {
-		data.Seed = -1 // Use -1 to indicate First Four team with unknown seed
-	} else {
-		seed, err := strconv.Atoi(row[1])
-		if err != nil {
-			return nil, fmt.Errorf("invalid seed value: %v", err)
-		}
-		data.Seed = seed
-	}
-
-	// Parse region
-	data.Region = row[2]
-
-	// Parse points scored
-	points, err := strconv.Atoi(row[3])
-	if err != nil {
-		return nil, fmt.Errorf("invalid points value: %v", err)
-	}
-	data.PointsScored = points
-
-	// Set the total investment
-	data.TotalInvestment = investment
-
-	return data, nil
-}
-
-// calculateByesAndWins determine
-// According to the rules:
-// First Round Win: 50 points
-// Sweet 16 Appearance: +100 points
-// Elite 8 Appearance: +150 points
-// Final Four Appearance: +200 points
-// Championship Game Appearance: +250 points
-// Tournament Winner: +300 points
 func calculateByesAndWins(points int) (byes, wins int) {
 	// Validate points value
 	validPoints := map[int]bool{
