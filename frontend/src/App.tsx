@@ -9,6 +9,8 @@ import { TournamentEditPage } from './pages/TournamentEditPage';
 import { TournamentCreatePage } from './pages/TournamentCreatePage';
 import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
 import { AdminPage } from './pages/AdminPage';
+import { HomePage } from './pages/HomePage';
+import { RulesPage } from './pages/RulesPage';
 import { Header } from './components/Header';
 import './App.css';
 
@@ -18,7 +20,9 @@ export const App: React.FC = () => {
       <div className="min-h-screen bg-gray-100">
         <Header />
         <Routes>
-          <Route path="/" element={<CalcuttaListPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/rules" element={<RulesPage />} />
+          <Route path="/calcuttas" element={<CalcuttaListPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/tournaments" element={<TournamentListPage />} />
           <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />

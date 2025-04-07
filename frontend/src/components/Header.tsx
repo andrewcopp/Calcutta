@@ -13,11 +13,14 @@ export const Header: React.FC = () => {
             <Link to="/" className="text-xl font-bold text-gray-800">
               Calcutta
             </Link>
-            {isAdminPage && (
-              <Link to="/admin" className="text-gray-600 hover:text-gray-800">
-                Admin Console
+            <nav className="hidden md:flex space-x-4">
+              <Link to="/calcuttas" className="text-gray-600 hover:text-gray-800">
+                Calcuttas
               </Link>
-            )}
+              <Link to="/rules" className="text-gray-600 hover:text-gray-800">
+                How It Works
+              </Link>
+            </nav>
           </div>
           
           {!isAdminPage && (

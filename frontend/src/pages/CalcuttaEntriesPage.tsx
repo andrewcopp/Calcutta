@@ -67,19 +67,30 @@ export function CalcuttaEntriesPage() {
       </div>
       <h1 className="text-3xl font-bold mb-6">Leaderboard</h1>
       <div className="grid gap-4">
-        {entries.map((entry) => (
+        {entries.map((entry, index) => (
           <Link
             key={entry.id}
             to={`/calcuttas/${calcuttaId}/entries/${entry.id}`}
-            className="block p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            className={`block p-4 rounded-lg shadow hover:shadow-md transition-shadow ${
+              index < 3 
+                ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400' 
+                : 'bg-white'
+            }`}
           >
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold">{entry.name}</h2>
+                <h2 className="text-xl font-semibold">
+                  {index + 1}. {entry.name}
+                  {index < 3 && (
+                    <span className="ml-2 text-yellow-600 text-sm">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                    </span>
+                  )}
+                </h2>
                 <p className="text-gray-600">Created: {new Date(entry.created).toLocaleDateString()}</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-blue-600">
+                <p className={`text-2xl font-bold ${index < 3 ? 'text-yellow-600' : 'text-blue-600'}`}>
                   {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
                 </p>
               </div>
