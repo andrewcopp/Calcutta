@@ -37,4 +37,10 @@ var SchoolNameMap = map[string]string{
 	"Texas A&M Corpus Christi": "Texas A&M-Corpus Christi",
 	"McNeese":                  "McNeese State",
 	"Saint Francis":            "St. Francis",
+	"Mich. State":              "Michigan State",
+	"Colorado St.":             "Colorado State",
+	"SIUE":                     "Southern Illinois-Edwardsville",
+	"Norfolk St.":              "Norfolk State",
+	"Xavier*":                  "Xavier",
+	"North Carolina*":          "North Carolina",
 }

@@ -24,11 +24,14 @@ var calcuttaRepo *services.CalcuttaRepository
 var calcuttaService *services.CalcuttaService
 
 func init() {
+	log.Printf("Initializing database connection...")
+
 	// Get database connection string from environment
 	connString := os.Getenv("DATABASE_URL")
 	if connString == "" {
 		log.Fatal("DATABASE_URL environment variable is not set")
 	}
+	log.Printf("Database connection string: %s", connString)
 
 	// Connect to database
 	db, err := sql.Open("postgres", connString)
@@ -36,15 +39,25 @@ func init() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	// Test the connection
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
+	}
+	log.Printf("Successfully connected to database")
+
 	// Initialize repositories
+	log.Printf("Initializing repositories...")
 	schoolRepo = services.NewSchoolRepository(db)
 	tournamentRepo = services.NewTournamentRepository(db)
 	calcuttaRepo = services.NewCalcuttaRepository(db)
+	log.Printf("Repositories initialized successfully")
 
 	// Initialize services
+	log.Printf("Initializing services...")
 	schoolService = services.NewSchoolService(schoolRepo)
 	tournamentService = services.NewTournamentService(tournamentRepo)
 	calcuttaService = services.NewCalcuttaService(calcuttaRepo)
+	log.Printf("Services initialized successfully")
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -620,6 +633,7 @@ func createTournamentTeamHandler(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		SchoolID string `json:"schoolId"`
 		Seed     int    `json:"seed"`
+		Region   string `json:"region"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -636,6 +650,9 @@ func createTournamentTeamHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Seed must be between 1 and 16", http.StatusBadRequest)
 		return
 	}
+	if request.Region == "" {
+		request.Region = "Unknown" // Default to "Unknown" if not provided
+	}
 
 	// Create the team
 	team := &models.TournamentTeam{
@@ -643,12 +660,14 @@ func createTournamentTeamHandler(w http.ResponseWriter, r *http.Request) {
 		TournamentID: tournamentID,
 		SchoolID:     request.SchoolID,
 		Seed:         request.Seed,
+		Region:       request.Region,
 		Byes:         0,
 		Wins:         0,
 		Eliminated:   false,
 	}
 
 	if err := tournamentRepo.CreateTeam(r.Context(), team); err != nil {
+		log.Printf("Error creating team: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -725,18 +744,23 @@ func tournamentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	log.Printf("Starting server initialization...")
+
 	r := mux.NewRouter()
+	log.Printf("Router created")
 
 	// Apply CORS middleware to all routes
 	r.Use(corsMiddleware)
+	log.Printf("CORS middleware applied")
 
 	// Routes
+	log.Printf("Setting up routes...")
 	r.HandleFunc("/api/health", healthHandler)
 	r.HandleFunc("/api/schools", schoolsHandler)
 	r.HandleFunc("/api/tournaments", tournamentsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}", tournamentHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments", createTournamentHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{id}/teams", tournamentTeamsHandler)
+	r.HandleFunc("/api/tournaments/{id}/teams", tournamentTeamsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}/teams", createTournamentTeamHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/teams/{id}", updateTeamHandler).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/calcuttas", calcuttasHandler)
@@ -746,17 +770,21 @@ func main() {
 	r.HandleFunc("/api/entries/{id}/portfolios", portfoliosHandler)
 	r.HandleFunc("/api/portfolios/{id}/teams", portfolioTeamsHandler)
 	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", recalculatePortfoliosHandler).Methods("POST", "OPTIONS")
+	log.Printf("Basic routes configured")
 
 	setupRoutes(r, calcuttaService)
+	log.Printf("Additional routes configured")
 
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
+	log.Printf("Using port: %s", port)
 
 	log.Printf("Server starting on port %s", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
+		log.Printf("Server failed to start: %v", err)
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }

@@ -88,6 +88,7 @@ export interface TournamentTeam {
   schoolId: string;
   tournamentId: string;
   seed: number;
+  region: string;
   byes: number;
   wins: number;
   eliminated: boolean;

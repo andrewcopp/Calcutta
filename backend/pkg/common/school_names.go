@@ -57,6 +57,16 @@ var SchoolNameMap = map[string]string{
 	"Texas A & M":     "Texas A&M",
 	"McNeese":         "McNeese State",
 	"Grambling State": "Grambling",
+	// Additional mappings for 2025 teams
+	"Mich. State":  "Michigan State",
+	"Colorado St.": "Colorado State",
+	"SIUE":         "Southern Illinois-Edwardsville",
+	"Norfolk St.":  "Norfolk State",
+
+	"Xavier*":         "Xavier",
+	"North Carolina*": "North Carolina",
+	"Mt. St. Mary's*": "Mount St. Mary's",
+	"Alabama St.*":    "Alabama State",
 }
 
 // GetStandardizedSchoolName returns the standardized name for a school

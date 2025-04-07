@@ -126,7 +126,7 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 // GetTeams returns all teams for a tournament
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
 	query := `
-		SELECT id, tournament_id, school_id, seed, byes, wins, eliminated, created_at, updated_at
+		SELECT id, tournament_id, school_id, seed, region, byes, wins, eliminated, created_at, updated_at
 		FROM tournament_teams
 		WHERE tournament_id = $1 AND deleted_at IS NULL
 		ORDER BY seed ASC
@@ -134,11 +134,11 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 
 	rows, err := r.db.QueryContext(ctx, query, tournamentID)
 	if err != nil {
-		return nil, err
+		return []*models.TournamentTeam{}, err
 	}
 	defer rows.Close()
 
-	var teams []*models.TournamentTeam
+	teams := make([]*models.TournamentTeam, 0)
 	for rows.Next() {
 		team := &models.TournamentTeam{}
 		var createdAt, updatedAt time.Time
@@ -148,6 +148,7 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			&team.TournamentID,
 			&team.SchoolID,
 			&team.Seed,
+			&team.Region,
 			&team.Byes,
 			&team.Wins,
 			&team.Eliminated,
@@ -155,7 +156,7 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			&updatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return []*models.TournamentTeam{}, err
 		}
 
 		team.Created = createdAt
@@ -165,7 +166,7 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return []*models.TournamentTeam{}, err
 	}
 
 	return teams, nil
@@ -316,22 +317,29 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 
 // CreateTeam creates a new tournament team in the database
 func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.TournamentTeam) error {
+	log.Printf("CreateTeam: Starting to create team with ID: %s", team.ID)
+	log.Printf("CreateTeam: Team data: %+v", team)
+
 	query := `
 		INSERT INTO tournament_teams (
-			id, tournament_id, school_id, seed, byes, wins, eliminated,
+			id, tournament_id, school_id, seed, region, byes, wins, eliminated,
 			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	now := time.Now()
 	team.Created = now
 	team.Updated = now
 
-	_, err := r.db.ExecContext(ctx, query,
+	log.Printf("CreateTeam: Executing SQL query with values: id=%s, tournament_id=%s, school_id=%s, seed=%d, region=%s, byes=%d, wins=%d, eliminated=%v, created_at=%v, updated_at=%v",
+		team.ID, team.TournamentID, team.SchoolID, team.Seed, team.Region, team.Byes, team.Wins, team.Eliminated, team.Created, team.Updated)
+
+	result, err := r.db.ExecContext(ctx, query,
 		team.ID,
 		team.TournamentID,
 		team.SchoolID,
 		team.Seed,
+		team.Region,
 		team.Byes,
 		team.Wins,
 		team.Eliminated,
@@ -339,8 +347,16 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		team.Updated,
 	)
 	if err != nil {
+		log.Printf("CreateTeam: Error executing query: %v", err)
 		return err
 	}
 
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("CreateTeam: Error getting rows affected: %v", err)
+		return err
+	}
+
+	log.Printf("CreateTeam: Successfully inserted team. Rows affected: %d", rowsAffected)
 	return nil
 }

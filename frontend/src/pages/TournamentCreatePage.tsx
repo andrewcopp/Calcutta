@@ -7,6 +7,7 @@ import { tournamentService } from '../services/tournamentService';
 interface TeamToAdd {
   schoolId: string;
   seed: number;
+  region: string;
 }
 
 export const TournamentCreatePage: React.FC = () => {
@@ -53,6 +54,7 @@ export const TournamentCreatePage: React.FC = () => {
     const newTeam: TeamToAdd = {
       schoolId: selectedSchool,
       seed: selectedSeed,
+      region: 'Unknown', // Default region
     };
 
     setTeamsToAdd([...teamsToAdd, newTeam]);
@@ -90,7 +92,7 @@ export const TournamentCreatePage: React.FC = () => {
       // Then create all teams in parallel
       await Promise.all(
         teamsToAdd.map(team =>
-          tournamentService.createTournamentTeam(tournament.id, team.schoolId, team.seed)
+          tournamentService.createTournamentTeam(tournament.id, team.schoolId, team.seed, team.region)
         )
       );
 

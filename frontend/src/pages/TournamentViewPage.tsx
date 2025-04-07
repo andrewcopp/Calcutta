@@ -30,7 +30,7 @@ export const TournamentViewPage: React.FC = () => {
 
       // Fetch teams
       const teamsData = await tournamentService.getTournamentTeams(id!);
-      setTeams(teamsData);
+      setTeams(teamsData || []);
 
       // Fetch schools for all teams
       const schoolsData = await adminService.getAllSchools();
@@ -42,6 +42,7 @@ export const TournamentViewPage: React.FC = () => {
     } catch (err) {
       setError('Failed to load tournament data');
       console.error('Error loading tournament data:', err);
+      setTeams([]);
     } finally {
       setIsLoading(false);
     }
@@ -72,12 +73,20 @@ export const TournamentViewPage: React.FC = () => {
             {tournament.rounds} rounds • Created {new Date(tournament.created).toLocaleDateString()}
           </p>
         </div>
-        <Link
-          to={`/admin/tournaments/${id}/edit`}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Edit Tournament
-        </Link>
+        <div className="flex gap-4">
+          <Link
+            to={`/admin/tournaments/${id}/edit`}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Edit Tournament
+          </Link>
+          <Link
+            to={`/admin/tournaments/${id}/teams/add`}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            Add Teams
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -86,30 +95,41 @@ export const TournamentViewPage: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Seed
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                School
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Byes
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Wins
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {teams.length > 0 ? (
-              teams
+      {teams.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <h2 className="text-xl font-semibold mb-4">No Teams Added Yet</h2>
+          <p className="text-gray-600 mb-6">This tournament has been created but no teams have been added yet.</p>
+          <Link
+            to={`/admin/tournaments/${id}/teams/add`}
+            className="bg-green-500 text-white px-6 py-3 rounded hover:bg-green-600 inline-block"
+          >
+            Add Teams to Tournament
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Seed
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  School
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Byes
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Wins
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {teams
                 .sort((a, b) => a.seed - b.seed)
                 .map(team => (
                   <tr key={team.id}>
@@ -133,17 +153,11 @@ export const TournamentViewPage: React.FC = () => {
                       )}
                     </td>
                   </tr>
-                ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                  No teams found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }; 

@@ -44,14 +44,15 @@ export const tournamentService = {
   async createTournamentTeam(
     tournamentId: string,
     schoolId: string,
-    seed: number
+    seed: number,
+    region: string = 'Unknown'
   ): Promise<TournamentTeam> {
     const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ schoolId, seed }),
+      body: JSON.stringify({ schoolId, seed, region }),
     });
     if (!response.ok) {
       throw new Error('Failed to create tournament team');
