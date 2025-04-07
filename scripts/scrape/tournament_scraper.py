@@ -99,6 +99,10 @@ class TournamentScraper:
                 # Remove location information
                 game_text = game_text.split(" at ")[0].strip()
 
+            # Remove region name if present
+            for region in ["East", "West", "South", "Midwest"]:
+                game_text = game_text.replace(f"{region} First Four", "").strip()
+
             # Split into team parts
             parts = game_text.split(",")
             if len(parts) != 2:
@@ -109,25 +113,28 @@ class TournamentScraper:
             team1_part = parts[0].strip()
             team2_part = parts[1].strip()
 
-            # Extract team names (ignore seed numbers and scores)
-            team1_match = re.match(r'\d+\s+(.+?)\s+\d+$', team1_part)
-            team2_match = re.match(r'\d+\s+(.+?)\s+\d+$', team2_part)
+            # Extract team names and scores using a more flexible regex
+            # This will match both "16 FDU 65" and "16 Florida Gulf Coast 96" formats
+            team1_match = re.match(r'\d+\s+(.+?)\s+(\d+)$', team1_part)
+            team2_match = re.match(r'\d+\s+(.+?)\s+(\d+)$', team2_part)
 
             if not team1_match or not team2_match:
-                print(f"Could not extract team names from: {game_text}")
-                return None
+                # Try alternative format without seed numbers
+                team1_match = re.match(r'(.+?)\s+(\d+)$', team1_part)
+                team2_match = re.match(r'(.+?)\s+(\d+)$', team2_part)
+                if not team1_match or not team2_match:
+                    print(f"Could not extract team names from: {game_text}")
+                    return None
 
             team1 = team1_match.group(1).strip()
             team2 = team2_match.group(1).strip()
+            score1 = int(team1_match.group(2))
+            score2 = int(team2_match.group(2))
 
             # Clean up team names
             for region in ["East", "West", "South", "Midwest"]:
                 team1 = team1.replace(f"{region} ", "")
                 team2 = team2.replace(f"{region} ", "")
-
-            # Extract scores from the last word in each part
-            score1 = int(team1_part.split()[-1])
-            score2 = int(team2_part.split()[-1])
 
             return Game(
                 id=f"{self.year}-ff-{game_number}",
