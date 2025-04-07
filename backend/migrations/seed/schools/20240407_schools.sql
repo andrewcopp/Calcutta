@@ -20,373 +20,375 @@ SET row_security = off;
 -- Data for Name: schools; Type: TABLE DATA; Schema: public; Owner: calcutta
 --
 
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cbdb8da5-fc71-4ab2-8620-55fe687dc62a', 'Play-in Losers', '2025-04-07 04:57:52.66934+00', '2025-04-07 04:57:52.66934+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e8d0e091-330c-456e-b358-cb0077c73327', 'Wright St.', '2025-04-07 04:57:52.937041+00', '2025-04-07 04:57:52.937041+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('42033686-d639-4be2-99d1-ed355f8959a6', 'Abilene Christian', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('649eb917-330e-46a0-9b70-b25eb039a160', 'Air Force', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f5440781-e530-4045-87cf-dc925793bf99', 'Akron', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2c7ac2a3-c9ce-4775-bd79-ef778b2db627', 'Alabama', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6da7da44-698d-455d-a1aa-cb7cc6f7e188', 'Alabama A&M', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('06b98521-5da8-4dab-a391-68a1c06b9df1', 'Alabama State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6f7273d5-cab0-4fec-93a2-681e576a2ef6', 'Alabama-Birmingham', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('328b2d43-54c5-445c-aee7-5e6c1b76e3e2', 'Albany', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c460a635-40db-4cef-9c93-4e1d7d37db32', 'Alcorn State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ef0da9ad-fb33-4e70-bb2f-395fc184348a', 'American', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8ef68b2d-1191-4f52-8954-d18df2eff958', 'Appalachian State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('66258bbf-69ab-4748-ace0-4efcb0289655', 'Arizona', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a1565907-bb85-4baf-b9a9-c7006cfdd708', 'Arizona State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3f16bcbb-3dc0-4605-99c8-c44ad7ee8495', 'Arkansas', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('053c64d2-56e6-4ab2-a13e-e499381f60a1', 'Arkansas Pine Bluff', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4ae56c54-0605-4ff0-ba43-4682985060b8', 'Arkansas State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('84bf78e2-068e-4d6b-ace7-edad77976907', 'Army', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b266761e-3619-4276-9d73-71f04defedbb', 'Auburn', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b4ef2f69-1ff9-4ce1-9c84-a05e1e907297', 'Austin Peay', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2d01793b-6a33-48e9-b913-7d048ae7a89d', 'Ball State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('604d94a6-29be-42fc-ad6b-2ddfda1450bf', 'Baylor', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cc13e731-85fd-4000-8655-87d4d94ea151', 'Bellarmine', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('48b33905-e78c-4112-8700-58a5f84083a0', 'Belmont', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9a80d729-102a-4ff0-b5d8-681e77391885', 'Bethune-Cookman', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('977bc499-7a91-42c5-814c-381025f4dd8f', 'Binghamton', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('79b76bd5-2881-4dc9-b980-aa4ac6396050', 'Boise State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4fe254c0-a072-489f-b0bd-49a939b9080d', 'Boston College', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d863476b-87a1-44a3-b05a-f0d1dcce469e', 'Boston University', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('0539767e-9890-4518-9617-c511ec58d388', 'Bowling Green', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('66ec2151-b1b5-4035-8c9a-3c56ca2fad19', 'Bradley', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('22640695-89d5-48f4-90e0-f9df9a3852f8', 'Brown', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d815637c-7b55-4cc0-8bf7-6ffd592d731a', 'Bryant', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2018dff6-6d73-41ad-a54b-7f94abc553e8', 'Bucknell', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c6599c90-0505-4f5c-a0d9-a3368a816dd4', 'Buffalo', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fc514782-9523-4c92-a1ab-5f8ebad6268e', 'Butler', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8ae17283-6dd2-41b6-a03c-1207277ae0ab', 'BYU', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('be08b30d-cbbe-4b7a-ae98-72117daa70d9', 'Cal Baptist', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9e157cf1-9c95-4142-9062-4a03b656e5ce', 'Cal Poly', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('303eda22-0ef1-4a73-9f5a-a72383eae801', 'Cal State Bakersfield', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f424af08-3d93-4c59-90bb-0c71a921cd1e', 'Cal State Fresno', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1526b86f-1b61-4359-a8ab-e12f90def502', 'Cal State Fullerton', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('56fc2e5f-fad4-4a4f-a3bf-2c4a3dd82dd1', 'Cal State Long Beach', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('153e59af-fb0c-419e-822b-872252759b23', 'Cal State Northridge', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('653d2626-dfc2-4029-9ce9-769714e75a52', 'Cal State Sacramento', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('256dc6cf-ae7d-449f-9ed3-36e14d889e0e', 'California', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c509adf8-5560-4d4a-aa07-b71c5e9616b0', 'Campbell', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('92740317-eae9-4517-9281-9d550c2b3512', 'Canisius', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c0185124-ba93-46b5-bc9e-fc9d30b8f5a0', 'Central Arkansas', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2519e6ec-3370-4c25-916f-0fe919268225', 'Central Connecticut', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('407c41cf-bc52-4bdf-a51b-b8b43bad54a9', 'Central Michigan', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a23d5d32-7a96-4a8e-8d1c-6e58648bfa7f', 'Charleston', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a39d0ff1-5e76-482f-a334-753219665fce', 'Charleston Southern', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e07b50f2-9aa1-423f-a43e-14d171af00c3', 'Charlotte', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('923bce08-b080-464c-b38e-bab6f4c88b69', 'Chattanooga', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3dc1e7a4-bfb9-48c4-b22f-36609f1d17f6', 'Chicago State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7de90b82-dc92-4168-9ba8-3b471e16c370', 'Cincinnati', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c3565a13-708b-42c5-b162-a594f82861e5', 'Clemson', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9719d2bb-d96e-4abf-9347-f14376583f94', 'Cleveland State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1e484621-4d9b-4942-9c7d-8b912ed62b63', 'Coastal Carolina', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5cf8127e-7b0f-4e8c-ada9-626f8924779c', 'Colgate', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('192b0206-dad5-4ac7-aa1e-4e47343bd707', 'College of Charleston', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7af83c2b-837c-420d-8cc2-5bd854c50376', 'Colorado', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bc6d365a-97ab-41fe-8a48-0948e6ea7855', 'Colorado State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8a17095a-149d-479d-ba7e-2098e2e30129', 'Columbia', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f22ba813-9cfb-42f0-8818-e024c912ea1b', 'Coppin State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5240530b-57cd-4fba-9979-94b01d87f83c', 'Cornell', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5650578d-519c-4add-a447-6cd05c152c76', 'Creighton', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6fe2102a-373a-44ea-8af5-074c56dfe416', 'Dartmouth', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a8208d10-5fd1-4c5e-8034-96471f66173f', 'Davidson', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d08011b4-f6e3-446e-89d4-92310965438e', 'Dayton', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2da63448-6df2-4cdb-a16c-e8cd21e7756d', 'Delaware', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f9a71bef-5307-4512-9bae-157e06dfa5a4', 'Delaware State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d4800a18-fcc2-46e2-ba58-ded17a9713f7', 'Denver', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('52461c09-b22b-433f-8f89-9cfd87af50b6', 'DePaul', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a1a2449f-16f8-4a4d-b8bd-778dc09830d8', 'Detroit Mercy', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('321ac7da-b1a4-4103-8139-539aabbd2ae7', 'Drake', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f3ec937a-4913-49f6-b05b-54bc43354e88', 'Drexel', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('57d29a57-2d28-4971-937d-dcdcf8d31540', 'Duke', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('23c13a0f-5f36-414c-96c1-c122a4ce4e91', 'Duquesne', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6264fe5d-96a7-4ac0-a571-e67375bf9a70', 'East Carolina', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('86364a8b-3b45-4fe4-b604-9f1f8cc3a89f', 'East Tennessee State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2499b260-9564-4403-a7f3-ebbbbd8c6592', 'Eastern Illinois', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1fc569dc-1525-4c80-a138-735d0e8dfb4e', 'Eastern Kentucky', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c7bf6632-8320-4844-b727-e6c2e5341101', 'Eastern Michigan', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8523e13c-4eb7-4358-b501-ef2a9469ed72', 'Eastern Washington', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3568fb9a-67fc-4d42-859c-0fc01d807e2c', 'Elon', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('117acce3-108c-47e2-9b00-70ea5d9ef699', 'Evansville', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f99c2f5a-a884-4c06-898d-a942b227584c', 'Fairfield', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('51eb3e92-7fb6-406d-9a07-bda7560c6fe5', 'Fairleigh Dickinson', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9bd76083-035e-43c6-83a6-67a023b96f85', 'FGCU', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2183935e-3cb1-4ccd-ac6d-24b1889197e5', 'Florida', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f0bd5907-962c-4ea5-b910-4aed2c347522', 'Florida A&M', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7bb92214-49f6-4f6f-8f55-b608b1e99de3', 'Florida Atlantic', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ad64d158-d545-4e99-9f78-2c974e27e067', 'Florida Gulf Coast', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8b56b787-132d-48e5-b4de-d5725ddf5c40', 'Florida International', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('77bf0d35-71a2-4d24-b464-18698cc51531', 'Florida State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1a223fa3-f531-4b45-88d6-6ab0367cca5f', 'Fordham', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c4458fff-9052-4ee9-a5fb-1792f71e454e', 'Furman', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b5b7c701-9b45-40a9-bdea-de97bb636290', 'Gardner-Webb', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8d1a022a-ef34-476b-b135-fd26e8ae1b3d', 'George Mason', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('0868a3a4-b2fa-4ac9-9967-24dfd7b67e88', 'George Washington', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b0084ed8-b293-41b3-9d8c-3ed31ec80caa', 'Georgetown', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c8b3398f-3d1c-45be-b907-18fb851dcc66', 'Georgia', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('956f8f40-6004-45eb-984c-d9478e5f3040', 'Georgia Southern', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c78057f5-57d0-4a6c-8edc-acae2499d241', 'Georgia State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a9c6249c-0860-4a82-9ef5-8e21f602515b', 'Georgia Tech', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('119baa05-4837-4de2-a06b-f7364f612e4f', 'Gonzaga', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('94da0443-a397-413d-bf7c-41b87158314a', 'Grambling State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1224a1d3-9c99-4255-9d4a-7392b60f46e0', 'Grand Canyon', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ea97dcd4-5929-4900-ac0a-21b357327aba', 'Green Bay', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cedf0ab4-8e98-420a-8a62-7ac7c824d03e', 'Hampton', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fb49e3d8-aa49-46fb-9587-93a497fe5ecb', 'Hartford', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ca47c3af-3ef2-41db-b984-e4fe0763cfd7', 'Harvard', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1490ffb4-a78f-430d-9233-dd3bf1ac161c', 'Hawaii', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2dc42488-0888-4c00-9f10-db4a81c48a52', 'High Point', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('abed3b5e-afe1-415e-af60-cd735a56ca73', 'Hofstra', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('83d16ece-7de1-4f43-aace-8d27aae56726', 'Holy Cross', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c90889cb-57f4-4863-bfed-eda8c70d58f1', 'Houston', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2362ae4e-bce3-41b2-873d-9861f75aeb3e', 'Houston Christian', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2029971f-4981-4d72-aa1d-afbd16c529c6', 'Howard', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('232a96be-c9b6-4eae-8380-748f1fe3bf94', 'Idaho', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('db696f43-2bec-4598-9f79-2910b703735f', 'Idaho State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('da57a8a4-5199-4dd0-8adf-d311c2143ba1', 'Illinois', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('69b10e75-dfa6-4a56-9c87-e94e2a26664a', 'Illinois Chicago', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('470f0dd9-65a6-438a-915c-1bef44448fab', 'Illinois State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fc1154c3-1ab6-4aec-aee4-2e5997e82c96', 'Indiana', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('368eacde-17cb-4c3d-bfd3-f3bed2493283', 'Indiana State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('93f60073-a037-4da1-bc94-a850f790954b', 'Iona', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('68591711-403c-4fab-b378-cece2b3b780e', 'Iowa', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3efc6288-43d2-4e1e-a054-e17f1394b9f3', 'Iowa State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('58525c81-5c83-4242-adcd-994e7d13181f', 'Jackson State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2b819cfb-84c8-458b-b732-2e666304b68f', 'Jacksonville', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fd93f2df-06f7-40cf-b517-b13a3bd4401d', 'Jacksonville State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c17a657e-cce4-4ecb-a41e-4fca9e17d683', 'James Madison', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5d825899-c2d5-49ee-b501-8ede450fbfd4', 'Kansas', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('54578f02-cd28-42ee-95bf-e7adefcd392c', 'Kansas City', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5c7f6966-ca09-481d-ba8c-f49340cc0e0f', 'Kansas State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('15f8d97c-cf9c-4288-ac9c-b6abb0d21a5e', 'Kennesaw State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b518938f-85ba-479b-ab7e-4eff5339a480', 'Kent State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('31866949-7f61-4f64-a5d1-1f5636184f69', 'Kentucky', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7e30eae0-0ab9-47da-9b39-659dc2db3b6c', 'La Salle', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f9ecc9cc-0f48-412b-a330-6fc9faea5634', 'Lafayette', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5aad2f6e-e44b-41eb-9d8f-fbf1827fe1d3', 'Lamar', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('34ba4ff1-901f-4998-b115-d03510b8cd45', 'Lehigh', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('07a4f56f-59d3-4be5-812a-c3671d676ac2', 'Liberty', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('09071394-c19e-4896-a517-a735fa14562e', 'Lipscomb', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('970aa258-cf31-4693-9df7-3d66a19703e1', 'Long Beach State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('18ba5e23-79ed-4397-908a-33748a11c37b', 'Long Island', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('92ed9d75-a404-4fe3-9b45-942c6f405ad1', 'Longwood', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('afba4011-60da-45d4-acdb-797c2433773a', 'Louisiana', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('31fe9e18-9c25-437f-bdc4-271a8d68a45c', 'Louisiana Monroe', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('23160fd3-fcba-48d0-a6e0-648e236f2c2c', 'Louisiana State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2a326614-1a99-40af-87ef-6fb78b62e6ab', 'Louisiana Tech', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('34299def-494a-47eb-9dd5-eacdef1a806f', 'Louisville', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('35bd356d-bb29-4728-85f0-281cdc2ae86e', 'Loyola Chicago', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2ff44675-a76a-47df-86bd-7788b00b26b5', 'Loyola Maryland', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('dd7bc4a8-41e0-4ed8-bc44-347549391e19', 'Loyola New Orleans', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a2cc4c6c-0bc6-4b8d-95ed-bbcffa74c37b', 'Maine', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b9f3d2a1-ccdb-4394-8575-4ada6f89af7f', 'Manhattan', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9e13494d-deb8-4d60-8724-e7e487ef919c', 'Marist', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('45dd2560-1c0b-4d56-8262-96b25af58bbf', 'Marquette', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('27b7e8a6-92b0-461f-a671-41d8587b77d7', 'Marshall', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('32221d65-29b6-466d-8b6a-d98867877482', 'Maryland', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6de5831f-d272-4b97-b95e-00445260f897', 'Maryland Eastern Shore', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ae09918f-efca-477b-8866-7f09fe115a8c', 'Massachusetts', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('73a45974-9304-4d1c-a286-0affc822ae00', 'McNeese', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c8217581-f2ca-4add-8fc5-2dc009288f7e', 'Memphis', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('283f47a7-2fbf-4c25-bf1e-59e375389553', 'Mercer', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c2031ff1-314e-4959-9c2d-acc5998d653d', 'Merrimack', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('dca4bace-521a-4233-b635-0f72ad1dbc56', 'Miami', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cdc50fb6-c9cd-4b83-80fe-2a60f2cfb186', 'Miami (OH)', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ecc727ad-a39c-406f-be42-883fb96e1ecb', 'Michigan', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5268fe3c-a9c7-4b34-a59e-35793761e2f3', 'Michigan State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('738f393e-ec47-4800-bd9b-802728961e26', 'Middle Tennessee State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ffedef74-3495-45cc-9e4d-c4d9f9fa8581', 'Minnesota', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7cf1c33c-2e73-4988-bafb-4645ff6df641', 'Mississippi', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('79ee6125-9226-4f2a-bc54-e50ce0184d6d', 'Mississippi State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('83711625-527f-4c1e-bf56-64c4ca109039', 'Mississippi Valley State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('73822bd5-0208-4562-930e-916d20ddf475', 'Missouri', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7fbd3793-d37a-484d-85ac-ac82ea0b884b', 'Missouri State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3a3fb5ed-980e-4f78-a2e7-701824b97c6c', 'Monmouth', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('191f0bc0-26e4-4dc6-81bd-e9a754d6d24f', 'Montana', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3ae98f4c-f6dc-4c0e-994f-31245395f381', 'Montana State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('60e0b184-ab97-48db-b435-99a5bd7b6dbf', 'Morehead State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cad47a17-6a30-4bb9-9188-c56cf0737e17', 'Morgan State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('76903d05-313f-4ab7-a2f9-2cef68d60548', 'Mount St. Mary''s', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6572eddb-f36d-4db4-9c6d-d875397156d1', 'Murray State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5e776c90-3705-4018-b5dc-ab0bff18586d', 'Navy', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('81a28e67-b6cd-406f-8390-34e6d1a68025', 'Nebraska', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('763bc8e6-3cf3-4767-a6e5-6bb3ad447eb7', 'Nebraska Omaha', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d016906c-2af7-4e78-976a-7b4bef574153', 'Nevada', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7de8d0cf-84d0-4357-ba65-c9a857be6019', 'New Hampshire', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a932275c-5021-4590-ace9-26607a37b383', 'New Mexico', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('05ab7bbd-4ae4-491c-82b3-006f1e6e8025', 'New Mexico State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2fa9f725-8ed8-4738-81d4-55d71a8c6645', 'New Orleans', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('91fff2dd-9dbf-430a-8613-4c142a07fdfa', 'Niagara', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('61a47e6b-e9f1-4dd0-b5a6-23b6a9a14e32', 'Nicholls State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('78491ed6-64c0-4cc1-a273-0bbb73776aa3', 'NJIT', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('acd6caaa-4ee6-448b-8278-050e696b489a', 'Norfolk State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('510d44cf-ca99-4b1e-b987-a50abb3b03a0', 'North Alabama', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('34e23cdd-8533-48eb-ac5c-6b992287e99a', 'North Carolina', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8ebffb48-6b90-41cd-b100-49b975101da3', 'North Carolina A&T', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b1fea459-2df1-4105-b7e1-75a268f46b40', 'North Carolina Central', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('71df7939-c64a-4d46-902a-05451a13320f', 'North Carolina State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9b08a348-8920-4153-a74a-2541febaeeae', 'North Dakota', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('317b4c3a-17e5-49c2-aaa9-5ad33d174d27', 'North Dakota State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d36d4321-80fd-4a15-a344-dd41c4a746de', 'North Florida', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('288532a6-613e-46ee-b3d4-ba7bb3e99d7e', 'North Texas', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c3478abc-d720-4c77-9987-026e557021d3', 'Northeastern', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2aea6685-7e12-429c-88f5-1836333b3530', 'Northern Arizona', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d6068fee-f744-47b1-89eb-ffe5d7ea06ae', 'Northern Colorado', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a4739f2d-3d9a-4c0f-97ac-0f81944315a0', 'Northern Illinois', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('905534c3-13d1-4cdd-9608-31325bef2e87', 'Northern Iowa', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e2c21430-907b-454e-be38-29d842f5a9df', 'Northern Kentucky', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('291e5611-0398-43dd-8695-8a207e041c6e', 'Northwestern', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('287ade65-620f-42f4-9d3f-3f6b32a9a90d', 'Northwestern State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2ce0c0a8-187a-4286-bae5-30ef08945c5b', 'Notre Dame', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a15bb32c-2323-4e92-9220-1762a999f164', 'Oakland', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bac74b9b-9065-45e9-9748-49f92a796247', 'Ohio', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6a9123b5-d131-43d7-8d1f-8424ec001361', 'Ohio State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('98d30d5c-c7ab-4d6e-86b0-2c4b50f89f2f', 'Oklahoma', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('254dab0d-fb87-4ecd-ab9d-7100f4065c75', 'Oklahoma State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('919e62ca-6646-4480-b3e5-2f1c6ad4f384', 'Old Dominion', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c4e6441c-73ea-4661-b583-5c17432a8ce5', 'Ole Miss', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c0786d93-9631-4770-b145-7f56a0608ec1', 'Omaha', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('afc244e9-1b7e-4dfd-8fd8-be3f4bb351ed', 'Oral Roberts', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f71d0624-d0d1-4ec5-ac5f-983870457d60', 'Oregon', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bc63f336-79a0-4165-8dd9-f80b59538286', 'Oregon State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('52b9d08d-c5c1-44f5-a71b-4838631b70f6', 'Pacific', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('03de54ba-ce01-49b6-ab44-aa2ee26e31c5', 'Penn', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3c2def64-d8ce-4a00-a14f-934fe974bb10', 'Penn State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7c2e24c6-a6ed-4828-8e43-bb0c5c2af7ce', 'Pepperdine', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5f7338df-ccab-4915-9d66-bd6010c04abf', 'Pittsburgh', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f32c76be-3f08-4dfc-90a3-c440e3c22e76', 'Portland', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('561050c1-80b8-440f-a896-70260f5b2971', 'Portland State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('746522d8-0601-4c70-b1e7-e4548029e2fd', 'Prairie View A&M', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2bc8c886-6b45-4d83-a493-816654b96382', 'Presbyterian', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('58b497b6-3ba6-4d7b-bbdf-0197c68c4ca8', 'Princeton', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cfbc1466-df8b-40e8-9d62-8a750a15aed6', 'Providence', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9279c1cd-8564-4c07-8d58-ef809950f09f', 'Purdue', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('98667ca0-a15f-4fbb-9ea5-9f51da80ab53', 'Purdue Fort Wayne', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('03ba671c-e639-491b-b5d0-c6849bfb8045', 'Quinnipiac', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('10a169c5-38a3-44df-8029-cf57a18ce5c3', 'Radford', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('94a61cce-d348-41ad-b989-e4454ecfa014', 'Rhode Island', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('95d72bb8-c677-4ecd-825e-1b9a248e2f0d', 'Rice', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('739c3c14-9f38-4256-b92b-17acc30795e6', 'Richmond', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('30e67476-1db3-4bda-a1dd-b04a7013b578', 'Rider', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('792506c4-02e7-46d9-b9cd-dbcc5b8bed1b', 'Robert Morris', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('20e94b62-0a3b-4931-8f4d-281b3f90c410', 'Rutgers', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9709b56a-b70b-462c-8492-f4ddb2380cd0', 'Sacramento State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5f56c301-6ea3-406d-b48f-d010332eddfd', 'Sacred Heart', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4cad7067-f832-4d3f-b2b9-26a4ddbc91bf', 'Saint Francis', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ac99f71f-061b-4829-9adb-95ac2724459c', 'Saint Joseph''s', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('68cf973b-e5fe-4e96-a306-cf015146b8f8', 'Saint Louis', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f9791a55-516e-46fa-9a65-fc92b0b97d7e', 'Saint Mary''s', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a6064da2-75a4-4b36-ba8d-4723919eca74', 'Saint Peter''s', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('24a80b5e-ed8f-4d2c-93b2-43235413bea1', 'Sam Houston State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b5319b40-10dd-4ae2-bfe3-754b036fe634', 'Samford', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7f7823cb-cc57-413a-a4cd-1ce4012518f1', 'San Diego', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('088e593f-8281-4938-831d-b424e09ed9b4', 'San Diego State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9fc8566f-3b26-40f8-a183-d321f682eaf2', 'San Francisco', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c05fcb91-9fc4-41f0-9511-2166a4b9496a', 'San Jose State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('60028749-33f5-45e3-8721-1051cbcf396a', 'Santa Clara', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3466737d-108f-47b2-9127-64f04891b4a2', 'Seattle', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a585b670-fcfb-4f78-99a8-4855c15cde3c', 'Seton Hall', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('313204b8-cf34-4d88-a398-23e7ad02194d', 'Siena', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ed080fd9-5ef3-46df-8945-ecad12b2642c', 'SIU Edwardsville', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ddb696b2-ec40-4e2f-b74c-7d51c0478bad', 'SMU', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('582df64c-36ab-411e-96ff-57f8466c0d28', 'South Alabama', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e038bd36-c002-43bd-8afd-54e4f9d4cd30', 'South Carolina', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('86ce17a4-e98d-4046-931f-f2ab398a8105', 'South Carolina State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('18cb6439-bbf9-4e7a-99dc-7b3c019bc5dc', 'South Dakota', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5ccc75f5-cd92-4471-8d4b-936c1d98e00a', 'South Dakota State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d7202e43-e0e8-4f9b-8879-70b07d6c6e1f', 'South Florida', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('aa64ba81-c43c-4c94-926e-50583160c1e8', 'Southeast Missouri State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('116eff48-6263-4217-b9aa-08083b174ec9', 'Southeastern Louisiana', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b1b19225-98aa-45b1-963e-fff538db0b29', 'Southern', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1a468bbc-dad0-4678-8e43-a3dcdc6da6dc', 'Southern Illinois', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ca291f9b-5c3b-4755-bac5-372c3cc7e955', 'Southern Indiana', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e55179f2-9491-4276-a5ce-07d244c335f0', 'Southern Miss', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f548849e-52d8-46d7-8d25-57f2b9efdc2b', 'Southern Utah', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('50c45f00-8e77-4e84-9e67-0d069de6643e', 'St. Bonaventure', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4bffb43e-df8a-49c3-80dd-370dc7948f75', 'St. Francis Brooklyn', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e959dcbc-1e02-4525-b0ee-43deb198b04c', 'St. John''s', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a178959a-6e1d-4af1-935c-b082995f2be6', 'St. Thomas', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bee98f73-3743-460c-9d11-5d4595c1874a', 'Stanford', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fbe0eb24-f9f3-451b-b76d-01053ac41af7', 'Stephen F. Austin', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6d508447-4b00-4b77-9749-0c77fe84fb34', 'Stetson', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('175e380d-1750-42a4-850f-3eab830f524f', 'Stonehill', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9a53fca9-aed3-4398-8ee4-170927db8029', 'Stony Brook', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('81a3374a-cb2a-48ce-a9d4-19b9b173b8ed', 'Syracuse', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3c03e75f-2054-4453-a061-dc3cc9c36bd7', 'TCU', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ad8cb975-471b-478e-beae-398bf167bd86', 'Temple', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('972ee754-0c3b-404a-810d-625ffb49fd17', 'Tennessee', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d460f5ad-6bf0-40ec-b2e7-ec1675719fe2', 'Tennessee State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('95ee96d7-258c-4bea-8051-87187f770b1d', 'Tennessee Tech', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b21e5602-c015-4686-8fdb-6b18fc85749c', 'Texas', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('67d58807-d440-40e8-a25f-796176b7c9f2', 'Texas A&M', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c44c77bb-c5b5-4e8e-b74b-00b6193b581c', 'Texas A&M Corpus Christi', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f42ae46e-e5ff-46f2-b4e2-39dd6a80b9c9', 'Texas Christian', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('97cc3720-17ed-4f5d-a97b-fa4b934a13f5', 'Texas El Paso', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e2149935-819e-4f91-b0b2-1a8dbd80ea6f', 'Texas Rio Grande Valley', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a542a371-4556-491e-afa7-519ce1afe2bb', 'Texas Southern', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('6260d8f9-407a-4a06-8534-d05e295144b9', 'Texas State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f511ca05-eacd-4ca1-8630-e0257208fe0e', 'Texas Tech', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('de9c2cc9-3df2-4ace-ab73-c6253c9f1ff8', 'The Citadel', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bba2f656-22e4-4392-899b-0da540ac3e71', 'Toledo', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('192096df-822d-48fa-9c2b-cd6c42a791c0', 'Towson', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('1cbe1bc7-0490-4e3b-9796-72e3e30a2d62', 'Troy', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a5415b69-7423-4ddb-9927-913478a48da0', 'Tulane', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('393f3694-0082-41c1-a93d-f4653b6f6cf0', 'Tulsa', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('da76976d-2832-411a-810b-4f4ee2495e55', 'UC Davis', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('dbedb8b9-5f0a-4efe-b6e4-ebcf82ca278c', 'UC Irvine', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4b301f4a-b1cb-4087-bee9-6c8b2c0c5d51', 'UC Riverside', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f3ded4da-00aa-4cca-8be6-3d7b75b3369a', 'UC San Diego', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('085809cc-7d18-4587-b967-7c38f62975e2', 'UC Santa Barbara', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4b7b5cd8-5450-4262-8387-2521aefd2860', 'UCF', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('a26dcb01-adb6-4e61-ac98-4c5069815088', 'UCLA', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('0ffdc541-ef3a-4df6-a294-017077958dc7', 'UConn', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ed282498-7138-4db4-9cd7-2be6910f7ecb', 'UMBC', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('914cc0b1-9869-4626-9d72-8cd687faac17', 'UMKC', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('061a5530-c994-4e68-9ded-e4b01e2a7e88', 'UNC Asheville', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('95bf8f95-bf83-4f53-b88d-58c682055c4f', 'UNC Greensboro', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8f9bb038-a678-4728-9623-b7decdda0d52', 'UNC Wilmington', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('3f7ac6fd-1d6f-4cdb-bdb4-8499c59e598c', 'UNLV', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('83b0dbc3-cb2b-49b5-a4a6-2038731aa751', 'USC', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5be60fe9-0b3b-420b-8702-a294e83fc896', 'USC Upstate', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('ea3675f8-2bd7-4e4f-9b60-201de7f49b32', 'Utah', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e193f03c-41f7-49e7-8312-d3d1f60c62f0', 'Utah State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4e626645-f54e-4c91-ac78-ed47a54c010b', 'Utah Tech', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d08323a5-6e7b-41a1-a535-82374dd833d9', 'Utah Valley', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b86bf2c1-8bda-4196-b797-ee623be59ba0', 'UTEP', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('100da758-8f65-48e8-9de7-cf6795aa130c', 'UTSA', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('cea93f36-9387-4b1a-a597-fe69b71deb28', 'Valparaiso', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9df00dcf-1730-407a-8743-e12239689c53', 'Vanderbilt', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('927b9105-3b54-4ecd-84a6-7b391837aece', 'VCU', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d8a56f37-1226-4f45-a579-5d088968d286', 'Vermont', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('82c75d6d-e3d9-4f5c-a9ba-e4e5658aba3e', 'Villanova', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fcde1ac9-e54d-4747-8716-57e858bfbaac', 'Virginia', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('e3ac2792-156c-45e9-b341-b5558e283e3e', 'Virginia Commonwealth', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('2cce0737-d5c1-4ae7-90ce-7158f31b6861', 'Virginia Military Institute', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('b098239e-02af-43ff-a1b1-0c0959496c06', 'Virginia Tech', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8f7baae2-0ee6-43ac-99fe-23bbab6b2776', 'Wagner', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('9b15ad37-4b93-4fb3-afea-958740949eb3', 'Wake Forest', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('0221486e-1278-4835-a6f9-2ed82b73fdb8', 'Washington', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f48183ca-0c4a-44f8-98b2-d83e6d000eb0', 'Washington State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4a694f33-8bd9-4cb5-8b7e-d3781981df19', 'Weber State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bdee8272-cdc7-41d3-a4cc-f3f2c0650451', 'West Georgia', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7286da31-6c01-474b-b1dc-7e6d47a271b4', 'West Virginia', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('03f5a498-7086-447a-81b2-215c7f6cba89', 'Western Carolina', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('d1ae0797-8b75-4bcb-bf50-24b4d4531928', 'Western Illinois', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('8d847e2e-cacb-4e80-98f4-62b838887328', 'Western Kentucky', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('bc040971-4370-41b4-a657-231f44920ef1', 'Western Michigan', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('4638f004-0f53-410b-a83f-76ee1f015e90', 'Wichita State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('326b829e-7792-460d-9758-e4a77d0f54fd', 'William & Mary', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f398f8f2-3091-4834-ad2b-ad9b3ad2d3d3', 'Winthrop', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('5e329788-cdd1-4ee2-ac2b-362b438c3d96', 'Wisconsin', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('fe2aae22-b07a-4afe-ac52-4b60e4aca26a', 'Wisconsin Green Bay', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('f0dbb0d8-3616-4bcc-9559-7d75ddacfc67', 'Wisconsin Milwaukee', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('c8360384-81d0-4013-a42e-6616ae92f28a', 'Wofford', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('00d610e0-ba40-4faa-bf50-44e6f34caca9', 'Wright State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('01cf5575-1076-42c7-ab9b-4d64daee4843', 'Wyoming', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('034f2883-54b2-462f-9c76-e61854af3843', 'Xavier', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('63caa20a-1cd4-4421-b784-11123d26c856', 'Yale', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
-INSERT INTO public.schools (id, name, created_at, updated_at, deleted_at) VALUES ('7f9811b0-55af-4c14-8ec8-260cdbf9d180', 'Youngstown State', '2025-04-07 04:56:52.00276+00', '2025-04-07 04:56:52.00276+00', NULL);
+COPY public.schools (id, name, created_at, updated_at, deleted_at) FROM stdin;
+69b17df8-4f29-42f0-9124-573daae639c6	Abilene Christian	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+66f0b527-2004-4ba2-a628-b9961bcea944	Air Force	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ba55cb20-9d25-4231-9d0a-d6ed249595cc	Akron	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ecdbb385-c2b4-47de-8a7c-a9cbba5b940a	Alabama	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+64c85c48-1574-413c-a59e-557fae35d31b	Alabama A&M	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+73dc8fd1-8db7-449e-8e0c-4e3ddbdbc3c8	Alabama State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0c0e5514-0ba3-43b0-9d0e-6cae7b5b0639	Albany (NY)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+069ccaab-e907-4ee1-9f65-961735cf2436	Alcorn State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5adf86e5-41ba-4be7-b25e-e4ba62b6dfe6	American	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+96e7f8a9-250b-493b-902b-06f7751004b3	Appalachian State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8f00a84f-eac6-4aed-bac5-f97c8e2faa86	Arizona	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+efd73940-d4f1-4132-8125-f37cef39b9e1	Arizona State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+efd1e8da-8ea6-4822-84d7-70856a6c07d6	Arkansas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+982f8395-b541-437e-b21a-98e8fad0f285	Arkansas State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d18eabfb-65af-42d1-93c4-a89ae960d33d	Arkansas-Pine Bluff	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+44f53fa0-b521-4071-87e4-bfce7b64143d	Army	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+660d52a2-f092-4875-884f-dea5eea2139f	Auburn	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2a58e03b-ce55-4a37-ad72-8924ad82db7d	Austin Peay	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+eec3a35f-8c30-43fc-a586-652cacb8009f	Ball State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5575f11a-6d8b-4c0c-bc4d-f42d3d6912f9	Baylor	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f9914080-8009-47f5-abc0-0f6dae8a6e6c	Bellarmine	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b2b6cc84-cadd-4e42-9880-5a3b9964dfdf	Belmont	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+42170245-33d0-4a10-8ae3-5924abbed4ec	Bethune-Cookman	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+01a5d676-2be4-4da7-8ae6-68a4502837a4	Binghamton	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+de0f64d7-2c8e-4d80-97a1-f4b36d7a57af	Boise State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+48d48674-12a7-4ae7-88d5-ea1319f4405d	Boston College	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+06bd6d59-f5cc-4361-b23b-54dfcfa220f1	Boston University	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c66a60a5-2c1e-4a73-8387-8c452cb3153c	Bowling Green State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9fda4e1f-de54-460e-a5de-57c303c1bc15	Bradley	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d13562eb-ae27-49c3-8db0-f6971cba5620	Brigham Young	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1fbd042f-15ac-4861-888b-435b57fb0bb6	Brown	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+212e8325-3538-443f-91ac-28fc9eb73447	Bryant	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7733a9dd-effe-436b-af25-92f200e42763	Bucknell	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+22638794-6594-4f58-a5b7-87cfa883a2be	Buffalo	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+33a4a592-46e8-405c-955b-53ad4743d2b4	Butler	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4d56f561-28c1-4b1a-8f0b-9303ad6e7c35	Cal Poly	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5d48c843-e71e-44c6-a1fd-190eba0fd4f1	Cal State Bakersfield	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+26894be3-09d7-4a2c-9e37-a6c9fceaf7e2	Cal State Fullerton	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+446214f6-7556-4f93-9b55-c5590aa88e2e	Cal State Northridge	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4d390a41-7019-48cc-8e00-96399fca24ab	California	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0454027b-3617-4aa7-80d0-fa1b5da1dfb6	California Baptist	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f1683d10-3899-400f-895c-488e3d3420b1	Campbell	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+984fbb1f-aaa4-4f0d-b5d5-941ffb891c79	Canisius	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5b590850-1eb6-4082-97b9-bb74a0bed812	Central Arkansas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+52bbcc60-fe8b-489c-8680-609970cdcd95	Central Connecticut State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ff876bf6-ef54-42a5-ac22-55f1eea57433	Central Michigan	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+92e89618-30a1-4218-8f29-e2bedb78baa3	Charleston Southern	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1e464687-f393-4ac9-bb6c-19167e61cabc	Charlotte	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6135d5ad-17e8-45e8-9975-e9f184a8f3e1	Chattanooga	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+32d67d70-9f67-446a-a24f-3d56a2e81df3	Chicago State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+acedcacc-c8e4-431e-8246-0658aa8c7029	Cincinnati	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f6e4de35-89d4-4f5e-9cfc-681ed3b680a6	Clemson	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c52debc4-2fc9-4b7c-9977-544d687139f8	Cleveland State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+070eaa44-fade-4b4e-bf51-86563e25635e	Coastal Carolina	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d008146b-b9a0-4b8e-871d-037d527bdcb5	Colgate	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bed4a2bf-80e7-47df-b5f5-5286441676a1	College of Charleston	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d27b5ebd-dd4e-44fe-9c04-abf3b6ad5d27	Colorado	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e87d8c47-2f93-4e9b-a190-da631d05ac27	Colorado State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6e3d6009-8023-4590-ba7b-189801af7d8e	Columbia	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c2590f70-f5af-4b1b-8321-94588905c142	Connecticut	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e6f48a36-179f-4aa3-a2ed-7009460833e1	Coppin State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+920e335e-cfc4-4d55-b573-6084582954d9	Cornell	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+fef288d6-3658-4f6d-87c5-78827cd8e9e7	Creighton	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bb52d009-eb72-4d24-b16a-662bbee784e6	Dartmouth	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b20fb39e-7fce-4fd9-b66d-88c0bfe15e11	Davidson	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+739e9598-8aef-42f2-8367-fc54eb5258cc	Dayton	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0faa2efe-1f41-4571-947c-e25778d13cde	DePaul	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9a9217c7-c435-4f70-8f7f-9a511218aeee	Delaware	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+30da37e5-8c9c-45d3-b8bf-b11789d2f2eb	Delaware State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1237c25b-1407-483d-87b9-ca8c8d7400f9	Denver	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+78883daa-6279-4bec-9da4-8c9bdac75526	Detroit Mercy	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+743b0b04-00c3-4f84-af8f-ade7bda36a27	Drake	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d98fdf12-c614-4ba0-bf1c-72bc54b36cf0	Drexel	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7b114a6f-7423-4bdf-977a-df49f87ffae9	Duke	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f243152c-78df-4d52-8254-81d0122ca679	Duquesne	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2f29c4e0-e1f6-41d0-8f95-b3408099bda1	East Carolina	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+95817920-f06c-4770-8508-01ab4d683528	East Tennessee State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+be33a4c8-f9cc-4952-9625-f4fbaa7ff5bf	East Texas A&M	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1972c79f-4786-4eb4-995e-bf6d7680af5c	Eastern Illinois	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ea70dc62-97ef-4c2e-a096-760470c20e18	Eastern Kentucky	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f0d45a4c-11a0-4e69-ad87-afffaea89119	Eastern Michigan	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2770c629-b934-49a1-b09e-fb04d79a8c90	Eastern Washington	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+fcc5b068-36d0-431b-ba2b-ac4759fce00b	Elon	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6ffa0a17-77cd-4575-b045-b43e3908428c	Evansville	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5632de0d-abd9-49c4-8aa8-298542973e9c	FDU	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+020a5363-035f-4293-a7b2-5f6f77a400af	Fairfield	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+25c6c3ad-cfc4-4ec7-9de3-d12d0b214450	Florida	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+dd0e5195-5b29-4ca3-ba5a-4ee679a95f3d	Florida A&M	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+05aaa7ed-3b5b-4f1a-b89b-f212b3f3250d	Florida Atlantic	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0dbb25b2-b84d-4374-bc1e-fcd91279f8d9	Florida Gulf Coast	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5d3977e0-dd98-4579-a2ec-b94b4873af08	Florida International	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d10a90f2-aaaa-4dad-85b8-762221ac55d6	Florida State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+146ea5b2-e086-425b-8ae2-e2705cc9c6c3	Fordham	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+46741c00-f91f-44b5-a1f8-99d02b5f3612	Fresno State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+030cb9ac-1702-4b4c-85ca-f5d191b3a3e1	Furman	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+59076187-b38a-4933-9d56-7d0b00a87de7	Gardner-Webb	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cdac0ebe-ff65-4539-a7ad-aa55380542c0	George Mason	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0ad574e1-c82a-4c51-b14e-bab844397937	George Washington	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+195cecf5-7ca0-40b7-840b-4d42eb2efb09	Georgetown	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a0bae6b7-44a5-4157-8e16-375467a73d1e	Georgia	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6a3e4838-a31a-42fe-8872-67d5b20693ea	Georgia Southern	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d4162fb9-4a5f-4f38-bca9-e91d207f814d	Georgia State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e5765e5d-bb4e-4443-b03b-4c29ab1b84b9	Georgia Tech	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2fb6a07b-a621-44d1-b0b6-5e181979a3bb	Gonzaga	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+51c86202-a9ab-4068-9f43-3126318b6f31	Grambling	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9f99725f-e9f5-4a51-8342-9ba6c6064dca	Grand Canyon	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ddc4f8b4-0df9-4f5b-a5cb-ed1e60cba2da	Green Bay	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e7894c28-5943-454d-ab3a-dbfba6f9be4b	Hampton	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f24c078f-8cd8-49aa-90f7-f87277dd0aa7	Hartford Hawks	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+80b15264-71c8-401b-afd7-760fbaa14a95	Harvard	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+120dc3ee-f0e7-466d-80ad-b661367d546d	Hawaii	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d9b324d1-c18d-4cf3-a58b-24e83726e8f1	High Point	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3213768c-cb76-427a-84c0-705a8df8a8d7	Hofstra	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+151c9a73-f68e-4ea7-9fc0-1a964b012164	Holy Cross	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4962ff19-a750-4f45-b34c-16eb18e8e160	Houston	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+dd446626-81db-4f30-91c3-76c18b15dbc0	Houston Christian	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c672109d-4267-4cb8-8bd7-e16b078a208f	Howard	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+69abda13-bd92-4b29-93a5-07930097577d	IU Indy	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f18fda74-2e0c-474f-8637-51f52473b5e8	Idaho	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+70048567-b92d-4f86-baa0-fd1f5440cd58	Idaho State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e056ec43-d3a5-462e-82a6-6ff5ffb79c99	Illinois	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+07794913-a455-4532-a3f6-1462a62cfa8d	Illinois State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a67c9d0c-cc1c-4133-9500-08dae81c86dc	Illinois-Chicago	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bca79f6f-91c2-4450-8132-a935bf3b60ce	Incarnate Word	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+11de3909-8a5a-4bd4-9b48-fd6feede3df6	Indiana	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f25c73ce-7354-4037-9ae9-aad8f4d62f08	Indiana State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9204a723-8cb9-434f-82ab-4c35457f6671	Iona	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f0504cb2-0d63-48f4-a149-5e1f12b3f1e7	Iowa	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a4ee689e-803d-4ad8-8f58-0357d6d6047d	Iowa State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4b47d519-a5d2-4a37-952c-00e5430a4929	Jackson State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1c461787-219f-4b99-a658-7738828e6e50	Jacksonville	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e614aa17-1108-425f-b0a5-38049e8c7552	Jacksonville State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3df6d210-23a2-4ecd-a714-2df8b2a21efd	James Madison	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3d9061cf-3df4-4c55-83dc-01232375f3be	Kansas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bbe2249a-3d8e-49fd-84d6-66cf5b192c6e	Kansas City	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c8ee1c63-6c78-451c-bff2-024959550fb3	Kansas State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+05264a34-d9ac-47d4-8604-2f7bf3cf685f	Kennesaw State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+49a814fa-bbcd-47ab-a173-b0db9c4c88dc	Kent State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2799fa70-2fe2-40e0-b584-ccd0f5facd41	Kentucky	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d6e11090-128f-475b-b38e-61103e7eb991	La Salle	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+72938414-86b6-4553-821f-0cd987a61c34	Lafayette	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ac0171b8-4129-4aea-b967-9d013979617f	Lamar	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+501e200d-a1c2-4c21-9de4-908e595d2bcc	Le Moyne	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0e44dae3-eb38-43c1-a294-00c237ee9e09	Lehigh	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d378f858-6127-4ff1-93f1-79501b66b946	Liberty	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0a355a31-3df7-428b-a432-886f1626c62d	Lindenwood	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+189efc94-112d-4819-a193-2772a5e2ffaa	Lipscomb	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+840ed976-ff38-412a-a25f-2af6caaf9e69	Little Rock	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bab31c27-0d22-42b7-aa2d-39f68d21b268	Long Beach State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5b39d6b7-dce6-413f-ae81-bb4b275a896d	Long Island University	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+efad1070-1ece-439b-a952-f301362cad69	Longwood	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+dec63182-3078-44bb-9f33-c718e1d90336	Louisiana	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+86a7dd82-f80c-4b87-8399-1088a76666cc	Louisiana State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+68dd63e1-0eec-47d3-b8aa-a3d9a3867191	Louisiana Tech	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9d149e24-1328-4e91-9153-66c22039070e	Louisiana-Monroe	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a61aca98-d585-475f-b8bd-27315778302a	Louisville	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+13764a1e-295d-4733-a7e1-d90d97380aff	Loyola (IL)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cc1ce625-2e89-47b3-b8f0-709a1cdba912	Loyola (MD)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9b29833f-87ca-4cdd-874b-9f2ce9331b7a	Loyola Marymount	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8365d09b-87d1-4220-aaab-2859828c1aa0	Maine	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9a79884b-149b-462f-9bc8-1ebc525632d2	Manhattan	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4a7f8e6f-000b-4668-9039-93e86fc3fd0c	Marist	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4a97d1c7-19f1-4bb2-856d-d0d829e6e099	Marquette	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+76760160-aaf4-433c-8f1c-f1dc91606b94	Marshall	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b33bbba0-2a46-438a-8737-d2c11be9bc5f	Maryland	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2acc3b8a-5783-4551-8308-9b5209f98ef4	Maryland-Baltimore County	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8f40f392-8fd2-453c-a2ae-314c93300ca1	Maryland-Eastern Shore	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0ff2aadc-c0db-4621-9da4-6260dd87c006	Massachusetts	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+398d7b9a-8bd0-4570-affd-66dbd9b81962	Massachusetts-Lowell	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+14263bd7-a3cf-46fc-999a-cbb7d7cf340c	McNeese State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+79aa92f2-d60c-436a-a97c-deaf19b3b34a	Memphis	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2dc911e0-f634-4b3b-9a27-ae0b0699d500	Mercer	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ce9f78df-86bb-4348-9345-f1b821c21b4e	Mercyhurst	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+17d2e144-e8b1-4a40-ad6a-e4dfb82c0cdf	Merrimack	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d4f67dd6-78bd-4f4a-bb49-4f3e2f4a3f08	Miami (FL)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1e1d076d-9dfe-4757-b782-1381b78a7bc5	Miami (OH)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+53d9af97-2a31-4e83-8148-eec8106955b4	Michigan	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c4960776-3a15-497d-aa7e-ca9124e197eb	Michigan State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+73d0090a-9d0d-48f2-83de-f8e0f87e93a9	Middle Tennessee	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+54b17852-f387-4ed4-a277-1adc7650ab33	Milwaukee	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b0ef581b-3db9-4072-a21d-0dd5c77f9a3e	Minnesota	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+43d30aef-5fab-42b7-8917-9b0aaeb9b759	Mississippi	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+65438d3c-c2ca-4e56-843d-369336b4ff96	Mississippi State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5f8a393f-fd09-401f-a203-da6a4da8e061	Mississippi Valley State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c0fb4af7-5298-4401-a044-1a0b236a149a	Missouri	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4ccd8bd4-651b-4e4f-9d2a-8d702b358fee	Missouri State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5ca64c47-7984-4280-a9db-44f4aff3db8a	Monmouth	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+90ce1f92-5875-4c96-80ec-9fd9b263862a	Montana	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6738cdd3-ab03-498d-8615-13ea850beae6	Montana State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b36e373f-8e62-4456-946f-d0710d301026	Morehead State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cf38f9c6-0807-475e-8759-1c5c9f919789	Morgan State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d7360b20-68ba-44e2-b97b-9ef91409b53e	Mount St. Mary's	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a0d3db76-c732-4376-8cee-4b0cfbb7b003	Murray State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9a832a4b-7a2f-4994-99eb-c72ee6971e50	NC State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cc39f397-5ae6-45ae-a8f8-c7dbbed4453f	NJIT	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ef3deb57-fe06-4db8-a591-154c11d976b9	Navy	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+658f64ee-09e3-41b5-805a-dbf683637388	Nebraska	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c1cc3e3f-0f19-400d-90c5-1f5b6c01088d	Nevada	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4d652238-a686-4840-9984-125c1bc6c1b6	Nevada-Las Vegas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+109c3cf3-4aa0-4a09-bb42-66b2f8bf8d6f	New Hampshire	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d1b0adba-30d7-4f10-aa17-9bce1181b0f2	New Mexico	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ebe75b2a-ae2f-4cb1-b620-62dfd6c97497	New Mexico State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+424bd864-9713-4d41-89d1-122410280f88	New Orleans	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f2a2245d-148e-4af1-9e61-86bf47e2b19c	Niagara	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+92645d97-e0b9-47ea-843c-bc61c9313b06	Nicholls State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+730a97f9-776f-449c-a999-f0af0637464e	Norfolk State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+97b18d31-8b40-4a20-b401-0b391491d625	North Alabama	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d6f3e6a9-22b7-423f-91b3-44f96d1ffbb7	North Carolina	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+49ea0973-a3e0-4ebe-adc2-13791582ec34	North Carolina A&T	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9cd26b8c-9eee-46a5-af02-4fed0b154940	North Carolina Central	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+131aa763-2d94-4cd1-b43a-22f2b99e42ff	North Dakota	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+27266aa5-dd7a-470c-ac5f-e7463e6def4e	North Dakota State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a041ad77-e800-4728-92ca-60cc10fbb674	North Florida	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+07412016-58ab-443f-a05c-2d0997f64c9f	North Texas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ab9ce598-df6f-41dd-be9d-9bc0e7361da2	Northeastern	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5b7381d4-fdeb-48a9-a3e5-6fcb2b63fcf7	Northern Arizona	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0b11bb25-6c8d-4586-9cc7-6be1d59ccb0c	Northern Colorado	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0c922a51-c884-40a7-b8cb-019cd262d9a6	Northern Illinois	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6db07e55-7ac1-4bc3-b84a-a89ee7aac8f8	Northern Iowa	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e3e51048-acd4-4925-8848-909fe3a8c994	Northern Kentucky	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d3170b61-7bbc-4e29-b46f-04dadfe90df9	Northwestern	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+74593b99-2acc-4dcc-b568-e21a0cfef3bf	Northwestern State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9b39112e-672b-4983-9ae3-1de344b2500d	Notre Dame	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4a874ed4-494e-4bfe-8099-e49b896924d2	Oakland	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+02ae3968-e965-420d-a93a-6b7e37fd8e2b	Ohio	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+12b0bedc-ce7e-4961-9939-6969a35a9eb5	Ohio State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+101aa742-cd65-4ad3-a833-0fae4fed9410	Oklahoma	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e6091626-eaed-49b3-9746-37bdb37a51f0	Oklahoma State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3cf50906-af41-4e9c-b0ac-63df4632bb57	Old Dominion	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1af66a02-f495-41b7-a78f-b2e6c04ef267	Omaha	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f12ba3ac-d71c-4dfd-997f-4ec16f94cd42	Oral Roberts	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8014d294-ccd0-4518-a4dd-2cc677cde091	Oregon	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2c67efa5-a138-4567-aa01-e8fcb5a9a039	Oregon State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e0611d17-ea65-450a-9b6a-486c9860243f	Pacific	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3cea6133-04dc-483c-b75a-c9533da6ba03	Penn State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+07d0f138-76e6-4445-8be2-f753eb7c917d	Pennsylvania	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+dd659347-2200-4fac-b294-08a2bd17732d	Pepperdine	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9b8e2a39-e492-4717-97d4-7d4fc876db4a	Pittsburgh	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f00a1dd8-f2d1-4d91-8840-5b1a5a76c919	Portland	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b9346dfd-6ea9-4538-9cc4-ee45fdf66b73	Portland State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+812383d7-ed18-4d58-81e8-1ab245b30254	Prairie View	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+105aab93-9666-4f45-9932-ab87b9097698	Presbyterian	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+188905c1-b69c-43ad-a88f-38d780a9975c	Princeton	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6b95fdbe-3a82-4fa7-b2c3-f9ddb6509a9b	Providence	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7f50ac31-a46b-41bf-96b7-79f5c44449db	Purdue	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f7452c5b-34de-4d11-95e5-082a16146dbb	Purdue Fort Wayne	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+42b6ee0f-8905-446d-a167-870b6576abaa	Queens (NC)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f3de623e-c1ae-41cd-9c5b-2f497322dcdb	Quinnipiac	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+fc49b79a-0212-4b05-b5dc-5cf437be00e5	Radford	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6e699f70-9bbf-4ffc-8106-0d92f66242f5	Rhode Island	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b4d067ef-35f7-4233-bc46-3019372fd02a	Rice	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c41799ad-c30c-48c4-81c4-850cd150953c	Richmond	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+18533d19-30be-4361-ad8e-7be6fd3042dd	Rider	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c4fe8ac8-ef6d-4e20-b8d3-21f3b08aa2a9	Robert Morris	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d7408dc0-97eb-4e63-941f-33838bf2bc4c	Rutgers	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+71b3f1fd-cffe-4340-89a9-022113451798	Sacramento State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c70a82e5-b8ef-4881-a8b7-4ad4dfadd217	Sacred Heart	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2f1beb47-e059-4857-935c-83239ea4d4bd	Saint Francis (PA)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4bf69fc9-ef18-487d-80f9-30ac66dec7d7	Saint Joseph's	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ecde152d-4a5d-4ffe-aebe-af915191070a	Saint Louis	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a8c3f6eb-c43a-4f79-a9b3-4b1ad748ce80	Saint Mary's (CA)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+12cb8e8c-f4be-4a44-bb97-99faa3cee903	Saint Peter's	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+eb8bce23-c4c2-4d4c-ba7e-642697495e52	Sam Houston	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f74677e4-9005-4c7d-90d9-7a16a4759ef9	Samford	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+617bec33-42e1-42d2-9592-017b5ae439ca	San Diego	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a0cd67fa-4e10-4692-aafa-8f5f8a4128c7	San Diego State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+765257ae-6342-4b1b-ba38-6d4e6c0d48a5	San Francisco	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1553ef63-46fd-48e0-8ee7-156437afaf43	San Jose State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+2bc60234-8816-40ac-963f-ea71e8d331bd	Santa Clara	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+453c2242-2cd1-4a35-9610-95b21ff86939	Savannah State Tigers	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c4cdc885-bd2c-4770-b6a9-084bb1627c7d	Seattle	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+835b728b-2193-403c-9080-c509534a17fd	Seton Hall	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1810945a-c504-4789-afc3-441226201608	Siena	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a93b74d0-8052-46c7-b48f-ecb415cdb4f3	South Alabama	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e0a7037c-1541-481a-b76f-ee4f7c01dbeb	South Carolina	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5590e7ca-54f4-4bba-8447-5ca5c0e5c7e3	South Carolina State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+96b3a149-c245-46bb-bb20-610fed8ee598	South Carolina Upstate	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+52ec5546-cf41-41c7-90e4-8a98b2d3f6da	South Dakota	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+88ebb768-8715-4ceb-8cc3-868e414141ba	South Dakota State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4f49daf5-a21f-450b-9e99-b233c67668d5	South Florida	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bbf84c49-d2f1-40a5-b61b-46e245fb1124	Southeast Missouri State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e41d8a1d-dd2a-46e4-9e9c-96bfefbff02b	Southeastern Louisiana	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3fd913b7-1448-48ed-9399-7fda26067761	Southern	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4bb54e73-54bb-4ee3-82e6-11ddc29acfa5	Southern California	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+40034a56-bedb-451a-b1d3-1ebc2df5bc62	Southern Illinois	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d76c7985-857b-475c-82bf-9a3d26856b92	Southern Illinois-Edwardsville	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+daaa6b90-57e7-4219-8fb9-2d102654adb3	Southern Indiana	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+edca6f03-ad9b-42f4-84d7-2f0bd723b635	Southern Methodist	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c2529318-27ef-4534-a27b-99dcab31a99f	Southern Mississippi	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+044ef5e6-1ef0-41ba-9c7d-327d76229529	Southern Utah	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8583ff52-bd66-4718-acb5-a0b5c9d035a6	St. Bonaventure	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3e1e6f06-6b3f-4cab-bf50-7e65898de8bc	St. Francis (NY) Terriers	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9518c29e-6ffe-49f9-a505-c10a38cf838f	St. John's (NY)	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9420152a-bd0c-4842-97e1-02c7ac9d4162	St. Thomas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+52f6e1c3-4a0b-4016-8a87-790297e0cdc6	Stanford	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7cbd9598-3cbc-408c-8867-d3289d512e64	Stephen F. Austin	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+70106568-8025-40f9-8b68-41609af7be12	Stetson	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cff7d12a-723d-48da-899c-44d9bd64b8e5	Stonehill	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4a24bca5-96d9-4f95-8c99-5a4c93958da0	Stony Brook	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b0671cc0-d29d-42a9-ad1b-7921fcee4f59	Syracuse	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f36b04bb-6923-40a9-8da1-d27f00e53698	TCU	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3689914b-9006-48e1-952f-3a6e9a87359c	Tarleton State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f8048bc0-76ed-43ef-bd9d-c464278f9fd1	Temple	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5a9e34f6-8a23-4b71-b972-a2b4ccb49636	Tennessee	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+e1775360-68d6-482f-9a09-9b57fde08ce2	Tennessee State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9db5c586-d797-45dc-a96e-eda9a2e13133	Tennessee Tech	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+351025de-b5a6-48a3-b20f-a6c64f9d435e	Tennessee-Martin	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c9e0a0de-41f9-476b-972e-e26ead4b9b19	Texas	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+0cf6fa8f-04da-4e28-b353-debc9180c341	Texas A&M	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+085ead75-e854-4217-be15-064d20c39584	Texas A&M-Corpus Christi	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+eaef2da1-feb2-41c7-b44a-bebe48a4a8b9	Texas Southern	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ce05cbab-328c-4fe7-a2d0-82d0dcf39980	Texas State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a6000608-dbd4-490f-af38-a94696016f03	Texas Tech	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+86d674b2-6a00-4ee8-ae75-4b75aac793bd	Texas-Rio Grande Valley	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+03a7f5e9-a2b8-4d02-81da-2e3091270d63	The Citadel	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1122ecdb-67e9-4ae2-a352-63699ca26fba	Toledo	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+96e182bc-6684-4de4-a52c-cbc0845fde27	Towson	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+b6c2b13d-b7ec-41fe-a231-98ac60c0edac	Troy	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+90169769-f7c7-48be-a88d-fea3e74bcccd	Tulane	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1c4333ab-f02b-4363-854f-f0be2577fbfb	Tulsa	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+63a1028c-e9d6-48ad-848a-54515f1c6f38	UAB	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3bada3df-43d5-4ae0-aae4-451e771488d1	UC Davis	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7a6244f1-7574-4e99-bc07-a59e46c4c0c9	UC Irvine	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4758843b-e227-429a-920a-b27552d249c1	UC Riverside	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1bd9ee98-988a-4a25-96d0-d26dc3f6534b	UC San Diego	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ae2571ea-792d-4f02-a62f-02fd738a8706	UC Santa Barbara	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bf82bd30-0893-400f-b975-a498312e0128	UCF	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a8d749e8-2522-4767-bdb9-7d6b71395108	UCLA	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+c21b93f8-5024-4858-8ce4-6217fbe1b6f8	UNC Asheville	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ec3974e5-101b-4484-bf97-92d4555c89b8	UNC Greensboro	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+de5c869c-ce33-4ee6-9de8-8773cb39e134	UNC Wilmington	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+244e4d85-4a46-4e8f-a9c4-1a21d113a22c	UT Arlington	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+5ed9e8b1-4a62-4b92-aa38-32052086be52	UTEP	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f12830e9-6a1b-43f1-924b-99c138489476	UTSA	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ff849ab7-1e7e-4b80-836d-5a6212c1f320	Utah	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+46fe51c8-6393-4e4f-83a6-262cd467cd6d	Utah State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4b1a93a6-4f29-42c8-8655-596efe102056	Utah Tech	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+1d79c474-e158-4a2c-a09b-e7abd515bc83	Utah Valley	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f49350b6-0eb1-4e66-9cac-5d93ba9c056b	Valparaiso	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+586333b2-5442-4e97-9bf8-9761732ece9f	Vanderbilt	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6dca7240-ea9e-4d70-9421-b9698e69d792	Vermont	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3f7a72d8-a139-4785-9940-33da37449b67	Villanova	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ab351b13-afd9-4afd-89a0-9835797692b9	Virginia	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+4444413d-31a0-437d-af0c-6ab097ee926c	Virginia Commonwealth	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+63c983bb-4b50-42a7-a118-f0e80204b9ff	Virginia Military Institute	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8952c3fe-a68b-4569-b325-64396fbcca4c	Virginia Tech	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+6bd8b43c-7532-424e-a553-21744e0da5f3	Wagner	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+d3dd7073-36b7-4f20-badb-44da46e15ded	Wake Forest	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+25050113-2ec4-42b4-bfb0-e1000260239b	Washington	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a68d088b-3c8e-4eea-b597-f88af21f1427	Washington State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cfbf0f33-8ea7-45dc-85c6-cc2694f048da	Weber State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+dff0a026-74c1-401e-aff5-ec3e146d1f96	West Georgia	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cc142bc5-0b37-4a66-bcc6-72158539fca0	West Virginia	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9f192038-aaf8-4f62-8a92-6cc696b2ecfd	Western Carolina	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7268d677-f8ea-4045-af83-4609be32b69f	Western Illinois	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+39cf6281-9b92-419f-95de-28eb2ca7a3d8	Western Kentucky	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+bd1b5281-ea45-45da-9b38-ed6c2272b13d	Western Michigan	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+410bbf3a-188b-40b2-a41a-2a44adf5b08d	Wichita State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+8f5f02ff-ef39-4fdc-86e7-b3ab023c684d	William & Mary	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+3d3a39d0-6d4e-44ed-81d7-c9c1014e63e4	Winthrop	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+7c16cfb7-3c53-4deb-8be7-88e3730aed14	Wisconsin	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+a3f2f3b9-8de8-4fe3-8cc0-46ee74aee033	Wofford	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+ec600628-7de5-439a-9d7a-a67c47a35ac2	Wright State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+cd7f59ba-7699-4475-87c3-1128414071e2	Wyoming	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+f0ae52a5-bb3d-4978-a4c1-be4c39d5f9dd	Xavier	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+78d6d5e2-f595-4281-8f9f-147292fdf658	Yale	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+9e5cad05-af24-42ac-898e-15388be9ef6c	Youngstown State	2025-04-07 07:36:17.077669+00	2025-04-07 07:36:17.077669+00	\N
+\.
 
 
 --
