@@ -1,0 +1,342 @@
+[
+  {
+    "name": "New Orleans",
+    "seed": 16,
+    "region": "East"
+  },
+  {
+    "name": "Mount St. Mary's",
+    "seed": 16,
+    "region": "East"
+  },
+  {
+    "name": "Southern California",
+    "seed": 11,
+    "region": "East"
+  },
+  {
+    "name": "Providence",
+    "seed": 11,
+    "region": "East"
+  },
+  {
+    "name": "Villanova",
+    "seed": 1,
+    "region": "East"
+  },
+  {
+    "name": "Wisconsin",
+    "seed": 8,
+    "region": "East"
+  },
+  {
+    "name": "Virginia Tech",
+    "seed": 9,
+    "region": "East"
+  },
+  {
+    "name": "Virginia",
+    "seed": 5,
+    "region": "East"
+  },
+  {
+    "name": "North Carolina Wilmington",
+    "seed": 12,
+    "region": "East"
+  },
+  {
+    "name": "Florida",
+    "seed": 4,
+    "region": "East"
+  },
+  {
+    "name": "ETSU",
+    "seed": 13,
+    "region": "East"
+  },
+  {
+    "name": "Southern Methodist",
+    "seed": 6,
+    "region": "East"
+  },
+  {
+    "name": "Baylor",
+    "seed": 3,
+    "region": "East"
+  },
+  {
+    "name": "New Mexico St",
+    "seed": 14,
+    "region": "East"
+  },
+  {
+    "name": "South Carolina",
+    "seed": 7,
+    "region": "East"
+  },
+  {
+    "name": "Marquette",
+    "seed": 10,
+    "region": "East"
+  },
+  {
+    "name": "Duke",
+    "seed": 2,
+    "region": "East"
+  },
+  {
+    "name": "Troy",
+    "seed": 15,
+    "region": "East"
+  },
+  {
+    "name": "UC Davis",
+    "seed": 16,
+    "region": "Midwest"
+  },
+  {
+    "name": "North Carolina Central",
+    "seed": 16,
+    "region": "Midwest"
+  },
+  {
+    "name": "Kansas",
+    "seed": 1,
+    "region": "Midwest"
+  },
+  {
+    "name": "Miami (FL)",
+    "seed": 8,
+    "region": "Midwest"
+  },
+  {
+    "name": "Michigan St",
+    "seed": 9,
+    "region": "Midwest"
+  },
+  {
+    "name": "Iowa St",
+    "seed": 5,
+    "region": "Midwest"
+  },
+  {
+    "name": "Nevada",
+    "seed": 12,
+    "region": "Midwest"
+  },
+  {
+    "name": "Purdue",
+    "seed": 4,
+    "region": "Midwest"
+  },
+  {
+    "name": "Vermont",
+    "seed": 13,
+    "region": "Midwest"
+  },
+  {
+    "name": "Creighton",
+    "seed": 6,
+    "region": "Midwest"
+  },
+  {
+    "name": "Rhode Island",
+    "seed": 11,
+    "region": "Midwest"
+  },
+  {
+    "name": "Oregon",
+    "seed": 3,
+    "region": "Midwest"
+  },
+  {
+    "name": "Iona",
+    "seed": 14,
+    "region": "Midwest"
+  },
+  {
+    "name": "Michigan",
+    "seed": 7,
+    "region": "Midwest"
+  },
+  {
+    "name": "Oklahoma St",
+    "seed": 10,
+    "region": "Midwest"
+  },
+  {
+    "name": "Louisville",
+    "seed": 2,
+    "region": "Midwest"
+  },
+  {
+    "name": "Jacksonville St",
+    "seed": 15,
+    "region": "Midwest"
+  },
+  {
+    "name": "Wake Forest",
+    "seed": 11,
+    "region": "South"
+  },
+  {
+    "name": "Kansas St",
+    "seed": 11,
+    "region": "South"
+  },
+  {
+    "name": "North Carolina",
+    "seed": 1,
+    "region": "South"
+  },
+  {
+    "name": "Texas Southern",
+    "seed": 16,
+    "region": "South"
+  },
+  {
+    "name": "Arkansas",
+    "seed": 8,
+    "region": "South"
+  },
+  {
+    "name": "Seton Hall",
+    "seed": 9,
+    "region": "South"
+  },
+  {
+    "name": "Minnesota",
+    "seed": 5,
+    "region": "South"
+  },
+  {
+    "name": "Middle Tennessee",
+    "seed": 12,
+    "region": "South"
+  },
+  {
+    "name": "Butler",
+    "seed": 4,
+    "region": "South"
+  },
+  {
+    "name": "Winthrop",
+    "seed": 13,
+    "region": "South"
+  },
+  {
+    "name": "Cincinnati",
+    "seed": 6,
+    "region": "South"
+  },
+  {
+    "name": "UCLA",
+    "seed": 3,
+    "region": "South"
+  },
+  {
+    "name": "Kent St",
+    "seed": 14,
+    "region": "South"
+  },
+  {
+    "name": "Dayton",
+    "seed": 7,
+    "region": "South"
+  },
+  {
+    "name": "Wichita St",
+    "seed": 10,
+    "region": "South"
+  },
+  {
+    "name": "Kentucky",
+    "seed": 2,
+    "region": "South"
+  },
+  {
+    "name": "Northern Kentucky",
+    "seed": 15,
+    "region": "South"
+  },
+  {
+    "name": "Gonzaga",
+    "seed": 1,
+    "region": "West"
+  },
+  {
+    "name": "South Dakota St",
+    "seed": 16,
+    "region": "West"
+  },
+  {
+    "name": "Northwestern",
+    "seed": 8,
+    "region": "West"
+  },
+  {
+    "name": "Vanderbilt",
+    "seed": 9,
+    "region": "West"
+  },
+  {
+    "name": "Notre Dame",
+    "seed": 5,
+    "region": "West"
+  },
+  {
+    "name": "Princeton",
+    "seed": 12,
+    "region": "West"
+  },
+  {
+    "name": "West Virginia",
+    "seed": 4,
+    "region": "West"
+  },
+  {
+    "name": "Bucknell",
+    "seed": 13,
+    "region": "West"
+  },
+  {
+    "name": "Maryland",
+    "seed": 6,
+    "region": "West"
+  },
+  {
+    "name": "Xavier",
+    "seed": 11,
+    "region": "West"
+  },
+  {
+    "name": "Florida St",
+    "seed": 3,
+    "region": "West"
+  },
+  {
+    "name": "Florida Gulf Coast",
+    "seed": 14,
+    "region": "West"
+  },
+  {
+    "name": "St. Mary's",
+    "seed": 7,
+    "region": "West"
+  },
+  {
+    "name": "Virginia Commonwealth",
+    "seed": 10,
+    "region": "West"
+  },
+  {
+    "name": "Arizona",
+    "seed": 2,
+    "region": "West"
+  },
+  {
+    "name": "North Dakota",
+    "seed": 15,
+    "region": "West"
+  }
+]

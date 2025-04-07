@@ -1,0 +1,342 @@
+[
+  {
+    "name": "FDU",
+    "seed": 16,
+    "region": "East"
+  },
+  {
+    "name": "Florida Gulf Coast",
+    "seed": 16,
+    "region": "East"
+  },
+  {
+    "name": "Tulsa",
+    "seed": 11,
+    "region": "East"
+  },
+  {
+    "name": "Michigan",
+    "seed": 11,
+    "region": "East"
+  },
+  {
+    "name": "North Carolina",
+    "seed": 1,
+    "region": "East"
+  },
+  {
+    "name": "Southern California",
+    "seed": 8,
+    "region": "East"
+  },
+  {
+    "name": "Providence",
+    "seed": 9,
+    "region": "East"
+  },
+  {
+    "name": "Indiana",
+    "seed": 5,
+    "region": "East"
+  },
+  {
+    "name": "Chattanooga",
+    "seed": 12,
+    "region": "East"
+  },
+  {
+    "name": "Kentucky",
+    "seed": 4,
+    "region": "East"
+  },
+  {
+    "name": "Stony Brook",
+    "seed": 13,
+    "region": "East"
+  },
+  {
+    "name": "Notre Dame",
+    "seed": 6,
+    "region": "East"
+  },
+  {
+    "name": "West Virginia",
+    "seed": 3,
+    "region": "East"
+  },
+  {
+    "name": "Stephen F. Austin",
+    "seed": 14,
+    "region": "East"
+  },
+  {
+    "name": "Wisconsin",
+    "seed": 7,
+    "region": "East"
+  },
+  {
+    "name": "Pitt",
+    "seed": 10,
+    "region": "East"
+  },
+  {
+    "name": "Xavier",
+    "seed": 2,
+    "region": "East"
+  },
+  {
+    "name": "Weber St",
+    "seed": 15,
+    "region": "East"
+  },
+  {
+    "name": "Virginia",
+    "seed": 1,
+    "region": "Midwest"
+  },
+  {
+    "name": "Hampton",
+    "seed": 16,
+    "region": "Midwest"
+  },
+  {
+    "name": "Texas Tech",
+    "seed": 8,
+    "region": "Midwest"
+  },
+  {
+    "name": "Butler",
+    "seed": 9,
+    "region": "Midwest"
+  },
+  {
+    "name": "Purdue",
+    "seed": 5,
+    "region": "Midwest"
+  },
+  {
+    "name": "Little Rock",
+    "seed": 12,
+    "region": "Midwest"
+  },
+  {
+    "name": "Iowa St",
+    "seed": 4,
+    "region": "Midwest"
+  },
+  {
+    "name": "Iona",
+    "seed": 13,
+    "region": "Midwest"
+  },
+  {
+    "name": "Seton Hall",
+    "seed": 6,
+    "region": "Midwest"
+  },
+  {
+    "name": "Gonzaga",
+    "seed": 11,
+    "region": "Midwest"
+  },
+  {
+    "name": "Utah",
+    "seed": 3,
+    "region": "Midwest"
+  },
+  {
+    "name": "Fresno St",
+    "seed": 14,
+    "region": "Midwest"
+  },
+  {
+    "name": "Dayton",
+    "seed": 7,
+    "region": "Midwest"
+  },
+  {
+    "name": "Syracuse",
+    "seed": 10,
+    "region": "Midwest"
+  },
+  {
+    "name": "Michigan St",
+    "seed": 2,
+    "region": "Midwest"
+  },
+  {
+    "name": "Middle Tennessee",
+    "seed": 15,
+    "region": "Midwest"
+  },
+  {
+    "name": "Wichita St",
+    "seed": 11,
+    "region": "South"
+  },
+  {
+    "name": "Vanderbilt",
+    "seed": 11,
+    "region": "South"
+  },
+  {
+    "name": "Kansas",
+    "seed": 1,
+    "region": "South"
+  },
+  {
+    "name": "Austin Peay",
+    "seed": 16,
+    "region": "South"
+  },
+  {
+    "name": "Colorado",
+    "seed": 8,
+    "region": "South"
+  },
+  {
+    "name": "Connecticut",
+    "seed": 9,
+    "region": "South"
+  },
+  {
+    "name": "Maryland",
+    "seed": 5,
+    "region": "South"
+  },
+  {
+    "name": "South Dakota St",
+    "seed": 12,
+    "region": "South"
+  },
+  {
+    "name": "California",
+    "seed": 4,
+    "region": "South"
+  },
+  {
+    "name": "Hawaii",
+    "seed": 13,
+    "region": "South"
+  },
+  {
+    "name": "Arizona",
+    "seed": 6,
+    "region": "South"
+  },
+  {
+    "name": "Miami (FL)",
+    "seed": 3,
+    "region": "South"
+  },
+  {
+    "name": "Buffalo",
+    "seed": 14,
+    "region": "South"
+  },
+  {
+    "name": "Iowa",
+    "seed": 7,
+    "region": "South"
+  },
+  {
+    "name": "Temple",
+    "seed": 10,
+    "region": "South"
+  },
+  {
+    "name": "Villanova",
+    "seed": 2,
+    "region": "South"
+  },
+  {
+    "name": "North Carolina Asheville",
+    "seed": 15,
+    "region": "South"
+  },
+  {
+    "name": "Southern",
+    "seed": 16,
+    "region": "West"
+  },
+  {
+    "name": "Holy Cross",
+    "seed": 16,
+    "region": "West"
+  },
+  {
+    "name": "Oregon",
+    "seed": 1,
+    "region": "West"
+  },
+  {
+    "name": "St. Joseph's",
+    "seed": 8,
+    "region": "West"
+  },
+  {
+    "name": "Cincinnati",
+    "seed": 9,
+    "region": "West"
+  },
+  {
+    "name": "Baylor",
+    "seed": 5,
+    "region": "West"
+  },
+  {
+    "name": "Yale",
+    "seed": 12,
+    "region": "West"
+  },
+  {
+    "name": "Duke",
+    "seed": 4,
+    "region": "West"
+  },
+  {
+    "name": "North Carolina Wilmington",
+    "seed": 13,
+    "region": "West"
+  },
+  {
+    "name": "Texas",
+    "seed": 6,
+    "region": "West"
+  },
+  {
+    "name": "Northern Iowa",
+    "seed": 11,
+    "region": "West"
+  },
+  {
+    "name": "Texas A&M",
+    "seed": 3,
+    "region": "West"
+  },
+  {
+    "name": "Green Bay",
+    "seed": 14,
+    "region": "West"
+  },
+  {
+    "name": "Oregon St",
+    "seed": 7,
+    "region": "West"
+  },
+  {
+    "name": "Virginia Commonwealth",
+    "seed": 10,
+    "region": "West"
+  },
+  {
+    "name": "Oklahoma",
+    "seed": 2,
+    "region": "West"
+  },
+  {
+    "name": "Cal St Bakersfield",
+    "seed": 15,
+    "region": "West"
+  }
+]
