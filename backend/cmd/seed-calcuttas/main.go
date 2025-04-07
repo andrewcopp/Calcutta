@@ -64,7 +64,14 @@ func main() {
 	}
 
 	// Get the data directory
-	dataDir := "../../migrations/seed/calcuttas"
+	wd, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting working directory: %v\n", err)
+		os.Exit(1)
+	}
+	// Go up two directories from cmd/seed-calcuttas to backend
+	backendDir := filepath.Join(wd, "..", "..")
+	dataDir := filepath.Join(backendDir, "migrations", "seed", "calcuttas")
 	fmt.Printf("Looking for data in: %s\n", dataDir)
 
 	// Process each CSV file in the data directory
@@ -230,6 +237,11 @@ func seedCalcutta(database *gorm.DB, data *CalcuttaData) error {
 		return fmt.Errorf("error finding tournament for year %d: %v", data.Year, err)
 	}
 
+	if tournament.ID == "" {
+		tx.Rollback()
+		return fmt.Errorf("no tournament found for year %d", data.Year)
+	}
+
 	// Find or create the admin user for all Calcuttas
 	var adminUser struct {
 		ID string
@@ -242,24 +254,18 @@ func seedCalcutta(database *gorm.DB, data *CalcuttaData) error {
 
 	if adminUser.ID == "" {
 		// Create the admin user if it doesn't exist
+		adminUser.ID = uuid.New().String()
 		err = tx.Exec(`
 			INSERT INTO users (id, email, first_name, last_name, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?)
-		`, uuid.New().String(), "admin@calcutta.com", "Calcutta", "Admin", time.Now(), time.Now()).Error
+		`, adminUser.ID, "admin@calcutta.com", "Calcutta", "Admin", time.Now(), time.Now()).Error
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("error creating admin user: %v", err)
 		}
-
-		// Get the ID of the newly created admin user
-		err = tx.Raw(`SELECT id FROM users WHERE email = ?`, "admin@calcutta.com").Scan(&adminUser).Error
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("error getting admin user ID: %v", err)
-		}
 	}
 
-	// Create a Calcutta for this tournament using the admin user
+	// Create the Calcutta
 	calcuttaID := uuid.New().String()
 	err = tx.Exec(`
 		INSERT INTO calcuttas (id, tournament_id, owner_id, name, created_at, updated_at)
@@ -271,67 +277,83 @@ func seedCalcutta(database *gorm.DB, data *CalcuttaData) error {
 	}
 
 	// Create Calcutta rounds
-	rounds := []int{50, 100, 150, 200, 250, 300} // Points for each round
-	for i, points := range rounds {
+	rounds := []struct {
+		round  int
+		points int
+	}{
+		{1, 50},  // Round of 64
+		{2, 100}, // Round of 32
+		{3, 150}, // Sweet 16
+		{4, 200}, // Elite 8
+		{5, 250}, // Final 4
+		{6, 300}, // Championship
+	}
+
+	for _, r := range rounds {
 		roundID := uuid.New().String()
 		err = tx.Exec(`
 			INSERT INTO calcutta_rounds (id, calcutta_id, round, points, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?)
-		`, roundID, calcuttaID, i+1, points, time.Now(), time.Now()).Error
+		`, roundID, calcuttaID, r.round, r.points, time.Now(), time.Now()).Error
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("error creating Calcutta round: %v", err)
 		}
 	}
 
+	// Create a map of team name to seed for quick lookup
+	teamSeedMap := make(map[string]int)
+	for _, team := range data.Teams {
+		standardizedName := common.GetStandardizedSchoolName(team.Name)
+		teamSeedMap[standardizedName] = team.Seed
+	}
+
 	// Create entries for each player
 	for _, entryData := range data.Entries {
-		// Create the entry with just the name, no user association
+		// Create the entry
 		entryID := uuid.New().String()
 		err = tx.Exec(`
-			INSERT INTO calcutta_entries (id, name, calcutta_id, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?)
-		`, entryID, entryData.Name, calcuttaID, time.Now(), time.Now()).Error
+			INSERT INTO calcutta_entries (id, calcutta_id, user_id, name, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, entryID, calcuttaID, adminUser.ID, entryData.Name, time.Now(), time.Now()).Error
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("error creating entry: %v", err)
 		}
 
-		// Create entry teams
+		// Add teams to the entry
 		for _, teamData := range entryData.Teams {
-			// Skip summary rows
 			standardizedName := common.GetStandardizedSchoolName(teamData.TeamName)
-			if standardizedName == "" {
-				continue
-			}
+			seed := teamSeedMap[standardizedName]
 
-			// Find the team using standardized school name
-			var team struct {
+			// Find the tournament team by seed and standardized school name
+			var tournamentTeam struct {
 				ID string
 			}
-			result := tx.Raw(`
+			err = tx.Raw(`
 				SELECT tt.id 
 				FROM tournament_teams tt
 				JOIN schools s ON tt.school_id = s.id
-				WHERE tt.tournament_id = ? AND s.name = ?
-			`, tournament.ID, standardizedName).Scan(&team)
-
-			if result.Error != nil {
-				tx.Rollback()
-				return fmt.Errorf("error finding team %s (standardized: %s): %v", teamData.TeamName, standardizedName, result.Error)
-			}
-
-			if result.RowsAffected == 0 {
+				WHERE tt.tournament_id = ? AND tt.seed = ? AND s.name = ?
+			`, tournament.ID, seed, standardizedName).Scan(&tournamentTeam).Error
+			if err != nil {
 				fmt.Printf("Warning: Could not find team %s (standardized: %s) for tournament %d\n", teamData.TeamName, standardizedName, data.Year)
 				continue
 			}
 
-			// Create the entry team
+			if tournamentTeam.ID == "" {
+				fmt.Printf("Warning: Found no tournament team for %s (standardized: %s) with seed %d in tournament %d\n", teamData.TeamName, standardizedName, seed, data.Year)
+				continue
+			}
+
+			fmt.Printf("Found tournament team %s for %s (standardized: %s) with seed %d in tournament %d\n", tournamentTeam.ID, teamData.TeamName, standardizedName, seed, data.Year)
+
+			// Create entry team
 			entryTeamID := uuid.New().String()
 			err = tx.Exec(`
 				INSERT INTO calcutta_entry_teams (id, entry_id, team_id, bid, created_at, updated_at)
 				VALUES (?, ?, ?, ?, ?, ?)
-			`, entryTeamID, entryID, team.ID, int(teamData.Bid), time.Now(), time.Now()).Error
+			`, entryTeamID, entryID, tournamentTeam.ID, teamData.Bid, time.Now(), time.Now()).Error
 			if err != nil {
 				tx.Rollback()
 				return fmt.Errorf("error creating entry team: %v", err)
@@ -339,11 +361,5 @@ func seedCalcutta(database *gorm.DB, data *CalcuttaData) error {
 		}
 	}
 
-	// Commit the transaction
-	err = tx.Commit().Error
-	if err != nil {
-		return fmt.Errorf("error committing transaction: %v", err)
-	}
-
-	return nil
+	return tx.Commit().Error
 }

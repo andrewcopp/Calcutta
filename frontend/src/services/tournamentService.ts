@@ -1,39 +1,78 @@
-import { Tournament } from '../types/tournament';
+import { Tournament, TournamentTeam } from '../types/calcutta';
 
-const API_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8080/api';
 
-export const fetchTournaments = async (): Promise<Tournament[]> => {
-  try {
-    const response = await fetch(`${API_URL}/tournaments`);
+export const tournamentService = {
+  async getAllTournaments(): Promise<Tournament[]> {
+    const response = await fetch(`${API_BASE_URL}/tournaments`);
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      throw new Error('Failed to fetch tournaments');
     }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching tournaments:', error);
-    throw error;
-  }
-};
+    return response.json();
+  },
 
-export const createTournament = async (name: string, rounds: number): Promise<Tournament> => {
-  try {
-    const response = await fetch(`${API_URL}/tournaments`, {
+  async getTournament(id: string): Promise<Tournament> {
+    const response = await fetch(`${API_BASE_URL}/tournaments/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch tournament');
+    }
+    return response.json();
+  },
+
+  async getTournamentTeams(id: string): Promise<TournamentTeam[]> {
+    const response = await fetch(`${API_BASE_URL}/tournaments/${id}/teams`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch tournament teams');
+    }
+    return response.json();
+  },
+
+  async createTournament(name: string, rounds: number): Promise<Tournament> {
+    const response = await fetch(`${API_BASE_URL}/tournaments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ name, rounds }),
     });
-
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      throw new Error('Failed to create tournament');
     }
+    return response.json();
+  },
 
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error creating tournament:', error);
-    throw error;
+  async createTournamentTeam(
+    tournamentId: string,
+    schoolId: string,
+    seed: number
+  ): Promise<TournamentTeam> {
+    const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ schoolId, seed }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create tournament team');
+    }
+    return response.json();
+  },
+
+  async updateTournamentTeam(
+    teamId: string,
+    updates: Partial<TournamentTeam>
+  ): Promise<TournamentTeam> {
+    const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update tournament team');
+    }
+    return response.json();
   }
 }; 

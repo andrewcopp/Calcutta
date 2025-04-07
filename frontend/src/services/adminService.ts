@@ -1,4 +1,5 @@
 import { TournamentTeam } from '../types/calcutta';
+import { School } from '../types/school';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -47,4 +48,38 @@ export async function recalculatePortfolios(tournamentId: string): Promise<void>
   if (!response.ok) {
     throw new Error('Failed to recalculate portfolios');
   }
-} 
+}
+
+interface CreateTournamentTeamData {
+  schoolId: string;
+  seed: number;
+  region: string;
+}
+
+export async function createTournamentTeam(tournamentId: string, teamData: CreateTournamentTeamData): Promise<TournamentTeam> {
+  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(teamData),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to create tournament team');
+  }
+  
+  return response.json();
+}
+
+export const adminService = {
+  async getAllSchools(): Promise<School[]> {
+    const response = await fetch(`${API_BASE_URL}/schools`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch schools');
+    }
+    return response.json();
+  }
+}; 

@@ -50,6 +50,13 @@ var SchoolNameMap = map[string]string{
 	"North Carolina Greensboro": "UNC Greensboro",
 	"Oregon St":                 "Oregon State",
 	"Ohio St":                   "Ohio State",
+	// New mappings for missing teams
+	"Charleston":      "College of Charleston",
+	"Kent St.":        "Kent State",
+	"Utah St.":        "Utah State",
+	"Texas A & M":     "Texas A&M",
+	"McNeese":         "McNeese State",
+	"Grambling State": "Grambling",
 }
 
 // GetStandardizedSchoolName returns the standardized name for a school
