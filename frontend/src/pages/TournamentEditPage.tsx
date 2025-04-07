@@ -66,6 +66,7 @@ export const TournamentEditPage: React.FC = () => {
       await Promise.all(
         teams.map(team =>
           tournamentService.updateTournamentTeam(team.id, {
+            seed: team.seed,
             byes: team.byes,
             wins: team.wins,
             eliminated: team.eliminated,
@@ -148,7 +149,17 @@ export const TournamentEditPage: React.FC = () => {
               .map(team => (
                 <tr key={team.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {team.seed}
+                    <select
+                      value={team.seed}
+                      onChange={(e) => handleTeamUpdate(team.id, 'seed', parseInt(e.target.value) || 1)}
+                      className="w-16 p-1 border rounded"
+                    >
+                      {Array.from({ length: 16 }, (_, i) => i + 1).map(seed => (
+                        <option key={seed} value={seed}>
+                          {seed}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {schools[team.schoolId]?.name || 'Unknown School'}
