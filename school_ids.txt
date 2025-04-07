@@ -1,0 +1,371 @@
+                  id                  |            name             
+--------------------------------------+-----------------------------
+ 776cfbdd-d66e-4eea-8545-6aaea1709ca9 | Abilene Christian
+ 1de78ae9-6b9e-4048-8aed-c1d9d1cf40e3 | Air Force
+ 3adba659-7115-4473-923d-f3f1dd4e10d5 | Akron
+ d5a7a116-2d4d-4968-b2a0-e976698368e0 | Alabama
+ 395b5e44-07c9-480d-a966-a5482c704f3b | Alabama A&M
+ b6a88d7b-ac1b-4381-abe7-d2e69dd09db8 | Alabama State
+ 1ab4d301-07b4-4035-9228-a7382a7017f5 | Alabama-Birmingham
+ 4f19841e-5033-4318-aef9-d309dfe22222 | Albany
+ 7abe7c69-d782-4533-9595-e4b8fcf9e361 | Alcorn State
+ 9cad5068-3c62-478c-9546-5c076c623d72 | American
+ c02717f4-47dd-496f-bc8d-86d6a36cd9c3 | Appalachian State
+ 44ba1787-a5ac-48e6-bf64-8193814e69ce | Arizona
+ 166ba8b8-2a2b-4525-b1d1-5e74a82bd694 | Arizona State
+ 89a0f2e1-ae98-4364-9beb-6c0eddcdbe1b | Arkansas
+ 8c725290-4bd0-4110-9706-ebca56dbea52 | Arkansas Pine Bluff
+ 458bf8bf-d3fc-4186-844a-79eef8ef09e3 | Arkansas State
+ 2f69d954-705e-4906-bef4-6eaccba7031e | Army
+ 992a3432-ba9e-4fff-928d-764cf1f795e9 | Auburn
+ 26d09335-31f9-4266-a130-d5f05553fb26 | Austin Peay
+ ecc96808-6ec7-49dd-b71f-054ffb3b2d62 | BYU
+ 115548f2-676e-457e-ba33-cd50b53aad67 | Ball State
+ 10454c4a-fc33-467d-b2e7-ae66053b287f | Baylor
+ 4ab1bd8c-f5d7-40fc-a48a-579bd55ce558 | Bellarmine
+ 6cbd5829-e70d-464a-8578-2f54aeafc820 | Belmont
+ 29c1d6c3-a751-477b-999f-bcc9a5a00a0d | Bethune-Cookman
+ 8cb8eb01-22f5-4a56-bacc-bac324d7641a | Binghamton
+ 43ff00dc-b693-47e0-b0a0-ea7e9d4cb555 | Boise State
+ 77794249-1fa5-4193-8b13-a028604343cf | Boston College
+ 4fc0388e-db2a-48af-86b3-bb831ae41f83 | Boston University
+ bb2af8f9-4f7e-4eaf-a8d5-5dbc500093c6 | Bowling Green
+ c2b069e1-0bde-4181-9ceb-3b1967f4a45a | Bradley
+ 62b30f3a-1d38-4b23-9c0b-726fb056b2f8 | Brown
+ 8d9ce4f4-1588-4ef0-b148-7827df51822a | Bryant
+ a3bae910-e7f9-4011-be19-20e7048f33d8 | Bucknell
+ 60bb9c88-6e64-461a-b7e6-8e44bc358aec | Buffalo
+ 20e4cc84-ab1c-4414-bbb2-69c73c844391 | Butler
+ 6a1e7142-8f40-4d6e-a45f-a013c6460ab4 | Cal Baptist
+ 16888a87-f04c-4155-b733-68f6c0174eff | Cal Poly
+ 1b1e7f0e-878f-4956-af2b-0666c25b6bfd | Cal State Bakersfield
+ ff291d89-6cc8-4e5a-97e0-f260fc3acd3d | Cal State Fresno
+ a36efdc3-4093-4b9d-9ecb-4bc303886c90 | Cal State Fullerton
+ aed62fcc-bc57-484b-a13a-d4e43f6cce95 | Cal State Long Beach
+ db74455c-230b-4a74-b432-7b92441dfef7 | Cal State Northridge
+ fb33fb25-0174-4f36-9b9f-4bbf96e6c27c | Cal State Sacramento
+ a008dfe3-04b8-41ce-ac42-32e8e63776c3 | California
+ 2b8c63fd-b110-45e3-a4ec-46647228c159 | Campbell
+ 21f5fb7a-b906-49f3-b063-fc63b0aedae4 | Canisius
+ b5518dfa-a755-4f0f-80e0-72c2d3a04fc5 | Central Arkansas
+ d60dd7fc-ca6b-4370-bd23-212c9b194b94 | Central Connecticut
+ 8973a84e-ed18-49b3-9472-afe86a23eae4 | Central Michigan
+ cdac4357-e016-4909-9890-1a30221d2fb5 | Charleston
+ 6e1597c7-27f5-406c-9f10-3b05c880d79c | Charleston Southern
+ 8a4b29b9-744c-47d8-80ee-0609c5ce5a4e | Charlotte
+ 555544d7-e2c7-4580-bd61-28125a0b3aca | Chattanooga
+ 66c56dcc-b3f5-43ed-922f-eec05c5d8ed6 | Chicago State
+ 3df98bd7-b59f-4ba5-bae2-989264970251 | Cincinnati
+ 1bf4c709-4d0d-468d-8c63-35489ab2bf8b | Clemson
+ 1c229413-97e8-4471-a2fa-b3258fc86aab | Cleveland State
+ d6f029b0-a1e3-4972-92f4-c30856e702a6 | Coastal Carolina
+ 20e95257-3a70-4802-bf84-cc3f18e32cd5 | Colgate
+ 6acbe64d-bd9e-4899-b8cd-8f41b5b0aede | College of Charleston
+ 3e3864ba-a85e-4ec9-9f3b-94b72af5eb75 | Colorado
+ 950ade9b-3ca6-4bd6-bf4f-6c6c404f8a46 | Colorado State
+ 9da84a3e-1034-47bd-9d64-fa4455d080e6 | Columbia
+ 2d01fe55-f784-43dd-a641-09402e3b14c9 | Connecticut
+ db90aac5-8313-4b13-bb9b-1615414e5c3c | Coppin State
+ a5bf088a-58b7-4ed2-8021-9672cc572531 | Cornell
+ 1231d8a7-647e-4c65-9b4d-164ea00a51a8 | Creighton
+ bb9df37c-417f-482a-a70e-0dc28817d854 | Dartmouth
+ 0d127cb1-1052-41fc-98d2-117c3fd9700c | Davidson
+ 3836f7ca-a0ab-4e01-ae71-e3f3647f64eb | Dayton
+ 521a90f0-9948-499f-8f6d-be3ba8466b5f | DePaul
+ dbc684d3-2a86-4410-914b-90c4969021ff | Delaware
+ 3a2d0964-8b16-4398-b78f-a5738e6a7aba | Delaware State
+ 1a04af5e-7432-4c71-abe1-be130f3f3d9e | Denver
+ f1fa9ce0-617f-4114-b384-c44a9279b782 | Detroit Mercy
+ fa2bcdee-430f-4afc-90aa-31e913e6397f | Drake
+ eb7be2c7-e1cb-4392-b9b3-daaebe7b0a94 | Drexel
+ b7c7740e-c24d-4697-aba7-2cbe1d9959a5 | Duke
+ 66b7ec9b-e125-411f-afa2-f359ba902e11 | Duquesne
+ d0c5da73-ad94-4238-8e57-5542080a9db8 | East Carolina
+ b319e039-16b4-49fa-9e5d-2188ebcf8538 | East Tennessee State
+ 53e6c5eb-024d-4e22-8664-562457a3a212 | Eastern Illinois
+ 1662c978-2dfa-4411-a2d4-880219707801 | Eastern Kentucky
+ 77881348-9db5-423b-aadd-22ec2acd8a20 | Eastern Michigan
+ 169f755a-2b66-4dc3-8f91-b8cbbf2e4e8a | Eastern Washington
+ d195b5bb-e7f5-47d6-b6a3-6748ba054159 | Elon
+ 3cbe75af-1410-4d61-8518-d5cb722fabc3 | Evansville
+ 8193452b-751d-4f11-8eb7-c53d7d8d4c52 | FGCU
+ 5cf7e997-1e09-4749-9bbf-fea316f75ccf | Fairfield
+ 638d3151-fa46-480e-9b76-e1cebba01a2d | Fairleigh Dickinson
+ f6f698e7-24cd-45f1-9810-981d5a078e3f | Florida
+ 3e61c40f-f55b-4c56-b8df-cedd73acb556 | Florida A&M
+ 06249d34-3807-40d4-8ac6-7d291da44835 | Florida Atlantic
+ d43e491b-72fb-4ccd-9a3d-455d2cf36296 | Florida Gulf Coast
+ 8a1503ce-3b3c-49a7-892b-b0a59f25e6d0 | Florida International
+ 5dfd1adf-65cd-474b-a067-ffc0d3d37707 | Florida State
+ 942cb94c-25e7-4343-8d4f-21abb455c90e | Fordham
+ c3974a10-2777-4728-a7c0-c38747a5e42d | Furman
+ fdcd84a4-ed0a-4913-84c1-3910a9e10865 | Gardner-Webb
+ 1cef3a8d-448f-41ba-bfba-2aa8d82dc44a | George Mason
+ 67d1efe9-d2a0-409d-91e9-12fcf35ee65b | George Washington
+ b88f4179-b1c2-4ff5-b179-a85c3e7c1dd3 | Georgetown
+ 912a0e3b-badd-4adf-b7d5-453f443e73b5 | Georgia
+ 004e6698-4b17-419f-a811-b7ecd1091c1e | Georgia Southern
+ 4c018987-7725-4651-8c36-10fdbe5d6853 | Georgia State
+ 24ec2ba3-7167-4223-a24a-6588ed017012 | Georgia Tech
+ 99a7c8df-4b67-4626-9ec4-74a0863a03e2 | Gonzaga
+ dba6b988-c752-4541-8b4c-be2913b96f2f | Grambling State
+ f4cba220-a7a9-4ea2-808e-2ab38ec72426 | Grand Canyon
+ e5ebb14c-be0c-4ecc-a7df-2f7fadb2a191 | Green Bay
+ d799cae4-84aa-4c5b-b99d-b9ae4c6ad5b6 | Hampton
+ 7cab7a31-f1b4-47e7-ba58-a5b142de588b | Hartford
+ 3e68513a-ea8f-4346-8927-d10b071de91c | Harvard
+ 2c4fe82c-bcf4-4f54-abd6-de33bd70a207 | Hawaii
+ 8d4dc92a-7cad-4ae0-ab23-258b73be6f9c | High Point
+ fb37f68d-f79b-4882-acc4-3542f3bcbe41 | Hofstra
+ c0cb7a94-70a9-4834-9678-10d691fbc115 | Holy Cross
+ 9d5aeba2-2a11-470c-a03c-311fbdcd9a09 | Houston
+ f36112dc-51bb-40bb-8b6d-4fe9bcf687cb | Houston Christian
+ 8ae8d35e-e166-46e0-93cd-1c28b86565fe | Howard
+ 32bd79f5-8cd2-4edc-b217-895f6cd869b8 | Idaho
+ ef0ad172-f477-4def-b4ad-59c8d1cf87c8 | Idaho State
+ 5553a8f0-f80f-42a9-a7d4-7a92416068fa | Illinois
+ 4474bbf1-3f07-4b84-8869-d10ed0471ebd | Illinois Chicago
+ 9d7bfd80-0938-41dd-b6b7-aa9152fcb0e9 | Illinois State
+ 9fc87aaa-9dd4-4748-a9bb-de1fb3df0c61 | Indiana
+ 27f81e70-66d2-4c82-b166-ae27a3ae1571 | Indiana State
+ 22d8e6a6-c61b-4024-b700-1cd66a05ab94 | Iona
+ 94485a4e-ab3a-44a9-8e39-d51943242759 | Iowa
+ c4e7b758-762f-439c-9e8e-a75e5612cc2d | Iowa State
+ 1929272d-1916-4819-bfa8-ac7a527fcae0 | Jackson State
+ 5a80d695-3bcc-44c6-addf-32336cec7efb | Jacksonville
+ 44ab3ad2-e48c-45f2-a745-941d3bb9c90c | Jacksonville State
+ fd747384-6924-4522-91b1-e93429343c43 | James Madison
+ 82c54498-598e-46a2-8095-fc6cd212d4e7 | Kansas
+ 5130675b-5d75-4279-9ce3-aad1bd94da5c | Kansas City
+ e3a3f3f2-7dca-4917-a9f9-c4c2451d3c64 | Kansas State
+ 10808f83-52eb-47ec-8a5e-c455826218dc | Kennesaw State
+ 771ee70f-8583-4881-a14a-4e924ae6385d | Kent State
+ 38563487-8b4d-4097-b301-9bb1fc30f771 | Kentucky
+ a0934d38-fe71-4f49-bc76-b4ec8ae7471d | La Salle
+ 880d6f45-bf4c-42d1-8709-ca8e11a4d277 | Lafayette
+ 28335287-2c6d-429f-8cee-4ceb5f810f50 | Lamar
+ 8cc29223-4d31-450d-8c6e-a6df36d852c2 | Lehigh
+ 685ae227-992c-4095-895f-606cb1b9cae1 | Liberty
+ b8317cf1-8852-4f07-a4d6-c499a3723fbd | Lipscomb
+ 81d48f15-d3ab-43ef-a71d-9fcbdef739f3 | Long Beach State
+ df370ef5-6b6e-4641-8031-0125e5105f92 | Long Island
+ 75b0d28d-fa0c-42f6-a4b1-405471cfb71a | Longwood
+ 5f859cb4-74c5-4d78-ac6a-2a7014bd56fa | Louisiana
+ e6b736b0-2c0f-4381-969a-bef5b4ab7af4 | Louisiana Monroe
+ 0d3202e6-2dee-4ef9-a248-7aa1e79ab2a0 | Louisiana State
+ 0163c3f7-fdaa-4cf3-a222-69563c9fcfba | Louisiana Tech
+ d836fa59-aadb-4466-9797-b35c5b9a12ff | Louisville
+ 2cf52a21-57de-4c7f-942c-430163ea1c3e | Loyola Chicago
+ e8afeb50-d0bb-4ed5-803c-88570b512458 | Loyola Maryland
+ ece7a421-755d-4d5b-85e2-eef70031bd73 | Loyola New Orleans
+ 98e79a32-c0d7-4528-a1d0-5b0ee70bc05e | Maine
+ 59ad491f-1029-4231-8073-0e0b67c48db2 | Manhattan
+ f001954c-b26f-4392-a78e-01d39a0482d6 | Marist
+ 4efbe54e-ab08-46e4-9589-90ad5ad9246d | Marquette
+ a5722101-71f3-47ef-87f2-94a25014f6e2 | Marshall
+ 59dff9f3-bbc0-44e5-91ab-624abdd395e1 | Maryland
+ 2cad64b5-1b44-48d3-8d07-34e2ba28f916 | Maryland Eastern Shore
+ b705cc16-d5c9-472f-89e3-76f2d42948e2 | Massachusetts
+ 1fb59ed8-5a0c-4546-80a4-d596ac116f30 | McNeese
+ 6b71a538-58d0-4ba1-a627-03bb34c948fd | Memphis
+ 7acda8de-c229-4573-9d91-43ddfd170f0c | Mercer
+ 049260b4-f289-449b-9291-00579af2a9e3 | Merrimack
+ 79d33da6-9247-4317-b47c-a0e9be3d62c9 | Miami
+ 50bf8458-a544-4258-8b93-7bbb52a90abf | Miami (OH)
+ 7cce1b4a-db47-4226-ad92-e78ed3f8323d | Michigan
+ a59ca1a2-bdb0-441a-80c9-32c042dc902b | Michigan State
+ d69d4466-3ad2-4b9c-b105-e3ae2731c0c7 | Middle Tennessee State
+ 1217f260-30af-45d0-96c7-290988c9c72c | Minnesota
+ 1359bfe0-2534-436e-83dc-57d3e63c9363 | Mississippi
+ ea13d4a5-798d-4ba0-a0d8-e1a2d58dd1b6 | Mississippi State
+ 1b3f345f-3737-472b-9174-0e6bb878b363 | Mississippi Valley State
+ 95289513-5388-4b88-9116-91d2f14fa652 | Missouri
+ a2b57ebc-b0bf-4d6a-a0b6-302a13157a95 | Missouri State
+ 49268990-3131-4055-a1bd-dd2f7eb76cbf | Monmouth
+ 11e5fadd-0c96-4064-b175-9e0ca825c958 | Montana
+ 222e1781-4c30-475d-a459-4d961491c50d | Montana State
+ 8f6b2cf9-4fe5-4edd-9d06-b249b07f9008 | Morehead State
+ 2acd6d2e-13de-4c05-b77a-5216276eb0ae | Morgan State
+ 12939bd9-1024-4830-a929-8e2f22ac6234 | Mount St. Mary's
+ 63d25cc2-b291-43ba-80a1-a297d242eb8c | Murray State
+ 5f64adc0-fe32-4090-9e3c-574299d1026b | NJIT
+ d0e2b2c2-06cc-4acf-b231-99527e0478e2 | Navy
+ cd007980-f123-4083-b453-04d7ca0e1960 | Nebraska
+ 65e43659-2b74-4917-a41c-ef1325a9b684 | Nebraska Omaha
+ e671bf26-1489-4936-8d4c-f925cb62a6c2 | Nevada
+ 1e2e58c1-0c47-4b00-8ddd-4ea71b0a6792 | New Hampshire
+ b89fac5f-830b-4826-aa66-aac32e8ad0f7 | New Mexico
+ 8c043cc7-6562-4fbf-bf9d-4ea16db1a22f | New Mexico State
+ 8ca04e56-dadc-423b-af7c-3300c4f9ec66 | New Orleans
+ 3033b098-1ba8-43b3-a8fe-f554c2eed41e | Niagara
+ 5840f1c4-9df0-485e-af30-02e07b1531fe | Nicholls State
+ 093bce66-1be7-4d62-890c-8ec4eee9cf27 | Norfolk State
+ 3ed7a887-6c1a-4ee2-92ab-2342b40752e0 | North Alabama
+ 48e8fda1-64d6-4bac-a183-074dc53788ed | North Carolina
+ e47b2bac-5cf1-4213-aea2-d5930ae66a41 | North Carolina A&T
+ 3aa113d6-edb9-47e7-bd16-0072859b2e54 | North Carolina Central
+ 8c39555c-b5a5-428a-a4a3-38279e61f88d | North Carolina State
+ 64e8ff95-0b6b-4dbe-9006-6a768996ea92 | North Dakota
+ a3a914b8-d65b-4719-95f7-5e8c8235d8f4 | North Dakota State
+ 6bd7800d-9a99-4f4c-8bef-7c76a0ade063 | North Florida
+ 2ab93c13-d22a-4cd8-9530-0b521b347b4c | North Texas
+ 2abd2e39-301a-43ac-8c74-f63edb1a7eb4 | Northeastern
+ 399d977a-f58a-4a87-8455-3d48df8fef0d | Northern Arizona
+ 8c651982-d35b-417c-a28c-2ff2b59e1dce | Northern Colorado
+ 34251fac-3d50-4721-b911-ad09511f89c0 | Northern Illinois
+ e122eeca-7734-47a6-87e9-1874e4321800 | Northern Iowa
+ 39467d30-16d4-4494-91b1-4375de5ee888 | Northern Kentucky
+ ccfd6ba9-95e7-42e6-bac9-197c9467ba80 | Northwestern
+ 3dc77b68-c5fa-4b7f-ba03-d9634adb1329 | Northwestern State
+ 76acbbec-bdb0-4ce4-a87b-67c738959b02 | Notre Dame
+ 2b263199-30e0-47d8-ab32-5c9fec08902b | Oakland
+ 330317c7-b46c-47c9-b9db-c000651a617c | Ohio
+ 25161d79-10fe-49bb-9b20-aae7fac47ffc | Ohio State
+ d1bf5f37-85e5-4dd7-900a-da70ebabe0a2 | Oklahoma
+ a393aed3-1187-4f7d-9775-ef3e4c756d77 | Oklahoma State
+ 17aea468-ee9a-47fe-a616-23534bc18969 | Old Dominion
+ b1bbd5b2-b83b-4ff4-a3be-21be46e36869 | Ole Miss
+ 09841129-226a-43fc-954b-71b18df9b75a | Omaha
+ da45bb35-ba22-4730-9a05-41c7faeb7330 | Oral Roberts
+ 99ac9fbb-d92f-4369-9f01-1e39c3312b0f | Oregon
+ b06c66b2-a0c5-4e47-92ea-d8124766c097 | Oregon State
+ a8da7b51-6908-4e9c-a32e-6711c0e0a2b8 | Pacific
+ 859af3b5-8ebc-462d-a302-c0311973bfcf | Penn
+ af4e7013-d192-4347-95a4-4119b1837c18 | Penn State
+ 110f609c-a762-4ce8-b73a-a8ab41a017d3 | Pepperdine
+ c8652715-42ee-4340-b48f-32b0adadcf15 | Pittsburgh
+ 1492c68a-cd95-4d28-87ad-3684d37b21e3 | Play-in Losers
+ 199678a2-cae0-44eb-a6c1-6f5664dede8b | Portland
+ 79eac7cf-4ce9-4dca-ba83-a7438b2b7dfd | Portland State
+ cafe808f-e9e2-4976-a816-a81eece5dd80 | Prairie View A&M
+ 09a9d1ec-e32b-4edb-80c5-2bfeca1abcee | Presbyterian
+ 067a436c-5d9e-4b9e-b58a-57fb1256a3f2 | Princeton
+ fa7a0d9d-9200-4e4f-adf4-f0e9e9cdac7c | Providence
+ a4147d04-0530-4166-8ed4-63e90453940c | Purdue
+ d2d85beb-f4d0-47a4-89f7-d75981b191ac | Purdue Fort Wayne
+ 1504ba7d-0251-4d1b-8027-a33029f49627 | Quinnipiac
+ 1859dbca-d9c5-4375-89a9-de8c530ad76c | Radford
+ 08ca4d79-cff5-4153-8e43-2743669f7157 | Rhode Island
+ 6b890cca-0819-4db4-9d11-c70d4109de2f | Rice
+ 823cc027-8e2c-443d-9c8f-a9fb593bdcd3 | Richmond
+ b98919a7-24f6-4611-9fe2-0b2c3028745a | Rider
+ 948e0999-2902-42cd-a9be-bee0db0124c1 | Robert Morris
+ af43b58e-fe5e-4915-9c01-7c7fffddb16b | Rutgers
+ 1c00f427-f0cd-43f5-8784-9b2a637a1647 | SIU Edwardsville
+ c2366620-a11b-4574-8df7-a7d428da0452 | SMU
+ dfcd6903-ec28-4ed4-ab3b-b6b47fbbcf3c | Sacramento State
+ ae919804-5886-451e-915b-5ce0334e3bba | Sacred Heart
+ 754f9d4c-6485-4253-a059-0d15eec30fea | Saint Francis
+ e3a0ba64-d97b-4d14-a332-db382d3acd00 | Saint Joseph's
+ ec909605-4dec-4226-a4e2-bb75d7239212 | Saint Louis
+ 038f7f9f-da60-49e9-b652-bed6b0996999 | Saint Mary's
+ a882384e-0f36-4114-b538-8538d928374c | Saint Peter's
+ 7ac5f3aa-d095-45cf-8f05-ccd49845be1f | Sam Houston State
+ d558662f-33f0-4113-b765-3f1cc26c9106 | Samford
+ 02f3d9ab-b2c5-4b0f-8678-4093e044319b | San Diego
+ 083cf895-227f-435e-8e0a-27170c2e73f2 | San Diego State
+ 89869cdb-62e9-4366-ad38-0a92b6bf9d5c | San Francisco
+ 9d43872f-45b1-4703-9b4a-1a7734487ae8 | San Jose State
+ 28b3300f-3f8e-4d7e-b79b-b77ec363b17b | Santa Clara
+ 949dcf3a-ea08-4c5e-af34-811af7447b10 | Seattle
+ ec0e715d-fee7-4b5f-b5ef-daf889ca94f5 | Seton Hall
+ 1fd499c6-21ed-47ce-b8f9-00b70179ee1d | Siena
+ de620924-4c04-4d81-b8da-717f4dc91353 | South Alabama
+ 70332d0f-57be-4c8f-84bf-b948c0a26431 | South Carolina
+ e0736931-a252-4c9e-b587-c272ef9d130f | South Carolina State
+ 236d66e8-6b30-44e2-9731-b20f892f1564 | South Dakota
+ 35f42ef3-f956-4d53-802a-cc9da35f74cd | South Dakota State
+ c44942f0-c8d4-49e0-9731-71d822923b8b | South Florida
+ 652fd7ab-0fdd-4e1b-9fe1-727ed09f491b | Southeastern Louisiana
+ 37dd8059-3121-4f81-97c7-f954121dd8c8 | Southern
+ bf4102b2-0c60-40c0-9353-e3caf7d600db | Southern Illinois
+ 20becbd0-b91e-414a-ad59-c22dff523a71 | Southern Indiana
+ b2f61e42-4e34-4fa2-ab62-f7f7da58b833 | Southern Miss
+ f85e37e7-37e5-4685-9f56-42a83d5e50d9 | Southern Utah
+ c5bf06fd-27b5-4b6e-a9c1-dfbaa785fab6 | St. Bonaventure
+ e9ce4667-e093-4f66-a179-3fa4b5fbe77e | St. Francis Brooklyn
+ f7c74bf8-e859-4dde-b5d3-7cc3ccab8d4a | St. John's
+ b3b81641-01b2-4c89-a4d0-fd48dddaf96f | St. Thomas
+ f21c70e8-f6ab-4f06-b935-20cd31131fce | Stanford
+ 71dbec83-1f59-4489-9a6d-5d150c92bc03 | Stephen F. Austin
+ 4e7c0356-93bf-4a2a-9d7c-d6ee91d3d943 | Stetson
+ 19b0866f-b6b2-47b6-8240-7ae4cd264b26 | Stonehill
+ 16dc2cc5-a8f2-4cb6-974e-56d2d15ab9b8 | Stony Brook
+ 3d92007f-f2a0-4266-a751-a043d56a23e3 | Syracuse
+ 546bacd2-f851-494f-8c01-ad9371daf6db | TCU
+ 6978b0bc-3c34-4821-adb6-98018369840d | Temple
+ 42cec989-c7f2-4d91-a0c2-6fec6ebb6bf8 | Tennessee
+ 5483a941-22ec-42fa-aca5-abe136c63f3b | Tennessee State
+ 82b08233-fccb-4bb0-8cff-1b1a8de0b6fa | Tennessee Tech
+ 650b7abf-f364-4f4d-8ac5-49c0667280f5 | Texas
+ b3a176b3-1106-49c0-bb61-66d6056d1b14 | Texas A&M
+ 04103521-62a2-4dce-8821-70b4df65d4b3 | Texas A&M Corpus Christi
+ 4fba942e-2aec-4093-8963-7c09bdbfbb63 | Texas Christian
+ 75ca20e2-fbaa-4942-b67f-48b208d916b8 | Texas El Paso
+ edf5ace1-a325-4075-b31e-95e0166c5e91 | Texas Rio Grande Valley
+ ecceb9db-ff62-48c6-9bef-3be19ff20c0a | Texas Southern
+ cd1eae46-aadb-46b0-9870-223ea7ee30e5 | Texas State
+ 228cd1b4-b0f9-4d0b-ab09-376c09adf054 | Texas Tech
+ 58cadc42-2015-4f88-88a5-6650fc1764a4 | The Citadel
+ 35c27354-e9fd-4965-a518-63ece5b206ae | Toledo
+ 4d7f4429-5e91-4afb-9d6d-00a0b8a12269 | Towson
+ abc4eada-6292-409d-912a-2a50629649eb | Troy
+ 99538c03-509b-4a12-a9a9-56739a50d0b6 | Tulane
+ 35406d0f-3662-4eda-b813-edb4ddda18c8 | Tulsa
+ ed94ab19-b629-48b7-a6c4-e3d70b617d47 | UC Davis
+ 33b8f619-eafd-434a-873a-27c1488488fa | UC Irvine
+ 48f58feb-7880-464c-b150-f90879e76b7d | UC Riverside
+ c4c67882-a79e-4c2e-a257-588a07c3763a | UC San Diego
+ 63620a68-803e-46ea-ab89-4ba5eee1b7d1 | UC Santa Barbara
+ dc894291-5e88-4284-a845-b7ec34d9a358 | UCF
+ cfa4da69-12d7-41d9-be0e-8ec5b5405690 | UCLA
+ 7976c00f-8b60-4e6d-b647-f6d625cc63c6 | UConn
+ ada653b2-7e8e-4558-b22d-dc1118c106a7 | UMBC
+ a27d9106-9ce1-48c2-9610-ce8e2d9ab9b0 | UMKC
+ 0fe932a1-2ad6-4c11-9511-22e5bf200a7e | UNC Asheville
+ 35077b2d-16a6-48b4-ab70-3b974971e8a5 | UNC Greensboro
+ e8865085-61dd-4971-9144-12c6ed47f816 | UNC Wilmington
+ 43f7ffd3-911a-4040-9c40-1c99a4307cea | UNLV
+ 60bd5794-76cb-4d47-80a0-fa99455bb812 | USC
+ 5a40aaa6-73ef-4ada-bf04-4422a63f53f8 | USC Upstate
+ 016f828a-1efb-4078-9c21-26d6cc81c50b | UTEP
+ 64a884be-82a9-4efe-9408-38b574a2a36a | UTSA
+ a9276409-4ce2-43d5-860c-9f62ac5f2bb8 | Utah
+ 34a8fdfb-796d-4342-9aca-e2f3431e0bd7 | Utah State
+ 2be06154-262f-4703-b2f4-4eb3f4dcb30b | Utah Tech
+ 16292cd5-c086-4c1a-ad71-1424b85af4a6 | Utah Valley
+ 30a6555b-81cb-4bc9-9e1e-f7a63f1beca1 | VCU
+ b8cc3da1-bf11-482b-a50d-f28fde68f2d5 | Valparaiso
+ 580344ec-5a4e-4913-9629-97c0435e3e13 | Vanderbilt
+ 6af115a5-6575-492d-915f-101d6a842509 | Vermont
+ 5b6509c1-3cb3-48c7-8b0d-1fc8d8465b9e | Villanova
+ cd6ecb25-d04a-4207-ba12-5fdb45c11c14 | Virginia
+ 9a26cbe8-42af-4ea4-9aee-b2f0a56f6ebe | Virginia Commonwealth
+ 343177f0-c3ac-480d-bce7-eec3186af7a6 | Virginia Military Institute
+ b9b66a54-c5e1-47d7-b1a1-99d8b3607ec8 | Virginia Tech
+ c70d293a-030b-459d-8e85-dfadb7e37b5c | Wagner
+ 73798b15-a1e2-4568-8f44-2e4f4066df7b | Wake Forest
+ 84f178a4-61fd-4de9-8c3f-73aad95617c1 | Washington
+ cd2d87f2-c4c1-46e1-a2b4-0fe01a53a8ab | Washington State
+ bd6fcfcb-339d-4c3b-bf6c-c4547c4c2806 | Weber State
+ 37ca921f-b5f8-45b5-9532-add3143cf624 | West Georgia
+ ffac6eaa-dac2-496f-9a61-2c6fbbbe523c | West Virginia
+ 4d4a44bf-2fce-4b5b-8bb0-a307d87f6a70 | Western Carolina
+ 2093b0cd-c124-4a3c-9b76-5d538eb47039 | Western Illinois
+ a7da19da-d1ec-4ba4-a1f4-b08b10d44e96 | Western Kentucky
+ a26982b3-0542-4c38-9dd4-cb87fe39d2bf | Western Michigan
+ f163e778-a61d-402f-9c33-4de6e618bc23 | Wichita State
+ 00a266e0-7f9f-4897-904b-20ccf5c84ea6 | William & Mary
+ b94fbc02-7d09-45a3-899f-a9fc5511df14 | Winthrop
+ 26717321-2c0f-4798-b1b2-07b1ea7f6264 | Wisconsin
+ e32ff6df-c4c7-47cb-8fd5-09bab41f860f | Wisconsin Green Bay
+ 81104249-35f5-44cc-9607-578303489bc5 | Wisconsin Milwaukee
+ 075aa171-a46f-48a1-adf3-455cb8f58c9d | Wofford
+ 39917e19-cbe2-43c4-bc24-beba6ff38600 | Wright St.
+ f52bac0a-2e07-45b7-99b8-834459e77fe0 | Wright State
+ 7e037b92-aa55-454e-b5b7-d51f8dec0647 | Wyoming
+ aae9cfb4-5d53-4439-a414-e73857f96db6 | Xavier
+ f4bfe161-63f7-4f5e-839e-533ed4b5175c | Yale
+ cb55e4be-ad0c-4148-a4fd-6eb00573f592 | Youngstown State
+(367 rows)
+
