@@ -1,342 +1,410 @@
 [
   {
-    "name": "FDU",
-    "seed": 16,
-    "region": "East"
-  },
-  {
-    "name": "Texas Southern",
-    "seed": 16,
-    "region": "East"
-  },
-  {
     "name": "Purdue",
     "seed": 1,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
+  },
+  {
+    "name": "FDU",
+    "seed": 16,
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Memphis",
     "seed": 8,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Florida Atlantic",
     "seed": 9,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Duke",
     "seed": 5,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Oral Roberts",
     "seed": 12,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Tennessee",
     "seed": 4,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Louisiana",
     "seed": 13,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Kentucky",
     "seed": 6,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Providence",
     "seed": 11,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
-    "name": "Kansas St",
+    "name": "Kansas State",
     "seed": 3,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
-    "name": "Montana St",
+    "name": "Montana State",
     "seed": 14,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
-    "name": "Michigan St",
+    "name": "Michigan State",
     "seed": 7,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
-    "name": "Southern California",
+    "name": "USC",
     "seed": 10,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Marquette",
     "seed": 2,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
     "name": "Vermont",
     "seed": 15,
-    "region": "East"
+    "region": "East",
+    "is_first_four": false
   },
   {
-    "name": "Pitt",
-    "seed": 11,
-    "region": "Midwest"
-  },
-  {
-    "name": "Mississippi St",
-    "seed": 11,
-    "region": "Midwest"
+    "name": "Texas Southern",
+    "seed": 16,
+    "region": "East",
+    "is_first_four": true
   },
   {
     "name": "Houston",
     "seed": 1,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Northern Kentucky",
     "seed": 16,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Iowa",
     "seed": 8,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Auburn",
     "seed": 9,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Miami (FL)",
     "seed": 5,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Drake",
     "seed": 12,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Indiana",
     "seed": 4,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
-    "name": "Kent St",
+    "name": "Kent State",
     "seed": 13,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
-    "name": "Iowa St",
+    "name": "Iowa State",
     "seed": 6,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
+  },
+  {
+    "name": "Pitt",
+    "seed": 11,
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Xavier",
     "seed": 3,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
-    "name": "Kennesaw St",
+    "name": "Kennesaw State",
     "seed": 14,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Texas A&M",
     "seed": 7,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
-    "name": "Penn St",
+    "name": "Penn State",
     "seed": 10,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Texas",
     "seed": 2,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
     "name": "Colgate",
     "seed": 15,
-    "region": "Midwest"
+    "region": "Midwest",
+    "is_first_four": false
   },
   {
-    "name": "Southeast Missouri St",
-    "seed": 16,
-    "region": "South"
-  },
-  {
-    "name": "Texas A&M-Corpus Christi",
-    "seed": 16,
-    "region": "South"
+    "name": "Mississippi State",
+    "seed": 11,
+    "region": "Midwest",
+    "is_first_four": true
   },
   {
     "name": "Alabama",
     "seed": 1,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
+  },
+  {
+    "name": "Texas A&M-Corpus Christi",
+    "seed": 16,
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Maryland",
     "seed": 8,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "West Virginia",
     "seed": 9,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
-    "name": "San Diego St",
+    "name": "San Diego State",
     "seed": 5,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "College of Charleston",
     "seed": 12,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Virginia",
     "seed": 4,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Furman",
     "seed": 13,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Creighton",
     "seed": 6,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
-    "name": "North Carolina St",
+    "name": "NC State",
     "seed": 11,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Baylor",
     "seed": 3,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "UCSB",
     "seed": 14,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Missouri",
     "seed": 7,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
-    "name": "Utah St",
+    "name": "Utah State",
     "seed": 10,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Arizona",
     "seed": 2,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
     "name": "Princeton",
     "seed": 15,
-    "region": "South"
+    "region": "South",
+    "is_first_four": false
   },
   {
-    "name": "Nevada",
-    "seed": 11,
-    "region": "West"
-  },
-  {
-    "name": "Arizona St",
-    "seed": 11,
-    "region": "West"
+    "name": "Southeast Missouri State",
+    "seed": 16,
+    "region": "South",
+    "is_first_four": true
   },
   {
     "name": "Kansas",
     "seed": 1,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Howard",
     "seed": 16,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Arkansas",
     "seed": 8,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Illinois",
     "seed": 9,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
-    "name": "St. Mary's",
+    "name": "Saint Mary's",
     "seed": 5,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
-    "name": "Virginia Commonwealth",
+    "name": "VCU",
     "seed": 12,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
-    "name": "Connecticut",
+    "name": "UConn",
     "seed": 4,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Iona",
     "seed": 13,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "TCU",
     "seed": 6,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
+  },
+  {
+    "name": "Arizona State",
+    "seed": 11,
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Gonzaga",
     "seed": 3,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Grand Canyon",
     "seed": 14,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "Northwestern",
     "seed": 7,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
-    "name": "Boise St",
+    "name": "Boise State",
     "seed": 10,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
     "name": "UCLA",
     "seed": 2,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
   },
   {
-    "name": "North Carolina Asheville",
+    "name": "UNC Asheville",
     "seed": 15,
-    "region": "West"
+    "region": "West",
+    "is_first_four": false
+  },
+  {
+    "name": "Nevada",
+    "seed": 11,
+    "region": "West",
+    "is_first_four": true
   }
 ]
