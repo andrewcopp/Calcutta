@@ -50,12 +50,6 @@ export const TournamentCreatePage: React.FC = () => {
       return;
     }
 
-    // Check if seed is already used
-    if (teamsToAdd.some(team => team.seed === selectedSeed)) {
-      setError(`Seed ${selectedSeed} is already assigned to another team`);
-      return;
-    }
-
     const newTeam: TeamToAdd = {
       schoolId: selectedSchool,
       seed: selectedSeed,

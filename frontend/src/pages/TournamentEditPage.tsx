@@ -72,7 +72,7 @@ export const TournamentEditPage: React.FC = () => {
           })
         )
       );
-      navigate(`/tournaments/${id}`);
+      navigate(`/admin/tournaments/${id}`);
     } catch (err) {
       setError('Failed to save changes');
       console.error('Error saving changes:', err);

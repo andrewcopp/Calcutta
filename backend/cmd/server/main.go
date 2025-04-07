@@ -241,11 +241,52 @@ func updateTeamHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the updated team with school information
+	updatedTeam, err := tournamentRepo.GetTeams(r.Context(), team.TournamentID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Find the updated team in the list
+	var responseTeam *models.TournamentTeam
+	for _, t := range updatedTeam {
+		if t.ID == team.ID {
+			responseTeam = t
+			break
+		}
+	}
+
+	if responseTeam == nil {
+		http.Error(w, "Failed to retrieve updated team", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the school information
+	school, err := schoolService.GetSchoolByID(r.Context(), responseTeam.SchoolID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Create response with team and school information
+	response := map[string]interface{}{
+		"id":         responseTeam.ID,
+		"schoolId":   responseTeam.SchoolID,
+		"seed":       responseTeam.Seed,
+		"byes":       responseTeam.Byes,
+		"wins":       responseTeam.Wins,
+		"eliminated": responseTeam.Eliminated,
+		"created":    responseTeam.Created.Format("2006-01-02T15:04:05Z07:00"),
+		"updated":    responseTeam.Updated.Format("2006-01-02T15:04:05Z07:00"),
+		"school": map[string]interface{}{
+			"id":   school.ID,
+			"name": school.Name,
+		},
+	}
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"message": "Team updated successfully",
-	})
+	json.NewEncoder(w).Encode(response)
 }
 
 // Calcutta API handlers

@@ -21,7 +21,7 @@ SET row_security = off;
 --
 
 COPY public.users (id, email, first_name, last_name, created_at, updated_at, deleted_at) FROM stdin;
-820d2909-c280-4986-b9c5-c55e1e13c1e5	admin@calcutta.com	Calcutta	Admin	2025-04-07 07:44:06.212807+00	2025-04-07 07:44:06.212807+00	\N
+090644de-1158-402e-a103-949b089d8cf9	admin@calcutta.com	Calcutta	Admin	2025-04-07 19:58:24.269075+00	2025-04-07 19:58:24.269075+00	\N
 \.
 
 
