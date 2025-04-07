@@ -104,6 +104,9 @@ func tournamentsHandler(w http.ResponseWriter, r *http.Request) {
 			winnerName = school.Name
 		}
 
+		// Log tournament data
+		log.Printf("Processing tournament: ID=%s, Name=%s", tournament.ID, tournament.Name)
+
 		response = append(response, TournamentResponse{
 			ID:      tournament.ID,
 			Name:    tournament.Name,
@@ -502,6 +505,53 @@ func recalculatePortfoliosHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func createTournamentHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight requests
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Parse request body
+	var request struct {
+		Name   string `json:"name"`
+		Rounds int    `json:"rounds"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if request.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+	if request.Rounds <= 0 {
+		http.Error(w, "Rounds must be greater than 0", http.StatusBadRequest)
+		return
+	}
+
+	// Create tournament
+	tournament, err := tournamentService.CreateTournament(r.Context(), request.Name, request.Rounds)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the created tournament
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(tournament)
+}
+
 func main() {
 	r := mux.NewRouter()
 
@@ -511,7 +561,8 @@ func main() {
 	// Routes
 	r.HandleFunc("/api/health", healthHandler)
 	r.HandleFunc("/api/schools", schoolsHandler)
-	r.HandleFunc("/api/tournaments", tournamentsHandler)
+	r.HandleFunc("/api/tournaments", tournamentsHandler).Methods("GET")
+	r.HandleFunc("/api/tournaments", createTournamentHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/tournaments/{id}/teams", tournamentTeamsHandler)
 	r.HandleFunc("/api/teams/{id}", updateTeamHandler).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/calcuttas", calcuttasHandler)

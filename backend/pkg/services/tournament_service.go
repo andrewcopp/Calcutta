@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"log"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/google/uuid"
 )
 
 // TournamentService handles business logic for tournaments
@@ -67,4 +69,25 @@ func (s *TournamentService) GetGame(gameID string) (*models.TournamentGame, erro
 	// In a real implementation, we would fetch the game from the database
 	// For now, we'll return a placeholder
 	return &models.TournamentGame{}, nil
+}
+
+// CreateTournament creates a new tournament
+func (s *TournamentService) CreateTournament(ctx context.Context, name string, rounds int) (*models.Tournament, error) {
+	log.Printf("Creating tournament with name: %s, rounds: %d", name, rounds)
+
+	tournament := &models.Tournament{
+		ID:     uuid.New().String(),
+		Name:   name,
+		Rounds: rounds,
+	}
+
+	log.Printf("Generated tournament ID: %s", tournament.ID)
+
+	if err := s.repo.Create(ctx, tournament); err != nil {
+		log.Printf("Error creating tournament: %v", err)
+		return nil, err
+	}
+
+	log.Printf("Successfully created tournament: %+v", tournament)
+	return tournament, nil
 }

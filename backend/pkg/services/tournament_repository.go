@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"log"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -276,4 +277,39 @@ func (r *TournamentRepository) GetGamesByTournamentID(ctx context.Context, tourn
 	}
 
 	return games, nil
+}
+
+// Create creates a new tournament in the database
+func (r *TournamentRepository) Create(ctx context.Context, tournament *models.Tournament) error {
+	log.Printf("Inserting tournament into database: %+v", tournament)
+
+	query := `
+		INSERT INTO tournaments (id, name, rounds, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+
+	now := time.Now()
+	tournament.Created = now
+	tournament.Updated = now
+
+	result, err := r.db.ExecContext(ctx, query,
+		tournament.ID,
+		tournament.Name,
+		tournament.Rounds,
+		tournament.Created,
+		tournament.Updated,
+	)
+	if err != nil {
+		log.Printf("Database error creating tournament: %v", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		return err
+	}
+
+	log.Printf("Successfully inserted tournament. Rows affected: %d", rowsAffected)
+	return nil
 }

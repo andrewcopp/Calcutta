@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { fetchTournaments } from '../services/tournamentService';
+import { fetchTournaments, createTournament } from '../services/tournamentService';
 import { Tournament } from '../types/tournament';
 import { TournamentTeam } from '../types/calcutta';
 import { fetchTournamentTeams, updateTournamentTeam, recalculatePortfolios } from '../services/adminService';
+import { SchoolList } from '../components/SchoolList';
 
 export const AdminPage: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -11,12 +12,17 @@ export const AdminPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [showSchools, setShowSchools] = useState(false);
+  const [showAddTournament, setShowAddTournament] = useState(false);
+  const [newTournamentName, setNewTournamentName] = useState('');
+  const [newTournamentRounds, setNewTournamentRounds] = useState(7);
 
   useEffect(() => {
     const loadTournaments = async () => {
       try {
         setLoading(true);
         const data = await fetchTournaments();
+        console.log('Loaded tournaments:', data);
         setTournaments(data);
       } catch (err) {
         setError('Failed to load tournaments');
@@ -87,6 +93,23 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleCreateTournament = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const tournament = await createTournament(newTournamentName, newTournamentRounds);
+      setTournaments([...tournaments, tournament]);
+      setNewTournamentName('');
+      setNewTournamentRounds(7);
+      setShowAddTournament(false);
+    } catch (err) {
+      setError('Failed to create tournament');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
@@ -94,6 +117,69 @@ export const AdminPage: React.FC = () => {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+        </div>
+      )}
+      
+      <div className="mb-6 flex space-x-4">
+        <button
+          onClick={() => setShowSchools(!showSchools)}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showSchools ? 'Hide Schools' : 'Show Schools'}
+        </button>
+        <button
+          onClick={() => setShowAddTournament(!showAddTournament)}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showAddTournament ? 'Cancel' : 'Add Tournament'}
+        </button>
+      </div>
+
+      {showAddTournament && (
+        <div className="mb-6 p-4 border rounded-lg bg-white shadow">
+          <h2 className="text-xl font-semibold mb-4">Create New Tournament</h2>
+          <form onSubmit={handleCreateTournament} className="space-y-4">
+            <div>
+              <label htmlFor="tournamentName" className="block text-sm font-medium text-gray-700 mb-1">
+                Tournament Name
+              </label>
+              <input
+                type="text"
+                id="tournamentName"
+                value={newTournamentName}
+                onChange={(e) => setNewTournamentName(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="tournamentRounds" className="block text-sm font-medium text-gray-700 mb-1">
+                Number of Rounds
+              </label>
+              <input
+                type="number"
+                id="tournamentRounds"
+                value={newTournamentRounds}
+                onChange={(e) => setNewTournamentRounds(parseInt(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded-md"
+                min="1"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create Tournament'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {showSchools && (
+        <div className="mb-6">
+          <SchoolList />
         </div>
       )}
       
