@@ -38,7 +38,44 @@ This application manages March Madness investment pools where players:
 
 ## Getting Started
 
-Coming soon...
+### Prerequisites
+
+- Go 1.24 or later
+- PostgreSQL 16 or later
+- Node.js 18 or later
+- npm 9 or later
+
+### Database Setup
+
+1. Create a PostgreSQL database named `calcutta`
+2. Copy `.env.example` to `.env` and update the database connection settings
+3. Run the database migrations:
+   ```bash
+   cd backend
+   ./scripts/run_migrations.sh -up
+   ```
+4. Seed the database with initial data:
+   ```bash
+   cd backend
+   ./scripts/run_seed.sh
+   ```
+
+### Running the Application
+
+1. Start the backend server:
+   ```bash
+   cd backend
+   go run cmd/server/main.go
+   ```
+
+2. Start the frontend development server:
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
+
+The application should now be running at `http://localhost:3000`
 
 ## Contributing
 
