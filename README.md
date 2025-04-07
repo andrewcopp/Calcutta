@@ -38,14 +38,31 @@ This application manages March Madness investment pools where players:
 
 ## Getting Started
 
-### Prerequisites
+The preferred way to run this project is using Docker Compose, which will set up all necessary services automatically.
+
+### Using Docker Compose (Recommended)
+
+1. Make sure you have Docker and Docker Compose installed
+2. Copy `.env.example` to `.env` and update any necessary settings
+3. Start the application:
+   ```bash
+   docker compose up
+   ```
+
+The application will be available at `http://localhost:3000`
+
+### Manual Setup (Alternative)
+
+If you prefer to run the services manually, follow these steps:
+
+#### Prerequisites
 
 - Go 1.24 or later
 - PostgreSQL 16 or later
 - Node.js 18 or later
 - npm 9 or later
 
-### Database Setup
+#### Database Setup
 
 1. Create a PostgreSQL database named `calcutta`
 2. Copy `.env.example` to `.env` and update the database connection settings
@@ -60,7 +77,7 @@ This application manages March Madness investment pools where players:
    ./scripts/run_seed.sh
    ```
 
-### Running the Application
+#### Running the Application
 
 1. Start the backend server:
    ```bash
