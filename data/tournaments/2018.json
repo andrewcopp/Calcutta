@@ -6,32 +6,32 @@
     {
       "id": "2018-ff-1",
       "tournament_id": "2018-ncaa-mens",
-      "team1_id": "first-four-liu",
-      "team2_id": "radford",
-      "tipoff_time": "2018-03-14T00:00:00",
+      "team1_id": "LIU",
+      "team2_id": "Radford",
+      "tipoff_time": "2018-03-13T00:00:00",
       "sort_order": 1,
       "team1_score": 61,
       "team2_score": 71,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-firstround-3",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.686553",
-      "updated": "2025-04-07T06:42:16.686557"
+      "created": "2025-04-07T03:08:58.426802",
+      "updated": "2025-04-07T03:08:58.426806"
     },
     {
       "id": "2018-ff-2",
       "tournament_id": "2018-ncaa-mens",
-      "team1_id": "st-bonaventure",
-      "team2_id": "ucla",
-      "tipoff_time": "2018-03-14T00:00:00",
+      "team1_id": "St. Bonaventure",
+      "team2_id": "UCLA",
+      "tipoff_time": "2018-03-13T00:00:00",
       "sort_order": 2,
       "team1_score": 65,
       "team2_score": 58,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-firstround-7",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.686570",
-      "updated": "2025-04-07T06:42:16.686571"
+      "created": "2025-04-07T03:08:58.426824",
+      "updated": "2025-04-07T03:08:58.426825"
     },
     {
       "id": "2018-firstround-3",
@@ -42,11 +42,11 @@
       "sort_order": 3,
       "team1_score": 87,
       "team2_score": 61,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-11",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688251",
-      "updated": "2025-04-07T06:42:16.688253"
+      "created": "2025-04-07T08:08:58.427413",
+      "updated": "2025-04-07T08:08:58.427415"
     },
     {
       "id": "2018-firstround-4",
@@ -57,11 +57,11 @@
       "sort_order": 4,
       "team1_score": 83,
       "team2_score": 86,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-11",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688335",
-      "updated": "2025-04-07T06:42:16.688336"
+      "created": "2025-04-07T08:08:58.427469",
+      "updated": "2025-04-07T08:08:58.427469"
     },
     {
       "id": "2018-firstround-5",
@@ -72,11 +72,11 @@
       "sort_order": 5,
       "team1_score": 85,
       "team2_score": 68,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-12",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688389",
-      "updated": "2025-04-07T06:42:16.688390"
+      "created": "2025-04-07T08:08:58.427518",
+      "updated": "2025-04-07T08:08:58.427518"
     },
     {
       "id": "2018-firstround-6",
@@ -87,11 +87,11 @@
       "sort_order": 6,
       "team1_score": 75,
       "team2_score": 81,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-12",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688439",
-      "updated": "2025-04-07T06:42:16.688440"
+      "created": "2025-04-07T08:08:58.427565",
+      "updated": "2025-04-07T08:08:58.427565"
     },
     {
       "id": "2018-firstround-7",
@@ -102,11 +102,11 @@
       "sort_order": 7,
       "team1_score": 77,
       "team2_score": 62,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-13",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688487",
-      "updated": "2025-04-07T06:42:16.688488"
+      "created": "2025-04-07T08:08:58.427611",
+      "updated": "2025-04-07T08:08:58.427612"
     },
     {
       "id": "2018-firstround-8",
@@ -117,11 +117,11 @@
       "sort_order": 8,
       "team1_score": 70,
       "team2_score": 60,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-13",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688535",
-      "updated": "2025-04-07T06:42:16.688535"
+      "created": "2025-04-07T08:08:58.427672",
+      "updated": "2025-04-07T08:08:58.427673"
     },
     {
       "id": "2018-firstround-9",
@@ -132,11 +132,11 @@
       "sort_order": 9,
       "team1_score": 62,
       "team2_score": 79,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-14",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688582",
-      "updated": "2025-04-07T06:42:16.688582"
+      "created": "2025-04-07T08:08:58.427719",
+      "updated": "2025-04-07T08:08:58.427719"
     },
     {
       "id": "2018-firstround-10",
@@ -147,11 +147,11 @@
       "sort_order": 10,
       "team1_score": 74,
       "team2_score": 48,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-14",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688628",
-      "updated": "2025-04-07T06:42:16.688629"
+      "created": "2025-04-07T08:08:58.427766",
+      "updated": "2025-04-07T08:08:58.427767"
     },
     {
       "id": "2018-secondround-11",
@@ -162,11 +162,11 @@
       "sort_order": 11,
       "team1_score": 81,
       "team2_score": 58,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-15",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688699",
-      "updated": "2025-04-07T06:42:16.688700"
+      "created": "2025-04-07T08:08:58.427827",
+      "updated": "2025-04-07T08:08:58.427828"
     },
     {
       "id": "2018-secondround-12",
@@ -177,11 +177,11 @@
       "sort_order": 12,
       "team1_score": 94,
       "team2_score": 71,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-15",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688748",
-      "updated": "2025-04-07T06:42:16.688748"
+      "created": "2025-04-07T08:08:58.427874",
+      "updated": "2025-04-07T08:08:58.427875"
     },
     {
       "id": "2018-secondround-13",
@@ -192,11 +192,11 @@
       "sort_order": 13,
       "team1_score": 66,
       "team2_score": 69,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-16",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688796",
-      "updated": "2025-04-07T06:42:16.688797"
+      "created": "2025-04-07T08:08:58.427921",
+      "updated": "2025-04-07T08:08:58.427922"
     },
     {
       "id": "2018-secondround-14",
@@ -207,11 +207,11 @@
       "sort_order": 14,
       "team1_score": 73,
       "team2_score": 76,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-16",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688844",
-      "updated": "2025-04-07T06:42:16.688845"
+      "created": "2025-04-07T08:08:58.427967",
+      "updated": "2025-04-07T08:08:58.427967"
     },
     {
       "id": "2018-sweet16-15",
@@ -222,11 +222,11 @@
       "sort_order": 15,
       "team1_score": 90,
       "team2_score": 78,
-      "next_game_id": "",
+      "next_game_id": "2018-eliteeight-17",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688904",
-      "updated": "2025-04-07T06:42:16.688905"
+      "created": "2025-04-07T08:08:58.428024",
+      "updated": "2025-04-07T08:08:58.428025"
     },
     {
       "id": "2018-sweet16-16",
@@ -237,11 +237,11 @@
       "sort_order": 16,
       "team1_score": 78,
       "team2_score": 65,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-eliteeight-17",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.688953",
-      "updated": "2025-04-07T06:42:16.688954"
+      "created": "2025-04-07T08:08:58.428070",
+      "updated": "2025-04-07T08:08:58.428071"
     },
     {
       "id": "2018-eliteeight-17",
@@ -252,26 +252,26 @@
       "sort_order": 17,
       "team1_score": 71,
       "team2_score": 59,
-      "next_game_id": "",
+      "next_game_id": "2018-finalfour-65",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689015",
-      "updated": "2025-04-07T06:42:16.689016"
+      "created": "2025-04-07T08:08:58.428128",
+      "updated": "2025-04-07T08:08:58.428129"
     },
     {
       "id": "2018-ff-18",
       "tournament_id": "2018-ncaa-mens",
-      "team1_id": "first-four-syracuse",
-      "team2_id": "arizona-state",
+      "team1_id": "Syracuse",
+      "team2_id": "Arizona State",
       "tipoff_time": "2018-03-14T00:00:00",
       "sort_order": 18,
       "team1_score": 60,
       "team2_score": 56,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-firstround-23",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689058",
-      "updated": "2025-04-07T06:42:16.689059"
+      "created": "2025-04-07T03:08:58.428214",
+      "updated": "2025-04-07T03:08:58.428216"
     },
     {
       "id": "2018-firstround-19",
@@ -282,11 +282,11 @@
       "sort_order": 19,
       "team1_score": 76,
       "team2_score": 60,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-27",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689554",
-      "updated": "2025-04-07T06:42:16.689555"
+      "created": "2025-04-07T08:08:58.428702",
+      "updated": "2025-04-07T08:08:58.428703"
     },
     {
       "id": "2018-firstround-20",
@@ -297,11 +297,11 @@
       "sort_order": 20,
       "team1_score": 94,
       "team2_score": 83,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-27",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689603",
-      "updated": "2025-04-07T06:42:16.689604"
+      "created": "2025-04-07T08:08:58.428751",
+      "updated": "2025-04-07T08:08:58.428751"
     },
     {
       "id": "2018-firstround-21",
@@ -312,11 +312,11 @@
       "sort_order": 21,
       "team1_score": 79,
       "team2_score": 68,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-28",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689651",
-      "updated": "2025-04-07T06:42:16.689652"
+      "created": "2025-04-07T08:08:58.428796",
+      "updated": "2025-04-07T08:08:58.428797"
     },
     {
       "id": "2018-firstround-22",
@@ -327,11 +327,11 @@
       "sort_order": 22,
       "team1_score": 62,
       "team2_score": 58,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-28",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689699",
-      "updated": "2025-04-07T06:42:16.689700"
+      "created": "2025-04-07T08:08:58.428840",
+      "updated": "2025-04-07T08:08:58.428841"
     },
     {
       "id": "2018-firstround-23",
@@ -342,11 +342,11 @@
       "sort_order": 23,
       "team1_score": 52,
       "team2_score": 57,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-29",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689747",
-      "updated": "2025-04-07T06:42:16.689747"
+      "created": "2025-04-07T08:08:58.428888",
+      "updated": "2025-04-07T08:08:58.428889"
     },
     {
       "id": "2018-firstround-24",
@@ -357,11 +357,11 @@
       "sort_order": 24,
       "team1_score": 82,
       "team2_score": 78,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-29",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689795",
-      "updated": "2025-04-07T06:42:16.689795"
+      "created": "2025-04-07T08:08:58.428936",
+      "updated": "2025-04-07T08:08:58.428937"
     },
     {
       "id": "2018-firstround-25",
@@ -372,11 +372,11 @@
       "sort_order": 25,
       "team1_score": 83,
       "team2_score": 78,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-30",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689841",
-      "updated": "2025-04-07T06:42:16.689842"
+      "created": "2025-04-07T08:08:58.428986",
+      "updated": "2025-04-07T08:08:58.428986"
     },
     {
       "id": "2018-firstround-26",
@@ -387,11 +387,11 @@
       "sort_order": 26,
       "team1_score": 89,
       "team2_score": 67,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-30",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689888",
-      "updated": "2025-04-07T06:42:16.689889"
+      "created": "2025-04-07T08:08:58.429034",
+      "updated": "2025-04-07T08:08:58.429037"
     },
     {
       "id": "2018-secondround-27",
@@ -402,11 +402,11 @@
       "sort_order": 27,
       "team1_score": 83,
       "team2_score": 79,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-31",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689946",
-      "updated": "2025-04-07T06:42:16.689946"
+      "created": "2025-04-07T08:08:58.429096",
+      "updated": "2025-04-07T08:08:58.429097"
     },
     {
       "id": "2018-secondround-28",
@@ -417,11 +417,11 @@
       "sort_order": 28,
       "team1_score": 84,
       "team2_score": 53,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-31",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.689992",
-      "updated": "2025-04-07T06:42:16.689993"
+      "created": "2025-04-07T08:08:58.429148",
+      "updated": "2025-04-07T08:08:58.429148"
     },
     {
       "id": "2018-secondround-29",
@@ -432,11 +432,11 @@
       "sort_order": 29,
       "team1_score": 55,
       "team2_score": 53,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-32",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.690039",
-      "updated": "2025-04-07T06:42:16.690040"
+      "created": "2025-04-07T08:08:58.429196",
+      "updated": "2025-04-07T08:08:58.429196"
     },
     {
       "id": "2018-secondround-30",
@@ -447,11 +447,11 @@
       "sort_order": 30,
       "team1_score": 62,
       "team2_score": 87,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-32",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.690086",
-      "updated": "2025-04-07T06:42:16.690087"
+      "created": "2025-04-07T08:08:58.429244",
+      "updated": "2025-04-07T08:08:58.429244"
     },
     {
       "id": "2018-sweet16-31",
@@ -462,11 +462,11 @@
       "sort_order": 31,
       "team1_score": 80,
       "team2_score": 76,
-      "next_game_id": "",
+      "next_game_id": "2018-eliteeight-33",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.690141",
-      "updated": "2025-04-07T06:42:16.690142"
+      "created": "2025-04-07T08:08:58.429299",
+      "updated": "2025-04-07T08:08:58.429300"
     },
     {
       "id": "2018-sweet16-32",
@@ -477,11 +477,11 @@
       "sort_order": 32,
       "team1_score": 65,
       "team2_score": 69,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-eliteeight-33",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.690188",
-      "updated": "2025-04-07T06:42:16.690189"
+      "created": "2025-04-07T08:08:58.429348",
+      "updated": "2025-04-07T08:08:58.429348"
     },
     {
       "id": "2018-eliteeight-33",
@@ -492,11 +492,11 @@
       "sort_order": 33,
       "team1_score": 85,
       "team2_score": 81,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-finalfour-65",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.690246",
-      "updated": "2025-04-07T06:42:16.690247"
+      "created": "2025-04-07T08:08:58.429403",
+      "updated": "2025-04-07T08:08:58.429404"
     },
     {
       "id": "2018-firstround-34",
@@ -507,11 +507,11 @@
       "sort_order": 34,
       "team1_score": 54,
       "team2_score": 74,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-42",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691136",
-      "updated": "2025-04-07T06:42:16.691139"
+      "created": "2025-04-07T08:08:58.430088",
+      "updated": "2025-04-07T08:08:58.430089"
     },
     {
       "id": "2018-firstround-35",
@@ -522,11 +522,11 @@
       "sort_order": 35,
       "team1_score": 59,
       "team2_score": 69,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-42",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691196",
-      "updated": "2025-04-07T06:42:16.691197"
+      "created": "2025-04-07T08:08:58.430136",
+      "updated": "2025-04-07T08:08:58.430136"
     },
     {
       "id": "2018-firstround-36",
@@ -537,11 +537,11 @@
       "sort_order": 36,
       "team1_score": 78,
       "team2_score": 73,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-43",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691248",
-      "updated": "2025-04-07T06:42:16.691248"
+      "created": "2025-04-07T08:08:58.430184",
+      "updated": "2025-04-07T08:08:58.430185"
     },
     {
       "id": "2018-firstround-37",
@@ -552,11 +552,11 @@
       "sort_order": 37,
       "team1_score": 68,
       "team2_score": 89,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-43",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691301",
-      "updated": "2025-04-07T06:42:16.691302"
+      "created": "2025-04-07T08:08:58.430232",
+      "updated": "2025-04-07T08:08:58.430233"
     },
     {
       "id": "2018-firstround-38",
@@ -567,11 +567,11 @@
       "sort_order": 38,
       "team1_score": 62,
       "team2_score": 64,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-44",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691348",
-      "updated": "2025-04-07T06:42:16.691349"
+      "created": "2025-04-07T08:08:58.430276",
+      "updated": "2025-04-07T08:08:58.430277"
     },
     {
       "id": "2018-firstround-39",
@@ -582,11 +582,11 @@
       "sort_order": 39,
       "team1_score": 73,
       "team2_score": 47,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-44",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691395",
-      "updated": "2025-04-07T06:42:16.691396"
+      "created": "2025-04-07T08:08:58.430320",
+      "updated": "2025-04-07T08:08:58.430320"
     },
     {
       "id": "2018-firstround-40",
@@ -597,11 +597,11 @@
       "sort_order": 40,
       "team1_score": 87,
       "team2_score": 83,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-45",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691442",
-      "updated": "2025-04-07T06:42:16.691443"
+      "created": "2025-04-07T08:08:58.430363",
+      "updated": "2025-04-07T08:08:58.430364"
     },
     {
       "id": "2018-firstround-41",
@@ -612,11 +612,11 @@
       "sort_order": 41,
       "team1_score": 68,
       "team2_score": 53,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-45",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691489",
-      "updated": "2025-04-07T06:42:16.691489"
+      "created": "2025-04-07T08:08:58.430407",
+      "updated": "2025-04-07T08:08:58.430407"
     },
     {
       "id": "2018-secondround-42",
@@ -627,11 +627,11 @@
       "sort_order": 42,
       "team1_score": 43,
       "team2_score": 50,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-46",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691551",
-      "updated": "2025-04-07T06:42:16.691552"
+      "created": "2025-04-07T08:08:58.430463",
+      "updated": "2025-04-07T08:08:58.430463"
     },
     {
       "id": "2018-secondround-43",
@@ -642,11 +642,11 @@
       "sort_order": 43,
       "team1_score": 95,
       "team2_score": 75,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-46",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691598",
-      "updated": "2025-04-07T06:42:16.691599"
+      "created": "2025-04-07T08:08:58.430510",
+      "updated": "2025-04-07T08:08:58.430510"
     },
     {
       "id": "2018-secondround-44",
@@ -657,11 +657,11 @@
       "sort_order": 44,
       "team1_score": 63,
       "team2_score": 62,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-47",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691644",
-      "updated": "2025-04-07T06:42:16.691644"
+      "created": "2025-04-07T08:08:58.430555",
+      "updated": "2025-04-07T08:08:58.430555"
     },
     {
       "id": "2018-secondround-45",
@@ -672,11 +672,11 @@
       "sort_order": 45,
       "team1_score": 75,
       "team2_score": 73,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-47",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691690",
-      "updated": "2025-04-07T06:42:16.691691"
+      "created": "2025-04-07T08:08:58.430597",
+      "updated": "2025-04-07T08:08:58.430598"
     },
     {
       "id": "2018-sweet16-46",
@@ -687,11 +687,11 @@
       "sort_order": 46,
       "team1_score": 61,
       "team2_score": 58,
-      "next_game_id": "",
+      "next_game_id": "2018-eliteeight-48",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691746",
-      "updated": "2025-04-07T06:42:16.691747"
+      "created": "2025-04-07T08:08:58.430650",
+      "updated": "2025-04-07T08:08:58.430651"
     },
     {
       "id": "2018-sweet16-47",
@@ -702,11 +702,11 @@
       "sort_order": 47,
       "team1_score": 69,
       "team2_score": 68,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-eliteeight-48",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691793",
-      "updated": "2025-04-07T06:42:16.691794"
+      "created": "2025-04-07T08:08:58.430693",
+      "updated": "2025-04-07T08:08:58.430694"
     },
     {
       "id": "2018-eliteeight-48",
@@ -717,26 +717,26 @@
       "sort_order": 48,
       "team1_score": 62,
       "team2_score": 78,
-      "next_game_id": "",
+      "next_game_id": "2018-finalfour-66",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691848",
-      "updated": "2025-04-07T06:42:16.691849"
+      "created": "2025-04-07T08:08:58.430744",
+      "updated": "2025-04-07T08:08:58.430744"
     },
     {
       "id": "2018-ff-49",
       "tournament_id": "2018-ncaa-mens",
-      "team1_id": "first-four-texas-southern",
-      "team2_id": "north-carolina-central",
+      "team1_id": "Texas Southern",
+      "team2_id": "North Carolina Central",
       "tipoff_time": "2018-03-14T00:00:00",
       "sort_order": 49,
       "team1_score": 64,
       "team2_score": 46,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-firstround-50",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.691899",
-      "updated": "2025-04-07T06:42:16.691900"
+      "created": "2025-04-07T03:08:58.430866",
+      "updated": "2025-04-07T03:08:58.430868"
     },
     {
       "id": "2018-firstround-50",
@@ -747,11 +747,11 @@
       "sort_order": 50,
       "team1_score": 102,
       "team2_score": 83,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-58",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692379",
-      "updated": "2025-04-07T06:42:16.692380"
+      "created": "2025-04-07T08:08:58.431392",
+      "updated": "2025-04-07T08:08:58.431393"
     },
     {
       "id": "2018-firstround-51",
@@ -762,11 +762,11 @@
       "sort_order": 51,
       "team1_score": 54,
       "team2_score": 67,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-58",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692427",
-      "updated": "2025-04-07T06:42:16.692428"
+      "created": "2025-04-07T08:08:58.431446",
+      "updated": "2025-04-07T08:08:58.431447"
     },
     {
       "id": "2018-firstround-52",
@@ -777,11 +777,11 @@
       "sort_order": 52,
       "team1_score": 81,
       "team2_score": 73,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-59",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692474",
-      "updated": "2025-04-07T06:42:16.692475"
+      "created": "2025-04-07T08:08:58.431495",
+      "updated": "2025-04-07T08:08:58.431496"
     },
     {
       "id": "2018-firstround-53",
@@ -792,11 +792,11 @@
       "sort_order": 53,
       "team1_score": 68,
       "team2_score": 64,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-59",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692519",
-      "updated": "2025-04-07T06:42:16.692520"
+      "created": "2025-04-07T08:08:58.431541",
+      "updated": "2025-04-07T08:08:58.431542"
     },
     {
       "id": "2018-firstround-54",
@@ -807,11 +807,11 @@
       "sort_order": 54,
       "team1_score": 67,
       "team2_score": 65,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-60",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692565",
-      "updated": "2025-04-07T06:42:16.692566"
+      "created": "2025-04-07T08:08:58.431588",
+      "updated": "2025-04-07T08:08:58.431588"
     },
     {
       "id": "2018-firstround-55",
@@ -822,11 +822,11 @@
       "sort_order": 55,
       "team1_score": 61,
       "team2_score": 47,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-60",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692611",
-      "updated": "2025-04-07T06:42:16.692612"
+      "created": "2025-04-07T08:08:58.431633",
+      "updated": "2025-04-07T08:08:58.431633"
     },
     {
       "id": "2018-firstround-56",
@@ -837,11 +837,11 @@
       "sort_order": 56,
       "team1_score": 73,
       "team2_score": 69,
-      "next_game_id": "",
+      "next_game_id": "2018-secondround-61",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692657",
-      "updated": "2025-04-07T06:42:16.692657"
+      "created": "2025-04-07T08:08:58.431678",
+      "updated": "2025-04-07T08:08:58.431678"
     },
     {
       "id": "2018-firstround-57",
@@ -852,11 +852,11 @@
       "sort_order": 57,
       "team1_score": 84,
       "team2_score": 66,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-secondround-61",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692701",
-      "updated": "2025-04-07T06:42:16.692702"
+      "created": "2025-04-07T08:08:58.431723",
+      "updated": "2025-04-07T08:08:58.431724"
     },
     {
       "id": "2018-secondround-58",
@@ -867,11 +867,11 @@
       "sort_order": 58,
       "team1_score": 70,
       "team2_score": 75,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-62",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692756",
-      "updated": "2025-04-07T06:42:16.692756"
+      "created": "2025-04-07T08:08:58.431784",
+      "updated": "2025-04-07T08:08:58.431785"
     },
     {
       "id": "2018-secondround-59",
@@ -882,11 +882,11 @@
       "sort_order": 59,
       "team1_score": 84,
       "team2_score": 90,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-62",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692803",
-      "updated": "2025-04-07T06:42:16.692803"
+      "created": "2025-04-07T08:08:58.431831",
+      "updated": "2025-04-07T08:08:58.431832"
     },
     {
       "id": "2018-secondround-60",
@@ -897,11 +897,11 @@
       "sort_order": 60,
       "team1_score": 63,
       "team2_score": 64,
-      "next_game_id": "",
+      "next_game_id": "2018-sweet16-63",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692850",
-      "updated": "2025-04-07T06:42:16.692850"
+      "created": "2025-04-07T08:08:58.431878",
+      "updated": "2025-04-07T08:08:58.431878"
     },
     {
       "id": "2018-secondround-61",
@@ -912,11 +912,11 @@
       "sort_order": 61,
       "team1_score": 86,
       "team2_score": 65,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-sweet16-63",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692897",
-      "updated": "2025-04-07T06:42:16.692898"
+      "created": "2025-04-07T08:08:58.431923",
+      "updated": "2025-04-07T08:08:58.431924"
     },
     {
       "id": "2018-sweet16-62",
@@ -927,11 +927,11 @@
       "sort_order": 62,
       "team1_score": 75,
       "team2_score": 60,
-      "next_game_id": "",
+      "next_game_id": "2018-eliteeight-64",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692952",
-      "updated": "2025-04-07T06:42:16.692953"
+      "created": "2025-04-07T08:08:58.431977",
+      "updated": "2025-04-07T08:08:58.431977"
     },
     {
       "id": "2018-sweet16-63",
@@ -942,11 +942,11 @@
       "sort_order": 63,
       "team1_score": 99,
       "team2_score": 72,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-eliteeight-64",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.692999",
-      "updated": "2025-04-07T06:42:16.693000"
+      "created": "2025-04-07T08:08:58.432022",
+      "updated": "2025-04-07T08:08:58.432022"
     },
     {
       "id": "2018-eliteeight-64",
@@ -957,11 +957,11 @@
       "sort_order": 64,
       "team1_score": 54,
       "team2_score": 58,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-finalfour-66",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.693054",
-      "updated": "2025-04-07T06:42:16.693055"
+      "created": "2025-04-07T08:08:58.432078",
+      "updated": "2025-04-07T08:08:58.432078"
     },
     {
       "id": "2018-finalfour-65",
@@ -972,11 +972,11 @@
       "sort_order": 65,
       "team1_score": 95,
       "team2_score": 79,
-      "next_game_id": "",
+      "next_game_id": "2018-championship-67",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.693293",
-      "updated": "2025-04-07T06:42:16.693294"
+      "created": "2025-04-07T08:08:58.432309",
+      "updated": "2025-04-07T08:08:58.432310"
     },
     {
       "id": "2018-finalfour-66",
@@ -987,11 +987,11 @@
       "sort_order": 66,
       "team1_score": 57,
       "team2_score": 69,
-      "next_game_id": "",
-      "next_game_slot": 1,
+      "next_game_id": "2018-championship-67",
+      "next_game_slot": 2,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.693340",
-      "updated": "2025-04-07T06:42:16.693341"
+      "created": "2025-04-07T08:08:58.432355",
+      "updated": "2025-04-07T08:08:58.432356"
     },
     {
       "id": "2018-championship-67",
@@ -1005,8 +1005,8 @@
       "next_game_id": "",
       "next_game_slot": 1,
       "is_final": true,
-      "created": "2025-04-07T06:42:16.693399",
-      "updated": "2025-04-07T06:42:16.693399"
+      "created": "2025-04-07T08:08:58.432411",
+      "updated": "2025-04-07T08:08:58.432411"
     }
   ]
 }

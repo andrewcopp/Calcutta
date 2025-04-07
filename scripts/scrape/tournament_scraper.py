@@ -329,6 +329,7 @@ class TournamentScraper:
 
     def _update_game_relationships(self, games: List[Game]) -> None:
         """Update next_game_id and next_game_slot based on bracket structure."""
+        # Group games by round
         round_games = {}
         for game in games:
             round_name = game.id.split("-")[1]
@@ -336,16 +337,52 @@ class TournamentScraper:
                 round_games[round_name] = []
             round_games[round_name].append(game)
         
+        # Sort games within each round by sort_order
+        for round_name in round_games:
+            round_games[round_name].sort(key=lambda g: g.sort_order)
+
+        # Define the tournament structure
+        # Each tuple contains (current_round, next_round, games_per_next_round_game)
+        tournament_structure = [
+            ("ff", "firstround", 1),      # First Four winners go to First Round (1 winner per First Round game)
+            ("firstround", "secondround", 2),  # First Round winners go to Second Round (2 winners per Second Round game)
+            ("secondround", "sweet16", 2),     # Second Round winners go to Sweet 16 (2 winners per Sweet 16 game)
+            ("sweet16", "eliteeight", 2),      # Sweet 16 winners go to Elite Eight (2 winners per Elite Eight game)
+            ("eliteeight", "finalfour", 2),    # Elite Eight winners go to Final Four (2 winners per Final Four game)
+            ("finalfour", "championship", 2),   # Final Four winners go to Championship (2 winners for the Championship game)
+        ]
+
         # Update relationships between rounds
-        round_order = ["ff", "r64", "r32", "r16", "r8", "f4", "champ"]
-        for i in range(len(round_order) - 1):
-            current_round = round_games.get(round_order[i], [])
-            next_round = round_games.get(round_order[i + 1], [])
-            
-            for j, game in enumerate(current_round):
-                if j < len(next_round):
-                    game.next_game_id = next_round[j // 2].id
-                    game.next_game_slot = 1 if j % 2 == 0 else 2
+        for current_round, next_round, games_per_next_round_game in tournament_structure:
+            current_games = round_games.get(current_round, [])
+            next_games = round_games.get(next_round, [])
+
+            # Skip if either round is empty
+            if not current_games or not next_games:
+                continue
+
+            # Special handling for First Four games
+            if current_round == "ff":
+                # Map each First Four game to its corresponding First Round game
+                for game in current_games:
+                    # Find the First Round game that this First Four winner feeds into
+                    # This can be determined by the winner's seed and region
+                    winner_score = max(game.team1_score, game.team2_score)
+                    winner_id = game.team1_id if game.team1_score == winner_score else game.team2_id
+                    
+                    # Find the First Round game containing this winner
+                    for next_game in next_games:
+                        if winner_id in [next_game.team1_id, next_game.team2_id]:
+                            game.next_game_id = next_game.id
+                            game.next_game_slot = 1 if winner_id == next_game.team1_id else 2
+                            break
+            else:
+                # Regular rounds
+                for i, game in enumerate(current_games):
+                    next_game_index = i // games_per_next_round_game
+                    if next_game_index < len(next_games):
+                        game.next_game_id = next_games[next_game_index].id
+                        game.next_game_slot = (i % games_per_next_round_game) + 1
 
     def scrape(self) -> None:
         """Scrape tournament data and save to JSON file."""
