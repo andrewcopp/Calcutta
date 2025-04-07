@@ -11,6 +11,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/andrewcopp/Calcutta/backend/pkg/services"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -552,6 +553,136 @@ func createTournamentHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tournament)
 }
 
+func createTournamentTeamHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight requests
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Extract tournament ID from URL path
+	vars := mux.Vars(r)
+	tournamentID := vars["id"]
+	if tournamentID == "" {
+		http.Error(w, "Tournament ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Parse request body
+	var request struct {
+		SchoolID string `json:"schoolId"`
+		Seed     int    `json:"seed"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if request.SchoolID == "" {
+		http.Error(w, "School ID is required", http.StatusBadRequest)
+		return
+	}
+	if request.Seed < 1 || request.Seed > 16 {
+		http.Error(w, "Seed must be between 1 and 16", http.StatusBadRequest)
+		return
+	}
+
+	// Create the team
+	team := &models.TournamentTeam{
+		ID:           uuid.New().String(),
+		TournamentID: tournamentID,
+		SchoolID:     request.SchoolID,
+		Seed:         request.Seed,
+		Byes:         0,
+		Wins:         0,
+		Eliminated:   false,
+	}
+
+	if err := tournamentRepo.CreateTeam(r.Context(), team); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the created team
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(team)
+}
+
+func tournamentHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract tournament ID from URL path
+	vars := mux.Vars(r)
+	tournamentID := vars["id"]
+	if tournamentID == "" {
+		http.Error(w, "Tournament ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get tournament by ID
+	tournament, err := tournamentService.GetTournamentByID(r.Context(), tournamentID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if tournament == nil {
+		http.Error(w, "Tournament not found", http.StatusNotFound)
+		return
+	}
+
+	// Get the winning team for this tournament
+	team, err := tournamentService.GetWinningTeam(r.Context(), tournament.ID)
+	if err != nil {
+		log.Printf("Error getting winning team for tournament %s: %v", tournament.ID, err)
+	}
+
+	// Create response with tournament and winning team info
+	type TournamentResponse struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Rounds  int    `json:"rounds"`
+		Winner  string `json:"winner,omitempty"`
+		Created string `json:"created"`
+	}
+
+	winnerName := ""
+	if team != nil {
+		// Get the school name
+		school, err := schoolService.GetSchoolByID(r.Context(), team.SchoolID)
+		if err != nil {
+			log.Printf("Error getting school for team %s: %v", team.ID, err)
+		} else {
+			winnerName = school.Name
+		}
+	}
+
+	response := TournamentResponse{
+		ID:      tournament.ID,
+		Name:    tournament.Name,
+		Rounds:  tournament.Rounds,
+		Winner:  winnerName,
+		Created: tournament.Created.Format("2006-01-02T15:04:05Z07:00"),
+	}
+
+	// Return the tournament response
+	json.NewEncoder(w).Encode(response)
+}
+
 func main() {
 	r := mux.NewRouter()
 
@@ -562,8 +693,10 @@ func main() {
 	r.HandleFunc("/api/health", healthHandler)
 	r.HandleFunc("/api/schools", schoolsHandler)
 	r.HandleFunc("/api/tournaments", tournamentsHandler).Methods("GET")
+	r.HandleFunc("/api/tournaments/{id}", tournamentHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments", createTournamentHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/tournaments/{id}/teams", tournamentTeamsHandler)
+	r.HandleFunc("/api/tournaments/{id}/teams", createTournamentTeamHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/teams/{id}", updateTeamHandler).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/calcuttas", calcuttasHandler)
 	r.HandleFunc("/api/calcuttas/{id}/entries", calcuttaEntriesHandler)

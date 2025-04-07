@@ -313,3 +313,34 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	log.Printf("Successfully inserted tournament. Rows affected: %d", rowsAffected)
 	return nil
 }
+
+// CreateTeam creates a new tournament team in the database
+func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.TournamentTeam) error {
+	query := `
+		INSERT INTO tournament_teams (
+			id, tournament_id, school_id, seed, byes, wins, eliminated,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+
+	now := time.Now()
+	team.Created = now
+	team.Updated = now
+
+	_, err := r.db.ExecContext(ctx, query,
+		team.ID,
+		team.TournamentID,
+		team.SchoolID,
+		team.Seed,
+		team.Byes,
+		team.Wins,
+		team.Eliminated,
+		team.Created,
+		team.Updated,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
