@@ -1,24 +1,25 @@
 #!/bin/bash
 
 # Load environment variables from .env file
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+if [ -f ../../.env ]; then
+  export $(grep -v '^#' ../../.env | xargs)
 fi
 
-# Set default database URL if not provided
-if [ -z "$DATABASE_URL" ]; then
-  export DATABASE_URL="postgres://postgres:postgres@localhost:5432/calcutta?sslmode=disable"
-  echo "Using default DATABASE_URL: $DATABASE_URL"
-fi
+# Override DB_HOST to use localhost
+export DB_HOST=localhost
 
-# Run the seed-schools command
-echo "Running seed-schools..."
-cd "$(dirname "$0")/../cmd/seed-schools"
-go run main.go
+# Construct DATABASE_URL with SSL disabled
+export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable"
 
-# Check if the command was successful
+# Change to the backend directory
+cd "$(dirname "$0")/.."
+
+# Run the seed script
+echo "Seeding schools from active_d1_teams.csv..."
+go run ./cmd/seed-schools/main.go
+
 if [ $? -eq 0 ]; then
-  echo "Successfully seeded schools"
+  echo "Schools seeded successfully"
 else
   echo "Failed to seed schools"
   exit 1

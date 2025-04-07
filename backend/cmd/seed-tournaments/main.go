@@ -209,6 +209,11 @@ func processCalcuttaFile(db *sql.DB, filepath, year string) error {
 			continue
 		}
 
+		// Skip "Play-in Losers" entries as they are not real teams
+		if row[0] == "Play-in Losers" || row[0] == "Play-in losers" {
+			continue
+		}
+
 		// Get standardized school name
 		schoolName := common.GetStandardizedSchoolName(row[0])
 		if schoolName == "" {
@@ -229,8 +234,8 @@ func processCalcuttaFile(db *sql.DB, filepath, year string) error {
 		// Find or create school
 		schoolID, err := findSchool(context.Background(), tx, data.SchoolName)
 		if err != nil {
-			stats.errors++
-			log.Printf("Error finding/creating school: %v", err)
+			// Log the error but continue processing other teams
+			log.Printf("Warning: %v", err)
 			continue
 		}
 
@@ -384,23 +389,9 @@ func findSchool(ctx context.Context, tx *sql.Tx, schoolName string) (string, err
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// School not found - create it
-			schoolID = uuid.New().String()
-			now := time.Now()
-			_, err = tx.ExecContext(ctx, `
-				INSERT INTO schools (id, name, created_at, updated_at)
-				VALUES ($1, $2, $3, $4)
-			`, schoolID, standardizedName, now, now)
-			if err != nil {
-				return "", fmt.Errorf("error creating school: %v", err)
-			}
-			log.Printf("Created new school: %s", standardizedName)
-
-			// Only track schools that don't map to any existing school
-			// This is the only case where we need to track for future mapping
+			// School not found - track it for future mapping
 			unmappedSchoolNames[schoolName] = true
-
-			return schoolID, nil
+			return "", fmt.Errorf("school not found: %s (standardized: %s)", schoolName, standardizedName)
 		}
 		return "", fmt.Errorf("error finding school: %v", err)
 	}

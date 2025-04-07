@@ -3,20 +3,16 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
-
-// Schools represents the structure of our JSON file
-type Schools struct {
-	Schools []string `json:"schools"`
-}
 
 func main() {
 	// Load database connection string from environment
@@ -42,14 +38,24 @@ func main() {
 	}
 
 	// Load the schools file
-	schoolsData, err := os.ReadFile("schools.json")
+	csvPath := filepath.Join("migrations", "seed", "schools", "active_d1_teams.csv")
+	file, err := os.Open(csvPath)
 	if err != nil {
-		log.Fatalf("Failed to read schools file: %v", err)
+		log.Fatalf("Failed to open schools file: %v", err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+
+	// Skip header row
+	if _, err := reader.Read(); err != nil {
+		log.Fatalf("Failed to read CSV header: %v", err)
 	}
 
-	var schools Schools
-	if err := json.Unmarshal(schoolsData, &schools); err != nil {
-		log.Fatalf("Failed to parse schools file: %v", err)
+	// Read all records
+	records, err := reader.ReadAll()
+	if err != nil {
+		log.Fatalf("Failed to read CSV records: %v", err)
 	}
 
 	// Begin a transaction
@@ -69,7 +75,11 @@ func main() {
 
 	// Insert schools
 	now := time.Now()
-	for _, schoolName := range schools.Schools {
+	for _, record := range records {
+		if len(record) == 0 {
+			continue
+		}
+		schoolName := record[0]
 		_, err = tx.Exec(`
 			INSERT INTO schools (id, name, created_at, updated_at)
 			VALUES ($1, $2, $3, $4)
@@ -88,5 +98,5 @@ func main() {
 		log.Fatalf("Failed to commit transaction: %v", err)
 	}
 
-	fmt.Printf("Successfully seeded %d schools\n", len(schools.Schools))
+	fmt.Printf("Successfully seeded %d schools\n", len(records))
 }
