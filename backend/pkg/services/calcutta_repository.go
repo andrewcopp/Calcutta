@@ -32,6 +32,7 @@ type CalcuttaRepositoryInterface interface {
 	GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
 	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
 	GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error)
+	CreateRound(ctx context.Context, round *models.CalcuttaRound) error
 }
 
 // CalcuttaRepository handles data access for Calcutta entities
@@ -96,6 +97,8 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 
 // GetByID retrieves a Calcutta by ID
 func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Calcutta, error) {
+	log.Printf("Executing GetByID query for calcutta ID: %s", id)
+
 	query := `
 		SELECT id, tournament_id, owner_id, name, created_at, updated_at, deleted_at
 		FROM calcuttas
@@ -106,6 +109,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 	var createdAt, updatedAt time.Time
 	var deletedAt sql.NullTime
 
+	log.Printf("Running query: %s with ID: %s", query, id)
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&calcutta.ID,
 		&calcutta.TournamentID,
@@ -117,8 +121,10 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("No calcutta found with ID: %s", id)
 			return nil, errors.New("calcutta not found")
 		}
+		log.Printf("Database error while fetching calcutta: %v", err)
 		return nil, err
 	}
 
@@ -128,11 +134,14 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		calcutta.Deleted = &deletedAt.Time
 	}
 
+	log.Printf("Successfully retrieved calcutta from database: %+v", calcutta)
 	return calcutta, nil
 }
 
 // Create creates a new Calcutta
 func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcutta) error {
+	log.Printf("Creating new calcutta: %+v", calcutta)
+
 	query := `
 		INSERT INTO calcuttas (id, tournament_id, owner_id, name, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -143,7 +152,10 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 	calcutta.Created = now
 	calcutta.Updated = now
 
-	_, err := r.db.ExecContext(ctx, query,
+	log.Printf("Executing query with values: id=%s, tournamentId=%s, ownerId=%s, name=%s, created=%v, updated=%v",
+		calcutta.ID, calcutta.TournamentID, calcutta.OwnerID, calcutta.Name, calcutta.Created, calcutta.Updated)
+
+	result, err := r.db.ExecContext(ctx, query,
 		calcutta.ID,
 		calcutta.TournamentID,
 		calcutta.OwnerID,
@@ -151,8 +163,19 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 		calcutta.Created,
 		calcutta.Updated,
 	)
+	if err != nil {
+		log.Printf("Error executing create calcutta query: %v", err)
+		return err
+	}
 
-	return err
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		return err
+	}
+	log.Printf("Created calcutta successfully, rows affected: %d", rowsAffected)
+
+	return nil
 }
 
 // Update updates an existing Calcutta
@@ -217,10 +240,28 @@ func (r *CalcuttaRepository) Delete(ctx context.Context, id string) error {
 // GetEntries retrieves all entries for a Calcutta
 func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
 	query := `
-		SELECT id, name, user_id, calcutta_id, created_at, updated_at, deleted_at
-		FROM calcutta_entries
-		WHERE calcutta_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC
+		WITH entry_points AS (
+			SELECT 
+				cp.entry_id,
+				COALESCE(SUM(cpt.actual_points), 0) as total_points
+			FROM calcutta_portfolios cp
+			LEFT JOIN calcutta_portfolio_teams cpt ON cp.id = cpt.portfolio_id
+			WHERE cp.deleted_at IS NULL AND cpt.deleted_at IS NULL
+			GROUP BY cp.entry_id
+		)
+		SELECT 
+			ce.id, 
+			ce.name, 
+			ce.user_id, 
+			ce.calcutta_id, 
+			ce.created_at, 
+			ce.updated_at, 
+			ce.deleted_at,
+			COALESCE(ep.total_points, 0) as total_points
+		FROM calcutta_entries ce
+		LEFT JOIN entry_points ep ON ce.id = ep.entry_id
+		WHERE ce.calcutta_id = $1 AND ce.deleted_at IS NULL
+		ORDER BY ep.total_points DESC NULLS LAST, ce.created_at DESC
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, calcuttaID)
@@ -235,6 +276,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 		var userID sql.NullString
 		var createdAt, updatedAt time.Time
 		var deletedAt sql.NullTime
+		var totalPoints float64
 
 		err := rows.Scan(
 			&entry.ID,
@@ -244,6 +286,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 			&createdAt,
 			&updatedAt,
 			&deletedAt,
+			&totalPoints,
 		)
 		if err != nil {
 			return nil, err
@@ -254,6 +297,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 		}
 		entry.Created = createdAt
 		entry.Updated = updatedAt
+		entry.TotalPoints = totalPoints
 		if deletedAt.Valid {
 			entry.Deleted = &deletedAt.Time
 		}
@@ -839,4 +883,44 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 	}
 
 	return calcuttas, nil
+}
+
+// CreateRound creates a new round for a Calcutta
+func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
+	log.Printf("Creating new round: %+v", round)
+
+	query := `
+		INSERT INTO calcutta_rounds (id, calcutta_id, round, points, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+
+	round.ID = uuid.New().String()
+	now := time.Now()
+	round.Created = now
+	round.Updated = now
+
+	log.Printf("Executing query with values: id=%s, calcuttaId=%s, round=%d, points=%d, created=%v, updated=%v",
+		round.ID, round.CalcuttaID, round.Round, round.Points, round.Created, round.Updated)
+
+	result, err := r.db.ExecContext(ctx, query,
+		round.ID,
+		round.CalcuttaID,
+		round.Round,
+		round.Points,
+		round.Created,
+		round.Updated,
+	)
+	if err != nil {
+		log.Printf("Error executing create round query: %v", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		return err
+	}
+	log.Printf("Created round successfully, rows affected: %d", rowsAffected)
+
+	return nil
 }

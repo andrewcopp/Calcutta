@@ -35,7 +35,14 @@ export function CalcuttaListPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Calcuttas</h1>
+        <Link
+          to="/calcuttas/create"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Create New Calcutta
+        </Link>
       </div>
+
       <div className="grid gap-4">
         {calcuttas.map((calcutta) => (
           <Link
@@ -47,6 +54,18 @@ export function CalcuttaListPage() {
             <p className="text-gray-600">Created: {new Date(calcutta.created).toLocaleDateString()}</p>
           </Link>
         ))}
+        
+        {calcuttas.length === 0 && (
+          <div className="text-center py-8 bg-white rounded-lg shadow">
+            <p className="text-gray-500 mb-4">No calcuttas found.</p>
+            <Link
+              to="/calcuttas/create"
+              className="text-blue-500 hover:text-blue-700"
+            >
+              Create your first Calcutta
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

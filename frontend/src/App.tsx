@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
+import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
 import { EntryTeamsPage } from './pages/EntryTeamsPage';
 import { TournamentListPage } from './pages/TournamentListPage';
 import { TournamentViewPage } from './pages/TournamentViewPage';
@@ -11,6 +12,7 @@ import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
 import { AdminPage } from './pages/AdminPage';
 import { HomePage } from './pages/HomePage';
 import { RulesPage } from './pages/RulesPage';
+import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
 import { Header } from './components/Header';
 import './App.css';
 
@@ -23,6 +25,7 @@ export const App: React.FC = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/calcuttas" element={<CalcuttaListPage />} />
+          <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/tournaments" element={<TournamentListPage />} />
           <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />
@@ -30,6 +33,7 @@ export const App: React.FC = () => {
           <Route path="/admin/tournaments/:id/edit" element={<TournamentEditPage />} />
           <Route path="/admin/tournaments/:id/teams/add" element={<TournamentAddTeamsPage />} />
           <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
+          <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
           <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
         </Routes>
       </div>

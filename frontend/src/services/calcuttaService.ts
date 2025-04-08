@@ -1,4 +1,4 @@
-import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School } from '../types/calcutta';
+import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School, TournamentTeam } from '../types/calcutta';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -7,6 +7,32 @@ export const calcuttaService = {
     const response = await fetch(`${API_BASE_URL}/calcuttas`);
     if (!response.ok) {
       throw new Error('Failed to fetch calcuttas');
+    }
+    return response.json();
+  },
+
+  async getCalcutta(id: string): Promise<Calcutta> {
+    const response = await fetch(`${API_BASE_URL}/calcuttas/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch calcutta');
+    }
+    return response.json();
+  },
+
+  async createCalcutta(name: string, tournamentId: string, ownerId: string): Promise<Calcutta> {
+    const response = await fetch(`${API_BASE_URL}/calcuttas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        tournamentId,
+        ownerId,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create calcutta');
     }
     return response.json();
   },
@@ -31,6 +57,14 @@ export const calcuttaService = {
     const response = await fetch(`${API_BASE_URL}/schools`);
     if (!response.ok) {
       throw new Error('Failed to fetch schools');
+    }
+    return response.json();
+  },
+
+  async getTournamentTeams(tournamentId: string): Promise<TournamentTeam[]> {
+    const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch tournament teams');
     }
     return response.json();
   },

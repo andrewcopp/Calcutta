@@ -307,11 +307,70 @@ func updateTeamHandler(w http.ResponseWriter, r *http.Request) {
 func calcuttasHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	if r.Method == "POST" {
+		log.Printf("Handling POST request to /api/calcuttas")
+
+		// Parse the request body
+		var calcutta models.Calcutta
+		if err := json.NewDecoder(r.Body).Decode(&calcutta); err != nil {
+			log.Printf("Error decoding request body: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Printf("Received request to create calcutta: %+v", calcutta)
+
+		// Create the calcutta
+		if err := calcuttaRepo.Create(r.Context(), &calcutta); err != nil {
+			log.Printf("Error creating calcutta: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Successfully created calcutta with ID: %s", calcutta.ID)
+
+		// Create the rounds for the Calcutta
+		rounds := []struct {
+			round  int
+			points int
+		}{
+			{1, 50},  // Round of 64
+			{2, 100}, // Round of 32
+			{3, 150}, // Sweet 16
+			{4, 200}, // Elite 8
+			{5, 250}, // Final 4
+			{6, 300}, // Championship
+		}
+
+		log.Printf("Creating %d rounds for calcutta %s", len(rounds), calcutta.ID)
+		for _, round := range rounds {
+			calcuttaRound := &models.CalcuttaRound{
+				CalcuttaID: calcutta.ID,
+				Round:      round.round,
+				Points:     round.points,
+			}
+			if err := calcuttaRepo.CreateRound(r.Context(), calcuttaRound); err != nil {
+				log.Printf("Error creating round %d for calcutta %s: %v", round.round, calcutta.ID, err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Successfully created round %d for calcutta %s", round.round, calcutta.ID)
+		}
+
+		// Return the created calcutta
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(calcutta)
+		log.Printf("Successfully completed POST request for calcutta %s", calcutta.ID)
+		return
+	}
+
+	// Handle GET request
+	log.Printf("Handling GET request to /api/calcuttas")
 	calcuttas, err := calcuttaRepo.GetAll(r.Context())
 	if err != nil {
+		log.Printf("Error getting all calcuttas: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("Successfully retrieved %d calcuttas", len(calcuttas))
 
 	json.NewEncoder(w).Encode(calcuttas)
 }
@@ -498,6 +557,15 @@ func setupRoutes(r *mux.Router, calcuttaService *services.CalcuttaService) {
 
 		w.WriteHeader(http.StatusOK)
 	}).Methods("PUT")
+
+	// Calcutta routes
+	r.HandleFunc("/api/calcuttas", calcuttasHandler).Methods("GET", "POST")
+	r.HandleFunc("/api/calcuttas/{id}", calcuttaHandler).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id}/entries", calcuttaEntriesHandler).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", calcuttaEntryTeamHandler).Methods("GET")
+	r.HandleFunc("/api/entries/{id}/teams", entryTeamsHandler)
+	r.HandleFunc("/api/entries/{id}/portfolios", portfoliosHandler)
+	r.HandleFunc("/api/portfolios/{id}/teams", portfolioTeamsHandler)
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -743,6 +811,41 @@ func tournamentHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func calcuttaHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	log.Printf("Handling GET request to /api/calcuttas/{id}")
+	log.Printf("Request URL: %s", r.URL.String())
+	log.Printf("Request Method: %s", r.Method)
+
+	// Extract calcutta ID from URL path
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	log.Printf("Extracted calcutta ID from path: %s", calcuttaID)
+
+	if calcuttaID == "" {
+		log.Printf("Error: Calcutta ID is empty")
+		http.Error(w, "Calcutta ID is required", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Attempting to fetch calcutta with ID: %s", calcuttaID)
+	calcutta, err := calcuttaRepo.GetByID(r.Context(), calcuttaID)
+	if err != nil {
+		if err.Error() == "calcutta not found" {
+			log.Printf("Calcutta not found with ID: %s", calcuttaID)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		log.Printf("Error fetching calcutta: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Successfully retrieved calcutta: %+v", calcutta)
+	json.NewEncoder(w).Encode(calcutta)
+}
+
 func main() {
 	log.Printf("Starting server initialization...")
 
@@ -763,14 +866,14 @@ func main() {
 	r.HandleFunc("/api/tournaments/{id}/teams", tournamentTeamsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}/teams", createTournamentTeamHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/teams/{id}", updateTeamHandler).Methods("PATCH", "OPTIONS")
-	r.HandleFunc("/api/calcuttas", calcuttasHandler)
-	r.HandleFunc("/api/calcuttas/{id}/entries", calcuttaEntriesHandler)
-	r.HandleFunc("/api/calcuttas/{id}/entries/{entryId}/teams", calcuttaEntryTeamHandler)
-	r.HandleFunc("/api/entries/{id}/teams", entryTeamsHandler)
-	r.HandleFunc("/api/entries/{id}/portfolios", portfoliosHandler)
-	r.HandleFunc("/api/portfolios/{id}/teams", portfolioTeamsHandler)
 	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", recalculatePortfoliosHandler).Methods("POST", "OPTIONS")
 	log.Printf("Basic routes configured")
+
+	// Add debug logging for unmatched routes
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("No route matched for request: %s %s", r.Method, r.URL.Path)
+		http.Error(w, "Not Found", http.StatusNotFound)
+	})
 
 	setupRoutes(r, calcuttaService)
 	log.Printf("Additional routes configured")
