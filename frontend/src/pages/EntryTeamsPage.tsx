@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useUser } from '../contexts/UserContext';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 // Add a new section to display portfolio scores
 const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }> = ({
@@ -40,6 +41,83 @@ const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaP
   );
 };
 
+// Add a new component for the ownership pie chart
+const OwnershipPieChart: React.FC<{ 
+  portfolioTeams: CalcuttaPortfolioTeam[]; 
+  portfolios: (CalcuttaPortfolio & { entryName?: string })[];
+  currentPortfolioId?: string;
+  rank?: number;
+  totalInvestors?: number;
+}> = ({ 
+  portfolioTeams,
+  portfolios,
+  currentPortfolioId,
+  rank,
+  totalInvestors
+}) => {
+  // Transform portfolio teams data for the pie chart
+  const data = portfolioTeams.map(pt => {
+    const portfolio = portfolios.find(p => p.id === pt.portfolioId);
+    const isCurrentPortfolio = pt.portfolioId === currentPortfolioId;
+    return {
+      name: portfolio?.entryName || `Portfolio ${portfolio?.id.slice(0, 4) || '??'}`,
+      value: pt.ownershipPercentage * 100,
+      portfolioId: pt.portfolioId,
+      isCurrentPortfolio
+    };
+  });
+
+  // Generate colors for each segment
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+  const HIGHLIGHT_COLOR = '#FF0000'; // Red color for the current portfolio
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="h-32 w-32">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={20}
+              outerRadius={40}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.isCurrentPortfolio ? HIGHLIGHT_COLOR : COLORS[index % COLORS.length]} 
+                  stroke={entry.isCurrentPortfolio ? "#000" : undefined}
+                  strokeWidth={entry.isCurrentPortfolio ? 2 : 0}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) => `${value.toFixed(2)}%`}
+              labelFormatter={(label) => label}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      {currentPortfolioId && (
+        <div className="mt-2 text-xs text-center">
+          <div className="flex items-center justify-center">
+            <div className="w-3 h-3 bg-red-500 mr-1"></div>
+            <span>Your Portfolio</span>
+          </div>
+        </div>
+      )}
+      {rank !== undefined && totalInvestors !== undefined && totalInvestors > 0 && (
+        <div className="mt-1 text-xs text-gray-600">
+          Investor Rank: {rank} / {totalInvestors}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
   const { user } = useUser();
@@ -48,6 +126,7 @@ export function EntryTeamsPage() {
   const [portfolios, setPortfolios] = useState<CalcuttaPortfolio[]>([]);
   const [portfolioTeams, setPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [allCalcuttaPortfolioTeams, setAllCalcuttaPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
+  const [allCalcuttaPortfolios, setAllCalcuttaPortfolios] = useState<(CalcuttaPortfolio & { entryName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,11 +139,15 @@ export function EntryTeamsPage() {
       }
       
       try {
-        const [teamsData, schoolsData, portfoliosData] = await Promise.all([
+        const [teamsData, schoolsData, portfoliosData, allEntriesData] = await Promise.all([
           calcuttaService.getEntryTeams(entryId, calcuttaId),
           calcuttaService.getSchools(),
-          calcuttaService.getPortfoliosByEntry(entryId)
+          calcuttaService.getPortfoliosByEntry(entryId),
+          calcuttaService.getCalcuttaEntries(calcuttaId)
         ]);
+
+        // Create a map of entryId to entryName
+        const entryNameMap = new Map(allEntriesData.map(entry => [entry.id, entry.name]));
 
         // Create a map of schools by ID for quick lookup
         const schoolMap = new Map(schoolsData.map(school => [school.id, school]));
@@ -82,7 +165,7 @@ export function EntryTeamsPage() {
         setSchools(schoolsData);
         setPortfolios(portfoliosData);
 
-        // Fetch portfolio teams for each portfolio
+        // Fetch portfolio teams for the current entry's portfolios
         if (portfoliosData.length > 0) {
           const portfolioTeamsPromises = portfoliosData.map(portfolio => 
             calcuttaService.getPortfolioTeams(portfolio.id)
@@ -103,16 +186,21 @@ export function EntryTeamsPage() {
           setPortfolioTeams(portfolioTeamsWithSchools);
         }
 
-        // Fetch all portfolios in the Calcutta
-        const allEntries = await calcuttaService.getCalcuttaEntries(calcuttaId);
-        const allPortfoliosPromises = allEntries.map(entry => 
+        // Fetch all portfolios in the Calcutta and associate entry names
+        const allPortfoliosPromises = allEntriesData.map(entry => 
           calcuttaService.getPortfoliosByEntry(entry.id)
         );
         const allPortfoliosResults = await Promise.all(allPortfoliosPromises);
-        const allPortfolios = allPortfoliosResults.flat();
+        const allPortfoliosFlat = allPortfoliosResults.flat();
+        // Add entryName to each portfolio object
+        const allPortfoliosWithEntryNames = allPortfoliosFlat.map(portfolio => ({
+          ...portfolio,
+          entryName: entryNameMap.get(portfolio.entryId)
+        })); 
+        setAllCalcuttaPortfolios(allPortfoliosWithEntryNames);
 
         // Fetch portfolio teams for all portfolios
-        const allPortfolioTeamsPromises = allPortfolios.map(portfolio => 
+        const allPortfolioTeamsPromises = allPortfoliosFlat.map(portfolio =>
           calcuttaService.getPortfolioTeams(portfolio.id)
         );
         const allPortfolioTeamsResults = await Promise.all(allPortfolioTeamsPromises);
@@ -149,7 +237,10 @@ export function EntryTeamsPage() {
 
   // Helper function to find portfolio team data for a given team ID
   const getPortfolioTeamData = (teamId: string) => {
-    return portfolioTeams.find(pt => pt.teamId === teamId);
+    // Find the portfolio team belonging to the current entry's portfolio
+    const currentPortfolioId = portfolios[0]?.id;
+    if (!currentPortfolioId) return undefined;
+    return allCalcuttaPortfolioTeams.find(pt => pt.teamId === teamId && pt.portfolioId === currentPortfolioId);
   };
 
   // Helper function to calculate investor ranking for a team
@@ -218,30 +309,44 @@ export function EntryTeamsPage() {
           const portfolioTeam = getPortfolioTeamData(team.teamId);
           const wins = calculateWins(team);
           const investorRanking = getInvestorRanking(team.teamId);
+          const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
+          const currentPortfolioId = portfolios[0]?.id;
+          
           return (
             <div
               key={team.id}
               className="p-4 bg-white rounded-lg shadow"
             >
-              <h2 className="text-xl font-semibold">
-                {team.team?.school?.name || 'Unknown School'}
-              </h2>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <p className="text-gray-600">Bid Amount: ${team.bid}</p>
-                <p className="text-gray-600">Wins: {wins}</p>
-                {portfolioTeam && (
-                  <>
-                    <p className="text-gray-600">
-                      Ownership: {(portfolioTeam.ownershipPercentage * 100).toFixed(2)}%
-                    </p>
-                    <p className="text-gray-600">
-                      Points Earned: {portfolioTeam.actualPoints.toFixed(2)}
-                    </p>
-                    <p className="text-gray-600">
-                      Investor Rank: {investorRanking.rank} / {investorRanking.total}
-                    </p>
-                  </>
-                )}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {team.team?.school?.name || 'Unknown School'}
+                  </h2>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <p className="text-gray-600">Bid Amount: ${team.bid}</p>
+                    <p className="text-gray-600">Wins: {wins}</p>
+                    {portfolioTeam && (
+                      <>
+                        <p className="text-gray-600">
+                          Ownership: {(portfolioTeam.ownershipPercentage * 100).toFixed(2)}%
+                        </p>
+                        <p className="text-gray-600">
+                          Points Earned: {portfolioTeam.actualPoints.toFixed(2)}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <OwnershipPieChart 
+                    portfolioTeams={teamPortfolioTeams} 
+                    portfolios={allCalcuttaPortfolios}
+                    currentPortfolioId={currentPortfolioId}
+                    rank={investorRanking.rank}
+                    totalInvestors={investorRanking.total}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Ownership Distribution</p>
+                </div>
               </div>
             </div>
           );
