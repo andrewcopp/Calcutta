@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Tournament } from '../types/calcutta';
+import { Tournament, TournamentTeam } from '../types/calcutta';
 import { tournamentService } from '../services/tournamentService';
 
+type TournamentStatus = 'Complete' | 'In Progress';
+
+interface TournamentWithStatus extends Tournament {
+  status: TournamentStatus;
+  totalTeams: number;
+  eliminatedTeams: number;
+}
+
 export const TournamentListPage: React.FC = () => {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentWithStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -14,7 +22,26 @@ export const TournamentListPage: React.FC = () => {
   const fetchTournaments = async () => {
     try {
       const data = await tournamentService.getAllTournaments();
-      setTournaments(data);
+      
+      // Fetch teams for each tournament to determine status
+      const tournamentsWithStatus = await Promise.all(
+        data.map(async (tournament) => {
+          const teams = await tournamentService.getTournamentTeams(tournament.id);
+          const eliminatedTeams = teams.filter(team => team.eliminated).length;
+          const totalTeams = teams.length;
+          
+          const status: TournamentStatus = totalTeams - eliminatedTeams <= 1 ? 'Complete' : 'In Progress';
+          
+          return {
+            ...tournament,
+            status,
+            totalTeams,
+            eliminatedTeams
+          };
+        })
+      );
+      
+      setTournaments(tournamentsWithStatus);
     } catch (err) {
       setError('Failed to load tournaments');
       console.error('Error loading tournaments:', err);
@@ -53,7 +80,14 @@ export const TournamentListPage: React.FC = () => {
                   {tournament.rounds} rounds • Created {new Date(tournament.created).toLocaleDateString()}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-4">
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  tournament.status === 'Complete' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {tournament.status}
+                </div>
                 <Link
                   to={`/admin/tournaments/${tournament.id}/edit`}
                   className="text-blue-500 hover:text-blue-700"
