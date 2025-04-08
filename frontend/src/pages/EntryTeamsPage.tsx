@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
+import { useUser } from '../contexts/UserContext';
 
 // Add a new section to display portfolio scores
 const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }> = ({
@@ -41,10 +42,12 @@ const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaP
 
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
+  const { user } = useUser();
   const [teams, setTeams] = useState<CalcuttaEntryTeam[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [portfolios, setPortfolios] = useState<CalcuttaPortfolio[]>([]);
   const [portfolioTeams, setPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
+  const [allCalcuttaPortfolioTeams, setAllCalcuttaPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +102,32 @@ export function EntryTeamsPage() {
           
           setPortfolioTeams(portfolioTeamsWithSchools);
         }
+
+        // Fetch all portfolios in the Calcutta
+        const allEntries = await calcuttaService.getCalcuttaEntries(calcuttaId);
+        const allPortfoliosPromises = allEntries.map(entry => 
+          calcuttaService.getPortfoliosByEntry(entry.id)
+        );
+        const allPortfoliosResults = await Promise.all(allPortfoliosPromises);
+        const allPortfolios = allPortfoliosResults.flat();
+
+        // Fetch portfolio teams for all portfolios
+        const allPortfolioTeamsPromises = allPortfolios.map(portfolio => 
+          calcuttaService.getPortfolioTeams(portfolio.id)
+        );
+        const allPortfolioTeamsResults = await Promise.all(allPortfolioTeamsPromises);
+        const allCalcuttaPortfolioTeams = allPortfolioTeamsResults.flat();
+
+        // Associate schools with all portfolio teams
+        const allCalcuttaPortfolioTeamsWithSchools = allCalcuttaPortfolioTeams.map(team => ({
+          ...team,
+          team: team.team ? {
+            ...team.team,
+            school: schoolMap.get(team.team.schoolId)
+          } : undefined
+        }));
+
+        setAllCalcuttaPortfolioTeams(allCalcuttaPortfolioTeamsWithSchools);
         
         setLoading(false);
       } catch (err) {
@@ -121,6 +150,26 @@ export function EntryTeamsPage() {
   // Helper function to find portfolio team data for a given team ID
   const getPortfolioTeamData = (teamId: string) => {
     return portfolioTeams.find(pt => pt.teamId === teamId);
+  };
+
+  // Helper function to calculate investor ranking for a team
+  const getInvestorRanking = (teamId: string) => {
+    // Get all portfolio teams for this team across all portfolios in the Calcutta
+    const allInvestors = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === teamId);
+    
+    // Sort investors by ownership percentage (descending)
+    const sortedInvestors = [...allInvestors].sort((a, b) => b.ownershipPercentage - a.ownershipPercentage);
+    
+    // Find current user's rank
+    const userPortfolio = portfolios[0];
+    const userRank = userPortfolio ? 
+      sortedInvestors.findIndex(pt => pt.portfolioId === userPortfolio.id) + 1 : 
+      0;
+    
+    return {
+      rank: userRank,
+      total: allInvestors.length
+    };
   };
 
   // Sort teams by points earned, then by ownership percentage, then by bid amount
@@ -168,6 +217,7 @@ export function EntryTeamsPage() {
         {sortedTeams.map((team) => {
           const portfolioTeam = getPortfolioTeamData(team.teamId);
           const wins = calculateWins(team);
+          const investorRanking = getInvestorRanking(team.teamId);
           return (
             <div
               key={team.id}
@@ -186,6 +236,9 @@ export function EntryTeamsPage() {
                     </p>
                     <p className="text-gray-600">
                       Points Earned: {portfolioTeam.actualPoints.toFixed(2)}
+                    </p>
+                    <p className="text-gray-600">
+                      Investor Rank: {investorRanking.rank} / {investorRanking.total}
                     </p>
                   </>
                 )}
