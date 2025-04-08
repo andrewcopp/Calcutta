@@ -1,7 +1,31 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { AuthForm } from '../components/Auth/AuthForm';
+import { useUser } from '../contexts/UserContext';
 
 export function HomePage() {
+  const { user } = useUser();
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+              Welcome to Calcutta
+            </h1>
+            <p className="text-xl text-gray-600 mb-8">
+              The ultimate NCAA Tournament auction platform where strategy meets excitement.
+              Bid on teams, build your portfolio, and compete for glory in the most thrilling
+              college basketball tournament of the year.
+            </p>
+            <AuthForm />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container mx-auto px-4 py-16">

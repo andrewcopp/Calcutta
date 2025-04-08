@@ -22,6 +22,8 @@ var tournamentRepo *services.TournamentRepository
 var tournamentService *services.TournamentService
 var calcuttaRepo *services.CalcuttaRepository
 var calcuttaService *services.CalcuttaService
+var userRepo *services.UserRepository
+var userService *services.UserService
 
 func init() {
 	log.Printf("Initializing database connection...")
@@ -50,6 +52,7 @@ func init() {
 	schoolRepo = services.NewSchoolRepository(db)
 	tournamentRepo = services.NewTournamentRepository(db)
 	calcuttaRepo = services.NewCalcuttaRepository(db)
+	userRepo = services.NewUserRepository(db)
 	log.Printf("Repositories initialized successfully")
 
 	// Initialize services
@@ -57,6 +60,7 @@ func init() {
 	schoolService = services.NewSchoolService(schoolRepo)
 	tournamentService = services.NewTournamentService(tournamentRepo)
 	calcuttaService = services.NewCalcuttaService(calcuttaRepo)
+	userService = services.NewUserService(userRepo)
 	log.Printf("Services initialized successfully")
 }
 
@@ -474,7 +478,38 @@ func portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(teams)
 }
 
+func setupCORS(router *mux.Router) {
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			// Handle preflight requests
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	})
+}
+
 func setupRoutes(r *mux.Router, calcuttaService *services.CalcuttaService) {
+	// Health check
+	r.HandleFunc("/health", healthHandler).Methods("GET", "OPTIONS")
+
+	// Auth routes - add OPTIONS method for CORS preflight
+	r.HandleFunc("/api/auth/login", loginHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/auth/signup", signupHandler).Methods("POST", "OPTIONS")
+
+	// Schools
+	r.HandleFunc("/api/schools", schoolsHandler).Methods("GET", "OPTIONS")
+
+	// ... rest of the routes ...
+
 	// Portfolio routes
 	r.HandleFunc("/api/portfolios/{id}/calculate-scores", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -844,6 +879,50 @@ func calcuttaHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Successfully retrieved calcutta: %+v", calcutta)
 	json.NewEncoder(w).Encode(calcutta)
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var req struct {
+		Email string `json:"email"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := userService.Login(r.Context(), req.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
+}
+
+func signupHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var req struct {
+		Email     string `json:"email"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := userService.Signup(r.Context(), req.Email, req.FirstName, req.LastName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
 }
 
 func main() {

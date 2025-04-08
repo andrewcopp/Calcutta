@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { UserMenu } from './Header/UserMenu';
 
 export const Header: React.FC = () => {
   const location = useLocation();
@@ -23,14 +24,17 @@ export const Header: React.FC = () => {
             </nav>
           </div>
           
-          {!isAdminPage && (
-            <Link
-              to="/admin"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Admin Console
-            </Link>
-          )}
+          <div className="flex items-center space-x-4">
+            <UserMenu />
+            {!isAdminPage && (
+              <Link
+                to="/admin"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Admin Console
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </header>
