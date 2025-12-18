@@ -60,7 +60,7 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 	}
 	defer rows.Close()
 
-	var calcuttas []*models.Calcutta
+	calcuttas := make([]*models.Calcutta, 0)
 	for rows.Next() {
 		calcutta := &models.Calcutta{}
 		var createdAt, updatedAt time.Time
@@ -270,7 +270,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 	}
 	defer rows.Close()
 
-	var entries []*models.CalcuttaEntry
+	entries := make([]*models.CalcuttaEntry, 0)
 	for rows.Next() {
 		entry := &models.CalcuttaEntry{}
 		var userID sql.NullString
@@ -344,7 +344,7 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 	}
 	defer rows.Close()
 
-	var teams []*models.CalcuttaEntryTeam
+	teams := make([]*models.CalcuttaEntryTeam, 0)
 	for rows.Next() {
 		team := &models.CalcuttaEntryTeam{}
 		var createdAt, updatedAt time.Time
@@ -471,7 +471,7 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 	}
 	defer rows.Close()
 
-	var teams []*models.CalcuttaPortfolioTeam
+	teams := make([]*models.CalcuttaPortfolioTeam, 0)
 	for rows.Next() {
 		team := &models.CalcuttaPortfolioTeam{}
 		var createdAt, updatedAt time.Time
@@ -562,7 +562,7 @@ func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID s
 	}
 	defer rows.Close()
 
-	var portfolios []*models.CalcuttaPortfolio
+	portfolios := make([]*models.CalcuttaPortfolio, 0)
 	for rows.Next() {
 		portfolio := &models.CalcuttaPortfolio{}
 		var createdAt, updatedAt time.Time
@@ -639,7 +639,7 @@ func (r *CalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) (
 	}
 	defer rows.Close()
 
-	var rounds []*models.CalcuttaRound
+	rounds := make([]*models.CalcuttaRound, 0)
 	for rows.Next() {
 		round := &models.CalcuttaRound{}
 		var createdAt, updatedAt time.Time

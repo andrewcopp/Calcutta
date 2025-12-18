@@ -187,35 +187,63 @@ func (s *CalcuttaService) CalculateTotalBids(ctx context.Context, entryID string
 
 // CreatePortfolio creates a new portfolio for a Calcutta entry
 func (s *CalcuttaService) CreatePortfolio(ctx context.Context, entryID string) (*models.CalcuttaPortfolio, error) {
+	// Get this entry's teams
 	teams, err := s.repo.GetEntryTeams(ctx, entryID)
 	if err != nil {
 		return nil, err
 	}
 
-	totalBids, err := s.CalculateTotalBids(ctx, entryID)
+	// Find the calcutta ID for this entry
+	entry, err := s.repo.GetEntry(ctx, entryID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Build a list of all entry teams across the entire calcutta
+	allEntries, err := s.repo.GetEntries(ctx, entry.CalcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	var allTeams []*models.CalcuttaEntryTeam
+	for _, e := range allEntries {
+		ets, err := s.repo.GetEntryTeams(ctx, e.ID)
+		if err != nil {
+			return nil, err
+		}
+		allTeams = append(allTeams, ets...)
+	}
+
+	// Create the portfolio
 	portfolio := &models.CalcuttaPortfolio{
 		EntryID: entryID,
 	}
 
-	err = s.repo.CreatePortfolio(ctx, portfolio)
-	if err != nil {
+	if err := s.repo.CreatePortfolio(ctx, portfolio); err != nil {
 		return nil, err
 	}
 
+	// For each team in this entry, calculate ownership as (entry bid for team) / (total bids for team across all entries)
 	for _, t := range teams {
-		ownershipPercentage := float64(t.Bid) / totalBids
+		totalBidsForTeam := 0.0
+		for _, et := range allTeams {
+			if et.TeamID == t.TeamID {
+				totalBidsForTeam += float64(et.Bid)
+			}
+		}
+
+		ownershipPercentage := 0.0
+		if totalBidsForTeam > 0 {
+			ownershipPercentage = float64(t.Bid) / totalBidsForTeam
+		}
+
 		portfolioTeam := &models.CalcuttaPortfolioTeam{
 			PortfolioID:         portfolio.ID,
 			TeamID:              t.TeamID,
 			OwnershipPercentage: ownershipPercentage,
 		}
 
-		err = s.repo.CreatePortfolioTeam(ctx, portfolioTeam)
-		if err != nil {
+		if err := s.repo.CreatePortfolioTeam(ctx, portfolioTeam); err != nil {
 			return nil, err
 		}
 	}

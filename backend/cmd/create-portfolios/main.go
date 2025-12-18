@@ -6,11 +6,9 @@ import (
 	"flag"
 	"log"
 	"os"
-	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 )
 
@@ -36,8 +34,9 @@ func main() {
 	}
 	defer db.Close()
 
-	// Initialize repositories
+	// Initialize repositories and services
 	calcuttaRepo := services.NewCalcuttaRepository(db)
+	calcuttaService := services.NewCalcuttaService(calcuttaRepo)
 
 	// Get the Calcutta
 	calcutta, err := calcuttaRepo.GetByID(context.Background(), *calcuttaID)
@@ -66,45 +65,13 @@ func main() {
 			continue
 		}
 
-		// Create a new portfolio
-		portfolio := &models.CalcuttaPortfolio{
-			EntryID: entry.ID,
-		}
-
-		err = calcuttaRepo.CreatePortfolio(context.Background(), portfolio)
+		// Create a new portfolio with correct ownership via service
+		portfolio, err := calcuttaService.CreatePortfolio(context.Background(), entry.ID)
 		if err != nil {
 			log.Printf("Error creating portfolio for entry %s: %v", entry.ID, err)
 			continue
 		}
-
 		log.Printf("Created portfolio %s for entry %s", portfolio.ID, entry.ID)
-
-		// Get entry teams
-		entryTeams, err := calcuttaRepo.GetEntryTeams(context.Background(), entry.ID)
-		if err != nil {
-			log.Printf("Error getting entry teams for entry %s: %v", entry.ID, err)
-			continue
-		}
-
-		// Create portfolio teams
-		now := time.Now()
-		for _, entryTeam := range entryTeams {
-			// Create a new portfolio team
-			portfolioTeam := &models.CalcuttaPortfolioTeam{
-				PortfolioID: portfolio.ID,
-				TeamID:      entryTeam.TeamID,
-				Created:     now,
-				Updated:     now,
-			}
-
-			err = calcuttaRepo.CreatePortfolioTeam(context.Background(), portfolioTeam)
-			if err != nil {
-				log.Printf("Error creating portfolio team for team %s: %v", entryTeam.TeamID, err)
-				continue
-			}
-
-			log.Printf("Created portfolio team %s for team %s", portfolioTeam.ID, entryTeam.TeamID)
-		}
 	}
 
 	log.Printf("All portfolios for Calcutta %s have been created", calcutta.ID)

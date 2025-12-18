@@ -30,7 +30,7 @@ func (r *SchoolRepository) GetAll(ctx context.Context) ([]models.School, error) 
 	}
 	defer rows.Close()
 
-	var schools []models.School
+	schools := make([]models.School, 0)
 	for rows.Next() {
 		var school models.School
 		if err := rows.Scan(&school.ID, &school.Name); err != nil {

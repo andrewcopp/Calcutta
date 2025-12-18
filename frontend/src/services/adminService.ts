@@ -1,7 +1,8 @@
 import { TournamentTeam } from '../types/calcutta';
 import { School } from '../types/school';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE_URL = `${API_URL}/api`;
 
 export async function fetchTournamentTeams(tournamentId: string): Promise<TournamentTeam[]> {
   const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams`, {
