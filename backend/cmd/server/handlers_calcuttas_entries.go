@@ -23,11 +23,17 @@ func (s *Server) calcuttaEntriesHandler(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, dtos.NewEntryListResponse(entries))
 }
 
-func (s *Server) entryTeamsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) calcuttaEntryTeamsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	entryID := vars["id"]
+	calcuttaID := vars["calcuttaId"]
+	entryID := vars["entryId"]
+
+	if calcuttaID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "calcuttaId")
+		return
+	}
 	if entryID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "id")
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "entryId")
 		return
 	}
 
