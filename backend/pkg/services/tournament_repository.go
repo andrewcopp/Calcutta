@@ -98,10 +98,23 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 // GetTeams returns all teams for a tournament
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
 	query := `
-		SELECT id, tournament_id, school_id, seed, region, byes, wins, eliminated, created_at, updated_at
-		FROM tournament_teams
-		WHERE tournament_id = $1 AND deleted_at IS NULL
-		ORDER BY seed ASC
+		SELECT 
+			tt.id, 
+			tt.tournament_id, 
+			tt.school_id, 
+			tt.seed, 
+			tt.region, 
+			tt.byes, 
+			tt.wins, 
+			tt.eliminated, 
+			tt.created_at, 
+			tt.updated_at,
+			s.id as school_id,
+			s.name as school_name
+		FROM tournament_teams tt
+		LEFT JOIN schools s ON tt.school_id = s.id
+		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
+		ORDER BY tt.seed ASC
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, tournamentID)
@@ -114,6 +127,8 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 	for rows.Next() {
 		team := &models.TournamentTeam{}
 		var createdAt, updatedAt time.Time
+		var schoolIDFromJoin sql.NullString
+		var schoolName sql.NullString
 
 		err := rows.Scan(
 			&team.ID,
@@ -126,6 +141,8 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			&team.Eliminated,
 			&createdAt,
 			&updatedAt,
+			&schoolIDFromJoin,
+			&schoolName,
 		)
 		if err != nil {
 			return []*models.TournamentTeam{}, err
@@ -133,6 +150,14 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 
 		team.Created = createdAt
 		team.Updated = updatedAt
+
+		// Add school information if available
+		if schoolIDFromJoin.Valid && schoolName.Valid {
+			team.School = &models.School{
+				ID:   schoolIDFromJoin.String,
+				Name: schoolName.String,
+			}
+		}
 
 		teams = append(teams, team)
 	}

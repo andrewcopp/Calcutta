@@ -18,6 +18,7 @@ type TournamentTeam struct {
 	Created      time.Time  `json:"created"`
 	Updated      time.Time  `json:"updated"`
 	Deleted      *time.Time `json:"deleted,omitempty"`
+	School       *School    `json:"school,omitempty"`
 }
 
 // TournamentConfig holds configuration for tournament rules and validation

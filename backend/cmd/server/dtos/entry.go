@@ -39,19 +39,24 @@ func NewEntryListResponse(entries []*models.CalcuttaEntry) []*EntryResponse {
 }
 
 type EntryTeamResponse struct {
-	ID      string `json:"id"`
-	EntryID string `json:"entryId"`
-	TeamID  string `json:"teamId"`
-	Bid     int    `json:"bid"`
+	ID      string                  `json:"id"`
+	EntryID string                  `json:"entryId"`
+	TeamID  string                  `json:"teamId"`
+	Bid     int                     `json:"bid"`
+	Team    *TournamentTeamResponse `json:"team,omitempty"`
 }
 
 func NewEntryTeamResponse(et *models.CalcuttaEntryTeam) *EntryTeamResponse {
-	return &EntryTeamResponse{
+	resp := &EntryTeamResponse{
 		ID:      et.ID,
 		EntryID: et.EntryID,
 		TeamID:  et.TeamID,
 		Bid:     et.Bid,
 	}
+	if et.Team != nil {
+		resp.Team = NewTournamentTeamResponse(et.Team, et.Team.School)
+	}
+	return resp
 }
 
 func NewEntryTeamListResponse(teams []*models.CalcuttaEntryTeam) []*EntryTeamResponse {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
@@ -23,14 +22,7 @@ func (s *Server) tournamentTeamsHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	response := make([]*dtos.TournamentTeamResponse, 0, len(teams))
 	for _, team := range teams {
-		school, err := s.schoolService.GetSchoolByID(r.Context(), team.SchoolID)
-		if err != nil {
-			log.Printf("Error getting school for team %s: %v", team.ID, err)
-			response = append(response, dtos.NewTournamentTeamResponse(team, nil))
-			continue
-		}
-		s := school
-		response = append(response, dtos.NewTournamentTeamResponse(team, &s))
+		response = append(response, dtos.NewTournamentTeamResponse(team, team.School))
 	}
 	writeJSON(w, http.StatusOK, response)
 }

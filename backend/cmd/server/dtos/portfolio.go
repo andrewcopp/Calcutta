@@ -37,18 +37,19 @@ func NewPortfolioListResponse(portfolios []*models.CalcuttaPortfolio) []*Portfol
 }
 
 type PortfolioTeamResponse struct {
-	ID                  string    `json:"id"`
-	PortfolioID         string    `json:"portfolioId"`
-	TeamID              string    `json:"teamId"`
-	OwnershipPercentage float64   `json:"ownershipPercentage"`
-	ExpectedPoints      float64   `json:"expectedPoints"`
-	PredictedPoints     float64   `json:"predictedPoints"`
-	ActualPoints        float64   `json:"actualPoints"`
-	Updated             time.Time `json:"updated"`
+	ID                  string                  `json:"id"`
+	PortfolioID         string                  `json:"portfolioId"`
+	TeamID              string                  `json:"teamId"`
+	OwnershipPercentage float64                 `json:"ownershipPercentage"`
+	ExpectedPoints      float64                 `json:"expectedPoints"`
+	PredictedPoints     float64                 `json:"predictedPoints"`
+	ActualPoints        float64                 `json:"actualPoints"`
+	Updated             time.Time               `json:"updated"`
+	Team                *TournamentTeamResponse `json:"team,omitempty"`
 }
 
 func NewPortfolioTeamResponse(pt *models.CalcuttaPortfolioTeam) *PortfolioTeamResponse {
-	return &PortfolioTeamResponse{
+	resp := &PortfolioTeamResponse{
 		ID:                  pt.ID,
 		PortfolioID:         pt.PortfolioID,
 		TeamID:              pt.TeamID,
@@ -58,6 +59,10 @@ func NewPortfolioTeamResponse(pt *models.CalcuttaPortfolioTeam) *PortfolioTeamRe
 		ActualPoints:        pt.ActualPoints,
 		Updated:             pt.Updated,
 	}
+	if pt.Team != nil {
+		resp.Team = NewTournamentTeamResponse(pt.Team, pt.Team.School)
+	}
+	return resp
 }
 
 func NewPortfolioTeamListResponse(teams []*models.CalcuttaPortfolioTeam) []*PortfolioTeamResponse {

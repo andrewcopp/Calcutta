@@ -62,8 +62,22 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			cpt.predicted_points, 
 			cpt.created_at, 
 			cpt.updated_at, 
-			cpt.deleted_at
+			cpt.deleted_at,
+			tt.id as team_id,
+			tt.school_id,
+			tt.tournament_id,
+			tt.seed,
+			tt.region,
+			tt.byes,
+			tt.wins,
+			tt.eliminated,
+			tt.created_at as team_created_at,
+			tt.updated_at as team_updated_at,
+			s.id as school_id,
+			s.name as school_name
 		FROM calcutta_portfolio_teams cpt
+		JOIN tournament_teams tt ON cpt.team_id = tt.id
+		LEFT JOIN schools s ON tt.school_id = s.id
 		WHERE cpt.portfolio_id = $1 AND cpt.deleted_at IS NULL
 	`
 
@@ -79,6 +93,17 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 		var createdAt, updatedAt time.Time
 		var deletedAt sql.NullTime
 
+		// Team fields
+		var teamID, schoolID, tournamentID string
+		var seed, byes, wins int
+		var region string
+		var eliminated bool
+		var teamCreatedAt, teamUpdatedAt time.Time
+
+		// School fields
+		var schoolIDFromJoin sql.NullString
+		var schoolName sql.NullString
+
 		err := rows.Scan(
 			&team.ID,
 			&team.PortfolioID,
@@ -90,6 +115,18 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			&createdAt,
 			&updatedAt,
 			&deletedAt,
+			&teamID,
+			&schoolID,
+			&tournamentID,
+			&seed,
+			&region,
+			&byes,
+			&wins,
+			&eliminated,
+			&teamCreatedAt,
+			&teamUpdatedAt,
+			&schoolIDFromJoin,
+			&schoolName,
 		)
 		if err != nil {
 			return nil, err
@@ -99,6 +136,28 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 		team.Updated = updatedAt
 		if deletedAt.Valid {
 			team.Deleted = &deletedAt.Time
+		}
+
+		// Create the nested team object
+		team.Team = &models.TournamentTeam{
+			ID:           teamID,
+			SchoolID:     schoolID,
+			TournamentID: tournamentID,
+			Seed:         seed,
+			Region:       region,
+			Byes:         byes,
+			Wins:         wins,
+			Eliminated:   eliminated,
+			Created:      teamCreatedAt,
+			Updated:      teamUpdatedAt,
+		}
+
+		// Add school information if available
+		if schoolIDFromJoin.Valid && schoolName.Valid {
+			team.Team.School = &models.School{
+				ID:   schoolIDFromJoin.String,
+				Name: schoolName.String,
+			}
 		}
 
 		teams = append(teams, team)

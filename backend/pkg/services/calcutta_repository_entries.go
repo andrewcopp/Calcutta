@@ -103,9 +103,12 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			tt.wins,
 			tt.created_at as team_created_at,
 			tt.updated_at as team_updated_at,
-			tt.deleted_at as team_deleted_at
+			tt.deleted_at as team_deleted_at,
+			s.id as school_id,
+			s.name as school_name
 		FROM calcutta_entry_teams cet
 		JOIN tournament_teams tt ON cet.team_id = tt.id
+		LEFT JOIN schools s ON tt.school_id = s.id
 		WHERE cet.entry_id = $1 AND cet.deleted_at IS NULL
 		ORDER BY cet.created_at DESC
 	`
@@ -128,6 +131,10 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 		var teamCreatedAt, teamUpdatedAt time.Time
 		var teamDeletedAt sql.NullTime
 
+		// School fields
+		var schoolIDFromJoin sql.NullString
+		var schoolName sql.NullString
+
 		err := rows.Scan(
 			&team.ID,
 			&team.EntryID,
@@ -145,6 +152,8 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			&teamCreatedAt,
 			&teamUpdatedAt,
 			&teamDeletedAt,
+			&schoolIDFromJoin,
+			&schoolName,
 		)
 		if err != nil {
 			return nil, err
@@ -169,6 +178,14 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 		}
 		if teamDeletedAt.Valid {
 			team.Team.Deleted = &teamDeletedAt.Time
+		}
+
+		// Add school information if available
+		if schoolIDFromJoin.Valid && schoolName.Valid {
+			team.Team.School = &models.School{
+				ID:   schoolIDFromJoin.String,
+				Name: schoolName.String,
+			}
 		}
 
 		teams = append(teams, team)
