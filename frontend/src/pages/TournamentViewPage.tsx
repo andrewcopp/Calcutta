@@ -131,6 +131,12 @@ export const TournamentViewPage: React.FC = () => {
         </div>
         <div className="flex gap-4">
           <Link
+            to={`/admin/tournaments/${id}/bracket`}
+            className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+          >
+            Manage Bracket
+          </Link>
+          <Link
             to={`/admin/tournaments/${id}/edit`}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >

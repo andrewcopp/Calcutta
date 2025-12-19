@@ -7,6 +7,7 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerBasicRoutes(r)
 	s.registerAuthRoutes(r)
 	s.registerTournamentRoutes(r)
+	s.registerBracketRoutes(r)
 	s.registerPortfolioRoutes(r)
 	s.registerCalcuttaRoutes(r)
 }
@@ -32,6 +33,14 @@ func (s *Server) registerTournamentRoutes(r *mux.Router) {
 	r.HandleFunc("/api/tournaments/{id}/teams", s.createTournamentTeamHandler).Methods("POST")
 	r.HandleFunc("/api/teams/{id}", s.updateTeamHandler).Methods("PATCH")
 	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", s.recalculatePortfoliosHandler).Methods("POST")
+}
+
+func (s *Server) registerBracketRoutes(r *mux.Router) {
+	// Bracket management
+	r.HandleFunc("/api/tournaments/{id}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{id}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.selectWinnerHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.unselectWinnerHandler).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerPortfolioRoutes(r *mux.Router) {

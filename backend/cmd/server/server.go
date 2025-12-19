@@ -15,6 +15,7 @@ type Server struct {
 	calcuttaService   *services.CalcuttaService
 	userRepo          *services.UserRepository
 	userService       *services.UserService
+	bracketService    *services.BracketService
 }
 
 func NewServer(db *sql.DB) *Server {
@@ -35,6 +36,7 @@ func NewServer(db *sql.DB) *Server {
 		TeamReader:      calcuttaRepo,
 	})
 	userService := services.NewUserService(userRepo)
+	bracketService := services.NewBracketService(tournamentRepo)
 
 	return &Server{
 		schoolRepo:        schoolRepo,
@@ -45,5 +47,6 @@ func NewServer(db *sql.DB) *Server {
 		calcuttaService:   calcuttaService,
 		userRepo:          userRepo,
 		userService:       userService,
+		bracketService:    bracketService,
 	}
 }

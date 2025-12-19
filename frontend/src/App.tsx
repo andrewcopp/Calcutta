@@ -9,6 +9,7 @@ import { TournamentViewPage } from './pages/TournamentViewPage';
 import { TournamentEditPage } from './pages/TournamentEditPage';
 import { TournamentCreatePage } from './pages/TournamentCreatePage';
 import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
+import { TournamentBracketPage } from './pages/TournamentBracketPage';
 import { AdminPage } from './pages/AdminPage';
 import { HomePage } from './pages/HomePage';
 import { RulesPage } from './pages/RulesPage';
@@ -34,6 +35,7 @@ export const App: React.FC = () => {
             <Route path="/admin/tournaments/:id" element={<TournamentViewPage />} />
             <Route path="/admin/tournaments/:id/edit" element={<TournamentEditPage />} />
             <Route path="/admin/tournaments/:id/teams/add" element={<TournamentAddTeamsPage />} />
+            <Route path="/admin/tournaments/:id/bracket" element={<TournamentBracketPage />} />
             <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
             <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
             <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />

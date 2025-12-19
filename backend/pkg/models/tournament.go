@@ -4,12 +4,16 @@ import "time"
 
 // Tournament represents a basketball tournament in the real world
 type Tournament struct {
-	ID      string     `json:"id"`
-	Name    string     `json:"name"`
-	Rounds  int        `json:"rounds"` // Total number of rounds in the tournament
-	Created time.Time  `json:"created"`
-	Updated time.Time  `json:"updated"`
-	Deleted *time.Time `json:"deleted,omitempty"`
+	ID                   string     `json:"id"`
+	Name                 string     `json:"name"`
+	Rounds               int        `json:"rounds"` // Total number of rounds in the tournament
+	FinalFourTopLeft     string     `json:"finalFourTopLeft"`
+	FinalFourBottomLeft  string     `json:"finalFourBottomLeft"`
+	FinalFourTopRight    string     `json:"finalFourTopRight"`
+	FinalFourBottomRight string     `json:"finalFourBottomRight"`
+	Created              time.Time  `json:"created"`
+	Updated              time.Time  `json:"updated"`
+	Deleted              *time.Time `json:"deleted,omitempty"`
 }
 
 // TournamentState represents the current state of a tournament
