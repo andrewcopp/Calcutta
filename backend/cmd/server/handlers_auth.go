@@ -2,49 +2,52 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+
+	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
+	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 )
 
 func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	var req struct {
-		Email string `json:"email"`
-	}
-
+	var req dtos.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	user, err := s.userService.Login(r.Context(), req.Email)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		var notFoundErr *services.NotFoundError
+		if errors.As(err, &notFoundErr) {
+			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Invalid credentials", "")
+			return
+		}
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(user)
+	writeJSON(w, http.StatusOK, dtos.NewUserResponse(user))
 }
 
 func (s *Server) signupHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	var req struct {
-		Email     string `json:"email"`
-		FirstName string `json:"firstName"`
-		LastName  string `json:"lastName"`
-	}
-
+	var req dtos.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	user, err := s.userService.Signup(r.Context(), req.Email, req.FirstName, req.LastName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(user)
+	writeJSON(w, http.StatusCreated, dtos.NewUserResponse(user))
 }

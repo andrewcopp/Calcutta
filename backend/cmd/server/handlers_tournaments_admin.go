@@ -8,18 +8,16 @@ import (
 )
 
 func (s *Server) recalculatePortfoliosHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	vars := mux.Vars(r)
 	tournamentID := vars["id"]
 	if tournamentID == "" {
-		http.Error(w, "Tournament ID is required", http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
 		return
 	}
 
 	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), tournamentID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
@@ -30,5 +28,5 @@ func (s *Server) recalculatePortfoliosHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	w.WriteHeader(http.StatusOK)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

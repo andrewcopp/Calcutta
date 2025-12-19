@@ -204,7 +204,7 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("entry not found")
+			return nil, &NotFoundError{Resource: "entry", ID: id}
 		}
 		return nil, err
 	}

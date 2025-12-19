@@ -35,7 +35,7 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("portfolio not found")
+			return nil, &NotFoundError{Resource: "portfolio", ID: id}
 		}
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (r *CalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *mode
 
 	if rowsAffected == 0 {
 		log.Printf("No rows updated for portfolio team %s", team.ID)
-		return errors.New("portfolio team not found")
+		return &NotFoundError{Resource: "portfolio team", ID: team.ID}
 	}
 
 	log.Printf("Successfully updated portfolio team %s (rows affected: %d)", team.ID, rowsAffected)
@@ -220,7 +220,7 @@ func (r *CalcuttaRepository) UpdatePortfolio(ctx context.Context, portfolio *mod
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("portfolio not found")
+		return &NotFoundError{Resource: "portfolio", ID: portfolio.ID}
 	}
 
 	return nil

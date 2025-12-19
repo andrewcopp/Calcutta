@@ -46,7 +46,7 @@ func main() {
 	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[%s] No route matched: %s %s", getRequestID(r.Context()), r.Method, r.URL.Path)
-		http.Error(w, "Not Found", http.StatusNotFound)
+		writeError(w, r, http.StatusNotFound, "not_found", "Not Found", "")
 	})
 
 	// Port

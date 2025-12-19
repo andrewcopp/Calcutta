@@ -3,39 +3,26 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
 )
 
 func (s *Server) createTournamentHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	// Parse request body
-	var request struct {
-		Name   string `json:"name"`
-		Rounds int    `json:"rounds"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	var req dtos.CreateTournamentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
-
-	// Validate request
-	if request.Name == "" {
-		http.Error(w, "Name is required", http.StatusBadRequest)
-		return
-	}
-	if request.Rounds <= 0 {
-		http.Error(w, "Rounds must be greater than 0", http.StatusBadRequest)
+	if err := req.Validate(); err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	// Create tournament
-	tournament, err := s.tournamentService.CreateTournament(r.Context(), request.Name, request.Rounds)
+	tournament, err := s.tournamentService.CreateTournament(r.Context(), req.Name, req.Rounds)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(tournament)
+	writeJSON(w, http.StatusCreated, dtos.NewTournamentResponse(tournament, ""))
 }

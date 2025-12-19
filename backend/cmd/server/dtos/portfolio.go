@@ -77,6 +77,23 @@ type UpdatePortfolioTeamScoresRequest struct {
 	PredictedPoints float64 `json:"predictedPoints"`
 }
 
+func (r *UpdatePortfolioTeamScoresRequest) Validate() error {
+	if r.ExpectedPoints < 0 {
+		return ErrFieldInvalid("expectedPoints", "must be >= 0")
+	}
+	if r.PredictedPoints < 0 {
+		return ErrFieldInvalid("predictedPoints", "must be >= 0")
+	}
+	return nil
+}
+
 type UpdatePortfolioMaximumScoreRequest struct {
 	MaximumPoints float64 `json:"maximumPoints"`
+}
+
+func (r *UpdatePortfolioMaximumScoreRequest) Validate() error {
+	if r.MaximumPoints < 0 {
+		return ErrFieldInvalid("maximumPoints", "must be >= 0")
+	}
+	return nil
 }

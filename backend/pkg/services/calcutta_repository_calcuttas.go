@@ -88,7 +88,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Printf("No calcutta found with ID: %s", id)
-			return nil, errors.New("calcutta not found")
+			return nil, &NotFoundError{Resource: "calcutta", ID: id}
 		}
 		log.Printf("Database error while fetching calcutta: %v", err)
 		return nil, err
@@ -171,7 +171,7 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("calcutta not found")
+		return &NotFoundError{Resource: "calcutta", ID: calcutta.ID}
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func (r *CalcuttaRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("calcutta not found")
+		return &NotFoundError{Resource: "calcutta", ID: id}
 	}
 
 	return nil

@@ -129,7 +129,7 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("tournament team not found")
+			return nil, &NotFoundError{Resource: "tournament team", ID: id}
 		}
 		return nil, err
 	}

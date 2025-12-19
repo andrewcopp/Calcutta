@@ -1,33 +1,31 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
+	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
 	"github.com/gorilla/mux"
 )
 
 func (s *Server) tournamentHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	// Extract tournament ID from URL path
 	vars := mux.Vars(r)
 	tournamentID := vars["id"]
 	if tournamentID == "" {
-		http.Error(w, "Tournament ID is required", http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
 		return
 	}
 
 	// Get tournament by ID
 	tournament, err := s.tournamentService.GetTournamentByID(r.Context(), tournamentID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	if tournament == nil {
-		http.Error(w, "Tournament not found", http.StatusNotFound)
+		writeError(w, r, http.StatusNotFound, "not_found", "Tournament not found", "id")
 		return
 	}
 
@@ -48,13 +46,5 @@ func (s *Server) tournamentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	response := tournamentResponse{
-		ID:      tournament.ID,
-		Name:    tournament.Name,
-		Rounds:  tournament.Rounds,
-		Winner:  winnerName,
-		Created: tournament.Created.Format("2006-01-02T15:04:05Z07:00"),
-	}
-
-	json.NewEncoder(w).Encode(response)
+	writeJSON(w, http.StatusOK, dtos.NewTournamentResponse(tournament, winnerName))
 }

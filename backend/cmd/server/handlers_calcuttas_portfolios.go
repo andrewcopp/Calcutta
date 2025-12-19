@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
@@ -9,39 +8,33 @@ import (
 )
 
 func (s *Server) portfoliosHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	vars := mux.Vars(r)
 	entryID := vars["id"]
 	if entryID == "" {
-		http.Error(w, "Entry ID is required", http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "id")
 		return
 	}
 
 	portfolios, err := s.calcuttaService.GetPortfoliosByEntry(r.Context(), entryID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(dtos.NewPortfolioListResponse(portfolios))
+	writeJSON(w, http.StatusOK, dtos.NewPortfolioListResponse(portfolios))
 }
 
 func (s *Server) portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]
 	if portfolioID == "" {
-		http.Error(w, "Portfolio ID is required", http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Portfolio ID is required", "id")
 		return
 	}
 
 	teams, err := s.calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(dtos.NewPortfolioTeamListResponse(teams))
+	writeJSON(w, http.StatusOK, dtos.NewPortfolioTeamListResponse(teams))
 }

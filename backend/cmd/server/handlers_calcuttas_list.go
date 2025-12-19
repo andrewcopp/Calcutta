@@ -9,8 +9,6 @@ import (
 )
 
 func (s *Server) calcuttasHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	if r.Method == "POST" {
 		s.createCalcuttaHandler(w, r)
 		return
@@ -20,13 +18,13 @@ func (s *Server) calcuttasHandler(w http.ResponseWriter, r *http.Request) {
 	calcuttas, err := s.calcuttaService.GetAllCalcuttas(r.Context())
 	if err != nil {
 		log.Printf("Error getting all calcuttas: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 	log.Printf("Successfully retrieved %d calcuttas", len(calcuttas))
 
 	response := dtos.NewCalcuttaListResponse(calcuttas)
-	json.NewEncoder(w).Encode(response)
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) createCalcuttaHandler(w http.ResponseWriter, r *http.Request) {
@@ -35,24 +33,22 @@ func (s *Server) createCalcuttaHandler(w http.ResponseWriter, r *http.Request) {
 	var req dtos.CreateCalcuttaRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 
 	if err := req.Validate(); err != nil {
 		log.Printf("Validation error: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	calcutta := req.ToModel()
 	if err := s.calcuttaService.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
 		log.Printf("Error creating calcutta with rounds: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 	log.Printf("Successfully created calcutta %s with rounds", calcutta.ID)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(dtos.NewCalcuttaResponse(calcutta))
+	writeJSON(w, http.StatusCreated, dtos.NewCalcuttaResponse(calcutta))
 }

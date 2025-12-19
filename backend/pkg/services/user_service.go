@@ -26,7 +26,7 @@ func (s *UserService) Login(ctx context.Context, email string) (*models.User, er
 	}
 
 	if user == nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, &NotFoundError{Resource: "user", ID: email}
 	}
 
 	return user, nil
@@ -40,7 +40,7 @@ func (s *UserService) Signup(ctx context.Context, email, firstName, lastName str
 	}
 
 	if existingUser != nil {
-		return nil, fmt.Errorf("user already exists")
+		return nil, &AlreadyExistsError{Resource: "user", Field: "email", Value: email}
 	}
 
 	// Create new user

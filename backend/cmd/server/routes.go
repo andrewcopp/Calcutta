@@ -47,7 +47,6 @@ func (s *Server) registerCalcuttaRoutes(r *mux.Router) {
 	r.HandleFunc("/api/calcuttas", s.calcuttasHandler).Methods("GET", "POST")
 	r.HandleFunc("/api/calcuttas/{id}", s.calcuttaHandler).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{id}/entries", s.calcuttaEntriesHandler).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", s.calcuttaEntryTeamHandler).Methods("GET")
 	r.HandleFunc("/api/entries/{id}/teams", s.entryTeamsHandler).Methods("GET")
 	r.HandleFunc("/api/entries/{id}/portfolios", s.portfoliosHandler).Methods("GET")
 }

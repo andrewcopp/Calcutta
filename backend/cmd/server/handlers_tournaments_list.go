@@ -1,30 +1,22 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
 )
 
-type tournamentResponse struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Rounds  int    `json:"rounds"`
-	Winner  string `json:"winner,omitempty"`
-	Created string `json:"created"`
-}
-
 func (s *Server) tournamentsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	tournaments, err := s.tournamentService.GetAllTournaments(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	response := make([]tournamentResponse, 0)
+	response := make([]*dtos.TournamentResponse, 0, len(tournaments))
 	for _, tournament := range tournaments {
+		tournament := tournament
 		// Get the winning team for this tournament
 		team, err := s.tournamentService.GetWinningTeam(r.Context(), tournament.ID)
 		if err != nil {
@@ -46,14 +38,7 @@ func (s *Server) tournamentsHandler(w http.ResponseWriter, r *http.Request) {
 		// Log tournament data
 		log.Printf("Processing tournament: ID=%s, Name=%s", tournament.ID, tournament.Name)
 
-		response = append(response, tournamentResponse{
-			ID:      tournament.ID,
-			Name:    tournament.Name,
-			Rounds:  tournament.Rounds,
-			Winner:  winnerName,
-			Created: tournament.Created.Format("2006-01-02T15:04:05Z07:00"),
-		})
+		response = append(response, dtos.NewTournamentResponse(&tournament, winnerName))
 	}
-
-	json.NewEncoder(w).Encode(response)
+	writeJSON(w, http.StatusOK, response)
 }

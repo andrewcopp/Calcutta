@@ -15,11 +15,10 @@ func (s *Server) calculatePortfolioScoresHandler(w http.ResponseWriter, r *http.
 	portfolioID := vars["id"]
 
 	if err := s.calcuttaService.CalculatePortfolioScores(r.Context(), portfolioID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http.Request) {
@@ -29,13 +28,17 @@ func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http
 
 	var req dtos.UpdatePortfolioTeamScoresRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	teams, err := s.calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
@@ -48,7 +51,7 @@ func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http
 	}
 
 	if portfolioTeam == nil {
-		http.Error(w, "Portfolio team not found", http.StatusNotFound)
+		writeError(w, r, http.StatusNotFound, "not_found", "Portfolio team not found", "")
 		return
 	}
 
@@ -57,11 +60,10 @@ func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http
 	portfolioTeam.Updated = time.Now()
 
 	if err := s.calcuttaService.UpdatePortfolioTeam(r.Context(), portfolioTeam); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) updatePortfolioMaximumScoreHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,14 +72,17 @@ func (s *Server) updatePortfolioMaximumScoreHandler(w http.ResponseWriter, r *ht
 
 	var req dtos.UpdatePortfolioMaximumScoreRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	if err := s.calcuttaService.UpdatePortfolioScores(r.Context(), portfolioID, req.MaximumPoints); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
