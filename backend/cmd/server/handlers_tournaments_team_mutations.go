@@ -52,9 +52,9 @@ func (s *Server) createTournamentTeamHandler(w http.ResponseWriter, r *http.Requ
 
 func (s *Server) updateTeamHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	teamID := vars["id"]
+	teamID := vars["teamId"]
 	if teamID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Team ID is required", "id")
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Team ID is required", "teamId")
 		return
 	}
 	var req dtos.UpdateTournamentTeamRequest

@@ -62,10 +62,11 @@ export const tournamentService = {
   },
 
   async updateTournamentTeam(
+    tournamentId: string,
     teamId: string,
     updates: Partial<TournamentTeam>
   ): Promise<TournamentTeam> {
-    const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+    const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams/${teamId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

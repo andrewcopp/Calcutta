@@ -169,6 +169,58 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 	return teams, nil
 }
 
+// GetTournamentTeam retrieves a single tournament team by ID
+func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
+	query := `
+		SELECT 
+			tt.id, tt.tournament_id, tt.school_id, tt.seed, tt.region, tt.byes, tt.wins, tt.eliminated,
+			tt.created_at, tt.updated_at,
+			s.id as school_id_from_join, s.name as school_name
+		FROM tournament_teams tt
+		LEFT JOIN schools s ON tt.school_id = s.id
+		WHERE tt.id = $1 AND tt.deleted_at IS NULL
+	`
+
+	var team models.TournamentTeam
+	var schoolIDFromJoin sql.NullString
+	var schoolName sql.NullString
+	var createdAt, updatedAt time.Time
+
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&team.ID,
+		&team.TournamentID,
+		&team.SchoolID,
+		&team.Seed,
+		&team.Region,
+		&team.Byes,
+		&team.Wins,
+		&team.Eliminated,
+		&createdAt,
+		&updatedAt,
+		&schoolIDFromJoin,
+		&schoolName,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	team.Created = createdAt
+	team.Updated = updatedAt
+
+	if schoolIDFromJoin.Valid && schoolName.Valid {
+		team.School = &models.School{
+			ID:   schoolIDFromJoin.String,
+			Name: schoolName.String,
+		}
+	}
+
+	return &team, nil
+}
+
 // UpdateTournamentTeam updates a tournament team in the database
 func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error {
 	query := `

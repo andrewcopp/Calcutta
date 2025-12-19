@@ -18,8 +18,8 @@ export async function fetchTournamentTeams(tournamentId: string): Promise<Tourna
   return response.json();
 }
 
-export async function updateTournamentTeam(teamId: string, updates: Partial<TournamentTeam>): Promise<TournamentTeam> {
-  const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+export async function updateTournamentTeam(tournamentId: string, teamId: string, updates: Partial<TournamentTeam>): Promise<TournamentTeam> {
+  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams/${teamId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',

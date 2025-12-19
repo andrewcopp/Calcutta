@@ -103,6 +103,17 @@ func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Successfully unselected winner for game %s, returning bracket with %d games", gameID, len(bracket.Games))
+
+	// Log the specific game state for debugging
+	if game, exists := bracket.Games[gameID]; exists {
+		log.Printf("Game %s after unselect - Winner: %v, Team1: %v, Team2: %v",
+			gameID,
+			game.Winner != nil,
+			game.Team1 != nil,
+			game.Team2 != nil)
+	}
+
 	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
 

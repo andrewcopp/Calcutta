@@ -8,9 +8,17 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
 
+// TournamentTeamRepository defines the interface for tournament team data access
+type TournamentTeamRepository interface {
+	GetByID(ctx context.Context, id string) (*models.Tournament, error)
+	GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error)
+	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
+	UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error
+}
+
 // BracketService manages tournament bracket operations
 type BracketService struct {
-	tournamentRepo *TournamentRepository
+	tournamentRepo TournamentTeamRepository
 	builder        *BracketBuilder
 	validator      *models.BracketValidator
 }
@@ -81,9 +89,9 @@ func (s *BracketService) GetBracket(ctx context.Context, tournamentID string) (*
 	return bracket, nil
 }
 
-// SelectWinner selects a winner for a game and progresses the bracket
+// SelectWinner selects a winner for a game by incrementing their wins and rebuilding the bracket
 func (s *BracketService) SelectWinner(ctx context.Context, tournamentID, gameID, winnerTeamID string) (*models.BracketStructure, error) {
-	// Get current bracket
+	// Get current bracket to validate the selection
 	bracket, err := s.GetBracket(ctx, tournamentID)
 	if err != nil {
 		return nil, err
@@ -100,51 +108,52 @@ func (s *BracketService) SelectWinner(ctx context.Context, tournamentID, gameID,
 		return nil, err
 	}
 
-	// Set the winner
-	if game.Team1 != nil && game.Team1.TeamID == winnerTeamID {
-		game.Winner = game.Team1
-	} else if game.Team2 != nil && game.Team2.TeamID == winnerTeamID {
-		game.Winner = game.Team2
+	// Get the winning team from database
+	winningTeam, err := s.tournamentRepo.GetTournamentTeam(ctx, winnerTeamID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team: %w", err)
+	}
+	if winningTeam == nil {
+		return nil, errors.New("team not found")
 	}
 
-	// Progress winner to next game
-	if game.NextGameID != "" {
-		nextGame, exists := bracket.Games[game.NextGameID]
-		if !exists {
-			return nil, fmt.Errorf("next game %s not found", game.NextGameID)
-		}
+	// Increment wins for winner
+	winningTeam.Wins++
+	if err := s.tournamentRepo.UpdateTournamentTeam(ctx, winningTeam); err != nil {
+		return nil, fmt.Errorf("failed to update team wins: %w", err)
+	}
 
-		// Update LowestSeedSeen: winner inherits the minimum of both teams' LowestSeedSeen
-		winnerCopy := *game.Winner
-		if game.Team1 != nil && game.Team2 != nil {
-			lowestInGame := game.Team1.LowestSeedSeen
-			if game.Team2.LowestSeedSeen < lowestInGame {
-				lowestInGame = game.Team2.LowestSeedSeen
+	// Mark losing team as eliminated
+	var losingTeamID string
+	if game.Team1 != nil && game.Team1.TeamID != winnerTeamID {
+		losingTeamID = game.Team1.TeamID
+	} else if game.Team2 != nil && game.Team2.TeamID != winnerTeamID {
+		losingTeamID = game.Team2.TeamID
+	}
+
+	if losingTeamID != "" {
+		losingTeam, err := s.tournamentRepo.GetTournamentTeam(ctx, losingTeamID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get losing team: %w", err)
+		}
+		if losingTeam != nil {
+			losingTeam.Eliminated = true
+			if err := s.tournamentRepo.UpdateTournamentTeam(ctx, losingTeam); err != nil {
+				return nil, fmt.Errorf("failed to mark losing team as eliminated: %w", err)
 			}
-			winnerCopy.LowestSeedSeen = lowestInGame
-		}
-
-		if game.NextGameSlot == 1 {
-			nextGame.Team1 = &winnerCopy
-		} else if game.NextGameSlot == 2 {
-			nextGame.Team2 = &winnerCopy
 		}
 	}
 
-	// Validate bracket progression
-	if err := s.validator.ValidateBracketProgression(bracket); err != nil {
-		return nil, fmt.Errorf("bracket validation failed: %w", err)
-	}
-
-	// Calculate and update wins/byes for all teams
-	if err := s.updateTeamStats(ctx, bracket); err != nil {
-		return nil, fmt.Errorf("failed to update team stats: %w", err)
+	// Rebuild bracket from updated state
+	bracket, err = s.GetBracket(ctx, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to rebuild bracket: %w", err)
 	}
 
 	return bracket, nil
 }
 
-// UnselectWinner removes a winner selection and clears downstream games
+// UnselectWinner removes a winner selection by decrementing their wins and rebuilding the bracket
 func (s *BracketService) UnselectWinner(ctx context.Context, tournamentID, gameID string) (*models.BracketStructure, error) {
 	// Get current bracket
 	bracket, err := s.GetBracket(ctx, tournamentID)
@@ -162,80 +171,171 @@ func (s *BracketService) UnselectWinner(ctx context.Context, tournamentID, gameI
 		return bracket, nil // Nothing to unselect
 	}
 
-	// Clear winner and downstream games recursively
-	s.clearDownstreamGames(bracket, gameID)
+	// Get the winning team from database
+	winningTeam, err := s.tournamentRepo.GetTournamentTeam(ctx, game.Winner.TeamID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team: %w", err)
+	}
+	if winningTeam == nil {
+		return nil, errors.New("team not found")
+	}
 
-	// Calculate and update wins/byes for all teams
-	if err := s.updateTeamStats(ctx, bracket); err != nil {
-		return nil, fmt.Errorf("failed to update team stats: %w", err)
+	// Decrement wins (but not below 0)
+	if winningTeam.Wins > 0 {
+		winningTeam.Wins--
+	}
+	if err := s.tournamentRepo.UpdateTournamentTeam(ctx, winningTeam); err != nil {
+		return nil, fmt.Errorf("failed to update team wins: %w", err)
+	}
+
+	// Reactivate the losing team (they're no longer eliminated)
+	var losingTeamID string
+	if game.Team1 != nil && game.Team1.TeamID != game.Winner.TeamID {
+		losingTeamID = game.Team1.TeamID
+	} else if game.Team2 != nil && game.Team2.TeamID != game.Winner.TeamID {
+		losingTeamID = game.Team2.TeamID
+	}
+
+	if losingTeamID != "" {
+		losingTeam, err := s.tournamentRepo.GetTournamentTeam(ctx, losingTeamID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get losing team: %w", err)
+		}
+		if losingTeam != nil {
+			losingTeam.Eliminated = false
+			if err := s.tournamentRepo.UpdateTournamentTeam(ctx, losingTeam); err != nil {
+				return nil, fmt.Errorf("failed to reactivate losing team: %w", err)
+			}
+		}
+	}
+
+	// Rebuild bracket from updated state
+	bracket, err = s.GetBracket(ctx, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to rebuild bracket: %w", err)
 	}
 
 	return bracket, nil
 }
 
-// clearDownstreamGames recursively clears winners and team assignments downstream
-func (s *BracketService) clearDownstreamGames(bracket *models.BracketStructure, gameID string) {
-	game, exists := bracket.Games[gameID]
-	if !exists {
-		return
-	}
-
-	// Clear the winner
-	game.Winner = nil
-
-	// If there's a next game, clear the team slot and recurse
-	if game.NextGameID != "" {
-		nextGame, exists := bracket.Games[game.NextGameID]
-		if exists {
-			if game.NextGameSlot == 1 {
-				nextGame.Team1 = nil
-			} else if game.NextGameSlot == 2 {
-				nextGame.Team2 = nil
-			}
-
-			// If both teams are now cleared, clear this game too
-			if nextGame.Team1 == nil && nextGame.Team2 == nil {
-				s.clearDownstreamGames(bracket, game.NextGameID)
-			}
-		}
-	}
-}
-
-// applyCurrentResults applies existing team results to the bracket
+// applyCurrentResults reconstructs the bracket state from stored team wins
 func (s *BracketService) applyCurrentResults(ctx context.Context, bracket *models.BracketStructure, teams []*models.TournamentTeam) error {
-	// For each team, use their wins to determine which games they won
-	// This reconstructs the bracket state from the team stats
-
-	// This is a simplified version - in practice, you might want to store
-	// game results separately or derive them from a more detailed state
-
-	// For now, we'll just ensure the bracket structure is valid
-	return s.validator.ValidateBracketProgression(bracket)
-}
-
-// updateTeamStats calculates and persists wins/byes/eliminated for all teams
-func (s *BracketService) updateTeamStats(ctx context.Context, bracket *models.BracketStructure) error {
-	// Get all teams
-	teams, err := s.tournamentRepo.GetTeams(ctx, bracket.TournamentID)
-	if err != nil {
-		return fmt.Errorf("failed to get teams: %w", err)
+	// Create a map of team ID to team for quick lookup
+	teamMap := make(map[string]*models.TournamentTeam)
+	for _, team := range teams {
+		teamMap[team.ID] = team
 	}
 
-	// Calculate stats for each team
-	for i, team := range teams {
-		wins, byes, eliminated := models.CalculateWinsAndByes(team.ID, bracket)
+	// Process games in order: First Four -> Round of 64 -> Round of 32 -> Sweet 16 -> Elite 8 -> Final Four -> Championship
+	rounds := []models.BracketRound{
+		models.RoundFirstFour,
+		models.RoundOf64,
+		models.RoundOf32,
+		models.RoundSweet16,
+		models.RoundElite8,
+		models.RoundFinalFour,
+		models.RoundChampionship,
+	}
 
-		// Update team
-		team.Wins = wins
-		team.Byes = byes
-		team.Eliminated = eliminated
+	for _, round := range rounds {
+		// Get all games for this round
+		for _, game := range bracket.Games {
+			if game.Round != round {
+				continue
+			}
 
-		if err := s.tournamentRepo.UpdateTournamentTeam(ctx, team); err != nil {
-			return fmt.Errorf("failed to update team %d/%d (ID: %s, Name: %s): %w", i+1, len(teams), team.ID, team.SchoolID, err)
+			// Skip if game doesn't have both teams yet
+			if game.Team1 == nil || game.Team2 == nil {
+				continue
+			}
+
+			// Get team data from database
+			team1 := teamMap[game.Team1.TeamID]
+			team2 := teamMap[game.Team2.TeamID]
+
+			if team1 == nil || team2 == nil {
+				continue
+			}
+
+			// Determine winner based on minimum required progress for this round
+			// Each round requires a minimum (wins + byes) to participate
+			// To WIN this game, a team must have MORE than the minimum (they advanced past it)
+			minRequired := s.getMinProgressForRound(round)
+			team1Progress := team1.Wins + team1.Byes
+			team2Progress := team2.Wins + team2.Byes
+
+			var winner *models.BracketTeam
+			// Check if one team has progressed beyond this round (won the game)
+			if team1Progress > minRequired && team2Progress >= minRequired {
+				// team1 won this game and advanced
+				winner = game.Team1
+			} else if team2Progress > minRequired && team1Progress >= minRequired {
+				// team2 won this game and advanced
+				winner = game.Team2
+			}
+			// If both are exactly at minRequired, they just arrived - game not played yet
+			// If either hasn't reached minRequired, they're not in this game yet
+
+			// Handle next game progression
+			if game.NextGameID != "" {
+				nextGame := bracket.Games[game.NextGameID]
+				if nextGame != nil {
+					if winner != nil {
+						// Set winner in this game
+						game.Winner = winner
+
+						// Progress winner to next game
+						winnerCopy := *winner
+						lowestInGame := game.Team1.LowestSeedSeen
+						if game.Team2.LowestSeedSeen < lowestInGame {
+							lowestInGame = game.Team2.LowestSeedSeen
+						}
+						winnerCopy.LowestSeedSeen = lowestInGame
+
+						if game.NextGameSlot == 1 {
+							nextGame.Team1 = &winnerCopy
+						} else if game.NextGameSlot == 2 {
+							nextGame.Team2 = &winnerCopy
+						}
+					} else {
+						// No winner yet - clear the slot in next game
+						if game.NextGameSlot == 1 {
+							nextGame.Team1 = nil
+						} else if game.NextGameSlot == 2 {
+							nextGame.Team2 = nil
+						}
+					}
+				}
+			} else if winner != nil {
+				// No next game but there is a winner (e.g., championship)
+				game.Winner = winner
+			}
 		}
 	}
 
 	return nil
+}
+
+// getMinProgressForRound returns the minimum (wins + byes) required to participate in a round
+func (s *BracketService) getMinProgressForRound(round models.BracketRound) int {
+	switch round {
+	case models.RoundFirstFour:
+		return 0 // First Four is the starting point for play-in teams
+	case models.RoundOf64:
+		return 1 // Need 1 (either 1 bye or 1 win from First Four)
+	case models.RoundOf32:
+		return 2 // Need 2 (1 bye + 1 win from Round of 64, or 2 wins from First Four + Round of 64)
+	case models.RoundSweet16:
+		return 3 // Need 3 total progress
+	case models.RoundElite8:
+		return 4 // Need 4 total progress
+	case models.RoundFinalFour:
+		return 5 // Need 5 total progress
+	case models.RoundChampionship:
+		return 6 // Need 6 total progress
+	default:
+		return 0
+	}
 }
 
 // ValidateBracketSetup validates that a tournament has the correct setup for bracket generation

@@ -45,7 +45,7 @@ export const TournamentEditPage: React.FC = () => {
 
   const handleTeamUpdate = async (teamId: string, field: keyof TournamentTeam, value: any) => {
     try {
-      const updatedTeam = await tournamentService.updateTournamentTeam(teamId, {
+      const updatedTeam = await tournamentService.updateTournamentTeam(id!, teamId, {
         [field]: value,
       });
       setTeams(teams.map(team => 
@@ -65,7 +65,7 @@ export const TournamentEditPage: React.FC = () => {
       // Save all team updates in parallel
       await Promise.all(
         teams.map(team =>
-          tournamentService.updateTournamentTeam(team.id, {
+          tournamentService.updateTournamentTeam(id!, team.id, {
             seed: team.seed,
             byes: team.byes,
             wins: team.wins,
