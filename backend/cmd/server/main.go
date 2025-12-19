@@ -1,25 +1,17 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v5/stdlib"
-)
-
-var (
-	schoolRepo        *services.SchoolRepository
-	schoolService     *services.SchoolService
-	tournamentRepo    *services.TournamentRepository
-	tournamentService *services.TournamentService
-	calcuttaRepo      *services.CalcuttaRepository
-	calcuttaService   *services.CalcuttaService
-	userRepo          *services.UserRepository
-	userService       *services.UserService
 )
 
 func main() {
@@ -40,28 +32,20 @@ func main() {
 	}
 	log.Printf("Successfully connected to database")
 
-	// Initialize repositories
-	schoolRepo = services.NewSchoolRepository(db)
-	tournamentRepo = services.NewTournamentRepository(db)
-	calcuttaRepo = services.NewCalcuttaRepository(db)
-	userRepo = services.NewUserRepository(db)
-
-	// Initialize services
-	schoolService = services.NewSchoolService(schoolRepo)
-	tournamentService = services.NewTournamentService(tournamentRepo)
-	calcuttaService = services.NewCalcuttaService(calcuttaRepo)
-	userService = services.NewUserService(userRepo)
+	server := NewServer(db)
 
 	// Router
 	r := mux.NewRouter()
+	r.Use(requestIDMiddleware)
+	r.Use(loggingMiddleware)
 	r.Use(corsMiddleware)
 
 	// Routes
-	RegisterRoutes(r)
+	server.RegisterRoutes(r)
 
-	// Not Found handler with logging
+	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("No route matched for request: %s %s", r.Method, r.URL.Path)
+		log.Printf("[%s] No route matched: %s %s", getRequestID(r.Context()), r.Method, r.URL.Path)
 		http.Error(w, "Not Found", http.StatusNotFound)
 	})
 
@@ -70,9 +54,42 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("Server starting on port %s", port)
 
-	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// HTTP server with production timeouts
+	httpServer := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
+
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server starting on port %s", port)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		log.Printf("Error closing database: %v", err)
+	}
+
+	log.Println("Server stopped gracefully")
 }

@@ -5,15 +5,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/cmd/server/dtos"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/gorilla/mux"
 )
 
-func calculatePortfolioScoresHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) calculatePortfolioScoresHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]
 
-	if err := calcuttaService.CalculatePortfolioScores(r.Context(), portfolioID); err != nil {
+	if err := s.calcuttaService.CalculatePortfolioScores(r.Context(), portfolioID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -21,21 +22,18 @@ func calculatePortfolioScoresHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]
 	teamID := vars["teamId"]
 
-	var request struct {
-		ExpectedPoints  float64 `json:"expectedPoints"`
-		PredictedPoints float64 `json:"predictedPoints"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	var req dtos.UpdatePortfolioTeamScoresRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	teams, err := calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
+	teams, err := s.calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -54,11 +52,11 @@ func updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	portfolioTeam.ExpectedPoints = request.ExpectedPoints
-	portfolioTeam.PredictedPoints = request.PredictedPoints
+	portfolioTeam.ExpectedPoints = req.ExpectedPoints
+	portfolioTeam.PredictedPoints = req.PredictedPoints
 	portfolioTeam.Updated = time.Now()
 
-	if err := calcuttaService.UpdatePortfolioTeam(r.Context(), portfolioTeam); err != nil {
+	if err := s.calcuttaService.UpdatePortfolioTeam(r.Context(), portfolioTeam); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -66,19 +64,17 @@ func updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func updatePortfolioMaximumScoreHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) updatePortfolioMaximumScoreHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]
 
-	var request struct {
-		MaximumPoints float64 `json:"maximumPoints"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	var req dtos.UpdatePortfolioMaximumScoreRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := calcuttaService.UpdatePortfolioScores(r.Context(), portfolioID, request.MaximumPoints); err != nil {
+	if err := s.calcuttaService.UpdatePortfolioScores(r.Context(), portfolioID, req.MaximumPoints); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

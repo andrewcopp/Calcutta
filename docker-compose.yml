@@ -21,14 +21,14 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/app
-    working_dir: /app/cmd/server
+    working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
       - NODE_ENV=${NODE_ENV}
-      - GOWORK=off
+      - GOWORK=/app/go.work
     depends_on:
       - db
-    command: sh -c 'go get github.com/jackc/pgx/v5/stdlib && go run .'
+    command: sh -c "go run ./cmd/server"
 
   db:
     image: postgres:16-alpine

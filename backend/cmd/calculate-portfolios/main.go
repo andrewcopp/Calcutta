@@ -39,7 +39,15 @@ func main() {
 	// Initialize repositories and services
 	calcuttaRepo := services.NewCalcuttaRepository(db)
 	tournamentRepo := services.NewTournamentRepository(db)
-	calcuttaService := services.NewCalcuttaService(calcuttaRepo)
+	calcuttaService := services.NewCalcuttaService(services.CalcuttaServicePorts{
+		CalcuttaReader:  calcuttaRepo,
+		CalcuttaWriter:  calcuttaRepo,
+		EntryReader:     calcuttaRepo,
+		PortfolioReader: calcuttaRepo,
+		PortfolioWriter: calcuttaRepo,
+		RoundWriter:     calcuttaRepo,
+		TeamReader:      calcuttaRepo,
+	})
 
 	// Get the Calcutta
 	calcutta, err := calcuttaRepo.GetByID(context.Background(), *calcuttaID)
@@ -159,7 +167,7 @@ func main() {
 			now := time.Now()
 			for _, portfolioTeam := range portfolioTeams {
 				// Calculate ownership percentage
-				ownershipPercentage := calcuttaService.CalculateOwnershipPercentage(portfolioTeam, allEntryTeams)
+				ownershipPercentage := calcuttaService.CalculateOwnershipPercentage(context.Background(), portfolioTeam, allEntryTeams)
 
 				// Calculate points earned
 				actualPoints := 0.0

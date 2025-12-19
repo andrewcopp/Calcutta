@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var req struct {
@@ -17,7 +17,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := userService.Login(r.Context(), req.Email)
+	user, err := s.userService.Login(r.Context(), req.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -26,7 +26,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-func signupHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) signupHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var req struct {
@@ -40,7 +40,7 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := userService.Signup(r.Context(), req.Email, req.FirstName, req.LastName)
+	user, err := s.userService.Signup(r.Context(), req.Email, req.FirstName, req.LastName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

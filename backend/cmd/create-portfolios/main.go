@@ -36,7 +36,15 @@ func main() {
 
 	// Initialize repositories and services
 	calcuttaRepo := services.NewCalcuttaRepository(db)
-	calcuttaService := services.NewCalcuttaService(calcuttaRepo)
+	calcuttaService := services.NewCalcuttaService(services.CalcuttaServicePorts{
+		CalcuttaReader:  calcuttaRepo,
+		CalcuttaWriter:  calcuttaRepo,
+		EntryReader:     calcuttaRepo,
+		PortfolioReader: calcuttaRepo,
+		PortfolioWriter: calcuttaRepo,
+		RoundWriter:     calcuttaRepo,
+		TeamReader:      calcuttaRepo,
+	})
 
 	// Get the Calcutta
 	calcutta, err := calcuttaRepo.GetByID(context.Background(), *calcuttaID)

@@ -8,10 +8,13 @@ COPY go.mod go.sum ./
 # Download dependencies
 RUN go mod download
 
-# The source code will be mounted as a volume in development
-# COPY . .
+# Copy source code (needed for internal packages)
+COPY . .
+
+# Build the application
+RUN go build -o /app/bin/server ./cmd/server
 
 EXPOSE 8080
 
-# The command will be overridden by docker-compose.yml in development
-CMD ["go", "run", "cmd/server/main.go"] 
+# Run the built binary
+CMD ["/app/bin/server"] 

@@ -76,34 +76,6 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 	return &team, nil
 }
 
-// GetTournamentWithWinner returns a tournament with its winning team and school
-func (r *TournamentRepository) GetTournamentWithWinner(ctx context.Context, tournamentID string) (*models.Tournament, *models.TournamentTeam, *models.School, error) {
-	// Get the tournament
-	tournament, err := r.GetByID(ctx, tournamentID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Get the winning team
-	team, err := r.GetWinningTeam(ctx, tournamentID)
-	if err != nil {
-		return tournament, nil, nil, err
-	}
-
-	if team == nil {
-		return tournament, nil, nil, nil
-	}
-
-	// Get the school
-	schoolRepo := NewSchoolRepository(r.db)
-	school, err := schoolRepo.GetByID(ctx, team.SchoolID)
-	if err != nil {
-		return tournament, team, nil, err
-	}
-
-	return tournament, team, &school, nil
-}
-
 // GetByID returns a tournament by ID
 func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.Tournament, error) {
 	var tournament models.Tournament

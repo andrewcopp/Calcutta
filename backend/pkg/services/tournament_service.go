@@ -10,12 +10,13 @@ import (
 
 // TournamentService handles business logic for tournaments
 type TournamentService struct {
-	repo *TournamentRepository
+	repo       *TournamentRepository
+	schoolRepo *SchoolRepository
 }
 
 // NewTournamentService creates a new TournamentService
-func NewTournamentService(repo *TournamentRepository) *TournamentService {
-	return &TournamentService{repo: repo}
+func NewTournamentService(repo *TournamentRepository, schoolRepo *SchoolRepository) *TournamentService {
+	return &TournamentService{repo: repo, schoolRepo: schoolRepo}
 }
 
 // GetAllTournaments returns all tournaments
@@ -25,7 +26,33 @@ func (s *TournamentService) GetAllTournaments(ctx context.Context) ([]models.Tou
 
 // GetTournamentWithWinner returns a tournament with its winning team and school
 func (s *TournamentService) GetTournamentWithWinner(ctx context.Context, tournamentID string) (*models.Tournament, *models.TournamentTeam, *models.School, error) {
-	return s.repo.GetTournamentWithWinner(ctx, tournamentID)
+	// Get the tournament
+	tournament, err := s.repo.GetByID(ctx, tournamentID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Get the winning team
+	team, err := s.repo.GetWinningTeam(ctx, tournamentID)
+	if err != nil {
+		return tournament, nil, nil, err
+	}
+
+	if team == nil {
+		return tournament, nil, nil, nil
+	}
+
+	// Get the school
+	school, err := s.schoolRepo.GetByID(ctx, team.SchoolID)
+	if err != nil {
+		return tournament, team, nil, err
+	}
+
+	if school.ID == "" {
+		return tournament, team, nil, nil
+	}
+
+	return tournament, team, &school, nil
 }
 
 // GetTournamentByID returns a tournament by ID
@@ -90,4 +117,16 @@ func (s *TournamentService) CreateTournament(ctx context.Context, name string, r
 
 	log.Printf("Successfully created tournament: %+v", tournament)
 	return tournament, nil
+}
+
+func (s *TournamentService) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
+	return s.repo.GetTeams(ctx, tournamentID)
+}
+
+func (s *TournamentService) CreateTeam(ctx context.Context, team *models.TournamentTeam) error {
+	return s.repo.CreateTeam(ctx, team)
+}
+
+func (s *TournamentService) UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error {
+	return s.repo.UpdateTournamentTeam(ctx, team)
 }
