@@ -86,7 +86,7 @@ func TestThatEastRegionalChampionLinksToFinalFourSemifinalOne(t *testing.T) {
 	}
 }
 
-func TestThatSouthRegionalChampionLinksToFinalFourSemifinalOne(t *testing.T) {
+func TestThatSouthRegionalChampionLinksToFinalFourSemifinalTwo(t *testing.T) {
 	// GIVEN a complete 68-team tournament with South in top-right
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
@@ -99,17 +99,17 @@ func TestThatSouthRegionalChampionLinksToFinalFourSemifinalOne(t *testing.T) {
 		t.Fatalf("Failed to build bracket: %v", err)
 	}
 
-	// THEN South regional champion links to semifinal 1
+	// THEN South regional champion links to semifinal 2
 	southChampion := bracket.Games["South-elite_8-1"]
 	if southChampion == nil {
 		t.Fatal("South regional final not found")
 	}
-	if southChampion.NextGameID != "final_four-1" {
-		t.Errorf("Expected South champion to link to final_four-1, got %s", southChampion.NextGameID)
+	if southChampion.NextGameID != "final_four-2" {
+		t.Errorf("Expected South champion to link to final_four-2, got %s", southChampion.NextGameID)
 	}
 }
 
-func TestThatWestRegionalChampionLinksToFinalFourSemifinalTwo(t *testing.T) {
+func TestThatWestRegionalChampionLinksToFinalFourSemifinalOne(t *testing.T) {
 	// GIVEN a complete 68-team tournament with West in bottom-left
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
@@ -122,13 +122,13 @@ func TestThatWestRegionalChampionLinksToFinalFourSemifinalTwo(t *testing.T) {
 		t.Fatalf("Failed to build bracket: %v", err)
 	}
 
-	// THEN West regional champion links to semifinal 2
+	// THEN West regional champion links to semifinal 1
 	westChampion := bracket.Games["West-elite_8-1"]
 	if westChampion == nil {
 		t.Fatal("West regional final not found")
 	}
-	if westChampion.NextGameID != "final_four-2" {
-		t.Errorf("Expected West champion to link to final_four-2, got %s", westChampion.NextGameID)
+	if westChampion.NextGameID != "final_four-1" {
+		t.Errorf("Expected West champion to link to final_four-1, got %s", westChampion.NextGameID)
 	}
 }
 

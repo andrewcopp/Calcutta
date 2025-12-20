@@ -269,12 +269,12 @@ func (b *BracketBuilder) buildFinalFour(bracket *models.BracketStructure, region
 	}
 	bracket.Games[semifinal1ID] = semifinal1
 
-	// Link regional champions to semifinal 1
+	// Link regional champions to semifinal 1 (TopLeft vs BottomLeft)
 	bracket.Games[regionalChampions[config.TopLeftRegion]].NextGameID = semifinal1ID
 	bracket.Games[regionalChampions[config.TopLeftRegion]].NextGameSlot = 1
 
-	bracket.Games[regionalChampions[config.TopRightRegion]].NextGameID = semifinal1ID
-	bracket.Games[regionalChampions[config.TopRightRegion]].NextGameSlot = 2
+	bracket.Games[regionalChampions[config.BottomLeftRegion]].NextGameID = semifinal1ID
+	bracket.Games[regionalChampions[config.BottomLeftRegion]].NextGameSlot = 2
 
 	// Create semifinal 2 (bottom bracket) - use deterministic ID
 	semifinal2ID := "final_four-2"
@@ -286,9 +286,9 @@ func (b *BracketBuilder) buildFinalFour(bracket *models.BracketStructure, region
 	}
 	bracket.Games[semifinal2ID] = semifinal2
 
-	// Link regional champions to semifinal 2
-	bracket.Games[regionalChampions[config.BottomLeftRegion]].NextGameID = semifinal2ID
-	bracket.Games[regionalChampions[config.BottomLeftRegion]].NextGameSlot = 1
+	// Link regional champions to semifinal 2 (TopRight vs BottomRight)
+	bracket.Games[regionalChampions[config.TopRightRegion]].NextGameID = semifinal2ID
+	bracket.Games[regionalChampions[config.TopRightRegion]].NextGameSlot = 1
 
 	bracket.Games[regionalChampions[config.BottomRightRegion]].NextGameID = semifinal2ID
 	bracket.Games[regionalChampions[config.BottomRightRegion]].NextGameSlot = 2

@@ -29,6 +29,7 @@ This application manages March Madness investment pools where players:
 ## Documentation
 
 - [Complete Rules and Examples](docs/rules.md)
+- [Database Seeding Guide](docs/seeding.md)
 - [Technical Documentation](docs/technical/) (Coming Soon)
 - [API Documentation](docs/technical/api.md) (Coming Soon)
 
@@ -49,7 +50,19 @@ The preferred way to run this project is using Docker Compose, which will set up
    docker compose up
    ```
 
+**That's it!** The database migrations and seeding happen automatically. The services start in this order:
+- Database starts and becomes healthy
+- Migrations run (only new migrations are applied)
+- Seed data is loaded (idempotent - won't duplicate data)
+- Backend and frontend services start
+
 The application will be available at `http://localhost:3000`
+
+To start fresh, tear down the environment and restart:
+```bash
+docker compose down -v  # -v removes volumes including database data
+docker compose up
+```
 
 ### Manual Setup (Alternative)
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -41,8 +42,17 @@ func RollbackSchemaMigrations(ctx context.Context) error {
 }
 
 // RunSeedMigrations runs the seed data migrations
+// Prefers SQL dumps if available, falls back to JSON/CSV-based seeding
 func RunSeedMigrations(ctx context.Context) error {
-	// Seed schools from JSON file
+	// Try SQL dump-based seeding first (more robust)
+	if err := seedFromSQLDumps(ctx); err == nil {
+		fmt.Println("✅ Seed data loaded from SQL dumps")
+		return nil
+	} else {
+		fmt.Printf("SQL dumps not available or failed (%v), falling back to JSON-based seeding\n", err)
+	}
+
+	// Fallback to JSON-based seeding
 	if err := seedSchoolsFromJSON(ctx); err != nil {
 		return fmt.Errorf("error seeding schools from JSON: %v", err)
 	}
@@ -127,4 +137,106 @@ func getMigrator(migrationType string) (*migrate.Migrate, error) {
 	}
 
 	return m, nil
+}
+
+// seedFromSQLDumps loads seed data from SQL dump files
+func seedFromSQLDumps(ctx context.Context) error {
+	// Get the database connection
+	pool := GetPool()
+	if pool == nil {
+		return fmt.Errorf("database connection pool is nil")
+	}
+
+	// Get the SQL dumps directory
+	workDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting working directory: %v", err)
+	}
+
+	dumpsDir := filepath.Join(workDir, "migrations", "seed", "sql-dumps")
+
+	// Check if dumps directory exists
+	if _, err := os.Stat(dumpsDir); os.IsNotExist(err) {
+		return fmt.Errorf("sql-dumps directory does not exist")
+	}
+
+	// Define the order of SQL files to execute (respecting foreign key dependencies)
+	sqlFiles := []string{
+		"schools.sql",
+		"tournaments.sql",
+		"tournament_teams.sql",
+		"users.sql",
+		"calcuttas.sql",
+		"calcutta_rounds.sql",
+		"calcutta_entries.sql",
+		"calcutta_entry_teams.sql",
+	}
+
+	// Check if seed data already exists (idempotency check)
+	// We check multiple tables to ensure complete seed data is present
+	var schoolCount, tournamentCount, calcuttaCount int
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM schools").Scan(&schoolCount)
+	if err != nil {
+		return fmt.Errorf("error checking schools: %v", err)
+	}
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM tournaments").Scan(&tournamentCount)
+	if err != nil {
+		return fmt.Errorf("error checking tournaments: %v", err)
+	}
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM calcuttas").Scan(&calcuttaCount)
+	if err != nil {
+		return fmt.Errorf("error checking calcuttas: %v", err)
+	}
+
+	// Only skip if we have data in all key tables
+	if schoolCount > 0 && tournamentCount > 0 && calcuttaCount > 0 {
+		fmt.Printf("Seed data already exists (schools: %d, tournaments: %d, calcuttas: %d), skipping SQL dump import\n",
+			schoolCount, tournamentCount, calcuttaCount)
+		return nil
+	}
+
+	// If we have partial data, warn the user
+	if schoolCount > 0 || tournamentCount > 0 || calcuttaCount > 0 {
+		fmt.Printf("Warning: Partial seed data detected (schools: %d, tournaments: %d, calcuttas: %d)\n",
+			schoolCount, tournamentCount, calcuttaCount)
+		fmt.Println("Proceeding with SQL dump import - this may create duplicate data if not careful")
+	}
+
+	fmt.Println("Loading seed data from SQL dumps...")
+
+	// Execute each SQL file in order
+	for _, sqlFile := range sqlFiles {
+		filePath := filepath.Join(dumpsDir, sqlFile)
+
+		// Check if file exists
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			fmt.Printf("Warning: SQL dump file not found: %s (skipping)\n", sqlFile)
+			continue
+		}
+
+		// Read the SQL file
+		sqlContent, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("error reading SQL file %s: %v", sqlFile, err)
+		}
+
+		// Skip empty files
+		if len(strings.TrimSpace(string(sqlContent))) == 0 {
+			fmt.Printf("Skipping empty file: %s\n", sqlFile)
+			continue
+		}
+
+		fmt.Printf("  Importing %s...\n", sqlFile)
+
+		// Execute the SQL
+		_, err = pool.Exec(ctx, string(sqlContent))
+		if err != nil {
+			return fmt.Errorf("error executing SQL file %s: %v", sqlFile, err)
+		}
+	}
+
+	return nil
 }

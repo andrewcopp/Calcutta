@@ -22,7 +22,9 @@ func NewTournamentRepository(db *sql.DB) *TournamentRepository {
 // GetAll returns all tournaments with their winning teams
 func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT t.id, t.name, t.rounds, t.created_at, t.updated_at
+		SELECT t.id, t.name, t.rounds,
+			t.final_four_top_left, t.final_four_bottom_left, t.final_four_top_right, t.final_four_bottom_right,
+			t.created_at, t.updated_at
 		FROM tournaments t
 		WHERE t.deleted_at IS NULL
 		ORDER BY t.name DESC
@@ -35,7 +37,17 @@ func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament,
 	var tournaments []models.Tournament
 	for rows.Next() {
 		var tournament models.Tournament
-		if err := rows.Scan(&tournament.ID, &tournament.Name, &tournament.Rounds, &tournament.Created, &tournament.Updated); err != nil {
+		if err := rows.Scan(
+			&tournament.ID,
+			&tournament.Name,
+			&tournament.Rounds,
+			&tournament.FinalFourTopLeft,
+			&tournament.FinalFourBottomLeft,
+			&tournament.FinalFourTopRight,
+			&tournament.FinalFourBottomRight,
+			&tournament.Created,
+			&tournament.Updated,
+		); err != nil {
 			return nil, err
 		}
 		tournaments = append(tournaments, tournament)
@@ -80,10 +92,22 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.Tournament, error) {
 	var tournament models.Tournament
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, name, rounds, created_at, updated_at
+		SELECT id, name, rounds,
+			final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right,
+			created_at, updated_at
 		FROM tournaments
 		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&tournament.ID, &tournament.Name, &tournament.Rounds, &tournament.Created, &tournament.Updated)
+	`, id).Scan(
+		&tournament.ID,
+		&tournament.Name,
+		&tournament.Rounds,
+		&tournament.FinalFourTopLeft,
+		&tournament.FinalFourBottomLeft,
+		&tournament.FinalFourTopRight,
+		&tournament.FinalFourBottomRight,
+		&tournament.Created,
+		&tournament.Updated,
+	)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -334,8 +358,18 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	log.Printf("Inserting tournament into database: %+v", tournament)
 
 	query := `
-		INSERT INTO tournaments (id, name, rounds, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO tournaments (
+			id,
+			name,
+			rounds,
+			final_four_top_left,
+			final_four_bottom_left,
+			final_four_top_right,
+			final_four_bottom_right,
+			created_at,
+			updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	now := time.Now()
@@ -346,6 +380,10 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		tournament.ID,
 		tournament.Name,
 		tournament.Rounds,
+		tournament.FinalFourTopLeft,
+		tournament.FinalFourBottomLeft,
+		tournament.FinalFourTopRight,
+		tournament.FinalFourBottomRight,
 		tournament.Created,
 		tournament.Updated,
 	)
