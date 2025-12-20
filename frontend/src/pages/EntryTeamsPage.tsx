@@ -58,6 +58,8 @@ const OwnershipPieChart: React.FC<{
   sizePx = 220,
   showRank = true,
 }) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
   // Transform portfolio teams data for the pie chart
   const data = portfolioTeams.map(pt => {
     const portfolio = portfolios.find(p => p.id === pt.portfolioId);
@@ -70,9 +72,10 @@ const OwnershipPieChart: React.FC<{
     };
   });
 
-  // Generate colors for each segment
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
-  const HIGHLIGHT_COLOR = '#FF0000'; // Red color for the current portfolio
+  const CURRENT_FILL = '#1F2937';
+  const OTHER_FILL = '#CBD5E1';
+  const DIVIDER_STROKE = '#FFFFFF';
+  const HOVER_STROKE = '#111827';
 
   return (
     <div className="flex flex-col items-center">
@@ -87,14 +90,21 @@ const OwnershipPieChart: React.FC<{
               outerRadius={Math.max(40, Math.floor(sizePx * 0.42))}
               paddingAngle={2}
               dataKey="value"
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
             >
               {data.map((entry, index) => (
+                (() => {
+                  const isActive = activeIndex === index;
+                  return (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={entry.isCurrentPortfolio ? HIGHLIGHT_COLOR : COLORS[index % COLORS.length]} 
-                  stroke={entry.isCurrentPortfolio ? "#000" : undefined}
-                  strokeWidth={entry.isCurrentPortfolio ? 2 : 0}
+                  fill={entry.isCurrentPortfolio ? CURRENT_FILL : OTHER_FILL}
+                  stroke={isActive ? HOVER_STROKE : DIVIDER_STROKE}
+                  strokeWidth={isActive ? 2 : 2}
                 />
+                  );
+                })()
               ))}
             </Pie>
             <Tooltip
@@ -104,14 +114,6 @@ const OwnershipPieChart: React.FC<{
           </PieChart>
         </ResponsiveContainer>
       </div>
-      {currentPortfolioId && (
-        <div className="mt-2 text-xs text-center">
-          <div className="flex items-center justify-center">
-            <div className="w-3 h-3 bg-red-500 mr-1"></div>
-            <span>Your Portfolio</span>
-          </div>
-        </div>
-      )}
       {showRank && rank !== undefined && totalInvestors !== undefined && totalInvestors > 0 && (
         <div className="mt-1 text-xs text-gray-600">
           Investor Rank: {rank} / {totalInvestors}
