@@ -48,12 +48,16 @@ const OwnershipPieChart: React.FC<{
   currentPortfolioId?: string;
   rank?: number;
   totalInvestors?: number;
+  sizePx?: number;
+  showRank?: boolean;
 }> = ({ 
   portfolioTeams,
   portfolios,
   currentPortfolioId,
   rank,
-  totalInvestors
+  totalInvestors,
+  sizePx = 220,
+  showRank = true,
 }) => {
   // Transform portfolio teams data for the pie chart
   const data = portfolioTeams.map(pt => {
@@ -73,15 +77,15 @@ const OwnershipPieChart: React.FC<{
 
   return (
     <div className="flex flex-col items-center">
-      <div className="h-32 w-32">
+      <div style={{ height: sizePx, width: sizePx }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={20}
-              outerRadius={40}
+              innerRadius={Math.max(20, Math.floor(sizePx * 0.22))}
+              outerRadius={Math.max(40, Math.floor(sizePx * 0.42))}
               paddingAngle={2}
               dataKey="value"
             >
@@ -109,7 +113,7 @@ const OwnershipPieChart: React.FC<{
           </div>
         </div>
       )}
-      {rank !== undefined && totalInvestors !== undefined && totalInvestors > 0 && (
+      {showRank && rank !== undefined && totalInvestors !== undefined && totalInvestors > 0 && (
         <div className="mt-1 text-xs text-gray-600">
           Investor Rank: {rank} / {totalInvestors}
         </div>
@@ -127,6 +131,7 @@ export function EntryTeamsPage() {
   const [portfolioTeams, setPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [allCalcuttaPortfolioTeams, setAllCalcuttaPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [allCalcuttaPortfolios, setAllCalcuttaPortfolios] = useState<(CalcuttaPortfolio & { entryName?: string })[]>([]);
+  const [totalBidByTeamId, setTotalBidByTeamId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'teams' | 'statistics'>('teams');
@@ -217,6 +222,17 @@ export function EntryTeamsPage() {
         }));
 
         setAllCalcuttaPortfolioTeams(allCalcuttaPortfolioTeamsWithSchools);
+
+        const allEntryTeamsPromises = allEntriesData.map((entry) =>
+          calcuttaService.getEntryTeams(entry.id, calcuttaId)
+        );
+        const allEntryTeamsResults = await Promise.all(allEntryTeamsPromises);
+        const allEntryTeamsFlat = allEntryTeamsResults.flat();
+        const bidTotals: Record<string, number> = {};
+        for (const t of allEntryTeamsFlat) {
+          bidTotals[t.teamId] = (bidTotals[t.teamId] ?? 0) + (t.bid ?? 0);
+        }
+        setTotalBidByTeamId(bidTotals);
         
         setLoading(false);
       } catch (err) {
@@ -332,48 +348,67 @@ export function EntryTeamsPage() {
       {activeTab === 'teams' && (
         <>
           <p className="text-gray-600 mb-4 italic">Teams are sorted by points earned, then by ownership percentage, then by bid amount. In the future, teams will be sorted by predicted points.</p>
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedTeams.map((team) => {
               const portfolioTeam = getPortfolioTeamData(team.teamId);
               const wins = calculateWins(team);
               const investorRanking = getInvestorRanking(team.teamId);
               const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
               const currentPortfolioId = portfolios[0]?.id;
+              const totalBids = totalBidByTeamId[team.teamId] ?? team.bid;
+              const ownershipPct = portfolioTeam ? portfolioTeam.ownershipPercentage * 100 : undefined;
+              const pointsEarned = portfolioTeam ? portfolioTeam.actualPoints : undefined;
               
               return (
                 <div
                   key={team.id}
-                  className="p-4 bg-white rounded-lg shadow"
+                  className="bg-white rounded-lg shadow p-4 flex flex-col"
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-lg font-semibold leading-snug truncate">
                         {team.team?.school?.name || 'Unknown School'}
                       </h2>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <p className="text-gray-600">Bid Amount: ${team.bid}</p>
-                        <p className="text-gray-600">Wins: {wins}</p>
-                        {portfolioTeam && (
-                          <>
-                            <p className="text-gray-600">
-                              Ownership: {(portfolioTeam.ownershipPercentage * 100).toFixed(2)}%
-                            </p>
-                            <p className="text-gray-600">
-                              Points Earned: {portfolioTeam.actualPoints.toFixed(2)}
-                            </p>
-                          </>
-                        )}
+                      <div className="mt-1 text-sm text-gray-600">
+                        Investor Rank: {investorRanking.rank} / {investorRanking.total}
                       </div>
                     </div>
-                    <div className="flex flex-col items-center">
-                      <OwnershipPieChart 
-                        portfolioTeams={teamPortfolioTeams} 
-                        portfolios={allCalcuttaPortfolios}
-                        currentPortfolioId={currentPortfolioId}
-                        rank={investorRanking.rank}
-                        totalInvestors={investorRanking.total}
-                      />
-                      <p className="text-sm text-gray-500 mt-1">Ownership Distribution</p>
+                    <div className="text-right">
+                      {ownershipPct !== undefined && (
+                        <div className="text-sm text-gray-600">
+                          Ownership
+                          <div className="text-base font-semibold text-gray-900">{ownershipPct.toFixed(2)}%</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-center">
+                    <OwnershipPieChart
+                      portfolioTeams={teamPortfolioTeams}
+                      portfolios={allCalcuttaPortfolios}
+                      currentPortfolioId={currentPortfolioId}
+                      sizePx={220}
+                      showRank={false}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <div>
+                      <div className="text-gray-500">Bid</div>
+                      <div className="font-medium text-gray-900">${team.bid}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Total Bids</div>
+                      <div className="font-medium text-gray-900">${team.bid} / ${totalBids}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Wins</div>
+                      <div className="font-medium text-gray-900">{wins}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Points Earned</div>
+                      <div className="font-medium text-gray-900">{pointsEarned !== undefined ? pointsEarned.toFixed(2) : '—'}</div>
                     </div>
                   </div>
                 </div>
