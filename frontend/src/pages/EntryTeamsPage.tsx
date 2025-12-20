@@ -456,7 +456,7 @@ export function EntryTeamsPage() {
         </div>
       )}
 
-      {(activeTab === 'ownership' || activeTab === 'points') && (
+      {activeTab === 'ownership' && (
         <>
           <div className="mb-4 flex items-center justify-end">
             <label className="text-sm text-gray-600">
@@ -547,6 +547,83 @@ export function EntryTeamsPage() {
                 </div>
               );
             })}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'points' && (
+        <>
+          <div className="mb-4 flex items-center justify-end">
+            <label className="text-sm text-gray-600">
+              Sort by
+              <select
+                className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bid')}
+              >
+                <option value="points">Points</option>
+                <option value="ownership">Ownership</option>
+                <option value="bid">Bid Amount</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b">
+                  <th className="py-3 pr-4">Team</th>
+                  <th className="py-3 pr-4">Points</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {sortedTeams.map((team) => {
+                  const portfolioTeam = getPortfolioTeamData(team.teamId);
+                  const totalPoints = portfolioTeam?.actualPoints ?? 0;
+                  const possiblePointsRaw = portfolioTeam?.expectedPoints ?? 0;
+                  const eliminated = team.team?.eliminated === true;
+                  const possiblePoints = eliminated ? totalPoints : Math.max(possiblePointsRaw, totalPoints);
+                  const ratio = possiblePoints > 0 ? Math.min(1, totalPoints / possiblePoints) : 0;
+
+                  return (
+                    <tr key={team.id}>
+                      <td className="py-4 pr-4 align-top">
+                        <div className="font-medium text-gray-900">
+                          {team.team?.school?.name || 'Unknown School'}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600">
+                          Seed: {team.team?.seed ?? '—'}
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <div className="space-y-2">
+                          <div>
+                            <div className="flex items-center justify-between text-xs text-gray-600">
+                              <span>Total Points</span>
+                              <span className="font-medium text-gray-900">{totalPoints.toFixed(2)}</span>
+                            </div>
+                            <div className="mt-1 h-3 w-full rounded bg-indigo-200 relative overflow-hidden">
+                              <div
+                                className="absolute left-0 top-0 h-full bg-indigo-600"
+                                style={{ width: `${(ratio * 100).toFixed(2)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between text-xs text-gray-600">
+                              <span>Possible Points</span>
+                              <span className="font-medium text-gray-900">{possiblePoints.toFixed(2)}</span>
+                            </div>
+                            <div className="mt-1 h-3 w-full rounded bg-indigo-200" />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </>
       )}
