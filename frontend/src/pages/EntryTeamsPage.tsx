@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
-import { useUser } from '../contexts/UserContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 // Add a new section to display portfolio scores
@@ -124,7 +123,6 @@ const OwnershipPieChart: React.FC<{
 
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
-  const { user } = useUser();
   const [teams, setTeams] = useState<CalcuttaEntryTeam[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [portfolios, setPortfolios] = useState<CalcuttaPortfolio[]>([]);
@@ -132,9 +130,11 @@ export function EntryTeamsPage() {
   const [allCalcuttaPortfolioTeams, setAllCalcuttaPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [allCalcuttaPortfolios, setAllCalcuttaPortfolios] = useState<(CalcuttaPortfolio & { entryName?: string })[]>([]);
   const [totalBidByTeamId, setTotalBidByTeamId] = useState<Record<string, number>>({});
+  const [entryName, setEntryName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'teams' | 'statistics'>('teams');
+  const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -151,6 +151,9 @@ export function EntryTeamsPage() {
           calcuttaService.getPortfoliosByEntry(entryId),
           calcuttaService.getCalcuttaEntries(calcuttaId)
         ]);
+
+        const currentEntry = allEntriesData.find(e => e.id === entryId);
+        setEntryName(currentEntry?.name || '');
 
         // Create a map of entryId to entryName
         const entryNameMap = new Map(allEntriesData.map(entry => [entry.id, entry.name]));
@@ -280,30 +283,43 @@ export function EntryTeamsPage() {
     };
   };
 
-  // Sort teams by points earned, then by ownership percentage, then by bid amount
-  const sortedTeams = [...teams].sort((a, b) => {
+  const compareDesc = (a: number, b: number) => b - a;
+
+  const compareTeams = (a: CalcuttaEntryTeam, b: CalcuttaEntryTeam) => {
     const portfolioTeamA = getPortfolioTeamData(a.teamId);
     const portfolioTeamB = getPortfolioTeamData(b.teamId);
-    
-    // First sort by points earned (descending)
+
     const pointsA = portfolioTeamA?.actualPoints || 0;
     const pointsB = portfolioTeamB?.actualPoints || 0;
-    
-    if (pointsA !== pointsB) {
-      return pointsB - pointsA;
-    }
-    
-    // If points are equal, sort by ownership percentage (descending)
     const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
     const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-    
-    if (ownershipA !== ownershipB) {
-      return ownershipB - ownershipA;
+    const bidA = a.bid || 0;
+    const bidB = b.bid || 0;
+
+    if (sortBy === 'points') {
+      const byPoints = compareDesc(pointsA, pointsB);
+      if (byPoints !== 0) return byPoints;
+      const byOwnership = compareDesc(ownershipA, ownershipB);
+      if (byOwnership !== 0) return byOwnership;
+      return compareDesc(bidA, bidB);
     }
-    
-    // If ownership is equal, sort by bid amount (descending)
-    return b.bid - a.bid;
-  });
+
+    if (sortBy === 'ownership') {
+      const byOwnership = compareDesc(ownershipA, ownershipB);
+      if (byOwnership !== 0) return byOwnership;
+      const byPoints = compareDesc(pointsA, pointsB);
+      if (byPoints !== 0) return byPoints;
+      return compareDesc(bidA, bidB);
+    }
+
+    const byBid = compareDesc(bidA, bidB);
+    if (byBid !== 0) return byBid;
+    const byPoints = compareDesc(pointsA, pointsB);
+    if (byPoints !== 0) return byPoints;
+    return compareDesc(ownershipA, ownershipB);
+  };
+
+  const sortedTeams = [...teams].sort(compareTeams);
 
   // Helper function to calculate wins (wins + byes - 1)
   const calculateWins = (team: CalcuttaEntryTeam) => {
@@ -318,7 +334,7 @@ export function EntryTeamsPage() {
       <div className="mb-6">
         <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">← Back to Entries</Link>
       </div>
-      <h1 className="text-3xl font-bold mb-6">Teams and Bids</h1>
+      <h1 className="text-3xl font-bold mb-6">{entryName || 'Entry'}</h1>
 
       <div className="mb-8 flex gap-2 border-b border-gray-200">
         <button
@@ -347,7 +363,20 @@ export function EntryTeamsPage() {
 
       {activeTab === 'teams' && (
         <>
-          <p className="text-gray-600 mb-4 italic">Teams are sorted by points earned, then by ownership percentage, then by bid amount. In the future, teams will be sorted by predicted points.</p>
+          <div className="mb-4 flex items-center justify-end">
+            <label className="text-sm text-gray-600">
+              Sort by
+              <select
+                className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bid')}
+              >
+                <option value="points">Points</option>
+                <option value="ownership">Ownership</option>
+                <option value="bid">Bid Amount</option>
+              </select>
+            </label>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedTeams.map((team) => {
               const portfolioTeam = getPortfolioTeamData(team.teamId);
