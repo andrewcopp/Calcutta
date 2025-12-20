@@ -129,6 +129,7 @@ export function EntryTeamsPage() {
   const [allCalcuttaPortfolios, setAllCalcuttaPortfolios] = useState<(CalcuttaPortfolio & { entryName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'teams' | 'statistics'>('teams');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -302,56 +303,92 @@ export function EntryTeamsPage() {
         <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">← Back to Entries</Link>
       </div>
       <h1 className="text-3xl font-bold mb-6">Teams and Bids</h1>
-      <p className="text-gray-600 mb-4 italic">Teams are sorted by points earned, then by ownership percentage, then by bid amount. In the future, teams will be sorted by predicted points.</p>
-      {portfolios.length > 0 && <PortfolioScores portfolio={portfolios[0]} teams={portfolioTeams} />}
-      <div className="grid gap-4">
-        {sortedTeams.map((team) => {
-          const portfolioTeam = getPortfolioTeamData(team.teamId);
-          const wins = calculateWins(team);
-          const investorRanking = getInvestorRanking(team.teamId);
-          const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
-          const currentPortfolioId = portfolios[0]?.id;
-          
-          return (
-            <div
-              key={team.id}
-              className="p-4 bg-white rounded-lg shadow"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">
-                    {team.team?.school?.name || 'Unknown School'}
-                  </h2>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <p className="text-gray-600">Bid Amount: ${team.bid}</p>
-                    <p className="text-gray-600">Wins: {wins}</p>
-                    {portfolioTeam && (
-                      <>
-                        <p className="text-gray-600">
-                          Ownership: {(portfolioTeam.ownershipPercentage * 100).toFixed(2)}%
-                        </p>
-                        <p className="text-gray-600">
-                          Points Earned: {portfolioTeam.actualPoints.toFixed(2)}
-                        </p>
-                      </>
-                    )}
+
+      <div className="mb-8 flex gap-2 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('teams')}
+          className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
+            activeTab === 'teams'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Teams
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('statistics')}
+          className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
+            activeTab === 'statistics'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Statistics
+        </button>
+      </div>
+
+      {activeTab === 'teams' && (
+        <>
+          <p className="text-gray-600 mb-4 italic">Teams are sorted by points earned, then by ownership percentage, then by bid amount. In the future, teams will be sorted by predicted points.</p>
+          <div className="grid gap-4">
+            {sortedTeams.map((team) => {
+              const portfolioTeam = getPortfolioTeamData(team.teamId);
+              const wins = calculateWins(team);
+              const investorRanking = getInvestorRanking(team.teamId);
+              const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
+              const currentPortfolioId = portfolios[0]?.id;
+              
+              return (
+                <div
+                  key={team.id}
+                  className="p-4 bg-white rounded-lg shadow"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold">
+                        {team.team?.school?.name || 'Unknown School'}
+                      </h2>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <p className="text-gray-600">Bid Amount: ${team.bid}</p>
+                        <p className="text-gray-600">Wins: {wins}</p>
+                        {portfolioTeam && (
+                          <>
+                            <p className="text-gray-600">
+                              Ownership: {(portfolioTeam.ownershipPercentage * 100).toFixed(2)}%
+                            </p>
+                            <p className="text-gray-600">
+                              Points Earned: {portfolioTeam.actualPoints.toFixed(2)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <OwnershipPieChart 
+                        portfolioTeams={teamPortfolioTeams} 
+                        portfolios={allCalcuttaPortfolios}
+                        currentPortfolioId={currentPortfolioId}
+                        rank={investorRanking.rank}
+                        totalInvestors={investorRanking.total}
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Ownership Distribution</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-center">
-                  <OwnershipPieChart 
-                    portfolioTeams={teamPortfolioTeams} 
-                    portfolios={allCalcuttaPortfolios}
-                    currentPortfolioId={currentPortfolioId}
-                    rank={investorRanking.rank}
-                    totalInvestors={investorRanking.total}
-                  />
-                  <p className="text-sm text-gray-500 mt-1">Ownership Distribution</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'statistics' && (
+        <>
+          {portfolios.length > 0 && <PortfolioScores portfolio={portfolios[0]} teams={portfolioTeams} />}
+        </>
+      )}
     </div>
   );
-} 
+}
+ 
