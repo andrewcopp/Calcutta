@@ -133,7 +133,7 @@ export function EntryTeamsPage() {
   const [entryName, setEntryName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'teams' | 'statistics'>('teams');
+  const [activeTab, setActiveTab] = useState<'bids' | 'ownership' | 'points' | 'statistics'>('ownership');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
 
   useEffect(() => {
@@ -339,14 +339,36 @@ export function EntryTeamsPage() {
       <div className="mb-8 flex gap-2 border-b border-gray-200">
         <button
           type="button"
-          onClick={() => setActiveTab('teams')}
+          onClick={() => setActiveTab('bids')}
           className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
-            activeTab === 'teams'
+            activeTab === 'bids'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          Teams
+          Bids
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('ownership')}
+          className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
+            activeTab === 'ownership'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Ownership
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('points')}
+          className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
+            activeTab === 'points'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Points
         </button>
         <button
           type="button"
@@ -361,7 +383,7 @@ export function EntryTeamsPage() {
         </button>
       </div>
 
-      {activeTab === 'teams' && (
+      {(activeTab === 'bids' || activeTab === 'ownership' || activeTab === 'points') && (
         <>
           <div className="mb-4 flex items-center justify-end">
             <label className="text-sm text-gray-600">
