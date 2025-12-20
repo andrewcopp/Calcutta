@@ -129,12 +129,12 @@ export function EntryTeamsPage() {
   const [portfolioTeams, setPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [allCalcuttaPortfolioTeams, setAllCalcuttaPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [allCalcuttaPortfolios, setAllCalcuttaPortfolios] = useState<(CalcuttaPortfolio & { entryName?: string })[]>([]);
-  const [totalBidByTeamId, setTotalBidByTeamId] = useState<Record<string, number>>({});
   const [entryName, setEntryName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'bids' | 'ownership' | 'points' | 'statistics'>('ownership');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
+  const [bidsSortBy, setBidsSortBy] = useState<'bid' | 'seed' | 'alpha'>('bid');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -226,17 +226,6 @@ export function EntryTeamsPage() {
 
         setAllCalcuttaPortfolioTeams(allCalcuttaPortfolioTeamsWithSchools);
 
-        const allEntryTeamsPromises = allEntriesData.map((entry) =>
-          calcuttaService.getEntryTeams(entry.id, calcuttaId)
-        );
-        const allEntryTeamsResults = await Promise.all(allEntryTeamsPromises);
-        const allEntryTeamsFlat = allEntryTeamsResults.flat();
-        const bidTotals: Record<string, number> = {};
-        for (const t of allEntryTeamsFlat) {
-          bidTotals[t.teamId] = (bidTotals[t.teamId] ?? 0) + (t.bid ?? 0);
-        }
-        setTotalBidByTeamId(bidTotals);
-        
         setLoading(false);
       } catch (err) {
         setError('Failed to fetch data');
@@ -321,13 +310,45 @@ export function EntryTeamsPage() {
 
   const sortedTeams = [...teams].sort(compareTeams);
 
-  // Helper function to calculate wins (wins + byes - 1)
-  const calculateWins = (team: CalcuttaEntryTeam) => {
-    if (!team.team) return 0;
-    const wins = team.team.wins || 0;
-    const byes = team.team.byes || 0;
-    return Math.max(0, wins + byes - 1);
+  const bidsTotal = teams.reduce((sum, team) => sum + (team.bid ?? 0), 0);
+
+  const compareBidsTeams = (a: CalcuttaEntryTeam, b: CalcuttaEntryTeam) => {
+    const nameA = a.team?.school?.name || '';
+    const nameB = b.team?.school?.name || '';
+    const seedA = a.team?.seed;
+    const seedB = b.team?.seed;
+    const bidA = a.bid ?? 0;
+    const bidB = b.bid ?? 0;
+
+    const compareSeedAsc = () => {
+      if (seedA === undefined && seedB === undefined) return 0;
+      if (seedA === undefined) return 1;
+      if (seedB === undefined) return -1;
+      return seedA - seedB;
+    };
+
+    if (bidsSortBy === 'bid') {
+      const byBid = compareDesc(bidA, bidB);
+      if (byBid !== 0) return byBid;
+      const bySeed = compareSeedAsc();
+      if (bySeed !== 0) return bySeed;
+      return nameA.localeCompare(nameB);
+    }
+
+    if (bidsSortBy === 'seed') {
+      const bySeed = compareSeedAsc();
+      if (bySeed !== 0) return bySeed;
+      const byBid = compareDesc(bidA, bidB);
+      if (byBid !== 0) return byBid;
+      return nameA.localeCompare(nameB);
+    }
+
+    const byName = nameA.localeCompare(nameB);
+    if (byName !== 0) return byName;
+    return compareDesc(bidA, bidB);
   };
+
+  const bidsList = [...teams].sort(compareBidsTeams);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -383,7 +404,59 @@ export function EntryTeamsPage() {
         </button>
       </div>
 
-      {(activeTab === 'bids' || activeTab === 'ownership' || activeTab === 'points') && (
+      {activeTab === 'bids' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-xl font-semibold">Bids</h2>
+            <div className="flex items-center gap-4">
+              <label className="text-sm text-gray-600">
+                Sort by
+                <select
+                  className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                  value={bidsSortBy}
+                  onChange={(e) => setBidsSortBy(e.target.value as 'bid' | 'seed' | 'alpha')}
+                >
+                  <option value="bid">Bid</option>
+                  <option value="seed">Seed</option>
+                  <option value="alpha">Alphabetical</option>
+                </select>
+              </label>
+              <div className="text-sm text-gray-600">
+                Total Spent: <span className="font-medium text-gray-900">${bidsTotal}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-y-2">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-2">Team</th>
+                  <th className="px-3 py-2">Seed</th>
+                  <th className="px-3 py-2 text-right">Bid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bidsList.map((team) => (
+                  <tr key={team.id} className="bg-gray-50">
+                    <td className="px-3 py-3 font-medium text-gray-900 rounded-l-md">
+                      {team.team?.school?.name || 'Unknown School'}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700">
+                      {team.team?.seed ?? '—'}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 rounded-r-md">
+                      ${team.bid}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {(activeTab === 'ownership' || activeTab === 'points') && (
         <>
           <div className="mb-4 flex items-center justify-end">
             <label className="text-sm text-gray-600">
@@ -402,13 +475,27 @@ export function EntryTeamsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedTeams.map((team) => {
               const portfolioTeam = getPortfolioTeamData(team.teamId);
-              const wins = calculateWins(team);
               const investorRanking = getInvestorRanking(team.teamId);
               const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
               const currentPortfolioId = portfolios[0]?.id;
-              const totalBids = totalBidByTeamId[team.teamId] ?? team.bid;
               const ownershipPct = portfolioTeam ? portfolioTeam.ownershipPercentage * 100 : undefined;
-              const pointsEarned = portfolioTeam ? portfolioTeam.actualPoints : undefined;
+
+              const topOwners: { name: string; pct: number | null }[] = [...teamPortfolioTeams]
+                .filter(pt => pt.ownershipPercentage > 0)
+                .sort((a, b) => b.ownershipPercentage - a.ownershipPercentage)
+                .slice(0, 3)
+                .map((pt) => {
+                  const portfolio = allCalcuttaPortfolios.find(p => p.id === pt.portfolioId);
+                  const name = portfolio?.entryName || `Portfolio ${pt.portfolioId.slice(0, 4)}`;
+                  return {
+                    name,
+                    pct: pt.ownershipPercentage * 100,
+                  };
+                });
+
+              while (topOwners.length < 3) {
+                topOwners.push({ name: '--', pct: null });
+              }
               
               return (
                 <div
@@ -444,22 +531,17 @@ export function EntryTeamsPage() {
                     />
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                    <div>
-                      <div className="text-gray-500">Bid</div>
-                      <div className="font-medium text-gray-900">${team.bid}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Total Bids</div>
-                      <div className="font-medium text-gray-900">${team.bid} / ${totalBids}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Wins</div>
-                      <div className="font-medium text-gray-900">{wins}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Points Earned</div>
-                      <div className="font-medium text-gray-900">{pointsEarned !== undefined ? pointsEarned.toFixed(2) : '—'}</div>
+                  <div className="mt-4">
+                    <div className="text-sm font-medium text-gray-900">Top Shareholders</div>
+                    <div className="mt-2 space-y-2">
+                      {topOwners.map((owner, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-3 text-sm">
+                          <div className="min-w-0 truncate text-gray-700">{owner.name}</div>
+                          <div className="font-medium text-gray-900">
+                            {owner.pct === null ? '--' : `${owner.pct.toFixed(2)}%`}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
