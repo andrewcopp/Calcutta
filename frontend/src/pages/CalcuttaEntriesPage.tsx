@@ -889,8 +889,8 @@ export function CalcuttaEntriesPage() {
                   <th className="px-2 py-2 w-14">Seed</th>
                   <th className="px-2 py-2 w-20">Region</th>
                   <th className="px-2 py-2 w-44">Team</th>
-                  <th className="px-2 py-2">Investment</th>
-                  <th className="px-2 py-2 w-24 text-right">Total</th>
+                  <th className="px-2 py-2"></th>
+                  <th className="px-2 py-2 w-24 text-right">Total Investment</th>
                 </tr>
               </thead>
               <tbody>
@@ -969,7 +969,7 @@ export function CalcuttaEntriesPage() {
 
       {activeTab === 'ownership' && (
         <>
-          <div className="mb-4 flex items-center justify-end gap-4">
+          <div className="mb-4 flex items-center justify-end">
             <label className="text-sm text-gray-600">
               Sort by
               <select
@@ -983,9 +983,6 @@ export function CalcuttaEntriesPage() {
                 <option value="investment">Investment</option>
               </select>
             </label>
-            <div className="text-sm text-gray-600">
-              Total Spent: <span className="font-medium text-gray-900">${totalSpent.toFixed(2)}</span>
-            </div>
           </div>
 
           {ownershipLoading ? (
@@ -1002,8 +999,8 @@ export function CalcuttaEntriesPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-600">
-                      Spend
+                    <div className="text-sm text-gray-600 whitespace-nowrap">
+                      Total Investment
                       <div className="text-base font-semibold text-gray-900">${team.totalSpend.toFixed(2)}</div>
                     </div>
                   </div>

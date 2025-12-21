@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School } from '../types/calcutta';
+import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School, TournamentTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -90,6 +90,7 @@ const OwnershipPieChart: React.FC<{
               outerRadius={Math.max(40, Math.floor(sizePx * 0.42))}
               paddingAngle={2}
               dataKey="value"
+              isAnimationActive={false}
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
             >
@@ -123,6 +124,294 @@ const OwnershipPieChart: React.FC<{
   );
 };
 
+const InvestmentsTab: React.FC<{
+  entryId: string;
+  teams: CalcuttaEntryTeam[];
+  tournamentTeams: TournamentTeam[];
+  allEntryTeams: CalcuttaEntryTeam[];
+  schools: School[];
+  investmentsSortBy: 'total' | 'seed' | 'region' | 'team';
+  setInvestmentsSortBy: (value: 'total' | 'seed' | 'region' | 'team') => void;
+  showAllTeams: boolean;
+  setShowAllTeams: (value: boolean) => void;
+  investmentHover: { entryName: string; amount: number; x: number; y: number } | null;
+  setInvestmentHover: (value: { entryName: string; amount: number; x: number; y: number } | null) => void;
+}> = ({
+  entryId,
+  teams,
+  tournamentTeams,
+  allEntryTeams,
+  schools,
+  investmentsSortBy,
+  setInvestmentsSortBy,
+  showAllTeams,
+  setShowAllTeams,
+  investmentHover,
+  setInvestmentHover,
+}) => {
+  const schoolNameById = useMemo(() => new Map(schools.map((school) => [school.id, school.name])), [schools]);
+
+  const mixHex = (hexA: string, hexB: string, amountB: number) => {
+    const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+    const norm = (hex: string) => hex.replace('#', '');
+    const a = norm(hexA);
+    const b = norm(hexB);
+    const ar = parseInt(a.substring(0, 2), 16);
+    const ag = parseInt(a.substring(2, 4), 16);
+    const ab = parseInt(a.substring(4, 6), 16);
+    const br = parseInt(b.substring(0, 2), 16);
+    const bg = parseInt(b.substring(2, 4), 16);
+    const bb = parseInt(b.substring(4, 6), 16);
+    const r = clamp(ar * (1 - amountB) + br * amountB);
+    const g = clamp(ag * (1 - amountB) + bg * amountB);
+    const bl = clamp(ab * (1 - amountB) + bb * amountB);
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`;
+  };
+
+  const desaturate = (hex: string) => mixHex(hex, '#FFFFFF', 0.55);
+
+  const investmentRows = useMemo(() => {
+    const byTeam = new Map<
+      string,
+      {
+        teamId: string;
+        seed: number | undefined;
+        region: string;
+        teamName: string;
+        totalInvestment: number;
+        entryInvestment: number;
+        otherInvestments: { entryId: string; entryName: string; amount: number }[];
+      }
+    >();
+
+    for (const tt of tournamentTeams) {
+      byTeam.set(tt.id, {
+        teamId: tt.id,
+        seed: tt.seed,
+        region: tt.region,
+        teamName: schoolNameById.get(tt.schoolId) || 'Unknown School',
+        totalInvestment: 0,
+        entryInvestment: 0,
+        otherInvestments: [],
+      });
+    }
+
+    for (const entryTeam of allEntryTeams) {
+      const amount = entryTeam.bid || 0;
+      if (amount <= 0) continue;
+
+      const row = byTeam.get(entryTeam.teamId);
+      if (!row) continue;
+
+      row.totalInvestment += amount;
+      if (entryTeam.entryId === entryId) {
+        row.entryInvestment += amount;
+      } else {
+        row.otherInvestments.push({
+          entryId: entryTeam.entryId,
+          entryName: 'Other',
+          amount,
+        });
+      }
+    }
+
+    let rows = Array.from(byTeam.values());
+
+    if (!showAllTeams) {
+      rows = rows.filter((row) => row.entryInvestment > 0);
+    }
+
+    const maxTotal = rows.reduce((max, row) => Math.max(max, row.totalInvestment), 0);
+
+    return { rows, maxTotal };
+  }, [allEntryTeams, entryId, schoolNameById, showAllTeams, tournamentTeams]);
+
+  const sortedRows = useMemo(() => {
+    const rows = investmentRows.rows.slice();
+    const seedA = (seed: number | undefined) => seed ?? 999;
+    const regionA = (region: string) => region || '';
+    const teamA = (name: string) => name || '';
+
+    rows.sort((a, b) => {
+      if (investmentsSortBy === 'total') {
+        if (b.totalInvestment !== a.totalInvestment) return b.totalInvestment - a.totalInvestment;
+        return seedA(a.seed) - seedA(b.seed);
+      }
+
+      if (investmentsSortBy === 'seed') {
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
+        if (regionDiff !== 0) return regionDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      if (investmentsSortBy === 'region') {
+        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
+        if (regionDiff !== 0) return regionDiff;
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      const nameDiff = teamA(a.teamName).localeCompare(teamA(b.teamName));
+      if (nameDiff !== 0) return nameDiff;
+      return seedA(a.seed) - seedA(b.seed);
+    });
+
+    return rows;
+  }, [investmentRows.rows, investmentsSortBy]);
+
+  const ENTRY_COLOR = '#2563EB';
+  const OTHER_COLOR = desaturate('#94A3B8');
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={showAllTeams}
+            onChange={(e) => setShowAllTeams(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Show All Teams
+        </label>
+        <label className="text-sm text-gray-600">
+          Sort by
+          <select
+            className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+            value={investmentsSortBy}
+            onChange={(e) => setInvestmentsSortBy(e.target.value as 'total' | 'seed' | 'region' | 'team')}
+          >
+            <option value="total">Total</option>
+            <option value="seed">Seed</option>
+            <option value="region">Region</option>
+            <option value="team">Team</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full table-fixed border-separate border-spacing-y-2">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+              <th className="px-2 py-2 w-14">Seed</th>
+              <th className="px-2 py-2 w-20">Region</th>
+              <th className="px-2 py-2 w-44">Team</th>
+              <th className="px-2 py-2"></th>
+              <th className="px-2 py-2 w-24 text-right">Investment</th>
+              <th className="px-2 py-2 w-32 text-right">Total Investment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRows.map((row) => {
+              const barWidthPct = investmentRows.maxTotal > 0 ? (row.totalInvestment / investmentRows.maxTotal) * 100 : 0;
+              const entryWidthPct = row.totalInvestment > 0 ? (row.entryInvestment / row.totalInvestment) * 100 : 0;
+              const otherTotal = row.otherInvestments.reduce((sum, inv) => sum + inv.amount, 0);
+              const otherWidthPct = row.totalInvestment > 0 ? (otherTotal / row.totalInvestment) * 100 : 0;
+
+              return (
+                <tr key={row.teamId} className="bg-gray-50">
+                  <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{row.seed ?? '—'}</td>
+                  <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{row.region}</td>
+                  <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">{row.teamName}</td>
+                  <td className="px-2 py-3">
+                    <div className="h-6 w-full rounded bg-gray-200 overflow-hidden">
+                      <div className="h-full flex" style={{ width: `${barWidthPct.toFixed(2)}%` }}>
+                        {row.entryInvestment > 0 && (
+                          <div
+                            className="h-full"
+                            style={{
+                              width: `${entryWidthPct.toFixed(2)}%`,
+                              backgroundColor: ENTRY_COLOR,
+                              boxSizing: 'border-box',
+                              border:
+                                investmentHover?.entryName === 'Your Entry' && investmentHover?.amount === row.entryInvestment
+                                  ? '2px solid #111827'
+                                  : '2px solid transparent',
+                            }}
+                            onMouseEnter={(e) => {
+                              setInvestmentHover({
+                                entryName: 'Your Entry',
+                                amount: row.entryInvestment,
+                                x: e.clientX,
+                                y: e.clientY,
+                              });
+                            }}
+                            onMouseMove={(e) => {
+                              if (investmentHover) {
+                                setInvestmentHover({
+                                  ...investmentHover,
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                });
+                              }
+                            }}
+                            onMouseLeave={() => setInvestmentHover(null)}
+                          />
+                        )}
+                        {otherTotal > 0 && (
+                          <div
+                            className="h-full"
+                            style={{
+                              width: `${otherWidthPct.toFixed(2)}%`,
+                              backgroundColor: OTHER_COLOR,
+                              boxSizing: 'border-box',
+                              border:
+                                investmentHover?.entryName === 'Others' && investmentHover?.amount === otherTotal
+                                  ? '2px solid #111827'
+                                  : '2px solid transparent',
+                            }}
+                            onMouseEnter={(e) => {
+                              setInvestmentHover({
+                                entryName: 'Others',
+                                amount: otherTotal,
+                                x: e.clientX,
+                                y: e.clientY,
+                              });
+                            }}
+                            onMouseMove={(e) => {
+                              if (investmentHover) {
+                                setInvestmentHover({
+                                  ...investmentHover,
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                });
+                              }
+                            }}
+                            onMouseLeave={() => setInvestmentHover(null)}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                    ${row.entryInvestment.toFixed(2)}
+                  </td>
+                  <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
+                    ${row.totalInvestment.toFixed(2)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {investmentHover && (
+        <div
+          className="fixed z-50 pointer-events-none rounded bg-gray-900 px-3 py-2 text-xs text-white shadow"
+          style={{ left: investmentHover.x + 12, top: investmentHover.y + 12 }}
+        >
+          <div className="font-medium">{investmentHover.entryName}</div>
+          <div>${investmentHover.amount.toFixed(2)}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
   const [teams, setTeams] = useState<CalcuttaEntryTeam[]>([]);
@@ -134,9 +423,16 @@ export function EntryTeamsPage() {
   const [entryName, setEntryName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'bids' | 'ownership' | 'points' | 'statistics'>('ownership');
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
+  const [allEntryTeams, setAllEntryTeams] = useState<CalcuttaEntryTeam[]>([]);
+  const [activeTab, setActiveTab] = useState<'investments' | 'ownerships' | 'points' | 'statistics'>('ownerships');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
-  const [bidsSortBy, setBidsSortBy] = useState<'bid' | 'seed' | 'alpha'>('bid');
+  const [investmentsSortBy, setInvestmentsSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
+  const [showAllTeams, setShowAllTeams] = useState(false);
+  const [investmentHover, setInvestmentHover] = useState<{ entryName: string; amount: number; x: number; y: number } | null>(null);
+  const [ownershipShowAllTeams, setOwnershipShowAllTeams] = useState(false);
+  const [ownershipLoading, setOwnershipLoading] = useState(false);
+  const [ownershipTeamsData, setOwnershipTeamsData] = useState<CalcuttaEntryTeam[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,12 +443,16 @@ export function EntryTeamsPage() {
       }
       
       try {
-        const [teamsData, schoolsData, portfoliosData, allEntriesData] = await Promise.all([
+        const calcutta = await calcuttaService.getCalcutta(calcuttaId);
+        const [teamsData, schoolsData, portfoliosData, allEntriesData, tournamentTeamsData] = await Promise.all([
           calcuttaService.getEntryTeams(entryId, calcuttaId),
           calcuttaService.getSchools(),
           calcuttaService.getPortfoliosByEntry(entryId),
-          calcuttaService.getCalcuttaEntries(calcuttaId)
+          calcuttaService.getCalcuttaEntries(calcuttaId),
+          calcuttaService.getTournamentTeams(calcutta.tournamentId)
         ]);
+
+        setTournamentTeams(tournamentTeamsData);
 
         const currentEntry = allEntriesData.find(e => e.id === entryId);
         setEntryName(currentEntry?.name || '');
@@ -228,6 +528,14 @@ export function EntryTeamsPage() {
 
         setAllCalcuttaPortfolioTeams(allCalcuttaPortfolioTeamsWithSchools);
 
+        // Fetch all entry teams for all entries
+        const allEntryTeamsPromises = allEntriesData.map(entry =>
+          calcuttaService.getEntryTeams(entry.id, calcuttaId)
+        );
+        const allEntryTeamsResults = await Promise.all(allEntryTeamsPromises);
+        const allEntryTeamsFlat = allEntryTeamsResults.flat();
+        setAllEntryTeams(allEntryTeamsFlat);
+
         setLoading(false);
       } catch (err) {
         setError('Failed to fetch data');
@@ -238,14 +546,6 @@ export function EntryTeamsPage() {
     fetchData();
   }, [entryId, calcuttaId]);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-
   // Helper function to find portfolio team data for a given team ID
   const getPortfolioTeamData = (teamId: string) => {
     // Find the portfolio team belonging to the current entry's portfolio
@@ -253,6 +553,39 @@ export function EntryTeamsPage() {
     if (!currentPortfolioId) return undefined;
     return allCalcuttaPortfolioTeams.find(pt => pt.teamId === teamId && pt.portfolioId === currentPortfolioId);
   };
+
+  useEffect(() => {
+    if (activeTab !== 'ownerships') {
+      setOwnershipLoading(false);
+      return;
+    }
+
+    setOwnershipLoading(true);
+    const handle = window.setTimeout(() => {
+      let teamsToShow = [...teams];
+      if (!ownershipShowAllTeams) {
+        teamsToShow = teamsToShow.filter((team) => {
+          const portfolioTeam = getPortfolioTeamData(team.teamId);
+          return portfolioTeam && portfolioTeam.ownershipPercentage > 0;
+        });
+      }
+      setOwnershipTeamsData(teamsToShow);
+      setOwnershipLoading(false);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(handle);
+      setOwnershipLoading(false);
+    };
+  }, [activeTab, teams, ownershipShowAllTeams, portfolios, allCalcuttaPortfolioTeams]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="error">{error}</div>;
+  }
 
   // Helper function to calculate investor ranking for a team
   const getInvestorRanking = (teamId: string) => {
@@ -312,45 +645,6 @@ export function EntryTeamsPage() {
 
   const sortedTeams = [...teams].sort(compareTeams);
 
-  const bidsTotal = teams.reduce((sum, team) => sum + (team.bid ?? 0), 0);
-
-  const compareBidsTeams = (a: CalcuttaEntryTeam, b: CalcuttaEntryTeam) => {
-    const nameA = a.team?.school?.name || '';
-    const nameB = b.team?.school?.name || '';
-    const seedA = a.team?.seed;
-    const seedB = b.team?.seed;
-    const bidA = a.bid ?? 0;
-    const bidB = b.bid ?? 0;
-
-    const compareSeedAsc = () => {
-      if (seedA === undefined && seedB === undefined) return 0;
-      if (seedA === undefined) return 1;
-      if (seedB === undefined) return -1;
-      return seedA - seedB;
-    };
-
-    if (bidsSortBy === 'bid') {
-      const byBid = compareDesc(bidA, bidB);
-      if (byBid !== 0) return byBid;
-      const bySeed = compareSeedAsc();
-      if (bySeed !== 0) return bySeed;
-      return nameA.localeCompare(nameB);
-    }
-
-    if (bidsSortBy === 'seed') {
-      const bySeed = compareSeedAsc();
-      if (bySeed !== 0) return bySeed;
-      const byBid = compareDesc(bidA, bidB);
-      if (byBid !== 0) return byBid;
-      return nameA.localeCompare(nameB);
-    }
-
-    const byName = nameA.localeCompare(nameB);
-    if (byName !== 0) return byName;
-    return compareDesc(bidA, bidB);
-  };
-
-  const bidsList = [...teams].sort(compareBidsTeams);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -362,25 +656,25 @@ export function EntryTeamsPage() {
       <div className="mb-8 flex gap-2 border-b border-gray-200">
         <button
           type="button"
-          onClick={() => setActiveTab('bids')}
+          onClick={() => setActiveTab('investments')}
           className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
-            activeTab === 'bids'
+            activeTab === 'investments'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          Bids
+          Investments
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('ownership')}
+          onClick={() => setActiveTab('ownerships')}
           className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
-            activeTab === 'ownership'
+            activeTab === 'ownerships'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          Ownership
+          Ownerships
         </button>
         <button
           type="button"
@@ -406,61 +700,34 @@ export function EntryTeamsPage() {
         </button>
       </div>
 
-      {activeTab === 'bids' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-xl font-semibold">Bids</h2>
-            <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-600">
-                Sort by
-                <select
-                  className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
-                  value={bidsSortBy}
-                  onChange={(e) => setBidsSortBy(e.target.value as 'bid' | 'seed' | 'alpha')}
-                >
-                  <option value="bid">Bid</option>
-                  <option value="seed">Seed</option>
-                  <option value="alpha">Alphabetical</option>
-                </select>
-              </label>
-              <div className="text-sm text-gray-600">
-                Total Spent: <span className="font-medium text-gray-900">${bidsTotal}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-y-2">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                  <th className="px-3 py-2">Team</th>
-                  <th className="px-3 py-2">Seed</th>
-                  <th className="px-3 py-2 text-right">Bid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bidsList.map((team) => (
-                  <tr key={team.id} className="bg-gray-50">
-                    <td className="px-3 py-3 font-medium text-gray-900 rounded-l-md">
-                      {team.team?.school?.name || 'Unknown School'}
-                    </td>
-                    <td className="px-3 py-3 text-gray-700">
-                      {team.team?.seed ?? '—'}
-                    </td>
-                    <td className="px-3 py-3 text-right font-medium text-gray-900 rounded-r-md">
-                      ${team.bid}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {activeTab === 'investments' && (
+        <InvestmentsTab
+          entryId={entryId!}
+          teams={teams}
+          tournamentTeams={tournamentTeams}
+          allEntryTeams={allEntryTeams}
+          schools={schools}
+          investmentsSortBy={investmentsSortBy}
+          setInvestmentsSortBy={setInvestmentsSortBy}
+          showAllTeams={showAllTeams}
+          setShowAllTeams={setShowAllTeams}
+          investmentHover={investmentHover}
+          setInvestmentHover={setInvestmentHover}
+        />
       )}
 
-      {activeTab === 'ownership' && (
+      {activeTab === 'ownerships' && (
         <>
-          <div className="mb-4 flex items-center justify-end">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={ownershipShowAllTeams}
+                onChange={(e) => setOwnershipShowAllTeams(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Show All Teams
+            </label>
             <label className="text-sm text-gray-600">
               Sort by
               <select
@@ -474,8 +741,11 @@ export function EntryTeamsPage() {
               </select>
             </label>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedTeams.map((team) => {
+          {ownershipLoading ? (
+            <div className="bg-white rounded-lg shadow p-6 text-gray-600">Loading ownerships…</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {ownershipTeamsData.map((team) => {
               const portfolioTeam = getPortfolioTeamData(team.teamId);
               const investorRanking = getInvestorRanking(team.teamId);
               const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
@@ -538,7 +808,10 @@ export function EntryTeamsPage() {
                     <div className="mt-2 space-y-2">
                       {topOwners.map((owner, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-3 text-sm">
-                          <div className="min-w-0 truncate text-gray-700">{owner.name}</div>
+                          <div className="min-w-0 truncate text-gray-700 flex items-center gap-2">
+                            <div className="w-4 shrink-0 text-gray-500">{idx + 1}</div>
+                            <div className="truncate">{owner.name}</div>
+                          </div>
                           <div className="font-medium text-gray-900">
                             {owner.pct === null ? '--' : `${owner.pct.toFixed(2)}%`}
                           </div>
@@ -548,8 +821,9 @@ export function EntryTeamsPage() {
                   </div>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+          )}
         </>
       )}
 
