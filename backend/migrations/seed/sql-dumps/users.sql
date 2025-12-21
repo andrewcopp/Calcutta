@@ -1,4 +1,4 @@
--- Generated on: 2025-12-19 23:33:06
+-- Generated on: 2025-12-20 22:07:44
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -23,5 +23,5 @@ INSERT INTO public.users VALUES ('090644de-1158-402e-a103-949b089d8cf9', 'admin@
 
 -- PostgreSQL database dump complete
 
-\unrestrict FRLvahAnomMoq6Rzag3kl4BszFaUokVQrAhmpYVd0PkFILzbPvm1hxHgHee6jLk
+\unrestrict JniSKynaOcWijkX0FztPzy2k0mw8gpllu6fhEDQBV8JRqjGA3JRnLqpA3pCRNKS
 
