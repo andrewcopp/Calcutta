@@ -753,96 +753,46 @@ export function CalcuttaEntriesPage() {
                       <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{row.region}</td>
                       <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">{row.teamName}</td>
                       <td className="px-2 py-3">
-                        <div className="space-y-2">
-                          <div>
-                            <div className="h-6 w-full rounded bg-gray-200 overflow-hidden">
-                              <div className="h-full flex" style={{ width: `${pointsWidthPct.toFixed(2)}%` }}>
-                                {row.pointsSegments.map((seg) => {
-                                  const segWidthPct = row.totalPoints > 0 ? (seg.amount / row.totalPoints) * 100 : 0;
-                                  const color = entryColorById.get(seg.entryId) || '#94A3B8';
-                                  const isActive = returnsHover?.entryName === seg.entryName && returnsHover?.amount === seg.amount;
+                        <div className="h-6 w-full rounded overflow-hidden" style={{ backgroundColor: row.eliminated ? 'transparent' : '#F3F4F6' }}>
+                          <div className="h-full flex" style={{ width: `${pointsWidthPct.toFixed(2)}%` }}>
+                            {row.pointsSegments.map((seg) => {
+                              const segWidthPct = row.totalPoints > 0 ? (seg.amount / row.totalPoints) * 100 : 0;
+                              const color = entryColorById.get(seg.entryId) || '#94A3B8';
+                              const isActive = returnsHover?.entryName === seg.entryName && returnsHover?.amount === seg.amount;
 
-                                  return (
-                                    <div
-                                      key={`${row.teamId}-points-${seg.entryId}`}
-                                      className="h-full"
-                                      style={{
-                                        width: `${segWidthPct.toFixed(2)}%`,
-                                        backgroundColor: color,
-                                        boxSizing: 'border-box',
-                                        border: isActive ? '2px solid #111827' : '2px solid transparent',
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        setReturnsHover({
-                                          entryName: seg.entryName,
-                                          amount: seg.amount,
-                                          x: e.clientX,
-                                          y: e.clientY,
-                                        });
-                                      }}
-                                      onMouseMove={(e) => {
-                                        setReturnsHover((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                x: e.clientX,
-                                                y: e.clientY,
-                                              }
-                                            : prev
-                                        );
-                                      }}
-                                      onMouseLeave={() => setReturnsHover(null)}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="h-6 w-full rounded bg-gray-200 overflow-hidden">
-                              <div className="h-full flex" style={{ width: `${possibleWidthPct.toFixed(2)}%` }}>
-                                {row.possibleSegments.map((seg) => {
-                                  const segWidthPct = row.totalPossible > 0 ? (seg.amount / row.totalPossible) * 100 : 0;
-                                  const base = entryColorById.get(seg.entryId) || '#94A3B8';
-                                  const color = desaturate(base);
-                                  const isActive = returnsHover?.entryName === seg.entryName && returnsHover?.amount === seg.amount;
-
-                                  return (
-                                    <div
-                                      key={`${row.teamId}-possible-${seg.entryId}`}
-                                      className="h-full"
-                                      style={{
-                                        width: `${segWidthPct.toFixed(2)}%`,
-                                        backgroundColor: color,
-                                        boxSizing: 'border-box',
-                                        border: isActive ? '2px solid #111827' : '2px solid transparent',
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        setReturnsHover({
-                                          entryName: seg.entryName,
-                                          amount: seg.amount,
-                                          x: e.clientX,
-                                          y: e.clientY,
-                                        });
-                                      }}
-                                      onMouseMove={(e) => {
-                                        setReturnsHover((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                x: e.clientX,
-                                                y: e.clientY,
-                                              }
-                                            : prev
-                                        );
-                                      }}
-                                      onMouseLeave={() => setReturnsHover(null)}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            </div>
+                              return (
+                                <div
+                                  key={`${row.teamId}-points-${seg.entryId}`}
+                                  className="h-full"
+                                  style={{
+                                    width: `${segWidthPct.toFixed(2)}%`,
+                                    backgroundColor: color,
+                                    boxSizing: 'border-box',
+                                    border: isActive ? '2px solid #111827' : '2px solid transparent',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    setReturnsHover({
+                                      entryName: seg.entryName,
+                                      amount: seg.amount,
+                                      x: e.clientX,
+                                      y: e.clientY,
+                                    });
+                                  }}
+                                  onMouseMove={(e) => {
+                                    setReturnsHover((prev) =>
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            x: e.clientX,
+                                            y: e.clientY,
+                                          }
+                                        : prev
+                                    );
+                                  }}
+                                  onMouseLeave={() => setReturnsHover(null)}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       </td>

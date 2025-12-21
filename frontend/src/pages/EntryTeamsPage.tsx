@@ -425,7 +425,7 @@ export function EntryTeamsPage() {
   const [error, setError] = useState<string | null>(null);
   const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const [allEntryTeams, setAllEntryTeams] = useState<CalcuttaEntryTeam[]>([]);
-  const [activeTab, setActiveTab] = useState<'investments' | 'ownerships' | 'points' | 'statistics'>('ownerships');
+  const [activeTab, setActiveTab] = useState<'investments' | 'ownerships' | 'returns' | 'statistics'>('ownerships');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
   const [investmentsSortBy, setInvestmentsSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
   const [showAllTeams, setShowAllTeams] = useState(false);
@@ -433,6 +433,8 @@ export function EntryTeamsPage() {
   const [ownershipShowAllTeams, setOwnershipShowAllTeams] = useState(false);
   const [ownershipLoading, setOwnershipLoading] = useState(false);
   const [ownershipTeamsData, setOwnershipTeamsData] = useState<CalcuttaEntryTeam[]>([]);
+  const [returnsShowAllTeams, setReturnsShowAllTeams] = useState(false);
+  const [returnsHover, setReturnsHover] = useState<{ type: 'entry' | 'others'; points: number; x: number; y: number } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -736,14 +738,14 @@ export function EntryTeamsPage() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('points')}
+          onClick={() => setActiveTab('returns')}
           className={`px-4 py-2 -mb-px border-b-2 font-medium transition-colors ${
-            activeTab === 'points'
+            activeTab === 'returns'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          Points
+          Returns
         </button>
         <button
           type="button"
@@ -885,9 +887,18 @@ export function EntryTeamsPage() {
         </>
       )}
 
-      {activeTab === 'points' && (
+      {activeTab === 'returns' && (
         <>
-          <div className="mb-4 flex items-center justify-end">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={returnsShowAllTeams}
+                onChange={(e) => setReturnsShowAllTeams(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Show All Teams
+            </label>
             <label className="text-sm text-gray-600">
               Sort by
               <select
@@ -902,63 +913,199 @@ export function EntryTeamsPage() {
             </label>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6 overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b">
-                  <th className="py-3 pr-4">Team</th>
-                  <th className="py-3 pr-4">Points</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {sortedTeams.map((team) => {
-                  const portfolioTeam = getPortfolioTeamData(team.teamId);
-                  const totalPoints = portfolioTeam?.actualPoints ?? 0;
-                  const possiblePointsRaw = portfolioTeam?.expectedPoints ?? 0;
-                  const eliminated = team.team?.eliminated === true;
-                  const possiblePoints = eliminated ? totalPoints : Math.max(possiblePointsRaw, totalPoints);
-                  const ratio = possiblePoints > 0 ? Math.min(1, totalPoints / possiblePoints) : 0;
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-fixed border-separate border-spacing-y-2">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+                    <th className="px-2 py-2 w-14">Seed</th>
+                    <th className="px-2 py-2 w-20">Region</th>
+                    <th className="px-2 py-2 w-44">Team</th>
+                    <th className="px-2 py-2"></th>
+                    <th className="px-2 py-2 w-28 text-right">Points</th>
+                    <th className="px-2 py-2 w-32 text-right">Total Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    // Calculate global max from ALL tournament teams (not just filtered list)
+                    const globalMax = tournamentTeams.reduce((max, tt) => {
+                      const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === tt.id);
+                      const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
+                      const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.expectedPoints || 0), 0);
+                      const eliminated = tt.eliminated === true;
+                      const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
+                      return Math.max(max, totalActualPoints, totalPossiblePoints);
+                    }, 0);
 
-                  return (
-                    <tr key={team.id}>
-                      <td className="py-4 pr-4 align-top">
-                        <div className="font-medium text-gray-900">
-                          {team.team?.school?.name || 'Unknown School'}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-600">
-                          Seed: {team.team?.seed ?? '—'}
-                        </div>
-                      </td>
-                      <td className="py-4 pr-4">
-                        <div className="space-y-2">
-                          <div>
-                            <div className="flex items-center justify-between text-xs text-gray-600">
-                              <span>Total Points</span>
-                              <span className="font-medium text-gray-900">{totalPoints.toFixed(2)}</span>
-                            </div>
-                            <div className="mt-1 h-3 w-full rounded bg-indigo-200 relative overflow-hidden">
-                              <div
-                                className="absolute left-0 top-0 h-full bg-indigo-600"
-                                style={{ width: `${(ratio * 100).toFixed(2)}%` }}
-                              />
-                            </div>
-                          </div>
+                    // Filter teams based on toggle
+                    let teamsToShow = returnsShowAllTeams
+                      ? tournamentTeams.map((tt) => {
+                          const existingTeam = teams.find(t => t.teamId === tt.id);
+                          if (existingTeam) return existingTeam;
+                          const schoolMap = new Map(schools.map(s => [s.id, s]));
+                          return {
+                            id: `synthetic-${tt.id}`,
+                            entryId: entryId!,
+                            teamId: tt.id,
+                            bid: 0,
+                            created: new Date().toISOString(),
+                            updated: new Date().toISOString(),
+                            team: { ...tt, school: schoolMap.get(tt.schoolId) },
+                          } as CalcuttaEntryTeam;
+                        })
+                      : teams;
 
-                          <div>
-                            <div className="flex items-center justify-between text-xs text-gray-600">
-                              <span>Possible Points</span>
-                              <span className="font-medium text-gray-900">{possiblePoints.toFixed(2)}</span>
+                    // Sort teams based on sortBy
+                    teamsToShow = teamsToShow.slice().sort((a, b) => {
+                      const portfolioTeamA = getPortfolioTeamData(a.teamId);
+                      const portfolioTeamB = getPortfolioTeamData(b.teamId);
+
+                      const pointsA = portfolioTeamA?.actualPoints || 0;
+                      const pointsB = portfolioTeamB?.actualPoints || 0;
+                      const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
+                      const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
+                      const bidA = a.bid || 0;
+                      const bidB = b.bid || 0;
+
+                      if (sortBy === 'points') {
+                        if (pointsB !== pointsA) return pointsB - pointsA;
+                        if (ownershipB !== ownershipA) return ownershipB - ownershipA;
+                        return bidB - bidA;
+                      }
+
+                      if (sortBy === 'ownership') {
+                        if (ownershipB !== ownershipA) return ownershipB - ownershipA;
+                        if (pointsB !== pointsA) return pointsB - pointsA;
+                        return bidB - bidA;
+                      }
+
+                      // sortBy === 'bid'
+                      if (bidB !== bidA) return bidB - bidA;
+                      if (pointsB !== pointsA) return pointsB - pointsA;
+                      return ownershipB - ownershipA;
+                    });
+
+                    // Get all portfolio teams for this entry to calculate user's share
+                    const currentPortfolioId = portfolios[0]?.id;
+
+                    return teamsToShow.map((team) => {
+                      const portfolioTeam = getPortfolioTeamData(team.teamId);
+                      const tournamentTeam = tournamentTeams.find(tt => tt.id === team.teamId);
+                      const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === team.teamId);
+                      
+                      // Calculate TOTAL points across all entries for this team
+                      const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
+                      const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.expectedPoints || 0), 0);
+                      const eliminated = team.team?.eliminated === true;
+                      const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
+
+                      // Calculate user's ownership percentage and their share of points
+                      const userOwnership = portfolioTeam?.ownershipPercentage ?? 0;
+                      const userActualPoints = totalActualPoints * userOwnership;
+                      const othersActualPoints = totalActualPoints * (1 - userOwnership);
+                      const userPossiblePoints = totalPossiblePoints * userOwnership;
+                      const othersPossiblePoints = totalPossiblePoints * (1 - userOwnership);
+
+                      // Calculate widths as percentage of global max
+                      const userActualWidthPct = globalMax > 0 ? (userActualPoints / globalMax) * 100 : 0;
+                      const othersActualWidthPct = globalMax > 0 ? (othersActualPoints / globalMax) * 100 : 0;
+                      const userPossibleWidthPct = globalMax > 0 ? (userPossiblePoints / globalMax) * 100 : 0;
+                      const othersPossibleWidthPct = globalMax > 0 ? (othersPossiblePoints / globalMax) * 100 : 0;
+
+                      return (
+                        <tr key={team.id} className="bg-gray-50">
+                          <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{team.team?.seed ?? '—'}</td>
+                          <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{tournamentTeam?.region || '—'}</td>
+                          <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">{team.team?.school?.name || 'Unknown School'}</td>
+                          <td className="px-2 py-3">
+                            <div className="h-6 w-full rounded overflow-hidden" style={{ backgroundColor: eliminated ? 'transparent' : '#F3F4F6' }}>
+                              <div className="h-full flex">
+                                {userActualPoints > 0 && (
+                                  <div
+                                    className="h-full"
+                                    style={{ 
+                                      width: `${userActualWidthPct.toFixed(2)}%`,
+                                      backgroundColor: '#4F46E5'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      setReturnsHover({
+                                        type: 'entry',
+                                        points: userActualPoints,
+                                        x: e.clientX,
+                                        y: e.clientY,
+                                      });
+                                    }}
+                                    onMouseMove={(e) => {
+                                      setReturnsHover((prev) =>
+                                        prev
+                                          ? {
+                                              ...prev,
+                                              x: e.clientX,
+                                              y: e.clientY,
+                                            }
+                                          : prev
+                                      );
+                                    }}
+                                    onMouseLeave={() => setReturnsHover(null)}
+                                  />
+                                )}
+                                {othersActualPoints > 0 && (
+                                  <div
+                                    className="h-full"
+                                    style={{ 
+                                      width: `${othersActualWidthPct.toFixed(2)}%`,
+                                      backgroundColor: '#9CA3AF'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      setReturnsHover({
+                                        type: 'others',
+                                        points: othersActualPoints,
+                                        x: e.clientX,
+                                        y: e.clientY,
+                                      });
+                                    }}
+                                    onMouseMove={(e) => {
+                                      setReturnsHover((prev) =>
+                                        prev
+                                          ? {
+                                              ...prev,
+                                              x: e.clientX,
+                                              y: e.clientY,
+                                            }
+                                          : prev
+                                      );
+                                    }}
+                                    onMouseLeave={() => setReturnsHover(null)}
+                                  />
+                                )}
+                              </div>
                             </div>
-                            <div className="mt-1 h-3 w-full rounded bg-indigo-200" />
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </td>
+                          <td className="px-2 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                            {userActualPoints.toFixed(2)}
+                          </td>
+                          <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
+                            {totalActualPoints.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {returnsHover && (
+            <div
+              className="fixed z-50 pointer-events-none rounded bg-gray-900 px-3 py-2 text-xs text-white shadow"
+              style={{ left: returnsHover.x + 12, top: returnsHover.y + 12 }}
+            >
+              <div className="font-medium">{returnsHover.type === 'entry' ? 'Entry' : 'Others'}</div>
+              <div>{returnsHover.points.toFixed(2)} points</div>
+            </div>
+          )}
         </>
       )}
 
