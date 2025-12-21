@@ -684,12 +684,12 @@ export function CalcuttaEntriesPage() {
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold leading-snug truncate">{team.teamName}</h2>
                     <div className="mt-1 text-sm text-gray-600">
-                      Seed: {team.seed} · {team.region}
+                      {team.seed} Seed - {team.region}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-gray-600">
-                      Total Spend
+                      Spend
                       <div className="text-base font-semibold text-gray-900">${team.totalSpend.toFixed(2)}</div>
                     </div>
                   </div>
@@ -702,15 +702,17 @@ export function CalcuttaEntriesPage() {
                 <div className="mt-4">
                   <div className="text-sm font-medium text-gray-900">Top Shareholders</div>
                   <div className="mt-2 space-y-2">
-                    {team.topOwners.map((owner, idx) => {
-                      const color = entryColorById.get(owner.entryId) || '#94A3B8';
+                    {Array.from({ length: 3 }).map((_, idx) => {
+                      const owner = team.topOwners[idx];
+                      const name = owner?.name ?? '--';
+                      const pct = owner ? `${owner.value.toFixed(2)}%` : '--';
                       return (
                         <div key={idx} className="flex items-center justify-between gap-3 text-sm">
                           <div className="min-w-0 truncate text-gray-700 flex items-center gap-2">
-                            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
-                            <span className="truncate">{owner.name}</span>
+                            <div className="w-4 shrink-0 text-gray-500">{idx + 1}</div>
+                            <div className="truncate">{name}</div>
                           </div>
-                          <div className="font-medium text-gray-900">{owner.value.toFixed(2)}%</div>
+                          <div className="font-medium text-gray-900">{pct}</div>
                         </div>
                       );
                     })}
