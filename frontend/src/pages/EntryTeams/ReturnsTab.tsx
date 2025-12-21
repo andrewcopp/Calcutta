@@ -1,0 +1,199 @@
+import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School, TournamentTeam } from '../../types/calcutta';
+import { SegmentedBar } from '../../components/SegmentedBar';
+
+export const ReturnsTab: React.FC<{
+  entryId: string;
+  returnsShowAllTeams: boolean;
+  setReturnsShowAllTeams: (value: boolean) => void;
+  sortBy: 'points' | 'ownership' | 'bid';
+  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
+  tournamentTeams: TournamentTeam[];
+  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
+  teams: CalcuttaEntryTeam[];
+  schools: School[];
+  portfolios: CalcuttaPortfolio[];
+  getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
+}> = ({
+  entryId,
+  returnsShowAllTeams,
+  setReturnsShowAllTeams,
+  sortBy,
+  setSortBy,
+  tournamentTeams,
+  allCalcuttaPortfolioTeams,
+  teams,
+  schools,
+  portfolios,
+  getPortfolioTeamData,
+}) => {
+  return (
+    <>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={returnsShowAllTeams}
+            onChange={(e) => setReturnsShowAllTeams(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Show All Teams
+        </label>
+        <label className="text-sm text-gray-600">
+          Sort by
+          <select
+            className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bid')}
+          >
+            <option value="points">Points</option>
+            <option value="ownership">Ownership</option>
+            <option value="bid">Bid Amount</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-fixed border-separate border-spacing-y-2">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+                <th className="px-2 py-2 w-14">Seed</th>
+                <th className="px-2 py-2 w-20">Region</th>
+                <th className="px-2 py-2 w-44">Team</th>
+                <th className="px-2 py-2"></th>
+                <th className="px-2 py-2 w-28 text-right">Points</th>
+                <th className="px-2 py-2 w-32 text-right">Total Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const globalMax = tournamentTeams.reduce((max, tt) => {
+                  const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === tt.id);
+                  const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
+                  const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.expectedPoints || 0), 0);
+                  const eliminated = tt.eliminated === true;
+                  const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
+                  return Math.max(max, totalActualPoints, totalPossiblePoints);
+                }, 0);
+
+                let teamsToShow = returnsShowAllTeams
+                  ? tournamentTeams.map((tt) => {
+                      const existingTeam = teams.find((t) => t.teamId === tt.id);
+                      if (existingTeam) return existingTeam;
+                      const schoolMap = new Map(schools.map((s) => [s.id, s]));
+                      return {
+                        id: `synthetic-${tt.id}`,
+                        entryId: entryId,
+                        teamId: tt.id,
+                        bid: 0,
+                        created: new Date().toISOString(),
+                        updated: new Date().toISOString(),
+                        team: { ...tt, school: schoolMap.get(tt.schoolId) },
+                      } as CalcuttaEntryTeam;
+                    })
+                  : teams;
+
+                teamsToShow = teamsToShow.slice().sort((a, b) => {
+                  const portfolioTeamA = getPortfolioTeamData(a.teamId);
+                  const portfolioTeamB = getPortfolioTeamData(b.teamId);
+
+                  const pointsA = portfolioTeamA?.actualPoints || 0;
+                  const pointsB = portfolioTeamB?.actualPoints || 0;
+                  const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
+                  const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
+                  const bidA = a.bid || 0;
+                  const bidB = b.bid || 0;
+
+                  if (sortBy === 'points') {
+                    if (pointsB !== pointsA) return pointsB - pointsA;
+                    if (ownershipB !== ownershipA) return ownershipB - ownershipA;
+                    return bidB - bidA;
+                  }
+
+                  if (sortBy === 'ownership') {
+                    if (ownershipB !== ownershipA) return ownershipB - ownershipA;
+                    if (pointsB !== pointsA) return pointsB - pointsA;
+                    return bidB - bidA;
+                  }
+
+                  if (bidB !== bidA) return bidB - bidA;
+                  if (pointsB !== pointsA) return pointsB - pointsA;
+                  return ownershipB - ownershipA;
+                });
+
+                const currentPortfolioId = portfolios[0]?.id;
+
+                return teamsToShow.map((team) => {
+                  const portfolioTeam = getPortfolioTeamData(team.teamId);
+                  const tournamentTeam = tournamentTeams.find((tt) => tt.id === team.teamId);
+                  const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === team.teamId);
+
+                  const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
+                  const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.expectedPoints || 0), 0);
+                  const eliminated = team.team?.eliminated === true;
+                  const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
+
+                  const userOwnership = portfolioTeam?.ownershipPercentage ?? 0;
+                  const userActualPoints = totalActualPoints * userOwnership;
+                  const othersActualPoints = totalActualPoints * (1 - userOwnership);
+                  const userPossiblePoints = totalPossiblePoints * userOwnership;
+                  const othersPossiblePoints = totalPossiblePoints * (1 - userOwnership);
+
+                  const userActualWidthPct = globalMax > 0 ? (userActualPoints / globalMax) * 100 : 0;
+                  const othersActualWidthPct = globalMax > 0 ? (othersActualPoints / globalMax) * 100 : 0;
+                  const userPossibleWidthPct = globalMax > 0 ? (userPossiblePoints / globalMax) * 100 : 0;
+                  const othersPossibleWidthPct = globalMax > 0 ? (othersPossiblePoints / globalMax) * 100 : 0;
+
+                  return (
+                    <tr key={team.id} className="bg-gray-50">
+                      <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{team.team?.seed ?? '—'}</td>
+                      <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{tournamentTeam?.region || '—'}</td>
+                      <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">
+                        {team.team?.school?.name || 'Unknown School'}
+                      </td>
+                      <td className="px-2 py-3">
+                        <SegmentedBar
+                          barWidthPct={((userActualPoints + othersActualPoints) / (globalMax || 1)) * 100}
+                          segments={[
+                            ...(userActualPoints > 0
+                              ? [
+                                  {
+                                    key: `${team.teamId}-entry`,
+                                    label: 'Entry',
+                                    value: userActualPoints,
+                                    color: '#4F46E5',
+                                  },
+                                ]
+                              : []),
+                            ...(othersActualPoints > 0
+                              ? [
+                                  {
+                                    key: `${team.teamId}-others`,
+                                    label: 'Others',
+                                    value: othersActualPoints,
+                                    color: '#9CA3AF',
+                                  },
+                                ]
+                              : []),
+                          ]}
+                          backgroundColor="#F3F4F6"
+                          disabled={eliminated}
+                          getTooltipTitle={(seg) => seg.label}
+                          getTooltipValue={(seg) => `${seg.value.toFixed(2)} points`}
+                        />
+                      </td>
+                      <td className="px-2 py-3 text-right font-medium text-gray-900 whitespace-nowrap">{userActualPoints.toFixed(2)}</td>
+                      <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
+                        {totalActualPoints.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+};
