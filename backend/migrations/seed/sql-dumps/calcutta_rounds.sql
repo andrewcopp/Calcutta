@@ -1,4 +1,4 @@
--- Generated on: 2025-12-21 00:03:06
+-- Generated on: 2025-12-21 00:31:45
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -70,5 +70,5 @@ INSERT INTO public.calcutta_rounds VALUES ('2ade2b25-6166-4d53-8509-38824e38761e
 
 -- PostgreSQL database dump complete
 
-\unrestrict ifYnwRBlDjlg4cvwLycUwXfSqNMalOQsTssaMqOMTaJHBD6pLFrojeywfqu93qh
+\unrestrict uqrDvhsUwBNFd0mdORzJUuesxCerohDnUW4z4zYeORsc9g0alOeOla8IHzuC6d4
 
