@@ -15,7 +15,13 @@ export const AdminPage: React.FC = () => {
           <p className="text-gray-600">Manage tournaments, teams, and brackets</p>
         </Link>
 
-        {/* Add more admin sections here as needed */}
+        <Link 
+          to="/admin/analytics" 
+          className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+        >
+          <h2 className="text-xl font-semibold mb-2">Analytics</h2>
+          <p className="text-gray-600">View historical trends and patterns across all calcuttas</p>
+        </Link>
       </div>
     </div>
   );

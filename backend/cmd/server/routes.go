@@ -10,6 +10,7 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerBracketRoutes(r)
 	s.registerPortfolioRoutes(r)
 	s.registerCalcuttaRoutes(r)
+	s.registerAnalyticsRoutes(r)
 }
 
 func (s *Server) registerBasicRoutes(r *mux.Router) {
@@ -58,4 +59,13 @@ func (s *Server) registerCalcuttaRoutes(r *mux.Router) {
 	r.HandleFunc("/api/calcuttas/{id}/entries", s.calcuttaEntriesHandler).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", s.calcuttaEntryTeamsHandler).Methods("GET")
 	r.HandleFunc("/api/entries/{id}/portfolios", s.portfoliosHandler).Methods("GET")
+}
+
+func (s *Server) registerAnalyticsRoutes(r *mux.Router) {
+	// Analytics
+	r.HandleFunc("/api/analytics", s.analyticsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/seeds", s.seedAnalyticsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/regions", s.regionAnalyticsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/teams", s.teamAnalyticsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/variance", s.seedVarianceAnalyticsHandler).Methods("GET", "OPTIONS")
 }

@@ -16,6 +16,8 @@ type Server struct {
 	userRepo          *services.UserRepository
 	userService       *services.UserService
 	bracketService    *services.BracketService
+	analyticsRepo     *services.AnalyticsRepository
+	analyticsService  *services.AnalyticsService
 }
 
 func NewServer(db *sql.DB) *Server {
@@ -23,6 +25,7 @@ func NewServer(db *sql.DB) *Server {
 	tournamentRepo := services.NewTournamentRepository(db)
 	calcuttaRepo := services.NewCalcuttaRepository(db)
 	userRepo := services.NewUserRepository(db)
+	analyticsRepo := services.NewAnalyticsRepository(db)
 
 	schoolService := services.NewSchoolService(schoolRepo)
 	tournamentService := services.NewTournamentService(tournamentRepo, schoolRepo)
@@ -37,6 +40,7 @@ func NewServer(db *sql.DB) *Server {
 	})
 	userService := services.NewUserService(userRepo)
 	bracketService := services.NewBracketService(tournamentRepo)
+	analyticsService := services.NewAnalyticsService(analyticsRepo)
 
 	return &Server{
 		schoolRepo:        schoolRepo,
@@ -48,5 +52,7 @@ func NewServer(db *sql.DB) *Server {
 		userRepo:          userRepo,
 		userService:       userService,
 		bracketService:    bracketService,
+		analyticsRepo:     analyticsRepo,
+		analyticsService:  analyticsService,
 	}
 }

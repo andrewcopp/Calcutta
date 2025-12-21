@@ -11,6 +11,7 @@ import { TournamentCreatePage } from './pages/TournamentCreatePage';
 import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
 import { TournamentBracketPage } from './pages/TournamentBracketPage';
 import { AdminPage } from './pages/AdminPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { HomePage } from './pages/HomePage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
             <Route path="/calcuttas" element={<CalcuttaListPage />} />
             <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/analytics" element={<AnalyticsPage />} />
             <Route path="/admin/tournaments" element={<TournamentListPage />} />
             <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />
             <Route path="/admin/tournaments/:id" element={<TournamentViewPage />} />
