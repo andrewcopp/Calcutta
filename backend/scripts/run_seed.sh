@@ -56,7 +56,16 @@ run_sql_file() {
 }
 
 # Get the latest seed files
-TIMESTAMP=$(date +%Y%m%d)
+TIMESTAMP="$1"
+if [ -z "$TIMESTAMP" ]; then
+    TIMESTAMP=$(ls -1 migrations/seed/users/*_users.sql 2>/dev/null | sed -E 's#.*\/([0-9]{8})_users\.sql#\1#' | sort | tail -n 1)
+fi
+if [ -z "$TIMESTAMP" ]; then
+    echo "Error: Could not determine seed timestamp (no migrations/seed/users/*_users.sql files found)"
+    exit 1
+fi
+
+echo "Using seed timestamp: $TIMESTAMP"
 
 # Run seed files in order
 echo "Starting database seeding..."

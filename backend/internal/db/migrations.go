@@ -13,6 +13,18 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
+func stripPsqlMetaCommands(sql string) string {
+	lines := strings.Split(sql, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "\\") {
+			continue
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
+}
+
 // RunSchemaMigrations runs the schema migrations
 func RunSchemaMigrations(ctx context.Context) error {
 	m, err := getMigrator("schema")
@@ -223,8 +235,10 @@ func seedFromSQLDumps(ctx context.Context) error {
 			return fmt.Errorf("error reading SQL file %s: %v", sqlFile, err)
 		}
 
+		sanitizedSQL := stripPsqlMetaCommands(string(sqlContent))
+
 		// Skip empty files
-		if len(strings.TrimSpace(string(sqlContent))) == 0 {
+		if len(strings.TrimSpace(sanitizedSQL)) == 0 {
 			fmt.Printf("Skipping empty file: %s\n", sqlFile)
 			continue
 		}
@@ -232,7 +246,7 @@ func seedFromSQLDumps(ctx context.Context) error {
 		fmt.Printf("  Importing %s...\n", sqlFile)
 
 		// Execute the SQL
-		_, err = pool.Exec(ctx, string(sqlContent))
+		_, err = pool.Exec(ctx, sanitizedSQL)
 		if err != nil {
 			return fmt.Errorf("error executing SQL file %s: %v", sqlFile, err)
 		}
