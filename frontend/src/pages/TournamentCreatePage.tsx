@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { School } from '../types/school';
 import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
+import { queryKeys } from '../queryKeys';
 
 interface TeamToAdd {
   schoolId: string;
@@ -12,31 +14,44 @@ interface TeamToAdd {
 
 export const TournamentCreatePage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [rounds, setRounds] = useState(6);
-  const [schools, setSchools] = useState<School[]>([]);
   const [selectedSchool, setSelectedSchool] = useState<string>('');
   const [selectedSeed, setSelectedSeed] = useState<number>(1);
   const [teamsToAdd, setTeamsToAdd] = useState<TeamToAdd[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const loadSchools = async () => {
-      try {
-        const data = await adminService.getAllSchools();
-        setSchools(data);
-      } catch (err) {
-        setError('Failed to load schools');
-        console.error('Error loading schools:', err);
-      }
-    };
+  const schoolsQuery = useQuery({
+    queryKey: queryKeys.schools.all(),
+    staleTime: 30_000,
+    queryFn: () => adminService.getAllSchools(),
+  });
 
-    loadSchools();
-  }, []);
+  const createTournamentMutation = useMutation({
+    mutationFn: async ({ name, rounds, teamsToAdd }: { name: string; rounds: number; teamsToAdd: TeamToAdd[] }) => {
+      const tournament = await tournamentService.createTournament(name, rounds);
 
-  const filteredSchools = schools.filter(school =>
+      await Promise.all(
+        teamsToAdd.map((team) => tournamentService.createTournamentTeam(tournament.id, team.schoolId, team.seed, team.region))
+      );
+
+      return tournament;
+    },
+    onSuccess: async (tournament) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(tournament.id) });
+      navigate(`/admin/tournaments/${tournament.id}`);
+    },
+    onError: () => {
+      setError('Failed to create tournament');
+    },
+  });
+
+  const schools: School[] = schoolsQuery.data || [];
+
+  const filteredSchools = schools.filter((school) =>
     school.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -83,26 +98,7 @@ export const TournamentCreatePage: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      // Create the tournament first
-      const tournament = await tournamentService.createTournament(name, rounds);
-
-      // Then create all teams in parallel
-      await Promise.all(
-        teamsToAdd.map(team =>
-          tournamentService.createTournamentTeam(tournament.id, team.schoolId, team.seed, team.region)
-        )
-      );
-
-      navigate(`/admin/tournaments/${tournament.id}`);
-    } catch (err) {
-      setError('Failed to create tournament');
-      console.error('Error creating tournament:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+    createTournamentMutation.mutate({ name, rounds, teamsToAdd });
   };
 
   return (
@@ -120,6 +116,12 @@ export const TournamentCreatePage: React.FC = () => {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+        </div>
+      )}
+
+      {schoolsQuery.isError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          Failed to load schools
         </div>
       )}
 
@@ -230,10 +232,10 @@ export const TournamentCreatePage: React.FC = () => {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isSubmitting || teamsToAdd.length === 0}
+            disabled={createTournamentMutation.isPending || schoolsQuery.isLoading || teamsToAdd.length === 0}
             className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
           >
-            {isSubmitting ? 'Creating Tournament...' : 'Create Tournament'}
+            {createTournamentMutation.isPending ? 'Creating Tournament...' : 'Create Tournament'}
           </button>
         </div>
       </form>

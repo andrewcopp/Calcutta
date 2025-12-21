@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, School, TournamentTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
+import { queryKeys } from '../queryKeys';
 
 interface TeamStats {
   teamId: string;
@@ -16,94 +17,81 @@ interface TeamStats {
 
 export function CalcuttaTeamsPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
-  const [teams, setTeams] = useState<TeamStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [calcuttaName, setCalcuttaName] = useState<string>('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!calcuttaId) return;
-      
-      try {
-        // Fetch calcutta details to get the name
-        const calcutta = await calcuttaService.getCalcutta(calcuttaId);
-        setCalcuttaName(calcutta.name);
-        
-        // Fetch all entries for this calcutta
-        const entries = await calcuttaService.getCalcuttaEntries(calcuttaId);
-        
-        // Fetch all schools for team names
-        const schools = await calcuttaService.getSchools();
-        const schoolMap = new Map(schools.map(school => [school.id, school.name]));
-        
-        // Fetch all tournament teams for this calcutta's tournament
-        const tournamentTeams = await calcuttaService.getTournamentTeams(calcutta.tournamentId);
-        
-        // Create a map of team stats
-        const teamStatsMap = new Map<string, TeamStats>();
-        
-        // Initialize the map with all tournament teams
-        for (const team of tournamentTeams) {
-          const schoolName = schoolMap.get(team.schoolId) || 'Unknown School';
-          teamStatsMap.set(team.id, {
-            teamId: team.id,
-            schoolId: team.schoolId,
-            schoolName,
-            seed: team.seed,
-            region: team.region,
-            totalInvestment: 0,
-            points: team.wins || 0,
-            roi: 0
-          });
-        }
-        
-        // Fetch all entry teams and calculate investments
-        for (const entry of entries) {
-          const entryTeams = await calcuttaService.getEntryTeams(entry.id, calcuttaId);
-          
-          for (const entryTeam of entryTeams) {
-            if (!entryTeam.team) continue;
-            
-            const teamId = entryTeam.teamId;
-            const existing = teamStatsMap.get(teamId);
-            
-            if (existing) {
-              existing.totalInvestment += entryTeam.bid;
-              teamStatsMap.set(teamId, existing);
-            }
-          }
-        }
-        
-        // Calculate ROI for each team
-        for (const team of teamStatsMap.values()) {
-          if (team.totalInvestment > 0) {
-            team.roi = (team.points / team.totalInvestment) * 100;
-          }
-        }
-        
-        // Convert map to array and sort by seed
-        const sortedTeams = Array.from(teamStatsMap.values())
-          .sort((a, b) => a.seed - b.seed);
-        
-        setTeams(sortedTeams);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to fetch team data');
-        setLoading(false);
+  const calcuttaTeamsQuery = useQuery({
+    queryKey: queryKeys.calcuttas.teamsPage(calcuttaId),
+    enabled: Boolean(calcuttaId),
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!calcuttaId) throw new Error('Missing calcuttaId');
+
+      const calcutta = await calcuttaService.getCalcutta(calcuttaId);
+
+      const [entries, schools, tournamentTeams] = await Promise.all([
+        calcuttaService.getCalcuttaEntries(calcuttaId),
+        calcuttaService.getSchools(),
+        calcuttaService.getTournamentTeams(calcutta.tournamentId),
+      ]);
+
+      const schoolMap = new Map(schools.map((school) => [school.id, school.name]));
+
+      const teamStatsMap = new Map<string, TeamStats>();
+      for (const team of tournamentTeams) {
+        const schoolName = schoolMap.get(team.schoolId) || 'Unknown School';
+        teamStatsMap.set(team.id, {
+          teamId: team.id,
+          schoolId: team.schoolId,
+          schoolName,
+          seed: team.seed,
+          region: team.region,
+          totalInvestment: 0,
+          points: team.wins || 0,
+          roi: 0,
+        });
       }
-    };
 
-    fetchData();
-  }, [calcuttaId]);
+      const entryTeamsByEntry = await Promise.all(
+        entries.map((entry) => calcuttaService.getEntryTeams(entry.id, calcuttaId))
+      );
+      const allEntryTeams: CalcuttaEntryTeam[] = entryTeamsByEntry.flat();
 
-  if (loading) {
+      for (const entryTeam of allEntryTeams) {
+        if (!entryTeam.team) continue;
+
+        const existing = teamStatsMap.get(entryTeam.teamId);
+        if (!existing) continue;
+
+        existing.totalInvestment += entryTeam.bid || 0;
+        teamStatsMap.set(entryTeam.teamId, existing);
+      }
+
+      for (const team of teamStatsMap.values()) {
+        if (team.totalInvestment > 0) {
+          team.roi = (team.points / team.totalInvestment) * 100;
+        }
+      }
+
+      const teams = Array.from(teamStatsMap.values()).sort((a, b) => a.seed - b.seed);
+
+      return { calcuttaName: calcutta.name, teams };
+    },
+  });
+
+  if (!calcuttaId) {
+    return <div className="error">Missing required parameters</div>;
+  }
+
+  if (calcuttaTeamsQuery.isLoading) {
     return <div>Loading...</div>;
   }
 
-  if (error) {
-    return <div className="error">{error}</div>;
+  if (calcuttaTeamsQuery.isError) {
+    const message = calcuttaTeamsQuery.error instanceof Error ? calcuttaTeamsQuery.error.message : 'Failed to fetch team data';
+    return <div className="error">{message}</div>;
   }
+
+  const teams = calcuttaTeamsQuery.data?.teams || [];
+  const calcuttaName = calcuttaTeamsQuery.data?.calcuttaName || '';
 
   return (
     <div className="container mx-auto px-4 py-8">

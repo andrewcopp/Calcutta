@@ -1,85 +1,88 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { BracketStructure, BracketGame, ROUND_LABELS, ROUND_ORDER, BracketRound } from '../types/bracket';
 import { Tournament } from '../types/calcutta';
 import { bracketService } from '../services/bracketService';
+import { tournamentService } from '../services/tournamentService';
 import { BracketGameCard } from '../components/BracketGameCard';
+import { queryKeys } from '../queryKeys';
 
 export const TournamentBracketPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [bracket, setBracket] = useState<BracketStructure | null>(null);
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (id) {
-      loadData();
-    }
-  }, [id]);
+  // Fetch tournament info
+  const tournamentQuery = useQuery({
+    queryKey: queryKeys.tournaments.detail(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getTournament(id!),
+  });
+
+  // Validate bracket setup
+  const validationQuery = useQuery({
+    queryKey: queryKeys.bracket.validation(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => bracketService.validateBracketSetup(id!),
+  });
+
+  // Fetch bracket
+  const bracketQuery = useQuery({
+    queryKey: queryKeys.bracket.detail(id),
+    enabled: Boolean(id) && validationQuery.data?.valid === true,
+    staleTime: 0,
+    queryFn: () => bracketService.fetchBracket(id!),
+  });
+
+  const selectWinnerMutation = useMutation({
+    mutationFn: async ({ gameId, teamId }: { gameId: string; teamId: string }) => {
+      setError(null);
+      return bracketService.selectWinner(id!, gameId, teamId);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.bracket.detail(id), updated);
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : 'Failed to select winner');
+    },
+  });
+
+  const unselectWinnerMutation = useMutation({
+    mutationFn: async ({ gameId }: { gameId: string }) => {
+      setError(null);
+      return bracketService.unselectWinner(id!, gameId);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.bracket.detail(id), updated);
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : 'Failed to unselect winner');
+    },
+  });
 
   const loadData = async () => {
-    if (!id) return;
-    
-    setLoading(true);
     setError(null);
-    
-    try {
-      // Fetch tournament info
-      const tournamentResponse = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/tournaments/${id}`,
-        { credentials: 'include' }
-      );
-      if (!tournamentResponse.ok) throw new Error('Failed to fetch tournament');
-      const tournamentData = await tournamentResponse.json();
-      setTournament(tournamentData);
 
-      // Validate bracket setup
-      const validation = await bracketService.validateBracketSetup(id);
-      if (!validation.valid) {
-        setValidationErrors(validation.errors);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch bracket
-      const bracketData = await bracketService.fetchBracket(id);
-      setBracket(bracketData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load bracket');
-    } finally {
-      setLoading(false);
+    await tournamentQuery.refetch();
+    const validationResult = await validationQuery.refetch();
+    if (validationResult.data?.valid === true) {
+      await bracketQuery.refetch();
     }
   };
 
   const handleSelectWinner = async (gameId: string, teamId: string) => {
-    if (!id || actionLoading) return;
-    
-    setActionLoading(true);
-    try {
-      const updatedBracket = await bracketService.selectWinner(id, gameId, teamId);
-      setBracket(updatedBracket);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to select winner');
-    } finally {
-      setActionLoading(false);
-    }
+    if (!id) return;
+    if (selectWinnerMutation.isPending || unselectWinnerMutation.isPending) return;
+    selectWinnerMutation.mutate({ gameId, teamId });
   };
 
   const handleUnselectWinner = async (gameId: string) => {
-    if (!id || actionLoading) return;
-    
-    setActionLoading(true);
-    try {
-      const updatedBracket = await bracketService.unselectWinner(id, gameId);
-      setBracket(updatedBracket);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unselect winner');
-    } finally {
-      setActionLoading(false);
-    }
+    if (!id) return;
+    if (selectWinnerMutation.isPending || unselectWinnerMutation.isPending) return;
+    unselectWinnerMutation.mutate({ gameId });
   };
 
   const groupGamesByRound = (games: BracketGame[]): Record<BracketRound, BracketGame[]> => {
@@ -94,7 +97,11 @@ export const TournamentBracketPage: React.FC = () => {
     return grouped;
   };
 
-  if (loading) {
+  if (!id) {
+    return <div className="error">Missing required parameters</div>;
+  }
+
+  if (tournamentQuery.isLoading || validationQuery.isLoading || (validationQuery.data?.valid === true && bracketQuery.isLoading)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
@@ -104,6 +111,8 @@ export const TournamentBracketPage: React.FC = () => {
       </div>
     );
   }
+
+  const validationErrors = validationQuery.data?.valid === false ? validationQuery.data.errors : [];
 
   if (validationErrors.length > 0) {
     return (
@@ -155,6 +164,34 @@ export const TournamentBracketPage: React.FC = () => {
       </div>
     );
   }
+
+  if (tournamentQuery.isError || validationQuery.isError || bracketQuery.isError) {
+    const message =
+      (tournamentQuery.error instanceof Error ? tournamentQuery.error.message : null) ||
+      (validationQuery.error instanceof Error ? validationQuery.error.message : null) ||
+      (bracketQuery.error instanceof Error ? bracketQuery.error.message : null) ||
+      'Failed to load bracket';
+
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-red-800 mb-2">Error</h2>
+          <p className="text-red-700">{message}</p>
+          <button
+            onClick={loadData}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const tournament: Tournament | null = tournamentQuery.data || null;
+  const bracket: BracketStructure | null = bracketQuery.data || null;
+
+  const actionLoading = selectWinnerMutation.isPending || unselectWinnerMutation.isPending;
 
   if (!bracket) {
     return (

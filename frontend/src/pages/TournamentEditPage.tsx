@@ -1,70 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tournament, TournamentTeam } from '../types/calcutta';
 import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';
+import { queryKeys } from '../queryKeys';
 
 export const TournamentEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [teams, setTeams] = useState<TournamentTeam[]>([]);
-  const [schools, setSchools] = useState<Record<string, School>>({});
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchTournamentData();
-    }
-  }, [id]);
+  const tournamentQuery = useQuery({
+    queryKey: queryKeys.tournaments.detail(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getTournament(id!),
+  });
 
-  const fetchTournamentData = async () => {
-    try {
-      // Fetch tournament details
-      const tournamentData = await tournamentService.getTournament(id!);
-      setTournament(tournamentData);
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.tournaments.teams(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getTournamentTeams(id!),
+  });
 
-      // Fetch teams
-      const teamsData = await tournamentService.getTournamentTeams(id!);
-      setTeams(teamsData);
+  const schoolsQuery = useQuery({
+    queryKey: queryKeys.schools.all(),
+    staleTime: 30_000,
+    queryFn: () => adminService.getAllSchools(),
+  });
 
-      // Fetch schools for all teams
-      const schoolsData = await adminService.getAllSchools();
-      const schoolsMap = schoolsData.reduce((acc, school) => {
-        acc[school.id] = school;
-        return acc;
-      }, {} as Record<string, School>);
-      setSchools(schoolsMap);
-    } catch (err) {
-      setError('Failed to load tournament data');
-      console.error('Error loading tournament data:', err);
-    }
-  };
+  const schools = useMemo(() => {
+    const schoolsData = schoolsQuery.data || [];
+    return schoolsData.reduce((acc, school) => {
+      acc[school.id] = school;
+      return acc;
+    }, {} as Record<string, School>);
+  }, [schoolsQuery.data]);
 
-  const handleTeamUpdate = async (teamId: string, field: keyof TournamentTeam, value: any) => {
-    try {
-      const updatedTeam = await tournamentService.updateTournamentTeam(id!, teamId, {
-        [field]: value,
+  const updateTeamMutation = useMutation({
+    mutationFn: async ({ teamId, updates }: { teamId: string; updates: Partial<TournamentTeam> }) => {
+      return tournamentService.updateTournamentTeam(id!, teamId, updates);
+    },
+    onMutate: async ({ teamId, updates }) => {
+      setError(null);
+
+      await queryClient.cancelQueries({ queryKey: queryKeys.tournaments.teams(id) });
+
+      const previousTeams = queryClient.getQueryData<TournamentTeam[]>(queryKeys.tournaments.teams(id));
+
+      queryClient.setQueryData<TournamentTeam[]>(queryKeys.tournaments.teams(id), (current) => {
+        const currentTeams = current || [];
+        return currentTeams.map((team) => (team.id === teamId ? ({ ...team, ...updates } as TournamentTeam) : team));
       });
-      setTeams(teams.map(team => 
-        team.id === teamId ? updatedTeam : team
-      ));
-    } catch (err) {
-      setError(`Failed to update team ${field}`);
-      console.error('Error updating team:', err);
-    }
-  };
 
-  const handleSaveAll = async () => {
-    setIsSaving(true);
-    setError(null);
+      return { previousTeams };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousTeams) {
+        queryClient.setQueryData(queryKeys.tournaments.teams(id), context.previousTeams);
+      }
+      setError('Failed to update team');
+    },
+    onSuccess: (updatedTeam) => {
+      queryClient.setQueryData<TournamentTeam[]>(queryKeys.tournaments.teams(id), (current) => {
+        const currentTeams = current || [];
+        return currentTeams.map((team) => (team.id === updatedTeam.id ? updatedTeam : team));
+      });
+    },
+  });
 
-    try {
-      // Save all team updates in parallel
+  const saveAllMutation = useMutation({
+    mutationFn: async () => {
+      const teams = queryClient.getQueryData<TournamentTeam[]>(queryKeys.tournaments.teams(id)) || [];
+
       await Promise.all(
-        teams.map(team =>
+        teams.map((team) =>
           tournamentService.updateTournamentTeam(id!, team.id, {
             seed: team.seed,
             byes: team.byes,
@@ -73,7 +88,29 @@ export const TournamentEditPage: React.FC = () => {
           })
         )
       );
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(id) });
       navigate(`/admin/tournaments/${id}`);
+    },
+    onError: () => {
+      setError('Failed to save changes');
+    },
+  });
+
+  const handleTeamUpdate = async (teamId: string, field: keyof TournamentTeam, value: any) => {
+    updateTeamMutation.mutate({
+      teamId,
+      updates: { [field]: value } as Partial<TournamentTeam>,
+    });
+  };
+
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      await saveAllMutation.mutateAsync();
     } catch (err) {
       setError('Failed to save changes');
       console.error('Error saving changes:', err);
@@ -81,6 +118,35 @@ export const TournamentEditPage: React.FC = () => {
       setIsSaving(false);
     }
   };
+
+  if (!id) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (tournamentQuery.isLoading || teamsQuery.isLoading || schoolsQuery.isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (tournamentQuery.isError || teamsQuery.isError || schoolsQuery.isError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          Failed to load tournament data
+        </div>
+      </div>
+    );
+  }
+
+  const tournament: Tournament | null = tournamentQuery.data || null;
+  const teams: TournamentTeam[] = teamsQuery.data || [];
 
   if (!tournament) {
     return (
@@ -101,7 +167,7 @@ export const TournamentEditPage: React.FC = () => {
         </div>
         <div className="flex gap-4">
           <button
-            onClick={() => navigate(`/tournaments/${id}`)}
+            onClick={() => navigate(`/admin/tournaments/${id}`)}
             className="px-4 py-2 border rounded hover:bg-gray-100"
           >
             Cancel

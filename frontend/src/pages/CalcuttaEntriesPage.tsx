@@ -8,6 +8,7 @@ import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
 import { OwnershipTab } from './CalcuttaEntries/OwnershipTab';
 import { TabsNav } from '../components/TabsNav';
+import { queryKeys } from '../queryKeys';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
@@ -26,7 +27,7 @@ export function CalcuttaEntriesPage() {
   );
 
   const calcuttaEntriesQuery = useQuery({
-    queryKey: ['calcuttaEntriesPage', calcuttaId],
+    queryKey: queryKeys.calcuttas.entriesPage(calcuttaId),
     enabled: Boolean(calcuttaId),
     staleTime: 30_000,
     queryFn: async () => {

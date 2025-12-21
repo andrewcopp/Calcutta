@@ -1,64 +1,70 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Tournament } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
+import { queryKeys } from '../queryKeys';
 
 export function CreateCalcuttaPage() {
   const navigate = useNavigate();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [newCalcutta, setNewCalcutta] = useState({
     name: '',
     tournamentId: '',
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const data = await tournamentService.getAllTournaments();
-        setTournaments(data);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to fetch tournaments');
-        setLoading(false);
-      }
-    };
+  const tournamentsQuery = useQuery({
+    queryKey: queryKeys.tournaments.all(),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getAllTournaments(),
+  });
 
-    fetchTournaments();
-  }, []);
+  const createCalcuttaMutation = useMutation({
+    mutationFn: async ({ name, tournamentId }: { name: string; tournamentId: string }) => {
+      const sysAdminId = '090644de-1158-402e-a103-949b089d8cf9';
+      return calcuttaService.createCalcutta(name, tournamentId, sysAdminId);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() });
+      navigate('/calcuttas');
+    },
+    onError: () => {
+      setError('Failed to create calcutta');
+    },
+  });
 
   const handleCreateCalcutta = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setError(null);
-    
-    try {
-      // Use the actual admin user ID from the seed data
-      const sysAdminId = '090644de-1158-402e-a103-949b089d8cf9';
-      await calcuttaService.createCalcutta(
-        newCalcutta.name,
-        newCalcutta.tournamentId,
-        sysAdminId
-      );
-      
-      // Redirect to the calcuttas list page
-      navigate('/calcuttas');
-    } catch (err) {
-      setError('Failed to create calcutta');
-      setIsSubmitting(false);
-    }
+
+    createCalcuttaMutation.mutate({
+      name: newCalcutta.name,
+      tournamentId: newCalcutta.tournamentId,
+    });
   };
 
-  if (loading) {
+  if (tournamentsQuery.isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">Loading tournaments...</div>
       </div>
     );
   }
+
+  if (tournamentsQuery.isError) {
+    const message = tournamentsQuery.error instanceof Error ? tournamentsQuery.error.message : 'Failed to fetch tournaments';
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {message}
+        </div>
+      </div>
+    );
+  }
+
+  const tournaments: Tournament[] = tournamentsQuery.data || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -122,10 +128,10 @@ export function CreateCalcuttaPage() {
             <div className="pt-4">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={createCalcuttaMutation.isPending}
                 className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
               >
-                {isSubmitting ? 'Creating...' : 'Create Calcutta'}
+                {createCalcuttaMutation.isPending ? 'Creating...' : 'Create Calcutta'}
               </button>
             </div>
           </div>

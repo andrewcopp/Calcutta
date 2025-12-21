@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { School } from '../types/school';
 import { Tournament } from '../types/calcutta';
 import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
+import { queryKeys } from '../queryKeys';
 
 interface TeamToAdd {
   schoolId: string;
@@ -14,41 +16,43 @@ interface TeamToAdd {
 export const TournamentAddTeamsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [schools, setSchools] = useState<School[]>([]);
+  const queryClient = useQueryClient();
   const [selectedSchool, setSelectedSchool] = useState<string>('');
   const [selectedSeed, setSelectedSeed] = useState<number>(1);
   const [teamsToAdd, setTeamsToAdd] = useState<TeamToAdd[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchTournamentData();
-      fetchSchools();
-    }
-  }, [id]);
+  const tournamentQuery = useQuery({
+    queryKey: queryKeys.tournaments.detail(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getTournament(id!),
+  });
 
-  const fetchTournamentData = async () => {
-    try {
-      const data = await tournamentService.getTournament(id!);
-      setTournament(data);
-    } catch (err) {
-      setError('Failed to load tournament data');
-      console.error('Error loading tournament data:', err);
-    }
-  };
+  const schoolsQuery = useQuery({
+    queryKey: queryKeys.schools.all(),
+    staleTime: 30_000,
+    queryFn: () => adminService.getAllSchools(),
+  });
 
-  const fetchSchools = async () => {
-    try {
-      const data = await adminService.getAllSchools();
-      setSchools(data);
-    } catch (err) {
-      setError('Failed to load schools');
-      console.error('Error loading schools:', err);
-    }
-  };
+  const createTeamsMutation = useMutation({
+    mutationFn: async ({ teamsToAdd }: { teamsToAdd: TeamToAdd[] }) => {
+      await Promise.all(
+        teamsToAdd.map((team) => tournamentService.createTournamentTeam(id!, team.schoolId, team.seed, team.region))
+      );
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(id) });
+      navigate(`/admin/tournaments/${id}`);
+    },
+    onError: () => {
+      setError('Failed to create teams');
+    },
+  });
+
+  const tournament: Tournament | null = tournamentQuery.data || null;
+  const schools: School[] = schoolsQuery.data || [];
 
   const filteredSchools = schools.filter(school =>
     school.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -88,24 +92,37 @@ export const TournamentAddTeamsPage: React.FC = () => {
       setError('Please add at least one team');
       return;
     }
-
-    setIsSubmitting(true);
     setError(null);
 
-    try {
-      await Promise.all(
-        teamsToAdd.map(team =>
-          tournamentService.createTournamentTeam(id!, team.schoolId, team.seed, team.region)
-        )
-      );
-      navigate(`/admin/tournaments/${id}`);
-    } catch (err) {
-      setError('Failed to create teams');
-      console.error('Error creating teams:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+    createTeamsMutation.mutate({ teamsToAdd });
   };
+
+  if (!id) {
+    return <div className="error">Missing required parameters</div>;
+  }
+
+  if (tournamentQuery.isLoading || schoolsQuery.isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (tournamentQuery.isError || schoolsQuery.isError) {
+    const message =
+      (tournamentQuery.error instanceof Error ? tournamentQuery.error.message : null) ||
+      (schoolsQuery.error instanceof Error ? schoolsQuery.error.message : null) ||
+      'Failed to load data';
+
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {message}
+        </div>
+      </div>
+    );
+  }
 
   if (!tournament) {
     return (
@@ -212,12 +229,12 @@ export const TournamentAddTeamsPage: React.FC = () => {
       <div className="flex justify-end mt-8">
         <button
           onClick={handleSubmit}
-          disabled={isSubmitting || teamsToAdd.length === 0}
+          disabled={createTeamsMutation.isPending || teamsToAdd.length === 0}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
         >
-          {isSubmitting ? 'Creating Teams...' : 'Create Teams'}
+          {createTeamsMutation.isPending ? 'Creating Teams...' : 'Create Teams'}
         </button>
       </div>
     </div>
   );
-}; 
+};

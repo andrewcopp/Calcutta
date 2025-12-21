@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart,
@@ -16,8 +16,9 @@ import {
   Line,
 } from 'recharts';
 import { AnalyticsResponse } from '../types/analytics';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../api/apiClient';
+import { queryKeys } from '../queryKeys';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7c7c'];
 const REGION_COLORS: Record<string, string> = {
@@ -28,32 +29,15 @@ const REGION_COLORS: Record<string, string> = {
 };
 
 export const AnalyticsPage: React.FC = () => {
-  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'seeds' | 'regions' | 'teams' | 'variance'>('seeds');
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
+  const analyticsQuery = useQuery({
+    queryKey: queryKeys.analytics.all(),
+    staleTime: 30_000,
+    queryFn: () => apiClient.get<AnalyticsResponse>('/analytics'),
+  });
 
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/analytics`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics');
-      }
-      const data = await response.json();
-      setAnalytics(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (analyticsQuery.isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">Loading analytics...</div>
@@ -61,15 +45,18 @@ export const AnalyticsPage: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (analyticsQuery.isError) {
+    const message = analyticsQuery.error instanceof Error ? analyticsQuery.error.message : 'An error occurred';
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Error: {error}
+          Error: {message}
         </div>
       </div>
     );
   }
+
+  const analytics = analyticsQuery.data;
 
   if (!analytics) {
     return (

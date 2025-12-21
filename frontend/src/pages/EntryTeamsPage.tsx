@@ -8,6 +8,7 @@ import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
 import { StatisticsTab } from './EntryTeams/StatisticsTab';
 import { TabsNav } from '../components/TabsNav';
+import { queryKeys } from '../queryKeys';
 
 // Add a new section to display portfolio scores
 const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }> = ({
@@ -67,7 +68,7 @@ export function EntryTeamsPage() {
   );
 
   const entryTeamsQuery = useQuery({
-    queryKey: ['entryTeamsPage', calcuttaId, entryId],
+    queryKey: queryKeys.calcuttas.entryTeamsPage(calcuttaId, entryId),
     enabled: Boolean(entryId && calcuttaId),
     staleTime: 30_000,
     queryFn: async () => {

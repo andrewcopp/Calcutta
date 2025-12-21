@@ -1,57 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { Tournament, TournamentTeam } from '../types/calcutta';
 import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';
+import { queryKeys } from '../queryKeys';
 
 type SortField = 'seed' | 'school' | 'byes' | 'wins' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export const TournamentViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [teams, setTeams] = useState<TournamentTeam[]>([]);
-  const [schools, setSchools] = useState<Record<string, School>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [sortField, setSortField] = useState<SortField>('seed');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  useEffect(() => {
-    if (id) {
-      fetchTournamentData();
-    }
-  }, [id]);
+  const tournamentQuery = useQuery({
+    queryKey: queryKeys.tournaments.detail(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getTournament(id!),
+  });
 
-  const fetchTournamentData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Fetch tournament details
-      const tournamentData = await tournamentService.getTournament(id!);
-      setTournament(tournamentData);
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.tournaments.teams(id),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    queryFn: () => tournamentService.getTournamentTeams(id!),
+  });
 
-      // Fetch teams
-      const teamsData = await tournamentService.getTournamentTeams(id!);
-      setTeams(teamsData || []);
+  const schoolsQuery = useQuery({
+    queryKey: queryKeys.schools.all(),
+    staleTime: 30_000,
+    queryFn: () => adminService.getAllSchools(),
+  });
 
-      // Fetch schools for all teams
-      const schoolsData = await adminService.getAllSchools();
-      const schoolsMap = schoolsData.reduce((acc, school) => {
-        acc[school.id] = school;
-        return acc;
-      }, {} as Record<string, School>);
-      setSchools(schoolsMap);
-    } catch (err) {
-      setError('Failed to load tournament data');
-      console.error('Error loading tournament data:', err);
-      setTeams([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const schools = useMemo(() => {
+    const schoolsData = schoolsQuery.data || [];
+    return schoolsData.reduce((acc, school) => {
+      acc[school.id] = school;
+      return acc;
+    }, {} as Record<string, School>);
+  }, [schoolsQuery.data]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -65,6 +55,7 @@ export const TournamentViewPage: React.FC = () => {
   };
 
   const getSortedTeams = () => {
+    const teams = teamsQuery.data || [];
     return [...teams].sort((a, b) => {
       let comparison = 0;
       
@@ -102,13 +93,34 @@ export const TournamentViewPage: React.FC = () => {
     return sortDirection === 'asc' ? <span>↑</span> : <span>↓</span>;
   };
 
-  if (isLoading) {
+  if (!id) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-600">Tournament not found</div>
+      </div>
+    );
+  }
+
+  if (tournamentQuery.isLoading || teamsQuery.isLoading || schoolsQuery.isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">Loading...</div>
       </div>
     );
   }
+
+  if (tournamentQuery.isError || teamsQuery.isError || schoolsQuery.isError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          Failed to load tournament data
+        </div>
+      </div>
+    );
+  }
+
+  const tournament = tournamentQuery.data || null;
+  const teams: TournamentTeam[] = teamsQuery.data || [];
 
   if (!tournament) {
     return (
@@ -150,12 +162,6 @@ export const TournamentViewPage: React.FC = () => {
           </Link>
         </div>
       </div>
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
 
       {teams.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
