@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Tournament } from '../types/tournament';
-import { fetchTournaments } from '../services/tournamentService';
+import { Tournament } from '../types/calcutta';
+import { tournamentService } from '../services/tournamentService';
 
 const TournamentList: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -10,7 +10,7 @@ const TournamentList: React.FC = () => {
   useEffect(() => {
     const loadTournaments = async () => {
       try {
-        const data = await fetchTournaments();
+        const data = await tournamentService.getAllTournaments();
         setTournaments(data);
       } catch (err) {
         setError('Failed to load tournaments');
@@ -32,15 +32,15 @@ const TournamentList: React.FC = () => {
       <table className="tournament-table">
         <thead>
           <tr>
-            <th>Year</th>
-            <th>Winner</th>
+            <th>Name</th>
+            <th>Rounds</th>
           </tr>
         </thead>
         <tbody>
           {tournaments.map((tournament) => (
             <tr key={tournament.id}>
               <td>{tournament.name}</td>
-              <td>{tournament.winner || 'TBD'}</td>
+              <td>{tournament.rounds}</td>
             </tr>
           ))}
         </tbody>
