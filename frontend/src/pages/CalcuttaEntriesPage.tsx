@@ -16,6 +16,22 @@ interface SeedInvestment {
   teamCount: number;
 }
 
+interface OwnershipSlice {
+  name: string;
+  value: number;
+  entryId: string;
+}
+
+interface OwnershipTeamCard {
+  teamId: string;
+  seed: number;
+  region: string;
+  teamName: string;
+  totalSpend: number;
+  slices: OwnershipSlice[];
+  topOwners: OwnershipSlice[];
+}
+
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const [entries, setEntries] = useState<CalcuttaEntry[]>([]);
@@ -32,6 +48,10 @@ export function CalcuttaEntriesPage() {
   const [allCalcuttaPortfolios, setAllCalcuttaPortfolios] = useState<(CalcuttaPortfolio & { entryName?: string })[]>([]);
   const [allCalcuttaPortfolioTeams, setAllCalcuttaPortfolioTeams] = useState<CalcuttaPortfolioTeam[]>([]);
   const [investmentHover, setInvestmentHover] = useState<{ entryName: string; amount: number; x: number; y: number } | null>(null);
+  const [investmentSortBy, setInvestmentSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
+  const [ownershipSortBy, setOwnershipSortBy] = useState<'seed' | 'region' | 'team' | 'investment'>('seed');
+  const [ownershipLoading, setOwnershipLoading] = useState(false);
+  const [ownershipTeamsData, setOwnershipTeamsData] = useState<OwnershipTeamCard[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -242,7 +262,6 @@ export function CalcuttaEntriesPage() {
           .sort((a, b) => b.amount - a.amount)
           .filter((seg) => seg.amount > 0),
       }))
-      .filter((row) => row.totalInvestment > 0)
       .sort((a, b) => {
         if (b.totalInvestment !== a.totalInvestment) return b.totalInvestment - a.totalInvestment;
         const seedA = a.seed ?? 999;
@@ -255,21 +274,64 @@ export function CalcuttaEntriesPage() {
     return { rows, maxTotal };
   }, [allEntryTeams, entryNameById, schoolNameById, tournamentTeams, tournamentTeamById]);
 
-  const ownershipTeams = useMemo(() => {
-    const byTeamSpend = new Map<string, number>();
-    for (const entryTeam of allEntryTeams) {
-      const amount = entryTeam.bid || 0;
-      if (amount <= 0) continue;
-      byTeamSpend.set(entryTeam.teamId, (byTeamSpend.get(entryTeam.teamId) || 0) + amount);
+  const investmentSortedRows = useMemo(() => {
+    const rows = investmentRows.rows.slice();
+
+    const seedA = (seed: number | undefined) => seed ?? 999;
+    const regionA = (region: string) => region || '';
+    const teamA = (name: string) => name || '';
+
+    rows.sort((a, b) => {
+      if (investmentSortBy === 'total') {
+        if (b.totalInvestment !== a.totalInvestment) return b.totalInvestment - a.totalInvestment;
+        return seedA(a.seed) - seedA(b.seed);
+      }
+
+      if (investmentSortBy === 'seed') {
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
+        if (regionDiff !== 0) return regionDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      if (investmentSortBy === 'region') {
+        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
+        if (regionDiff !== 0) return regionDiff;
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      const nameDiff = teamA(a.teamName).localeCompare(teamA(b.teamName));
+      if (nameDiff !== 0) return nameDiff;
+      return seedA(a.seed) - seedA(b.seed);
+    });
+
+    return rows;
+  }, [investmentRows.rows, investmentSortBy]);
+
+  useEffect(() => {
+    if (activeTab !== 'ownership') {
+      setOwnershipLoading(false);
+      return;
     }
 
-    const cards = tournamentTeams
-      .map((team) => {
+    setOwnershipLoading(true);
+    const handle = window.setTimeout(() => {
+      const byTeamSpend = new Map<string, number>();
+      for (const entryTeam of allEntryTeams) {
+        const amount = entryTeam.bid || 0;
+        if (amount <= 0) continue;
+        byTeamSpend.set(entryTeam.teamId, (byTeamSpend.get(entryTeam.teamId) || 0) + amount);
+      }
+
+      const cards: OwnershipTeamCard[] = tournamentTeams.map((team) => {
         const teamId = team.id;
         const spend = byTeamSpend.get(teamId) || 0;
         const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === teamId && pt.ownershipPercentage > 0);
 
-        const slices = teamPortfolioTeams
+        const slices: OwnershipSlice[] = teamPortfolioTeams
           .slice()
           .sort((a, b) => b.ownershipPercentage - a.ownershipPercentage)
           .map((pt) => {
@@ -283,8 +345,6 @@ export function CalcuttaEntriesPage() {
             };
           });
 
-        const topOwners = slices.slice(0, 3);
-
         return {
           teamId,
           seed: team.seed,
@@ -292,17 +352,58 @@ export function CalcuttaEntriesPage() {
           teamName: schoolNameById.get(team.schoolId) || 'Unknown School',
           totalSpend: spend,
           slices,
-          topOwners,
+          topOwners: slices.slice(0, 3),
         };
-      })
-      .filter((card) => card.totalSpend > 0)
-      .sort((a, b) => {
-        if (b.totalSpend !== a.totalSpend) return b.totalSpend - a.totalSpend;
-        return a.seed - b.seed;
       });
 
+      setOwnershipTeamsData(cards);
+      setOwnershipLoading(false);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(handle);
+      setOwnershipLoading(false);
+    };
+  }, [activeTab, allCalcuttaPortfolios, allCalcuttaPortfolioTeams, allEntryTeams, entryNameById, schoolNameById, tournamentTeams]);
+
+  const ownershipSortedTeams = useMemo(() => {
+    const cards = ownershipTeamsData.slice();
+
+    const seedA = (seed: number) => seed;
+    const regionA = (region: string) => region || '';
+    const teamA = (name: string) => name || '';
+
+    cards.sort((a, b) => {
+      if (ownershipSortBy === 'investment') {
+        if (b.totalSpend !== a.totalSpend) return b.totalSpend - a.totalSpend;
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      if (ownershipSortBy === 'seed') {
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
+        if (regionDiff !== 0) return regionDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      if (ownershipSortBy === 'region') {
+        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
+        if (regionDiff !== 0) return regionDiff;
+        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        if (seedDiff !== 0) return seedDiff;
+        return teamA(a.teamName).localeCompare(teamA(b.teamName));
+      }
+
+      const nameDiff = teamA(a.teamName).localeCompare(teamA(b.teamName));
+      if (nameDiff !== 0) return nameDiff;
+      return seedA(a.seed) - seedA(b.seed);
+    });
+
     return cards;
-  }, [allCalcuttaPortfolios, allCalcuttaPortfolioTeams, allEntryTeams, entryNameById, schoolNameById, tournamentTeams]);
+  }, [ownershipSortBy, ownershipTeamsData]);
 
   const CalcuttaOwnershipPieChart = ({ slices }: { slices: { name: string; value: number; entryId: string }[] }) => {
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -330,6 +431,7 @@ export function CalcuttaEntriesPage() {
               outerRadius={92}
               paddingAngle={2}
               dataKey="value"
+              isAnimationActive={false}
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
             >
@@ -450,33 +552,42 @@ export function CalcuttaEntriesPage() {
 
       {activeTab === 'investment' && (
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-xl font-semibold">Investment</h2>
-            <div className="text-sm text-gray-600">
-              Total Investment: <span className="font-medium text-gray-900">${totalSpent.toFixed(2)}</span>
-            </div>
+          <div className="mb-4 flex items-center justify-end">
+            <label className="text-sm text-gray-600">
+              Sort by
+              <select
+                className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                value={investmentSortBy}
+                onChange={(e) => setInvestmentSortBy(e.target.value as 'total' | 'seed' | 'region' | 'team')}
+              >
+                <option value="total">Total</option>
+                <option value="seed">Seed</option>
+                <option value="region">Region</option>
+                <option value="team">Team</option>
+              </select>
+            </label>
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-y-2">
+            <table className="min-w-full table-fixed border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                  <th className="px-3 py-2">Seed</th>
-                  <th className="px-3 py-2">Team</th>
-                  <th className="px-3 py-2">Region</th>
-                  <th className="px-3 py-2">Investment</th>
-                  <th className="px-3 py-2 text-right">Total</th>
+                  <th className="px-2 py-2 w-14">Seed</th>
+                  <th className="px-2 py-2 w-20">Region</th>
+                  <th className="px-2 py-2 w-44">Team</th>
+                  <th className="px-2 py-2">Investment</th>
+                  <th className="px-2 py-2 w-24 text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {investmentRows.rows.map((row) => {
+                {investmentSortedRows.map((row) => {
                   const barWidthPct = investmentRows.maxTotal > 0 ? (row.totalInvestment / investmentRows.maxTotal) * 100 : 0;
                   return (
                     <tr key={row.teamId} className="bg-gray-50">
-                      <td className="px-3 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{row.seed ?? '—'}</td>
-                      <td className="px-3 py-3 text-gray-900 font-medium whitespace-nowrap">{row.teamName}</td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">{row.region}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{row.seed ?? '—'}</td>
+                      <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{row.region}</td>
+                      <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">{row.teamName}</td>
+                      <td className="px-2 py-3">
                         <div className="h-6 w-full rounded bg-gray-200 overflow-hidden">
                           <div className="h-full flex" style={{ width: `${barWidthPct.toFixed(2)}%` }}>
                             {row.segments.map((seg) => {
@@ -520,7 +631,7 @@ export function CalcuttaEntriesPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
+                      <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
                         ${row.totalInvestment.toFixed(2)}
                       </td>
                     </tr>
@@ -544,14 +655,30 @@ export function CalcuttaEntriesPage() {
 
       {activeTab === 'ownership' && (
         <>
-          <div className="mb-4 flex items-center justify-end">
+          <div className="mb-4 flex items-center justify-end gap-4">
+            <label className="text-sm text-gray-600">
+              Sort by
+              <select
+                className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                value={ownershipSortBy}
+                onChange={(e) => setOwnershipSortBy(e.target.value as 'seed' | 'region' | 'team' | 'investment')}
+              >
+                <option value="seed">Seed</option>
+                <option value="region">Region</option>
+                <option value="team">Team</option>
+                <option value="investment">Investment</option>
+              </select>
+            </label>
             <div className="text-sm text-gray-600">
               Total Spent: <span className="font-medium text-gray-900">${totalSpent.toFixed(2)}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {ownershipTeams.map((team) => (
+          {ownershipLoading ? (
+            <div className="bg-white rounded-lg shadow p-6 text-gray-600">Loading ownership…</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {ownershipSortedTeams.map((team) => (
               <div key={team.teamId} className="bg-white rounded-lg shadow p-4 flex flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -590,14 +717,14 @@ export function CalcuttaEntriesPage() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
       {activeTab === 'leaderboard' && (
         <>
-          <h2 className="text-2xl font-bold mb-6">Leaderboard</h2>
           <div className="grid gap-4">
             {entries.map((entry, index) => (
               <Link
