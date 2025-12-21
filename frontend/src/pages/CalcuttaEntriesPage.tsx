@@ -738,7 +738,8 @@ export function CalcuttaEntriesPage() {
                   <th className="px-2 py-2 w-14">Seed</th>
                   <th className="px-2 py-2 w-20">Region</th>
                   <th className="px-2 py-2 w-44">Team</th>
-                  <th className="px-2 py-2">Points</th>
+                  <th className="px-2 py-2"></th>
+                  <th className="px-2 py-2 w-32 text-right">Total Points</th>
                 </tr>
               </thead>
               <tbody>
@@ -751,7 +752,7 @@ export function CalcuttaEntriesPage() {
                       <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{row.seed ?? '—'}</td>
                       <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{row.region}</td>
                       <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">{row.teamName}</td>
-                      <td className="px-2 py-3 rounded-r-md">
+                      <td className="px-2 py-3">
                         <div className="space-y-2">
                           <div>
                             <div className="h-6 w-full rounded bg-gray-200 overflow-hidden">
@@ -844,6 +845,9 @@ export function CalcuttaEntriesPage() {
                             </div>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
+                        {row.totalPoints.toFixed(2)}
                       </td>
                     </tr>
                   );
