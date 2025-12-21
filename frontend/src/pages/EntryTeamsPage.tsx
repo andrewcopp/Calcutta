@@ -562,13 +562,71 @@ export function EntryTeamsPage() {
 
     setOwnershipLoading(true);
     const handle = window.setTimeout(() => {
-      let teamsToShow = [...teams];
-      if (!ownershipShowAllTeams) {
-        teamsToShow = teamsToShow.filter((team) => {
+      let teamsToShow: CalcuttaEntryTeam[];
+      
+      if (ownershipShowAllTeams) {
+        // Show all tournament teams, creating synthetic CalcuttaEntryTeam objects for teams not bid on
+        const teamIdSet = new Set(teams.map(t => t.teamId));
+        const schoolMap = new Map(schools.map(s => [s.id, s]));
+        
+        teamsToShow = tournamentTeams.map((tt) => {
+          const existingTeam = teams.find(t => t.teamId === tt.id);
+          if (existingTeam) {
+            return existingTeam;
+          }
+          
+          // Create synthetic team for teams not bid on
+          return {
+            id: `synthetic-${tt.id}`,
+            entryId: entryId!,
+            teamId: tt.id,
+            bid: 0,
+            created: new Date().toISOString(),
+            updated: new Date().toISOString(),
+            team: {
+              ...tt,
+              school: schoolMap.get(tt.schoolId),
+            },
+          } as CalcuttaEntryTeam;
+        });
+      } else {
+        // Show only teams with ownership > 0
+        teamsToShow = teams.filter((team) => {
           const portfolioTeam = getPortfolioTeamData(team.teamId);
           return portfolioTeam && portfolioTeam.ownershipPercentage > 0;
         });
       }
+
+      // Sort the teams based on sortBy
+      teamsToShow.sort((a, b) => {
+        const portfolioTeamA = getPortfolioTeamData(a.teamId);
+        const portfolioTeamB = getPortfolioTeamData(b.teamId);
+
+        const pointsA = portfolioTeamA?.actualPoints || 0;
+        const pointsB = portfolioTeamB?.actualPoints || 0;
+        const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
+        const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
+        const bidA = a.bid || 0;
+        const bidB = b.bid || 0;
+
+        if (sortBy === 'points') {
+          if (pointsB !== pointsA) return pointsB - pointsA;
+          if (ownershipB !== ownershipA) return ownershipB - ownershipA;
+          return bidB - bidA;
+        }
+
+        if (sortBy === 'ownership') {
+          if (ownershipB !== ownershipA) return ownershipB - ownershipA;
+          if (pointsB !== pointsA) return pointsB - pointsA;
+          return bidB - bidA;
+        }
+
+        // sortBy === 'bid'
+        if (bidB !== bidA) return bidB - bidA;
+        if (pointsB !== pointsA) return pointsB - pointsA;
+        return ownershipB - ownershipA;
+      });
+
       setOwnershipTeamsData(teamsToShow);
       setOwnershipLoading(false);
     }, 0);
@@ -577,7 +635,7 @@ export function EntryTeamsPage() {
       window.clearTimeout(handle);
       setOwnershipLoading(false);
     };
-  }, [activeTab, teams, ownershipShowAllTeams, portfolios, allCalcuttaPortfolioTeams]);
+  }, [activeTab, teams, ownershipShowAllTeams, sortBy, portfolios, allCalcuttaPortfolioTeams, tournamentTeams, schools, entryId]);
 
   if (loading) {
     return <div>Loading...</div>;
