@@ -3,6 +3,7 @@ go 1.24
 use (
 	.
 	./cmd/migrate
+	./cmd/sandbox
 	./cmd/server
 	./cmd/seed-calcuttas
 	./cmd/seed-schools

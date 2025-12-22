@@ -81,6 +81,7 @@ backend/
 - **[Testing Guidelines](docs/bracket_testing_guidelines.md)** - **CRITICAL**: Strict testing conventions (one assert per test, TestThat naming)
 - [Complete Rules and Examples](docs/rules.md) - Business logic and game rules
 - [Database Seeding Guide](docs/seeding.md) - How to populate test data
+- [Data Science Sandbox](docs/data_science_sandbox.md) - Sandbox workflow + two-model framing (predict returns, predict investment, compute ROI)
 
 ### Domain Documentation
 - [Bracket Management](docs/bracket_management.md)
