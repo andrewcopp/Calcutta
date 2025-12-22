@@ -51,6 +51,7 @@ The CLI supports these modes:
 - `-mode baseline`
 - `-mode simulate`
 - `-mode backtest`
+- `-mode report`
 
 The default is `export`.
 
@@ -211,6 +212,25 @@ Example:
   -exclude-entry-name "Andrew Copp" \
   -train-years 0 \
   -out /tmp/backtest_2018_2025.csv
+```
+
+## Report mode
+
+Report mode runs the end-to-end harness year-by-year and writes a human-readable report:
+
+- The simulated entry (team + bid points)
+- The simulated finish position vs the field for that year
+
+Example:
+
+```bash
+./backend/scripts/run_sandbox.sh \
+  -mode report \
+  -start-year 2018 \
+  -end-year 2025 \
+  -exclude-entry-name "Andrew Copp" \
+  -train-years 0 \
+  -out /tmp/report_2018_2025.md
 ```
 
 ## Troubleshooting

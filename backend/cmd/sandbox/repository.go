@@ -7,6 +7,12 @@ import (
 	"fmt"
 )
 
+type entryBid struct {
+	EntryName string
+	TeamID    string
+	Bid       float64
+}
+
 func calcuttaYear(ctx context.Context, db *sql.DB, calcuttaID string) (int, error) {
 	query := `
 		SELECT COALESCE(substring(t.name from '([0-9]{4})')::int, 0) as tournament_year
@@ -293,6 +299,42 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 			return nil, fmt.Errorf("no rows returned for year %d", year)
 		}
 		return nil, fmt.Errorf("no rows returned for calcutta-id %s", calcuttaID)
+	}
+
+	return results, nil
+}
+
+func queryEntryBids(ctx context.Context, db *sql.DB, calcuttaID string, excludeEntryName string) ([]entryBid, error) {
+	query := `
+		SELECT
+			ce.name,
+			cet.team_id,
+			SUM(cet.bid)::float as bid
+		FROM calcutta_entries ce
+		JOIN calcutta_entry_teams cet ON cet.entry_id = ce.id AND cet.deleted_at IS NULL
+		WHERE ce.deleted_at IS NULL
+			AND ce.calcutta_id = $1::uuid
+			AND ($2 = '' OR ce.name <> $2)
+		GROUP BY ce.name, cet.team_id
+		ORDER BY ce.name ASC
+	`
+
+	rows, err := db.QueryContext(ctx, query, calcuttaID, excludeEntryName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]entryBid, 0)
+	for rows.Next() {
+		var r entryBid
+		if err := rows.Scan(&r.EntryName, &r.TeamID, &r.Bid); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return results, nil

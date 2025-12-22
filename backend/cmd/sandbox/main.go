@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var (
-		mode             = flag.String("mode", "export", "Mode to run: export|baseline|simulate|backtest")
+		mode             = flag.String("mode", "export", "Mode to run: export|baseline|simulate|backtest|report")
 		year             = flag.Int("year", 0, "Tournament year to export (matches 4-digit year parsed from tournament name).")
 		calcuttaID       = flag.String("calcutta-id", "", "Calcutta ID to export.")
 		outPath          = flag.String("out", "", "Output path for CSV (defaults to stdout).")
@@ -30,7 +30,7 @@ func main() {
 	)
 	flag.Parse()
 
-	if *mode != "backtest" {
+	if *mode != "backtest" && *mode != "report" {
 		if *year == 0 && *calcuttaID == "" {
 			log.Fatal("Must provide either -year or -calcutta-id")
 		}
@@ -127,7 +127,17 @@ func main() {
 		if err := writeBacktestCSV(out, rows); err != nil {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}
+	case "report":
+		if *startYear == 0 || *endYear == 0 {
+			log.Fatal("report mode requires -start-year and -end-year")
+		}
+		if *endYear < *startYear {
+			log.Fatal("report mode requires -end-year >= -start-year")
+		}
+		if err := runReport(ctx, db, out, *startYear, *endYear, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid); err != nil {
+			log.Fatalf("Failed to run report: %v", err)
+		}
 	default:
-		log.Fatalf("Unknown -mode %q (expected export|baseline|simulate|backtest)", *mode)
+		log.Fatalf("Unknown -mode %q (expected export|baseline|simulate|backtest|report)", *mode)
 	}
 }
