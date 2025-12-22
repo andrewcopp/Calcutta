@@ -127,6 +127,23 @@ export function CalcuttaEntriesPage() {
   const allCalcuttaPortfolios = calcuttaEntriesQuery.data?.allCalcuttaPortfolios || [];
   const allCalcuttaPortfolioTeams = calcuttaEntriesQuery.data?.allCalcuttaPortfolioTeams || [];
 
+  const totalInvestment = useMemo(() => allEntryTeams.reduce((sum, et) => sum + (et.bid || 0), 0), [allEntryTeams]);
+
+  const totalReturns = useMemo(() => entries.reduce((sum, e) => sum + (e.totalPoints || 0), 0), [entries]);
+
+  const averageReturn = useMemo(() => (totalEntries > 0 ? totalReturns / totalEntries : 0), [totalEntries, totalReturns]);
+
+  const returnsStdDev = useMemo(() => {
+    if (totalEntries <= 1) return 0;
+
+    const mean = averageReturn;
+    const variance = entries.reduce((acc, e) => {
+      const v = (e.totalPoints || 0) - mean;
+      return acc + v * v;
+    }, 0);
+    return Math.sqrt(variance / totalEntries);
+  }, [entries, totalEntries, averageReturn]);
+
   const schoolNameById = useMemo(() => new Map(schools.map((school) => [school.id, school.name])), [schools]);
 
   const teamROIData = useMemo(() => {
@@ -188,6 +205,10 @@ export function CalcuttaEntriesPage() {
         <StatisticsTab
           calcuttaId={calcuttaId}
           totalEntries={totalEntries}
+          totalInvestment={totalInvestment}
+          totalReturns={totalReturns}
+          averageReturn={averageReturn}
+          returnsStdDev={returnsStdDev}
           seedInvestmentData={seedInvestmentData}
           teamROIData={teamROIData}
         />

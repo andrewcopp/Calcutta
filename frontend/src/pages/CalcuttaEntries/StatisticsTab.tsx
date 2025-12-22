@@ -4,6 +4,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export const StatisticsTab: React.FC<{
   calcuttaId: string;
   totalEntries: number;
+  totalInvestment: number;
+  totalReturns: number;
+  averageReturn: number;
+  returnsStdDev: number;
   seedInvestmentData: { seed: number; totalInvestment: number }[];
   teamROIData: {
     teamId: string;
@@ -14,13 +18,17 @@ export const StatisticsTab: React.FC<{
     investment: number;
     roi: number;
   }[];
-}> = ({ calcuttaId, totalEntries, seedInvestmentData, teamROIData }) => {
+}> = ({ calcuttaId, totalEntries, totalInvestment, totalReturns, averageReturn, returnsStdDev, seedInvestmentData, teamROIData }) => {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Tournament Statistics</h2>
           <p className="text-gray-600">Total Entries: {totalEntries}</p>
+          <p className="text-gray-600">Total Investment: ${totalInvestment.toFixed(2)}</p>
+          <p className="text-gray-600">Total Returns: {totalReturns.toFixed(2)}</p>
+          <p className="text-gray-600">Average Return: {averageReturn.toFixed(2)}</p>
+          <p className="text-gray-600">Std Dev for Returns: {returnsStdDev.toFixed(2)}</p>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
