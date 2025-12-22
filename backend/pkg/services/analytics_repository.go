@@ -104,14 +104,15 @@ type EntryLeaderboardData struct {
 }
 
 type CareerLeaderboardData struct {
-	EntryName           string
-	Years               int
-	BestFinish          int
-	Wins                int
-	Podiums             int
-	InTheMoneys         int
-	Top10s              int
-	CareerEarningsCents int
+	EntryName              string
+	Years                  int
+	BestFinish             int
+	Wins                   int
+	Podiums                int
+	InTheMoneys            int
+	Top10s                 int
+	CareerEarningsCents    int
+	ActiveInLatestCalcutta bool
 }
 
 func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error) {
@@ -255,7 +256,24 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]TeamAnaly
 
 func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardData, error) {
 	query := `
-		WITH entry_points AS (
+		WITH latest_calcutta AS (
+			SELECT c.id as calcutta_id
+			FROM calcuttas c
+			JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+			WHERE c.deleted_at IS NULL
+			ORDER BY
+				COALESCE(substring(t.name from '([0-9]{4})')::int, 0) DESC,
+				c.created_at DESC
+			LIMIT 1
+		),
+		latest_entries AS (
+			SELECT DISTINCT TRIM(ce.name) as entry_name
+			FROM calcutta_entries ce
+			JOIN latest_calcutta lc ON lc.calcutta_id = ce.calcutta_id
+			WHERE ce.deleted_at IS NULL
+				AND TRIM(ce.name) <> ''
+		),
+		entry_points AS (
 			SELECT
 				c.id as calcutta_id,
 				ce.id as entry_id,
@@ -370,7 +388,12 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 			podiums,
 			in_the_moneys,
 			top_10s,
-			career_earnings_cents
+			career_earnings_cents,
+			EXISTS (
+				SELECT 1
+				FROM latest_entries le
+				WHERE le.entry_name = career_agg.entry_name
+			) as active_in_latest_calcutta
 		FROM career_agg
 		ORDER BY
 			(career_earnings_cents::float / NULLIF(years, 0)) DESC,
@@ -401,6 +424,7 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 			&d.InTheMoneys,
 			&d.Top10s,
 			&d.CareerEarningsCents,
+			&d.ActiveInLatestCalcutta,
 		); err != nil {
 			log.Printf("Error scanning best careers row: %v", err)
 			return nil, err

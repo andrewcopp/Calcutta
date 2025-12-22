@@ -16,6 +16,7 @@ import {
 
 export const HallOfFamePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bestTeams' | 'bestInvestments' | 'bestEntries' | 'bestCareers'>('bestTeams');
+  const [hideInactiveCareers, setHideInactiveCareers] = useState<boolean>(false);
 
   const formatDollarsFromCents = (cents?: number) => {
     if (!cents) return '$0';
@@ -291,6 +292,19 @@ export const HallOfFamePage: React.FC = () => {
             Careers ranked by average winnings per year (not shown). Tie breaks: wins, podiums, payouts, then top 10s.
           </p>
 
+          <div className="mb-4 flex items-center gap-2">
+            <input
+              id="hideInactiveCareers"
+              type="checkbox"
+              checked={hideInactiveCareers}
+              onChange={(e) => setHideInactiveCareers(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <label htmlFor="hideInactiveCareers" className="text-sm text-gray-700">
+              Hide inactive careers
+            </label>
+          </div>
+
           {bestCareersQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best careers...</div>}
 
           {bestCareersQuery.isError && (
@@ -316,10 +330,13 @@ export const HallOfFamePage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {bestCareersQuery.data.careers.map((c: CareerLeaderboardRow, idx: number) => (
+                  {(hideInactiveCareers
+                    ? bestCareersQuery.data.careers.filter((c: CareerLeaderboardRow) => c.activeInLatestCalcutta)
+                    : bestCareersQuery.data.careers
+                  ).map((c: CareerLeaderboardRow, idx: number) => (
                     <tr key={`${c.entryName}-${idx}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{idx + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.entryName}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${c.activeInLatestCalcutta ? 'font-bold' : 'font-medium'}`}>{c.entryName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.years}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.bestFinish}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.wins}</td>

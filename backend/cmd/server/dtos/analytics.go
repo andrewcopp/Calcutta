@@ -157,14 +157,15 @@ type EntryLeaderboardResponse struct {
 }
 
 type CareerLeaderboardRow struct {
-	EntryName           string `json:"entryName"`
-	Years               int    `json:"years"`
-	BestFinish          int    `json:"bestFinish"`
-	Wins                int    `json:"wins"`
-	Podiums             int    `json:"podiums"`
-	InTheMoneys         int    `json:"inTheMoneys"`
-	Top10s              int    `json:"top10s"`
-	CareerEarningsCents int    `json:"careerEarningsCents"`
+	EntryName              string `json:"entryName"`
+	Years                  int    `json:"years"`
+	BestFinish             int    `json:"bestFinish"`
+	Wins                   int    `json:"wins"`
+	Podiums                int    `json:"podiums"`
+	InTheMoneys            int    `json:"inTheMoneys"`
+	Top10s                 int    `json:"top10s"`
+	CareerEarningsCents    int    `json:"careerEarningsCents"`
+	ActiveInLatestCalcutta bool   `json:"activeInLatestCalcutta"`
 }
 
 type CareerLeaderboardResponse struct {

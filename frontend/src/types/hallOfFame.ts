@@ -64,6 +64,7 @@ export interface CareerLeaderboardRow {
   inTheMoneys: number;
   top10s: number;
   careerEarningsCents: number;
+  activeInLatestCalcutta: boolean;
 }
 
 export interface CareerLeaderboardResponse {
