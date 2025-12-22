@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int) ([]SimulateRow, *SimulateSummary, error) {
+func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, sigma float64) ([]SimulateRow, *SimulateSummary, error) {
 	if budget <= 0 {
 		return nil, nil, fmt.Errorf("budget must be > 0")
 	}
@@ -28,31 +28,14 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 		return nil, nil, err
 	}
 
-	targetYear, err := calcuttaYear(ctx, db, targetCalcuttaID)
+	predPointsByTeam, err := predictedPointsByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, predModel, sigma)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	maxYear := targetYear - 1
-	minYear := 0
-	if trainYears > 0 {
-		minYear = targetYear - trainYears
-	}
-	if trainYears > 0 && maxYear < minYear {
-		return nil, nil, fmt.Errorf("invalid training window: target_year=%d train_years=%d", targetYear, trainYears)
-	}
-
-	seedPointsMean, _, err := computeSeedMeans(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, "")
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(seedPointsMean) == 0 {
-		return nil, nil, fmt.Errorf("no training data found for simulate: target_year=%d train_years=%d", targetYear, trainYears)
 	}
 
 	totalPredPoints := 0.0
 	for _, r := range targetRows {
-		totalPredPoints += seedPointsMean[r.Seed]
+		totalPredPoints += predPointsByTeam[r.TeamID]
 	}
 
 	totalMarketBid := 0.0
@@ -80,7 +63,7 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 		}
 		candidates = append(candidates, candidate{
 			idx:        i,
-			predPoints: seedPointsMean[r.Seed],
+			predPoints: predPointsByTeam[r.TeamID],
 			baseBid:    baseBid,
 			bid:        0,
 			seed:       r.Seed,
@@ -136,6 +119,8 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 			TournamentName:      r.TournamentName,
 			TournamentYear:      r.TournamentYear,
 			CalcuttaID:          r.CalcuttaID,
+			PredModel:           predModel,
+			Sigma:               sigma,
 			TeamID:              r.TeamID,
 			SchoolName:          r.SchoolName,
 			Seed:                r.Seed,

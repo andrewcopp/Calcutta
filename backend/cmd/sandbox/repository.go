@@ -13,6 +13,34 @@ type entryBid struct {
 	Bid       float64
 }
 
+type tournamentMeta struct {
+	TournamentID   string
+	TournamentName string
+	TournamentYear int
+}
+
+func tournamentMetaForCalcuttaID(ctx context.Context, db *sql.DB, calcuttaID string) (*tournamentMeta, error) {
+	query := `
+		SELECT
+			t.id as tournament_id,
+			t.name as tournament_name,
+			COALESCE(substring(t.name from '([0-9]{4})')::int, 0) as tournament_year
+		FROM calcuttas c
+		JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+		WHERE c.deleted_at IS NULL
+			AND c.id = $1::uuid
+	`
+
+	var m tournamentMeta
+	if err := db.QueryRowContext(ctx, query, calcuttaID).Scan(&m.TournamentID, &m.TournamentName, &m.TournamentYear); err != nil {
+		return nil, err
+	}
+	if m.TournamentID == "" {
+		return nil, fmt.Errorf("no tournament found for calcutta-id %s", calcuttaID)
+	}
+	return &m, nil
+}
+
 func calcuttaYear(ctx context.Context, db *sql.DB, calcuttaID string) (int, error) {
 	query := `
 		SELECT COALESCE(substring(t.name from '([0-9]{4})')::int, 0) as tournament_year

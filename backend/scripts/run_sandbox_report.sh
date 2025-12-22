@@ -34,6 +34,8 @@ fi
 
 ./backend/scripts/run_sandbox.sh \
   -mode report \
+  -pred-model kenpom \
+  -sigma 11.0 \
   -exclude-entry-name "Andrew Copp" \
   -train-years 0 \
   "${ARGS[@]}"

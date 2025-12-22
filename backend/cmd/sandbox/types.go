@@ -27,6 +27,8 @@ type SimulateRow struct {
 	TournamentName      string
 	TournamentYear      int
 	CalcuttaID          string
+	PredModel           string
+	Sigma               float64
 	TeamID              string
 	SchoolName          string
 	Seed                int
@@ -58,6 +60,8 @@ type BacktestRow struct {
 	CalcuttaID            string
 	TrainYears            int
 	ExcludeEntryName      string
+	PredModel             string
+	Sigma                 float64
 	NumTeams              int
 	Budget                int
 	ExpectedPointsShare   float64
@@ -83,4 +87,16 @@ type BaselineRow struct {
 	PredBidShare       float64
 	ActualROI          float64
 	PredROI            float64
+}
+
+type KenPomReturnsRow struct {
+	TournamentName string
+	TournamentYear int
+	CalcuttaID     string
+	TeamID         string
+	SchoolName     string
+	Seed           int
+	Region         string
+	Sigma          float64
+	PredPoints     float64
 }

@@ -39,7 +39,7 @@ func ordinal(n int) string {
 	}
 }
 
-func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int) error {
+func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, sigma float64) error {
 	for y := startYear; y <= endYear; y++ {
 		calcuttaID, err := resolveSingleCalcuttaIDForYear(ctx, db, y)
 		if err != nil {
@@ -49,7 +49,7 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 			return err
 		}
 
-		simRows, _, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid)
+		simRows, _, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid, predModel, sigma)
 		if err != nil {
 			return err
 		}

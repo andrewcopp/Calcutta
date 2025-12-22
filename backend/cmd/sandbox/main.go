@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var (
-		mode             = flag.String("mode", "export", "Mode to run: export|baseline|simulate|backtest|report")
+		mode             = flag.String("mode", "export", "Mode to run: export|baseline|simulate|backtest|report|kenpom-returns")
 		year             = flag.Int("year", 0, "Tournament year to export (matches 4-digit year parsed from tournament name).")
 		calcuttaID       = flag.String("calcutta-id", "", "Calcutta ID to export.")
 		outPath          = flag.String("out", "", "Output path for CSV (defaults to stdout).")
@@ -27,6 +27,8 @@ func main() {
 		maxBid           = flag.Int("max-bid", 50, "Maximum bid per team in simulate mode.")
 		startYear        = flag.Int("start-year", 0, "Start year for backtest mode.")
 		endYear          = flag.Int("end-year", 0, "End year for backtest mode.")
+		predModel        = flag.String("pred-model", "seed", "Predicted returns model to use for simulate/report/backtest: seed|kenpom")
+		sigma            = flag.Float64("sigma", 11.0, "Sigma (std dev) for KenPom margin->win probability conversion.")
 	)
 	flag.Parse()
 
@@ -89,6 +91,17 @@ func main() {
 		if err := writeCSV(out, rows); err != nil {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}
+	case "kenpom-returns":
+		if *calcuttaID == "" {
+			log.Fatal("kenpom-returns mode requires -calcutta-id (or -year that resolves to a single calcutta)")
+		}
+		rows, err := runKenPomReturns(ctx, db, *calcuttaID, *sigma)
+		if err != nil {
+			log.Fatalf("Failed to compute kenpom returns: %v", err)
+		}
+		if err := writeKenPomReturnsCSV(out, rows); err != nil {
+			log.Fatalf("Failed to write CSV: %v", err)
+		}
 	case "baseline":
 		if *calcuttaID == "" {
 			log.Fatal("baseline mode requires -calcutta-id (or -year that resolves to a single calcutta)")
@@ -105,11 +118,11 @@ func main() {
 		if *calcuttaID == "" {
 			log.Fatal("simulate mode requires -calcutta-id (or -year that resolves to a single calcutta)")
 		}
-		rows, summary, err := runSimulateEntry(ctx, db, *calcuttaID, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid)
+		rows, summary, err := runSimulateEntry(ctx, db, *calcuttaID, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *sigma)
 		if err != nil {
 			log.Fatalf("Failed to simulate entry: %v", err)
 		}
-		log.Printf("Simulate summary: train_years=%d exclude_entry_name=%q teams=%d budget=%d expected_points_share=%.6f expected_bid_share=%.6f expected_normalized_roi=%.4f", *trainYears, *excludeEntryName, summary.NumTeams, summary.Budget, summary.ExpectedPointsShare, summary.ExpectedBidShare, summary.ExpectedNormalizedROI)
+		log.Printf("Simulate summary: pred_model=%s sigma=%g train_years=%d exclude_entry_name=%q teams=%d budget=%d expected_points_share=%.6f expected_bid_share=%.6f expected_normalized_roi=%.4f", *predModel, *sigma, *trainYears, *excludeEntryName, summary.NumTeams, summary.Budget, summary.ExpectedPointsShare, summary.ExpectedBidShare, summary.ExpectedNormalizedROI)
 		if err := writeSimulateCSV(out, rows); err != nil {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}
@@ -131,7 +144,7 @@ func main() {
 		if end < start {
 			log.Fatal("backtest mode requires -end-year >= -start-year")
 		}
-		rows, err := runBacktest(ctx, db, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid)
+		rows, err := runBacktest(ctx, db, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *sigma)
 		if err != nil {
 			log.Fatalf("Failed to run backtest: %v", err)
 		}
@@ -156,7 +169,7 @@ func main() {
 		if end < start {
 			log.Fatal("report mode requires -end-year >= -start-year")
 		}
-		if err := runReport(ctx, db, out, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid); err != nil {
+		if err := runReport(ctx, db, out, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *sigma); err != nil {
 			log.Fatalf("Failed to run report: %v", err)
 		}
 	default:

@@ -56,6 +56,46 @@ func writeBaselineCSV(w io.Writer, rows []BaselineRow) error {
 	return cw.Error()
 }
 
+func writeKenPomReturnsCSV(w io.Writer, rows []KenPomReturnsRow) error {
+	cw := csv.NewWriter(w)
+	defer cw.Flush()
+
+	header := []string{
+		"tournament_name",
+		"tournament_year",
+		"calcutta_id",
+		"team_id",
+		"school_name",
+		"seed",
+		"region",
+		"sigma",
+		"pred_points",
+	}
+	if err := cw.Write(header); err != nil {
+		return err
+	}
+
+	for _, r := range rows {
+		record := []string{
+			r.TournamentName,
+			fmt.Sprintf("%d", r.TournamentYear),
+			r.CalcuttaID,
+			r.TeamID,
+			r.SchoolName,
+			fmt.Sprintf("%d", r.Seed),
+			r.Region,
+			fmt.Sprintf("%g", r.Sigma),
+			fmt.Sprintf("%g", r.PredPoints),
+		}
+		if err := cw.Write(record); err != nil {
+			return err
+		}
+	}
+
+	cw.Flush()
+	return cw.Error()
+}
+
 func writeSimulateCSV(w io.Writer, rows []SimulateRow) error {
 	cw := csv.NewWriter(w)
 	defer cw.Flush()
@@ -64,6 +104,8 @@ func writeSimulateCSV(w io.Writer, rows []SimulateRow) error {
 		"tournament_name",
 		"tournament_year",
 		"calcutta_id",
+		"pred_model",
+		"sigma",
 		"team_id",
 		"school_name",
 		"seed",
@@ -85,6 +127,8 @@ func writeSimulateCSV(w io.Writer, rows []SimulateRow) error {
 			r.TournamentName,
 			fmt.Sprintf("%d", r.TournamentYear),
 			r.CalcuttaID,
+			r.PredModel,
+			fmt.Sprintf("%g", r.Sigma),
 			r.TeamID,
 			r.SchoolName,
 			fmt.Sprintf("%d", r.Seed),
@@ -115,6 +159,8 @@ func writeBacktestCSV(w io.Writer, rows []BacktestRow) error {
 		"calcutta_id",
 		"train_years",
 		"exclude_entry_name",
+		"pred_model",
+		"sigma",
 		"num_teams",
 		"budget",
 		"expected_points_share",
@@ -134,6 +180,8 @@ func writeBacktestCSV(w io.Writer, rows []BacktestRow) error {
 			r.CalcuttaID,
 			fmt.Sprintf("%d", r.TrainYears),
 			r.ExcludeEntryName,
+			r.PredModel,
+			fmt.Sprintf("%g", r.Sigma),
 			fmt.Sprintf("%d", r.NumTeams),
 			fmt.Sprintf("%d", r.Budget),
 			fmt.Sprintf("%g", r.ExpectedPointsShare),

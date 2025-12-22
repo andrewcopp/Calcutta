@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int) ([]BacktestRow, error) {
+func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, sigma float64) ([]BacktestRow, error) {
 	rows := make([]BacktestRow, 0)
 	for y := startYear; y <= endYear; y++ {
 		calcuttaID, err := resolveSingleCalcuttaIDForYear(ctx, db, y)
@@ -17,7 +17,7 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 			return nil, err
 		}
 
-		simRows, simSummary, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid)
+		simRows, simSummary, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid, predModel, sigma)
 		if err != nil {
 			return nil, err
 		}
@@ -59,6 +59,8 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 			CalcuttaID:            calcuttaID,
 			TrainYears:            trainYears,
 			ExcludeEntryName:      excludeEntryName,
+			PredModel:             predModel,
+			Sigma:                 sigma,
 			NumTeams:              simSummary.NumTeams,
 			Budget:                simSummary.Budget,
 			ExpectedPointsShare:   simSummary.ExpectedPointsShare,
