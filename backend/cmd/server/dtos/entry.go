@@ -7,22 +7,30 @@ import (
 )
 
 type EntryResponse struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	UserID     *string   `json:"userId,omitempty"`
-	CalcuttaID string    `json:"calcuttaId"`
-	Created    time.Time `json:"created"`
-	Updated    time.Time `json:"updated"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	UserID         *string   `json:"userId,omitempty"`
+	CalcuttaID     string    `json:"calcuttaId"`
+	FinishPosition int       `json:"finishPosition"`
+	InTheMoney     bool      `json:"inTheMoney"`
+	PayoutCents    int       `json:"payoutCents"`
+	IsTied         bool      `json:"isTied"`
+	Created        time.Time `json:"created"`
+	Updated        time.Time `json:"updated"`
 }
 
 func NewEntryResponse(e *models.CalcuttaEntry) *EntryResponse {
 	return &EntryResponse{
-		ID:         e.ID,
-		Name:       e.Name,
-		UserID:     e.UserID,
-		CalcuttaID: e.CalcuttaID,
-		Created:    e.Created,
-		Updated:    e.Updated,
+		ID:             e.ID,
+		Name:           e.Name,
+		UserID:         e.UserID,
+		CalcuttaID:     e.CalcuttaID,
+		FinishPosition: e.FinishPosition,
+		InTheMoney:     e.InTheMoney,
+		PayoutCents:    e.PayoutCents,
+		IsTied:         e.IsTied,
+		Created:        e.Created,
+		Updated:        e.Updated,
 	}
 }
 

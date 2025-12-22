@@ -1,4 +1,4 @@
--- Generated on: 2025-12-21 00:31:45
+-- Generated on: 2025-12-21 23:42:41
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -440,5 +440,5 @@ INSERT INTO public.schools VALUES ('7d42afe8-8d20-43c7-9286-00e2f365f079', 'Wisc
 
 -- PostgreSQL database dump complete
 
-\unrestrict UZyGbW2qCJFXEhPyMpZzNVsli1IxAQRsNdnnODo4gaAw8Em3PoGG30rjci9Aa0I
+\unrestrict lLekBK9jGYFJgWkHwKSHN8ToWQGA6lkM8ZDyOwFRPIQCecNQForW9lZpfTvO0cC
 

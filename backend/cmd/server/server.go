@@ -33,6 +33,7 @@ func NewServer(db *sql.DB) *Server {
 		CalcuttaReader:  calcuttaRepo,
 		CalcuttaWriter:  calcuttaRepo,
 		EntryReader:     calcuttaRepo,
+		PayoutReader:    calcuttaRepo,
 		PortfolioReader: calcuttaRepo,
 		PortfolioWriter: calcuttaRepo,
 		RoundWriter:     calcuttaRepo,

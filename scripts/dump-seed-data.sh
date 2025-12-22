@@ -82,6 +82,7 @@ dump_table "tournaments" "$OUTPUT_DIR/tournaments.sql"
 dump_table "tournament_teams" "$OUTPUT_DIR/tournament_teams.sql"
 dump_table "users" "$OUTPUT_DIR/users.sql"
 dump_table "calcuttas" "$OUTPUT_DIR/calcuttas.sql"
+dump_table "calcutta_payouts" "$OUTPUT_DIR/calcutta_payouts.sql"
 dump_table "calcutta_rounds" "$OUTPUT_DIR/calcutta_rounds.sql"
 dump_table "calcutta_entries" "$OUTPUT_DIR/calcutta_entries.sql"
 dump_table "calcutta_entry_teams" "$OUTPUT_DIR/calcutta_entry_teams.sql"
@@ -104,6 +105,7 @@ SET session_replication_role = replica;
 \i tournament_teams.sql
 \i users.sql
 \i calcuttas.sql
+\i calcutta_payouts.sql
 \i calcutta_rounds.sql
 \i calcutta_entries.sql
 \i calcutta_entry_teams.sql

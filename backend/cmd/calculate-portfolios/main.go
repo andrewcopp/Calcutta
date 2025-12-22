@@ -43,6 +43,7 @@ func main() {
 		CalcuttaReader:  calcuttaRepo,
 		CalcuttaWriter:  calcuttaRepo,
 		EntryReader:     calcuttaRepo,
+		PayoutReader:    calcuttaRepo,
 		PortfolioReader: calcuttaRepo,
 		PortfolioWriter: calcuttaRepo,
 		RoundWriter:     calcuttaRepo,

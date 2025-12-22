@@ -57,12 +57,13 @@ export interface EntryLeaderboardResponse {
 
 export interface CareerLeaderboardRow {
   entryName: string;
-  entryCount: number;
-  averageFinishPercent: number;
   wins: number;
-  top3s: number;
-  top6s: number;
+  years: number;
   bestFinish: number;
+  podiums: number;
+  inTheMoneys: number;
+  top10s: number;
+  careerEarningsCents: number;
 }
 
 export interface CareerLeaderboardResponse {

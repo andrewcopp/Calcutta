@@ -221,13 +221,14 @@ func (s *Server) hofBestCareersHandler(w http.ResponseWriter, r *http.Request) {
 	response := dtos.CareerLeaderboardResponse{Careers: make([]dtos.CareerLeaderboardRow, 0, len(results))}
 	for _, c := range results {
 		response.Careers = append(response.Careers, dtos.CareerLeaderboardRow{
-			EntryName:            c.EntryName,
-			EntryCount:           c.EntryCount,
-			AverageFinishPercent: c.AverageFinishPercent,
-			Wins:                 c.Wins,
-			Top3s:                c.Top3s,
-			Top6s:                c.Top6s,
-			BestFinish:           c.BestFinish,
+			EntryName:           c.EntryName,
+			Years:               c.Years,
+			BestFinish:          c.BestFinish,
+			Wins:                c.Wins,
+			Podiums:             c.Podiums,
+			InTheMoneys:         c.InTheMoneys,
+			Top10s:              c.Top10s,
+			CareerEarningsCents: c.CareerEarningsCents,
 		})
 	}
 

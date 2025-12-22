@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"math"
+	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
@@ -23,7 +25,69 @@ func (s *CalcuttaService) CreateRound(ctx context.Context, round *models.Calcutt
 }
 
 func (s *CalcuttaService) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
-	return s.ports.EntryReader.GetEntries(ctx, calcuttaID)
+	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	payouts, err := s.ports.PayoutReader.GetPayouts(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	payoutByPosition := map[int]int{}
+	for _, p := range payouts {
+		payoutByPosition[p.Position] = p.AmountCents
+	}
+
+	sort.SliceStable(entries, func(i, j int) bool {
+		if entries[i].TotalPoints == entries[j].TotalPoints {
+			return entries[i].Created.After(entries[j].Created)
+		}
+		return entries[i].TotalPoints > entries[j].TotalPoints
+	})
+
+	const epsilon = 0.0001
+
+	position := 1
+	for i := 0; i < len(entries); {
+		j := i + 1
+		for j < len(entries) && math.Abs(entries[j].TotalPoints-entries[i].TotalPoints) < epsilon {
+			j++
+		}
+
+		groupSize := j - i
+		isTied := groupSize > 1
+
+		totalGroupPayout := 0
+		for pos := position; pos < position+groupSize; pos++ {
+			totalGroupPayout += payoutByPosition[pos]
+		}
+
+		base := 0
+		remainder := 0
+		if groupSize > 0 {
+			base = totalGroupPayout / groupSize
+			remainder = totalGroupPayout % groupSize
+		}
+
+		for k := 0; k < groupSize; k++ {
+			e := entries[i+k]
+			e.FinishPosition = position
+			e.IsTied = isTied
+			e.PayoutCents = base
+			if remainder > 0 {
+				e.PayoutCents++
+				remainder--
+			}
+			e.InTheMoney = e.PayoutCents > 0
+		}
+
+		position += groupSize
+		i = j
+	}
+
+	return entries, nil
 }
 
 func (s *CalcuttaService) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {

@@ -13,6 +13,10 @@ export interface CalcuttaEntry {
   calcuttaId: string;
   userId?: string;
   totalPoints?: number;
+  finishPosition?: number;
+  inTheMoney?: boolean;
+  payoutCents?: number;
+  isTied?: boolean;
   created: string;
   updated: string;
 }

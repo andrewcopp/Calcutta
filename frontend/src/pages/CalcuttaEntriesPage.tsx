@@ -14,6 +14,16 @@ export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'statistics' | 'investment' | 'ownership' | 'returns'>('leaderboard');
 
+  const formatDollarsFromCents = (cents?: number) => {
+    if (!cents) return '$0';
+    const abs = Math.abs(cents);
+    const dollars = Math.floor(abs / 100);
+    const remainder = abs % 100;
+    const sign = cents < 0 ? '-' : '';
+    if (remainder === 0) return `${sign}$${dollars}`;
+    return `${sign}$${dollars}.${remainder.toString().padStart(2, '0')}`;
+  };
+
   const tabs = useMemo(
     () =>
       [
@@ -87,7 +97,12 @@ export function CalcuttaEntriesPage() {
           ...entry,
           totalPoints: entryPointsMap.get(entry.id) || 0,
         }))
-        .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+        .sort((a, b) => {
+          const diff = (b.totalPoints || 0) - (a.totalPoints || 0);
+          if (diff !== 0) return diff;
+
+          return new Date(b.created).getTime() - new Date(a.created).getTime();
+        });
 
       const entryTeamsByEntry = await Promise.all(entriesData.map((entry) => calcuttaService.getEntryTeams(entry.id, calcuttaId)));
       const allEntryTeams: CalcuttaEntryTeam[] = entryTeamsByEntry.flat();
@@ -243,36 +258,54 @@ export function CalcuttaEntriesPage() {
       {activeTab === 'leaderboard' && (
         <>
           <div className="grid gap-4">
-            {entries.map((entry, index) => (
-              <Link
-                key={entry.id}
-                to={`/calcuttas/${calcuttaId}/entries/${entry.id}`}
-                className={`block p-4 rounded-lg shadow hover:shadow-md transition-shadow ${
-                  index < 3 
-                    ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400' 
-                    : 'bg-white'
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl font-semibold">
-                      {index + 1}. {entry.name}
-                      {index < 3 && (
-                        <span className="ml-2 text-yellow-600 text-sm">
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                        </span>
-                      )}
-                    </h2>
-                    <p className="text-gray-600">Created: {new Date(entry.created).toLocaleDateString()}</p>
+            {entries.map((entry, index) => {
+              const displayPosition = entry.finishPosition || index + 1;
+              const isInTheMoney = Boolean(entry.inTheMoney);
+              const payoutText = entry.payoutCents ? `(${formatDollarsFromCents(entry.payoutCents)})` : '';
+
+              const rowClass = isInTheMoney
+                ? displayPosition === 1
+                  ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400'
+                  : displayPosition === 2
+                    ? 'bg-gradient-to-r from-slate-50 to-slate-200 border-2 border-slate-400'
+                    : displayPosition === 3
+                      ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-500'
+                      : 'bg-gradient-to-r from-slate-50 to-blue-50 border-2 border-slate-300'
+                : 'bg-white';
+
+              const pointsClass = isInTheMoney
+                ? displayPosition === 1
+                  ? 'text-yellow-700'
+                  : displayPosition === 2
+                    ? 'text-slate-700'
+                    : displayPosition === 3
+                      ? 'text-amber-700'
+                      : 'text-slate-700'
+                : 'text-blue-600';
+
+              return (
+                <Link
+                  key={entry.id}
+                  to={`/calcuttas/${calcuttaId}/entries/${entry.id}`}
+                  className={`block p-4 rounded-lg shadow hover:shadow-md transition-shadow ${rowClass}`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="text-xl font-semibold">
+                        {displayPosition}. {entry.name}
+                        {isInTheMoney && payoutText && <span className="ml-2 text-sm text-gray-700">{payoutText}</span>}
+                      </h2>
+                      <p className="text-gray-600">Created: {new Date(entry.created).toLocaleDateString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-2xl font-bold ${pointsClass}`}>
+                        {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-2xl font-bold ${index < 3 ? 'text-yellow-600' : 'text-blue-600'}`}>
-                      {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

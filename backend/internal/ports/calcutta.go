@@ -46,6 +46,10 @@ type RoundWriter interface {
 	CreateRound(ctx context.Context, round *models.CalcuttaRound) error
 }
 
+type PayoutReader interface {
+	GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error)
+}
+
 type TournamentTeamReader interface {
 	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
 }

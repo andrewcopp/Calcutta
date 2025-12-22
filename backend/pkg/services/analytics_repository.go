@@ -104,13 +104,14 @@ type EntryLeaderboardData struct {
 }
 
 type CareerLeaderboardData struct {
-	EntryName            string
-	EntryCount           int
-	AverageFinishPercent float64
-	Wins                 int
-	Top3s                int
-	Top6s                int
-	BestFinish           int
+	EntryName           string
+	Years               int
+	BestFinish          int
+	Wins                int
+	Podiums             int
+	InTheMoneys         int
+	Top10s              int
+	CareerEarningsCents int
 }
 
 func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error) {
@@ -258,6 +259,7 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 			SELECT
 				c.id as calcutta_id,
 				ce.id as entry_id,
+				ce.created_at as entry_created_at,
 				TRIM(ce.name) as entry_name,
 				COALESCE(SUM(cpt.actual_points), 0)::float as total_points
 			FROM calcutta_entries ce
@@ -265,43 +267,99 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 			LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
 			LEFT JOIN calcutta_portfolio_teams cpt ON cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
 			WHERE ce.deleted_at IS NULL
-			GROUP BY c.id, ce.id, ce.name
+			GROUP BY c.id, ce.id, ce.created_at, ce.name
+		),
+		group_stats AS (
+			SELECT
+				calcutta_id,
+				total_points,
+				COUNT(*)::int as tie_size,
+				DENSE_RANK() OVER (PARTITION BY calcutta_id ORDER BY total_points DESC) as group_rank
+			FROM entry_points
+			GROUP BY calcutta_id, total_points
+		),
+		position_groups AS (
+			SELECT
+				gs.*,
+				1 + COALESCE(
+					SUM(tie_size) OVER (PARTITION BY calcutta_id ORDER BY group_rank ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING),
+					0
+				) as start_position
+			FROM group_stats gs
 		),
 		enriched AS (
 			SELECT
-				ep.*,
-				COUNT(*) OVER (PARTITION BY calcutta_id) as total_participants,
-				RANK() OVER (PARTITION BY calcutta_id ORDER BY total_points DESC, entry_id ASC) as finish_rank,
-				CASE
-					WHEN COUNT(*) OVER (PARTITION BY calcutta_id) <= 1 THEN 1.0
-					ELSE 1.0 - ((RANK() OVER (PARTITION BY calcutta_id ORDER BY total_points DESC, entry_id ASC) - 1)::float / (COUNT(*) OVER (PARTITION BY calcutta_id) - 1)::float)
-				END as finish_percentile
+				ep.calcutta_id,
+				ep.entry_id,
+				ep.entry_name,
+				ep.total_points,
+				pg.tie_size,
+				pg.start_position as finish_position,
+				ROW_NUMBER() OVER (
+					PARTITION BY ep.calcutta_id, ep.total_points
+					ORDER BY ep.entry_created_at DESC, ep.entry_id ASC
+				)::int as tie_index
 			FROM entry_points ep
+			JOIN position_groups pg
+				ON pg.calcutta_id = ep.calcutta_id AND pg.total_points = ep.total_points
+			WHERE ep.entry_name <> ''
+		),
+		payout_calc AS (
+			SELECT
+				e.*,
+				COALESCE(gp.group_payout_cents, 0)::int as group_payout_cents,
+				(COALESCE(gp.group_payout_cents, 0)::int / NULLIF(e.tie_size, 0))::int as base_payout_cents,
+				(COALESCE(gp.group_payout_cents, 0)::int % NULLIF(e.tie_size, 0))::int as remainder_cents
+			FROM enriched e
+			LEFT JOIN LATERAL (
+				SELECT COALESCE(SUM(cp.amount_cents), 0)::int as group_payout_cents
+				FROM calcutta_payouts cp
+				WHERE cp.calcutta_id = e.calcutta_id
+					AND cp.deleted_at IS NULL
+					AND cp.position >= e.finish_position
+					AND cp.position < (e.finish_position + e.tie_size)
+			) gp ON true
+		),
+		entry_results AS (
+			SELECT
+				pc.entry_name,
+				pc.calcutta_id,
+				pc.finish_position,
+				(
+					pc.base_payout_cents + CASE WHEN pc.tie_index <= pc.remainder_cents THEN 1 ELSE 0 END
+				)::int as payout_cents
+			FROM payout_calc pc
 		),
 		career_agg AS (
 			SELECT
 				entry_name,
-				COUNT(*)::int as entry_count,
-				AVG(finish_percentile)::float as average_finish_percentile,
-				SUM(CASE WHEN finish_rank = 1 THEN 1 ELSE 0 END)::int as wins,
-				SUM(CASE WHEN finish_rank <= 3 THEN 1 ELSE 0 END)::int as top_3s,
-				SUM(CASE WHEN finish_rank <= 6 THEN 1 ELSE 0 END)::int as top_6s,
-				MIN(finish_rank)::int as best_finish
-			FROM enriched
-			WHERE entry_name <> ''
+				COUNT(DISTINCT calcutta_id)::int as years,
+				MIN(finish_position)::int as best_finish,
+				SUM(CASE WHEN finish_position = 1 THEN 1 ELSE 0 END)::int as wins,
+				SUM(CASE WHEN finish_position <= 3 THEN 1 ELSE 0 END)::int as podiums,
+				SUM(CASE WHEN payout_cents > 0 THEN 1 ELSE 0 END)::int as in_the_moneys,
+				SUM(CASE WHEN finish_position <= 10 THEN 1 ELSE 0 END)::int as top_10s,
+				SUM(payout_cents)::int as career_earnings_cents
+			FROM entry_results
 			GROUP BY entry_name
 		)
 		SELECT
 			entry_name,
-			entry_count,
-			average_finish_percentile,
+			years,
+			best_finish,
 			wins,
-			top_3s,
-			top_6s,
-			best_finish
+			podiums,
+			in_the_moneys,
+			top_10s,
+			career_earnings_cents
 		FROM career_agg
-		WHERE entry_count >= 3 OR top_6s >= 1
-		ORDER BY average_finish_percentile DESC, wins DESC, top_3s DESC, top_6s DESC, entry_count DESC, entry_name ASC
+		ORDER BY
+			(career_earnings_cents::float / NULLIF(years, 0)) DESC,
+			wins DESC,
+			podiums DESC,
+			in_the_moneys DESC,
+			top_10s DESC,
+			entry_name ASC
 		LIMIT $1
 	`
 
@@ -317,12 +375,13 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 		var d CareerLeaderboardData
 		if err := rows.Scan(
 			&d.EntryName,
-			&d.EntryCount,
-			&d.AverageFinishPercent,
-			&d.Wins,
-			&d.Top3s,
-			&d.Top6s,
+			&d.Years,
 			&d.BestFinish,
+			&d.Wins,
+			&d.Podiums,
+			&d.InTheMoneys,
+			&d.Top10s,
+			&d.CareerEarningsCents,
 		); err != nil {
 			log.Printf("Error scanning best careers row: %v", err)
 			return nil, err

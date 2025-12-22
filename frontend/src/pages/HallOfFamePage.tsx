@@ -17,6 +17,16 @@ import {
 export const HallOfFamePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bestTeams' | 'bestInvestments' | 'bestEntries' | 'bestCareers'>('bestTeams');
 
+  const formatDollarsFromCents = (cents?: number) => {
+    if (!cents) return '$0';
+    const abs = Math.abs(cents);
+    const dollars = Math.floor(abs / 100);
+    const remainder = abs % 100;
+    const sign = cents < 0 ? '-' : '';
+    if (remainder === 0) return `${sign}$${dollars}`;
+    return `${sign}$${dollars}.${remainder.toString().padStart(2, '0')}`;
+  };
+
   const bestTeamsQuery = useQuery<BestTeamsResponse, Error>({
     queryKey: queryKeys.hallOfFame.bestTeams(200),
     staleTime: 30_000,
@@ -278,7 +288,7 @@ export const HallOfFamePage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-2">Best Careers</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Careers ranked by average finish percentile (normalized for year size). Entry names are treated as unique humans.
+            Careers ranked by average winnings per year (not shown). Tie breaks: wins, podiums, in the moneys, then top 10s.
           </p>
 
           {bestCareersQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best careers...</div>}
@@ -296,12 +306,13 @@ export const HallOfFamePage: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"># Entries</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Finish Percentile</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wins</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Top 3s</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Top 6s</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Years</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best Finish</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wins</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Podiums</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In the Moneys</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Top 10s</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Career Earnings</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -309,18 +320,13 @@ export const HallOfFamePage: React.FC = () => {
                     <tr key={`${c.entryName}-${idx}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{idx + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.entryName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.entryCount}</td>
-                      <td
-                        className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                          c.averageFinishPercent > 0.5 ? 'text-green-600' : c.averageFinishPercent < 0.5 ? 'text-red-600' : 'text-gray-500'
-                        }`}
-                      >
-                        {(c.averageFinishPercent * 100).toFixed(1)}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.wins}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.top3s}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.top6s}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.years}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.bestFinish}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.wins}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.podiums}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.inTheMoneys}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.top10s}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDollarsFromCents(c.careerEarningsCents)}</td>
                     </tr>
                   ))}
                 </tbody>

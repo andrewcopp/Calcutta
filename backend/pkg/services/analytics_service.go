@@ -133,13 +133,14 @@ type EntryLeaderboardResult struct {
 }
 
 type CareerLeaderboardResult struct {
-	EntryName            string
-	EntryCount           int
-	AverageFinishPercent float64
-	Wins                 int
-	Top3s                int
-	Top6s                int
-	BestFinish           int
+	EntryName           string
+	Years               int
+	BestFinish          int
+	Wins                int
+	Podiums             int
+	InTheMoneys         int
+	Top10s              int
+	CareerEarningsCents int
 }
 
 type AnalyticsResult struct {
@@ -212,13 +213,14 @@ func (s *AnalyticsService) GetBestCareers(ctx context.Context, limit int) ([]Car
 	results := make([]CareerLeaderboardResult, 0, len(data))
 	for _, d := range data {
 		results = append(results, CareerLeaderboardResult{
-			EntryName:            d.EntryName,
-			EntryCount:           d.EntryCount,
-			AverageFinishPercent: d.AverageFinishPercent,
-			Wins:                 d.Wins,
-			Top3s:                d.Top3s,
-			Top6s:                d.Top6s,
-			BestFinish:           d.BestFinish,
+			EntryName:           d.EntryName,
+			Years:               d.Years,
+			BestFinish:          d.BestFinish,
+			Wins:                d.Wins,
+			Podiums:             d.Podiums,
+			InTheMoneys:         d.InTheMoneys,
+			Top10s:              d.Top10s,
+			CareerEarningsCents: d.CareerEarningsCents,
 		})
 	}
 
