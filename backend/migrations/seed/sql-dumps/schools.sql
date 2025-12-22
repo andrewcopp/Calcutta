@@ -1,4 +1,4 @@
--- Generated on: 2025-12-22 00:50:30
+-- Generated on: 2025-12-22 01:32:36
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -411,7 +411,6 @@ INSERT INTO public.schools VALUES ('dc7357fb-c7e0-4d22-b4dc-76d1971a5d71', 'McNe
 INSERT INTO public.schools VALUES ('f497de09-07b0-42cc-8b1c-14bdef831e86', 'Miami', '2025-12-19 16:30:30.375155+00', '2025-12-19 16:30:30.375155+00', NULL);
 INSERT INTO public.schools VALUES ('0620f637-f9fa-4c15-91bf-c84f5810a061', 'Middle Tennessee State', '2025-12-19 16:30:30.37659+00', '2025-12-19 16:30:30.37659+00', NULL);
 INSERT INTO public.schools VALUES ('08e30bde-e6ef-4c47-846b-fbf66d9f2504', 'Nebraska Omaha', '2025-12-19 16:30:30.381267+00', '2025-12-19 16:30:30.381267+00', NULL);
-INSERT INTO public.schools VALUES ('d38c95be-156f-407a-bec7-c73a95107daa', 'North Carolina State', '2025-12-19 16:30:30.385275+00', '2025-12-19 16:30:30.385275+00', NULL);
 INSERT INTO public.schools VALUES ('df0eff33-bf53-4831-8102-a6fb82296987', 'Ole Miss', '2025-12-19 16:30:30.391148+00', '2025-12-19 16:30:30.391148+00', NULL);
 INSERT INTO public.schools VALUES ('402ab9df-f5a3-422c-8112-00285cc87338', 'Penn', '2025-12-19 16:30:30.393093+00', '2025-12-19 16:30:30.393093+00', NULL);
 INSERT INTO public.schools VALUES ('8e33c2e9-82e7-4331-b6dc-83d4f359e981', 'Prairie View A&M', '2025-12-19 16:30:30.395054+00', '2025-12-19 16:30:30.395054+00', NULL);
@@ -436,9 +435,10 @@ INSERT INTO public.schools VALUES ('3e254fd4-211b-4bc9-a61a-e0f81e15408c', 'USC 
 INSERT INTO public.schools VALUES ('6f14f932-d789-4925-b53a-e6f410a5711d', 'VCU', '2025-12-19 16:30:30.434794+00', '2025-12-19 16:30:30.434794+00', NULL);
 INSERT INTO public.schools VALUES ('d12a9cff-e3a1-4d72-b9a0-97eec62b68c1', 'Wisconsin Green Bay', '2025-12-19 16:30:30.443282+00', '2025-12-19 16:30:30.443282+00', NULL);
 INSERT INTO public.schools VALUES ('7d42afe8-8d20-43c7-9286-00e2f365f079', 'Wisconsin Milwaukee', '2025-12-19 16:30:30.444074+00', '2025-12-19 16:30:30.444074+00', NULL);
+INSERT INTO public.schools VALUES ('d38c95be-156f-407a-bec7-c73a95107daa', 'North Carolina State', '2025-12-19 16:30:30.385275+00', '2025-12-19 16:30:30.385275+00', '2025-12-22 07:12:34.904707+00');
 
 
 -- PostgreSQL database dump complete
 
-\unrestrict FDysYg93BNpzqlTqfPwbw4SpBR3IvjT479NUHKaTdD2jrsem1hFQKgaetoq8Rg5
+\unrestrict qf6xzRtYULRBKxmJRQz0mEFPW5mgo8i2rHrUaKQ8Pq4ZZH9HX1wdMEElgWfWW8C
 
