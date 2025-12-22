@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 )
 
@@ -21,6 +22,23 @@ type simulatedLine struct {
 	Ownership      float64
 	TeamPoints     float64
 	RealizedPoints float64
+}
+
+type predictedLine struct {
+	SchoolName     string
+	Seed           int
+	Region         string
+	BaseMarketBid  float64
+	PredPoints     float64
+	RecommendedBid int
+	OwnershipAfter float64
+	PredInvestment float64
+	PredReturn     float64
+	PredROI        float64
+	MinBidReturn   float64
+	MinBidROI      float64
+	MaxBidReturn   float64
+	MaxBidROI      float64
 }
 
 func ordinal(n int) string {
@@ -49,12 +67,30 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 			return err
 		}
 
-		simRows, _, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid, predModel, sigma)
+		datasetRows, err := queryTeamDataset(ctx, db, 0, calcuttaID, excludeEntryName)
 		if err != nil {
 			return err
 		}
 
-		datasetRows, err := queryTeamDataset(ctx, db, 0, calcuttaID, excludeEntryName)
+		predPointsByTeam, err := predictedPointsByTeam(ctx, db, calcuttaID, datasetRows, trainYears, predModel, sigma)
+		if err != nil {
+			return err
+		}
+
+		predPointsVec := make([]float64, 0, len(datasetRows))
+		baseBidsVec := make([]float64, 0, len(datasetRows))
+		teamIDs := make([]string, 0, len(datasetRows))
+		for _, r := range datasetRows {
+			baseBid := r.TotalCommunityBid
+			if excludeEntryName != "" {
+				baseBid = r.TotalCommunityBidExcl
+			}
+			teamIDs = append(teamIDs, r.TeamID)
+			predPointsVec = append(predPointsVec, predPointsByTeam[r.TeamID])
+			baseBidsVec = append(baseBidsVec, baseBid)
+		}
+
+		bidsVec, _, err := dpAllocateBids(predPointsVec, baseBidsVec, budget, minTeams, maxTeams, minBid, maxBid)
 		if err != nil {
 			return err
 		}
@@ -71,14 +107,17 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 		}
 
 		botBid := map[string]float64{}
-		for _, r := range simRows {
-			botBid[r.TeamID] = float64(r.RecommendedBid)
+		for i, teamID := range teamIDs {
+			botBid[teamID] = float64(bidsVec[i])
 		}
 
-		lines := make([]simulatedLine, 0, len(simRows))
-		for _, r := range simRows {
+		lines := make([]simulatedLine, 0)
+		for _, r := range datasetRows {
+			bid := botBid[r.TeamID]
+			if bid <= 0 {
+				continue
+			}
 			base := teamBaseBid[r.TeamID]
-			bid := float64(r.RecommendedBid)
 			den := base + bid
 			own := 0.0
 			if den > 0 {
@@ -89,7 +128,7 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 			lines = append(lines, simulatedLine{
 				SchoolName:     r.SchoolName,
 				Seed:           r.Seed,
-				Bid:            r.RecommendedBid,
+				Bid:            int(math.Round(bid)),
 				Ownership:      own,
 				TeamPoints:     tp,
 				RealizedPoints: realized,
@@ -101,6 +140,73 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 				return lines[i].SchoolName < lines[j].SchoolName
 			}
 			return lines[i].Bid > lines[j].Bid
+		})
+
+		predLines := make([]predictedLine, 0, len(datasetRows))
+		for _, r := range datasetRows {
+			base := teamBaseBid[r.TeamID]
+			predPts := predPointsByTeam[r.TeamID]
+			bid := botBid[r.TeamID]
+			den := base + bid
+			own := 0.0
+			if den > 0 {
+				own = bid / den
+			}
+			predReturn := predPts * own
+			predInvestment := bid
+			predROI := 0.0
+			if bid > 0 && den > 0 {
+				predROI = predReturn / bid
+			}
+
+			minDen := base + float64(minBid)
+			minOwn := 0.0
+			if minDen > 0 {
+				minOwn = float64(minBid) / minDen
+			}
+			minRet := predPts * minOwn
+			minROI := 0.0
+			if minBid > 0 && minDen > 0 {
+				minROI = minRet / float64(minBid)
+			}
+
+			maxDen := base + float64(maxBid)
+			maxOwn := 0.0
+			if maxDen > 0 {
+				maxOwn = float64(maxBid) / maxDen
+			}
+			maxRet := predPts * maxOwn
+			maxROI := 0.0
+			if maxBid > 0 && maxDen > 0 {
+				maxROI = maxRet / float64(maxBid)
+			}
+
+			predLines = append(predLines, predictedLine{
+				SchoolName:     r.SchoolName,
+				Seed:           r.Seed,
+				Region:         r.Region,
+				BaseMarketBid:  base,
+				PredPoints:     predPts,
+				RecommendedBid: int(math.Round(bid)),
+				OwnershipAfter: own,
+				PredInvestment: predInvestment,
+				PredReturn:     predReturn,
+				PredROI:        predROI,
+				MinBidReturn:   minRet,
+				MinBidROI:      minROI,
+				MaxBidReturn:   maxRet,
+				MaxBidROI:      maxROI,
+			})
+		}
+
+		sort.Slice(predLines, func(i, j int) bool {
+			if predLines[i].Seed != predLines[j].Seed {
+				return predLines[i].Seed < predLines[j].Seed
+			}
+			if predLines[i].RecommendedBid != predLines[j].RecommendedBid {
+				return predLines[i].RecommendedBid > predLines[j].RecommendedBid
+			}
+			return predLines[i].SchoolName < predLines[j].SchoolName
 		})
 
 		bids, err := queryEntryBids(ctx, db, calcuttaID, excludeEntryName)
@@ -149,9 +255,40 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 		}
 
 		fmt.Fprintf(w, "## %d\n\n", y)
-		fmt.Fprintf(w, "Simulated entry (budget=%d, teams=%d):\n\n", budget, len(lines))
+		fmt.Fprintf(w, "Simulated entry (pred_model=%s, sigma=%.2f, budget=%d, teams=%d):\n\n", predModel, sigma, budget, len(lines))
+		fmt.Fprintln(w, "How the simulated entry is computed:")
+		fmt.Fprintln(w, "")
+		fmt.Fprintf(w, "We estimate each team’s expected points (PredPoints). For a hypothetical bid x against the market’s existing investment (BaseMarketBid), we model our ownership as x/(BaseMarketBid+x), so the expected points we get from that team is PredPoints * x/(BaseMarketBid+x).\n\n")
+		fmt.Fprintf(w, "The optimizer chooses bids (integer dollars) to maximize the sum of expected points across teams, subject to: total budget=%d, team count in [%d,%d], per-team bid in [%d,%d].\n\n", budget, minTeams, maxTeams, minBid, maxBid)
+		fmt.Fprintln(w, "Recommended bids (teams we actually invest in):")
+		fmt.Fprintln(w, "")
 		for i, r := range lines {
 			fmt.Fprintf(w, "%d. %s (%d-seed) — bid=%d, own=%.2f%%, team_points=%.0f, realized=%.2f\n", i+1, r.SchoolName, r.Seed, r.Bid, r.Ownership*100, r.TeamPoints, r.RealizedPoints)
+		}
+		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "Per-team predicted economics (all teams in the field):")
+		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "seed | team | region | base_market_bid | pred_points | bid | pred_investment | ownership_after | pred_return | pred_roi | return@min_bid | roi@min_bid | return@max_bid | roi@max_bid")
+		fmt.Fprintln(w, "--- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---:")
+		for _, pl := range predLines {
+			fmt.Fprintf(
+				w,
+				"%d | %s | %s | %.0f | %.2f | %d | %.0f | %.2f%% | %.2f | %.4f | %.2f | %.4f | %.2f | %.4f\n",
+				pl.Seed,
+				pl.SchoolName,
+				pl.Region,
+				pl.BaseMarketBid,
+				pl.PredPoints,
+				pl.RecommendedBid,
+				pl.PredInvestment,
+				pl.OwnershipAfter*100,
+				pl.PredReturn,
+				pl.PredROI,
+				pl.MinBidReturn,
+				pl.MinBidROI,
+				pl.MaxBidReturn,
+				pl.MaxBidROI,
+			)
 		}
 		fmt.Fprintf(w, "\nWe would have finished %s place (%d/%d), scoring %.4f points.\n\n", ordinal(rank), rank, len(results), botPoints)
 
