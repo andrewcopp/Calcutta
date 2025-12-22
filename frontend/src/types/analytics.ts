@@ -46,6 +46,57 @@ export interface SeedVarianceAnalytics {
   varianceRatio: number;
 }
 
+export interface SeedInvestmentPoint {
+  seed: number;
+  tournamentName: string;
+  tournamentYear: number;
+  calcuttaId: string;
+  teamId: string;
+  schoolName: string;
+  totalBid: number;
+  calcuttaTotalBid: number;
+  normalizedBid: number;
+}
+
+export interface SeedInvestmentSummary {
+  seed: number;
+  count: number;
+  mean: number;
+  stdDev: number;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+}
+
+export interface SeedInvestmentDistributionResponse {
+  points: SeedInvestmentPoint[];
+  summaries: SeedInvestmentSummary[];
+}
+
+export interface BestInvestment {
+  tournamentName: string;
+  tournamentYear: number;
+  calcuttaId: string;
+  teamId: string;
+  schoolName: string;
+  seed: number;
+  region: string;
+  teamPoints: number;
+  totalBid: number;
+  calcuttaTotalBid: number;
+  calcuttaTotalPoints: number;
+  investmentShare: number;
+  pointsShare: number;
+  rawROI: number;
+  normalizedROI: number;
+}
+
+export interface BestInvestmentsResponse {
+  investments: BestInvestment[];
+}
+
 export interface AnalyticsResponse {
   seedAnalytics?: SeedAnalytics[];
   regionAnalytics?: RegionAnalytics[];

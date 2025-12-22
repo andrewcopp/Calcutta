@@ -48,6 +48,128 @@ type SeedVarianceAnalytics struct {
 	VarianceRatio    float64 `json:"varianceRatio"`
 }
 
+type SeedInvestmentPoint struct {
+	Seed             int     `json:"seed"`
+	TournamentName   string  `json:"tournamentName"`
+	TournamentYear   int     `json:"tournamentYear"`
+	CalcuttaID       string  `json:"calcuttaId"`
+	TeamID           string  `json:"teamId"`
+	SchoolName       string  `json:"schoolName"`
+	TotalBid         float64 `json:"totalBid"`
+	CalcuttaTotalBid float64 `json:"calcuttaTotalBid"`
+	NormalizedBid    float64 `json:"normalizedBid"`
+}
+
+type SeedInvestmentSummary struct {
+	Seed   int     `json:"seed"`
+	Count  int     `json:"count"`
+	Mean   float64 `json:"mean"`
+	StdDev float64 `json:"stdDev"`
+	Min    float64 `json:"min"`
+	Q1     float64 `json:"q1"`
+	Median float64 `json:"median"`
+	Q3     float64 `json:"q3"`
+	Max    float64 `json:"max"`
+}
+
+type SeedInvestmentDistributionResponse struct {
+	Points    []SeedInvestmentPoint   `json:"points"`
+	Summaries []SeedInvestmentSummary `json:"summaries"`
+}
+
+type BestTeam struct {
+	TournamentName   string  `json:"tournamentName"`
+	TournamentYear   int     `json:"tournamentYear"`
+	CalcuttaID       string  `json:"calcuttaId"`
+	TeamID           string  `json:"teamId"`
+	SchoolName       string  `json:"schoolName"`
+	Seed             int     `json:"seed"`
+	Region           string  `json:"region"`
+	TeamPoints       float64 `json:"teamPoints"`
+	TotalBid         float64 `json:"totalBid"`
+	CalcuttaTotalBid float64 `json:"calcuttaTotalBid"`
+	CalcuttaTotalPts float64 `json:"calcuttaTotalPoints"`
+	InvestmentShare  float64 `json:"investmentShare"`
+	PointsShare      float64 `json:"pointsShare"`
+	RawROI           float64 `json:"rawROI"`
+	NormalizedROI    float64 `json:"normalizedROI"`
+}
+
+type BestTeamsResponse struct {
+	Teams []BestTeam `json:"teams"`
+}
+
+type BestInvestment struct {
+	TournamentName   string  `json:"tournamentName"`
+	TournamentYear   int     `json:"tournamentYear"`
+	CalcuttaID       string  `json:"calcuttaId"`
+	TeamID           string  `json:"teamId"`
+	SchoolName       string  `json:"schoolName"`
+	Seed             int     `json:"seed"`
+	Region           string  `json:"region"`
+	TeamPoints       float64 `json:"teamPoints"`
+	TotalBid         float64 `json:"totalBid"`
+	CalcuttaTotalBid float64 `json:"calcuttaTotalBid"`
+	CalcuttaTotalPts float64 `json:"calcuttaTotalPoints"`
+	InvestmentShare  float64 `json:"investmentShare"`
+	PointsShare      float64 `json:"pointsShare"`
+	RawROI           float64 `json:"rawROI"`
+	NormalizedROI    float64 `json:"normalizedROI"`
+}
+
+type BestInvestmentsResponse struct {
+	Investments []BestInvestment `json:"investments"`
+}
+
+type InvestmentLeaderboardRow struct {
+	TournamentName      string  `json:"tournamentName"`
+	TournamentYear      int     `json:"tournamentYear"`
+	CalcuttaID          string  `json:"calcuttaId"`
+	EntryID             string  `json:"entryId"`
+	EntryName           string  `json:"entryName"`
+	TeamID              string  `json:"teamId"`
+	SchoolName          string  `json:"schoolName"`
+	Seed                int     `json:"seed"`
+	Investment          float64 `json:"investment"`
+	OwnershipPercentage float64 `json:"ownershipPercentage"`
+	RawReturns          float64 `json:"rawReturns"`
+	NormalizedReturns   float64 `json:"normalizedReturns"`
+}
+
+type InvestmentLeaderboardResponse struct {
+	Investments []InvestmentLeaderboardRow `json:"investments"`
+}
+
+type EntryLeaderboardRow struct {
+	TournamentName    string  `json:"tournamentName"`
+	TournamentYear    int     `json:"tournamentYear"`
+	CalcuttaID        string  `json:"calcuttaId"`
+	EntryID           string  `json:"entryId"`
+	EntryName         string  `json:"entryName"`
+	TotalReturns      float64 `json:"totalReturns"`
+	TotalParticipants int     `json:"totalParticipants"`
+	AverageReturns    float64 `json:"averageReturns"`
+	NormalizedReturns float64 `json:"normalizedReturns"`
+}
+
+type EntryLeaderboardResponse struct {
+	Entries []EntryLeaderboardRow `json:"entries"`
+}
+
+type CareerLeaderboardRow struct {
+	EntryName            string  `json:"entryName"`
+	EntryCount           int     `json:"entryCount"`
+	AverageFinishPercent float64 `json:"averageFinishPercent"`
+	Wins                 int     `json:"wins"`
+	Top3s                int     `json:"top3s"`
+	Top6s                int     `json:"top6s"`
+	BestFinish           int     `json:"bestFinish"`
+}
+
+type CareerLeaderboardResponse struct {
+	Careers []CareerLeaderboardRow `json:"careers"`
+}
+
 type AnalyticsResponse struct {
 	SeedAnalytics         []SeedAnalytics         `json:"seedAnalytics,omitempty"`
 	RegionAnalytics       []RegionAnalytics       `json:"regionAnalytics,omitempty"`

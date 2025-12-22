@@ -11,6 +11,7 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerPortfolioRoutes(r)
 	s.registerCalcuttaRoutes(r)
 	s.registerAnalyticsRoutes(r)
+	s.registerHallOfFameRoutes(r)
 }
 
 func (s *Server) registerBasicRoutes(r *mux.Router) {
@@ -68,4 +69,14 @@ func (s *Server) registerAnalyticsRoutes(r *mux.Router) {
 	r.HandleFunc("/api/analytics/regions", s.regionAnalyticsHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/teams", s.teamAnalyticsHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/variance", s.seedVarianceAnalyticsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/seed-investment-distribution", s.seedInvestmentDistributionHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/best-investments", s.bestInvestmentsHandler).Methods("GET", "OPTIONS")
+}
+
+func (s *Server) registerHallOfFameRoutes(r *mux.Router) {
+	// Hall of Fame
+	r.HandleFunc("/api/hall-of-fame/best-teams", s.hofBestTeamsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/hall-of-fame/best-investments", s.hofBestInvestmentsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/hall-of-fame/best-entries", s.hofBestEntriesHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/hall-of-fame/best-careers", s.hofBestCareersHandler).Methods("GET", "OPTIONS")
 }

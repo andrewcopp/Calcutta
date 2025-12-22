@@ -22,6 +22,14 @@ export const AdminPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-2">Analytics</h2>
           <p className="text-gray-600">View historical trends and patterns across all calcuttas</p>
         </Link>
+
+        <Link 
+          to="/admin/hall-of-fame" 
+          className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+        >
+          <h2 className="text-xl font-semibold mb-2">Hall of Fame</h2>
+          <p className="text-gray-600">Leaderboards for best teams, investments, and entries across all years</p>
+        </Link>
       </div>
     </div>
   );

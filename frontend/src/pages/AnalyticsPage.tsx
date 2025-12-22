@@ -14,8 +14,10 @@ import {
   Cell,
   LineChart,
   Line,
+  ScatterChart,
+  Scatter,
 } from 'recharts';
-import { AnalyticsResponse } from '../types/analytics';
+import { AnalyticsResponse, SeedInvestmentDistributionResponse } from '../types/analytics';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
@@ -35,6 +37,12 @@ export const AnalyticsPage: React.FC = () => {
     queryKey: queryKeys.analytics.all(),
     staleTime: 30_000,
     queryFn: () => apiClient.get<AnalyticsResponse>('/analytics'),
+  });
+
+  const seedInvestmentDistributionQuery = useQuery({
+    queryKey: queryKeys.analytics.seedInvestmentDistribution(),
+    staleTime: 30_000,
+    queryFn: () => apiClient.get<SeedInvestmentDistributionResponse>('/analytics/seed-investment-distribution'),
   });
 
   if (analyticsQuery.isLoading) {
@@ -65,6 +73,8 @@ export const AnalyticsPage: React.FC = () => {
       </div>
     );
   }
+
+  const seedInvestmentDistribution = seedInvestmentDistributionQuery.data;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -481,6 +491,77 @@ export const AnalyticsPage: React.FC = () => {
 
       {activeTab === 'variance' && analytics.seedVarianceAnalytics && (
         <div className="space-y-6">
+          {seedInvestmentDistribution && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4">Investment Distribution by Seed (Normalized)</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Each dot is a team-season (e.g. 2021 Duke) showing total investment (sum of all bids on that team) normalized by total bids in that calcutta. Teams with neither a bye nor a win are excluded.
+              </p>
+
+              <ResponsiveContainer width="100%" height={420}>
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="seed" type="number" domain={[1, 16]} allowDecimals={false} />
+                  <YAxis dataKey="normalizedBid" type="number" />
+                  <Tooltip
+                    formatter={(value: number, name: string, props: any) => {
+                      if (name === 'normalizedBid') return [value.toFixed(4), 'Normalized Total Bid'];
+                      if (name === 'totalBid') return [`$${value.toFixed(2)}`, 'Total Bid'];
+                      if (name === 'calcuttaTotalBid') return [`$${value.toFixed(2)}`, 'Calcutta Total'];
+                      if (name === 'schoolName') return [String(value), 'Team'];
+                      if (name === 'tournamentYear') return [String(value), 'Year'];
+                      return [value, name];
+                    }}
+                    labelFormatter={(label: number) => `Seed ${label}`}
+                  />
+                  <Legend />
+                  <Scatter
+                    name="Normalized Bid"
+                    data={seedInvestmentDistribution.points}
+                    fill="#0088FE"
+                    opacity={0.35}
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-3">Per-Seed Summary (Box-Plot Stats)</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mean</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">StdDev</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Q1</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Median</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Q3</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {seedInvestmentDistribution.summaries.map((s) => (
+                        <tr key={s.seed}>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{s.seed}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.count}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.mean.toFixed(4)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.stdDev.toFixed(4)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.min.toFixed(4)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.q1.toFixed(4)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.median.toFixed(4)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.q3.toFixed(4)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{s.max.toFixed(4)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Investment Variance by Seed</h2>
             <p className="text-sm text-gray-600 mb-4">
@@ -490,7 +571,7 @@ export const AnalyticsPage: React.FC = () => {
               <BarChart data={analytics.seedVarianceAnalytics}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="seed" label={{ value: 'Seed', position: 'insideBottom', offset: -5 }} />
-                <YAxis label={{ value: 'Standard Deviation ($)', angle: -90, position: 'insideLeft' }} />
+                <YAxis label={{ value: 'Standard Deviation (Normalized Bid)', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="investmentStdDev" fill="#0088FE" name="Investment StdDev" />
@@ -526,13 +607,13 @@ export const AnalyticsPage: React.FC = () => {
                       Seed
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Teams
+                      Data Points
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Avg Investment
+                      Avg Normalized Bid
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Investment StdDev
+                      Normalized Bid StdDev
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Investment CV
@@ -561,10 +642,10 @@ export const AnalyticsPage: React.FC = () => {
                         {variance.teamCount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${variance.investmentMean.toFixed(2)}
+                        {variance.investmentMean.toFixed(4)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${variance.investmentStdDev.toFixed(2)}
+                        {variance.investmentStdDev.toFixed(4)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {variance.investmentCV.toFixed(3)}
@@ -601,6 +682,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

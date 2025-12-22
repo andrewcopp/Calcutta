@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"log"
+	"math"
+	"sort"
 )
 
 type AnalyticsService struct {
@@ -61,6 +63,85 @@ type SeedVarianceResult struct {
 	VarianceRatio    float64
 }
 
+type SeedInvestmentPointResult struct {
+	Seed             int
+	TournamentName   string
+	TournamentYear   int
+	CalcuttaID       string
+	TeamID           string
+	SchoolName       string
+	TotalBid         float64
+	CalcuttaTotalBid float64
+	NormalizedBid    float64
+}
+
+type SeedInvestmentSummaryResult struct {
+	Seed   int
+	Count  int
+	Mean   float64
+	StdDev float64
+	Min    float64
+	Q1     float64
+	Median float64
+	Q3     float64
+	Max    float64
+}
+
+type BestInvestmentResult struct {
+	TournamentName   string
+	TournamentYear   int
+	CalcuttaID       string
+	TeamID           string
+	SchoolName       string
+	Seed             int
+	Region           string
+	TeamPoints       float64
+	TotalBid         float64
+	CalcuttaTotalBid float64
+	CalcuttaTotalPts float64
+	InvestmentShare  float64
+	PointsShare      float64
+	RawROI           float64
+	NormalizedROI    float64
+}
+
+type InvestmentLeaderboardResult struct {
+	TournamentName      string
+	TournamentYear      int
+	CalcuttaID          string
+	EntryID             string
+	EntryName           string
+	TeamID              string
+	SchoolName          string
+	Seed                int
+	Investment          float64
+	OwnershipPercentage float64
+	RawReturns          float64
+	NormalizedReturns   float64
+}
+
+type EntryLeaderboardResult struct {
+	TournamentName    string
+	TournamentYear    int
+	CalcuttaID        string
+	EntryID           string
+	EntryName         string
+	TotalReturns      float64
+	TotalParticipants int
+	AverageReturns    float64
+	NormalizedReturns float64
+}
+
+type CareerLeaderboardResult struct {
+	EntryName            string
+	EntryCount           int
+	AverageFinishPercent float64
+	Wins                 int
+	Top3s                int
+	Top6s                int
+	BestFinish           int
+}
+
 type AnalyticsResult struct {
 	SeedAnalytics         []SeedAnalyticsResult
 	RegionAnalytics       []RegionAnalyticsResult
@@ -69,6 +150,256 @@ type AnalyticsResult struct {
 	TotalPoints           float64
 	TotalInvestment       float64
 	BaselineROI           float64
+}
+
+type SeedInvestmentDistributionResult struct {
+	Points    []SeedInvestmentPointResult
+	Summaries []SeedInvestmentSummaryResult
+}
+
+func (s *AnalyticsService) GetBestInvestments(ctx context.Context, limit int) ([]BestInvestmentResult, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	data, err := s.repo.GetBestInvestments(ctx, limit)
+	if err != nil {
+		log.Printf("Error getting best investments: %v", err)
+		return nil, err
+	}
+
+	results := make([]BestInvestmentResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, BestInvestmentResult{
+			TournamentName:   d.TournamentName,
+			TournamentYear:   d.TournamentYear,
+			CalcuttaID:       d.CalcuttaID,
+			TeamID:           d.TeamID,
+			SchoolName:       d.SchoolName,
+			Seed:             d.Seed,
+			Region:           d.Region,
+			TeamPoints:       d.TeamPoints,
+			TotalBid:         d.TotalBid,
+			CalcuttaTotalBid: d.CalcuttaTotalBid,
+			CalcuttaTotalPts: d.CalcuttaTotalPts,
+			InvestmentShare:  d.InvestmentShare,
+			PointsShare:      d.PointsShare,
+			RawROI:           d.RawROI,
+			NormalizedROI:    d.NormalizedROI,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *AnalyticsService) GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardResult, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	data, err := s.repo.GetBestCareers(ctx, limit)
+	if err != nil {
+		log.Printf("Error getting best careers: %v", err)
+		return nil, err
+	}
+
+	results := make([]CareerLeaderboardResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, CareerLeaderboardResult{
+			EntryName:            d.EntryName,
+			EntryCount:           d.EntryCount,
+			AverageFinishPercent: d.AverageFinishPercent,
+			Wins:                 d.Wins,
+			Top3s:                d.Top3s,
+			Top6s:                d.Top6s,
+			BestFinish:           d.BestFinish,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *AnalyticsService) GetBestInvestmentBids(ctx context.Context, limit int) ([]InvestmentLeaderboardResult, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	data, err := s.repo.GetBestInvestmentBids(ctx, limit)
+	if err != nil {
+		log.Printf("Error getting best investment bids: %v", err)
+		return nil, err
+	}
+
+	results := make([]InvestmentLeaderboardResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, InvestmentLeaderboardResult{
+			TournamentName:      d.TournamentName,
+			TournamentYear:      d.TournamentYear,
+			CalcuttaID:          d.CalcuttaID,
+			EntryID:             d.EntryID,
+			EntryName:           d.EntryName,
+			TeamID:              d.TeamID,
+			SchoolName:          d.SchoolName,
+			Seed:                d.Seed,
+			Investment:          d.Investment,
+			OwnershipPercentage: d.OwnershipPercentage,
+			RawReturns:          d.RawReturns,
+			NormalizedReturns:   d.NormalizedReturns,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *AnalyticsService) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderboardResult, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	data, err := s.repo.GetBestEntries(ctx, limit)
+	if err != nil {
+		log.Printf("Error getting best entries: %v", err)
+		return nil, err
+	}
+
+	results := make([]EntryLeaderboardResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, EntryLeaderboardResult{
+			TournamentName:    d.TournamentName,
+			TournamentYear:    d.TournamentYear,
+			CalcuttaID:        d.CalcuttaID,
+			EntryID:           d.EntryID,
+			EntryName:         d.EntryName,
+			TotalReturns:      d.TotalReturns,
+			TotalParticipants: d.TotalParticipants,
+			AverageReturns:    d.AverageReturns,
+			NormalizedReturns: d.NormalizedReturns,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *AnalyticsService) GetSeedInvestmentDistribution(ctx context.Context) (*SeedInvestmentDistributionResult, error) {
+	data, err := s.repo.GetSeedInvestmentPoints(ctx)
+	if err != nil {
+		log.Printf("Error getting seed investment points: %v", err)
+		return nil, err
+	}
+
+	points := make([]SeedInvestmentPointResult, 0, len(data))
+	bySeed := map[int][]float64{}
+
+	for _, d := range data {
+		points = append(points, SeedInvestmentPointResult{
+			Seed:             d.Seed,
+			TournamentName:   d.TournamentName,
+			TournamentYear:   d.TournamentYear,
+			CalcuttaID:       d.CalcuttaID,
+			TeamID:           d.TeamID,
+			SchoolName:       d.SchoolName,
+			TotalBid:         d.TotalBid,
+			CalcuttaTotalBid: d.CalcuttaTotalBid,
+			NormalizedBid:    d.NormalizedBid,
+		})
+
+		bySeed[d.Seed] = append(bySeed[d.Seed], d.NormalizedBid)
+	}
+
+	seeds := make([]int, 0, len(bySeed))
+	for seed := range bySeed {
+		seeds = append(seeds, seed)
+	}
+	sort.Ints(seeds)
+
+	summaries := make([]SeedInvestmentSummaryResult, 0, len(seeds))
+	for _, seed := range seeds {
+		values := bySeed[seed]
+		sort.Float64s(values)
+
+		count := len(values)
+		if count == 0 {
+			continue
+		}
+
+		mean := meanFloat64(values)
+		stddev := stddevFloat64(values, mean)
+
+		summaries = append(summaries, SeedInvestmentSummaryResult{
+			Seed:   seed,
+			Count:  count,
+			Mean:   mean,
+			StdDev: stddev,
+			Min:    values[0],
+			Q1:     quantileSorted(values, 0.25),
+			Median: quantileSorted(values, 0.50),
+			Q3:     quantileSorted(values, 0.75),
+			Max:    values[count-1],
+		})
+	}
+
+	return &SeedInvestmentDistributionResult{Points: points, Summaries: summaries}, nil
+}
+
+func meanFloat64(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+
+	var sum float64
+	for _, v := range values {
+		sum += v
+	}
+	return sum / float64(len(values))
+}
+
+func stddevFloat64(values []float64, mean float64) float64 {
+	if len(values) < 2 {
+		return 0
+	}
+
+	var sumSquares float64
+	for _, v := range values {
+		d := v - mean
+		sumSquares += d * d
+	}
+
+	return math.Sqrt(sumSquares / float64(len(values)-1))
+}
+
+func quantileSorted(sortedValues []float64, q float64) float64 {
+	n := len(sortedValues)
+	if n == 0 {
+		return 0
+	}
+	if q <= 0 {
+		return sortedValues[0]
+	}
+	if q >= 1 {
+		return sortedValues[n-1]
+	}
+
+	pos := q * float64(n-1)
+	lo := int(math.Floor(pos))
+	hi := int(math.Ceil(pos))
+	if lo == hi {
+		return sortedValues[lo]
+	}
+
+	w := pos - float64(lo)
+	return sortedValues[lo]*(1-w) + sortedValues[hi]*w
 }
 
 func (s *AnalyticsService) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, float64, float64, error) {
