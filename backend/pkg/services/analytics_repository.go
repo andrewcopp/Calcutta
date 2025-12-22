@@ -330,17 +330,36 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 				)::int as payout_cents
 			FROM payout_calc pc
 		),
+		per_calcutta AS (
+			SELECT
+				entry_name,
+				calcutta_id,
+				MIN(finish_position)::int as finish_position,
+				SUM(payout_cents)::int as payout_cents
+			FROM entry_results
+			GROUP BY entry_name, calcutta_id
+		),
+		paid_positions AS (
+			SELECT
+				cp.calcutta_id,
+				MAX(cp.position)::int as max_paid_position
+			FROM calcutta_payouts cp
+			WHERE cp.deleted_at IS NULL
+				AND cp.amount_cents > 0
+			GROUP BY cp.calcutta_id
+		),
 		career_agg AS (
 			SELECT
 				entry_name,
-				COUNT(DISTINCT calcutta_id)::int as years,
+				COUNT(*)::int as years,
 				MIN(finish_position)::int as best_finish,
 				SUM(CASE WHEN finish_position = 1 THEN 1 ELSE 0 END)::int as wins,
 				SUM(CASE WHEN finish_position <= 3 THEN 1 ELSE 0 END)::int as podiums,
-				SUM(CASE WHEN payout_cents > 0 THEN 1 ELSE 0 END)::int as in_the_moneys,
+				SUM(CASE WHEN finish_position <= COALESCE(pp.max_paid_position, 0) THEN 1 ELSE 0 END)::int as in_the_moneys,
 				SUM(CASE WHEN finish_position <= 10 THEN 1 ELSE 0 END)::int as top_10s,
 				SUM(payout_cents)::int as career_earnings_cents
-			FROM entry_results
+			FROM per_calcutta pc
+			LEFT JOIN paid_positions pp ON pp.calcutta_id = pc.calcutta_id
 			GROUP BY entry_name
 		)
 		SELECT
