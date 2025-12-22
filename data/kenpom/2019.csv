@@ -1,0 +1,354 @@
+Rk,Team,Conf,NetRtg,ORtg,DRtg,AdjT
+1,Virginia 1,ACC,35.66,123.6,87.9,59.2
+2,Gonzaga 1,WCC,32.79,125.1,92.3,69.7
+3,Duke 1,ACC,31.99,120.1,88.1,72.2
+4,Michigan St. 2,B10,31.36,121.7,90.4,67.4
+5,Michigan 2,B10,29.44,115.5,86.1,64.4
+6,North Carolina 1,ACC,29.17,119.9,90.7,74.3
+7,Kentucky 2,SEC,27.42,118.2,90.8,65.8
+8,Tennessee 2,SEC,26.98,122.5,95.5,67.7
+9,Texas Tech 3,B12,26.75,112.7,86.0,66.5
+10,Purdue 3,B10,26.05,121.1,95.0,65.6
+11,Virginia Tech 4,ACC,24.47,118.4,94.0,63.2
+12,Wisconsin 5,B10,23.68,110.8,87.1,63.6
+13,Auburn 5,SEC,23.33,119.6,96.2,67.5
+14,Florida St. 4,ACC,22.56,113.0,90.4,68.2
+15,Houston 3,Amer,22.43,114.1,91.7,66.1
+16,Iowa St. 6,B12,21.85,119.0,97.2,67.6
+17,Louisville 7,ACC,20.97,113.4,92.4,67.1
+18,LSU 3,SEC,20.97,118.5,97.5,69.8
+19,Wofford 7,SC,20.72,118.4,97.6,65.6
+20,Kansas 4,B12,20.71,112.8,92.0,69.9
+21,Mississippi St. 5,SEC,20.68,117.4,96.7,67.4
+22,Buffalo 6,MAC,20.33,114.9,94.6,73.7
+23,Kansas St. 4,B12,20.22,108.0,87.7,63.0
+24,Maryland 6,B10,19.98,113.8,93.8,65.6
+25,Nevada 7,MWC,18.92,114.0,95.1,69.2
+26,Villanova 6,BE,18.77,117.0,98.2,63.6
+27,Marquette 5,BE,18.42,114.2,95.7,68.6
+28,Florida 10,SEC,18.33,110.2,91.9,62.7
+29,Clemson 2,ACC,17.94,108.7,90.7,65.9
+30,Texas 2,B12,17.89,114.1,96.2,64.2
+31,Saint Mary's 11,WCC,17.71,114.6,96.9,62.6
+32,Cincinnati 7,Amer,17.05,111.6,94.5,63.2
+33,N.C. State 2,ACC,16.70,112.7,96.0,70.7
+34,Utah St. 8,MWC,16.62,113.0,96.4,67.8
+35,Syracuse 8,ACC,16.30,110.2,93.9,66.0
+36,Iowa 10,B10,15.96,117.2,101.2,69.3
+37,VCU 8,A10,15.69,104.3,88.6,68.2
+38,Oklahoma 9,B12,15.54,109.4,93.9,68.6
+39,Nebraska 4,B10,15.53,112.6,97.1,66.2
+40,Penn St.,B10,15.42,109.5,94.1,67.5
+41,Baylor 9,B12,15.29,113.5,98.2,65.2
+42,Indiana 1,B10,15.29,110.1,94.8,66.4
+43,Oregon 12,P12,15.15,107.7,92.6,64.0
+44,Mississippi 8,SEC,15.09,112.8,97.7,68.3
+45,Ohio St. 11,B10,15.08,109.3,94.2,65.7
+46,UCF 9,Amer,14.58,110.3,95.7,64.8
+47,Minnesota 10,B10,14.46,110.7,96.2,67.4
+48,TCU 1,B12,14.17,110.4,96.2,68.7
+49,New Mexico St. 12,WAC,13.59,112.6,99.0,65.6
+50,Creighton 2,BE,13.50,113.3,99.8,68.3
+51,Washington 9,P12,13.37,107.0,93.6,65.8
+52,Murray St. 12,OVC,13.34,112.0,98.7,69.0
+53,Lipscomb 5,ASun,13.29,110.0,96.7,72.8
+54,Belmont 11,OVC,13.08,114.9,101.8,71.1
+55,Seton Hall 10,BE,12.91,109.3,96.4,68.9
+56,Furman 3,SC,12.63,108.8,96.2,66.4
+57,Arkansas 5,SEC,12.34,109.6,97.2,70.2
+58,Toledo 6,MAC,12.00,110.0,98.0,67.4
+59,Alabama 1,SEC,11.48,108.1,96.6,68.6
+60,Dayton 5,A10,11.48,111.5,100.1,64.4
+61,Arizona St. 11,P12,11.21,109.8,98.6,70.5
+62,Memphis 3,Amer,10.88,109.0,98.1,74.0
+63,Liberty 12,ASun,10.87,110.6,99.7,61.7
+64,Xavier 3,BE,10.43,110.8,100.4,64.8
+65,Colorado 4,P12,10.42,106.5,96.1,67.6
+66,San Francisco,WCC,9.96,111.7,101.8,66.4
+67,Providence 4,BE,9.95,105.0,95.0,67.6
+68,Butler 5,BE,9.92,110.8,100.9,65.9
+69,East Tennessee St.,SC,9.83,109.1,99.3,66.9
+70,Missouri,SEC,9.76,106.7,97.0,64.6
+71,Miami FL,ACC,9.69,109.9,100.2,66.8
+72,Fresno St.,MWC,9.68,108.2,98.5,67.7
+73,South Carolina,SEC,9.67,108.0,98.3,70.0
+74,Northwestern,B10,9.55,102.9,93.4,65.8
+75,UC Irvine 13,BW,9.46,106.6,97.2,65.1
+76,Temple 11,Amer,9.39,108.9,99.5,68.7
+77,Rutgers,B10,9.31,105.5,96.2,67.5
+78,St. John's 11,BE,8.75,109.7,100.9,70.5
+79,Northeastern 13,CAA,8.74,111.5,102.7,66.0
+80,Vermont 13,AE,8.71,108.0,99.2,65.3
+81,UNC Greensboro 1,SC,8.60,106.5,98.0,67.4
+82,Yale 14,Ivy,8.58,111.7,103.1,70.7
+83,Illinois,B10,8.51,109.1,100.6,70.4
+84,Davidson 4,A10,8.28,107.5,99.3,64.5
+85,Oregon St.,P12,7.89,111.2,103.3,65.5
+86,San Diego 6,WCC,7.89,106.0,98.1,66.8
+87,BYU,WCC,7.78,111.7,103.9,70.7
+88,USC,P12,7.65,109.2,101.6,69.4
+89,Oklahoma St.,B12,7.60,108.9,101.3,65.8
+90,Notre Dame,ACC,7.58,108.2,100.6,65.0
+91,Georgetown 3,BE,7.52,109.2,101.7,71.9
+92,Texas A&M,SEC,7.49,106.9,99.4,67.2
+93,Wichita St. 6,Amer,7.49,105.9,98.4,67.7
+94,Hofstra 7,CAA,7.47,116.3,108.8,67.2
+95,West Virginia,B12,7.26,109.1,101.8,70.1
+96,Utah Valley,WAC,7.17,109.0,101.8,68.3
+97,Pittsburgh,ACC,7.09,105.1,98.0,66.8
+98,South Dakota St. 7,Sum,7.09,112.1,105.0,70.8
+99,Arizona,P12,6.86,105.0,98.1,66.5
+100,Northern Kentucky 14,Horz,6.56,109.2,102.7,67.9
+101,Southern Miss,CUSA,6.42,106.5,100.1,64.6
+102,Georgia Southern,SB,6.40,108.4,102.0,73.0
+103,DePaul,BE,6.36,110.7,104.4,69.3
+104,Saint Louis 13,A10,6.27,102.6,96.3,66.0
+105,Grand Canyon,WAC,6.22,108.1,101.9,67.5
+106,Bowling Green,MAC,6.17,108.2,102.0,70.3
+107,Akron,MAC,6.09,99.8,93.7,66.0
+108,Connecticut,Amer,6.02,108.3,102.3,68.4
+109,Georgia Tech,ACC,5.91,101.8,95.9,66.6
+110,UCLA,P12,5.89,108.4,102.5,72.3
+111,Georgia St. 14,SB,5.60,107.9,102.3,69.8
+112,Old Dominion 14,CUSA,5.58,101.9,96.4,64.3
+113,Jacksonville St.,OVC,5.46,104.9,99.4,67.5
+114,Utah,P12,5.39,114.2,108.8,66.2
+115,Boston College,ACC,5.30,107.5,102.2,67.1
+116,Western Kentucky,CUSA,5.27,104.9,99.6,67.6
+117,SMU,Amer,5.18,112.0,106.8,64.8
+118,St. Bonaventure,A10,5.16,102.0,96.8,63.8
+119,Stanford,P12,5.12,103.3,98.2,69.8
+120,Charleston,CAA,5.05,108.3,103.3,65.2
+121,South Florida,Amer,5.04,102.3,97.3,67.0
+122,San Diego St.,MWC,5.04,103.7,98.7,66.5
+123,Central Michigan,MAC,4.89,110.3,105.4,70.8
+124,Harvard 6,Ivy,4.50,104.8,100.3,67.3
+125,Radford,BSth,4.45,108.7,104.2,64.3
+126,Texas St.,SB,4.37,102.1,97.7,65.0
+127,Wright St. 7,Horz,4.34,105.9,101.6,64.9
+128,Drake,MVC,4.32,107.0,102.7,69.0
+129,Colgate 15,Pat,4.29,110.0,105.7,66.3
+130,Penn,Ivy,4.28,104.0,99.7,66.7
+131,Tulsa,Amer,4.23,104.7,100.4,68.6
+132,Georgia,SEC,4.18,105.8,101.6,68.2
+133,Loyola Chicago 7,MVC,4.15,104.2,100.0,62.3
+134,Ball St.,MAC,4.08,102.3,98.2,70.1
+135,Austin Peay,OVC,3.91,110.6,106.7,68.8
+136,Northern Illinois,MAC,3.88,108.8,104.9,65.7
+137,Montana 15,BSky,3.55,107.4,103.8,66.5
+138,Loyola Marymount,WCC,3.42,103.6,100.2,62.7
+139,Boise St.,MWC,3.22,107.1,103.8,65.3
+140,Louisiana Monroe,SB,3.12,112.4,109.2,66.2
+141,Louisiana Tech,CUSA,2.96,104.7,101.7,65.2
+142,Kent St.,MAC,2.83,109.6,106.8,67.3
+143,Rhode Island,A10,2.68,103.8,101.1,67.4
+144,Samford,SC,2.22,106.6,104.3,69.0
+145,Abilene Christian 15,Slnd,2.09,103.6,101.5,66.0
+146,Brown,Ivy,1.90,98.7,96.8,70.8
+147,Bucknell,Pat,1.87,105.5,103.6,70.5
+148,UAB,CUSA,1.84,106.4,104.5,64.9
+149,Miami OH,MAC,1.78,104.7,102.9,66.1
+150,Southern Illinois,MVC,1.70,104.2,102.5,65.6
+151,UTSA,CUSA,1.66,105.7,104.1,71.9
+152,UT Arlington,SB,1.54,101.2,99.6,66.1
+153,Pepperdine,WCC,1.41,106.7,105.2,70.1
+154,Vanderbilt,SEC,0.79,102.0,101.2,67.1
+155,Eastern Michigan,MAC,0.75,103.4,102.6,62.7
+156,George Mason,A10,0.69,104.4,103.7,67.6
+157,North Texas,CUSA,0.51,99.5,99.0,65.1
+158,Charleston Southern,BSth,0.06,101.3,101.2,69.2
+159,Florida Atlantic,CUSA,-0.01,99.3,99.4,67.4
+160,UNLV,MWC,-0.14,105.9,106.0,67.3
+161,Marshall,CUSA,-0.15,107.9,108.1,73.8
+162,Coastal Carolina,SB,-0.15,104.8,104.9,69.3
+163,Wake Forest,ACC,-0.22,104.6,104.8,67.4
+164,Nebraska Omaha,Sum,-0.36,109.9,110.3,67.7
+165,Bradley 15,MVC,-0.36,100.9,101.3,65.0
+166,UT Rio Grande Valley,WAC,-0.37,99.3,99.6,70.1
+167,Gardner Webb 16,BSth,-0.74,107.5,108.2,67.1
+168,Stony Brook,AE,-0.78,99.1,99.9,68.9
+169,Lehigh,Pat,-0.79,108.6,109.4,71.4
+170,Duquesne,A10,-0.80,104.4,105.2,69.7
+171,UC Santa Barbara,BW,-0.80,105.1,105.9,64.5
+172,Sam Houston St. 8,Slnd,-0.88,105.9,106.8,66.0
+173,North Florida,ASun,-0.91,103.7,104.7,71.7
+174,Missouri St.,MVC,-0.92,102.9,103.8,65.3
+175,Princeton,Ivy,-1.01,98.7,99.7,67.4
+176,NJIT,ASun,-1.05,102.1,103.2,66.5
+177,Northern Iowa,MVC,-1.16,101.1,102.3,64.2
+178,Louisiana,SB,-1.18,106.5,107.7,71.9
+179,Winthrop,BSth,-1.20,106.4,107.6,72.5
+180,Colorado St.,MWC,-1.23,107.4,108.7,66.9
+181,Seattle,WAC,-1.42,100.7,102.2,67.1
+182,Ohio,MAC,-1.53,98.6,100.1,69.1
+183,New Mexico,MWC,-1.60,103.9,105.5,72.6
+184,Saint Joseph's,A10,-1.73,105.2,106.9,68.4
+185,Santa Clara,WCC,-1.85,101.8,103.6,66.1
+186,Campbell 8,BSth,-1.88,107.9,109.8,65.2
+187,Presbyterian,BSth,-1.94,109.1,111.0,67.6
+188,Oakland,Horz,-2.12,107.3,109.4,68.5
+189,Hartford,AE,-2.25,108.3,110.5,66.5
+190,Purdue Fort Wayne,Sum,-2.28,106.5,108.8,71.5
+191,Northern Colorado,BSky,-2.44,102.2,104.6,66.3
+192,Cal Baptist,WAC,-2.51,106.7,109.2,67.8
+193,Hampton,BSth,-2.56,107.5,110.0,70.8
+194,IUPUI,Horz,-2.56,103.9,106.4,68.4
+195,Mercer,SC,-2.60,103.5,106.1,66.6
+196,Hawaii,BW,-3.03,103.5,106.5,66.2
+197,Iona 16,MAAC,-3.13,106.5,109.6,70.5
+198,American,Pat,-3.14,101.8,104.9,66.4
+199,North Dakota St. 16,Sum,-3.20,106.6,109.8,64.8
+200,Illinois Chicago,Horz,-3.21,100.4,103.6,69.8
+201,Richmond,A10,-3.23,106.8,110.0,65.8
+202,FIU,CUSA,-3.25,101.9,105.1,77.4
+203,Cal St. Fullerton,BW,-3.44,98.9,102.3,69.7
+204,Illinois St.,MVC,-3.50,101.1,104.6,66.6
+205,Appalachian St.,SB,-3.61,105.9,109.5,71.4
+206,Green Bay,Horz,-3.62,102.8,106.5,73.5
+207,Indiana St.,MVC,-4.14,101.0,105.1,68.7
+208,Fairleigh Dickinson 16,NEC,-4.24,106.2,110.4,66.7
+209,Prairie View A&M 16,SWAC,-4.31,101.5,105.8,70.9
+210,Washington St.,P12,-4.31,105.9,110.2,70.4
+211,South Alabama,SB,-4.49,103.0,107.5,66.2
+212,Columbia,Ivy,-4.49,101.8,106.3,67.4
+213,Pacific,WCC,-4.49,99.8,104.3,64.9
+214,Texas Southern,SWAC,-4.50,104.0,108.5,74.5
+215,Rider,MAAC,-4.55,101.2,105.8,73.7
+216,Lamar,Slnd,-4.57,103.1,107.6,68.1
+217,Florida Gulf Coast,ASun,-4.62,101.3,105.9,67.8
+218,Cornell,Ivy,-4.63,99.0,103.7,67.5
+219,William & Mary,CAA,-4.65,103.3,108.0,68.5
+220,Dartmouth,Ivy,-4.66,103.3,108.0,65.7
+221,Valparaiso,MVC,-4.92,97.9,102.8,65.0
+222,Little Rock,SB,-4.94,99.7,104.7,70.2
+223,Long Beach St.,BW,-5.00,101.0,106.0,71.4
+224,Weber St.,BSky,-5.06,101.3,106.4,70.9
+225,Cal St. Bakersfield,WAC,-5.16,102.5,107.6,65.3
+226,La Salle,A10,-5.16,99.8,105.0,68.7
+227,Evansville,MVC,-5.37,99.3,104.7,69.3
+228,High Point,BSth,-5.52,99.1,104.7,63.5
+229,South Dakota,Sum,-5.70,100.3,106.0,66.7
+230,UMBC,AE,-5.76,95.9,101.7,64.8
+231,Southeastern Louisiana,Slnd,-5.90,99.3,105.2,65.1
+232,Boston University,Pat,-5.93,104.1,110.1,66.1
+233,UMKC,WAC,-6.14,100.9,107.1,66.1
+234,Massachusetts,A10,-6.17,102.7,108.9,67.1
+235,Quinnipiac,MAAC,-6.23,105.2,111.4,66.7
+236,Detroit,Horz,-6.46,106.1,112.5,68.4
+237,Eastern Kentucky,OVC,-6.57,99.3,105.8,76.4
+238,Eastern Washington,BSky,-6.57,100.9,107.5,67.6
+239,Sacred Heart,NEC,-6.71,104.1,110.8,71.8
+240,Holy Cross,Pat,-6.81,100.9,107.8,63.4
+241,Air Force,MWC,-6.84,100.4,107.3,66.4
+242,Army,Pat,-6.85,96.1,103.0,69.6
+243,Middle Tennessee,CUSA,-7.20,98.1,105.3,67.5
+244,California,P12,-7.20,102.9,110.1,66.4
+245,Drexel,CAA,-7.37,105.4,112.8,68.9
+246,Troy,SB,-7.40,102.8,110.2,66.8
+247,Rice,CUSA,-7.48,102.9,110.3,70.0
+248,UC Davis,BW,-7.49,96.2,103.7,65.7
+249,Jacksonville,ASun,-7.56,98.7,106.2,70.8
+250,The Citadel,SC,-7.59,106.6,114.2,73.5
+251,Western Michigan,MAC,-7.61,99.0,106.6,69.0
+252,Montana St.,BSky,-7.64,107.4,115.1,69.8
+253,New Orleans,Slnd,-7.68,97.0,104.7,68.1
+254,Arkansas St.,SB,-7.68,102.3,109.9,68.1
+255,Morehead St.,OVC,-7.71,102.2,109.9,67.0
+256,Fordham,A10,-7.84,96.5,104.3,65.0
+257,Chattanooga,SC,-7.84,101.5,109.3,66.0
+258,UMass Lowell,AE,-7.85,104.3,112.1,69.7
+259,Cal St. Northridge,BW,-7.97,104.4,112.4,70.4
+260,Delaware,CAA,-8.07,104.7,112.8,63.1
+261,St. Francis PA 8,NEC,-8.12,105.2,113.3,68.0
+262,LIU Brooklyn,NEC,-8.18,98.1,106.3,70.7
+263,Youngstown St.,Horz,-8.30,103.9,112.2,66.9
+264,Norfolk St. 8,MEAC,-8.40,97.5,105.9,69.1
+265,Siena,MAAC,-8.45,100.5,108.9,60.4
+266,Loyola MD,Pat,-8.72,101.5,110.2,68.3
+267,Robert Morris,NEC,-8.76,94.8,103.5,65.9
+268,North Dakota,Sum,-8.77,97.3,106.1,69.5
+269,East Carolina,Amer,-9.02,97.9,106.9,67.9
+270,UNC Wilmington,CAA,-9.04,105.3,114.3,69.1
+271,Western Carolina,SC,-9.21,101.7,110.9,69.3
+272,Grambling St.,SWAC,-9.42,94.6,104.1,69.6
+273,St. Francis NY,NEC,-9.49,95.7,105.2,68.2
+274,Marist,MAAC,-9.55,100.0,109.5,64.3
+275,Sacramento St.,BSky,-9.55,96.2,105.7,67.9
+276,Houston Baptist,Slnd,-9.62,102.8,112.5,73.7
+277,Albany,AE,-9.87,98.2,108.0,65.7
+278,James Madison,CAA,-9.87,100.9,110.8,65.0
+279,Navy,Pat,-9.90,97.1,107.0,66.8
+280,Southern Utah,BSky,-9.91,96.5,106.4,70.9
+281,Canisius,MAAC,-9.91,101.4,111.3,67.5
+282,Texas A&M Corpus Chris,Slnd,-9.94,94.5,104.4,64.7
+283,VMI,SC,-10.03,102.2,112.3,71.4
+284,Cleveland St.,Horz,-10.05,101.5,111.6,68.9
+285,North Alabama,ASun,-10.12,95.0,105.1,68.3
+286,Longwood,BSth,-10.19,96.3,106.5,66.9
+287,Portland St.,BSky,-10.38,101.5,111.9,68.9
+288,Towson,CAA,-10.49,100.1,110.5,63.3
+289,Tennessee Martin,OVC,-10.62,104.6,115.2,68.3
+290,George Washington,A10,-10.68,95.2,105.9,67.0
+291,Oral Roberts,Sum,-10.72,103.3,114.0,66.7
+292,Tulane,Amer,-10.77,96.5,107.3,69.6
+293,Monmouth,MAAC,-10.93,92.9,103.8,67.3
+294,Western Illinois,Sum,-10.97,97.3,108.3,67.1
+295,Tennessee St.,OVC,-11.07,98.4,109.5,69.3
+296,Central Arkansas,Slnd,-11.17,99.8,110.9,70.3
+297,Charlotte,CUSA,-11.17,95.4,106.6,64.3
+298,UTEP,CUSA,-11.22,89.9,101.1,67.8
+299,Lafayette,Pat,-11.28,101.4,112.6,68.7
+300,Milwaukee,Horz,-11.34,98.2,109.5,65.9
+301,Fairfield,MAAC,-11.53,95.7,107.3,67.6
+302,North Carolina A&T,MEAC,-11.58,96.3,107.9,65.5
+303,North Carolina Central 16,MEAC,-11.89,96.6,108.5,65.2
+304,Northern Arizona,BSky,-11.92,100.4,112.3,68.3
+305,Elon,CAA,-12.12,98.9,111.0,67.8
+306,Bethune Cookman,MEAC,-12.13,93.3,105.4,72.0
+307,Eastern Illinois,OVC,-12.23,99.5,111.8,66.7
+308,Howard,MEAC,-12.39,101.8,114.2,71.0
+309,Southeast Missouri St.,OVC,-12.46,97.4,109.8,67.4
+310,Nicholls St.,Slnd,-12.65,98.6,111.3,68.3
+311,Stephen F. Austin,Slnd,-12.75,95.3,108.1,68.6
+312,Denver,Sum,-13.13,99.7,112.8,67.0
+313,Wagner,NEC,-13.43,93.8,107.2,63.6
+314,Niagara,MAAC,-13.60,101.5,115.1,69.5
+315,Arkansas Pine Bluff,SWAC,-13.64,96.1,109.7,65.0
+316,Wyoming,MWC,-13.65,95.0,108.6,68.2
+317,Saint Peter's,MAAC,-13.68,94.3,108.0,63.0
+318,Florida A&M,MEAC,-14.27,89.0,103.2,64.7
+319,Jackson St.,SWAC,-14.84,89.8,104.6,64.9
+320,Central Connecticut,NEC,-14.87,97.0,111.9,68.9
+321,UC Riverside,BW,-14.95,98.1,113.0,63.1
+322,Tennessee Tech,OVC,-15.18,89.4,104.6,68.1
+323,Mount St. Mary's,NEC,-15.23,94.6,109.8,67.0
+324,Manhattan,MAAC,-15.26,89.3,104.6,61.6
+325,Bryant,NEC,-15.60,99.3,114.9,67.4
+326,Portland,WCC,-15.63,94.3,109.9,66.6
+327,Stetson,ASun,-15.78,97.5,113.3,68.7
+328,Idaho St.,BSky,-16.29,101.8,118.1,66.7
+329,Alabama St.,SWAC,-16.36,94.6,111.0,67.0
+330,SIU Edwardsville,OVC,-16.48,96.5,113.0,69.5
+331,McNeese St.,Slnd,-16.55,98.0,114.6,66.1
+332,Binghamton,AE,-16.75,95.9,112.6,65.7
+333,Cal Poly,BW,-17.79,96.8,114.6,66.0
+334,Morgan St.,MEAC,-18.04,92.5,110.5,71.9
+335,Southern,SWAC,-18.41,93.7,112.1,65.5
+336,USC Upstate,BSth,-18.54,92.8,111.3,67.9
+337,Maine,AE,-18.66,93.1,111.7,63.9
+338,South Carolina St.,MEAC,-18.82,97.9,116.7,66.8
+339,Kennesaw St.,ASun,-19.10,91.6,110.7,68.1
+340,Northwestern St.,Slnd,-19.73,89.9,109.6,68.4
+341,Savannah St.,MEAC,-19.77,96.2,116.0,74.7
+342,Coppin St.,MEAC,-20.56,88.5,109.1,70.0
+343,San Jose St.,MWC,-21.85,91.7,113.6,69.1
+344,Alabama A&M,SWAC,-22.66,86.5,109.1,65.5
+345,Incarnate Word,Slnd,-22.87,97.4,120.2,64.8
+346,New Hampshire,AE,-23.07,84.1,107.2,65.4
+347,Idaho,BSky,-23.90,94.8,118.7,65.2
+348,UNC Asheville,BSth,-24.11,92.8,116.9,61.7
+349,Alcorn St.,SWAC,-24.64,88.8,113.4,65.6
+350,Mississippi Valley St.,SWAC,-25.09,89.4,114.5,69.0
+351,Chicago St.,WAC,-27.90,90.3,118.2,69.9
+352,Delaware St.,MEAC,-29.66,84.2,113.9,69.5
+353,Maryland Eastern Shore,MEAC,-29.70,85.1,114.8,62.9
