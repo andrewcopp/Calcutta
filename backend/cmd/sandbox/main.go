@@ -37,6 +37,7 @@ func main() {
 		year       = flag.Int("year", 0, "Tournament year to export (matches 4-digit year parsed from tournament name).")
 		calcuttaID = flag.String("calcutta-id", "", "Calcutta ID to export.")
 		outPath    = flag.String("out", "", "Output path for CSV (defaults to stdout).")
+		trainYears = flag.Int("train-years", 0, "Baseline training window size in prior years (e.g. 1,2,3). 0 means use all available history excluding the target calcutta.")
 	)
 	flag.Parse()
 
@@ -101,11 +102,11 @@ func main() {
 		if *calcuttaID == "" {
 			log.Fatal("baseline mode requires -calcutta-id (or -year that resolves to a single calcutta)")
 		}
-		rows, summary, err := runSeedBaseline(ctx, db, *calcuttaID)
+		rows, summary, err := runSeedBaseline(ctx, db, *calcuttaID, *trainYears)
 		if err != nil {
 			log.Fatalf("Failed to run baseline: %v", err)
 		}
-		log.Printf("Baseline summary: points_mae=%.4f bid_share_mae=%.6f", summary.PointsMAE, summary.BidShareMAE)
+		log.Printf("Baseline summary: train_years=%d points_mae=%.4f bid_share_mae=%.6f", *trainYears, summary.PointsMAE, summary.BidShareMAE)
 		if err := writeBaselineCSV(out, rows); err != nil {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}
@@ -135,15 +136,32 @@ type BaselineRow struct {
 	PredROI        float64
 }
 
-func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string) ([]BaselineRow, *BaselineSummary, error) {
+func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int) ([]BaselineRow, *BaselineSummary, error) {
 	targetRows, err := queryTeamDataset(ctx, db, 0, targetCalcuttaID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	seedPointsMean, seedBidShareMean, err := computeSeedMeans(ctx, db, targetCalcuttaID)
+	targetYear, err := calcuttaYear(ctx, db, targetCalcuttaID)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	maxYear := targetYear - 1
+	minYear := 0
+	if trainYears > 0 {
+		minYear = targetYear - trainYears
+	}
+	if trainYears > 0 && maxYear < minYear {
+		return nil, nil, fmt.Errorf("invalid training window: target_year=%d train_years=%d", targetYear, trainYears)
+	}
+
+	seedPointsMean, seedBidShareMean, err := computeSeedMeans(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(seedPointsMean) == 0 {
+		return nil, nil, fmt.Errorf("no training data found for baseline: target_year=%d train_years=%d", targetYear, trainYears)
 	}
 
 	var totalActualPoints float64
@@ -208,7 +226,26 @@ func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string) (
 	return baselineRows, summary, nil
 }
 
-func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string) (map[int]float64, map[int]float64, error) {
+func calcuttaYear(ctx context.Context, db *sql.DB, calcuttaID string) (int, error) {
+	query := `
+		SELECT COALESCE(substring(t.name from '([0-9]{4})')::int, 0) as tournament_year
+		FROM calcuttas c
+		JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+		WHERE c.deleted_at IS NULL
+			AND c.id = $1::uuid
+	`
+
+	var year int
+	if err := db.QueryRowContext(ctx, query, calcuttaID).Scan(&year); err != nil {
+		return 0, err
+	}
+	if year == 0 {
+		return 0, fmt.Errorf("failed to parse tournament year for calcutta-id %s", calcuttaID)
+	}
+	return year, nil
+}
+
+func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string, trainYears int, minYear int, maxYear int) (map[int]float64, map[int]float64, error) {
 	query := `
 		WITH team_bids AS (
 			SELECT
@@ -228,10 +265,20 @@ func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string)
 				COALESCE(SUM(cet.bid), 0)::float as total_bid
 			FROM tournament_teams tt
 			JOIN calcuttas c ON c.tournament_id = tt.tournament_id AND c.deleted_at IS NULL
+			JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 			LEFT JOIN calcutta_entries ce ON ce.calcutta_id = c.id AND ce.deleted_at IS NULL
 			LEFT JOIN calcutta_entry_teams cet ON cet.entry_id = ce.id AND cet.team_id = tt.id AND cet.deleted_at IS NULL
 			WHERE tt.deleted_at IS NULL
 				AND c.id <> $1::uuid
+				AND (
+					$2 = 0
+					OR
+					(
+						COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <> 0
+						AND COALESCE(substring(t.name from '([0-9]{4})')::int, 0) >= $3
+						AND COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <= $4
+					)
+				)
 			GROUP BY c.id, tt.id, tt.seed, team_points
 		),
 		enriched AS (
@@ -254,7 +301,7 @@ func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string)
 		ORDER BY seed
 	`
 
-	rows, err := db.QueryContext(ctx, query, excludeCalcuttaID)
+	rows, err := db.QueryContext(ctx, query, excludeCalcuttaID, trainYears, minYear, maxYear)
 	if err != nil {
 		return nil, nil, err
 	}
