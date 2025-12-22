@@ -1,4 +1,4 @@
--- Generated on: 2025-12-22 01:32:36
+-- Generated on: 2025-12-22 16:43:31
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -60,12 +60,14 @@ INSERT INTO public.calcutta_payouts VALUES ('ec3e7370-b0c2-4305-9d6f-e85020be813
 INSERT INTO public.calcutta_payouts VALUES ('7d651f88-07cc-4ed6-89d2-5328e4143839', '12314ffd-b933-48ff-97ec-4fad2bd9f584', 5, 7500, '2025-12-22 04:44:26.722919+00', '2025-12-22 04:44:26.722919+00', NULL);
 INSERT INTO public.calcutta_payouts VALUES ('19210ea2-3ff2-437d-a450-8bc2c48f37b3', '12314ffd-b933-48ff-97ec-4fad2bd9f584', 6, 5000, '2025-12-22 04:44:26.722919+00', '2025-12-22 04:44:26.722919+00', NULL);
 INSERT INTO public.calcutta_payouts VALUES ('e11a3af2-d181-484f-bd4c-5599eb4b0975', '12314ffd-b933-48ff-97ec-4fad2bd9f584', 7, 2500, '2025-12-22 04:44:26.722919+00', '2025-12-22 04:44:26.722919+00', NULL);
-INSERT INTO public.calcutta_payouts VALUES ('79ea91b5-b5dd-421d-8e9f-c839164d8aab', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 1, 30000, '2025-12-22 04:46:34.669193+00', '2025-12-22 04:46:34.669193+00', NULL);
-INSERT INTO public.calcutta_payouts VALUES ('d072a78c-01de-49dd-b346-471cdebcd62b', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 2, 20000, '2025-12-22 04:46:34.669193+00', '2025-12-22 04:46:34.669193+00', NULL);
-INSERT INTO public.calcutta_payouts VALUES ('7f1c58de-3e91-49fb-95a7-6e783bee89d3', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 3, 10000, '2025-12-22 04:46:34.669193+00', '2025-12-22 04:46:34.669193+00', NULL);
+INSERT INTO public.calcutta_payouts VALUES ('79ea91b5-b5dd-421d-8e9f-c839164d8aab', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 1, 16500, '2025-12-22 04:46:34.669193+00', '2025-12-22 04:46:34.669193+00', NULL);
+INSERT INTO public.calcutta_payouts VALUES ('d072a78c-01de-49dd-b346-471cdebcd62b', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 2, 12000, '2025-12-22 04:46:34.669193+00', '2025-12-22 04:46:34.669193+00', NULL);
+INSERT INTO public.calcutta_payouts VALUES ('7f1c58de-3e91-49fb-95a7-6e783bee89d3', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 3, 7500, '2025-12-22 04:46:34.669193+00', '2025-12-22 04:46:34.669193+00', NULL);
+INSERT INTO public.calcutta_payouts VALUES ('035240b5-2cfc-4d42-ba92-006b9f7b0bd0', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 5, 2500, '2025-12-22 07:36:15.464647+00', '2025-12-22 07:36:15.464647+00', NULL);
+INSERT INTO public.calcutta_payouts VALUES ('173b0a59-6f8d-47b4-8b52-73b24b3218af', 'f87a28db-91c0-4f0c-8c29-ed25fa70dd5b', 4, 5000, '2025-12-22 07:36:15.464647+00', '2025-12-22 07:36:15.464647+00', NULL);
 
 
 -- PostgreSQL database dump complete
 
-\unrestrict unebabyFFYhdy4Y1MzELIv5yMsfBrNnwYYflj265jw4Fcs9NOdFub9i40RbfCaH
+\unrestrict 8XG1stzTpCmYkFjhdflSX8dfOg98JvotagursdzIuu71HYT5mprW8mV23bFKKcV
 

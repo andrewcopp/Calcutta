@@ -80,6 +80,7 @@ dump_table() {
 dump_table "schools" "$OUTPUT_DIR/schools.sql"
 dump_table "tournaments" "$OUTPUT_DIR/tournaments.sql"
 dump_table "tournament_teams" "$OUTPUT_DIR/tournament_teams.sql"
+dump_table "tournament_team_kenpom_stats" "$OUTPUT_DIR/tournament_team_kenpom_stats.sql"
 dump_table "users" "$OUTPUT_DIR/users.sql"
 dump_table "calcuttas" "$OUTPUT_DIR/calcuttas.sql"
 dump_table "calcutta_payouts" "$OUTPUT_DIR/calcutta_payouts.sql"
@@ -103,6 +104,7 @@ SET session_replication_role = replica;
 \i schools.sql
 \i tournaments.sql
 \i tournament_teams.sql
+\i tournament_team_kenpom_stats.sql
 \i users.sql
 \i calcuttas.sql
 \i calcutta_payouts.sql

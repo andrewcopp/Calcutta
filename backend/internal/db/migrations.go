@@ -177,6 +177,7 @@ func seedFromSQLDumps(ctx context.Context) error {
 		"schools.sql",
 		"tournaments.sql",
 		"tournament_teams.sql",
+		"tournament_team_kenpom_stats.sql",
 		"users.sql",
 		"calcuttas.sql",
 		"calcutta_payouts.sql",

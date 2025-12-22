@@ -1,4 +1,4 @@
--- Generated on: 2025-12-22 01:32:36
+-- Generated on: 2025-12-22 16:43:31
 -- This file contains seed data for the Calcutta application
 
 -- Master seed data import file
@@ -14,6 +14,7 @@ SET session_replication_role = replica;
 \i schools.sql
 \i tournaments.sql
 \i tournament_teams.sql
+\i tournament_team_kenpom_stats.sql
 \i users.sql
 \i calcuttas.sql
 \i calcutta_payouts.sql
