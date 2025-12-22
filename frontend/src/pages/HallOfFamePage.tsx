@@ -288,7 +288,7 @@ export const HallOfFamePage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-2">Best Careers</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Careers ranked by average winnings per year (not shown). Tie breaks: wins, podiums, in the moneys, then top 10s.
+            Careers ranked by average winnings per year (not shown). Tie breaks: wins, podiums, payouts, then top 10s.
           </p>
 
           {bestCareersQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best careers...</div>}
@@ -310,7 +310,7 @@ export const HallOfFamePage: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best Finish</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wins</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Podiums</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In the Moneys</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payouts</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Top 10s</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Career Earnings</th>
                   </tr>
