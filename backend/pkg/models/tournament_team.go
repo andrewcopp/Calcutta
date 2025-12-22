@@ -7,18 +7,26 @@ import (
 
 // TournamentTeam represents a team participating in a tournament
 type TournamentTeam struct {
-	ID           string     `json:"id"`
-	SchoolID     string     `json:"schoolId"`
-	TournamentID string     `json:"tournamentId"`
-	Seed         int        `json:"seed"`       // The team's seed in the tournament (1-16)
-	Region       string     `json:"region"`     // The team's region in the tournament
-	Byes         int        `json:"byes"`       // Number of byes the team received (0 = no byes, 1 = first round bye, etc.)
-	Wins         int        `json:"wins"`       // Number of wins in the tournament
-	Eliminated   bool       `json:"eliminated"` // Whether the team has been eliminated from the tournament
-	Created      time.Time  `json:"created"`
-	Updated      time.Time  `json:"updated"`
-	Deleted      *time.Time `json:"deleted,omitempty"`
-	School       *School    `json:"school,omitempty"`
+	ID           string       `json:"id"`
+	SchoolID     string       `json:"schoolId"`
+	TournamentID string       `json:"tournamentId"`
+	Seed         int          `json:"seed"`       // The team's seed in the tournament (1-16)
+	Region       string       `json:"region"`     // The team's region in the tournament
+	Byes         int          `json:"byes"`       // Number of byes the team received (0 = no byes, 1 = first round bye, etc.)
+	Wins         int          `json:"wins"`       // Number of wins in the tournament
+	Eliminated   bool         `json:"eliminated"` // Whether the team has been eliminated from the tournament
+	Created      time.Time    `json:"created"`
+	Updated      time.Time    `json:"updated"`
+	Deleted      *time.Time   `json:"deleted,omitempty"`
+	School       *School      `json:"school,omitempty"`
+	KenPom       *KenPomStats `json:"kenPom,omitempty"`
+}
+
+type KenPomStats struct {
+	NetRtg *float64 `json:"netRtg,omitempty"`
+	ORtg   *float64 `json:"oRtg,omitempty"`
+	DRtg   *float64 `json:"dRtg,omitempty"`
+	AdjT   *float64 `json:"adjT,omitempty"`
 }
 
 // TournamentConfig holds configuration for tournament rules and validation

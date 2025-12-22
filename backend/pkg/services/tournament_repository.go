@@ -65,8 +65,14 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 	// Find the team with the most wins in the tournament
 	// In a typical tournament, the winner will have the maximum number of wins
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT tt.id, tt.tournament_id, tt.school_id, tt.seed, tt.byes, tt.wins, tt.eliminated, tt.created_at, tt.updated_at
+		SELECT
+			tt.id, tt.tournament_id, tt.school_id, tt.seed, tt.byes, tt.wins, tt.eliminated, tt.created_at, tt.updated_at,
+			kps.net_rtg,
+			kps.o_rtg,
+			kps.d_rtg,
+			kps.adj_t
 		FROM tournament_teams tt
+		LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
 		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 		ORDER BY tt.wins DESC
 		LIMIT 1
@@ -81,8 +87,36 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 	}
 
 	var team models.TournamentTeam
-	if err := rows.Scan(&team.ID, &team.TournamentID, &team.SchoolID, &team.Seed, &team.Byes, &team.Wins, &team.Eliminated, &team.Created, &team.Updated); err != nil {
+	var netRtg sql.NullFloat64
+	var oRtg sql.NullFloat64
+	var dRtg sql.NullFloat64
+	var adjT sql.NullFloat64
+	if err := rows.Scan(
+		&team.ID,
+		&team.TournamentID,
+		&team.SchoolID,
+		&team.Seed,
+		&team.Byes,
+		&team.Wins,
+		&team.Eliminated,
+		&team.Created,
+		&team.Updated,
+		&netRtg,
+		&oRtg,
+		&dRtg,
+		&adjT,
+	); err != nil {
 		return nil, err
+	}
+
+	hasKenPom := netRtg.Valid || oRtg.Valid || dRtg.Valid || adjT.Valid
+	if hasKenPom {
+		team.KenPom = &models.KenPomStats{
+			NetRtg: nullFloat64Ptr(netRtg),
+			ORtg:   nullFloat64Ptr(oRtg),
+			DRtg:   nullFloat64Ptr(dRtg),
+			AdjT:   nullFloat64Ptr(adjT),
+		}
 	}
 
 	return &team, nil
@@ -133,9 +167,14 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			tt.eliminated, 
 			tt.created_at, 
 			tt.updated_at,
+			kps.net_rtg,
+			kps.o_rtg,
+			kps.d_rtg,
+			kps.adj_t,
 			s.id as school_id,
 			s.name as school_name
 		FROM tournament_teams tt
+		LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
 		LEFT JOIN schools s ON tt.school_id = s.id
 		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 		ORDER BY tt.seed ASC
@@ -153,6 +192,10 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 		var createdAt, updatedAt time.Time
 		var schoolIDFromJoin sql.NullString
 		var schoolName sql.NullString
+		var netRtg sql.NullFloat64
+		var oRtg sql.NullFloat64
+		var dRtg sql.NullFloat64
+		var adjT sql.NullFloat64
 
 		err := rows.Scan(
 			&team.ID,
@@ -165,6 +208,10 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			&team.Eliminated,
 			&createdAt,
 			&updatedAt,
+			&netRtg,
+			&oRtg,
+			&dRtg,
+			&adjT,
 			&schoolIDFromJoin,
 			&schoolName,
 		)
@@ -174,6 +221,16 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 
 		team.Created = createdAt
 		team.Updated = updatedAt
+
+		hasKenPom := netRtg.Valid || oRtg.Valid || dRtg.Valid || adjT.Valid
+		if hasKenPom {
+			team.KenPom = &models.KenPomStats{
+				NetRtg: nullFloat64Ptr(netRtg),
+				ORtg:   nullFloat64Ptr(oRtg),
+				DRtg:   nullFloat64Ptr(dRtg),
+				AdjT:   nullFloat64Ptr(adjT),
+			}
+		}
 
 		// Add school information if available
 		if schoolIDFromJoin.Valid && schoolName.Valid {
@@ -199,8 +256,13 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 		SELECT 
 			tt.id, tt.tournament_id, tt.school_id, tt.seed, tt.region, tt.byes, tt.wins, tt.eliminated,
 			tt.created_at, tt.updated_at,
+			kps.net_rtg,
+			kps.o_rtg,
+			kps.d_rtg,
+			kps.adj_t,
 			s.id as school_id_from_join, s.name as school_name
 		FROM tournament_teams tt
+		LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
 		LEFT JOIN schools s ON tt.school_id = s.id
 		WHERE tt.id = $1 AND tt.deleted_at IS NULL
 	`
@@ -209,6 +271,10 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 	var schoolIDFromJoin sql.NullString
 	var schoolName sql.NullString
 	var createdAt, updatedAt time.Time
+	var netRtg sql.NullFloat64
+	var oRtg sql.NullFloat64
+	var dRtg sql.NullFloat64
+	var adjT sql.NullFloat64
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&team.ID,
@@ -221,6 +287,10 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 		&team.Eliminated,
 		&createdAt,
 		&updatedAt,
+		&netRtg,
+		&oRtg,
+		&dRtg,
+		&adjT,
 		&schoolIDFromJoin,
 		&schoolName,
 	)
@@ -234,6 +304,16 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 
 	team.Created = createdAt
 	team.Updated = updatedAt
+
+	hasKenPom := netRtg.Valid || oRtg.Valid || dRtg.Valid || adjT.Valid
+	if hasKenPom {
+		team.KenPom = &models.KenPomStats{
+			NetRtg: nullFloat64Ptr(netRtg),
+			ORtg:   nullFloat64Ptr(oRtg),
+			DRtg:   nullFloat64Ptr(dRtg),
+			AdjT:   nullFloat64Ptr(adjT),
+		}
+	}
 
 	if schoolIDFromJoin.Valid && schoolName.Valid {
 		team.School = &models.School{
@@ -438,6 +518,12 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		return err
 	}
 
+	if team.KenPom != nil {
+		if err := r.UpsertTournamentTeamKenPomStats(ctx, team.ID, team.KenPom); err != nil {
+			return err
+		}
+	}
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		log.Printf("CreateTeam: Error getting rows affected: %v", err)
@@ -446,4 +532,57 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 
 	log.Printf("CreateTeam: Successfully inserted team. Rows affected: %d", rowsAffected)
 	return nil
+}
+
+func (r *TournamentRepository) UpsertTournamentTeamKenPomStats(ctx context.Context, tournamentTeamID string, stats *models.KenPomStats) error {
+	if stats == nil {
+		return nil
+	}
+
+	query := `
+		INSERT INTO tournament_team_kenpom_stats (
+			tournament_team_id,
+			net_rtg, o_rtg, d_rtg, adj_t,
+			updated_at
+		) VALUES (
+			$1,
+			$2, $3, $4, $5,
+			NOW()
+		)
+		ON CONFLICT (tournament_team_id)
+		DO UPDATE SET
+			net_rtg = EXCLUDED.net_rtg,
+			o_rtg = EXCLUDED.o_rtg,
+			d_rtg = EXCLUDED.d_rtg,
+			adj_t = EXCLUDED.adj_t,
+			updated_at = NOW(),
+			deleted_at = NULL
+		WHERE tournament_team_kenpom_stats.deleted_at IS NULL OR tournament_team_kenpom_stats.deleted_at IS NOT NULL
+	`
+
+	_, err := r.db.ExecContext(
+		ctx,
+		query,
+		tournamentTeamID,
+		float64OrNil(stats.NetRtg),
+		float64OrNil(stats.ORtg),
+		float64OrNil(stats.DRtg),
+		float64OrNil(stats.AdjT),
+	)
+	return err
+}
+
+func nullFloat64Ptr(n sql.NullFloat64) *float64 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Float64
+	return &v
+}
+
+func float64OrNil(p *float64) any {
+	if p == nil {
+		return nil
+	}
+	return *p
 }
