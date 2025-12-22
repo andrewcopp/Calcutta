@@ -1,4 +1,4 @@
--- Generated on: 2025-12-21 23:42:41
+-- Generated on: 2025-12-22 00:50:30
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -67,5 +67,5 @@ INSERT INTO public.calcutta_payouts VALUES ('7f1c58de-3e91-49fb-95a7-6e783bee89d
 
 -- PostgreSQL database dump complete
 
-\unrestrict 8x3P4dJWgEFexzQ4f7iQp7ohQ5wSiuyRp7bWV0VZW6LWtJ7OzZuJJo2reZzlqUj
+\unrestrict ALuJosmRWGwzURkhQNoaikEfIGOZafWL5U7m8qFfvgXnHnuqBXX9fKUGiPAHfsj
 

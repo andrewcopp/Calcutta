@@ -1,4 +1,4 @@
--- Generated on: 2025-12-21 23:42:41
+-- Generated on: 2025-12-22 00:50:30
 -- This file contains seed data for the Calcutta application
 
 -- PostgreSQL database dump
@@ -634,5 +634,5 @@ INSERT INTO public.tournament_teams VALUES ('9269bccf-5950-4428-9fb6-77eb2d00145
 
 -- PostgreSQL database dump complete
 
-\unrestrict vG1NNPgJTZHGW7HAzuf0ybkJ7ESi4qzTAhmdvu5qH6Efmnp2liXnsVQLLbfeLmQ
+\unrestrict gDVmICfofEv8URfr8xijyUo1FeBkG88ozKbqozvvtR0YMaaeigdtkPk1n95iOff
 
