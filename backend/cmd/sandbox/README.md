@@ -27,6 +27,12 @@ The recommended entrypoint is the wrapper script:
 ./backend/scripts/run_sandbox.sh [flags]
 ```
 
+For the common “end-to-end” workflow (all years, exclude "Andrew Copp", output report), use:
+
+```bash
+./backend/scripts/run_sandbox_report.sh
+```
+
 The wrapper script:
 
 - Loads env vars from `backend/.env` and `./.env` if present
@@ -202,6 +208,8 @@ It outputs one row per year containing:
 
 Years with no Calcutta are skipped.
 
+If `-start-year` and/or `-end-year` are omitted, the sandbox will auto-detect the available year range from the database.
+
 Example:
 
 ```bash
@@ -231,6 +239,14 @@ Example:
   -exclude-entry-name "Andrew Copp" \
   -train-years 0 \
   -out /tmp/report_2018_2025.md
+```
+
+If `-start-year` and/or `-end-year` are omitted, the sandbox will auto-detect the available year range from the database.
+
+Happy path:
+
+```bash
+./backend/scripts/run_sandbox_report.sh
 ```
 
 ## Troubleshooting

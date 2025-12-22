@@ -114,13 +114,24 @@ func main() {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}
 	case "backtest":
-		if *startYear == 0 || *endYear == 0 {
-			log.Fatal("backtest mode requires -start-year and -end-year")
+		start := *startYear
+		end := *endYear
+		if start == 0 || end == 0 {
+			minY, maxY, err := availableTournamentYearRange(ctx, db)
+			if err != nil {
+				log.Fatalf("Failed to determine available year range: %v", err)
+			}
+			if start == 0 {
+				start = minY
+			}
+			if end == 0 {
+				end = maxY
+			}
 		}
-		if *endYear < *startYear {
+		if end < start {
 			log.Fatal("backtest mode requires -end-year >= -start-year")
 		}
-		rows, err := runBacktest(ctx, db, *startYear, *endYear, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid)
+		rows, err := runBacktest(ctx, db, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid)
 		if err != nil {
 			log.Fatalf("Failed to run backtest: %v", err)
 		}
@@ -128,13 +139,24 @@ func main() {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}
 	case "report":
-		if *startYear == 0 || *endYear == 0 {
-			log.Fatal("report mode requires -start-year and -end-year")
+		start := *startYear
+		end := *endYear
+		if start == 0 || end == 0 {
+			minY, maxY, err := availableTournamentYearRange(ctx, db)
+			if err != nil {
+				log.Fatalf("Failed to determine available year range: %v", err)
+			}
+			if start == 0 {
+				start = minY
+			}
+			if end == 0 {
+				end = maxY
+			}
 		}
-		if *endYear < *startYear {
+		if end < start {
 			log.Fatal("report mode requires -end-year >= -start-year")
 		}
-		if err := runReport(ctx, db, out, *startYear, *endYear, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid); err != nil {
+		if err := runReport(ctx, db, out, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid); err != nil {
 			log.Fatalf("Failed to run report: %v", err)
 		}
 	default:

@@ -32,6 +32,31 @@ func calcuttaYear(ctx context.Context, db *sql.DB, calcuttaID string) (int, erro
 	return year, nil
 }
 
+func availableTournamentYearRange(ctx context.Context, db *sql.DB) (int, int, error) {
+	query := `
+		SELECT
+			MIN(y) as min_year,
+			MAX(y) as max_year
+		FROM (
+			SELECT
+				COALESCE(substring(t.name from '([0-9]{4})')::int, 0) as y
+			FROM calcuttas c
+			JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+			WHERE c.deleted_at IS NULL
+		) years
+		WHERE y <> 0
+	`
+
+	var minYear, maxYear sql.NullInt32
+	if err := db.QueryRowContext(ctx, query).Scan(&minYear, &maxYear); err != nil {
+		return 0, 0, err
+	}
+	if !minYear.Valid || !maxYear.Valid {
+		return 0, 0, fmt.Errorf("no tournament years found")
+	}
+	return int(minYear.Int32), int(maxYear.Int32), nil
+}
+
 func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string, trainYears int, minYear int, maxYear int, excludeEntryName string) (map[int]float64, map[int]float64, error) {
 	query := `
 		WITH team_bids AS (
