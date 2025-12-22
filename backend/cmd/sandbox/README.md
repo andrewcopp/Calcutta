@@ -45,10 +45,12 @@ So an output like `/tmp/teams_2025.csv` will actually live at `/private/tmp/team
 
 ## Modes
 
-The CLI supports two modes:
+The CLI supports these modes:
 
 - `-mode export`
 - `-mode baseline`
+- `-mode simulate`
+- `-mode backtest`
 
 The default is `export`.
 
@@ -61,6 +63,10 @@ The default is `export`.
   - Selects a Calcutta directly.
 - `-out <path>`
   - Writes CSV output to a file. If omitted, output is written to stdout.
+- `-exclude-entry-name <name>`
+  - Excludes bids from entries with this exact name when computing investment totals/shares.
+  - Example: `-exclude-entry-name "Andrew Copp"`
+  - This is useful for measuring cannibalization and reducing strategy leakage when training investment models.
 
 You must provide **exactly one** of `-year` or `-calcutta-id`.
 
@@ -71,6 +77,7 @@ Export produces one row per tournament team in the Calcutta with:
 - Team identifiers and metadata (seed, region, school)
 - Actual realized points
 - Total community investment and normalized bid share
+- Total community investment and normalized bid share excluding `-exclude-entry-name` (if provided)
 
 Example:
 
@@ -89,6 +96,7 @@ It writes one row per team containing:
 
 - Actual points and predicted points (by seed)
 - Actual bid share and predicted bid share (by seed)
+- Actual bid share excluding `-exclude-entry-name` (if provided)
 - Normalized ROI (actual vs predicted)
 
 ### Training window (`-train-years`)
@@ -135,6 +143,75 @@ Baseline prints a summary to stderr:
 
 - `points_mae`
 - `bid_share_mae`
+
+## Simulate mode
+
+Simulate mode generates a single “simulated entry” (a bid allocation) for a target Calcutta.
+
+It uses:
+
+- A returns model: seed-based expected points (trained from historical years via `-train-years`)
+- A market model: baseline market investment `B_i` from the target Calcutta (optionally excluding `-exclude-entry-name`)
+
+And then solves for an allocation that maximizes expected entry points under constraints.
+
+### Constraints (defaults)
+
+- Budget is `100` (whole dollars)
+- Minimum teams bid on: `3`
+- Maximum teams bid on: `10`
+- Minimum bid per team: `1`
+- Maximum bid per team: `50`
+
+All of these are configurable with flags:
+
+- `-budget`
+- `-min-teams`, `-max-teams`
+- `-min-bid`, `-max-bid`
+
+### Why this is not greedy
+
+Under a `max-teams` cap, a naive “take the next best marginal ROI” greedy algorithm can get stuck: you hit 10 teams, then you’re forced to keep adding dollars to the same 10 even when their marginal ROI collapses.
+
+This sandbox uses an integer dynamic programming optimizer (knapsack-style) to avoid that lock-in and choose the best 3–10 team set and bid sizes jointly.
+
+### Output
+
+The CSV includes **only teams with non-zero bids**, matching how a real entry looks.
+
+Example:
+
+```bash
+./backend/scripts/run_sandbox.sh \
+  -mode simulate \
+  -year 2025 \
+  -exclude-entry-name "Andrew Copp" \
+  -train-years 0 \
+  -out /tmp/sim_entry_2025.csv
+```
+
+## Backtest mode
+
+Backtest runs `simulate` across a year range and scores the simulated entry against realized tournament outcomes.
+
+It outputs one row per year containing:
+
+- Expected normalized ROI (based on the returns model)
+- Realized normalized ROI (based on actual tournament points)
+
+Years with no Calcutta are skipped.
+
+Example:
+
+```bash
+./backend/scripts/run_sandbox.sh \
+  -mode backtest \
+  -start-year 2018 \
+  -end-year 2025 \
+  -exclude-entry-name "Andrew Copp" \
+  -train-years 0 \
+  -out /tmp/backtest_2018_2025.csv
+```
 
 ## Troubleshooting
 
