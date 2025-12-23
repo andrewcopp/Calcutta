@@ -23,6 +23,57 @@ type KenPomPredictedReturnsService struct {
 	sigma          float64
 }
 
+func kenPomAdjEM(t *models.TournamentTeam) (float64, bool) {
+	if t == nil || t.KenPom == nil || t.KenPom.ORtg == nil || t.KenPom.DRtg == nil {
+		return 0, false
+	}
+	return *t.KenPom.ORtg - *t.KenPom.DRtg, true
+}
+
+func kenPomExpectedMargin(teamA *models.TournamentTeam, teamB *models.TournamentTeam) (float64, bool) {
+	if teamA == nil || teamB == nil {
+		return 0, false
+	}
+	if teamA.KenPom == nil || teamB.KenPom == nil {
+		return 0, false
+	}
+	if teamA.KenPom.AdjT == nil || teamB.KenPom.AdjT == nil {
+		return 0, false
+	}
+	adjEMA, okA := kenPomAdjEM(teamA)
+	adjEMB, okB := kenPomAdjEM(teamB)
+	if !okA || !okB {
+		return 0, false
+	}
+
+	marginPer100 := adjEMA - adjEMB
+	poss := (*teamA.KenPom.AdjT + *teamB.KenPom.AdjT) / 2.0
+	return marginPer100 * (poss / 100.0), true
+}
+
+func kenPomWinProbFromMargin(margin float64, sigma float64) float64 {
+	if sigma <= 0 {
+		sigma = 11.0
+	}
+	z := margin / sigma
+	p := 0.5 * (1.0 + math.Erf(z/math.Sqrt2))
+	if p < 0 {
+		p = 0
+	}
+	if p > 1 {
+		p = 1
+	}
+	return p
+}
+
+func kenPomWinProb(teamA *models.TournamentTeam, teamB *models.TournamentTeam, sigma float64) (float64, error) {
+	margin, ok := kenPomExpectedMargin(teamA, teamB)
+	if !ok {
+		return 0, fmt.Errorf("missing/incomplete kenpom stats for matchup")
+	}
+	return kenPomWinProbFromMargin(margin, sigma), nil
+}
+
 func NewKenPomPredictedReturnsService(bracketService *BracketService) *KenPomPredictedReturnsService {
 	return &KenPomPredictedReturnsService{
 		bracketService: bracketService,
@@ -38,12 +89,39 @@ func (s *KenPomPredictedReturnsService) WithSigma(sigma float64) *KenPomPredicte
 }
 
 func (s *KenPomPredictedReturnsService) GetPredictedReturnsPreTournament(ctx context.Context, tournamentID string) ([]KenPomPredictedReturn, error) {
-	bracket, err := s.bracketService.GetBracket(ctx, tournamentID)
+	tournament, err := s.bracketService.tournamentRepo.GetByID(ctx, tournamentID)
+	if err != nil {
+		return nil, err
+	}
+	if tournament == nil {
+		return nil, fmt.Errorf("tournament not found")
+	}
+
+	teams, err := s.bracketService.tournamentRepo.GetTeams(ctx, tournamentID)
 	if err != nil {
 		return nil, err
 	}
 
-	teams, err := s.bracketService.tournamentRepo.GetTeams(ctx, tournamentID)
+	finalFour := &models.FinalFourConfig{
+		TopLeftRegion:     tournament.FinalFourTopLeft,
+		BottomLeftRegion:  tournament.FinalFourBottomLeft,
+		TopRightRegion:    tournament.FinalFourTopRight,
+		BottomRightRegion: tournament.FinalFourBottomRight,
+	}
+	if finalFour.TopLeftRegion == "" {
+		finalFour.TopLeftRegion = "East"
+	}
+	if finalFour.BottomLeftRegion == "" {
+		finalFour.BottomLeftRegion = "West"
+	}
+	if finalFour.TopRightRegion == "" {
+		finalFour.TopRightRegion = "South"
+	}
+	if finalFour.BottomRightRegion == "" {
+		finalFour.BottomRightRegion = "Midwest"
+	}
+
+	bracket, err := s.bracketService.builder.BuildBracket(tournamentID, teams, finalFour)
 	if err != nil {
 		return nil, err
 	}
@@ -92,26 +170,6 @@ func (s *KenPomPredictedReturnsService) GetPredictedReturnsPreTournament(ctx con
 		models.RoundChampionship: 300,
 	}
 
-	firstFourLosers := make(map[string]bool)
-	for _, g := range bracket.Games {
-		if g == nil || g.Round != models.RoundFirstFour {
-			continue
-		}
-		if g.Team1 == nil || g.Team2 == nil {
-			return nil, fmt.Errorf("first four game %s missing participants", g.GameID)
-		}
-		if g.Winner == nil {
-			return nil, fmt.Errorf("first four game %s has no winner selected", g.GameID)
-		}
-		if g.Winner.TeamID == g.Team1.TeamID {
-			firstFourLosers[g.Team2.TeamID] = true
-		} else if g.Winner.TeamID == g.Team2.TeamID {
-			firstFourLosers[g.Team1.TeamID] = true
-		} else {
-			return nil, fmt.Errorf("first four game %s winner is not a participant", g.GameID)
-		}
-	}
-
 	type dist map[string]float64
 
 	winDistByGame := make(map[string]dist, len(bracket.Games))
@@ -155,27 +213,9 @@ func (s *KenPomPredictedReturnsService) GetPredictedReturnsPreTournament(ctx con
 		if a == nil || b == nil {
 			return 0, fmt.Errorf("missing team data for matchup %s vs %s", teamAID, teamBID)
 		}
-		if a.KenPom == nil || b.KenPom == nil {
-			return 0, fmt.Errorf("missing kenpom stats for matchup %s vs %s", teamAID, teamBID)
-		}
-		if a.KenPom.ORtg == nil || a.KenPom.DRtg == nil || a.KenPom.AdjT == nil {
-			return 0, fmt.Errorf("incomplete kenpom stats for team %s", teamAID)
-		}
-		if b.KenPom.ORtg == nil || b.KenPom.DRtg == nil || b.KenPom.AdjT == nil {
-			return 0, fmt.Errorf("incomplete kenpom stats for team %s", teamBID)
-		}
-
-		m100 := (*a.KenPom.ORtg - *b.KenPom.DRtg) - (*b.KenPom.ORtg - *a.KenPom.DRtg)
-		poss := (*a.KenPom.AdjT + *b.KenPom.AdjT) / 2.0
-		m := m100 * (poss / 100.0)
-
-		z := m / s.sigma
-		p := 0.5 * (1.0 + math.Erf(z/math.Sqrt2))
-		if p < 0 {
-			p = 0
-		}
-		if p > 1 {
-			p = 1
+		p, err := kenPomWinProb(a, b, s.sigma)
+		if err != nil {
+			return 0, fmt.Errorf("%w: %s vs %s", err, teamAID, teamBID)
 		}
 		return p, nil
 	}
@@ -191,11 +231,6 @@ func (s *KenPomPredictedReturnsService) GetPredictedReturnsPreTournament(ctx con
 		sort.Slice(games, func(i, j int) bool { return games[i].SortOrder < games[j].SortOrder })
 
 		for _, g := range games {
-			if g.Round == models.RoundFirstFour && g.Winner != nil {
-				winDistByGame[g.GameID] = dist{g.Winner.TeamID: 1}
-				continue
-			}
-
 			left, err := getSlotDist(g, 1)
 			if err != nil {
 				return nil, err
@@ -245,9 +280,6 @@ func (s *KenPomPredictedReturnsService) GetPredictedReturnsPreTournament(ctx con
 	out := make([]KenPomPredictedReturn, 0, len(teamsByID))
 	for teamID, team := range teamsByID {
 		if team == nil {
-			continue
-		}
-		if firstFourLosers[teamID] {
 			continue
 		}
 		name := ""
