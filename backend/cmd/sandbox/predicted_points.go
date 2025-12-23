@@ -4,8 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
+	"strings"
 )
 
 func computeMeanCalcuttaTotalBid(ctx context.Context, db *sql.DB, excludeCalcuttaID string, trainYears int, minYear int, maxYear int, excludeEntryName string) (float64, error) {
@@ -53,6 +52,9 @@ func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID
 	if err != nil {
 		return nil, nil, 0, err
 	}
+	if investModel == "" {
+		investModel = "seed"
+	}
 
 	maxYear := targetYear - 1
 	minYear := 0
@@ -63,7 +65,17 @@ func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID
 		return nil, nil, 0, fmt.Errorf("invalid training window: target_year=%d train_years=%d", targetYear, trainYears)
 	}
 
-	predScoreByTeam, err := predictedBidShareByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, investModel, excludeEntryName)
+	model, err := GetInvestmentModel(investModel)
+	if err != nil {
+		allowed := strings.Join(ListInvestmentModelNames(), "|")
+		return nil, nil, 0, fmt.Errorf("unknown invest-model %q (expected %s)", investModel, allowed)
+	}
+	if model == nil {
+		allowed := strings.Join(ListInvestmentModelNames(), "|")
+		return nil, nil, 0, fmt.Errorf("unknown invest-model %q (expected %s)", investModel, allowed)
+	}
+
+	predScoreByTeam, err := model.PredictBidShareByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, excludeEntryName)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -73,26 +85,19 @@ func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID
 		return nil, nil, 0, err
 	}
 
-	sumScore := 0.0
+	teamIDs := make([]string, 0, len(targetRows))
 	for _, r := range targetRows {
-		v := predScoreByTeam[r.TeamID]
-		if v < 0 {
-			v = 0
-		}
-		sumScore += v
+		teamIDs = append(teamIDs, r.TeamID)
 	}
-	if sumScore <= 0 {
+	shares, _, normErr := normalizeNonNegativeScoresForTeams(teamIDs, predScoreByTeam)
+	if normErr != nil {
 		return nil, nil, 0, fmt.Errorf("%w: market bid model target_year=%d train_years=%d invest_model=%s", ErrNoTrainingData, targetYear, trainYears, investModel)
 	}
 
 	predBidByTeam := make(map[string]float64, len(targetRows))
 	predBidShareByTeam := make(map[string]float64, len(targetRows))
 	for _, r := range targetRows {
-		share := predScoreByTeam[r.TeamID]
-		if share < 0 {
-			share = 0
-		}
-		share = share / sumScore
+		share := shares[r.TeamID]
 		predBidShareByTeam[r.TeamID] = share
 		predBidByTeam[r.TeamID] = predTotalMarketBid * share
 	}
@@ -101,57 +106,14 @@ func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID
 }
 
 func predictedPointsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID string, targetRows []TeamDatasetRow, trainYears int, predModel string, sigma float64) (map[string]float64, error) {
-	switch predModel {
-	case "seed":
-		targetYear, err := calcuttaYear(ctx, db, targetCalcuttaID)
-		if err != nil {
-			return nil, err
-		}
-
-		maxYear := targetYear - 1
-		minYear := 0
-		if trainYears > 0 {
-			minYear = targetYear - trainYears
-		}
-		if trainYears > 0 && maxYear < minYear {
-			return nil, fmt.Errorf("invalid training window: target_year=%d train_years=%d", targetYear, trainYears)
-		}
-
-		seedPointsMean, _, err := computeSeedMeans(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, "")
-		if err != nil {
-			return nil, err
-		}
-		if len(seedPointsMean) == 0 {
-			return nil, fmt.Errorf("%w: seed model target_year=%d train_years=%d", ErrNoTrainingData, targetYear, trainYears)
-		}
-
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			out[r.TeamID] = seedPointsMean[r.Seed]
-		}
-		return out, nil
-
-	case "kenpom":
-		meta, err := tournamentMetaForCalcuttaID(ctx, db, targetCalcuttaID)
-		if err != nil {
-			return nil, err
-		}
-
-		repo := services.NewTournamentRepository(db)
-		bracketService := services.NewBracketService(repo)
-		returnsService := services.NewKenPomPredictedReturnsService(bracketService).WithSigma(sigma)
-
-		pred, err := returnsService.GetPredictedReturnsPreTournament(ctx, meta.TournamentID)
-		if err != nil {
-			return nil, err
-		}
-
-		out := make(map[string]float64, len(pred))
-		for _, p := range pred {
-			out[p.TeamID] = p.ExpectedPoints
-		}
-		return out, nil
-	default:
-		return nil, fmt.Errorf("unknown pred-model %q (expected seed|kenpom)", predModel)
+	model, err := GetPointsModel(predModel)
+	if err != nil {
+		allowed := strings.Join(ListPointsModelNames(), "|")
+		return nil, fmt.Errorf("unknown pred-model %q (expected %s)", predModel, allowed)
 	}
+	if model == nil {
+		allowed := strings.Join(ListPointsModelNames(), "|")
+		return nil, fmt.Errorf("unknown pred-model %q (expected %s)", predModel, allowed)
+	}
+	return model.PredictPointsByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, sigma)
 }

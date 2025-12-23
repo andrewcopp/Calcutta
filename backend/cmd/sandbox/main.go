@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -29,6 +30,7 @@ func main() {
 		endYear          = flag.Int("end-year", 0, "End year for backtest mode.")
 		predModel        = flag.String("pred-model", "seed", "Predicted returns model to use for simulate/report/backtest: seed|kenpom")
 		investModel      = flag.String("invest-model", "seed", "Predicted investment model to use for baseline evaluation: seed|seed-pod|seed-kenpom-delta|seed-kenpom-rank|kenpom-rank|kenpom-score")
+		investModels     = flag.String("invest-models", "", "Comma-separated list of predicted investment models to compare in invest-eval mode (defaults to built-in list).")
 		sigma            = flag.Float64("sigma", 11.0, "Sigma (std dev) for KenPom margin->win probability conversion.")
 	)
 	flag.Parse()
@@ -191,7 +193,19 @@ func main() {
 		if end < start {
 			log.Fatal("invest-eval mode requires -end-year >= -start-year")
 		}
-		rows, err := runInvestEval(ctx, db, start, end, *trainYears, *excludeEntryName)
+		var models []string
+		if *investModels != "" {
+			parts := strings.Split(*investModels, ",")
+			models = make([]string, 0, len(parts))
+			for _, p := range parts {
+				m := strings.TrimSpace(p)
+				if m == "" {
+					continue
+				}
+				models = append(models, m)
+			}
+		}
+		rows, err := runInvestEval(ctx, db, start, end, *trainYears, *excludeEntryName, models)
 		if err != nil {
 			log.Fatalf("Failed to run invest-eval: %v", err)
 		}

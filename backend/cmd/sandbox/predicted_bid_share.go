@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 type seedIntKey struct {
@@ -46,152 +47,15 @@ type floatAgg struct {
 }
 
 func predictedBidShareByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID string, targetRows []TeamDatasetRow, trainYears int, investModel string, excludeEntryName string) (map[string]float64, error) {
-	targetYear, err := calcuttaYear(ctx, db, targetCalcuttaID)
+	if investModel == "" {
+		investModel = "seed"
+	}
+	model, err := GetInvestmentModel(investModel)
 	if err != nil {
-		return nil, err
+		allowed := strings.Join(ListInvestmentModelNames(), "|")
+		return nil, fmt.Errorf("unknown invest-model %q (expected %s)", investModel, allowed)
 	}
-
-	maxYear := targetYear - 1
-	minYear := 0
-	if trainYears > 0 {
-		minYear = targetYear - trainYears
-	}
-	if trainYears > 0 && maxYear < minYear {
-		return nil, fmt.Errorf("invalid training window: target_year=%d train_years=%d", targetYear, trainYears)
-	}
-
-	seedPointsMean, seedBidShareMean, err := computeSeedMeans(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
-	if err != nil {
-		return nil, err
-	}
-	if len(seedPointsMean) == 0 {
-		return nil, fmt.Errorf("%w: investment model target_year=%d train_years=%d", ErrNoTrainingData, targetYear, trainYears)
-	}
-
-	seedFallback := func(seed int) float64 {
-		if v, ok := seedBidShareMean[seed]; ok {
-			return v
-		}
-		return 0
-	}
-
-	switch investModel {
-	case "", "seed":
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			out[r.TeamID] = seedFallback(r.Seed)
-		}
-		return out, nil
-
-	case "seed-pod":
-		train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
-		if err != nil {
-			return nil, err
-		}
-		means := seedPodRankMeans(train)
-		podRankByTeam := seedPodRankByTeam(targetRows)
-
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			rank := podRankByTeam[r.TeamID]
-			if v, ok := means[seedIntKey{Seed: r.Seed, Val: rank}]; ok {
-				out[r.TeamID] = v
-			} else {
-				out[r.TeamID] = seedFallback(r.Seed)
-			}
-		}
-		return out, nil
-
-	case "seed-kenpom-delta":
-		train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
-		if err != nil {
-			return nil, err
-		}
-		means := seedKenPomDeltaBinMeans(train)
-		deltaBinByTeam := seedKenPomDeltaBinByTeam(targetRows)
-
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			bin := deltaBinByTeam[r.TeamID]
-			if v, ok := means[seedIntKey{Seed: r.Seed, Val: bin}]; ok {
-				out[r.TeamID] = v
-			} else {
-				out[r.TeamID] = seedFallback(r.Seed)
-			}
-		}
-		return out, nil
-
-	case "seed-kenpom-rank":
-		train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
-		if err != nil {
-			return nil, err
-		}
-		means := seedKenPomRankBucketMeans(train)
-		bucketByTeam := kenPomRankBucketByTeam(targetRows)
-
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			b := bucketByTeam[r.TeamID]
-			if v, ok := means[seedIntKey{Seed: r.Seed, Val: b}]; ok {
-				out[r.TeamID] = v
-			} else {
-				out[r.TeamID] = seedFallback(r.Seed)
-			}
-		}
-		return out, nil
-
-	case "kenpom-rank":
-		train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
-		if err != nil {
-			return nil, err
-		}
-		bucketMeans := kenPomRankBucketMeans(train)
-		bucketByTeam := kenPomRankBucketByTeam(targetRows)
-
-		overallMean := 0.0
-		if a, ok := bucketMeans[-1]; ok {
-			overallMean = a
-		}
-
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			b := bucketByTeam[r.TeamID]
-			if v, ok := bucketMeans[b]; ok {
-				out[r.TeamID] = v
-			} else {
-				out[r.TeamID] = overallMean
-			}
-		}
-		return out, nil
-
-	case "kenpom-score":
-		train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
-		if err != nil {
-			return nil, err
-		}
-		intercept, slope, ok := fitKenPomScoreOLS(train)
-		if !ok {
-			return nil, fmt.Errorf("insufficient training data for kenpom-score investment model")
-		}
-		out := make(map[string]float64, len(targetRows))
-		for _, r := range targetRows {
-			pred := intercept
-			if r.KenPomNetRtg != nil {
-				pred = intercept + slope*(*r.KenPomNetRtg)
-			}
-			if pred < 0 {
-				pred = 0
-			}
-			if pred > 1 {
-				pred = 1
-			}
-			out[r.TeamID] = pred
-		}
-		return out, nil
-
-	default:
-		return nil, fmt.Errorf("unknown invest-model %q (expected seed|seed-pod|seed-kenpom-delta|seed-kenpom-rank|kenpom-rank|kenpom-score)", investModel)
-	}
+	return model.PredictBidShareByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, excludeEntryName)
 }
 
 func seedPodRankMeans(rows []trainingBidRow) map[seedIntKey]float64 {
