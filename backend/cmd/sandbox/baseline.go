@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int, excludeEntryName string) ([]BaselineRow, *BaselineSummary, error) {
+func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int, excludeEntryName string, investModel string) ([]BaselineRow, *BaselineSummary, error) {
 	targetRows, err := queryTeamDataset(ctx, db, 0, targetCalcuttaID, excludeEntryName)
 	if err != nil {
 		return nil, nil, err
@@ -34,6 +34,11 @@ func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string, t
 		return nil, nil, fmt.Errorf("no training data found for baseline: target_year=%d train_years=%d", targetYear, trainYears)
 	}
 
+	predBidShareByTeam, err := predictedBidShareByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, investModel, excludeEntryName)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var totalActualPoints float64
 	var totalPredPoints float64
 	for _, r := range targetRows {
@@ -48,6 +53,9 @@ func runSeedBaseline(ctx context.Context, db *sql.DB, targetCalcuttaID string, t
 	for _, r := range targetRows {
 		predPoints := seedPointsMean[r.Seed]
 		predBidShare := seedBidShareMean[r.Seed]
+		if v, ok := predBidShareByTeam[r.TeamID]; ok {
+			predBidShare = v
+		}
 
 		actualBidShareUsed := r.NormalizedBid
 		if excludeEntryName != "" {

@@ -19,6 +19,14 @@ type tournamentMeta struct {
 	TournamentYear int
 }
 
+type trainingBidRow struct {
+	CalcuttaID   string
+	TeamID       string
+	Seed         int
+	KenPomNetRtg sql.NullFloat64
+	BidShare     float64
+}
+
 func tournamentMetaForCalcuttaID(ctx context.Context, db *sql.DB, calcuttaID string) (*tournamentMeta, error) {
 	query := `
 		SELECT
@@ -116,13 +124,9 @@ func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string,
 			WHERE tt.deleted_at IS NULL
 				AND c.id <> $1::uuid
 				AND (
-					$2 = 0
-					OR
-					(
-						COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <> 0
-						AND COALESCE(substring(t.name from '([0-9]{4})')::int, 0) >= $3
-						AND COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <= $4
-					)
+					COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <> 0
+					AND COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <= $4
+					AND ($2 = 0 OR COALESCE(substring(t.name from '([0-9]{4})')::int, 0) >= $3)
 				)
 			GROUP BY c.id, tt.id, tt.seed, team_points
 		),
@@ -168,6 +172,78 @@ func computeSeedMeans(ctx context.Context, db *sql.DB, excludeCalcuttaID string,
 	}
 
 	return seedPoints, seedBidShare, nil
+}
+
+func queryTrainingBidShares(ctx context.Context, db *sql.DB, excludeCalcuttaID string, trainYears int, minYear int, maxYear int, excludeEntryName string) ([]trainingBidRow, error) {
+	query := `
+		WITH team_bids AS (
+			SELECT
+				c.id as calcutta_id,
+				tt.id as team_id,
+				tt.seed,
+				kps.net_rtg,
+				COALESCE(SUM(
+					CASE
+						WHEN $5 <> '' AND ce.name = $5 THEN 0
+						ELSE COALESCE(cet.bid, 0)
+					END
+				), 0)::float as total_bid
+			FROM tournament_teams tt
+			JOIN calcuttas c ON c.tournament_id = tt.tournament_id AND c.deleted_at IS NULL
+			JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+			LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
+			LEFT JOIN calcutta_entries ce ON ce.calcutta_id = c.id AND ce.deleted_at IS NULL
+			LEFT JOIN calcutta_entry_teams cet ON cet.entry_id = ce.id AND cet.team_id = tt.id AND cet.deleted_at IS NULL
+			WHERE tt.deleted_at IS NULL
+				AND c.id <> $1::uuid
+				AND (
+					COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <> 0
+					AND COALESCE(substring(t.name from '([0-9]{4})')::int, 0) <= $4
+					AND ($2 = 0 OR COALESCE(substring(t.name from '([0-9]{4})')::int, 0) >= $3)
+				)
+			GROUP BY c.id, tt.id, tt.seed, kps.net_rtg
+		),
+		enriched AS (
+			SELECT
+				calcutta_id,
+				team_id,
+				seed,
+				net_rtg,
+				CASE
+					WHEN SUM(total_bid) OVER (PARTITION BY calcutta_id) > 0 THEN (total_bid / SUM(total_bid) OVER (PARTITION BY calcutta_id))
+					ELSE 0
+				END as bid_share
+			FROM team_bids
+		)
+		SELECT
+			calcutta_id,
+			team_id,
+			seed,
+			net_rtg,
+			bid_share
+		FROM enriched
+		ORDER BY calcutta_id ASC, seed ASC, team_id ASC
+	`
+
+	rows, err := db.QueryContext(ctx, query, excludeCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]trainingBidRow, 0)
+	for rows.Next() {
+		var r trainingBidRow
+		if err := rows.Scan(&r.CalcuttaID, &r.TeamID, &r.Seed, &r.KenPomNetRtg, &r.BidShare); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 func resolveSingleCalcuttaIDForYear(ctx context.Context, db *sql.DB, year int) (string, error) {
@@ -241,6 +317,7 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 				s.name as school_name,
 				tt.seed,
 				tt.region,
+				kps.net_rtg,
 				tt.wins,
 				tt.byes,
 				CASE (tt.wins + tt.byes)
@@ -263,6 +340,7 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 				), 0)::float as total_bid_excl
 			FROM tournament_teams tt
 			JOIN schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
+			LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
 			JOIN calcuttas c ON c.tournament_id = tt.tournament_id AND c.deleted_at IS NULL
 			JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 			LEFT JOIN calcutta_entries ce ON ce.calcutta_id = c.id AND ce.deleted_at IS NULL
@@ -281,6 +359,7 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 				s.name,
 				tt.seed,
 				tt.region,
+				kps.net_rtg,
 				tt.wins,
 				tt.byes,
 				team_points
@@ -293,6 +372,7 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 			school_name,
 			seed,
 			region,
+			net_rtg,
 			wins,
 			byes,
 			team_points,
@@ -321,6 +401,7 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 	results := make([]TeamDatasetRow, 0)
 	for dbRows.Next() {
 		var r TeamDatasetRow
+		var netRtg sql.NullFloat64
 		if err := dbRows.Scan(
 			&r.TournamentName,
 			&r.TournamentYear,
@@ -329,6 +410,7 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 			&r.SchoolName,
 			&r.Seed,
 			&r.Region,
+			&netRtg,
 			&r.Wins,
 			&r.Byes,
 			&r.TeamPoints,
@@ -340,6 +422,10 @@ func queryTeamDataset(ctx context.Context, db *sql.DB, year int, calcuttaID stri
 			&r.NormalizedBidExcl,
 		); err != nil {
 			return nil, err
+		}
+		if netRtg.Valid {
+			v := netRtg.Float64
+			r.KenPomNetRtg = &v
 		}
 		results = append(results, r)
 	}

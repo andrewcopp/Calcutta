@@ -212,6 +212,7 @@ func writeCSV(w io.Writer, rows []TeamDatasetRow) error {
 		"school_name",
 		"seed",
 		"region",
+		"kenpom_net_rtg",
 		"wins",
 		"byes",
 		"team_points",
@@ -227,6 +228,10 @@ func writeCSV(w io.Writer, rows []TeamDatasetRow) error {
 	}
 
 	for _, r := range rows {
+		kenPomNet := ""
+		if r.KenPomNetRtg != nil {
+			kenPomNet = fmt.Sprintf("%g", *r.KenPomNetRtg)
+		}
 		record := []string{
 			r.TournamentName,
 			fmt.Sprintf("%d", r.TournamentYear),
@@ -235,6 +240,7 @@ func writeCSV(w io.Writer, rows []TeamDatasetRow) error {
 			r.SchoolName,
 			fmt.Sprintf("%d", r.Seed),
 			r.Region,
+			kenPomNet,
 			fmt.Sprintf("%d", r.Wins),
 			fmt.Sprintf("%d", r.Byes),
 			fmt.Sprintf("%g", r.TeamPoints),

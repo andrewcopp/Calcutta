@@ -28,6 +28,7 @@ func main() {
 		startYear        = flag.Int("start-year", 0, "Start year for backtest mode.")
 		endYear          = flag.Int("end-year", 0, "End year for backtest mode.")
 		predModel        = flag.String("pred-model", "seed", "Predicted returns model to use for simulate/report/backtest: seed|kenpom")
+		investModel      = flag.String("invest-model", "seed", "Predicted investment model to use for baseline evaluation: seed|seed-pod|seed-kenpom-delta|kenpom-rank|kenpom-score")
 		sigma            = flag.Float64("sigma", 11.0, "Sigma (std dev) for KenPom margin->win probability conversion.")
 	)
 	flag.Parse()
@@ -106,11 +107,11 @@ func main() {
 		if *calcuttaID == "" {
 			log.Fatal("baseline mode requires -calcutta-id (or -year that resolves to a single calcutta)")
 		}
-		rows, summary, err := runSeedBaseline(ctx, db, *calcuttaID, *trainYears, *excludeEntryName)
+		rows, summary, err := runSeedBaseline(ctx, db, *calcuttaID, *trainYears, *excludeEntryName, *investModel)
 		if err != nil {
 			log.Fatalf("Failed to run baseline: %v", err)
 		}
-		log.Printf("Baseline summary: train_years=%d exclude_entry_name=%q points_mae=%.4f bid_share_mae=%.6f", *trainYears, *excludeEntryName, summary.PointsMAE, summary.BidShareMAE)
+		log.Printf("Baseline summary: invest_model=%s train_years=%d exclude_entry_name=%q points_mae=%.4f bid_share_mae=%.6f", *investModel, *trainYears, *excludeEntryName, summary.PointsMAE, summary.BidShareMAE)
 		if err := writeBaselineCSV(out, rows); err != nil {
 			log.Fatalf("Failed to write CSV: %v", err)
 		}

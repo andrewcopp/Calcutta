@@ -4,6 +4,8 @@ import "errors"
 
 var ErrNoCalcuttaForYear = errors.New("no calcuttas found for year")
 
+var ErrNoTrainingData = errors.New("no training data")
+
 type TeamDatasetRow struct {
 	TournamentName         string
 	TournamentYear         int
@@ -12,6 +14,7 @@ type TeamDatasetRow struct {
 	SchoolName             string
 	Seed                   int
 	Region                 string
+	KenPomNetRtg           *float64
 	Wins                   int
 	Byes                   int
 	TeamPoints             float64
