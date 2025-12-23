@@ -14,6 +14,8 @@ OUT_DEFAULT="/tmp/calcutta_sandbox_report.md"
 OUT_PATH=""
 ARGS=("$@")
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # If the caller provided -out, respect it.
 for ((i=0; i<${#ARGS[@]}; i++)); do
   if [ "${ARGS[$i]}" = "-out" ]; then
@@ -32,7 +34,7 @@ if [ -z "${OUT_PATH}" ]; then
   ARGS=("-out" "${OUT_PATH}" "${ARGS[@]}")
 fi
 
-./backend/scripts/run_sandbox.sh \
+"${SCRIPT_DIR}/run_sandbox.sh" \
   -mode report \
   -pred-model kenpom \
   -sigma 11.0 \

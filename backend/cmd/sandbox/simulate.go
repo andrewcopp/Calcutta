@@ -33,19 +33,17 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 		return nil, nil, err
 	}
 
+	predMarketBidByTeam, predMarketBidShareByTeam, predTotalMarketBid, err := predictedMarketBidsByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, excludeEntryName)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	totalPredPoints := 0.0
 	for _, r := range targetRows {
 		totalPredPoints += predPointsByTeam[r.TeamID]
 	}
 
-	totalMarketBid := 0.0
-	if len(targetRows) > 0 {
-		if excludeEntryName != "" {
-			totalMarketBid = targetRows[0].CalcuttaTotalExcl
-		} else {
-			totalMarketBid = targetRows[0].CalcuttaTotalCommunity
-		}
-	}
+	totalMarketBid := predTotalMarketBid
 
 	type candidate struct {
 		idx        int
@@ -57,10 +55,7 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 
 	candidates := make([]candidate, 0, len(targetRows))
 	for i, r := range targetRows {
-		baseBid := r.TotalCommunityBid
-		if excludeEntryName != "" {
-			baseBid = r.TotalCommunityBidExcl
-		}
+		baseBid := predMarketBidByTeam[r.TeamID]
 		candidates = append(candidates, candidate{
 			idx:        i,
 			predPoints: predPointsByTeam[r.TeamID],
@@ -103,12 +98,7 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 		if totalPredPoints > 0 {
 			predPointsShare = predPoints / totalPredPoints
 		}
-		baseShare := 0.0
-		if excludeEntryName != "" {
-			baseShare = r.NormalizedBidExcl
-		} else {
-			baseShare = r.NormalizedBid
-		}
+		baseShare := predMarketBidShareByTeam[r.TeamID]
 		ownership := 0.0
 		if c.bid > 0 {
 			ownership = float64(c.bid) / (baseBid + float64(c.bid))

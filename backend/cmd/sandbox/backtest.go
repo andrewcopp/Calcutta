@@ -19,6 +19,9 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 
 		simRows, simSummary, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid, predModel, sigma)
 		if err != nil {
+			if errors.Is(err, ErrNoTrainingData) {
+				continue
+			}
 			return nil, err
 		}
 
@@ -28,18 +31,34 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 		}
 
 		teamPointsByID := map[string]float64{}
+		actualBaseBidByID := map[string]float64{}
 		totalActualPoints := 0.0
 		for _, r := range datasetRows {
 			teamPointsByID[r.TeamID] = r.TeamPoints
+			if excludeEntryName != "" {
+				actualBaseBidByID[r.TeamID] = r.TotalCommunityBidExcl
+			} else {
+				actualBaseBidByID[r.TeamID] = r.TotalCommunityBid
+			}
 			totalActualPoints += r.TeamPoints
+		}
+
+		actualTotalMarketBid := 0.0
+		if len(datasetRows) > 0 {
+			if excludeEntryName != "" {
+				actualTotalMarketBid = datasetRows[0].CalcuttaTotalExcl
+			} else {
+				actualTotalMarketBid = datasetRows[0].CalcuttaTotalCommunity
+			}
 		}
 
 		realizedEntryPointsTotal := 0.0
 		for _, r := range simRows {
 			teamPoints := teamPointsByID[r.TeamID]
+			actualBaseBid := actualBaseBidByID[r.TeamID]
 			own := 0.0
 			if r.RecommendedBid > 0 {
-				own = float64(r.RecommendedBid) / (r.BaseMarketBid + float64(r.RecommendedBid))
+				own = float64(r.RecommendedBid) / (actualBaseBid + float64(r.RecommendedBid))
 			}
 			realizedEntryPointsTotal += teamPoints * own
 		}
@@ -48,7 +67,10 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 		if totalActualPoints > 0 {
 			realizedPointsShare = realizedEntryPointsTotal / totalActualPoints
 		}
-		realizedBidShare := simSummary.ExpectedBidShare
+		realizedBidShare := 0.0
+		if actualTotalMarketBid+float64(budget) > 0 {
+			realizedBidShare = float64(budget) / (actualTotalMarketBid + float64(budget))
+		}
 		realizedNormROI := 0.0
 		if realizedBidShare > 0 {
 			realizedNormROI = realizedPointsShare / realizedBidShare
