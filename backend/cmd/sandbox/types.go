@@ -64,6 +64,7 @@ type BacktestRow struct {
 	TrainYears            int
 	ExcludeEntryName      string
 	PredModel             string
+	InvestModel           string
 	Sigma                 float64
 	NumTeams              int
 	Budget                int

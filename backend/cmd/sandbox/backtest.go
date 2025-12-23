@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, sigma float64) ([]BacktestRow, error) {
+func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, investModel string, sigma float64) ([]BacktestRow, error) {
 	rows := make([]BacktestRow, 0)
 	for y := startYear; y <= endYear; y++ {
 		calcuttaID, err := resolveSingleCalcuttaIDForYear(ctx, db, y)
@@ -17,7 +17,7 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 			return nil, err
 		}
 
-		simRows, simSummary, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid, predModel, sigma)
+		simRows, simSummary, err := runSimulateEntry(ctx, db, calcuttaID, trainYears, excludeEntryName, budget, minTeams, maxTeams, minBid, maxBid, predModel, investModel, sigma)
 		if err != nil {
 			if errors.Is(err, ErrNoTrainingData) {
 				continue
@@ -82,6 +82,7 @@ func runBacktest(ctx context.Context, db *sql.DB, startYear int, endYear int, tr
 			TrainYears:            trainYears,
 			ExcludeEntryName:      excludeEntryName,
 			PredModel:             predModel,
+			InvestModel:           investModel,
 			Sigma:                 sigma,
 			NumTeams:              simSummary.NumTeams,
 			Budget:                simSummary.Budget,

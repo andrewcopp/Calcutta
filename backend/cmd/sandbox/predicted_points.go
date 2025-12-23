@@ -48,7 +48,7 @@ func computeMeanCalcuttaTotalBid(ctx context.Context, db *sql.DB, excludeCalcutt
 	return mean.Float64, nil
 }
 
-func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID string, targetRows []TeamDatasetRow, trainYears int, excludeEntryName string) (map[string]float64, map[string]float64, float64, error) {
+func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID string, targetRows []TeamDatasetRow, trainYears int, investModel string, excludeEntryName string) (map[string]float64, map[string]float64, float64, error) {
 	targetYear, err := calcuttaYear(ctx, db, targetCalcuttaID)
 	if err != nil {
 		return nil, nil, 0, err
@@ -63,12 +63,9 @@ func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID
 		return nil, nil, 0, fmt.Errorf("invalid training window: target_year=%d train_years=%d", targetYear, trainYears)
 	}
 
-	_, seedBidShareMean, err := computeSeedMeans(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
+	predScoreByTeam, err := predictedBidShareByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, investModel, excludeEntryName)
 	if err != nil {
 		return nil, nil, 0, err
-	}
-	if len(seedBidShareMean) == 0 {
-		return nil, nil, 0, fmt.Errorf("%w: market bid model target_year=%d train_years=%d", ErrNoTrainingData, targetYear, trainYears)
 	}
 
 	predTotalMarketBid, err := computeMeanCalcuttaTotalBid(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
@@ -76,10 +73,26 @@ func predictedMarketBidsByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID
 		return nil, nil, 0, err
 	}
 
+	sumScore := 0.0
+	for _, r := range targetRows {
+		v := predScoreByTeam[r.TeamID]
+		if v < 0 {
+			v = 0
+		}
+		sumScore += v
+	}
+	if sumScore <= 0 {
+		return nil, nil, 0, fmt.Errorf("%w: market bid model target_year=%d train_years=%d invest_model=%s", ErrNoTrainingData, targetYear, trainYears, investModel)
+	}
+
 	predBidByTeam := make(map[string]float64, len(targetRows))
 	predBidShareByTeam := make(map[string]float64, len(targetRows))
 	for _, r := range targetRows {
-		share := seedBidShareMean[r.Seed]
+		share := predScoreByTeam[r.TeamID]
+		if share < 0 {
+			share = 0
+		}
+		share = share / sumScore
 		predBidShareByTeam[r.TeamID] = share
 		predBidByTeam[r.TeamID] = predTotalMarketBid * share
 	}

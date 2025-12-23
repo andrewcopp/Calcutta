@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var (
-		mode             = flag.String("mode", "export", "Mode to run: export|baseline|simulate|backtest|report|kenpom-returns")
+		mode             = flag.String("mode", "export", "Mode to run: export|baseline|simulate|backtest|report|kenpom-returns|invest-eval")
 		year             = flag.Int("year", 0, "Tournament year to export (matches 4-digit year parsed from tournament name).")
 		calcuttaID       = flag.String("calcutta-id", "", "Calcutta ID to export.")
 		outPath          = flag.String("out", "", "Output path for CSV (defaults to stdout).")
@@ -28,12 +28,12 @@ func main() {
 		startYear        = flag.Int("start-year", 0, "Start year for backtest mode.")
 		endYear          = flag.Int("end-year", 0, "End year for backtest mode.")
 		predModel        = flag.String("pred-model", "seed", "Predicted returns model to use for simulate/report/backtest: seed|kenpom")
-		investModel      = flag.String("invest-model", "seed", "Predicted investment model to use for baseline evaluation: seed|seed-pod|seed-kenpom-delta|kenpom-rank|kenpom-score")
+		investModel      = flag.String("invest-model", "seed", "Predicted investment model to use for baseline evaluation: seed|seed-pod|seed-kenpom-delta|seed-kenpom-rank|kenpom-rank|kenpom-score")
 		sigma            = flag.Float64("sigma", 11.0, "Sigma (std dev) for KenPom margin->win probability conversion.")
 	)
 	flag.Parse()
 
-	if *mode != "backtest" && *mode != "report" {
+	if *mode != "backtest" && *mode != "report" && *mode != "invest-eval" {
 		if *year == 0 && *calcuttaID == "" {
 			log.Fatal("Must provide either -year or -calcutta-id")
 		}
@@ -119,7 +119,7 @@ func main() {
 		if *calcuttaID == "" {
 			log.Fatal("simulate mode requires -calcutta-id (or -year that resolves to a single calcutta)")
 		}
-		rows, summary, err := runSimulateEntry(ctx, db, *calcuttaID, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *sigma)
+		rows, summary, err := runSimulateEntry(ctx, db, *calcuttaID, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *investModel, *sigma)
 		if err != nil {
 			log.Fatalf("Failed to simulate entry: %v", err)
 		}
@@ -145,7 +145,7 @@ func main() {
 		if end < start {
 			log.Fatal("backtest mode requires -end-year >= -start-year")
 		}
-		rows, err := runBacktest(ctx, db, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *sigma)
+		rows, err := runBacktest(ctx, db, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *investModel, *sigma)
 		if err != nil {
 			log.Fatalf("Failed to run backtest: %v", err)
 		}
@@ -170,10 +170,35 @@ func main() {
 		if end < start {
 			log.Fatal("report mode requires -end-year >= -start-year")
 		}
-		if err := runReport(ctx, db, out, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *sigma); err != nil {
+		if err := runReport(ctx, db, out, start, end, *trainYears, *excludeEntryName, *budget, *minTeams, *maxTeams, *minBid, *maxBid, *predModel, *investModel, *sigma); err != nil {
 			log.Fatalf("Failed to run report: %v", err)
 		}
+	case "invest-eval":
+		start := *startYear
+		end := *endYear
+		if start == 0 || end == 0 {
+			minY, maxY, err := availableTournamentYearRange(ctx, db)
+			if err != nil {
+				log.Fatalf("Failed to determine available year range: %v", err)
+			}
+			if start == 0 {
+				start = minY
+			}
+			if end == 0 {
+				end = maxY
+			}
+		}
+		if end < start {
+			log.Fatal("invest-eval mode requires -end-year >= -start-year")
+		}
+		rows, err := runInvestEval(ctx, db, start, end, *trainYears, *excludeEntryName)
+		if err != nil {
+			log.Fatalf("Failed to run invest-eval: %v", err)
+		}
+		if err := writeInvestEvalCSV(out, rows); err != nil {
+			log.Fatalf("Failed to write CSV: %v", err)
+		}
 	default:
-		log.Fatalf("Unknown -mode %q (expected export|baseline|simulate|backtest|report)", *mode)
+		log.Fatalf("Unknown -mode %q (expected export|baseline|simulate|backtest|report|kenpom-returns|invest-eval)", *mode)
 	}
 }

@@ -13,6 +13,33 @@ type seedIntKey struct {
 	Val  int
 }
 
+func seedKenPomRankBucketMeans(rows []trainingBidRow) map[seedIntKey]float64 {
+	byCalcutta := map[string][]trainingBidRow{}
+	for _, r := range rows {
+		byCalcutta[r.CalcuttaID] = append(byCalcutta[r.CalcuttaID], r)
+	}
+
+	agg := map[seedIntKey]floatAgg{}
+	for _, calcuttaRows := range byCalcutta {
+		buckets := kenPomRankBucketsTraining(calcuttaRows)
+		for _, r := range calcuttaRows {
+			key := seedIntKey{Seed: r.Seed, Val: buckets[r.TeamID]}
+			a := agg[key]
+			a.Sum += r.BidShare
+			a.Count++
+			agg[key] = a
+		}
+	}
+
+	out := make(map[seedIntKey]float64, len(agg))
+	for k, a := range agg {
+		if a.Count > 0 {
+			out[k] = a.Sum / float64(a.Count)
+		}
+	}
+	return out
+}
+
 type floatAgg struct {
 	Sum   float64
 	Count int
@@ -38,7 +65,7 @@ func predictedBidShareByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID s
 		return nil, err
 	}
 	if len(seedPointsMean) == 0 {
-		return nil, fmt.Errorf("no training data found for investment model: target_year=%d train_years=%d", targetYear, trainYears)
+		return nil, fmt.Errorf("%w: investment model target_year=%d train_years=%d", ErrNoTrainingData, targetYear, trainYears)
 	}
 
 	seedFallback := func(seed int) float64 {
@@ -87,6 +114,25 @@ func predictedBidShareByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID s
 		for _, r := range targetRows {
 			bin := deltaBinByTeam[r.TeamID]
 			if v, ok := means[seedIntKey{Seed: r.Seed, Val: bin}]; ok {
+				out[r.TeamID] = v
+			} else {
+				out[r.TeamID] = seedFallback(r.Seed)
+			}
+		}
+		return out, nil
+
+	case "seed-kenpom-rank":
+		train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, minYear, maxYear, excludeEntryName)
+		if err != nil {
+			return nil, err
+		}
+		means := seedKenPomRankBucketMeans(train)
+		bucketByTeam := kenPomRankBucketByTeam(targetRows)
+
+		out := make(map[string]float64, len(targetRows))
+		for _, r := range targetRows {
+			b := bucketByTeam[r.TeamID]
+			if v, ok := means[seedIntKey{Seed: r.Seed, Val: b}]; ok {
 				out[r.TeamID] = v
 			} else {
 				out[r.TeamID] = seedFallback(r.Seed)
@@ -144,7 +190,7 @@ func predictedBidShareByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID s
 		return out, nil
 
 	default:
-		return nil, fmt.Errorf("unknown invest-model %q (expected seed|seed-pod|seed-kenpom-delta|kenpom-rank|kenpom-score)", investModel)
+		return nil, fmt.Errorf("unknown invest-model %q (expected seed|seed-pod|seed-kenpom-delta|seed-kenpom-rank|kenpom-rank|kenpom-score)", investModel)
 	}
 }
 

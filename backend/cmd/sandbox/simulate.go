@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, sigma float64) ([]SimulateRow, *SimulateSummary, error) {
+func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, investModel string, sigma float64) ([]SimulateRow, *SimulateSummary, error) {
 	if budget <= 0 {
 		return nil, nil, fmt.Errorf("budget must be > 0")
 	}
@@ -33,7 +33,7 @@ func runSimulateEntry(ctx context.Context, db *sql.DB, targetCalcuttaID string, 
 		return nil, nil, err
 	}
 
-	predMarketBidByTeam, predMarketBidShareByTeam, predTotalMarketBid, err := predictedMarketBidsByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, excludeEntryName)
+	predMarketBidByTeam, predMarketBidShareByTeam, predTotalMarketBid, err := predictedMarketBidsByTeam(ctx, db, targetCalcuttaID, targetRows, trainYears, investModel, excludeEntryName)
 	if err != nil {
 		return nil, nil, err
 	}

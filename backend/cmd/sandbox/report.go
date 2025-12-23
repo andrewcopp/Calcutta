@@ -62,7 +62,7 @@ func ordinal(n int) string {
 	}
 }
 
-func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, sigma float64) error {
+func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endYear int, trainYears int, excludeEntryName string, budget int, minTeams int, maxTeams int, minBid int, maxBid int, predModel string, investModel string, sigma float64) error {
 	for y := startYear; y <= endYear; y++ {
 		calcuttaID, err := resolveSingleCalcuttaIDForYear(ctx, db, y)
 		if err != nil {
@@ -85,7 +85,7 @@ func runReport(ctx context.Context, db *sql.DB, w io.Writer, startYear int, endY
 			return err
 		}
 
-		predMarketBidByTeam, _, predTotalMarketBid, err := predictedMarketBidsByTeam(ctx, db, calcuttaID, datasetRows, trainYears, excludeEntryName)
+		predMarketBidByTeam, _, predTotalMarketBid, err := predictedMarketBidsByTeam(ctx, db, calcuttaID, datasetRows, trainYears, investModel, excludeEntryName)
 		if err != nil {
 			if errors.Is(err, ErrNoTrainingData) {
 				continue
