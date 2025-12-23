@@ -70,6 +70,133 @@ func (m seedInvestmentModel) PredictBidShareByTeam(ctx context.Context, db *sql.
 	return out, nil
 }
 
+type ridgeReturnsShrinkSegTunedCoarseInvestmentModel struct{}
+
+func (m ridgeReturnsShrinkSegTunedCoarseInvestmentModel) Name() string {
+	return "ridge-returns-shrink-seg-tuned-coarse"
+}
+
+func (m ridgeReturnsShrinkSegTunedCoarseInvestmentModel) PredictBidShareByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID string, targetRows []TeamDatasetRow, trainYears int, excludeEntryName string) (map[string]float64, error) {
+	c, err := buildInvestmentTrainingContext(ctx, db, targetCalcuttaID, trainYears, excludeEntryName)
+	if err != nil {
+		return nil, err
+	}
+
+	sigma := 11.0
+	train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, c.minYear, c.maxYear, excludeEntryName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build expected points share for each training calcutta once.
+	byCalcutta := map[string]map[string]float64{}
+	for _, tr := range train {
+		if _, ok := byCalcutta[tr.CalcuttaID]; ok {
+			continue
+		}
+		m, err := returnsShareByTeamForCalcutta(ctx, db, tr.CalcuttaID, sigma)
+		if err != nil {
+			return nil, err
+		}
+		byCalcutta[tr.CalcuttaID] = m
+	}
+
+	trainRows := make([]trainReturnsRow, 0, len(train))
+	for _, tr := range train {
+		expShare := 0.0
+		if m, ok := byCalcutta[tr.CalcuttaID]; ok {
+			if v, ok2 := m[tr.TeamID]; ok2 {
+				expShare = v
+			}
+		}
+		baseline := c.seedBidShareMean[tr.Seed]
+		trainRows = append(trainRows, trainReturnsRow{
+			CalcuttaID:     tr.CalcuttaID,
+			TeamID:         tr.TeamID,
+			Seed:           tr.Seed,
+			KenPomNetRtg:   tr.KenPomNetRtg,
+			BidShare:       tr.BidShare,
+			SeedBaseline:   baseline,
+			ExpPointsShare: expShare,
+			ROIFeature:     ridgeReturnsROIFeature(expShare, baseline),
+		})
+	}
+
+	model, ok := fitRidgeReturnsBidShareModel(trainRows)
+	if !ok {
+		return nil, fmt.Errorf("insufficient training data for ridge-returns-shrink-seg-tuned-coarse investment model")
+	}
+
+	// Tune segment alphas using coarse grid.
+	alphaGrid := []float64{0, 0.5, 1.0}
+	aTop4, aTop8, aOther := chooseShrinkAlphaSegmentsLOOCVRidgeReturns(trainRows, alphaGrid)
+
+	targetReturnsShare, err := returnsShareByTeamForCalcutta(ctx, db, targetCalcuttaID, sigma)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(map[string]float64, len(targetRows))
+	for _, r := range targetRows {
+		expShare := targetReturnsShare[r.TeamID]
+		baseline := c.seedBidShareMean[r.Seed]
+		roiFeat := ridgeReturnsROIFeature(expShare, baseline)
+		predResid := ridgeReturnsPredict(model.Beta, model.SeedNetRtgMean, model.SeedNetRtgStd, r.Seed, r.KenPomNetRtg, expShare, roiFeat)
+		alpha := aOther
+		if r.Seed >= 1 && r.Seed <= 4 {
+			alpha = aTop4
+		} else if r.Seed >= 1 && r.Seed <= 8 {
+			alpha = aTop8
+		}
+		pred := baseline + alpha*predResid
+		out[r.TeamID] = clamp01(pred)
+	}
+	return out, nil
+}
+
+type kenPomScoreShrinkSegTunedCoarseInvestmentModel struct{}
+
+func (m kenPomScoreShrinkSegTunedCoarseInvestmentModel) Name() string {
+	return "kenpom-score-shrink-seg-tuned-coarse"
+}
+
+func (m kenPomScoreShrinkSegTunedCoarseInvestmentModel) PredictBidShareByTeam(ctx context.Context, db *sql.DB, targetCalcuttaID string, targetRows []TeamDatasetRow, trainYears int, excludeEntryName string) (map[string]float64, error) {
+	c, err := buildInvestmentTrainingContext(ctx, db, targetCalcuttaID, trainYears, excludeEntryName)
+	if err != nil {
+		return nil, err
+	}
+
+	train, err := queryTrainingBidShares(ctx, db, targetCalcuttaID, trainYears, c.minYear, c.maxYear, excludeEntryName)
+	if err != nil {
+		return nil, err
+	}
+	intercept, slope, ok := fitKenPomScoreOLS(train)
+	if !ok {
+		return nil, fmt.Errorf("insufficient training data for kenpom-score-shrink-seg-tuned-coarse investment model")
+	}
+
+	alphaGrid := []float64{0, 0.5, 1.0}
+	aTop4, aTop8, aOther := chooseShrinkAlphaSegmentsLOOCVKenPomScore(train, alphaGrid)
+
+	out := make(map[string]float64, len(targetRows))
+	for _, r := range targetRows {
+		raw := intercept
+		if r.KenPomNetRtg != nil {
+			raw = intercept + slope*(*r.KenPomNetRtg)
+		}
+		baseline := c.seedFallback(r.Seed)
+		alpha := aOther
+		if r.Seed >= 1 && r.Seed <= 4 {
+			alpha = aTop4
+		} else if r.Seed >= 1 && r.Seed <= 8 {
+			alpha = aTop8
+		}
+		pred := baseline + alpha*(raw-baseline)
+		out[r.TeamID] = clamp01(pred)
+	}
+	return out, nil
+}
+
 type kenPomScoreShrinkSegTunedInvestmentModel struct{}
 
 func (m kenPomScoreShrinkSegTunedInvestmentModel) Name() string {
@@ -511,7 +638,9 @@ func init() {
 	RegisterInvestmentModel(kenPomScoreShrinkInvestmentModel{})
 	RegisterInvestmentModel(kenPomScoreShrinkTunedInvestmentModel{})
 	RegisterInvestmentModel(kenPomScoreShrinkSegTunedInvestmentModel{})
+	RegisterInvestmentModel(kenPomScoreShrinkSegTunedCoarseInvestmentModel{})
 	RegisterInvestmentModel(ridgeInvestmentModel{})
 	RegisterInvestmentModel(ridgeReturnsInvestmentModel{})
 	RegisterInvestmentModel(ridgeReturnsShrinkInvestmentModel{})
+	RegisterInvestmentModel(ridgeReturnsShrinkSegTunedCoarseInvestmentModel{})
 }

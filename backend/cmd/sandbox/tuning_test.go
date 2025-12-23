@@ -60,3 +60,15 @@ func TestChooseShrinkAlphaSegmentsLOOCVKenPomScore_InsufficientFoldsDefaults(t *
 		t.Fatalf("expected default (0.5,0.5,0.5) with <2 folds, got (%v,%v,%v)", a4, a8, ao)
 	}
 }
+
+func TestChooseShrinkAlphaSegmentsLOOCVRidgeReturns_InsufficientFoldsDefaults(t *testing.T) {
+	train := []trainReturnsRow{
+		{CalcuttaID: "c1", TeamID: "t1", Seed: 1, KenPomNetRtg: sql.NullFloat64{Float64: 10, Valid: true}, BidShare: 0.1, SeedBaseline: 0.1, ExpPointsShare: 0.1, ROIFeature: 0.0},
+		{CalcuttaID: "c1", TeamID: "t2", Seed: 6, KenPomNetRtg: sql.NullFloat64{Float64: 12, Valid: true}, BidShare: 0.2, SeedBaseline: 0.2, ExpPointsShare: 0.2, ROIFeature: 0.0},
+		{CalcuttaID: "c1", TeamID: "t3", Seed: 12, KenPomNetRtg: sql.NullFloat64{Float64: 9, Valid: true}, BidShare: 0.05, SeedBaseline: 0.05, ExpPointsShare: 0.05, ROIFeature: 0.0},
+	}
+	a4, a8, ao := chooseShrinkAlphaSegmentsLOOCVRidgeReturns(train, []float64{0, 0.5, 1.0})
+	if a4 != 0.5 || a8 != 0.5 || ao != 0.5 {
+		t.Fatalf("expected default (0.5,0.5,0.5) with <2 folds, got (%v,%v,%v)", a4, a8, ao)
+	}
+}

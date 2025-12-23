@@ -35,7 +35,7 @@ type InvestEvalRow struct {
 
 func runInvestEval(ctx context.Context, db *sql.DB, startYear int, endYear int, trainYears int, excludeEntryName string, models []string) ([]InvestEvalRow, error) {
 	if len(models) == 0 {
-		models = []string{"seed", "seed-pod", "seed-kenpom-delta", "seed-kenpom-rank", "kenpom-rank", "kenpom-score", "ridge", "ridge-returns"}
+		models = ListInvestmentModelNames()
 	}
 	type agg struct {
 		sse                float64
