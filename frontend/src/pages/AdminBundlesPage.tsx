@@ -1,11 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
-type ImportResponse = {
+type ImportStartResponse = {
+  upload_id: string;
+  status: 'pending' | 'running' | 'succeeded' | 'failed';
+  filename: string;
+  sha256: string;
+  size_bytes: number;
+};
+
+type ImportStatusResponse = {
   upload_id: string;
   filename: string;
   sha256: string;
   size_bytes: number;
-  import_report: {
+  status: 'pending' | 'running' | 'succeeded' | 'failed';
+  started_at?: string;
+  finished_at?: string;
+  error_message?: string;
+  import_report?: {
     started_at: string;
     finished_at: string;
     dry_run: boolean;
@@ -18,7 +30,7 @@ type ImportResponse = {
     payouts: number;
     rounds: number;
   };
-  verify_report: {
+  verify_report?: {
     ok: boolean;
     mismatch_count: number;
     mismatches?: { where: string; what: string }[];
@@ -31,7 +43,56 @@ export const AdminBundlesPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ImportResponse | null>(null);
+  const [result, setResult] = useState<ImportStatusResponse | null>(null);
+  const [uploadId, setUploadId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!uploadId) return;
+    if (!busy) return;
+
+    let cancelled = false;
+    let timeoutId: number | undefined;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/admin/bundles/import/${uploadId}`, { credentials: 'include' });
+        const body = (await res.json().catch(() => undefined)) as ImportStatusResponse | undefined;
+        if (!res.ok) {
+          const msg = (body as any)?.error?.message || `Status check failed (${res.status})`;
+          throw new Error(msg);
+        }
+        if (cancelled) return;
+
+        setResult(body ?? null);
+
+        if (!body) {
+          timeoutId = window.setTimeout(poll, 1000);
+          return;
+        }
+        if (body.status === 'succeeded') {
+          setBusy(false);
+          return;
+        }
+        if (body.status === 'failed') {
+          setBusy(false);
+          setError(body.error_message || 'Import failed');
+          return;
+        }
+
+        timeoutId = window.setTimeout(poll, 1000);
+      } catch (e) {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setBusy(false);
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, [API_URL, busy, uploadId]);
 
   const download = async () => {
     setError(null);
@@ -70,6 +131,7 @@ export const AdminBundlesPage: React.FC = () => {
     }
     setError(null);
     setResult(null);
+    setUploadId(null);
     setBusy(true);
     try {
       const form = new FormData();
@@ -81,10 +143,17 @@ export const AdminBundlesPage: React.FC = () => {
         const msg = body?.error?.message || `Import failed (${res.status})`;
         throw new Error(msg);
       }
-      setResult(body as ImportResponse);
+      const started = body as ImportStartResponse;
+      setUploadId(started.upload_id);
+      setResult({
+        upload_id: started.upload_id,
+        filename: started.filename,
+        sha256: started.sha256,
+        size_bytes: started.size_bytes,
+        status: started.status,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    } finally {
       setBusy(false);
     }
   };

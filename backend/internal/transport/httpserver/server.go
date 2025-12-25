@@ -33,6 +33,7 @@ type Server struct {
 	tokenManager      *auth.TokenManager
 	pool              *pgxpool.Pool
 	cfg               platform.Config
+	bundleImportQueue chan string
 }
 
 func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
@@ -86,5 +87,6 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 		tokenManager:      tm,
 		pool:              pool,
 		cfg:               cfg,
+		bundleImportQueue: make(chan string, 32),
 	}
 }

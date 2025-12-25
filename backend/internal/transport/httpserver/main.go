@@ -41,6 +41,9 @@ func Run() {
 	}
 
 	server := NewServer(db, pool, cfg)
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	server.StartBundleImportWorker(workerCtx)
+	server.EnqueuePendingBundleUploads(workerCtx)
 
 	// Router
 	r := mux.NewRouter()
@@ -84,6 +87,7 @@ func Run() {
 	<-quit
 
 	log.Println("Shutting down server...")
+	workerCancel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
 	defer cancel()
