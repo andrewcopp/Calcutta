@@ -15,13 +15,12 @@ func main() {
 	// Parse command line flags
 	up := flag.Bool("up", false, "Run migrations up")
 	down := flag.Bool("down", false, "Run migrations down")
-	seed := flag.Bool("seed", false, "Run seed data migrations")
-	skipSeed := flag.Bool("skip-seed", false, "Skip seed data migrations when running up")
+	force := flag.Int("force", 0, "Force schema migration version (clears dirty state)")
 	flag.Parse()
 
 	// Check if at least one flag is set
-	if !*up && !*down && !*seed {
-		fmt.Println("Please specify either -up, -down, or -seed flag")
+	if !*up && !*down && *force == 0 {
+		fmt.Println("Please specify either -up or -down flag")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -38,21 +37,20 @@ func main() {
 	fmt.Println("Database connection initialized successfully")
 
 	// Run migrations
+	if *force != 0 {
+		fmt.Printf("Forcing schema migration version to %d (clearing dirty state)...\n", *force)
+		if err := db.ForceSchemaMigrations(ctx, *force); err != nil {
+			log.Fatalf("Error forcing schema migrations: %v", err)
+		}
+		fmt.Println("Schema migration version forced successfully")
+	}
+
 	if *up {
 		fmt.Println("Running schema migrations up...")
 		if err := db.RunSchemaMigrations(ctx); err != nil {
 			log.Fatalf("Error running schema migrations: %v", err)
 		}
 		fmt.Println("Schema migrations completed successfully")
-
-		// Run seed migrations unless explicitly skipped
-		if !*skipSeed {
-			fmt.Println("Running seed data migrations...")
-			if err := db.RunSeedMigrations(ctx); err != nil {
-				log.Fatalf("Error running seed migrations: %v", err)
-			}
-			fmt.Println("Seed migrations completed successfully")
-		}
 	}
 
 	if *down {
@@ -61,14 +59,6 @@ func main() {
 			log.Fatalf("Error rolling back schema migrations: %v", err)
 		}
 		fmt.Println("Schema migrations rolled back successfully")
-	}
-
-	if *seed {
-		fmt.Println("Running seed data migrations...")
-		if err := db.RunSeedMigrations(ctx); err != nil {
-			log.Fatalf("Error running seed migrations: %v", err)
-		}
-		fmt.Println("Seed migrations completed successfully")
 	}
 
 	// Close the database connection

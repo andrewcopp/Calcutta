@@ -21,7 +21,7 @@ This application manages March Madness investment pools where players:
 - Modern React patterns (hooks, context)
 
 ### Backend
-- **Go 1.24** with Go workspaces
+- **Go 1.24**
 - **Gorilla Mux** for routing
 - **PostgreSQL** driver (pgx/v5)
 - Clean architecture principles (in transition)
@@ -35,33 +35,9 @@ This application manages March Madness investment pools where players:
 
 ## Architecture Notes
 
-### Go Workspace Setup (Important!)
+### Backend structure
 
-This project uses **Go workspaces** with multiple modules. This is critical to understand:
-
-```
-backend/
-├── go.work              # Workspace definition (13 modules)
-├── go.mod               # Root module (Go 1.23)
-├── cmd/
-│   ├── server/          # Main API server (Go 1.24)
-│   ├── migrate/         # Database migrations
-│   ├── seed-*/          # Data seeding utilities
-│   └── */               # Other command-line tools
-├── pkg/
-│   ├── models/          # Domain models
-│   └── services/        # Business logic & repositories
-└── internal/
-    ├── ports/           # Interface definitions
-    ├── adapters/        # (Future: DB implementations)
-    └── db/              # Database utilities
-```
-
-**Key points:**
-- The `go.work` file is required for builds to work
-- IDEs need workspace mode enabled (VSCode: gopls workspace mode)
-- Each `cmd/*` subdirectory is its own module with `replace` directives
-- Services/repositories currently live in `pkg/services/` (will migrate to `internal/` later)
+The backend is a standard Go module. The `backend/cmd/*` directories contain the runnable binaries (API server, migrations, and tools).
 
 ### Current vs. Future Architecture
 
@@ -80,7 +56,6 @@ backend/
 - **[Engineering Standards](docs/engineering.md)** - Architecture principles and coding standards
 - **[Testing Guidelines](docs/bracket_testing_guidelines.md)** - **CRITICAL**: Strict testing conventions (one assert per test, TestThat naming)
 - [Complete Rules and Examples](docs/rules.md) - Business logic and game rules
-- [Database Seeding Guide](docs/seeding.md) - How to populate test data
 - [Data Science Sandbox](docs/data_science_sandbox.md) - Sandbox workflow + two-model framing (predict returns, predict investment, compute ROI)
 
 ### Domain Documentation
@@ -109,11 +84,18 @@ The preferred way to run this project is using Docker Compose, which will set up
    docker compose up
    ```
 
-**That's it!** The database migrations and seeding happen automatically. The services start in this order:
+The services start in this order:
 - Database starts and becomes healthy
-- Migrations run (only new migrations are applied)
-- Seed data is loaded (idempotent - won't duplicate data)
 - Backend and frontend services start
+
+Database schema migrations are run as an explicit ops step:
+```bash
+make ops-migrate
+```
+
+Initial data is imported via the admin UI (Bundles upload):
+- Visit `http://localhost:3000/admin/bundles`
+- Upload a bundle archive
 
 The application will be available at `http://localhost:3000`
 
@@ -129,7 +111,7 @@ If you prefer to run the services manually, follow these steps:
 
 #### Prerequisites
 
-- **Go 1.24 or later** (workspace support required)
+- **Go 1.24 or later**
 - **PostgreSQL 16 or later**
 - **Node.js 18 or later**
 - **npm 9 or later**
@@ -157,21 +139,19 @@ API_URL=http://localhost:8080  # Change from 'http://backend:8080'
 
 2. Run migrations:
    ```bash
-   cd backend
-   go run ./cmd/migrate -up -skip-seed
+   make ops-migrate
    ```
 
-3. Seed the database:
-   ```bash
-   go run ./cmd/migrate -seed
-   ```
+3. Import initial data:
+   - Visit `http://localhost:3000/admin/bundles`
+   - Upload a bundle archive
 
 #### Running the Application
 
 1. Start the backend server:
    ```bash
    cd backend
-   go run ./cmd/server
+   go run ./cmd/api
    ```
    Backend will be available at `http://localhost:8080`
 
@@ -185,32 +165,12 @@ API_URL=http://localhost:8080  # Change from 'http://backend:8080'
 
 ### Troubleshooting
 
-#### Go Workspace Issues
-
-**Problem:** `go: cannot find main module`
-- **Solution:** Make sure you're in the `backend/` directory where `go.work` exists
-- The workspace file is required for all Go commands
-
-**Problem:** IDE not recognizing imports
-- **VSCode:** Enable gopls workspace mode in settings
-- **GoLand:** Ensure "Use Go modules" is enabled and workspace is detected
-
-**Problem:** Version conflicts between modules
-- Each module has its own Go version (1.21, 1.23, 1.24)
-- This is intentional but can cause confusion
-- Always run commands from the appropriate directory
-
 #### Docker Issues
 
 **Problem:** Migrations fail on startup
 - **Solution:** Check database logs: `docker compose logs db`
 - Ensure PostgreSQL is fully started before migrations run
 - Try: `docker compose down -v && docker compose up`
-
-**Problem:** Backend won't start, waiting for seed
-- **Solution:** Check seed service logs: `docker compose logs seed`
-- Seed data is idempotent but may fail if schema is wrong
-- Verify migrations completed: `docker compose logs migrate`
 
 **Problem:** Port conflicts (3000, 8080, 5432)
 - **Solution:** Stop other services using these ports
@@ -361,7 +321,6 @@ func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
 
 ### Common Pitfalls for New Contributors
 
-- **Forgetting Go workspace:** Always run commands from `backend/` directory
 - **Multiple assertions in tests:** Will be rejected in code review
 - **Wrong test naming:** Must use `TestThat{Scenario}` format
 - **Adding logic to handlers:** Business logic belongs in services

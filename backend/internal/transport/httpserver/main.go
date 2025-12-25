@@ -1,0 +1,101 @@
+package httpserver
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/gorilla/mux"
+)
+
+func Run() {
+	log.Printf("Starting server initialization...")
+
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	env := os.Getenv("NODE_ENV")
+	if env == "" {
+		env = "development"
+	}
+	if env != "development" && cfg.JWTSecret == "" {
+		log.Fatal("JWT_SECRET environment variable is not set")
+	}
+
+	db, err := platform.OpenDB(context.Background(), cfg, nil)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	log.Printf("Successfully connected to database")
+
+	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
+	if err != nil {
+		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+	}
+
+	server := NewServer(db, pool, cfg)
+
+	// Router
+	r := mux.NewRouter()
+	r.Use(requestIDMiddleware)
+	r.Use(loggingMiddleware)
+	r.Use(corsMiddleware)
+	r.Use(server.authenticateMiddleware)
+
+	// Routes
+	server.RegisterRoutes(r)
+
+	// Not Found handler
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[%s] No route matched: %s %s", getRequestID(r.Context()), r.Method, r.URL.Path)
+		writeError(w, r, http.StatusNotFound, "not_found", "Not Found", "")
+	})
+
+	port := cfg.Port
+
+	// HTTP server with production timeouts
+	httpServer := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server starting on port %s", port)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		log.Printf("Error closing database: %v", err)
+	}
+	pool.Close()
+
+	log.Println("Server stopped gracefully")
+}

@@ -11,6 +11,7 @@ import { TournamentCreatePage } from './pages/TournamentCreatePage';
 import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
 import { TournamentBracketPage } from './pages/TournamentBracketPage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminBundlesPage } from './pages/AdminBundlesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { HomePage } from './pages/HomePage';
@@ -32,6 +33,7 @@ export const App: React.FC = () => {
             <Route path="/calcuttas" element={<CalcuttaListPage />} />
             <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/bundles" element={<AdminBundlesPage />} />
             <Route path="/admin/analytics" element={<AnalyticsPage />} />
             <Route path="/admin/hall-of-fame" element={<HallOfFamePage />} />
             <Route path="/admin/tournaments" element={<TournamentListPage />} />

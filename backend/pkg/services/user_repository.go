@@ -18,8 +18,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	query := `
-		INSERT INTO users (id, email, first_name, last_name, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, email, first_name, last_name, password_hash, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	now := time.Now()
@@ -31,6 +31,7 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 		user.Email,
 		user.FirstName,
 		user.LastName,
+		user.PasswordHash,
 		user.Created,
 		user.Updated,
 	)
@@ -40,7 +41,7 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT id, email, first_name, last_name, created_at, updated_at, deleted_at
+		SELECT id, email, first_name, last_name, password_hash, created_at, updated_at, deleted_at
 		FROM users
 		WHERE email = $1 AND deleted_at IS NULL
 	`
@@ -51,6 +52,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		&user.Email,
 		&user.FirstName,
 		&user.LastName,
+		&user.PasswordHash,
 		&user.Created,
 		&user.Updated,
 		&user.Deleted,
@@ -68,7 +70,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, error) {
 	query := `
-		SELECT id, email, first_name, last_name, created_at, updated_at, deleted_at
+		SELECT id, email, first_name, last_name, password_hash, created_at, updated_at, deleted_at
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL
 	`
@@ -79,6 +81,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 		&user.Email,
 		&user.FirstName,
 		&user.LastName,
+		&user.PasswordHash,
 		&user.Created,
 		&user.Updated,
 		&user.Deleted,

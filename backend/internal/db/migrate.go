@@ -3,9 +3,9 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -13,10 +13,9 @@ import (
 
 // RunMigrations runs all pending migrations
 func RunMigrations(ctx context.Context) error {
-	// Get connection string from environment
-	connString := os.Getenv("DATABASE_URL")
-	if connString == "" {
-		return fmt.Errorf("DATABASE_URL environment variable is not set")
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		return err
 	}
 
 	// Get migrations directory
@@ -29,7 +28,7 @@ func RunMigrations(ctx context.Context) error {
 	// Create migration instance
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s", absPath),
-		connString,
+		cfg.DatabaseURL,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating migration instance: %v", err)
@@ -46,10 +45,9 @@ func RunMigrations(ctx context.Context) error {
 
 // RollbackMigrations rolls back the last migration
 func RollbackMigrations(ctx context.Context) error {
-	// Get connection string from environment
-	connString := os.Getenv("DATABASE_URL")
-	if connString == "" {
-		return fmt.Errorf("DATABASE_URL environment variable is not set")
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		return err
 	}
 
 	// Get migrations directory
@@ -62,7 +60,7 @@ func RollbackMigrations(ctx context.Context) error {
 	// Create migration instance
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s", absPath),
-		connString,
+		cfg.DatabaseURL,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating migration instance: %v", err)

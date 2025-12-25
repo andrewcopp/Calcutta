@@ -16,19 +16,32 @@ func TestThatSelectingWinnerMarksLosingTeamAsEliminated(t *testing.T) {
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
 
-	// Add our specific test teams
-	team1 := &models.TournamentTeam{ID: "team-1", Wins: 0, Byes: 1, Eliminated: false, Seed: 1, Region: "East"}
-	team16 := &models.TournamentTeam{ID: "team-16", Wins: 0, Byes: 1, Eliminated: false, Seed: 16, Region: "East"}
-	teams[0] = team1
-	teams[1] = team16
+	// Use the fixture teams to avoid accidentally creating duplicate seeds
+	var team1 *models.TournamentTeam
+	var team16 *models.TournamentTeam
+	for _, tm := range teams {
+		if tm.Region == "East" && tm.Seed == 1 {
+			team1 = tm
+		}
+		if tm.Region == "East" && tm.Seed == 16 {
+			team16 = tm
+		}
+		// Default non-play-in teams have a bye into the Round of 64
+		tm.Byes = 1
+		tm.Wins = 0
+		tm.Eliminated = false
+	}
+	if team1 == nil || team16 == nil {
+		t.Fatal("failed to find required East seed 1/16 teams in fixture")
+	}
 
 	mockRepo := &MockTournamentRepo{
 		teams:        make(map[string]*models.TournamentTeam),
 		allTeams:     teams,
 		tournamentID: "tournament-1",
 	}
-	mockRepo.teams["team-1"] = team1
-	mockRepo.teams["team-16"] = team16
+	mockRepo.teams[team1.ID] = team1
+	mockRepo.teams[team16.ID] = team16
 
 	service := &BracketService{
 		tournamentRepo: mockRepo,
@@ -37,13 +50,13 @@ func TestThatSelectingWinnerMarksLosingTeamAsEliminated(t *testing.T) {
 	}
 
 	// WHEN selecting team1 as winner
-	_, err := service.SelectWinner(ctx, "tournament-1", "East-round_of_64-1", "team-1")
+	_, err := service.SelectWinner(ctx, "tournament-1", "East-round_of_64-1", team1.ID)
 	if err != nil {
 		t.Fatalf("Failed to select winner: %v", err)
 	}
 
 	// THEN team16 is marked as eliminated
-	team16Updated := mockRepo.teams["team-16"]
+	team16Updated := mockRepo.teams[team16.ID]
 	if !team16Updated.Eliminated {
 		t.Error("Expected losing team (team-16) to be marked as eliminated")
 	}
@@ -55,17 +68,29 @@ func TestThatSelectingWinnerDoesNotMarkWinnerAsEliminated(t *testing.T) {
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
 
-	team1 := &models.TournamentTeam{ID: "team-1", Wins: 0, Byes: 1, Eliminated: false, Seed: 1, Region: "East"}
-	team16 := &models.TournamentTeam{ID: "team-16", Wins: 0, Byes: 1, Eliminated: false, Seed: 16, Region: "East"}
-	teams[0] = team1
-	teams[1] = team16
+	var team1 *models.TournamentTeam
+	var team16 *models.TournamentTeam
+	for _, tm := range teams {
+		if tm.Region == "East" && tm.Seed == 1 {
+			team1 = tm
+		}
+		if tm.Region == "East" && tm.Seed == 16 {
+			team16 = tm
+		}
+		tm.Byes = 1
+		tm.Wins = 0
+		tm.Eliminated = false
+	}
+	if team1 == nil || team16 == nil {
+		t.Fatal("failed to find required East seed 1/16 teams in fixture")
+	}
 
 	mockRepo := &MockTournamentRepo{
 		teams:    make(map[string]*models.TournamentTeam),
 		allTeams: teams,
 	}
-	mockRepo.teams["team-1"] = team1
-	mockRepo.teams["team-16"] = team16
+	mockRepo.teams[team1.ID] = team1
+	mockRepo.teams[team16.ID] = team16
 
 	service := &BracketService{
 		tournamentRepo: mockRepo,
@@ -74,13 +99,13 @@ func TestThatSelectingWinnerDoesNotMarkWinnerAsEliminated(t *testing.T) {
 	}
 
 	// WHEN selecting team1 as winner
-	_, err := service.SelectWinner(ctx, "tournament-1", "East-round_of_64-1", "team-1")
+	_, err := service.SelectWinner(ctx, "tournament-1", "East-round_of_64-1", team1.ID)
 	if err != nil {
 		t.Fatalf("Failed to select winner: %v", err)
 	}
 
 	// THEN team1 is NOT marked as eliminated
-	team1Updated := mockRepo.teams["team-1"]
+	team1Updated := mockRepo.teams[team1.ID]
 	if team1Updated.Eliminated {
 		t.Error("Expected winning team (team-1) to NOT be marked as eliminated")
 	}
@@ -92,17 +117,31 @@ func TestThatUnselectingWinnerReactivatesLosingTeam(t *testing.T) {
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
 
-	team1 := &models.TournamentTeam{ID: "team-1", Wins: 1, Byes: 1, Eliminated: false, Seed: 1, Region: "East"}
-	team16 := &models.TournamentTeam{ID: "team-16", Wins: 0, Byes: 1, Eliminated: true, Seed: 16, Region: "East"}
-	teams[0] = team1
-	teams[1] = team16
+	var team1 *models.TournamentTeam
+	var team16 *models.TournamentTeam
+	for _, tm := range teams {
+		if tm.Region == "East" && tm.Seed == 1 {
+			team1 = tm
+		}
+		if tm.Region == "East" && tm.Seed == 16 {
+			team16 = tm
+		}
+		tm.Byes = 1
+		tm.Wins = 0
+		tm.Eliminated = false
+	}
+	if team1 == nil || team16 == nil {
+		t.Fatal("failed to find required East seed 1/16 teams in fixture")
+	}
+	team1.Wins = 1
+	team16.Eliminated = true
 
 	mockRepo := &MockTournamentRepo{
 		teams:    make(map[string]*models.TournamentTeam),
 		allTeams: teams,
 	}
-	mockRepo.teams["team-1"] = team1
-	mockRepo.teams["team-16"] = team16
+	mockRepo.teams[team1.ID] = team1
+	mockRepo.teams[team16.ID] = team16
 
 	service := &BracketService{
 		tournamentRepo: mockRepo,
@@ -117,7 +156,7 @@ func TestThatUnselectingWinnerReactivatesLosingTeam(t *testing.T) {
 	}
 
 	// THEN team16 is reactivated (no longer eliminated)
-	team16Updated := mockRepo.teams["team-16"]
+	team16Updated := mockRepo.teams[team16.ID]
 	if team16Updated.Eliminated {
 		t.Error("Expected losing team (team-16) to be reactivated after unselecting winner")
 	}
@@ -129,17 +168,34 @@ func TestThatFirstFourLoserIsMarkedAsEliminated(t *testing.T) {
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
 
-	team11a := &models.TournamentTeam{ID: "team-11a", Wins: 0, Byes: 0, Eliminated: false, Seed: 11, Region: "East"}
-	team11b := &models.TournamentTeam{ID: "team-11b", Wins: 0, Byes: 0, Eliminated: false, Seed: 11, Region: "East"}
-	teams[0] = team11a
-	teams[1] = team11b
+	var team11a *models.TournamentTeam
+	var team11b *models.TournamentTeam
+	for _, tm := range teams {
+		tm.Byes = 1
+		tm.Wins = 0
+		tm.Eliminated = false
+	}
+	for _, tm := range teams {
+		if tm.Region == "East" && tm.Seed == 11 {
+			if team11a == nil {
+				team11a = tm
+			} else if team11b == nil {
+				team11b = tm
+			}
+		}
+	}
+	if team11a == nil || team11b == nil {
+		t.Fatal("failed to find required East seed 11 play-in teams in fixture")
+	}
+	team11a.Byes = 0
+	team11b.Byes = 0
 
 	mockRepo := &MockTournamentRepo{
 		teams:    make(map[string]*models.TournamentTeam),
 		allTeams: teams,
 	}
-	mockRepo.teams["team-11a"] = team11a
-	mockRepo.teams["team-11b"] = team11b
+	mockRepo.teams[team11a.ID] = team11a
+	mockRepo.teams[team11b.ID] = team11b
 
 	service := &BracketService{
 		tournamentRepo: mockRepo,
@@ -148,13 +204,13 @@ func TestThatFirstFourLoserIsMarkedAsEliminated(t *testing.T) {
 	}
 
 	// WHEN selecting team-11a as winner
-	_, err := service.SelectWinner(ctx, "tournament-1", "East-first_four-11", "team-11a")
+	_, err := service.SelectWinner(ctx, "tournament-1", "East-first_four-11", team11a.ID)
 	if err != nil {
 		t.Fatalf("Failed to select winner: %v", err)
 	}
 
 	// THEN team-11b is marked as eliminated
-	team11bUpdated := mockRepo.teams["team-11b"]
+	team11bUpdated := mockRepo.teams[team11b.ID]
 	if !team11bUpdated.Eliminated {
 		t.Error("Expected First Four loser (team-11b) to be marked as eliminated")
 	}
@@ -166,17 +222,36 @@ func TestThatUnselectingFirstFourWinnerReactivatesLoser(t *testing.T) {
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
 
-	team11a := &models.TournamentTeam{ID: "team-11a", Wins: 1, Byes: 0, Eliminated: false, Seed: 11, Region: "East"}
-	team11b := &models.TournamentTeam{ID: "team-11b", Wins: 0, Byes: 0, Eliminated: true, Seed: 11, Region: "East"}
-	teams[0] = team11a
-	teams[1] = team11b
+	var team11a *models.TournamentTeam
+	var team11b *models.TournamentTeam
+	for _, tm := range teams {
+		tm.Byes = 1
+		tm.Wins = 0
+		tm.Eliminated = false
+	}
+	for _, tm := range teams {
+		if tm.Region == "East" && tm.Seed == 11 {
+			if team11a == nil {
+				team11a = tm
+			} else if team11b == nil {
+				team11b = tm
+			}
+		}
+	}
+	if team11a == nil || team11b == nil {
+		t.Fatal("failed to find required East seed 11 play-in teams in fixture")
+	}
+	team11a.Byes = 0
+	team11b.Byes = 0
+	team11a.Wins = 1
+	team11b.Eliminated = true
 
 	mockRepo := &MockTournamentRepo{
 		teams:    make(map[string]*models.TournamentTeam),
 		allTeams: teams,
 	}
-	mockRepo.teams["team-11a"] = team11a
-	mockRepo.teams["team-11b"] = team11b
+	mockRepo.teams[team11a.ID] = team11a
+	mockRepo.teams[team11b.ID] = team11b
 
 	service := &BracketService{
 		tournamentRepo: mockRepo,
@@ -191,7 +266,7 @@ func TestThatUnselectingFirstFourWinnerReactivatesLoser(t *testing.T) {
 	}
 
 	// THEN team-11b is reactivated
-	team11bUpdated := mockRepo.teams["team-11b"]
+	team11bUpdated := mockRepo.teams[team11b.ID]
 	if team11bUpdated.Eliminated {
 		t.Error("Expected First Four loser (team-11b) to be reactivated after unselecting winner")
 	}
@@ -203,17 +278,33 @@ func TestThatChampionshipLoserIsMarkedAsEliminated(t *testing.T) {
 	helper := NewBracketTestHelper()
 	teams := helper.CreateTournament68Teams()
 
-	champion := &models.TournamentTeam{ID: "team-champion", Wins: 5, Byes: 1, Eliminated: false, Seed: 1, Region: "East"}
-	runnerUp := &models.TournamentTeam{ID: "team-runner-up", Wins: 5, Byes: 1, Eliminated: false, Seed: 1, Region: "West"}
-	teams[0] = champion
-	teams[1] = runnerUp
+	// Make the bracket fully resolved so the championship game has both teams.
+	for _, tm := range teams {
+		tm.Byes = 1
+		tm.Wins = 6
+		tm.Eliminated = false
+	}
+
+	var champion *models.TournamentTeam
+	var runnerUp *models.TournamentTeam
+	for _, tm := range teams {
+		if tm.Region == "East" && tm.Seed == 1 {
+			champion = tm
+		}
+		if tm.Region == "South" && tm.Seed == 1 {
+			runnerUp = tm
+		}
+	}
+	if champion == nil || runnerUp == nil {
+		t.Fatal("failed to find required seed 1 teams in fixture")
+	}
 
 	mockRepo := &MockTournamentRepo{
 		teams:    make(map[string]*models.TournamentTeam),
 		allTeams: teams,
 	}
-	mockRepo.teams["team-champion"] = champion
-	mockRepo.teams["team-runner-up"] = runnerUp
+	mockRepo.teams[champion.ID] = champion
+	mockRepo.teams[runnerUp.ID] = runnerUp
 
 	service := &BracketService{
 		tournamentRepo: mockRepo,
@@ -222,13 +313,13 @@ func TestThatChampionshipLoserIsMarkedAsEliminated(t *testing.T) {
 	}
 
 	// WHEN selecting team-champion as winner
-	_, err := service.SelectWinner(ctx, "tournament-1", "championship", "team-champion")
+	_, err := service.SelectWinner(ctx, "tournament-1", "championship", champion.ID)
 	if err != nil {
 		t.Fatalf("Failed to select winner: %v", err)
 	}
 
 	// THEN team-runner-up is marked as eliminated
-	runnerUpUpdated := mockRepo.teams["team-runner-up"]
+	runnerUpUpdated := mockRepo.teams[runnerUp.ID]
 	if !runnerUpUpdated.Eliminated {
 		t.Error("Expected championship loser (team-runner-up) to be marked as eliminated")
 	}

@@ -15,5 +15,11 @@ Thumbs.db
 .env.production
 .env.staging
 
+# Local direnv config
+.envrc
+
+# Generated artifacts
+backend/exports/
+
 # Log files
 *.log

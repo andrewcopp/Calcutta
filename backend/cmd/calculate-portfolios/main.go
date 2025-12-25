@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"log"
-	"os"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/andrewcopp/Calcutta/backend/pkg/services"
@@ -23,14 +21,12 @@ func main() {
 		log.Fatal("Calcutta ID is required")
 	}
 
-	// Get database connection string from environment
-	connString := os.Getenv("DATABASE_URL")
-	if connString == "" {
-		log.Fatal("DATABASE_URL environment variable is not set")
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Connect to database
-	db, err := sql.Open("pgx", connString)
+	db, err := platform.OpenDB(context.Background(), cfg, nil)
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}

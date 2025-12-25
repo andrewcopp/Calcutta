@@ -12,9 +12,9 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o /app/bin/server ./cmd/server
+RUN go build -o /app/bin/api ./cmd/api
 
 EXPOSE 8080
 
 # Run the built binary
-CMD ["/app/bin/server"] 
+CMD ["/app/bin/api"]

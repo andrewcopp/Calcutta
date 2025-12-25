@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/common"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -83,12 +83,12 @@ func main() {
 		log.Printf("Running in dry-run mode (no database writes). Pass --dry-run=false to persist stats.")
 	}
 
-	connString := os.Getenv("DATABASE_URL")
-	if connString == "" {
-		log.Fatal("DATABASE_URL environment variable is not set")
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	db, err := sql.Open("pgx", connString)
+	db, err := platform.OpenDB(context.Background(), cfg, nil)
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
@@ -97,10 +97,6 @@ func main() {
 			log.Printf("Error closing database connection: %v", err)
 		}
 	}()
-
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
-	}
 
 	overrideMap, err := readOverrides(*overrides)
 	if err != nil {

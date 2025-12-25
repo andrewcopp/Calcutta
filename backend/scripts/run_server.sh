@@ -10,4 +10,4 @@ cd "$(dirname "$0")/.."
 
 # Run the server
 echo "Starting server on port $PORT..."
-go run cmd/server/main.go 
+go run ./cmd/api

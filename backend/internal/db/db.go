@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -12,14 +12,13 @@ var pool *pgxpool.Pool
 
 // Initialize sets up the database connection pool
 func Initialize(ctx context.Context) error {
-	// Get connection string from environment
-	connString := os.Getenv("DATABASE_URL")
-	if connString == "" {
-		return fmt.Errorf("DATABASE_URL environment variable is not set")
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		return err
 	}
 
 	// Create connection pool
-	config, err := pgxpool.ParseConfig(connString)
+	config, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("error parsing connection string: %v", err)
 	}

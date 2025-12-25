@@ -24,7 +24,7 @@ type BracketService struct {
 }
 
 // NewBracketService creates a new bracket service
-func NewBracketService(tournamentRepo *TournamentRepository) *BracketService {
+func NewBracketService(tournamentRepo TournamentTeamRepository) *BracketService {
 	return &BracketService{
 		tournamentRepo: tournamentRepo,
 		builder:        NewBracketBuilder(),

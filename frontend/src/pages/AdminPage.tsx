@@ -16,6 +16,14 @@ export const AdminPage: React.FC = () => {
         </Link>
 
         <Link 
+          to="/admin/bundles" 
+          className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+        >
+          <h2 className="text-xl font-semibold mb-2">Bundles</h2>
+          <p className="text-gray-600">Export or import bundle archives</p>
+        </Link>
+
+        <Link 
           to="/admin/analytics" 
           className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >

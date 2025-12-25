@@ -25,13 +25,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
       - NODE_ENV=${NODE_ENV}
-      - GOWORK=/app/go.work
     depends_on:
-      migrate:
-        condition: service_completed_successfully
-      seed:
-        condition: service_completed_successfully
-    command: sh -c "go run ./cmd/server"
+      db:
+        condition: service_healthy
+    command: sh -c "go run ./cmd/api"
 
   db:
     image: postgres:16-alpine
@@ -51,6 +48,8 @@ services:
 
   migrate:
     build: ./backend
+    profiles:
+      - ops
     volumes:
       - ./backend:/app
     working_dir: /app
@@ -59,20 +58,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "go run ./cmd/migrate -up -skip-seed"
-    restart: on-failure
-
-  seed:
-    build: ./backend
-    volumes:
-      - ./backend:/app
-    working_dir: /app
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    command: sh -c "go run ./cmd/migrate -seed"
+    command: sh -c "go run ./cmd/migrate -up"
     restart: on-failure
 
 volumes:

@@ -7,6 +7,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -19,7 +20,7 @@ func NewUserService(userRepo *UserRepository) *UserService {
 	}
 }
 
-func (s *UserService) Login(ctx context.Context, email string) (*models.User, error) {
+func (s *UserService) Login(ctx context.Context, email, password string) (*models.User, error) {
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -29,10 +30,17 @@ func (s *UserService) Login(ctx context.Context, email string) (*models.User, er
 		return nil, &NotFoundError{Resource: "user", ID: email}
 	}
 
+	if user.PasswordHash == nil || *user.PasswordHash == "" {
+		return nil, &NotFoundError{Resource: "user", ID: email}
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
+		return nil, &NotFoundError{Resource: "user", ID: email}
+	}
+
 	return user, nil
 }
 
-func (s *UserService) Signup(ctx context.Context, email, firstName, lastName string) (*models.User, error) {
+func (s *UserService) Signup(ctx context.Context, email, firstName, lastName, password string) (*models.User, error) {
 	// Check if user already exists
 	existingUser, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -44,13 +52,20 @@ func (s *UserService) Signup(ctx context.Context, email, firstName, lastName str
 	}
 
 	// Create new user
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+	hashStr := string(hash)
+
 	user := &models.User{
-		ID:        uuid.New().String(),
-		Email:     email,
-		FirstName: firstName,
-		LastName:  lastName,
-		Created:   time.Now(),
-		Updated:   time.Now(),
+		ID:           uuid.New().String(),
+		Email:        email,
+		FirstName:    firstName,
+		LastName:     lastName,
+		PasswordHash: &hashStr,
+		Created:      time.Now(),
+		Updated:      time.Now(),
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
