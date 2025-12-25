@@ -6,6 +6,7 @@ import "github.com/gorilla/mux"
 func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerBasicRoutes(r)
 	s.registerAdminBundleRoutes(r)
+	s.registerAdminAnalyticsRoutes(r)
 	s.registerAuthRoutes(r)
 	s.registerTournamentRoutes(r)
 	s.registerBracketRoutes(r)

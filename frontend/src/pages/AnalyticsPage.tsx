@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart,
@@ -21,6 +21,8 @@ import { AnalyticsResponse, SeedInvestmentDistributionResponse } from '../types/
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
+import { Tournament } from '../types/tournament';
+import { Calcutta } from '../types/calcutta';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7c7c'];
 const REGION_COLORS: Record<string, string> = {
@@ -31,7 +33,26 @@ const REGION_COLORS: Record<string, string> = {
 };
 
 export const AnalyticsPage: React.FC = () => {
+  const API_URL = useMemo(() => import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080', []);
+
   const [activeTab, setActiveTab] = useState<'seeds' | 'regions' | 'teams' | 'variance'>('seeds');
+
+  const [exportTournamentId, setExportTournamentId] = useState<string>('');
+  const [exportCalcuttaId, setExportCalcuttaId] = useState<string>('');
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const tournamentsQuery = useQuery({
+    queryKey: queryKeys.tournaments.all(),
+    staleTime: 30_000,
+    queryFn: () => apiClient.get<Tournament[]>('/tournaments'),
+  });
+
+  const calcuttasQuery = useQuery({
+    queryKey: queryKeys.calcuttas.all(),
+    staleTime: 30_000,
+    queryFn: () => apiClient.get<Calcutta[]>('/calcuttas'),
+  });
 
   const analyticsQuery = useQuery({
     queryKey: queryKeys.analytics.all(),
@@ -76,6 +97,51 @@ export const AnalyticsPage: React.FC = () => {
 
   const seedInvestmentDistribution = seedInvestmentDistributionQuery.data;
 
+  const tournaments = tournamentsQuery.data ?? [];
+  const calcuttas = calcuttasQuery.data ?? [];
+  const filteredCalcuttas = exportTournamentId ? calcuttas.filter((c) => c.tournamentId === exportTournamentId) : calcuttas;
+
+  const downloadSnapshot = async () => {
+    setExportError(null);
+    setExportBusy(true);
+    try {
+      if (!exportTournamentId) {
+        throw new Error('Please select a tournament');
+      }
+      if (!exportCalcuttaId) {
+        throw new Error('Please select a calcutta');
+      }
+
+      const url = new URL(`${API_URL}/api/admin/analytics/export`);
+      url.searchParams.set('tournamentId', exportTournamentId);
+      url.searchParams.set('calcuttaId', exportCalcuttaId);
+
+      const res = await fetch(url.toString(), { credentials: 'include' });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(txt || `Export failed (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const match = /filename="([^"]+)"/i.exec(cd);
+      const filename = match?.[1] || 'analytics-snapshot.zip';
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -86,6 +152,64 @@ export const AnalyticsPage: React.FC = () => {
         <p className="text-gray-600 mt-2">
           Historical analysis across all calcuttas to identify trends and patterns
         </p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-2">Export Analytics Snapshot</h2>
+        <p className="text-gray-600 mb-4">
+          Download a zip containing CSV tables and a manifest for offline Python analysis.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tournament</label>
+            <select
+              value={exportTournamentId}
+              onChange={(e) => {
+                setExportTournamentId(e.target.value);
+                setExportCalcuttaId('');
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              disabled={exportBusy}
+            >
+              <option value="">Select tournament</option>
+              {tournaments.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Calcutta</label>
+            <select
+              value={exportCalcuttaId}
+              onChange={(e) => setExportCalcuttaId(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              disabled={exportBusy}
+            >
+              <option value="">Select calcutta</option>
+              {filteredCalcuttas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <button
+              onClick={downloadSnapshot}
+              disabled={exportBusy}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              Download snapshot (.zip)
+            </button>
+          </div>
+        </div>
+
+        {exportError && <div className="mt-4 text-red-600">{exportError}</div>}
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
