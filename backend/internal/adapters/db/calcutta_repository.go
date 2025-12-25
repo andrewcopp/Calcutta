@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -535,6 +536,9 @@ func uuidToPtrString(u pgtype.UUID) *string {
 
 func numericFromFloat64(v float64) (pgtype.Numeric, error) {
 	var n pgtype.Numeric
-	err := n.Scan(v)
+	// pgtype.Numeric.Scan does not reliably accept float64 across pgx versions.
+	// Format as a decimal string to ensure consistent behavior.
+	s := strconv.FormatFloat(v, 'f', -1, 64)
+	err := n.Scan(s)
 	return n, err
 }
