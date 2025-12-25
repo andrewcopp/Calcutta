@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -110,6 +111,17 @@ func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
+	}
+
+	calcuttas, err := s.calcuttaService.GetAllCalcuttas(r.Context())
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	for _, c := range calcuttas {
+		if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
+			log.Printf("Error ensuring portfolios/recalculating for calcutta %s: %v", c.ID, err)
+		}
 	}
 
 	impJSON, _ := json.Marshal(impReport)

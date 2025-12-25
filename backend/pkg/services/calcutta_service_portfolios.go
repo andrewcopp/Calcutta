@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -86,6 +87,43 @@ func (s *CalcuttaService) CreatePortfolio(ctx context.Context, entryID string) (
 	}
 
 	return portfolio, nil
+}
+
+func (s *CalcuttaService) EnsurePortfoliosAndRecalculate(ctx context.Context, calcuttaID string) error {
+	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		portfolios, err := s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entry.ID)
+		if err != nil {
+			return err
+		}
+		if len(portfolios) == 0 {
+			if _, err := s.CreatePortfolio(ctx, entry.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := s.RecalculatePortfolio(ctx, calcuttaID); err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		portfolios, err := s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entry.ID)
+		if err != nil {
+			return err
+		}
+		for _, p := range portfolios {
+			if err := s.CalculatePortfolioScores(ctx, p.ID); err != nil {
+				log.Printf("Error calculating portfolio scores for portfolio %s: %v", p.ID, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // UpdatePortfolioScores updates the maximum possible score for a portfolio

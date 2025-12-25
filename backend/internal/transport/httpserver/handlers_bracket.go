@@ -78,6 +78,17 @@ func (s *Server) selectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), tournamentID)
+	if err != nil {
+		log.Printf("Error listing calcuttas for tournament %s: %v", tournamentID, err)
+	} else {
+		for _, c := range calcuttas {
+			if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
+				log.Printf("Error ensuring portfolios/recalculating for calcutta %s after winner select: %v", c.ID, err)
+			}
+		}
+	}
+
 	log.Printf("Successfully selected winner, returning bracket with %d games", len(bracket.Games))
 	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
@@ -101,6 +112,17 @@ func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error unselecting winner: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
+	}
+
+	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), tournamentID)
+	if err != nil {
+		log.Printf("Error listing calcuttas for tournament %s: %v", tournamentID, err)
+	} else {
+		for _, c := range calcuttas {
+			if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
+				log.Printf("Error ensuring portfolios/recalculating for calcutta %s after winner unselect: %v", c.ID, err)
+			}
+		}
 	}
 
 	log.Printf("Successfully unselected winner for game %s, returning bracket with %d games", gameID, len(bracket.Games))
