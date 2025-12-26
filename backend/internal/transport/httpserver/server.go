@@ -20,17 +20,7 @@ import (
 )
 
 type Server struct {
-	schoolRepo        *services.SchoolRepository
-	schoolService     *services.SchoolService
-	tournamentRepo    *services.TournamentRepository
-	tournamentService *services.TournamentService
-	calcuttaRepo      *dbadapters.CalcuttaRepository
-	calcuttaService   *services.CalcuttaService
-	userRepo          *services.UserRepository
-	userService       *services.UserService
 	app               *app.App
-	analyticsRepo     *services.AnalyticsRepository
-	analyticsService  *services.AnalyticsService
 	authRepo          *AuthRepository
 	authzRepo         *AuthorizationRepository
 	apiKeysRepo       *APIKeysRepository
@@ -41,10 +31,7 @@ type Server struct {
 }
 
 func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
-	schoolRepo := services.NewSchoolRepository(db)
-	tournamentRepo := services.NewTournamentRepository(db)
 	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)
-	userRepo := services.NewUserRepository(db)
 	analyticsRepo := services.NewAnalyticsRepository(db)
 	authRepo := NewAuthRepository(pool)
 	authzRepo := NewAuthorizationRepository(pool)
@@ -58,8 +45,6 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 		log.Fatalf("failed to initialize auth token manager: %v", err)
 	}
 
-	schoolService := services.NewSchoolService(schoolRepo)
-	tournamentService := services.NewTournamentService(tournamentRepo, schoolRepo)
 	calcuttaService := services.NewCalcuttaService(services.CalcuttaServicePorts{
 		CalcuttaReader:  calcuttaRepo,
 		CalcuttaWriter:  calcuttaRepo,
@@ -71,7 +56,6 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 		RoundWriter:     calcuttaRepo,
 		TeamReader:      calcuttaRepo,
 	})
-	userService := services.NewUserService(userRepo)
 	bracketService := services.NewBracketService(dbTournamentRepo)
 	a := &app.App{Bracket: appbracket.New(bracketService)}
 	a.Calcutta = appcalcutta.New(calcuttaService)
@@ -82,17 +66,7 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 	a.Analytics = appanalytics.New(analyticsService)
 
 	return &Server{
-		schoolRepo:        schoolRepo,
-		schoolService:     schoolService,
-		tournamentRepo:    tournamentRepo,
-		tournamentService: tournamentService,
-		calcuttaRepo:      calcuttaRepo,
-		calcuttaService:   calcuttaService,
-		userRepo:          userRepo,
-		userService:       userService,
 		app:               a,
-		analyticsRepo:     analyticsRepo,
-		analyticsService:  analyticsService,
 		authRepo:          authRepo,
 		authzRepo:         authzRepo,
 		apiKeysRepo:       apiKeysRepo,
