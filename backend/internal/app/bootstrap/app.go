@@ -43,9 +43,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
 	analyticsService := services.NewAnalyticsService(analyticsRepo)
 
-	bracketService := services.NewBracketService(dbTournamentRepo)
-
-	a := &app.App{Bracket: appbracket.New(bracketService)}
+	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = appcalcutta.New(calcuttaService)
 	a.Analytics = appanalytics.New(analyticsService)
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
