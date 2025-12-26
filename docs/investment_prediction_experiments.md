@@ -4,8 +4,8 @@
 Predict *market investment* (team bid share) well enough to identify *overbid / underbid* teams, especially among high-quality teams.
 
 ## Current evaluation runner
-- `backend/scripts/run_invest_eval.sh`
-- Output: CSV containing per-year metrics and overall aggregated rows.
+- `data-science/evaluate_harness.py`
+- Output: JSON containing per-fold metrics.
 
 ## Metrics to track
 ### Primary (north star)

@@ -18,6 +18,10 @@ Thumbs.db
 # Local direnv config
 .envrc
 
+# Python artifacts
+__pycache__/
+*.pyc
+
 # Generated artifacts
 backend/exports/
 
