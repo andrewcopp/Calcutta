@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 // CalculateOwnershipPercentage calculates the ownership percentage for a team
-func (s *CalcuttaService) CalculateOwnershipPercentage(ctx context.Context, team interface{}, allTeams []*models.CalcuttaEntryTeam) float64 {
+func (s *Service) CalculateOwnershipPercentage(ctx context.Context, team interface{}, allTeams []*models.CalcuttaEntryTeam) float64 {
 	// Rule 8: Ownership percentage = (Player's bid on team) ÷ (Total bids on team)
 	totalBids := 0.0
 	var teamID string

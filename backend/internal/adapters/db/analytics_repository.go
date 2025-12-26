@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,17 +17,17 @@ func NewAnalyticsRepository(pool *pgxpool.Pool) *AnalyticsRepository {
 	return &AnalyticsRepository{pool: pool, q: sqlc.New(pool)}
 }
 
-func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]services.SeedAnalyticsData, float64, float64, error) {
+func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]ports.SeedAnalyticsData, float64, float64, error) {
 	rows, err := r.q.GetSeedAnalytics(ctx)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	out := make([]services.SeedAnalyticsData, 0, len(rows))
+	out := make([]ports.SeedAnalyticsData, 0, len(rows))
 	var totalPoints float64
 	var totalInvestment float64
 	for _, row := range rows {
-		out = append(out, services.SeedAnalyticsData{
+		out = append(out, ports.SeedAnalyticsData{
 			Seed:            int(row.Seed),
 			TotalPoints:     row.TotalPoints,
 			TotalInvestment: row.TotalInvestment,
@@ -40,17 +40,17 @@ func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]services.
 	return out, totalPoints, totalInvestment, nil
 }
 
-func (r *AnalyticsRepository) GetRegionAnalytics(ctx context.Context) ([]services.RegionAnalyticsData, float64, float64, error) {
+func (r *AnalyticsRepository) GetRegionAnalytics(ctx context.Context) ([]ports.RegionAnalyticsData, float64, float64, error) {
 	rows, err := r.q.GetRegionAnalytics(ctx)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	out := make([]services.RegionAnalyticsData, 0, len(rows))
+	out := make([]ports.RegionAnalyticsData, 0, len(rows))
 	var totalPoints float64
 	var totalInvestment float64
 	for _, row := range rows {
-		out = append(out, services.RegionAnalyticsData{
+		out = append(out, ports.RegionAnalyticsData{
 			Region:          row.Region,
 			TotalPoints:     row.TotalPoints,
 			TotalInvestment: row.TotalInvestment,
@@ -63,15 +63,15 @@ func (r *AnalyticsRepository) GetRegionAnalytics(ctx context.Context) ([]service
 	return out, totalPoints, totalInvestment, nil
 }
 
-func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]services.TeamAnalyticsData, error) {
+func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.TeamAnalyticsData, error) {
 	rows, err := r.q.GetTeamAnalytics(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.TeamAnalyticsData, 0, len(rows))
+	out := make([]ports.TeamAnalyticsData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.TeamAnalyticsData{
+		out = append(out, ports.TeamAnalyticsData{
 			SchoolID:        row.SchoolID,
 			SchoolName:      row.SchoolName,
 			TotalPoints:     row.TotalPoints,
@@ -84,15 +84,15 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]services.
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]services.SeedVarianceData, error) {
+func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]ports.SeedVarianceData, error) {
 	rows, err := r.q.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.SeedVarianceData, 0, len(rows))
+	out := make([]ports.SeedVarianceData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.SeedVarianceData{
+		out = append(out, ports.SeedVarianceData{
 			Seed:             int(row.Seed),
 			InvestmentStdDev: row.InvestmentStddev,
 			PointsStdDev:     row.PointsStddev,
@@ -104,15 +104,15 @@ func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]s
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetSeedInvestmentPoints(ctx context.Context) ([]services.SeedInvestmentPointData, error) {
+func (r *AnalyticsRepository) GetSeedInvestmentPoints(ctx context.Context) ([]ports.SeedInvestmentPointData, error) {
 	rows, err := r.q.GetSeedInvestmentPoints(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.SeedInvestmentPointData, 0, len(rows))
+	out := make([]ports.SeedInvestmentPointData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.SeedInvestmentPointData{
+		out = append(out, ports.SeedInvestmentPointData{
 			Seed:             int(row.Seed),
 			TournamentName:   row.TournamentName,
 			TournamentYear:   int(row.TournamentYear),
@@ -128,15 +128,15 @@ func (r *AnalyticsRepository) GetSeedInvestmentPoints(ctx context.Context) ([]se
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetBestInvestments(ctx context.Context, limit int) ([]services.BestInvestmentData, error) {
+func (r *AnalyticsRepository) GetBestInvestments(ctx context.Context, limit int) ([]ports.BestInvestmentData, error) {
 	rows, err := r.q.GetBestInvestments(ctx, int32(limit))
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.BestInvestmentData, 0, len(rows))
+	out := make([]ports.BestInvestmentData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.BestInvestmentData{
+		out = append(out, ports.BestInvestmentData{
 			TournamentName:   row.TournamentName,
 			TournamentYear:   int(row.TournamentYear),
 			CalcuttaID:       row.CalcuttaID,
@@ -158,15 +158,15 @@ func (r *AnalyticsRepository) GetBestInvestments(ctx context.Context, limit int)
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetBestInvestmentBids(ctx context.Context, limit int) ([]services.InvestmentLeaderboardData, error) {
+func (r *AnalyticsRepository) GetBestInvestmentBids(ctx context.Context, limit int) ([]ports.InvestmentLeaderboardData, error) {
 	rows, err := r.q.GetBestInvestmentBids(ctx, int32(limit))
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.InvestmentLeaderboardData, 0, len(rows))
+	out := make([]ports.InvestmentLeaderboardData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.InvestmentLeaderboardData{
+		out = append(out, ports.InvestmentLeaderboardData{
 			TournamentName:      row.TournamentName,
 			TournamentYear:      int(row.TournamentYear),
 			CalcuttaID:          row.CalcuttaID,
@@ -185,15 +185,15 @@ func (r *AnalyticsRepository) GetBestInvestmentBids(ctx context.Context, limit i
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetBestEntries(ctx context.Context, limit int) ([]services.EntryLeaderboardData, error) {
+func (r *AnalyticsRepository) GetBestEntries(ctx context.Context, limit int) ([]ports.EntryLeaderboardData, error) {
 	rows, err := r.q.GetBestEntries(ctx, int32(limit))
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.EntryLeaderboardData, 0, len(rows))
+	out := make([]ports.EntryLeaderboardData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.EntryLeaderboardData{
+		out = append(out, ports.EntryLeaderboardData{
 			TournamentName:    row.TournamentName,
 			TournamentYear:    int(row.TournamentYear),
 			CalcuttaID:        row.CalcuttaID,
@@ -209,15 +209,15 @@ func (r *AnalyticsRepository) GetBestEntries(ctx context.Context, limit int) ([]
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]services.CareerLeaderboardData, error) {
+func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]ports.CareerLeaderboardData, error) {
 	rows, err := r.q.GetBestCareers(ctx, int32(limit))
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]services.CareerLeaderboardData, 0, len(rows))
+	out := make([]ports.CareerLeaderboardData, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, services.CareerLeaderboardData{
+		out = append(out, ports.CareerLeaderboardData{
 			EntryName:              row.EntryName,
 			Years:                  int(row.Years),
 			BestFinish:             int(row.BestFinish),

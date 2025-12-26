@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 )
 
 // ValidateEntry validates all bids for an entry according to the rules
-func (s *CalcuttaService) ValidateEntry(entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {
+func (s *Service) ValidateEntry(entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {
 	// Rule 1: All bids are sealed until the tournament begins
 	// This is handled at the API level, not in the service
 

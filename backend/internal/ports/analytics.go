@@ -1,4 +1,6 @@
-package services
+package ports
+
+import "context"
 
 type SeedAnalyticsData struct {
 	Seed            int
@@ -99,4 +101,16 @@ type CareerLeaderboardData struct {
 	Top10s                 int
 	CareerEarningsCents    int
 	ActiveInLatestCalcutta bool
+}
+
+type AnalyticsRepo interface {
+	GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error)
+	GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsData, float64, float64, error)
+	GetTeamAnalytics(ctx context.Context) ([]TeamAnalyticsData, error)
+	GetSeedVarianceAnalytics(ctx context.Context) ([]SeedVarianceData, error)
+	GetSeedInvestmentPoints(ctx context.Context) ([]SeedInvestmentPointData, error)
+	GetBestInvestments(ctx context.Context, limit int) ([]BestInvestmentData, error)
+	GetBestInvestmentBids(ctx context.Context, limit int) ([]InvestmentLeaderboardData, error)
+	GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderboardData, error)
+	GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardData, error)
 }

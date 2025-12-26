@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 // CalculateTotalBids calculates the total bids for a Calcutta entry
-func (s *CalcuttaService) CalculateTotalBids(ctx context.Context, entryID string) (float64, error) {
+func (s *Service) CalculateTotalBids(ctx context.Context, entryID string) (float64, error) {
 	teams, err := s.ports.EntryReader.GetEntryTeams(ctx, entryID)
 	if err != nil {
 		return 0, err
@@ -24,7 +24,7 @@ func (s *CalcuttaService) CalculateTotalBids(ctx context.Context, entryID string
 }
 
 // CreatePortfolio creates a new portfolio for a Calcutta entry
-func (s *CalcuttaService) CreatePortfolio(ctx context.Context, entryID string) (*models.CalcuttaPortfolio, error) {
+func (s *Service) CreatePortfolio(ctx context.Context, entryID string) (*models.CalcuttaPortfolio, error) {
 	// Get this entry's teams
 	teams, err := s.ports.EntryReader.GetEntryTeams(ctx, entryID)
 	if err != nil {
@@ -89,7 +89,7 @@ func (s *CalcuttaService) CreatePortfolio(ctx context.Context, entryID string) (
 	return portfolio, nil
 }
 
-func (s *CalcuttaService) EnsurePortfoliosAndRecalculate(ctx context.Context, calcuttaID string) error {
+func (s *Service) EnsurePortfoliosAndRecalculate(ctx context.Context, calcuttaID string) error {
 	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (s *CalcuttaService) EnsurePortfoliosAndRecalculate(ctx context.Context, ca
 }
 
 // UpdatePortfolioScores updates the maximum possible score for a portfolio
-func (s *CalcuttaService) UpdatePortfolioScores(ctx context.Context, portfolioID string, maxPoints float64) error {
+func (s *Service) UpdatePortfolioScores(ctx context.Context, portfolioID string, maxPoints float64) error {
 	portfolio, err := s.ports.PortfolioReader.GetPortfolio(ctx, portfolioID)
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (s *CalcuttaService) UpdatePortfolioScores(ctx context.Context, portfolioID
 }
 
 // CalculatePortfolioScores calculates and updates the scores for a portfolio
-func (s *CalcuttaService) CalculatePortfolioScores(ctx context.Context, portfolioID string) error {
+func (s *Service) CalculatePortfolioScores(ctx context.Context, portfolioID string) error {
 	teams, err := s.ports.PortfolioReader.GetPortfolioTeams(ctx, portfolioID)
 	if err != nil {
 		return err
@@ -191,11 +191,11 @@ func (s *CalcuttaService) CalculatePortfolioScores(ctx context.Context, portfoli
 }
 
 // GetPortfolioTeams retrieves all teams for a portfolio
-func (s *CalcuttaService) GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error) {
+func (s *Service) GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error) {
 	return s.ports.PortfolioReader.GetPortfolioTeams(ctx, portfolioID)
 }
 
 // UpdatePortfolioTeam updates a portfolio team
-func (s *CalcuttaService) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
+func (s *Service) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
 	return s.ports.PortfolioWriter.UpdatePortfolioTeam(ctx, team)
 }

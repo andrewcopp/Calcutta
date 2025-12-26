@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 // RecalculatePortfolio recalculates the portfolio for a calcutta entry
-func (s *CalcuttaService) RecalculatePortfolio(ctx context.Context, calcuttaID string) error {
+func (s *Service) RecalculatePortfolio(ctx context.Context, calcuttaID string) error {
 	log.Printf("Starting portfolio recalculation for calcutta %s", calcuttaID)
 
 	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
@@ -28,7 +28,7 @@ func (s *CalcuttaService) RecalculatePortfolio(ctx context.Context, calcuttaID s
 	return nil
 }
 
-func (s *CalcuttaService) recalculateEntryPortfolios(ctx context.Context, calcuttaID string, entry *models.CalcuttaEntry) error {
+func (s *Service) recalculateEntryPortfolios(ctx context.Context, calcuttaID string, entry *models.CalcuttaEntry) error {
 	log.Printf("Processing entry %s", entry.ID)
 
 	portfolios, err := s.ports.PortfolioReader.GetPortfolios(ctx, entry.ID)
@@ -47,7 +47,7 @@ func (s *CalcuttaService) recalculateEntryPortfolios(ctx context.Context, calcut
 	return nil
 }
 
-func (s *CalcuttaService) recalculatePortfolio(ctx context.Context, calcuttaID string, portfolio *models.CalcuttaPortfolio) error {
+func (s *Service) recalculatePortfolio(ctx context.Context, calcuttaID string, portfolio *models.CalcuttaPortfolio) error {
 	log.Printf("Processing portfolio %s for entry %s", portfolio.ID, portfolio.EntryID)
 
 	portfolioTeams, err := s.ports.PortfolioReader.GetPortfolioTeams(ctx, portfolio.ID)
@@ -71,7 +71,7 @@ func (s *CalcuttaService) recalculatePortfolio(ctx context.Context, calcuttaID s
 	return nil
 }
 
-func (s *CalcuttaService) loadAllEntryTeams(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntryTeam, error) {
+func (s *Service) loadAllEntryTeams(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntryTeam, error) {
 	allEntryTeams, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
 	if err != nil {
 		log.Printf("Error getting all entries: %v", err)
@@ -92,7 +92,7 @@ func (s *CalcuttaService) loadAllEntryTeams(ctx context.Context, calcuttaID stri
 	return allTeams, nil
 }
 
-func (s *CalcuttaService) recalculatePortfolioTeam(ctx context.Context, portfolio *models.CalcuttaPortfolio, portfolioTeam *models.CalcuttaPortfolioTeam, allTeams []*models.CalcuttaEntryTeam) error {
+func (s *Service) recalculatePortfolioTeam(ctx context.Context, portfolio *models.CalcuttaPortfolio, portfolioTeam *models.CalcuttaPortfolioTeam, allTeams []*models.CalcuttaEntryTeam) error {
 	log.Printf("Processing team %s in portfolio", portfolioTeam.TeamID)
 
 	tournamentTeam, err := s.ports.TeamReader.GetTournamentTeam(ctx, portfolioTeam.TeamID)

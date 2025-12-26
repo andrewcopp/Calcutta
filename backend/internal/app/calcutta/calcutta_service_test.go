@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 // MockCalcuttaRepository is a mock implementation of CalcuttaRepository for testing
 type MockCalcuttaRepository struct{}
 
-func newTestCalcuttaService() *CalcuttaService {
+func newTestCalcuttaService() *Service {
 	mockRepo := &MockCalcuttaRepository{}
-	return NewCalcuttaService(CalcuttaServicePorts{
+	return New(Ports{
 		CalcuttaReader:  mockRepo,
 		CalcuttaWriter:  mockRepo,
 		EntryReader:     mockRepo,

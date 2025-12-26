@@ -1,9 +1,9 @@
-package services
+package calcutta
 
 import "github.com/andrewcopp/Calcutta/backend/pkg/models"
 
 // CalculatePoints calculates the points earned by a team based on its performance
-func (s *CalcuttaService) CalculatePoints(team *models.TournamentTeam, rounds []*models.CalcuttaRound) float64 {
+func (s *Service) CalculatePoints(team *models.TournamentTeam, rounds []*models.CalcuttaRound) float64 {
 	// Calculate total progress (wins + byes)
 	totalProgress := team.Wins + team.Byes
 
@@ -40,7 +40,7 @@ func (s *CalcuttaService) CalculatePoints(team *models.TournamentTeam, rounds []
 }
 
 // CalculatePlayerPoints calculates the points earned by a player based on their team ownerships
-func (s *CalcuttaService) CalculatePlayerPoints(portfolio *models.CalcuttaPortfolio, portfolioTeams []*models.CalcuttaPortfolioTeam) float64 {
+func (s *Service) CalculatePlayerPoints(portfolio *models.CalcuttaPortfolio, portfolioTeams []*models.CalcuttaPortfolioTeam) float64 {
 	totalPoints := 0.0
 	for _, portfolioTeam := range portfolioTeams {
 		if portfolioTeam.PortfolioID == portfolio.ID {

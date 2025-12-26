@@ -13,7 +13,6 @@ import (
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,7 +27,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	}
 
 	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)
-	calcuttaService := services.NewCalcuttaService(services.CalcuttaServicePorts{
+	calcuttaService := appcalcutta.New(appcalcutta.Ports{
 		CalcuttaReader:  calcuttaRepo,
 		CalcuttaWriter:  calcuttaRepo,
 		EntryReader:     calcuttaRepo,
@@ -41,11 +40,11 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	})
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
-	analyticsService := services.NewAnalyticsService(analyticsRepo)
+	analyticsService := appanalytics.New(analyticsRepo)
 
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
-	a.Calcutta = appcalcutta.New(calcuttaService)
-	a.Analytics = appanalytics.New(analyticsService)
+	a.Calcutta = calcuttaService
+	a.Analytics = analyticsService
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)

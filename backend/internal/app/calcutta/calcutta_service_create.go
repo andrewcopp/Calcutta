@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 )
 
 // CreateCalcuttaWithRounds creates a new calcutta and its associated rounds
-func (s *CalcuttaService) CreateCalcuttaWithRounds(ctx context.Context, calcutta *models.Calcutta) error {
+func (s *Service) CreateCalcuttaWithRounds(ctx context.Context, calcutta *models.Calcutta) error {
 	if err := s.ports.CalcuttaWriter.Create(ctx, calcutta); err != nil {
 		return err
 	}

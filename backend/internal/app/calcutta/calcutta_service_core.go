@@ -1,10 +1,10 @@
-package services
+package calcutta
 
 import (
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
-type CalcuttaServicePorts struct {
+type Ports struct {
 	CalcuttaReader  ports.CalcuttaReader
 	CalcuttaWriter  ports.CalcuttaWriter
 	EntryReader     ports.EntryReader
@@ -17,11 +17,11 @@ type CalcuttaServicePorts struct {
 }
 
 // CalcuttaService handles business logic for Calcutta auctions
-type CalcuttaService struct {
-	ports CalcuttaServicePorts
+type Service struct {
+	ports Ports
 }
 
 // NewCalcuttaService creates a new CalcuttaService
-func NewCalcuttaService(ports CalcuttaServicePorts) *CalcuttaService {
-	return &CalcuttaService{ports: ports}
+func New(ports Ports) *Service {
+	return &Service{ports: ports}
 }

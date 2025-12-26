@@ -1,4 +1,4 @@
-package services
+package calcutta
 
 import (
 	"context"
@@ -8,27 +8,27 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
 
-func (s *CalcuttaService) GetAllCalcuttas(ctx context.Context) ([]*models.Calcutta, error) {
+func (s *Service) GetAllCalcuttas(ctx context.Context) ([]*models.Calcutta, error) {
 	return s.ports.CalcuttaReader.GetAll(ctx)
 }
 
-func (s *CalcuttaService) GetCalcuttaByID(ctx context.Context, id string) (*models.Calcutta, error) {
+func (s *Service) GetCalcuttaByID(ctx context.Context, id string) (*models.Calcutta, error) {
 	return s.ports.CalcuttaReader.GetByID(ctx, id)
 }
 
-func (s *CalcuttaService) CreateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
+func (s *Service) CreateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
 	return s.ports.CalcuttaWriter.Create(ctx, calcutta)
 }
 
-func (s *CalcuttaService) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
+func (s *Service) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
 	return s.ports.RoundWriter.CreateRound(ctx, round)
 }
 
-func (s *CalcuttaService) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
+func (s *Service) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
 	return s.ports.CalcuttaWriter.Update(ctx, calcutta)
 }
 
-func (s *CalcuttaService) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
+func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
 	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
 	if err != nil {
 		return nil, err
@@ -94,26 +94,26 @@ func (s *CalcuttaService) GetEntries(ctx context.Context, calcuttaID string) ([]
 	return entries, nil
 }
 
-func (s *CalcuttaService) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {
+func (s *Service) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {
 	return s.ports.EntryReader.GetEntryTeams(ctx, entryID)
 }
 
-func (s *CalcuttaService) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {
+func (s *Service) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {
 	return s.ports.EntryReader.GetEntry(ctx, id)
 }
 
-func (s *CalcuttaService) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
+func (s *Service) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
 	return s.ports.EntryWriter.ReplaceEntryTeams(ctx, entryID, teams)
 }
 
-func (s *CalcuttaService) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
+func (s *Service) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	return s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entryID)
 }
 
-func (s *CalcuttaService) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
+func (s *Service) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
 	return s.ports.TeamReader.GetTournamentTeam(ctx, id)
 }
 
-func (s *CalcuttaService) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
+func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
 	return s.ports.CalcuttaReader.GetCalcuttasByTournament(ctx, tournamentID)
 }
