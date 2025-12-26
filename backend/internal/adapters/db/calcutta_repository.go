@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -101,7 +101,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 	row, err := r.q.GetCalcuttaByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, &services.NotFoundError{Resource: "calcutta", ID: id}
+			return nil, &apperrors.NotFoundError{Resource: "calcutta", ID: id}
 		}
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 		return err
 	}
 	if affected == 0 {
-		return &services.NotFoundError{Resource: "calcutta", ID: calcutta.ID}
+		return &apperrors.NotFoundError{Resource: "calcutta", ID: calcutta.ID}
 	}
 	return nil
 }
@@ -195,7 +195,7 @@ func (r *CalcuttaRepository) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	if affected == 0 {
-		return &services.NotFoundError{Resource: "calcutta", ID: id}
+		return &apperrors.NotFoundError{Resource: "calcutta", ID: id}
 	}
 	return nil
 }
@@ -284,7 +284,7 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 	row, err := r.q.GetEntryByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, &services.NotFoundError{Resource: "entry", ID: id}
+			return nil, &apperrors.NotFoundError{Resource: "entry", ID: id}
 		}
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 	row, err := r.q.GetPortfolioByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, &services.NotFoundError{Resource: "portfolio", ID: id}
+			return nil, &apperrors.NotFoundError{Resource: "portfolio", ID: id}
 		}
 		return nil, err
 	}
@@ -475,7 +475,7 @@ func (r *CalcuttaRepository) UpdatePortfolio(ctx context.Context, portfolio *mod
 		return err
 	}
 	if affected == 0 {
-		return &services.NotFoundError{Resource: "portfolio", ID: portfolio.ID}
+		return &apperrors.NotFoundError{Resource: "portfolio", ID: portfolio.ID}
 	}
 	return nil
 }
@@ -546,7 +546,7 @@ func (r *CalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *mode
 		return err
 	}
 	if affected == 0 {
-		return &services.NotFoundError{Resource: "portfolio team", ID: team.ID}
+		return &apperrors.NotFoundError{Resource: "portfolio team", ID: team.ID}
 	}
 	return nil
 }
@@ -555,7 +555,7 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 	row, err := r.q.GetTournamentTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, &services.NotFoundError{Resource: "tournament team", ID: id}
+			return nil, &apperrors.NotFoundError{Resource: "tournament team", ID: id}
 		}
 		return nil, err
 	}
