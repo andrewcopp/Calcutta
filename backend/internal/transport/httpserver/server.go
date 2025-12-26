@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
@@ -22,12 +21,12 @@ type Server struct {
 	bundleImportQueue chan string
 }
 
-func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
+func NewServer(pool *pgxpool.Pool, cfg platform.Config) *Server {
 	authRepo := NewAuthRepository(pool)
 	authzRepo := NewAuthorizationRepository(pool)
 	apiKeysRepo := NewAPIKeysRepository(pool)
 
-	a, tm, err := appbootstrap.NewApp(db, pool, cfg, authRepo, authzRepo)
+	a, tm, err := appbootstrap.NewApp(pool, cfg, authRepo, authzRepo)
 	if err != nil {
 		log.Fatalf("failed to initialize app: %v", err)
 	}

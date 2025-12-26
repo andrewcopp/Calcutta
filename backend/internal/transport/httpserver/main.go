@@ -29,18 +29,12 @@ func Run() {
 		log.Fatal("JWT_SECRET environment variable is not set")
 	}
 
-	db, err := platform.OpenDB(context.Background(), cfg, nil)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	log.Printf("Successfully connected to database")
-
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
 		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
 	}
 
-	server := NewServer(db, pool, cfg)
+	server := NewServer(pool, cfg)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	server.StartBundleImportWorker(workerCtx)
 	server.EnqueuePendingBundleUploads(workerCtx)
@@ -96,9 +90,6 @@ func Run() {
 		log.Printf("Server forced to shutdown: %v", err)
 	}
 
-	if err := db.Close(); err != nil {
-		log.Printf("Error closing database: %v", err)
-	}
 	pool.Close()
 
 	log.Println("Server stopped gracefully")

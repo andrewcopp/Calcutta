@@ -8,6 +8,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ApiKey struct {
+	ID         string
+	UserID     string
+	KeyHash    string
+	Label      *string
+	CreatedAt  pgtype.Timestamptz
+	RevokedAt  pgtype.Timestamptz
+	LastUsedAt pgtype.Timestamptz
+}
+
 type AuthSession struct {
 	ID               string
 	UserID           string
@@ -21,17 +31,35 @@ type AuthSession struct {
 	IpAddress        *string
 }
 
+type BundleUpload struct {
+	ID           string
+	Filename     string
+	Sha256       string
+	SizeBytes    int64
+	Archive      []byte
+	ImportReport []byte
+	VerifyReport []byte
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+	Status       string
+	StartedAt    pgtype.Timestamptz
+	FinishedAt   pgtype.Timestamptz
+	ErrorMessage *string
+}
+
 type Calcutta struct {
 	ID           string
 	TournamentID string
 	OwnerID      string
 	Name         string
-	MinTeams     int32
-	MaxTeams     int32
-	MaxBid       int32
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
+	Key          *string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
 }
 
 type CalcuttaEntry struct {
@@ -42,6 +70,7 @@ type CalcuttaEntry struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
+	Key        *string
 }
 
 type CalcuttaEntryTeam struct {
@@ -139,13 +168,13 @@ type School struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	DeletedAt pgtype.Timestamptz
+	Slug      string
 }
 
 type Tournament struct {
 	ID                   string
 	Name                 string
 	Rounds               int32
-	StartingAt           *pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 	DeletedAt            pgtype.Timestamptz
@@ -153,6 +182,8 @@ type Tournament struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
+	ImportKey            string
+	StartingAt           pgtype.Timestamptz
 }
 
 type TournamentGame struct {

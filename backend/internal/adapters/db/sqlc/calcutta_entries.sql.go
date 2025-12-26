@@ -24,9 +24,19 @@ FROM calcutta_entries
 WHERE id = $1 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetEntryByID(ctx context.Context, id string) (CalcuttaEntry, error) {
+type GetEntryByIDRow struct {
+	ID         string
+	Name       string
+	UserID     pgtype.UUID
+	CalcuttaID string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) GetEntryByID(ctx context.Context, id string) (GetEntryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getEntryByID, id)
-	var i CalcuttaEntry
+	var i GetEntryByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

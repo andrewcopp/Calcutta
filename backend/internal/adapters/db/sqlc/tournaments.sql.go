@@ -35,7 +35,7 @@ type CreateTournamentParams struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
-	StartingAt           *pgtype.Timestamptz
+	StartingAt           pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -73,7 +73,7 @@ type GetTournamentByIDRow struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
-	StartingAt           *pgtype.Timestamptz
+	StartingAt           pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -114,7 +114,7 @@ type ListTournamentsRow struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
-	StartingAt           *pgtype.Timestamptz
+	StartingAt           pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -158,17 +158,13 @@ WHERE id = $3 AND deleted_at IS NULL
 `
 
 type UpdateTournamentStartingAtParams struct {
-	StartingAt *pgtype.Timestamptz
+	StartingAt pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	ID         string
 }
 
 func (q *Queries) UpdateTournamentStartingAt(ctx context.Context, arg UpdateTournamentStartingAtParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateTournamentStartingAt,
-		arg.StartingAt,
-		arg.UpdatedAt,
-		arg.ID,
-	)
+	result, err := q.db.Exec(ctx, updateTournamentStartingAt, arg.StartingAt, arg.UpdatedAt, arg.ID)
 	if err != nil {
 		return 0, err
 	}

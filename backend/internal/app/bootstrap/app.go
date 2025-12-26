@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"database/sql"
 	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
@@ -18,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewApp(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRepository, authzRepo *dbadapters.AuthorizationRepository) (*app.App, *coreauth.TokenManager, error) {
+func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRepository, authzRepo *dbadapters.AuthorizationRepository) (*app.App, *coreauth.TokenManager, error) {
 	dbUserRepo := dbadapters.NewUserRepository(pool)
 	dbSchoolRepo := dbadapters.NewSchoolRepository(pool)
 	dbTournamentRepo := dbadapters.NewTournamentRepository(pool)
@@ -41,7 +40,7 @@ func NewApp(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config, authRepo *dbada
 		TeamReader:      calcuttaRepo,
 	})
 
-	analyticsRepo := services.NewAnalyticsRepository(db)
+	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
 	analyticsService := services.NewAnalyticsService(analyticsRepo)
 
 	bracketService := services.NewBracketService(dbTournamentRepo)

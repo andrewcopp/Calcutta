@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createEntryTeam = `-- name: CreateEntryTeam :exec
+INSERT INTO calcutta_entry_teams (id, entry_id, team_id, bid, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type CreateEntryTeamParams struct {
+	ID        string
+	EntryID   string
+	TeamID    string
+	Bid       int32
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateEntryTeam(ctx context.Context, arg CreateEntryTeamParams) error {
+	_, err := q.db.Exec(ctx, createEntryTeam,
+		arg.ID,
+		arg.EntryID,
+		arg.TeamID,
+		arg.Bid,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const listEntryTeamsByEntryID = `-- name: ListEntryTeamsByEntryID :many
 SELECT
     cet.id,
@@ -113,30 +139,4 @@ func (q *Queries) SoftDeleteEntryTeamsByEntryID(ctx context.Context, arg SoftDel
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const createEntryTeam = `-- name: CreateEntryTeam :exec
-INSERT INTO calcutta_entry_teams (id, entry_id, team_id, bid, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6)
-`
-
-type CreateEntryTeamParams struct {
-	ID        string
-	EntryID   string
-	TeamID    string
-	Bid       int32
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) CreateEntryTeam(ctx context.Context, arg CreateEntryTeamParams) error {
-	_, err := q.db.Exec(ctx, createEntryTeam,
-		arg.ID,
-		arg.EntryID,
-		arg.TeamID,
-		arg.Bid,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
 }

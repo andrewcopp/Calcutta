@@ -37,7 +37,7 @@ func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament,
 			FinalFourBottomLeft:  derefString(row.FinalFourBottomLeft),
 			FinalFourTopRight:    derefString(row.FinalFourTopRight),
 			FinalFourBottomRight: derefString(row.FinalFourBottomRight),
-			StartingAt:           timestamptzPtrToTimePtr(row.StartingAt),
+			StartingAt:           timestamptzToTimePtr(row.StartingAt),
 			Created:              row.CreatedAt.Time,
 			Updated:              row.UpdatedAt.Time,
 		})
@@ -61,7 +61,7 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 		FinalFourBottomLeft:  derefString(row.FinalFourBottomLeft),
 		FinalFourTopRight:    derefString(row.FinalFourTopRight),
 		FinalFourBottomRight: derefString(row.FinalFourBottomRight),
-		StartingAt:           timestamptzPtrToTimePtr(row.StartingAt),
+		StartingAt:           timestamptzToTimePtr(row.StartingAt),
 		Created:              row.CreatedAt.Time,
 		Updated:              row.UpdatedAt.Time,
 	}, nil
@@ -77,9 +77,9 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	fftr := tournament.FinalFourTopRight
 	ffbr := tournament.FinalFourBottomRight
 
-	var startingAt *pgtype.Timestamptz
+	var startingAt pgtype.Timestamptz
 	if tournament.StartingAt != nil {
-		startingAt = &pgtype.Timestamptz{Time: *tournament.StartingAt, Valid: true}
+		startingAt = pgtype.Timestamptz{Time: *tournament.StartingAt, Valid: true}
 	}
 
 	return r.q.CreateTournament(ctx, sqlc.CreateTournamentParams{
@@ -99,9 +99,9 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error {
 	now := time.Now()
 
-	var start *pgtype.Timestamptz
+	var start pgtype.Timestamptz
 	if startingAt != nil {
-		start = &pgtype.Timestamptz{Time: *startingAt, Valid: true}
+		start = pgtype.Timestamptz{Time: *startingAt, Valid: true}
 	}
 
 	affected, err := r.q.UpdateTournamentStartingAt(ctx, sqlc.UpdateTournamentStartingAtParams{
@@ -236,8 +236,8 @@ func derefString(p *string) string {
 	return *p
 }
 
-func timestamptzPtrToTimePtr(ts *pgtype.Timestamptz) *time.Time {
-	if ts == nil || !ts.Valid {
+func timestamptzToTimePtr(ts pgtype.Timestamptz) *time.Time {
+	if !ts.Valid {
 		return nil
 	}
 	t := ts.Time
