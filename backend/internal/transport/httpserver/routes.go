@@ -5,21 +5,28 @@ import "github.com/gorilla/mux"
 // RegisterRoutes centralizes HTTP route registration
 func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerBasicRoutes(r)
-	s.registerAdminBundleRoutes(r)
-	s.registerAdminAnalyticsRoutes(r)
 	s.registerAuthRoutes(r)
+
+	protected := r.NewRoute().Subrouter()
+	protected.Use(s.requireAuthMiddleware)
+	s.registerAdminBundleRoutes(protected)
+	s.registerAdminAnalyticsRoutes(protected)
+	s.registerProtectedRoutes(protected)
+}
+
+func (s *Server) registerBasicRoutes(r *mux.Router) {
+	// Health & basic
+	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
+}
+
+func (s *Server) registerProtectedRoutes(r *mux.Router) {
+	r.HandleFunc("/api/schools", s.schoolsHandler).Methods("GET")
 	s.registerTournamentRoutes(r)
 	s.registerBracketRoutes(r)
 	s.registerPortfolioRoutes(r)
 	s.registerCalcuttaRoutes(r)
 	s.registerAnalyticsRoutes(r)
 	s.registerHallOfFameRoutes(r)
-}
-
-func (s *Server) registerBasicRoutes(r *mux.Router) {
-	// Health & basic
-	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
-	r.HandleFunc("/api/schools", s.schoolsHandler).Methods("GET")
 }
 
 func (s *Server) registerAuthRoutes(r *mux.Router) {
@@ -34,12 +41,12 @@ func (s *Server) registerTournamentRoutes(r *mux.Router) {
 	// Tournaments
 	r.HandleFunc("/api/tournaments", s.tournamentsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}", s.tournamentHandler).Methods("GET")
-	r.HandleFunc("/api/tournaments", s.createTournamentHandler).Methods("POST")
+	r.HandleFunc("/api/tournaments", s.requirePermission("tournament.game.write", s.createTournamentHandler)).Methods("POST")
 	r.HandleFunc("/api/tournaments/{id}", s.requirePermission("tournament.game.write", s.updateTournamentHandler)).Methods("PATCH")
 	r.HandleFunc("/api/tournaments/{id}/teams", s.tournamentTeamsHandler).Methods("GET")
-	r.HandleFunc("/api/tournaments/{id}/teams", s.createTournamentTeamHandler).Methods("POST")
-	r.HandleFunc("/api/tournaments/{tournamentId}/teams/{teamId}", s.updateTeamHandler).Methods("PATCH", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", s.recalculatePortfoliosHandler).Methods("POST")
+	r.HandleFunc("/api/tournaments/{id}/teams", s.requirePermission("tournament.game.write", s.createTournamentTeamHandler)).Methods("POST")
+	r.HandleFunc("/api/tournaments/{tournamentId}/teams/{teamId}", s.requirePermission("tournament.game.write", s.updateTeamHandler)).Methods("PATCH", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", s.requirePermission("tournament.game.write", s.recalculatePortfoliosHandler)).Methods("POST")
 }
 
 func (s *Server) registerBracketRoutes(r *mux.Router) {
@@ -52,15 +59,16 @@ func (s *Server) registerBracketRoutes(r *mux.Router) {
 
 func (s *Server) registerPortfolioRoutes(r *mux.Router) {
 	// Portfolio scoring
-	r.HandleFunc("/api/portfolios/{id}/calculate-scores", s.calculatePortfolioScoresHandler).Methods("POST")
-	r.HandleFunc("/api/portfolios/{id}/teams/{teamId}/scores", s.updatePortfolioTeamScoresHandler).Methods("PUT")
-	r.HandleFunc("/api/portfolios/{id}/maximum-score", s.updatePortfolioMaximumScoreHandler).Methods("PUT")
+	r.HandleFunc("/api/portfolios/{id}/calculate-scores", s.requirePermission("tournament.game.write", s.calculatePortfolioScoresHandler)).Methods("POST")
+	r.HandleFunc("/api/portfolios/{id}/teams/{teamId}/scores", s.requirePermission("tournament.game.write", s.updatePortfolioTeamScoresHandler)).Methods("PUT")
+	r.HandleFunc("/api/portfolios/{id}/maximum-score", s.requirePermission("tournament.game.write", s.updatePortfolioMaximumScoreHandler)).Methods("PUT")
 	r.HandleFunc("/api/portfolios/{id}/teams", s.portfolioTeamsHandler).Methods("GET")
 }
 
 func (s *Server) registerCalcuttaRoutes(r *mux.Router) {
 	// Calcutta
-	r.HandleFunc("/api/calcuttas", s.calcuttasHandler).Methods("GET", "POST")
+	r.HandleFunc("/api/calcuttas", s.calcuttasHandler).Methods("GET")
+	r.HandleFunc("/api/calcuttas", s.requirePermission("calcutta.config.write", s.calcuttasHandler)).Methods("POST")
 	r.HandleFunc("/api/calcuttas/{id}", s.calcuttaHandler).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{id}/entries", s.calcuttaEntriesHandler).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", s.calcuttaEntryTeamsHandler).Methods("GET")

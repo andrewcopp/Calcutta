@@ -70,6 +70,16 @@ func authUserID(ctx context.Context) string {
 	return ""
 }
 
+func (s *Server) requireAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if authUserID(r.Context()) == "" {
+			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) requirePermission(permissionKey string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := authUserID(r.Context())
