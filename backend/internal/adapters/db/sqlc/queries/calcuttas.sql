@@ -1,25 +1,28 @@
 -- name: ListCalcuttas :many
-SELECT id, tournament_id, owner_id, name, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
 FROM calcuttas
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: GetCalcuttaByID :one
-SELECT id, tournament_id, owner_id, name, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
 FROM calcuttas
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: CreateCalcutta :exec
-INSERT INTO calcuttas (id, tournament_id, owner_id, name, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6);
+INSERT INTO calcuttas (id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: UpdateCalcutta :execrows
 UPDATE calcuttas
 SET tournament_id = $1,
     owner_id = $2,
     name = $3,
-    updated_at = $4
-WHERE id = $5 AND deleted_at IS NULL;
+    min_teams = $4,
+    max_teams = $5,
+    max_bid = $6,
+    updated_at = $7
+WHERE id = $8 AND deleted_at IS NULL;
 
 -- name: DeleteCalcutta :execrows
 UPDATE calcuttas
@@ -28,6 +31,6 @@ SET deleted_at = $1,
 WHERE id = $3 AND deleted_at IS NULL;
 
 -- name: GetCalcuttasByTournament :many
-SELECT id, tournament_id, owner_id, name, created_at, updated_at, deleted_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at, deleted_at
 FROM calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL;

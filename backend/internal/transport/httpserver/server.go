@@ -30,6 +30,7 @@ type Server struct {
 	analyticsService  *services.AnalyticsService
 	authRepo          *AuthRepository
 	authzRepo         *AuthorizationRepository
+	apiKeysRepo       *APIKeysRepository
 	tokenManager      *auth.TokenManager
 	pool              *pgxpool.Pool
 	cfg               platform.Config
@@ -44,6 +45,7 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 	analyticsRepo := services.NewAnalyticsRepository(db)
 	authRepo := NewAuthRepository(pool)
 	authzRepo := NewAuthorizationRepository(pool)
+	apiKeysRepo := NewAPIKeysRepository(pool)
 	dbUserRepo := dbadapters.NewUserRepository(pool)
 	dbSchoolRepo := dbadapters.NewSchoolRepository(pool)
 	dbTournamentRepo := dbadapters.NewTournamentRepository(pool)
@@ -84,6 +86,7 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 		analyticsService:  analyticsService,
 		authRepo:          authRepo,
 		authzRepo:         authzRepo,
+		apiKeysRepo:       apiKeysRepo,
 		tokenManager:      tm,
 		pool:              pool,
 		cfg:               cfg,

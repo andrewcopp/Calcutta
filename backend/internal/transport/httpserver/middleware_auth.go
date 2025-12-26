@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -16,11 +18,6 @@ const (
 
 func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.tokenManager == nil {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		h := r.Header.Get("Authorization")
 		if h == "" {
 			next.ServeHTTP(w, r)
@@ -37,29 +34,31 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		claims, err := s.tokenManager.VerifyAccessToken(tok, time.Now())
-		if err != nil {
-			next.ServeHTTP(w, r)
-			return
+		if s.tokenManager != nil {
+			claims, err := s.tokenManager.VerifyAccessToken(tok, time.Now())
+			if err == nil {
+				sess, err := s.authRepo.GetSessionByID(r.Context(), claims.Sid)
+				if err == nil && sess != nil && sess.RevokedAt == nil && !time.Now().After(sess.ExpiresAt) && sess.UserID == claims.Sub {
+					ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
+					ctx = context.WithValue(ctx, authSessionIDKey, claims.Sid)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
 		}
 
-		sess, err := s.authRepo.GetSessionByID(r.Context(), claims.Sid)
-		if err != nil {
-			next.ServeHTTP(w, r)
-			return
-		}
-		if sess == nil || sess.RevokedAt != nil || time.Now().After(sess.ExpiresAt) {
-			next.ServeHTTP(w, r)
-			return
-		}
-		if sess.UserID != claims.Sub {
-			next.ServeHTTP(w, r)
-			return
+		if s.apiKeysRepo != nil {
+			sum := sha256.Sum256([]byte(tok))
+			h := hex.EncodeToString(sum[:])
+			k, err := s.apiKeysRepo.GetActiveByHash(r.Context(), h, time.Now().UTC())
+			if err == nil && k != nil {
+				ctx := context.WithValue(r.Context(), authUserIDKey, k.UserID)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
 		}
 
-		ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
-		ctx = context.WithValue(ctx, authSessionIDKey, claims.Sid)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }
 

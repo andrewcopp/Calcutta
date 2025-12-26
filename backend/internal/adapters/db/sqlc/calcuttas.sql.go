@@ -12,8 +12,8 @@ import (
 )
 
 const createCalcutta = `-- name: CreateCalcutta :exec
-INSERT INTO calcuttas (id, tournament_id, owner_id, name, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO calcuttas (id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateCalcuttaParams struct {
@@ -21,6 +21,9 @@ type CreateCalcuttaParams struct {
 	TournamentID string
 	OwnerID      string
 	Name         string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
@@ -31,6 +34,9 @@ func (q *Queries) CreateCalcutta(ctx context.Context, arg CreateCalcuttaParams) 
 		arg.TournamentID,
 		arg.OwnerID,
 		arg.Name,
+		arg.MinTeams,
+		arg.MaxTeams,
+		arg.MaxBid,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -59,7 +65,7 @@ func (q *Queries) DeleteCalcutta(ctx context.Context, arg DeleteCalcuttaParams) 
 }
 
 const getCalcuttaByID = `-- name: GetCalcuttaByID :one
-SELECT id, tournament_id, owner_id, name, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
 FROM calcuttas
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -69,6 +75,9 @@ type GetCalcuttaByIDRow struct {
 	TournamentID string
 	OwnerID      string
 	Name         string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
@@ -81,6 +90,9 @@ func (q *Queries) GetCalcuttaByID(ctx context.Context, id string) (GetCalcuttaBy
 		&i.TournamentID,
 		&i.OwnerID,
 		&i.Name,
+		&i.MinTeams,
+		&i.MaxTeams,
+		&i.MaxBid,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -88,7 +100,7 @@ func (q *Queries) GetCalcuttaByID(ctx context.Context, id string) (GetCalcuttaBy
 }
 
 const getCalcuttasByTournament = `-- name: GetCalcuttasByTournament :many
-SELECT id, tournament_id, owner_id, name, created_at, updated_at, deleted_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at, deleted_at
 FROM calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL
 `
@@ -107,6 +119,9 @@ func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID str
 			&i.TournamentID,
 			&i.OwnerID,
 			&i.Name,
+			&i.MinTeams,
+			&i.MaxTeams,
+			&i.MaxBid,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -122,7 +137,7 @@ func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID str
 }
 
 const listCalcuttas = `-- name: ListCalcuttas :many
-SELECT id, tournament_id, owner_id, name, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
 FROM calcuttas
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
@@ -133,6 +148,9 @@ type ListCalcuttasRow struct {
 	TournamentID string
 	OwnerID      string
 	Name         string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
@@ -151,6 +169,9 @@ func (q *Queries) ListCalcuttas(ctx context.Context) ([]ListCalcuttasRow, error)
 			&i.TournamentID,
 			&i.OwnerID,
 			&i.Name,
+			&i.MinTeams,
+			&i.MaxTeams,
+			&i.MaxBid,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -169,14 +190,20 @@ UPDATE calcuttas
 SET tournament_id = $1,
     owner_id = $2,
     name = $3,
-    updated_at = $4
-WHERE id = $5 AND deleted_at IS NULL
+    min_teams = $4,
+    max_teams = $5,
+    max_bid = $6,
+    updated_at = $7
+WHERE id = $8 AND deleted_at IS NULL
 `
 
 type UpdateCalcuttaParams struct {
 	TournamentID string
 	OwnerID      string
 	Name         string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
 	UpdatedAt    pgtype.Timestamptz
 	ID           string
 }
@@ -186,6 +213,9 @@ func (q *Queries) UpdateCalcutta(ctx context.Context, arg UpdateCalcuttaParams) 
 		arg.TournamentID,
 		arg.OwnerID,
 		arg.Name,
+		arg.MinTeams,
+		arg.MaxTeams,
+		arg.MaxBid,
 		arg.UpdatedAt,
 		arg.ID,
 	)

@@ -26,6 +26,9 @@ type Calcutta struct {
 	TournamentID string
 	OwnerID      string
 	Name         string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz

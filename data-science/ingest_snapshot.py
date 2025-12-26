@@ -2,8 +2,12 @@ import argparse
 import json
 import os
 import sys
+import tempfile
+import urllib.parse
+import urllib.request
 import zipfile
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -25,6 +29,29 @@ def _csv_members(zf: zipfile.ZipFile):
             yield name
 
 
+def _download_snapshot_zip(
+    base_url: str,
+    tournament_id: str,
+    calcutta_id: str,
+    api_key: str,
+    out_path: Path,
+):
+    q = urllib.parse.urlencode(
+        {"tournamentId": tournament_id, "calcuttaId": calcutta_id}
+    )
+    url = base_url.rstrip("/") + "/api/admin/analytics/export?" + q
+
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"Bearer {api_key}")
+
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        if resp.status != 200:
+            raise RuntimeError(
+                f"download failed: {resp.status} {resp.reason}"
+            )
+        out_path.write_bytes(resp.read())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -34,7 +61,29 @@ def main() -> int:
     )
     parser.add_argument(
         "zip_path",
+        nargs="?",
         help="Path to downloaded analytics snapshot zip",
+    )
+    parser.add_argument(
+        "--base-url",
+        dest="base_url",
+        help="Base URL for API, e.g. http://localhost:8080",
+    )
+    parser.add_argument(
+        "--tournament-id",
+        dest="tournament_id",
+        help="Tournament ID for snapshot export",
+    )
+    parser.add_argument(
+        "--calcutta-id",
+        dest="calcutta_id",
+        help="Calcutta ID for snapshot export",
+    )
+    parser.add_argument(
+        "--api-key",
+        dest="api_key",
+        default=os.getenv("CALCUTTA_API_KEY"),
+        help="API key for Authorization: Bearer (or set CALCUTTA_API_KEY)",
     )
     parser.add_argument(
         "--out",
@@ -44,13 +93,55 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    zip_path = Path(args.zip_path)
-    if not zip_path.exists():
-        print(f"zip not found: {zip_path}", file=sys.stderr)
-        return 2
-
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    zip_path: Optional[Path]
+    if args.zip_path:
+        zip_path = Path(args.zip_path)
+        if not zip_path.exists():
+            print(f"zip not found: {zip_path}", file=sys.stderr)
+            return 2
+    else:
+        if not args.base_url:
+            print(
+                "--base-url is required when zip_path is omitted",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.tournament_id:
+            print(
+                "--tournament-id is required when zip_path is omitted",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.calcutta_id:
+            print(
+                "--calcutta-id is required when zip_path is omitted",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.api_key:
+            print(
+                "--api-key (or CALCUTTA_API_KEY) is required when zip_path is "
+                "omitted",
+                file=sys.stderr,
+            )
+            return 2
+
+        tmp_dir = Path(tempfile.mkdtemp(prefix="calcutta-analytics-"))
+        zip_path = tmp_dir / "analytics_snapshot.zip"
+        try:
+            _download_snapshot_zip(
+                args.base_url,
+                args.tournament_id,
+                args.calcutta_id,
+                args.api_key,
+                zip_path,
+            )
+        except Exception as e:
+            print(str(e), file=sys.stderr)
+            return 4
 
     with zipfile.ZipFile(zip_path, "r") as zf:
         manifest = _read_manifest(zf)

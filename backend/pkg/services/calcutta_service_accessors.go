@@ -24,6 +24,10 @@ func (s *CalcuttaService) CreateRound(ctx context.Context, round *models.Calcutt
 	return s.ports.RoundWriter.CreateRound(ctx, round)
 }
 
+func (s *CalcuttaService) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
+	return s.ports.CalcuttaWriter.Update(ctx, calcutta)
+}
+
 func (s *CalcuttaService) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
 	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
 	if err != nil {

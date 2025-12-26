@@ -24,6 +24,10 @@ type EntryReader interface {
 	GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error)
 }
 
+type EntryWriter interface {
+	ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error
+}
+
 type PortfolioReader interface {
 	GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error)
 	GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error)

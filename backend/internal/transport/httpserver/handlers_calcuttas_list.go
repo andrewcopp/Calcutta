@@ -44,6 +44,20 @@ func (s *Server) createCalcuttaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	calcutta := req.ToModel()
+	calcutta.OwnerID = authUserID(r.Context())
+	if calcutta.OwnerID == "" {
+		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+	if calcutta.MinTeams == 0 {
+		calcutta.MinTeams = 3
+	}
+	if calcutta.MaxTeams == 0 {
+		calcutta.MaxTeams = 10
+	}
+	if calcutta.MaxBid == 0 {
+		calcutta.MaxBid = 50
+	}
 	if err := s.calcuttaService.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
 		log.Printf("Error creating calcutta with rounds: %v", err)
 		writeErrorFromErr(w, r, err)
