@@ -116,7 +116,7 @@ export const AnalyticsPage: React.FC = () => {
       url.searchParams.set('tournamentId', exportTournamentId);
       url.searchParams.set('calcuttaId', exportCalcuttaId);
 
-      const res = await fetch(url.toString(), { credentials: 'include' });
+      const res = await apiClient.fetch(url.toString(), { credentials: 'include' });
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
         throw new Error(txt || `Export failed (${res.status})`);

@@ -4,8 +4,8 @@ import { userService } from '../services/userService';
 
 interface UserContextType {
   user: User | null;
-  login: (email: string) => Promise<void>;
-  signup: (email: string, firstName: string, lastName: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,13 +21,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string) => {
-    const user = await userService.login({ email });
+  const login = async (email: string, password: string) => {
+    const user = await userService.login({ email, password });
     setUser(user);
   };
 
-  const signup = async (email: string, firstName: string, lastName: string) => {
-    const user = await userService.signup({ email, firstName, lastName });
+  const signup = async (email: string, firstName: string, lastName: string, password: string) => {
+    const user = await userService.signup({ email, firstName, lastName, password });
     setUser(user);
   };
 

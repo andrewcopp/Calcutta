@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { apiClient } from '../api/apiClient';
 
 type ImportStartResponse = {
   upload_id: string;
@@ -55,7 +56,7 @@ export const AdminBundlesPage: React.FC = () => {
 
     const poll = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/admin/bundles/import/${uploadId}`, { credentials: 'include' });
+        const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import/${uploadId}`, { credentials: 'include' });
         const body = (await res.json().catch(() => undefined)) as ImportStatusResponse | undefined;
         if (!res.ok) {
           const msg = (body as any)?.error?.message || `Status check failed (${res.status})`;
@@ -99,7 +100,7 @@ export const AdminBundlesPage: React.FC = () => {
     setResult(null);
     setBusy(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/bundles/export`, { credentials: 'include' });
+      const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/export`, { credentials: 'include' });
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
         throw new Error(txt || `Export failed (${res.status})`);
@@ -137,7 +138,7 @@ export const AdminBundlesPage: React.FC = () => {
       const form = new FormData();
       form.append('file', file);
 
-      const res = await fetch(`${API_URL}/api/admin/bundles/import`, { method: 'POST', body: form, credentials: 'include' });
+      const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import`, { method: 'POST', body: form, credentials: 'include' });
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
         const msg = body?.error?.message || `Import failed (${res.status})`;
