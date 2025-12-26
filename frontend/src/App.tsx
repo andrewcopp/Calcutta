@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
 import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
@@ -15,38 +15,49 @@ import { AdminBundlesPage } from './pages/AdminBundlesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 import './App.css';
 
+const AppLayout: React.FC = () => {
+  const location = useLocation();
+  const hideHeader = location.pathname === '/';
+
+  return (
+    <div className={hideHeader ? 'min-h-screen bg-[#070a12]' : 'min-h-screen bg-gray-100'}>
+      {!hideHeader && <Header />}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/rules" element={<RulesPage />} />
+        <Route path="/calcuttas" element={<CalcuttaListPage />} />
+        <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/bundles" element={<AdminBundlesPage />} />
+        <Route path="/admin/analytics" element={<AnalyticsPage />} />
+        <Route path="/admin/hall-of-fame" element={<HallOfFamePage />} />
+        <Route path="/admin/tournaments" element={<TournamentListPage />} />
+        <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />
+        <Route path="/admin/tournaments/:id" element={<TournamentViewPage />} />
+        <Route path="/admin/tournaments/:id/edit" element={<TournamentEditPage />} />
+        <Route path="/admin/tournaments/:id/teams/add" element={<TournamentAddTeamsPage />} />
+        <Route path="/admin/tournaments/:id/bracket" element={<TournamentBracketPage />} />
+        <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
+        <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
+        <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
+      </Routes>
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   return (
     <UserProvider>
       <Router>
-        <div className="min-h-screen bg-gray-100">
-          <Header />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/rules" element={<RulesPage />} />
-            <Route path="/calcuttas" element={<CalcuttaListPage />} />
-            <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/bundles" element={<AdminBundlesPage />} />
-            <Route path="/admin/analytics" element={<AnalyticsPage />} />
-            <Route path="/admin/hall-of-fame" element={<HallOfFamePage />} />
-            <Route path="/admin/tournaments" element={<TournamentListPage />} />
-            <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />
-            <Route path="/admin/tournaments/:id" element={<TournamentViewPage />} />
-            <Route path="/admin/tournaments/:id/edit" element={<TournamentEditPage />} />
-            <Route path="/admin/tournaments/:id/teams/add" element={<TournamentAddTeamsPage />} />
-            <Route path="/admin/tournaments/:id/bracket" element={<TournamentBracketPage />} />
-            <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
-            <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
-            <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
-          </Routes>
-        </div>
+        <AppLayout />
       </Router>
     </UserProvider>
   );

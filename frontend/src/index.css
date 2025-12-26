@@ -9,6 +9,82 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #070a12;
+  overscroll-behavior-y: none;
+}
+
+html {
+  background-color: #070a12;
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  background-color: #070a12;
+  min-height: 100vh;
+}
+
+@keyframes home-own-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.home-own-marquee {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-own-marquee::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 64px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(7, 10, 18, 1) 0%, rgba(7, 10, 18, 0) 100%);
+  z-index: 1;
+}
+
+.home-own-marquee::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 64px;
+  pointer-events: none;
+  background: linear-gradient(270deg, rgba(7, 10, 18, 1) 0%, rgba(7, 10, 18, 0) 100%);
+  z-index: 1;
+}
+
+.home-own-track {
+  display: flex;
+  gap: 2rem;
+  width: max-content;
+  animation: home-own-marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.home-own-track:hover {
+  animation-play-state: paused;
+}
+
+.home-own-track:focus-within {
+  animation-play-state: paused;
+}
+
+.home-own-track--no-anim {
+  animation: none;
+}
+
+.home-own-card {
+  width: 360px;
+  flex: 0 0 auto;
 }
 
 code {
