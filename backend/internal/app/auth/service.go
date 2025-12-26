@@ -6,9 +6,9 @@ import (
 	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -45,13 +45,13 @@ func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddre
 		return nil, err
 	}
 	if user == nil {
-		return nil, &services.NotFoundError{Resource: "user", ID: email}
+		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
 	}
 	if user.PasswordHash == nil || *user.PasswordHash == "" {
-		return nil, &services.NotFoundError{Resource: "user", ID: email}
+		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
-		return nil, &services.NotFoundError{Resource: "user", ID: email}
+		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
 	}
 
 	refreshToken, err := coreauth.NewRefreshToken()
@@ -87,7 +87,7 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 		return nil, err
 	}
 	if existing != nil {
-		return nil, &services.AlreadyExistsError{Resource: "user", Field: "email", Value: email}
+		return nil, &apperrors.AlreadyExistsError{Resource: "user", Field: "email", Value: email}
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -150,7 +150,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 		return nil, err
 	}
 	if sess == nil || sess.RevokedAt != nil || now.After(sess.ExpiresAt) {
-		return nil, errors.New("invalid refresh token")
+		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
 	}
 
 	newToken, err := coreauth.NewRefreshToken()
@@ -173,7 +173,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
 	}
 
 	return &Result{User: user, AccessToken: accessToken, RefreshToken: newToken, RefreshExpiresAt: newExpiresAt}, nil

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 )
 
 func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -23,8 +23,8 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.app.Auth.Login(r.Context(), req.Email, req.Password, r.UserAgent(), r.RemoteAddr, time.Now())
 	if err != nil {
-		var notFoundErr *services.NotFoundError
-		if errors.As(err, &notFoundErr) {
+		var unauthorizedErr *apperrors.UnauthorizedError
+		if errors.As(err, &unauthorizedErr) {
 			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Invalid credentials", "")
 			return
 		}

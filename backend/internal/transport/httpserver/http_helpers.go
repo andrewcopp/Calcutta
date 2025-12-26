@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
-	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 )
 
 type apiError struct {
@@ -51,15 +51,21 @@ func writeErrorFromErr(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
-	var notFoundErr *services.NotFoundError
+	var notFoundErr *apperrors.NotFoundError
 	if errors.As(err, &notFoundErr) {
 		writeError(w, r, http.StatusNotFound, "not_found", notFoundErr.Error(), "")
 		return
 	}
 
-	var alreadyExistsErr *services.AlreadyExistsError
+	var alreadyExistsErr *apperrors.AlreadyExistsError
 	if errors.As(err, &alreadyExistsErr) {
 		writeError(w, r, http.StatusConflict, "conflict", alreadyExistsErr.Error(), alreadyExistsErr.Field)
+		return
+	}
+
+	var unauthorizedErr *apperrors.UnauthorizedError
+	if errors.As(err, &unauthorizedErr) {
+		writeError(w, r, http.StatusUnauthorized, "unauthorized", unauthorizedErr.Error(), "")
 		return
 	}
 

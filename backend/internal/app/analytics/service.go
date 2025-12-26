@@ -3,6 +3,7 @@ package analytics
 import (
 	"context"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/pkg/services"
 )
 
@@ -15,41 +16,51 @@ func New(svc *services.AnalyticsService) *Service {
 }
 
 func (s *Service) GetAllAnalytics(ctx context.Context) (*services.AnalyticsResult, error) {
-	return s.svc.GetAllAnalytics(ctx)
+	res, err := s.svc.GetAllAnalytics(ctx)
+	return res, apperrors.Translate(err)
 }
 
 func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]services.BestInvestmentResult, error) {
-	return s.svc.GetBestInvestments(ctx, limit)
+	res, err := s.svc.GetBestInvestments(ctx, limit)
+	return res, apperrors.Translate(err)
 }
 
 func (s *Service) GetBestInvestmentBids(ctx context.Context, limit int) ([]services.InvestmentLeaderboardResult, error) {
-	return s.svc.GetBestInvestmentBids(ctx, limit)
+	res, err := s.svc.GetBestInvestmentBids(ctx, limit)
+	return res, apperrors.Translate(err)
 }
 
 func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]services.EntryLeaderboardResult, error) {
-	return s.svc.GetBestEntries(ctx, limit)
+	res, err := s.svc.GetBestEntries(ctx, limit)
+	return res, apperrors.Translate(err)
 }
 
 func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]services.CareerLeaderboardResult, error) {
-	return s.svc.GetBestCareers(ctx, limit)
+	res, err := s.svc.GetBestCareers(ctx, limit)
+	return res, apperrors.Translate(err)
 }
 
 func (s *Service) GetSeedInvestmentDistribution(ctx context.Context) (*services.SeedInvestmentDistributionResult, error) {
-	return s.svc.GetSeedInvestmentDistribution(ctx)
+	res, err := s.svc.GetSeedInvestmentDistribution(ctx)
+	return res, apperrors.Translate(err)
 }
 
 func (s *Service) GetSeedAnalytics(ctx context.Context) ([]services.SeedAnalyticsResult, float64, float64, error) {
-	return s.svc.GetSeedAnalytics(ctx)
+	res, totalPoints, totalInvestment, err := s.svc.GetSeedAnalytics(ctx)
+	return res, totalPoints, totalInvestment, apperrors.Translate(err)
 }
 
 func (s *Service) GetRegionAnalytics(ctx context.Context) ([]services.RegionAnalyticsResult, float64, float64, error) {
-	return s.svc.GetRegionAnalytics(ctx)
+	res, totalPoints, totalInvestment, err := s.svc.GetRegionAnalytics(ctx)
+	return res, totalPoints, totalInvestment, apperrors.Translate(err)
 }
 
 func (s *Service) GetTeamAnalytics(ctx context.Context) ([]services.TeamAnalyticsResult, float64, error) {
-	return s.svc.GetTeamAnalytics(ctx)
+	res, baselineROI, err := s.svc.GetTeamAnalytics(ctx)
+	return res, baselineROI, apperrors.Translate(err)
 }
 
 func (s *Service) GetSeedVarianceAnalytics(ctx context.Context) ([]services.SeedVarianceResult, error) {
-	return s.svc.GetSeedVarianceAnalytics(ctx)
+	res, err := s.svc.GetSeedVarianceAnalytics(ctx)
+	return res, apperrors.Translate(err)
 }
