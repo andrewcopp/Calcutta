@@ -20,6 +20,8 @@ pip install -r requirements.txt
   - Run leakage-safe baseline evaluation across snapshots.
 - `backtest_scaffold.py`
   - Build a feasible portfolio under auction constraints and compute realized + expected payout/ROI.
+- `calibrate_kenpom_scale.py`
+  - Fit a global KenPom win probability scale from historical outcomes.
 
 ## How to run
 
@@ -75,6 +77,23 @@ SNAP=./out/$(cat ./out/LATEST)
 python backtest_scaffold.py "$SNAP" \
   --expected-sims 1000 \
   --expected-seed 1 \
+  --out "$SNAP/derived/backtest_with_expected.json"
+```
+
+### 6) Calibrate KenPom scale (recommended) + use it
+
+```bash
+python calibrate_kenpom_scale.py ./out --out ./out/kenpom_scale.json
+```
+
+Then:
+
+```bash
+SNAP=./out/$(cat ./out/LATEST)
+python backtest_scaffold.py "$SNAP" \
+  --expected-sims 1000 \
+  --expected-seed 1 \
+  --kenpom-scale-file ./out/kenpom_scale.json \
   --out "$SNAP/derived/backtest_with_expected.json"
 ```
 

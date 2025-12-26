@@ -65,6 +65,126 @@ def _prepare_features(
     return X, y_total, y_share
 
 
+def _prepare_features_set(
+    df: pd.DataFrame,
+    feature_set: str,
+) -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
+    X, y_total, y_share = _prepare_features(df)
+    if feature_set == "basic":
+        return X, y_total, y_share
+
+    required = [
+        "seed",
+        "region",
+        "kenpom_net",
+        "kenpom_o",
+        "kenpom_d",
+        "kenpom_adj_t",
+    ]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"team_dataset missing columns: {missing}")
+
+    base = df[
+        [
+            "seed",
+            "region",
+            "kenpom_net",
+            "kenpom_o",
+            "kenpom_d",
+            "kenpom_adj_t",
+        ]
+    ].copy()
+    base["seed"] = pd.to_numeric(base["seed"], errors="coerce")
+    base["kenpom_net"] = pd.to_numeric(base["kenpom_net"], errors="coerce")
+    base["kenpom_o"] = pd.to_numeric(base["kenpom_o"], errors="coerce")
+    base["kenpom_d"] = pd.to_numeric(base["kenpom_d"], errors="coerce")
+    base["kenpom_adj_t"] = pd.to_numeric(
+        base["kenpom_adj_t"],
+        errors="coerce",
+    )
+
+    base["seed_sq"] = base["seed"] ** 2
+    base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
+
+    X = pd.get_dummies(base, columns=["region"], dummy_na=True)
+    return X, y_total, y_share
+
+
+def _align_columns(
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    cols = sorted(set(train.columns).union(set(test.columns)))
+    return train.reindex(columns=cols, fill_value=0.0), test.reindex(
+        columns=cols,
+        fill_value=0.0,
+    )
+
+
+def _nanmean(xs: List[float]) -> float:
+    v = [x for x in xs if x == x and np.isfinite(x)]
+    if not v:
+        return float("nan")
+    return float(np.mean(v))
+
+
+def _nanmedian(xs: List[float]) -> float:
+    v = [x for x in xs if x == x and np.isfinite(x)]
+    if not v:
+        return float("nan")
+    return float(np.median(v))
+
+
+def _summarize_folds(results: Dict[str, object]) -> Dict[str, object]:
+    # results["folds"][i]["targets"][target][model][metric]
+    folds = results.get("folds")
+    if not isinstance(folds, list):
+        return {}
+
+    summary: Dict[str, object] = {
+        "targets": {},
+    }
+
+    for fold in folds:
+        if not isinstance(fold, dict):
+            continue
+        targets = fold.get("targets")
+        if not isinstance(targets, dict):
+            continue
+
+        for target_name, models in targets.items():
+            if not isinstance(models, dict):
+                continue
+            t = summary["targets"].setdefault(str(target_name), {})
+            for model_name, metrics in models.items():
+                if not isinstance(metrics, dict):
+                    continue
+                m = t.setdefault(str(model_name), {})
+                for metric_name in ["mae", "rmse", "spearman", "n"]:
+                    m.setdefault(metric_name, []).append(
+                        float(metrics.get(metric_name, float("nan")))
+                    )
+
+    out: Dict[str, object] = {"targets": {}}
+    for target_name, models in summary["targets"].items():
+        out_models: Dict[str, object] = {}
+        for model_name, metric_lists in models.items():
+            out_models[model_name] = {
+                "mae_mean": _nanmean(metric_lists.get("mae", [])),
+                "mae_median": _nanmedian(metric_lists.get("mae", [])),
+                "rmse_mean": _nanmean(metric_lists.get("rmse", [])),
+                "rmse_median": _nanmedian(metric_lists.get("rmse", [])),
+                "spearman_mean": _nanmean(metric_lists.get("spearman", [])),
+                "spearman_median": _nanmedian(
+                    metric_lists.get("spearman", [])
+                ),
+                "n_mean": _nanmean(metric_lists.get("n", [])),
+            }
+        out["targets"][target_name] = out_models
+    return out
+
+
 def _fit_ols(X: pd.DataFrame, y: pd.Series) -> Optional[np.ndarray]:
     m = X.copy()
     m.insert(0, "intercept", 1.0)
@@ -88,6 +208,40 @@ def _predict_ols(X: pd.DataFrame, coef: np.ndarray) -> np.ndarray:
     m.insert(0, "intercept", 1.0)
     Xv = m.to_numpy(dtype=float)
     return Xv @ coef
+
+
+def _fit_ridge(
+    X: pd.DataFrame,
+    y: pd.Series,
+    alpha: float,
+) -> Optional[np.ndarray]:
+    if alpha < 0:
+        raise ValueError("ridge alpha must be non-negative")
+
+    m = X.copy()
+    m.insert(0, "intercept", 1.0)
+
+    valid = y.notna()
+    for c in m.columns:
+        valid &= m[c].notna()
+
+    if int(valid.sum()) < 5:
+        return None
+
+    Xv = m.loc[valid].to_numpy(dtype=float)
+    yv = y.loc[valid].to_numpy(dtype=float)
+
+    # Ridge closed form: (X'X + alpha*I)^{-1} X'y
+    # Intercept is not regularized.
+    xtx = Xv.T @ Xv
+    reg = np.eye(xtx.shape[0], dtype=float) * float(alpha)
+    reg[0, 0] = 0.0
+    coef = np.linalg.solve(xtx + reg, Xv.T @ yv)
+    return coef
+
+
+def _predict_ridge(X: pd.DataFrame, coef: np.ndarray) -> np.ndarray:
+    return _predict_ols(X, coef)
 
 
 def _predict_seed_mean(
@@ -145,6 +299,20 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--ridge-alpha",
+        dest="ridge_alpha",
+        type=float,
+        default=1.0,
+        help="Ridge regularization strength (default: 1.0)",
+    )
+    parser.add_argument(
+        "--feature-set",
+        dest="feature_set",
+        default="basic",
+        choices=["basic", "expanded"],
+        help="Which feature set to use (default: basic)",
+    )
+    parser.add_argument(
         "--out",
         dest="out_path",
         default=None,
@@ -182,14 +350,26 @@ def main() -> int:
     results: Dict[str, object] = {
         "snapshots": [s.name for s in snapshots],
         "folds": [],
+        "config": {
+            "ridge_alpha": float(args.ridge_alpha),
+            "feature_set": str(args.feature_set),
+        },
     }
 
     for held_out in tournaments:
         train = all_rows[all_rows["tournament_key"] != held_out].copy()
         test = all_rows[all_rows["tournament_key"] == held_out].copy()
 
-        X_train, y_total_train, y_share_train = _prepare_features(train)
-        X_test, y_total_test, y_share_test = _prepare_features(test)
+        X_train, y_total_train, y_share_train = _prepare_features_set(
+            train,
+            str(args.feature_set),
+        )
+        X_test, y_total_test, y_share_test = _prepare_features_set(
+            test,
+            str(args.feature_set),
+        )
+
+        X_train, X_test = _align_columns(X_train, X_test)
 
         fold: Dict[str, object] = {
             "held_out_tournament_key": str(held_out),
@@ -227,12 +407,31 @@ def main() -> int:
 
             ols_metrics = _fold_metrics(y_test, ols_pred)
 
+            ridge_coef = _fit_ridge(
+                X_train,
+                y_train,
+                alpha=float(args.ridge_alpha),
+            )
+            if ridge_coef is None:
+                ridge_pred = np.full(
+                    shape=(len(test),),
+                    fill_value=np.nan,
+                    dtype=float,
+                )
+            else:
+                ridge_pred = _predict_ridge(X_test, ridge_coef)
+
+            ridge_metrics = _fold_metrics(y_test, ridge_pred)
+
             fold["targets"][target_name] = {
                 "seed_mean": seed_metrics,
                 "ols": ols_metrics,
+                "ridge": ridge_metrics,
             }
 
         results["folds"].append(fold)
+
+    results["summary"] = _summarize_folds(results)
 
     out_json = json.dumps(results, indent=2) + "\n"
     if args.out_path:

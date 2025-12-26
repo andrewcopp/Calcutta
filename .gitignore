@@ -22,6 +22,10 @@ Thumbs.db
 __pycache__/
 *.pyc
 
+data-science/.venv/
+data-science/in/
+data-science/out/
+
 # Generated artifacts
 backend/exports/
 

@@ -182,6 +182,8 @@ def _expected_simulation(
     seed: int,
     kenpom_scale: float,
     budget: float,
+    use_historical_winners: bool,
+    competitor_entry_keys: Optional[List[str]] = None,
 ) -> Dict[str, object]:
     if n_sims <= 0:
         return {}
@@ -222,6 +224,7 @@ def _expected_simulation(
     rois: List[float] = []
     points_list: List[float] = []
     finish_positions: List[int] = []
+    team_points_sums: Dict[str, float] = {}
 
     for _ in range(n_sims):
         # Simulate winners.
@@ -231,11 +234,12 @@ def _expected_simulation(
         for _, gr in games.iterrows():
             gid = str(gr.get("game_id"))
 
-            winner_fixed = str(gr.get("winner_team_key") or "")
-            if winner_fixed:
-                winners_by_game[gid] = winner_fixed
-                wins_sim[winner_fixed] = wins_sim.get(winner_fixed, 0) + 1
-                continue
+            if use_historical_winners:
+                winner_fixed = str(gr.get("winner_team_key") or "")
+                if winner_fixed:
+                    winners_by_game[gid] = winner_fixed
+                    wins_sim[winner_fixed] = wins_sim.get(winner_fixed, 0) + 1
+                    continue
 
             t1 = str(gr.get("team1_key") or "")
             t2 = str(gr.get("team2_key") or "")
@@ -271,6 +275,11 @@ def _expected_simulation(
             else:
                 team_points[team_key] = _team_points_fixed(progress)
 
+        for team_key, pts in team_points.items():
+            team_points_sums[team_key] = (
+                team_points_sums.get(team_key, 0.0) + float(pts)
+            )
+
         # Entry points for historical entries.
         points_by_team_df = pd.DataFrame(
             {
@@ -278,13 +287,6 @@ def _expected_simulation(
                 "team_points": list(team_points.values()),
             }
         )
-        entry_points = _compute_entry_points(
-            entry_bids=market_bids,
-            points_by_team=points_by_team_df,
-            calcutta_key=calcutta_key,
-        )
-
-        # Sim entry points.
         if market_mode == "join":
             bids_all = pd.concat([market_bids, sim_rows], ignore_index=True)
             entry_points = _compute_entry_points(
@@ -293,6 +295,11 @@ def _expected_simulation(
                 calcutta_key=calcutta_key,
             )
         else:
+            entry_points = _compute_entry_points(
+                entry_bids=market_bids,
+                points_by_team=points_by_team_df,
+                calcutta_key=calcutta_key,
+            )
             sim_points = _compute_sim_entry_points_shadow(
                 sim_bids=sim_rows,
                 market_entry_bids=market_bids,
@@ -303,6 +310,17 @@ def _expected_simulation(
             entry_points = pd.concat(
                 [entry_points, sim_points],
                 ignore_index=True,
+            )
+
+        if competitor_entry_keys is not None:
+            allowed = set(str(k) for k in competitor_entry_keys)
+            allowed.add(str(sim_entry_key))
+            entry_points = entry_points[
+                entry_points["entry_key"].astype(str).isin(allowed)
+            ].copy()
+            entry_points = _ensure_entry_points_include_competitors(
+                entry_points,
+                competitor_entry_keys=list(allowed),
             )
 
         standings = _compute_finish_positions_and_payouts(
@@ -341,6 +359,7 @@ def _expected_simulation(
         "budget": float(budget),
         "mean_payout_cents": float(sum(payouts) / len(payouts)),
         "mean_roi": float(sum(rois) / len(rois)),
+        "mean_total_points": float(sum(points_list) / len(points_list)),
         "p50_payout_cents": _pct([float(x) for x in payouts], 0.50),
         "p90_payout_cents": _pct([float(x) for x in payouts], 0.90),
         "p50_roi": _pct(rois, 0.50),
@@ -348,7 +367,15 @@ def _expected_simulation(
         "p50_total_points": _pct(points_list, 0.50),
         "p90_total_points": _pct(points_list, 0.90),
         "finish_position_counts": {},
+        "team_mean_points": {},
     }
+
+    team_means: Dict[str, float] = {}
+    denom = float(len(payouts))
+    if denom > 0:
+        for team_key, s in team_points_sums.items():
+            team_means[str(team_key)] = float(s) / denom
+    expected["team_mean_points"] = team_means
 
     counts: Dict[str, int] = {}
     for fp in finish_positions:
@@ -356,6 +383,29 @@ def _expected_simulation(
         counts[k] = counts.get(k, 0) + 1
     expected["finish_position_counts"] = counts
     return expected
+
+
+def _ensure_entry_points_include_competitors(
+    entry_points: pd.DataFrame,
+    competitor_entry_keys: List[str],
+) -> pd.DataFrame:
+    if entry_points is None or entry_points.empty:
+        base = pd.DataFrame(columns=["entry_key", "total_points"])
+    else:
+        base = entry_points.copy()
+
+    have = set(base["entry_key"].astype(str).tolist())
+    missing = [str(k) for k in competitor_entry_keys if str(k) not in have]
+    if not missing:
+        return base
+
+    add = pd.DataFrame(
+        {
+            "entry_key": missing,
+            "total_points": [0.0 for _ in missing],
+        }
+    )
+    return pd.concat([base, add], ignore_index=True)
 
 
 def _team_points_fixed(progress: int) -> float:
@@ -730,11 +780,29 @@ def main() -> int:
         help="Random seed for expected Monte Carlo",
     )
     parser.add_argument(
+        "--expected-use-historical-winners",
+        dest="expected_use_historical_winners",
+        action="store_true",
+        help=(
+            "If set, expected simulation will use winner_team_key values from "
+            "games.parquet (leaky for true pre-tournament expectations)"
+        ),
+    )
+    parser.add_argument(
         "--kenpom-scale",
         dest="kenpom_scale",
         type=float,
         default=10.0,
         help="Logistic scale for kenpom_net diff to win prob",
+    )
+    parser.add_argument(
+        "--kenpom-scale-file",
+        dest="kenpom_scale_file",
+        default=None,
+        help=(
+            "If set, read a JSON file containing kenpom_scale and override "
+            "--kenpom-scale (used for expected simulation)"
+        ),
     )
     parser.add_argument(
         "--out",
@@ -907,6 +975,16 @@ def main() -> int:
     }
 
     if args.expected_sims and args.expected_sims > 0:
+        kenpom_scale = float(args.kenpom_scale)
+        kenpom_scale_source = "arg"
+        if args.kenpom_scale_file:
+            p = Path(args.kenpom_scale_file)
+            payload = json.loads(p.read_text(encoding="utf-8"))
+            if "kenpom_scale" not in payload:
+                raise ValueError("kenpom scale file missing kenpom_scale")
+            kenpom_scale = float(payload["kenpom_scale"])
+            kenpom_scale_source = str(p)
+
         points_by_round: Optional[Dict[int, float]] = None
         if points_mode == "round_scoring" and "round_scoring" in tables:
             rs = tables["round_scoring"].copy()
@@ -930,10 +1008,14 @@ def main() -> int:
             points_by_round=points_by_round,
             n_sims=int(args.expected_sims),
             seed=int(args.expected_seed),
-            kenpom_scale=float(args.kenpom_scale),
+            kenpom_scale=kenpom_scale,
             budget=float(args.budget),
+            use_historical_winners=bool(
+                args.expected_use_historical_winners
+            ),
         )
         if exp:
+            exp["kenpom_scale_source"] = kenpom_scale_source
             out["expected"] = exp
 
     out_json = json.dumps(out, indent=2) + "\n"
