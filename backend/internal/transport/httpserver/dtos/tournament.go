@@ -1,6 +1,7 @@
 package dtos
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -23,23 +24,57 @@ func (r *CreateTournamentRequest) Validate() error {
 }
 
 type TournamentResponse struct {
-	ID      string    `json:"id"`
-	Name    string    `json:"name"`
-	Rounds  int       `json:"rounds"`
-	Winner  string    `json:"winner,omitempty"`
-	Created time.Time `json:"created"`
-	Updated time.Time `json:"updated"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Rounds     int        `json:"rounds"`
+	Winner     string     `json:"winner,omitempty"`
+	StartingAt *time.Time `json:"startingAt,omitempty"`
+	Created    time.Time  `json:"created"`
+	Updated    time.Time  `json:"updated"`
 }
 
 func NewTournamentResponse(t *models.Tournament, winner string) *TournamentResponse {
 	return &TournamentResponse{
-		ID:      t.ID,
-		Name:    t.Name,
-		Rounds:  t.Rounds,
-		Winner:  winner,
-		Created: t.Created,
-		Updated: t.Updated,
+		ID:         t.ID,
+		Name:       t.Name,
+		Rounds:     t.Rounds,
+		Winner:     winner,
+		StartingAt: t.StartingAt,
+		Created:    t.Created,
+		Updated:    t.Updated,
 	}
+}
+
+type NullableTime struct {
+	Present bool
+	Value   *time.Time
+}
+
+func (nt *NullableTime) UnmarshalJSON(b []byte) error {
+	nt.Present = true
+
+	if string(b) == "null" {
+		nt.Value = nil
+		return nil
+	}
+
+	var t time.Time
+	if err := json.Unmarshal(b, &t); err != nil {
+		return err
+	}
+	nt.Value = &t
+	return nil
+}
+
+type UpdateTournamentRequest struct {
+	StartingAt NullableTime `json:"startingAt"`
+}
+
+func (r *UpdateTournamentRequest) Validate() error {
+	if !r.StartingAt.Present {
+		return ErrFieldRequired("startingAt")
+	}
+	return nil
 }
 
 type CreateTournamentTeamRequest struct {

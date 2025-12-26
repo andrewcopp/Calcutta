@@ -20,10 +20,11 @@ INSERT INTO tournaments (
   final_four_bottom_left,
   final_four_top_right,
   final_four_bottom_right,
+  starting_at,
   created_at,
   updated_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type CreateTournamentParams struct {
@@ -34,6 +35,7 @@ type CreateTournamentParams struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
+	StartingAt           *pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -47,6 +49,7 @@ func (q *Queries) CreateTournament(ctx context.Context, arg CreateTournamentPara
 		arg.FinalFourBottomLeft,
 		arg.FinalFourTopRight,
 		arg.FinalFourBottomRight,
+		arg.StartingAt,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -56,6 +59,7 @@ func (q *Queries) CreateTournament(ctx context.Context, arg CreateTournamentPara
 const getTournamentByID = `-- name: GetTournamentByID :one
 SELECT id, name, rounds,
        final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right,
+       starting_at,
        created_at, updated_at
 FROM tournaments
 WHERE id = $1 AND deleted_at IS NULL
@@ -69,6 +73,7 @@ type GetTournamentByIDRow struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
+	StartingAt           *pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -84,6 +89,7 @@ func (q *Queries) GetTournamentByID(ctx context.Context, id string) (GetTourname
 		&i.FinalFourBottomLeft,
 		&i.FinalFourTopRight,
 		&i.FinalFourBottomRight,
+		&i.StartingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -93,6 +99,7 @@ func (q *Queries) GetTournamentByID(ctx context.Context, id string) (GetTourname
 const listTournaments = `-- name: ListTournaments :many
 SELECT id, name, rounds,
        final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right,
+       starting_at,
        created_at, updated_at
 FROM tournaments
 WHERE deleted_at IS NULL
@@ -107,6 +114,7 @@ type ListTournamentsRow struct {
 	FinalFourBottomLeft  *string
 	FinalFourTopRight    *string
 	FinalFourBottomRight *string
+	StartingAt           *pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -128,6 +136,7 @@ func (q *Queries) ListTournaments(ctx context.Context) ([]ListTournamentsRow, er
 			&i.FinalFourBottomLeft,
 			&i.FinalFourTopRight,
 			&i.FinalFourBottomRight,
+			&i.StartingAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -139,4 +148,29 @@ func (q *Queries) ListTournaments(ctx context.Context) ([]ListTournamentsRow, er
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTournamentStartingAt = `-- name: UpdateTournamentStartingAt :execrows
+UPDATE tournaments
+SET starting_at = $1,
+    updated_at = $2
+WHERE id = $3 AND deleted_at IS NULL
+`
+
+type UpdateTournamentStartingAtParams struct {
+	StartingAt *pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	ID         string
+}
+
+func (q *Queries) UpdateTournamentStartingAt(ctx context.Context, arg UpdateTournamentStartingAtParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateTournamentStartingAt,
+		arg.StartingAt,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

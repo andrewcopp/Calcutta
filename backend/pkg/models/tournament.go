@@ -11,9 +11,43 @@ type Tournament struct {
 	FinalFourBottomLeft  string     `json:"finalFourBottomLeft"`
 	FinalFourTopRight    string     `json:"finalFourTopRight"`
 	FinalFourBottomRight string     `json:"finalFourBottomRight"`
+	StartingAt           *time.Time `json:"startingAt,omitempty"`
 	Created              time.Time  `json:"created"`
 	Updated              time.Time  `json:"updated"`
 	Deleted              *time.Time `json:"deleted,omitempty"`
+}
+
+func (t *Tournament) HasStarted(now time.Time) bool {
+	if t == nil || t.StartingAt == nil {
+		return false
+	}
+	return !now.Before(*t.StartingAt)
+}
+
+const (
+	TournamentEditDeniedReasonTournamentMissing = "tournament_missing"
+	TournamentEditDeniedReasonTournamentStarted = "tournament_started"
+)
+
+func (t *Tournament) CanEditCalcutta(now time.Time, isAdmin bool) (bool, string) {
+	if t == nil {
+		return false, TournamentEditDeniedReasonTournamentMissing
+	}
+	if isAdmin {
+		return true, ""
+	}
+	if !t.HasStarted(now) {
+		return true, ""
+	}
+	return false, TournamentEditDeniedReasonTournamentStarted
+}
+
+func (t *Tournament) CanEditBids(now time.Time, isAdmin bool) (bool, string) {
+	return t.CanEditCalcutta(now, isAdmin)
+}
+
+func (t *Tournament) CanEditEntries(now time.Time, isAdmin bool) (bool, string) {
+	return t.CanEditCalcutta(now, isAdmin)
 }
 
 // TournamentState represents the current state of a tournament

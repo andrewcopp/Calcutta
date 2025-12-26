@@ -142,6 +142,7 @@ type Tournament struct {
 	ID                   string
 	Name                 string
 	Rounds               int32
+	StartingAt           *pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 	DeletedAt            pgtype.Timestamptz

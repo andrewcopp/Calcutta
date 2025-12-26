@@ -37,6 +37,7 @@ func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament,
 			FinalFourBottomLeft:  derefString(row.FinalFourBottomLeft),
 			FinalFourTopRight:    derefString(row.FinalFourTopRight),
 			FinalFourBottomRight: derefString(row.FinalFourBottomRight),
+			StartingAt:           timestamptzPtrToTimePtr(row.StartingAt),
 			Created:              row.CreatedAt.Time,
 			Updated:              row.UpdatedAt.Time,
 		})
@@ -60,6 +61,7 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 		FinalFourBottomLeft:  derefString(row.FinalFourBottomLeft),
 		FinalFourTopRight:    derefString(row.FinalFourTopRight),
 		FinalFourBottomRight: derefString(row.FinalFourBottomRight),
+		StartingAt:           timestamptzPtrToTimePtr(row.StartingAt),
 		Created:              row.CreatedAt.Time,
 		Updated:              row.UpdatedAt.Time,
 	}, nil
@@ -75,6 +77,11 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	fftr := tournament.FinalFourTopRight
 	ffbr := tournament.FinalFourBottomRight
 
+	var startingAt *pgtype.Timestamptz
+	if tournament.StartingAt != nil {
+		startingAt = &pgtype.Timestamptz{Time: *tournament.StartingAt, Valid: true}
+	}
+
 	return r.q.CreateTournament(ctx, sqlc.CreateTournamentParams{
 		ID:                   tournament.ID,
 		Name:                 tournament.Name,
@@ -83,9 +90,32 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		FinalFourBottomLeft:  &ffbl,
 		FinalFourTopRight:    &fftr,
 		FinalFourBottomRight: &ffbr,
+		StartingAt:           startingAt,
 		CreatedAt:            pgtype.Timestamptz{Time: tournament.Created, Valid: true},
 		UpdatedAt:            pgtype.Timestamptz{Time: tournament.Updated, Valid: true},
 	})
+}
+
+func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error {
+	now := time.Now()
+
+	var start *pgtype.Timestamptz
+	if startingAt != nil {
+		start = &pgtype.Timestamptz{Time: *startingAt, Valid: true}
+	}
+
+	affected, err := r.q.UpdateTournamentStartingAt(ctx, sqlc.UpdateTournamentStartingAtParams{
+		StartingAt: start,
+		UpdatedAt:  pgtype.Timestamptz{Time: now, Valid: true},
+		ID:         tournamentID,
+	})
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return nil
+	}
+	return nil
 }
 
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
@@ -204,6 +234,14 @@ func derefString(p *string) string {
 		return ""
 	}
 	return *p
+}
+
+func timestamptzPtrToTimePtr(ts *pgtype.Timestamptz) *time.Time {
+	if ts == nil || !ts.Valid {
+		return nil
+	}
+	t := ts.Time
+	return &t
 }
 
 func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region string, byes, wins int32, eliminated bool, createdAt, updatedAt pgtype.Timestamptz, netRtg, oRtg, dRtg, adjT *float64, schoolName *string) *models.TournamentTeam {

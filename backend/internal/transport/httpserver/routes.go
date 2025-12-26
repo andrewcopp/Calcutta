@@ -35,6 +35,7 @@ func (s *Server) registerTournamentRoutes(r *mux.Router) {
 	r.HandleFunc("/api/tournaments", s.tournamentsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}", s.tournamentHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments", s.createTournamentHandler).Methods("POST")
+	r.HandleFunc("/api/tournaments/{id}", s.requirePermission("tournament.game.write", s.updateTournamentHandler)).Methods("PATCH")
 	r.HandleFunc("/api/tournaments/{id}/teams", s.tournamentTeamsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}/teams", s.createTournamentTeamHandler).Methods("POST")
 	r.HandleFunc("/api/tournaments/{tournamentId}/teams/{teamId}", s.updateTeamHandler).Methods("PATCH", "OPTIONS")

@@ -2,6 +2,7 @@ package tournament
 
 import (
 	"context"
+	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -46,4 +47,8 @@ func (s *Service) UpdateTournamentTeam(ctx context.Context, team *models.Tournam
 
 func (s *Service) GetWinningTeam(ctx context.Context, tournamentID string) (*models.TournamentTeam, error) {
 	return s.repo.GetWinningTeam(ctx, tournamentID)
+}
+
+func (s *Service) UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error {
+	return s.repo.UpdateStartingAt(ctx, tournamentID, startingAt)
 }

@@ -89,6 +89,17 @@ func (s *Server) updateTeamHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), team.TournamentID)
+	if err != nil {
+		log.Printf("Error listing calcuttas for tournament %s after team update: %v", team.TournamentID, err)
+	} else {
+		for _, c := range calcuttas {
+			if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
+				log.Printf("Error ensuring portfolios/recalculating for calcutta %s after team update: %v", c.ID, err)
+			}
+		}
+	}
+
 	updatedTeam, err := s.app.Tournament.GetTeams(r.Context(), team.TournamentID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
