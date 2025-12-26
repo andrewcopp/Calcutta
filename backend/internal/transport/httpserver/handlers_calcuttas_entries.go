@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/gorilla/mux"
@@ -74,47 +75,19 @@ func (s *Server) updateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isAdmin := false
-	ok, err := s.authzRepo.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if ok {
-		isAdmin = true
-	}
-
-	authorized := false
-	if entry.UserID != nil && *entry.UserID == userID {
-		authorized = true
-	}
-	if calcutta.OwnerID == userID {
-		authorized = true
-	}
-	if isAdmin {
-		authorized = true
-	}
-	if !authorized {
-		writeError(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
-		return
-	}
-
 	tournament, err := s.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if tournament == nil {
-		writeError(w, r, http.StatusBadRequest, "tournament_missing", "Tournament not found", "tournamentId")
+
+	decision, err := policy.CanEditEntryBids(r.Context(), s.authzRepo, userID, entry, calcutta, tournament, time.Now())
+	if err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	if ok, reason := tournament.CanEditBids(time.Now(), isAdmin); !ok {
-		code := "tournament_locked"
-		if reason != "" {
-			code = reason
-		}
-		writeError(w, r, http.StatusLocked, code, "Bids are locked", "")
+	if !decision.Allowed {
+		writeError(w, r, decision.Status, decision.Code, decision.Message, "")
 		return
 	}
 
