@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,14 +63,40 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
-		if allowedOrigin == "" {
-			allowedOrigin = "http://localhost:3000"
+		allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
+		if allowedOriginsEnv == "" {
+			allowedOriginsEnv = os.Getenv("ALLOWED_ORIGIN")
+		}
+		if allowedOriginsEnv == "" {
+			allowedOriginsEnv = "http://localhost:3000"
 		}
 
-		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+		allowedOrigins := make([]string, 0)
+		for _, o := range strings.Split(allowedOriginsEnv, ",") {
+			trimmed := strings.TrimSpace(o)
+			if trimmed != "" {
+				allowedOrigins = append(allowedOrigins, trimmed)
+			}
+		}
+		if len(allowedOrigins) == 0 {
+			allowedOrigins = []string{"http://localhost:3000"}
+		}
+
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			for _, ao := range allowedOrigins {
+				if ao == origin {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Add("Vary", "Origin")
+					break
+				}
+			}
+		} else if len(allowedOrigins) == 1 {
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigins[0])
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, X-Requested-With, X-Request-ID")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "3600")
 

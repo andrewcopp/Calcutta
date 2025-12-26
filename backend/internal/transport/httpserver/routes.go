@@ -1,6 +1,10 @@
 package httpserver
 
-import "github.com/gorilla/mux"
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+)
 
 // RegisterRoutes centralizes HTTP route registration
 func (s *Server) RegisterRoutes(r *mux.Router) {
@@ -17,6 +21,9 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 
 func (s *Server) registerBasicRoutes(r *mux.Router) {
 	// Health & basic
+	r.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
 }
 
