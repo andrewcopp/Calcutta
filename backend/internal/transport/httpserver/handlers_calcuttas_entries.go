@@ -19,7 +19,7 @@ func (s *Server) calcuttaEntriesHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	entries, err := s.calcuttaService.GetEntries(r.Context(), calcuttaID)
+	entries, err := s.app.Calcutta.GetEntries(r.Context(), calcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -41,7 +41,7 @@ func (s *Server) calcuttaEntryTeamsHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	teams, err := s.calcuttaService.GetEntryTeams(r.Context(), entryID)
+	teams, err := s.app.Calcutta.GetEntryTeams(r.Context(), entryID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -63,13 +63,13 @@ func (s *Server) updateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entry, err := s.calcuttaService.GetEntry(r.Context(), entryID)
+	entry, err := s.app.Calcutta.GetEntry(r.Context(), entryID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	calcutta, err := s.calcuttaService.GetCalcuttaByID(r.Context(), entry.CalcuttaID)
+	calcutta, err := s.app.Calcutta.GetCalcuttaByID(r.Context(), entry.CalcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -110,21 +110,21 @@ func (s *Server) updateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := s.calcuttaService.ValidateEntry(entry, teams); err != nil {
+	if err := s.app.Calcutta.ValidateEntry(entry, teams); err != nil {
 		writeError(w, r, http.StatusBadRequest, "validation_error", err.Error(), "teams")
 		return
 	}
 
-	if err := s.calcuttaService.ReplaceEntryTeams(r.Context(), entryID, teams); err != nil {
+	if err := s.app.Calcutta.ReplaceEntryTeams(r.Context(), entryID, teams); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
+	if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	updatedTeams, err := s.calcuttaService.GetEntryTeams(r.Context(), entryID)
+	updatedTeams, err := s.app.Calcutta.GetEntryTeams(r.Context(), entryID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return

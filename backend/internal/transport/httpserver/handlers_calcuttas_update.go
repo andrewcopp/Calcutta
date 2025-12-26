@@ -23,7 +23,7 @@ func (s *Server) updateCalcuttaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calcutta, err := s.calcuttaService.GetCalcuttaByID(r.Context(), calcuttaID)
+	calcutta, err := s.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -69,7 +69,7 @@ func (s *Server) updateCalcuttaHandler(w http.ResponseWriter, r *http.Request) {
 		calcutta.MaxBid = *req.MaxBid
 	}
 
-	if err := s.calcuttaService.UpdateCalcutta(r.Context(), calcutta); err != nil {
+	if err := s.app.Calcutta.UpdateCalcutta(r.Context(), calcutta); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}

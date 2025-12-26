@@ -15,7 +15,7 @@ func (s *Server) portfoliosHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	portfolios, err := s.calcuttaService.GetPortfoliosByEntry(r.Context(), entryID)
+	portfolios, err := s.app.Calcutta.GetPortfoliosByEntry(r.Context(), entryID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -31,7 +31,7 @@ func (s *Server) portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	teams, err := s.calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
+	teams, err := s.app.Calcutta.GetPortfolioTeams(r.Context(), portfolioID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return

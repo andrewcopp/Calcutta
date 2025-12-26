@@ -78,12 +78,12 @@ func (s *Server) selectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), tournamentID)
+	calcuttas, err := s.app.Calcutta.GetCalcuttasByTournament(r.Context(), tournamentID)
 	if err != nil {
 		log.Printf("Error listing calcuttas for tournament %s: %v", tournamentID, err)
 	} else {
 		for _, c := range calcuttas {
-			if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
+			if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
 				log.Printf("Error ensuring portfolios/recalculating for calcutta %s after winner select: %v", c.ID, err)
 			}
 		}
@@ -114,12 +114,12 @@ func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), tournamentID)
+	calcuttas, err := s.app.Calcutta.GetCalcuttasByTournament(r.Context(), tournamentID)
 	if err != nil {
 		log.Printf("Error listing calcuttas for tournament %s: %v", tournamentID, err)
 	} else {
 		for _, c := range calcuttas {
-			if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
+			if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(r.Context(), c.ID); err != nil {
 				log.Printf("Error ensuring portfolios/recalculating for calcutta %s after winner unselect: %v", c.ID, err)
 			}
 		}

@@ -15,14 +15,14 @@ func (s *Server) recalculatePortfoliosHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	calcuttas, err := s.calcuttaService.GetCalcuttasByTournament(r.Context(), tournamentID)
+	calcuttas, err := s.app.Calcutta.GetCalcuttasByTournament(r.Context(), tournamentID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	for _, calcutta := range calcuttas {
-		if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
+		if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
 			log.Printf("Error ensuring portfolios/recalculating for calcutta %s: %v", calcutta.ID, err)
 			continue
 		}

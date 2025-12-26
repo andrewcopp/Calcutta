@@ -15,7 +15,7 @@ func (s *Server) calcuttasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Handling GET request to /api/calcuttas")
-	calcuttas, err := s.calcuttaService.GetAllCalcuttas(r.Context())
+	calcuttas, err := s.app.Calcutta.GetAllCalcuttas(r.Context())
 	if err != nil {
 		log.Printf("Error getting all calcuttas: %v", err)
 		writeErrorFromErr(w, r, err)
@@ -58,7 +58,7 @@ func (s *Server) createCalcuttaHandler(w http.ResponseWriter, r *http.Request) {
 	if calcutta.MaxBid == 0 {
 		calcutta.MaxBid = 50
 	}
-	if err := s.calcuttaService.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
+	if err := s.app.Calcutta.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
 		log.Printf("Error creating calcutta with rounds: %v", err)
 		writeErrorFromErr(w, r, err)
 		return

@@ -20,7 +20,7 @@ func (s *Server) calcuttaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Fetching calcutta with ID: %s", calcuttaID)
-	calcutta, err := s.calcuttaService.GetCalcuttaByID(r.Context(), calcuttaID)
+	calcutta, err := s.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return

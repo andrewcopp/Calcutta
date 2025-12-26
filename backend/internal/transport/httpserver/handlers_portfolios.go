@@ -14,7 +14,7 @@ func (s *Server) calculatePortfolioScoresHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]
 
-	if err := s.calcuttaService.CalculatePortfolioScores(r.Context(), portfolioID); err != nil {
+	if err := s.app.Calcutta.CalculatePortfolioScores(r.Context(), portfolioID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -36,7 +36,7 @@ func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	teams, err := s.calcuttaService.GetPortfolioTeams(r.Context(), portfolioID)
+	teams, err := s.app.Calcutta.GetPortfolioTeams(r.Context(), portfolioID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -59,7 +59,7 @@ func (s *Server) updatePortfolioTeamScoresHandler(w http.ResponseWriter, r *http
 	portfolioTeam.PredictedPoints = req.PredictedPoints
 	portfolioTeam.Updated = time.Now()
 
-	if err := s.calcuttaService.UpdatePortfolioTeam(r.Context(), portfolioTeam); err != nil {
+	if err := s.app.Calcutta.UpdatePortfolioTeam(r.Context(), portfolioTeam); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -80,7 +80,7 @@ func (s *Server) updatePortfolioMaximumScoreHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if err := s.calcuttaService.UpdatePortfolioScores(r.Context(), portfolioID, req.MaximumPoints); err != nil {
+	if err := s.app.Calcutta.UpdatePortfolioScores(r.Context(), portfolioID, req.MaximumPoints); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}

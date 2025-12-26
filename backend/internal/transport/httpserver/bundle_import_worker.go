@@ -117,13 +117,13 @@ func (s *Server) processBundleUpload(ctx context.Context, uploadID string) {
 		return
 	}
 
-	calcuttas, err := s.calcuttaService.GetAllCalcuttas(ctx)
+	calcuttas, err := s.app.Calcutta.GetAllCalcuttas(ctx)
 	if err != nil {
 		s.failBundleUpload(ctx, uploadID, err)
 		return
 	}
 	for _, c := range calcuttas {
-		if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(ctx, c.ID); err != nil {
+		if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(ctx, c.ID); err != nil {
 			log.Printf("Error ensuring portfolios/recalculating for calcutta %s (upload %s): %v", c.ID, uploadID, err)
 		}
 	}

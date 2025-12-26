@@ -9,6 +9,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
+	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	"github.com/andrewcopp/Calcutta/backend/internal/auth"
@@ -72,6 +73,7 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 	userService := services.NewUserService(userRepo)
 	bracketService := services.NewBracketService(dbTournamentRepo)
 	a := &app.App{Bracket: appbracket.New(bracketService)}
+	a.Calcutta = appcalcutta.New(calcuttaService)
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)
