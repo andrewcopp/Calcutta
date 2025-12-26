@@ -104,3 +104,38 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 	)
 	return i, err
 }
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users
+SET
+  email = $2,
+  first_name = $3,
+  last_name = $4,
+  password_hash = $5,
+  updated_at = $6,
+  deleted_at = $7
+WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID           string
+	Email        string
+	FirstName    string
+	LastName     string
+	PasswordHash *string
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.Exec(ctx, updateUser,
+		arg.ID,
+		arg.Email,
+		arg.FirstName,
+		arg.LastName,
+		arg.PasswordHash,
+		arg.UpdatedAt,
+		arg.DeletedAt,
+	)
+	return err
+}

@@ -15,3 +15,8 @@ type UserWriter interface {
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
 }
+
+type UserRepository interface {
+	UserReader
+	UserWriter
+}

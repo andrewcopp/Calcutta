@@ -59,6 +59,26 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
 
+func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
+	now := time.Now()
+	user.Updated = now
+
+	var deletedAt pgtype.Timestamptz
+	if user.Deleted != nil {
+		deletedAt = pgtype.Timestamptz{Time: *user.Deleted, Valid: true}
+	}
+
+	return r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
+		ID:           user.ID,
+		Email:        user.Email,
+		FirstName:    user.FirstName,
+		LastName:     user.LastName,
+		PasswordHash: user.PasswordHash,
+		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
+		DeletedAt:    deletedAt,
+	})
+}
+
 func userFromRow(id, email, firstName, lastName string, passwordHash *string, createdAt, updatedAt, deletedAt pgtype.Timestamptz) *models.User {
 	var deleted *time.Time
 	if deletedAt.Valid {

@@ -8,6 +8,7 @@ import (
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -21,14 +22,14 @@ type Result struct {
 }
 
 type Service struct {
-	userRepo   *dbadapters.UserRepository
+	userRepo   ports.UserRepository
 	authRepo   *dbadapters.AuthRepository
 	authzRepo  *dbadapters.AuthorizationRepository
 	tokenMgr   *coreauth.TokenManager
 	refreshTTL time.Duration
 }
 
-func New(userRepo *dbadapters.UserRepository, authRepo *dbadapters.AuthRepository, authzRepo *dbadapters.AuthorizationRepository, tokenMgr *coreauth.TokenManager, refreshTTL time.Duration) *Service {
+func New(userRepo ports.UserRepository, authRepo *dbadapters.AuthRepository, authzRepo *dbadapters.AuthorizationRepository, tokenMgr *coreauth.TokenManager, refreshTTL time.Duration) *Service {
 	return &Service{userRepo: userRepo, authRepo: authRepo, authzRepo: authzRepo, tokenMgr: tokenMgr, refreshTTL: refreshTTL}
 }
 
