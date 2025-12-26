@@ -39,9 +39,9 @@ type adminBundlesImportStatusResponse struct {
 }
 
 func (s *Server) registerAdminBundleRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/bundles/export", s.adminBundlesExportHandler).Methods("GET")
-	r.HandleFunc("/api/admin/bundles/import", s.adminBundlesImportHandler).Methods("POST")
-	r.HandleFunc("/api/admin/bundles/import/{uploadId}", s.adminBundlesImportStatusHandler).Methods("GET")
+	r.HandleFunc("/api/admin/bundles/export", s.requirePermission("admin.bundles.export", s.adminBundlesExportHandler)).Methods("GET")
+	r.HandleFunc("/api/admin/bundles/import", s.requirePermission("admin.bundles.import", s.adminBundlesImportHandler)).Methods("POST")
+	r.HandleFunc("/api/admin/bundles/import/{uploadId}", s.requirePermission("admin.bundles.read", s.adminBundlesImportStatusHandler)).Methods("GET")
 }
 
 func (s *Server) adminBundlesExportHandler(w http.ResponseWriter, r *http.Request) {
