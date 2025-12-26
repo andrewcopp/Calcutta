@@ -8,6 +8,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Optional
+from datetime import datetime, timezone
 
 import pandas as pd
 
@@ -86,6 +87,30 @@ def main() -> int:
         help="API key for Authorization: Bearer (or set CALCUTTA_API_KEY)",
     )
     parser.add_argument(
+        "--out-root",
+        dest="out_root",
+        default=None,
+        help="If set, write outputs to <out-root>/<snapshot>/ (Option A)",
+    )
+    parser.add_argument(
+        "--snapshot",
+        dest="snapshot",
+        default=None,
+        help=(
+            "Snapshot directory name under --out-root "
+            "(defaults to manifest-derived)"
+        ),
+    )
+    parser.add_argument(
+        "--update-latest",
+        dest="update_latest",
+        action="store_true",
+        help=(
+            "If set with --out-root, write <out-root>/LATEST "
+            "pointing at the snapshot dir"
+        ),
+    )
+    parser.add_argument(
         "--out",
         dest="out_dir",
         default="./out",
@@ -93,8 +118,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    out_dir = Path(args.out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_root: Optional[Path] = Path(args.out_root) if args.out_root else None
+    out_dir: Optional[Path] = None
 
     zip_path: Optional[Path]
     if args.zip_path:
@@ -145,6 +170,39 @@ def main() -> int:
 
     with zipfile.ZipFile(zip_path, "r") as zf:
         manifest = _read_manifest(zf)
+
+        if out_root is not None:
+            out_root.mkdir(parents=True, exist_ok=True)
+
+            snapshot_name: Optional[str] = args.snapshot
+            if not snapshot_name:
+                if isinstance(manifest, dict):
+                    tournament_key = str(
+                        manifest.get("tournament_key") or ""
+                    )
+                    calcutta_key = str(manifest.get("calcutta_key") or "")
+                    exported_at = str(manifest.get("exported_at") or "")
+                    exported_at_safe = exported_at.replace(":", "")
+                    exported_at_safe = exported_at_safe.replace("-", "")
+                    exported_at_safe = exported_at_safe.replace("T", "-")
+                    exported_at_safe = exported_at_safe.replace("Z", "")
+                    exported_at_safe = exported_at_safe.split(".", 1)[0]
+                    if tournament_key and calcutta_key and exported_at_safe:
+                        snapshot_name = (
+                            f"{tournament_key}-{calcutta_key}-"
+                            f"{exported_at_safe}"
+                        )
+
+                if not snapshot_name:
+                    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+                    snapshot_name = f"snapshot-{ts}"
+
+            out_dir = out_root / snapshot_name
+        else:
+            out_dir = Path(args.out_dir)
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+
         if manifest is not None:
             (out_dir / "manifest.json").write_text(
                 json.dumps(manifest, indent=2) + "\n",
@@ -163,6 +221,9 @@ def main() -> int:
 
             parquet_path = out_dir / f"{table_name}.parquet"
             df.to_parquet(parquet_path, index=False)
+
+    if out_root is not None and args.update_latest and out_dir is not None:
+        (out_root / "LATEST").write_text(out_dir.name + "\n", encoding="utf-8")
 
     return 0
 

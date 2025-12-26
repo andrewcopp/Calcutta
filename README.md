@@ -67,6 +67,12 @@ The backend is a standard Go module. The `backend/cmd/*` directories contain the
 ### API Reference
 See [API Endpoints](#api-endpoints) section below.
 
+### Data science workflow
+
+The Python utilities for snapshot ingestion, canonical dataset derivation, evaluation, and backtesting live in `data-science/`.
+
+See: `data-science/README.md`
+
 ## Project Status
 
 🚧 Active development - Core bracket and scoring logic implemented, analytics in progress.
