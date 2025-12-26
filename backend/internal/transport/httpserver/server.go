@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"database/sql"
+	"log"
 	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
@@ -50,7 +51,10 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 	dbSchoolRepo := dbadapters.NewSchoolRepository(pool)
 	dbTournamentRepo := dbadapters.NewTournamentRepository(pool)
 
-	tm, _ := auth.NewTokenManager(cfg.JWTSecret, time.Duration(cfg.AccessTokenTTLSeconds)*time.Second)
+	tm, err := auth.NewTokenManager(cfg.JWTSecret, time.Duration(cfg.AccessTokenTTLSeconds)*time.Second)
+	if err != nil {
+		log.Fatalf("failed to initialize auth token manager: %v", err)
+	}
 
 	schoolService := services.NewSchoolService(schoolRepo)
 	tournamentService := services.NewTournamentService(tournamentRepo, schoolRepo)
@@ -58,6 +62,7 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 		CalcuttaReader:  calcuttaRepo,
 		CalcuttaWriter:  calcuttaRepo,
 		EntryReader:     calcuttaRepo,
+		EntryWriter:     calcuttaRepo,
 		PayoutReader:    calcuttaRepo,
 		PortfolioReader: calcuttaRepo,
 		PortfolioWriter: calcuttaRepo,

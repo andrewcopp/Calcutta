@@ -15,6 +15,7 @@ func newTestCalcuttaService() *CalcuttaService {
 		CalcuttaReader:  mockRepo,
 		CalcuttaWriter:  mockRepo,
 		EntryReader:     mockRepo,
+		EntryWriter:     mockRepo,
 		PayoutReader:    mockRepo,
 		PortfolioReader: mockRepo,
 		PortfolioWriter: mockRepo,
@@ -84,6 +85,10 @@ func (m *MockCalcuttaRepository) GetRounds(ctx context.Context, calcuttaID strin
 
 func (m *MockCalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {
 	return nil, nil
+}
+
+func (m *MockCalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
+	return nil
 }
 
 func (m *MockCalcuttaRepository) CreatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {

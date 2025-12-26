@@ -1,6 +1,7 @@
 package dtos
 
 import (
+	"strings"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
@@ -44,6 +45,38 @@ func NewEntryListResponse(entries []*models.CalcuttaEntry) []*EntryResponse {
 		responses[i] = NewEntryResponse(e)
 	}
 	return responses
+}
+
+type UpdateEntryTeamRequest struct {
+	TeamID string `json:"teamId"`
+	Bid    int    `json:"bid"`
+}
+
+type UpdateEntryRequest struct {
+	Teams []*UpdateEntryTeamRequest `json:"teams"`
+}
+
+func (r *UpdateEntryRequest) Validate() error {
+	if r == nil {
+		return ErrFieldInvalid("body", "request body is required")
+	}
+	if len(r.Teams) == 0 {
+		return ErrFieldInvalid("teams", "at least one team must be provided")
+	}
+	for i, t := range r.Teams {
+		if t == nil {
+			return ErrFieldInvalid("teams", "team cannot be null")
+		}
+		if strings.TrimSpace(t.TeamID) == "" {
+			_ = i
+			return ErrFieldRequired("teamId")
+		}
+		if t.Bid <= 0 {
+			_ = i
+			return ErrFieldInvalid("bid", "must be greater than 0")
+		}
+	}
+	return nil
 }
 
 type EntryTeamResponse struct {

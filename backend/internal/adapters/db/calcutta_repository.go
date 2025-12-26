@@ -48,6 +48,55 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 	return out, nil
 }
 
+func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
+	// Validate that entry exists (and that caller has access is handled at higher layers)
+	if _, err := r.GetEntry(ctx, entryID); err != nil {
+		return err
+	}
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	now := time.Now()
+
+	if _, err = qtx.SoftDeleteEntryTeamsByEntryID(ctx, sqlc.SoftDeleteEntryTeamsByEntryIDParams{
+		DeletedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		EntryID:   entryID,
+	}); err != nil {
+		return err
+	}
+
+	for _, t := range teams {
+		if t == nil {
+			continue
+		}
+		id := uuid.New().String()
+		if err = qtx.CreateEntryTeam(ctx, sqlc.CreateEntryTeamParams{
+			ID:        id,
+			EntryID:   entryID,
+			TeamID:    t.TeamID,
+			Bid:       int32(t.Bid),
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}); err != nil {
+			return err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Calcutta, error) {
 	row, err := r.q.GetCalcuttaByID(ctx, id)
 	if err != nil {

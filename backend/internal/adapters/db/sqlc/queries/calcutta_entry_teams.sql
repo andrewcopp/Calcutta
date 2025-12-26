@@ -22,3 +22,13 @@ JOIN tournament_teams tt ON cet.team_id = tt.id
 LEFT JOIN schools s ON tt.school_id = s.id
 WHERE cet.entry_id = $1 AND cet.deleted_at IS NULL
 ORDER BY cet.created_at DESC;
+
+-- name: SoftDeleteEntryTeamsByEntryID :execrows
+UPDATE calcutta_entry_teams
+SET deleted_at = $1,
+    updated_at = $1
+WHERE entry_id = $2 AND deleted_at IS NULL;
+
+-- name: CreateEntryTeam :exec
+INSERT INTO calcutta_entry_teams (id, entry_id, team_id, bid, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6);

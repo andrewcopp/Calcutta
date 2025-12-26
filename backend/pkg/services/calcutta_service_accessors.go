@@ -98,6 +98,14 @@ func (s *CalcuttaService) GetEntryTeams(ctx context.Context, entryID string) ([]
 	return s.ports.EntryReader.GetEntryTeams(ctx, entryID)
 }
 
+func (s *CalcuttaService) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {
+	return s.ports.EntryReader.GetEntry(ctx, id)
+}
+
+func (s *CalcuttaService) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
+	return s.ports.EntryWriter.ReplaceEntryTeams(ctx, entryID, teams)
+}
+
 func (s *CalcuttaService) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	return s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entryID)
 }

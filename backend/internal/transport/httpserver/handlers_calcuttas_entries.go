@@ -1,9 +1,12 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/gorilla/mux"
 )
 
@@ -43,4 +46,115 @@ func (s *Server) calcuttaEntryTeamsHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusOK, dtos.NewEntryTeamListResponse(teams))
+}
+
+func (s *Server) updateEntryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	entryID := vars["id"]
+	if entryID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "id")
+		return
+	}
+
+	userID := authUserID(r.Context())
+	if userID == "" {
+		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	entry, err := s.calcuttaService.GetEntry(r.Context(), entryID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	calcutta, err := s.calcuttaService.GetCalcuttaByID(r.Context(), entry.CalcuttaID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	isAdmin := false
+	ok, err := s.authzRepo.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if ok {
+		isAdmin = true
+	}
+
+	authorized := false
+	if entry.UserID != nil && *entry.UserID == userID {
+		authorized = true
+	}
+	if calcutta.OwnerID == userID {
+		authorized = true
+	}
+	if isAdmin {
+		authorized = true
+	}
+	if !authorized {
+		writeError(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
+		return
+	}
+
+	tournament, err := s.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if tournament == nil {
+		writeError(w, r, http.StatusBadRequest, "tournament_missing", "Tournament not found", "tournamentId")
+		return
+	}
+
+	if ok, reason := tournament.CanEditBids(time.Now(), isAdmin); !ok {
+		code := "tournament_locked"
+		if reason != "" {
+			code = reason
+		}
+		writeError(w, r, http.StatusLocked, code, "Bids are locked", "")
+		return
+	}
+
+	var req dtos.UpdateEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	teams := make([]*models.CalcuttaEntryTeam, 0, len(req.Teams))
+	for _, t := range req.Teams {
+		teams = append(teams, &models.CalcuttaEntryTeam{
+			EntryID: entryID,
+			TeamID:  t.TeamID,
+			Bid:     t.Bid,
+		})
+	}
+
+	if err := s.calcuttaService.ValidateEntry(entry, teams); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", err.Error(), "teams")
+		return
+	}
+
+	if err := s.calcuttaService.ReplaceEntryTeams(r.Context(), entryID, teams); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if err := s.calcuttaService.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	updatedTeams, err := s.calcuttaService.GetEntryTeams(r.Context(), entryID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, dtos.NewEntryTeamListResponse(updatedTeams))
 }

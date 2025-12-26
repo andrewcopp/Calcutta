@@ -19,6 +19,11 @@ type Config struct {
 }
 
 func LoadConfigFromEnv() (Config, error) {
+	env := os.Getenv("NODE_ENV")
+	if env == "" {
+		env = "development"
+	}
+
 	accessTTLSeconds := 900
 	if v := os.Getenv("ACCESS_TOKEN_TTL_SECONDS"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
@@ -71,6 +76,10 @@ func LoadConfigFromEnv() (Config, error) {
 		AccessTokenTTLSeconds:  accessTTLSeconds,
 		RefreshTokenTTLHours:   refreshTTLHours,
 		ShutdownTimeoutSeconds: 30,
+	}
+
+	if env == "development" && cfg.JWTSecret == "" {
+		cfg.JWTSecret = "dev-jwt-secret"
 	}
 
 	if cfg.AllowedOrigin == "" {

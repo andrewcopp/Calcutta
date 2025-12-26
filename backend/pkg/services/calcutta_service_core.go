@@ -8,6 +8,7 @@ type CalcuttaServicePorts struct {
 	CalcuttaReader  ports.CalcuttaReader
 	CalcuttaWriter  ports.CalcuttaWriter
 	EntryReader     ports.EntryReader
+	EntryWriter     ports.EntryWriter
 	PayoutReader    ports.PayoutReader
 	PortfolioReader ports.PortfolioReader
 	PortfolioWriter ports.PortfolioWriter

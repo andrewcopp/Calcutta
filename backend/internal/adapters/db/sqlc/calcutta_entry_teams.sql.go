@@ -94,3 +94,49 @@ func (q *Queries) ListEntryTeamsByEntryID(ctx context.Context, entryID string) (
 	}
 	return items, nil
 }
+
+const softDeleteEntryTeamsByEntryID = `-- name: SoftDeleteEntryTeamsByEntryID :execrows
+UPDATE calcutta_entry_teams
+SET deleted_at = $1,
+    updated_at = $1
+WHERE entry_id = $2 AND deleted_at IS NULL
+`
+
+type SoftDeleteEntryTeamsByEntryIDParams struct {
+	DeletedAt pgtype.Timestamptz
+	EntryID   string
+}
+
+func (q *Queries) SoftDeleteEntryTeamsByEntryID(ctx context.Context, arg SoftDeleteEntryTeamsByEntryIDParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteEntryTeamsByEntryID, arg.DeletedAt, arg.EntryID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const createEntryTeam = `-- name: CreateEntryTeam :exec
+INSERT INTO calcutta_entry_teams (id, entry_id, team_id, bid, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type CreateEntryTeamParams struct {
+	ID        string
+	EntryID   string
+	TeamID    string
+	Bid       int32
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateEntryTeam(ctx context.Context, arg CreateEntryTeamParams) error {
+	_, err := q.db.Exec(ctx, createEntryTeam,
+		arg.ID,
+		arg.EntryID,
+		arg.TeamID,
+		arg.Bid,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
