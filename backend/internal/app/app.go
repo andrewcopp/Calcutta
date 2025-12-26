@@ -1,6 +1,7 @@
 package app
 
 import (
+	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
@@ -9,6 +10,7 @@ import (
 )
 
 type App struct {
+	Analytics  *appanalytics.Service
 	Bracket    *bracket.Service
 	Calcutta   *appcalcutta.Service
 	Auth       *appauth.Service

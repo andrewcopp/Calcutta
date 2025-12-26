@@ -7,6 +7,7 @@ import (
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
+	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
@@ -78,6 +79,7 @@ func NewServer(db *sql.DB, pool *pgxpool.Pool, cfg platform.Config) *Server {
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)
 	analyticsService := services.NewAnalyticsService(analyticsRepo)
+	a.Analytics = appanalytics.New(analyticsService)
 
 	return &Server{
 		schoolRepo:        schoolRepo,
