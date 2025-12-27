@@ -4,18 +4,24 @@ import (
 	"context"
 	"fmt"
 
-	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
 
+type TournamentRepo interface {
+	GetByID(ctx context.Context, id string) (*models.Tournament, error)
+	GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error)
+	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
+	UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error
+}
+
 type Service struct {
-	tournamentRepo *dbadapters.TournamentRepository
+	tournamentRepo TournamentRepo
 	builder        *BracketBuilder
 	validator      *models.BracketValidator
 }
 
-func New(tournamentRepo *dbadapters.TournamentRepository) *Service {
+func New(tournamentRepo TournamentRepo) *Service {
 	return &Service{
 		tournamentRepo: tournamentRepo,
 		builder:        NewBracketBuilder(),

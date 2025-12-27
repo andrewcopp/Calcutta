@@ -21,6 +21,7 @@ type TournamentWriter interface {
 
 type TeamReader interface {
 	GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error)
+	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
 }
 
 type TeamWriter interface {

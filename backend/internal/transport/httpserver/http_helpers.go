@@ -51,6 +51,12 @@ func writeErrorFromErr(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
+	var invalidArgErr *apperrors.InvalidArgumentError
+	if errors.As(err, &invalidArgErr) {
+		writeError(w, r, http.StatusBadRequest, "invalid_argument", invalidArgErr.Error(), invalidArgErr.Field)
+		return
+	}
+
 	var notFoundErr *apperrors.NotFoundError
 	if errors.As(err, &notFoundErr) {
 		writeError(w, r, http.StatusNotFound, "not_found", notFoundErr.Error(), "")

@@ -40,3 +40,15 @@ func (e *UnauthorizedError) Error() string {
 	}
 	return e.Message
 }
+
+type InvalidArgumentError struct {
+	Field   string
+	Message string
+}
+
+func (e *InvalidArgumentError) Error() string {
+	if e.Message == "" {
+		return "invalid argument"
+	}
+	return e.Message
+}
