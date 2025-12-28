@@ -43,6 +43,10 @@ def build_report(
     allocation_mode: str,
     greedy_objective: str,
     greedy_contest_sims: int,
+    payout_snapshot: Optional[str] = None,
+    payout_utility: str = "power",
+    payout_utility_gamma: float = 1.2,
+    payout_utility_alpha: float = 1.0,
     exclude_entry_names: List[str],
     debug_output: bool,
     expected_sims: int,
@@ -106,6 +110,12 @@ def build_report(
                 greedy_objective=str(greedy_objective),
                 greedy_top_k=int(greedy_top_k),
                 greedy_contest_sims=int(greedy_contest_sims),
+                payout_snapshot=(
+                    str(payout_snapshot) if payout_snapshot is not None else None
+                ),
+                payout_utility=str(payout_utility),
+                payout_utility_gamma=float(payout_utility_gamma),
+                payout_utility_alpha=float(payout_utility_alpha),
                 exclude_entry_names=list(exclude_entry_names or []),
                 train_mode=str(train_mode),
                 debug_output=bool(debug_output),
@@ -189,6 +199,12 @@ def build_report(
             "allocation_mode": str(allocation_mode),
             "greedy_objective": str(greedy_objective),
             "greedy_contest_sims": int(greedy_contest_sims),
+            "payout_snapshot": (
+                str(payout_snapshot) if payout_snapshot is not None else None
+            ),
+            "payout_utility": str(payout_utility),
+            "payout_utility_gamma": float(payout_utility_gamma),
+            "payout_utility_alpha": float(payout_utility_alpha),
             "exclude_entry_names": list(exclude_entry_names or []),
             "debug_output": bool(debug_output),
             "expected_sims": int(expected_sims),

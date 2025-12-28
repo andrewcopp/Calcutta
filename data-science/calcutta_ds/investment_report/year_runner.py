@@ -159,6 +159,48 @@ def _map_greedy_objective(
     return mapped_obj, mapped_k
 
 
+def _build_payout_map(*, payouts: pd.DataFrame) -> Dict[int, int]:
+    req = {"position", "amount_cents"}
+    if payouts is None or payouts.empty or not req.issubset(set(payouts.columns)):
+        raise ValueError("payouts table missing required columns")
+
+    p = payouts.copy()
+    p["position"] = pd.to_numeric(p["position"], errors="coerce")
+    p["amount_cents"] = pd.to_numeric(p["amount_cents"], errors="coerce")
+    p = p[p["position"].notna() & p["amount_cents"].notna()].copy()
+
+    payout_map: Dict[int, int] = {}
+    for _, r in p.iterrows():
+        payout_map[int(r["position"])] = int(r["amount_cents"])
+    if not payout_map:
+        raise ValueError("payouts table produced empty payout_map")
+    return payout_map
+
+
+def _load_payout_map(
+    *,
+    out_root: Path,
+    all_snapshot_dirs: List[Path],
+    payout_snapshot: Optional[str],
+    fallback_tables: Dict[str, pd.DataFrame],
+) -> Dict[int, int]:
+    if payout_snapshot:
+        name = str(payout_snapshot)
+        sd = next((p for p in all_snapshot_dirs if p.name == name), None)
+        if sd is None:
+            raise FileNotFoundError(f"payout_snapshot not found: {name}")
+        ptables = backtest_scaffold._load_snapshot_tables(sd)
+        payouts = ptables.get("payouts")
+        if payouts is None:
+            raise ValueError(f"payout_snapshot missing payouts.parquet: {name}")
+        return _build_payout_map(payouts=payouts)
+
+    payouts = fallback_tables.get("payouts")
+    if payouts is None:
+        raise ValueError("snapshot missing payouts.parquet")
+    return _build_payout_map(payouts=payouts)
+
+
 def run_single_year(
     *,
     out_root: Path,
@@ -184,6 +226,10 @@ def run_single_year(
     exclude_entry_names: List[str],
     train_mode: str,
     debug_output: bool,
+    payout_snapshot: Optional[str] = None,
+    payout_utility: str = "power",
+    payout_utility_gamma: float = 1.2,
+    payout_utility_alpha: float = 1.0,
     artifacts_dir: Optional[str] = None,
     use_cache: bool = False,
 ) -> Dict[str, object]:
@@ -517,32 +563,45 @@ def run_single_year(
                 index=False,
             )
 
-        usable["expected_team_points"] = pd.to_numeric(
-            usable["expected_team_points"],
-            errors="coerce",
-        ).fillna(0.0)
-        usable["predicted_team_share_of_pool"] = pd.to_numeric(
-            usable["predicted_team_share_of_pool"],
-            errors="coerce",
-        ).fillna(0.0)
+    usable["expected_team_points"] = pd.to_numeric(
+        usable["expected_team_points"],
+        errors="coerce",
+    ).fillna(0.0)
+    usable["predicted_team_share_of_pool"] = pd.to_numeric(
+        usable["predicted_team_share_of_pool"],
+        errors="coerce",
+    ).fillna(0.0)
+    usable["predicted_team_total_bids"] = pd.to_numeric(
+        usable.get("predicted_team_total_bids"),
+        errors="coerce",
+    ).fillna(0.0)
 
-        total_exp = float(usable["expected_team_points"].sum())
-        if total_exp > 0:
-            usable["expected_points_share"] = (
-                usable["expected_team_points"] / total_exp
-            )
-        else:
-            usable["expected_points_share"] = 0.0
+    total_exp = float(usable["expected_team_points"].sum())
+    if total_exp > 0:
+        usable["expected_points_share"] = (
+            usable["expected_team_points"] / total_exp
+        )
+    else:
+        usable["expected_points_share"] = 0.0
 
-        def _ratio_row(r: pd.Series) -> float:
-            denom = float(r.get("predicted_team_share_of_pool") or 0.0)
-            if denom <= 0:
-                return 0.0
-            return float(r.get("expected_points_share") or 0.0) / denom
+    def _ratio_row(r: pd.Series) -> float:
+        denom = float(r.get("predicted_team_share_of_pool") or 0.0)
+        if denom <= 0:
+            return float("inf")
+        return float(r.get("expected_points_share") or 0.0) / denom
 
-        usable["value_ratio"] = usable.apply(_ratio_row, axis=1)
-        usable["value_score"] = usable["value_ratio"]
-        score_label = "expected_points_share / predicted_share"
+    usable["value_ratio"] = usable.apply(_ratio_row, axis=1)
+
+    def _ppd_row(r: pd.Series) -> float:
+        exp_pts = float(r.get("expected_team_points") or 0.0)
+        m = float(r.get("predicted_team_total_bids") or 0.0)
+        if m < 0:
+            m = 0.0
+        denom = m + float(min_bid)
+        return (exp_pts / denom) if denom > 0 else 0.0
+
+    usable["value_score"] = usable.apply(_ppd_row, axis=1)
+    score_label = "expected_points_per_dollar_at_min_bid"
 
     contest_greedy_trace: Optional[List[Dict[str, object]]] = None
 
@@ -612,6 +671,15 @@ def run_single_year(
                 greedy_top_k,
             )
 
+            payout_map = None
+            if mapped_obj in ("expected_payout", "expected_utility_payout"):
+                payout_map = _load_payout_map(
+                    out_root=out_root,
+                    all_snapshot_dirs=all_snapshot_dirs,
+                    payout_snapshot=payout_snapshot,
+                    fallback_tables=tables,
+                )
+
             if bool(debug_output):
                 contest_greedy_trace = []
 
@@ -624,6 +692,10 @@ def run_single_year(
                 min_bid=float(min_bid),
                 objective=mapped_obj,
                 top_k=mapped_k,
+                payout_map=payout_map,
+                utility=str(payout_utility),
+                utility_gamma=float(payout_utility_gamma),
+                utility_alpha=float(payout_utility_alpha),
                 team_keys=list(team_keys_s),
                 team_points_scenarios=np.asarray(team_pts_s, dtype=float),
                 market_entry_bids=market_entry_bids,

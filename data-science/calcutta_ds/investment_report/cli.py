@@ -131,6 +131,8 @@ def main() -> int:
         default="expected_points",
         choices=[
             "expected_points",
+            "expected_payout",
+            "expected_utility_payout",
             "mean_finish_position",
             "p_top1",
             "p_top3",
@@ -139,7 +141,48 @@ def main() -> int:
         help=(
             "Objective used by --allocation-mode greedy. expected_points "
             "matches old behavior. mean_finish_position/p_top* optimize "
-            "contest outcome."
+            "contest outcome. expected_payout/expected_utility_payout optimize "
+            "expected payout using a payout table."
+        ),
+    )
+
+    parser.add_argument(
+        "--payout-snapshot",
+        dest="payout_snapshot",
+        default="2025",
+        help=(
+            "Snapshot year to use for payout table during contest optimization "
+            "(default: 2025)."
+        ),
+    )
+    parser.add_argument(
+        "--payout-utility",
+        dest="payout_utility",
+        default="power",
+        choices=["linear", "log", "power", "exp"],
+        help=(
+            "Utility function applied to per-sim payout when using "
+            "expected_utility_payout (default: power)."
+        ),
+    )
+    parser.add_argument(
+        "--payout-utility-gamma",
+        dest="payout_utility_gamma",
+        type=float,
+        default=1.2,
+        help=(
+            "Gamma parameter for payout utility when --payout-utility=power "
+            "(default: 1.2)."
+        ),
+    )
+    parser.add_argument(
+        "--payout-utility-alpha",
+        dest="payout_utility_alpha",
+        type=float,
+        default=1.0,
+        help=(
+            "Alpha parameter for payout utility when --payout-utility=exp "
+            "(default: 1.0)."
         ),
     )
     parser.add_argument(
@@ -278,6 +321,12 @@ def main() -> int:
         allocation_mode=str(args.allocation_mode),
         greedy_objective=str(args.greedy_objective),
         greedy_contest_sims=int(args.greedy_contest_sims),
+        payout_snapshot=(
+            str(args.payout_snapshot) if args.payout_snapshot is not None else None
+        ),
+        payout_utility=str(args.payout_utility),
+        payout_utility_gamma=float(args.payout_utility_gamma),
+        payout_utility_alpha=float(args.payout_utility_alpha),
         exclude_entry_names=list(args.exclude_entry_names or []),
         debug_output=bool(args.debug_output),
         expected_sims=int(args.expected_sims),

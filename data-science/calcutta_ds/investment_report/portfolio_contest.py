@@ -6,6 +6,31 @@ import numpy as np
 import pandas as pd
 
 
+def _utility(
+    *,
+    payout_cents: np.ndarray,
+    utility: str,
+    utility_gamma: float,
+    utility_alpha: float,
+    epsilon: float,
+) -> np.ndarray:
+    u = str(utility)
+    x = np.asarray(payout_cents, dtype=float)
+    if u == "linear":
+        return x
+    if u == "log":
+        return np.log(np.maximum(x, 0.0) + float(epsilon))
+    if u == "power":
+        g = float(utility_gamma)
+        if g <= 0:
+            return np.zeros_like(x)
+        return np.power(np.maximum(x, 0.0) + float(epsilon), g)
+    if u == "exp":
+        a = float(utility_alpha)
+        return 1.0 - np.exp(-a * np.maximum(x, 0.0))
+    raise ValueError(f"unknown utility: {utility}")
+
+
 def contest_objective_from_sim_bids(
     *,
     team_points_scenarios: np.ndarray,
@@ -14,6 +39,10 @@ def contest_objective_from_sim_bids(
     sim_team_bids: np.ndarray,
     objective: str,
     top_k: int,
+    payout_map: Optional[Dict[int, int]] = None,
+    utility: str = "linear",
+    utility_gamma: float = 1.0,
+    utility_alpha: float = 1.0,
     epsilon: float = 1e-6,
 ) -> float:
     if team_points_scenarios.size == 0:
@@ -43,6 +72,40 @@ def contest_objective_from_sim_bids(
             return 0.0
         return float((finish_pos <= float(k) + 1e-9).mean())
 
+    if objective in ("expected_payout", "expected_utility_payout"):
+        if not payout_map:
+            raise ValueError("payout objective requires payout_map")
+
+        start_pos = (1.0 + gt).astype(int)
+        group_size = (1.0 + eq).astype(int)
+
+        max_pos = int(start_pos.max() + group_size.max()) if start_pos.size else 0
+        payout_by_pos = np.zeros((max_pos + 2,), dtype=float)
+        for pos, amt in payout_map.items():
+            p = int(pos)
+            if p < 0 or p >= len(payout_by_pos):
+                continue
+            payout_by_pos[p] = float(amt)
+
+        payout_cents = np.zeros((len(start_pos),), dtype=float)
+        for i in range(len(start_pos)):
+            s = int(start_pos[i])
+            g = int(group_size[i])
+            tot = float(payout_by_pos[s : s + g].sum()) if g > 0 else 0.0
+            payout_cents[i] = (tot / float(g)) if g > 0 else 0.0
+
+        if objective == "expected_payout":
+            return float(payout_cents.mean())
+
+        util = _utility(
+            payout_cents=payout_cents,
+            utility=str(utility),
+            utility_gamma=float(utility_gamma),
+            utility_alpha=float(utility_alpha),
+            epsilon=float(epsilon),
+        )
+        return float(np.asarray(util, dtype=float).mean())
+
     raise ValueError(f"unknown greedy_objective: {objective}")
 
 
@@ -56,6 +119,10 @@ def optimize_portfolio_greedy_contest(
     min_bid: float,
     objective: str,
     top_k: int,
+    payout_map: Optional[Dict[int, int]] = None,
+    utility: str = "linear",
+    utility_gamma: float = 1.0,
+    utility_alpha: float = 1.0,
     team_keys: List[str],
     team_points_scenarios: np.ndarray,
     market_entry_bids: np.ndarray,
@@ -106,6 +173,10 @@ def optimize_portfolio_greedy_contest(
             sim_team_bids=sim_team_bids,
             objective=str(objective),
             top_k=int(top_k),
+            payout_map=payout_map,
+            utility=str(utility),
+            utility_gamma=float(utility_gamma),
+            utility_alpha=float(utility_alpha),
         )
 
     cur_obj = _objective_for_current()
