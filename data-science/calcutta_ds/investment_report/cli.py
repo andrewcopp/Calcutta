@@ -141,7 +141,8 @@ def main() -> int:
         help=(
             "Objective used by --allocation-mode greedy. expected_points "
             "matches old behavior. mean_finish_position/p_top* optimize "
-            "contest outcome. expected_payout/expected_utility_payout optimize "
+            "contest outcome. expected_payout/expected_utility_payout "
+            "optimize "
             "expected payout using a payout table."
         ),
     )
@@ -151,7 +152,8 @@ def main() -> int:
         dest="payout_snapshot",
         default="2025",
         help=(
-            "Snapshot year to use for payout table during contest optimization "
+            "Snapshot year to use for payout table during contest "
+            "optimization "
             "(default: 2025)."
         ),
     )
@@ -249,7 +251,7 @@ def main() -> int:
         default=None,
         help=(
             "Write report JSON to this path "
-            "(default: <out_root>/report.json)"
+            "(default: <out_root>/report_<YYYYMMDD_HHMMSS>[_<suffix>].json)"
         ),
     )
 
@@ -322,7 +324,9 @@ def main() -> int:
         greedy_objective=str(args.greedy_objective),
         greedy_contest_sims=int(args.greedy_contest_sims),
         payout_snapshot=(
-            str(args.payout_snapshot) if args.payout_snapshot is not None else None
+            str(args.payout_snapshot)
+            if args.payout_snapshot is not None
+            else None
         ),
         payout_utility=str(args.payout_utility),
         payout_utility_gamma=float(args.payout_utility_gamma),

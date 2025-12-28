@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -111,7 +112,9 @@ def build_report(
                 greedy_top_k=int(greedy_top_k),
                 greedy_contest_sims=int(greedy_contest_sims),
                 payout_snapshot=(
-                    str(payout_snapshot) if payout_snapshot is not None else None
+                    str(payout_snapshot)
+                    if payout_snapshot is not None
+                    else None
                 ),
                 payout_utility=str(payout_utility),
                 payout_utility_gamma=float(payout_utility_gamma),
@@ -215,7 +218,11 @@ def build_report(
             "kenpom_scale": float(kenpom_scale),
             "kenpom_scale_source": str(kenpom_scale_source),
             "summary_min_train_snapshots": int(summary_min_train_snapshots),
-            "snapshot_filter": list(snapshot_filter) if snapshot_filter else None,
+            "snapshot_filter": (
+                list(snapshot_filter)
+                if snapshot_filter
+                else None
+            ),
         },
         "summary": {
             "n_years": int(len(years)),
@@ -337,7 +344,41 @@ def write_report(
     out_path: Optional[str],
     report: Dict[str, object],
 ) -> Path:
-    final_path = Path(out_path) if out_path else (out_root / "report.json")
+    if out_path:
+        final_path = Path(out_path)
+    else:
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        cfg = report.get("config") if isinstance(report, dict) else None
+        suffix_parts: List[str] = []
+        if isinstance(cfg, dict):
+            alloc = cfg.get("allocation_mode")
+            if isinstance(alloc, str) and alloc:
+                suffix_parts.append(alloc)
+            greedy_obj = cfg.get("greedy_objective")
+            if (
+                isinstance(greedy_obj, str)
+                and greedy_obj
+                and alloc == "greedy"
+            ):
+                suffix_parts.append(greedy_obj)
+
+        def _sanitize(s: str) -> str:
+            return "".join(
+                (
+                    ch
+                    if (ch.isalnum() or ch in ("-", "_"))
+                    else "-"
+                )
+                for ch in s
+            )
+
+        suffix = "_".join(_sanitize(p) for p in suffix_parts if p)
+        name = (
+            f"report_{ts}.json"
+            if not suffix
+            else f"report_{ts}_{suffix}.json"
+        )
+        final_path = out_root / name
     final_path.write_text(
         json.dumps(report, indent=2) + "\n",
         encoding="utf-8",
