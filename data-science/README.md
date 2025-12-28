@@ -22,6 +22,9 @@ pip install -r requirements.txt
   - Build a feasible portfolio under auction constraints and compute realized + expected payout/ROI.
 - `calibrate_kenpom_scale.py`
   - Fit a global KenPom win probability scale from historical outcomes.
+- `investment_report.py`
+  - Generate per-snapshot investment reports (portfolio + realized/expected evaluation) with staged artifacts and caching.
+  - See `calcutta_ds/investment_report/README.md` for details on outputs and CLI flags.
 
 ## How to run
 

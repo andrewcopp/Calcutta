@@ -122,7 +122,52 @@ def _build_team_dataset(
     ):
         raise ValueError("team_market missing required keys")
 
-    df = team_market.merge(team_features, on="team_key", how="left")
+    calcutta_keys = sorted(
+        [
+            str(k)
+            for k in team_market["calcutta_key"].dropna().unique().tolist()
+        ]
+    )
+    if not calcutta_keys:
+        calcutta_keys = [""]
+
+    base_frames = []
+    for ck in calcutta_keys:
+        tf = team_features.copy()
+        tf["calcutta_key"] = ck
+        base_frames.append(tf)
+
+    base = pd.concat(base_frames, ignore_index=True)
+
+    df = base.merge(
+        team_market,
+        on=["calcutta_key", "team_key"],
+        how="left",
+    )
+
+    pool_by_ck = (
+        team_market.groupby("calcutta_key", dropna=False)
+        .agg(pool_total_bid_amount=("pool_total_bid_amount", "max"))
+        .reset_index()
+    )
+    df = df.merge(pool_by_ck, on="calcutta_key", how="left")
+
+    market_fill = {
+        "total_bid_amount": 0.0,
+        "num_bids": 0,
+        "num_entries": 0,
+        "min_bid_amount": 0.0,
+        "max_bid_amount": 0.0,
+        "avg_bid_amount": 0.0,
+        "team_share_of_pool": 0.0,
+    }
+    for c, v in market_fill.items():
+        if c in df.columns:
+            df[c] = df[c].fillna(v)
+
+    if "pool_total_bid_amount" in df.columns:
+        df["pool_total_bid_amount"] = df["pool_total_bid_amount"].fillna(0.0)
+
     return df
 
 
