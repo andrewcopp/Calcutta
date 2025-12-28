@@ -55,15 +55,16 @@ def build_report(
     use_cache: bool = False,
     snapshot_filter: Optional[List[str]] = None,
 ) -> Dict[str, object]:
-    snapshot_dirs = predict_market_share._find_snapshots(out_root)
+    all_snapshot_dirs = predict_market_share._find_snapshots(out_root)
     if (
-        not snapshot_dirs
+        not all_snapshot_dirs
         and (out_root / "derived" / "team_dataset.parquet").exists()
     ):
-        snapshot_dirs = [out_root]
-    if not snapshot_dirs:
+        all_snapshot_dirs = [out_root]
+    if not all_snapshot_dirs:
         raise FileNotFoundError(f"no snapshots found under: {out_root}")
 
+    snapshot_dirs = list(all_snapshot_dirs)
     if snapshot_filter:
         allowed = set(str(s) for s in snapshot_filter if str(s).strip())
         snapshot_dirs = [sd for sd in snapshot_dirs if sd.name in allowed]
@@ -85,7 +86,7 @@ def build_report(
             run_single_year(
                 out_root=out_root,
                 snapshot_dir=sd,
-                all_snapshot_dirs=snapshot_dirs,
+                all_snapshot_dirs=all_snapshot_dirs,
                 ridge_alpha=float(ridge_alpha),
                 budget=float(budget),
                 real_buyin_dollars=float(real_buyin_dollars),

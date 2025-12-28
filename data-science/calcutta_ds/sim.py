@@ -88,6 +88,9 @@ def expected_simulation(
 
             t1 = str(gr.get("team1_key") or "")
             t2 = str(gr.get("team2_key") or "")
+            if int(gr.get("round_order") or 999) > 2:
+                t1 = ""
+                t2 = ""
 
             if not t1:
                 prev = prev_by_next.get(gid, {}).get(1)
@@ -316,6 +319,9 @@ def simulate_team_points_scenarios(
 
             t1 = str(gr.get("team1_key") or "")
             t2 = str(gr.get("team2_key") or "")
+            if int(gr.get("round_order") or 999) > 2:
+                t1 = ""
+                t2 = ""
 
             if not t1:
                 prev = prev_by_next.get(gid, {}).get(1)

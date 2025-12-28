@@ -46,10 +46,11 @@ def _filter_eligible_teams(
         "team_key",
         "wins",
         "byes",
-        "calcutta_key",
     }
     if teams is not None and required.issubset(set(teams.columns)):
-        t = teams[teams["calcutta_key"] == calcutta_key].copy()
+        t = teams.copy()
+        if "calcutta_key" in t.columns:
+            t = t[t["calcutta_key"] == calcutta_key].copy()
         t["wins"] = (
             pd.to_numeric(t["wins"], errors="coerce")
             .fillna(0)
@@ -65,6 +66,34 @@ def _filter_eligible_teams(
             .astype(str)
             .tolist()
         )
+
+        pred_keys = set(pred_df["team_key"].astype(str).tolist())
+        missing = sorted(eligible_team_keys - pred_keys)
+        if missing:
+            add_cols = set(pred_df.columns)
+            add_rows: List[Dict[str, object]] = []
+            t2 = t[t["team_key"].astype(str).isin(missing)].copy()
+            for _, r in t2.iterrows():
+                row: Dict[str, object] = {c: np.nan for c in add_cols}
+                row["team_key"] = str(r.get("team_key"))
+                if "calcutta_key" in add_cols:
+                    row["calcutta_key"] = str(calcutta_key)
+                if "school_name" in add_cols:
+                    row["school_name"] = r.get("school_name")
+                if "seed" in add_cols:
+                    row["seed"] = r.get("seed")
+                if "region" in add_cols:
+                    row["region"] = r.get("region")
+                if "kenpom_net" in add_cols:
+                    row["kenpom_net"] = r.get("kenpom_net")
+                if "predicted_team_share_of_pool" in add_cols:
+                    row["predicted_team_share_of_pool"] = 0.0
+                add_rows.append(row)
+            if add_rows:
+                pred_df = pd.concat(
+                    [pred_df, pd.DataFrame(add_rows)],
+                    ignore_index=True,
+                )
 
         pred_df = pred_df[
             pred_df["team_key"].astype(str).isin(eligible_team_keys)
@@ -239,6 +268,12 @@ def run_single_year(
         tables=tables,
         calcutta_key=calcutta_key,
     )
+
+    if artifact_root is not None:
+        _write_json(
+            artifact_root / "predicted_market_stage.json",
+            pred_df.to_dict(orient="records"),
+        )
 
     if artifact_root is not None:
         _write_json(
