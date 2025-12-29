@@ -451,6 +451,7 @@ def _stage_simulated_entry_outcomes(
 
     predicted_game_outcomes_path = out_dir / "predicted_game_outcomes.parquet"
     recommended_entry_bids_path = out_dir / "recommended_entry_bids.parquet"
+    simulated_tournaments_path = out_dir / "simulated_tournaments.parquet"
 
     if not predicted_game_outcomes_path.exists():
         raise FileNotFoundError(
@@ -462,6 +463,11 @@ def _stage_simulated_entry_outcomes(
             "missing required artifact: "
             f"{recommended_entry_bids_path}"
         )
+
+    # Load cached tournaments if available
+    simulated_tournaments_df = None
+    if simulated_tournaments_path.exists():
+        simulated_tournaments_df = pd.read_parquet(simulated_tournaments_path)
 
     input_fps = {
         "games": fingerprint_file(games_path),
@@ -475,6 +481,12 @@ def _stage_simulated_entry_outcomes(
             recommended_entry_bids_path
         ),
     }
+    
+    # Add simulated_tournaments to inputs if it exists
+    if simulated_tournaments_df is not None:
+        input_fps["simulated_tournaments"] = fingerprint_file(
+            simulated_tournaments_path
+        )
 
     ck = calcutta_key
     if ck is None:
@@ -531,6 +543,7 @@ def _stage_simulated_entry_outcomes(
         entry_bids=entry_bids_df,
         predicted_game_outcomes=predicted_game_outcomes_df,
         recommended_entry_bids=recommended_entry_bids_df,
+        simulated_tournaments=simulated_tournaments_df,
         calcutta_key=str(ck),
         n_sims=int(n_sims),
         seed=int(seed),

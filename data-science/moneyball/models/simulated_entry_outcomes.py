@@ -75,6 +75,7 @@ def simulate_entry_outcomes(
     entry_bids: pd.DataFrame,
     predicted_game_outcomes: pd.DataFrame,
     recommended_entry_bids: pd.DataFrame,
+    simulated_tournaments: Optional[pd.DataFrame],
     calcutta_key: str,
     n_sims: int,
     seed: int,
@@ -87,23 +88,41 @@ def simulate_entry_outcomes(
     if budget_points <= 0:
         raise ValueError("budget_points must be positive")
 
-    required_go = [
-        "game_id",
-        "team1_key",
-        "team2_key",
-        "p_team1_wins_given_matchup",
-        "p_team2_wins_given_matchup",
-    ]
-    missing_go = [
-        c
-        for c in required_go
-        if c not in predicted_game_outcomes.columns
-    ]
-    if missing_go:
-        raise ValueError(
-            "predicted_game_outcomes missing columns: "
-            + ", ".join(missing_go)
-        )
+    # If simulated_tournaments is provided, use cached simulations
+    use_cached = (
+        simulated_tournaments is not None and
+        not simulated_tournaments.empty
+    )
+    if not use_cached:
+        required_go = [
+            "game_id",
+            "team1_key",
+            "team2_key",
+            "p_team1_wins_given_matchup",
+            "p_team2_wins_given_matchup",
+        ]
+        missing_go = [
+            c
+            for c in required_go
+            if c not in predicted_game_outcomes.columns
+        ]
+        if missing_go:
+            raise ValueError(
+                "predicted_game_outcomes missing columns: "
+                + ", ".join(missing_go)
+            )
+    else:
+        # Validate cached tournaments
+        required_cached = ["sim_id", "team_key", "wins"]
+        missing_cached = [
+            c for c in required_cached
+            if c not in simulated_tournaments.columns
+        ]
+        if missing_cached:
+            raise ValueError(
+                "simulated_tournaments missing columns: "
+                + ", ".join(missing_cached)
+            )
 
     required_bids = ["team_key", "bid_amount_points"]
     missing_bids = [
@@ -162,47 +181,58 @@ def simulate_entry_outcomes(
     sims_rows: List[Dict[str, object]] = []
 
     for sim_i in range(int(n_sims)):
-        wins_sim: Dict[str, int] = {}
-        winners_by_game: Dict[str, str] = {}
+        if use_cached:
+            # Use cached tournament results
+            sim_data = simulated_tournaments[
+                simulated_tournaments["sim_id"] == sim_i
+            ]
+            wins_sim = {
+                str(row["team_key"]): int(row["wins"])
+                for _, row in sim_data.iterrows()
+            }
+        else:
+            # Simulate games from scratch
+            wins_sim: Dict[str, int] = {}
+            winners_by_game: Dict[str, str] = {}
 
-        for _, gr in games_graph.iterrows():
-            gid = str(gr.get("game_id") or "")
-            if not gid:
-                continue
+            for _, gr in games_graph.iterrows():
+                gid = str(gr.get("game_id") or "")
+                if not gid:
+                    continue
 
-            t1 = str(gr.get("team1_key") or "")
-            t2 = str(gr.get("team2_key") or "")
+                t1 = str(gr.get("team1_key") or "")
+                t2 = str(gr.get("team2_key") or "")
 
-            if int(gr.get("round_order") or 999) > 2:
-                t1 = ""
-                t2 = ""
+                if int(gr.get("round_order") or 999) > 2:
+                    t1 = ""
+                    t2 = ""
 
-            if not t1:
-                prev = prev_by_next.get(gid, {}).get(1)
-                if prev:
-                    t1 = winners_by_game.get(prev, "")
-            if not t2:
-                prev = prev_by_next.get(gid, {}).get(2)
-                if prev:
-                    t2 = winners_by_game.get(prev, "")
+                if not t1:
+                    prev = prev_by_next.get(gid, {}).get(1)
+                    if prev:
+                        t1 = winners_by_game.get(prev, "")
+                if not t2:
+                    prev = prev_by_next.get(gid, {}).get(2)
+                    if prev:
+                        t2 = winners_by_game.get(prev, "")
 
-            if not t1 or not t2:
-                continue
+                if not t1 or not t2:
+                    continue
 
-            p1 = _win_prob_from_predicted_game_outcomes(
-                predicted_game_outcomes=predicted_game_outcomes,
-                game_id=gid,
-                team1_key=t1,
-                team2_key=t2,
-            )
-            if p1 < 0.0:
-                p1 = 0.0
-            if p1 > 1.0:
-                p1 = 1.0
+                p1 = _win_prob_from_predicted_game_outcomes(
+                    predicted_game_outcomes=predicted_game_outcomes,
+                    game_id=gid,
+                    team1_key=t1,
+                    team2_key=t2,
+                )
+                if p1 < 0.0:
+                    p1 = 0.0
+                if p1 > 1.0:
+                    p1 = 1.0
 
-            w = t1 if rng.random() < float(p1) else t2
-            winners_by_game[gid] = w
-            wins_sim[w] = wins_sim.get(w, 0) + 1
+                w = t1 if rng.random() < float(p1) else t2
+                winners_by_game[gid] = w
+                wins_sim[w] = wins_sim.get(w, 0) + 1
 
         team_points = []
         for team_key, byes in byes_by_team.items():
