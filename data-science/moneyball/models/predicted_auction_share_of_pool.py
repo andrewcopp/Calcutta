@@ -1,0 +1,708 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
+
+import backtest_scaffold
+from calcutta_ds import points
+from calcutta_ds.investment_report.market_bids import (
+    compute_team_shares_from_bids,
+    filter_market_bids,
+)
+
+FEATURE_SETS = [
+    "basic",
+    "expanded",
+    "expanded_last_year_core",
+    "expanded_last_year",
+    "expanded_last_year_expected",
+]
+
+DEFAULT_FEATURE_SET = "expanded_last_year_expected"
+
+
+def _norm_school_name(v: object) -> str:
+    if v is None:
+        return ""
+    return str(v).strip().lower()
+
+
+def _prev_snapshot_name(snapshot: str) -> Optional[str]:
+    s = str(snapshot).strip()
+    try:
+        y = int(s)
+    except Exception:
+        return None
+    if y <= 0:
+        return None
+    return str(y - 1)
+
+
+_EXP_PROG_CACHE: Dict[int, np.ndarray] = {}
+
+
+def _fit_expected_progress_model(
+    *, snapshot_dirs_by_name: Dict[str, Path], cutoff_year: int
+) -> Optional[np.ndarray]:
+    if cutoff_year in _EXP_PROG_CACHE:
+        return _EXP_PROG_CACHE[cutoff_year]
+
+    xs: List[float] = []
+    ys: List[float] = []
+    for name, sd in snapshot_dirs_by_name.items():
+        try:
+            y = int(str(name))
+        except Exception:
+            continue
+        if y > int(cutoff_year):
+            continue
+
+        ds = _load_team_dataset(sd)
+        if ds is None or ds.empty:
+            continue
+        ck = backtest_scaffold._choose_calcutta_key(ds, None)
+        ds = ds[ds["calcutta_key"] == ck].copy()
+        if ds.empty:
+            continue
+
+        if "kenpom_net" not in ds.columns:
+            continue
+        if "wins" not in ds.columns or "byes" not in ds.columns:
+            continue
+
+        ds["kenpom_net"] = pd.to_numeric(ds["kenpom_net"], errors="coerce")
+        ds["wins"] = pd.to_numeric(ds["wins"], errors="coerce").fillna(0)
+        ds["byes"] = pd.to_numeric(ds["byes"], errors="coerce").fillna(0)
+        ds = ds[ds["kenpom_net"].notna()].copy()
+        if ds.empty:
+            continue
+
+        prog = (ds["wins"] + ds["byes"]).astype(float)
+        xs.extend(ds["kenpom_net"].astype(float).tolist())
+        ys.extend(prog.tolist())
+
+    if len(xs) < 20:
+        return None
+
+    x = np.asarray(xs, dtype=float)
+    y = np.asarray(ys, dtype=float)
+    m = np.stack([np.ones_like(x), x, x * x], axis=1)
+    coef, _, _, _ = np.linalg.lstsq(m, y, rcond=None)
+    coef = np.asarray(coef, dtype=float)
+    _EXP_PROG_CACHE[cutoff_year] = coef
+    return coef
+
+
+def _build_last_year_features(
+    *,
+    prev_snapshot: str,
+    prev_sd: Path,
+    snapshot_dirs_by_name: Dict[str, Path],
+    exclude_entry_names: List[str],
+) -> pd.DataFrame:
+    ds = _load_team_dataset(prev_sd)
+    if ds is None or ds.empty:
+        return pd.DataFrame(
+            columns=[
+                "_school_norm",
+                "has_last_year",
+                "wins_last_year",
+                "byes_last_year",
+                "progress_last_year",
+                "points_last_year",
+                "total_bid_amount_last_year",
+                "team_share_of_pool_last_year",
+                "points_per_dollar_last_year",
+                "bid_per_point_last_year",
+                "expected_progress_last_year",
+                "expected_points_last_year",
+                "expected_points_per_dollar_last_year",
+                "progress_ratio_last_year",
+                "progress_residual_last_year",
+                "roi_ratio_last_year",
+            ]
+        )
+
+    ck = backtest_scaffold._choose_calcutta_key(ds, None)
+    ds = ds[ds["calcutta_key"] == ck].copy()
+    if ds.empty:
+        return pd.DataFrame()
+
+    if "school_name" not in ds.columns:
+        raise ValueError("team_dataset missing school_name")
+
+    ds["_school_norm"] = ds["school_name"].apply(_norm_school_name)
+    ds = ds[ds["_school_norm"] != ""].copy()
+    ds["has_last_year"] = 1.0
+
+    ds["wins"] = pd.to_numeric(ds.get("wins"), errors="coerce").fillna(0)
+    ds["wins"] = ds["wins"].astype(int)
+    ds["byes"] = pd.to_numeric(ds.get("byes"), errors="coerce").fillna(0)
+    ds["byes"] = ds["byes"].astype(int)
+
+    ds["progress"] = ds["wins"] + ds["byes"]
+    ds["points"] = ds["progress"].apply(
+        lambda p: float(points.team_points_fixed(int(p)))
+    )
+
+    tables = backtest_scaffold._load_snapshot_tables(prev_sd)
+    bids = filter_market_bids(
+        tables=tables,
+        calcutta_key=ck,
+        exclude_entry_names=exclude_entry_names,
+    )
+    bids["team_key"] = bids["team_key"].astype(str)
+    bids["bid_amount"] = (
+        pd.to_numeric(bids["bid_amount"], errors="coerce")
+        .fillna(0.0)
+        .astype(float)
+    )
+    totals = bids.groupby("team_key")["bid_amount"].sum().to_dict()
+    shares = compute_team_shares_from_bids(
+        tables=tables,
+        calcutta_key=ck,
+        exclude_entry_names=exclude_entry_names,
+    )
+
+    ds["total_bid_amount"] = ds["team_key"].astype(str).apply(
+        lambda tk: float(totals.get(str(tk), 0.0))
+    )
+    ds["team_share_of_pool"] = ds["team_key"].astype(str).apply(
+        lambda tk: float(shares.get(str(tk), 0.0))
+    )
+
+    def _points_per_dollar_row(r: pd.Series) -> float:
+        denom = float(r.get("total_bid_amount") or 0.0)
+        if denom <= 0:
+            return 0.0
+        return float(r.get("points") or 0.0) / denom
+
+    ds["points_per_dollar"] = ds.apply(_points_per_dollar_row, axis=1)
+
+    def _bid_per_point_row(r: pd.Series) -> float:
+        denom = float(r.get("points") or 0.0)
+        if denom <= 0:
+            return 0.0
+        return float(r.get("total_bid_amount") or 0.0) / denom
+
+    ds["bid_per_point"] = ds.apply(_bid_per_point_row, axis=1)
+
+    exp_prog: object = 0.0
+    try:
+        prev_year = int(str(prev_snapshot))
+    except Exception:
+        prev_year = None
+    if prev_year is not None:
+        coef = _fit_expected_progress_model(
+            snapshot_dirs_by_name=snapshot_dirs_by_name,
+            cutoff_year=int(prev_year),
+        )
+        if coef is not None and "kenpom_net" in ds.columns:
+            x = pd.to_numeric(ds["kenpom_net"], errors="coerce").fillna(0.0)
+            exp_prog = (
+                float(coef[0])
+                + float(coef[1]) * x
+                + float(coef[2]) * x * x
+            )
+
+    ds["expected_progress"] = exp_prog
+    ds["expected_progress"] = pd.to_numeric(
+        ds["expected_progress"],
+        errors="coerce",
+    ).fillna(0.0)
+    ds["expected_progress"] = ds["expected_progress"].clip(
+        lower=0.0,
+        upper=7.0,
+    )
+
+    ds["expected_points"] = ds["expected_progress"].apply(
+        lambda p: float(points.team_points_fixed(int(round(float(p)))))
+    )
+
+    def _expected_points_per_dollar_row(r: pd.Series) -> float:
+        denom = float(r.get("total_bid_amount") or 0.0)
+        if denom <= 0:
+            return 0.0
+        return float(r.get("expected_points") or 0.0) / denom
+
+    ds["expected_points_per_dollar"] = ds.apply(
+        _expected_points_per_dollar_row,
+        axis=1,
+    )
+
+    def _progress_ratio_row(r: pd.Series) -> float:
+        denom = float(r.get("expected_progress") or 0.0)
+        if denom <= 0:
+            return 0.0
+        return float(r.get("progress") or 0.0) / denom
+
+    ds["progress_ratio"] = ds.apply(_progress_ratio_row, axis=1)
+    ds["progress_residual"] = ds.apply(
+        lambda r: float(r.get("progress") or 0.0)
+        - float(r.get("expected_progress") or 0.0),
+        axis=1,
+    )
+
+    def _roi_ratio_row(r: pd.Series) -> float:
+        denom = float(r.get("expected_points_per_dollar") or 0.0)
+        if denom <= 0:
+            return 0.0
+        return float(r.get("points_per_dollar") or 0.0) / denom
+
+    ds["roi_ratio"] = ds.apply(_roi_ratio_row, axis=1)
+
+    ds = ds.rename(
+        columns={
+            "wins": "wins_last_year",
+            "byes": "byes_last_year",
+            "progress": "progress_last_year",
+            "points": "points_last_year",
+            "total_bid_amount": "total_bid_amount_last_year",
+            "team_share_of_pool": "team_share_of_pool_last_year",
+            "points_per_dollar": "points_per_dollar_last_year",
+            "bid_per_point": "bid_per_point_last_year",
+            "expected_progress": "expected_progress_last_year",
+            "expected_points": "expected_points_last_year",
+            "expected_points_per_dollar": (
+                "expected_points_per_dollar_last_year"
+            ),
+            "progress_ratio": "progress_ratio_last_year",
+            "progress_residual": "progress_residual_last_year",
+            "roi_ratio": "roi_ratio_last_year",
+        }
+    )
+
+    cols = [
+        "_school_norm",
+        "has_last_year",
+        "wins_last_year",
+        "byes_last_year",
+        "progress_last_year",
+        "points_last_year",
+        "total_bid_amount_last_year",
+        "team_share_of_pool_last_year",
+        "points_per_dollar_last_year",
+        "bid_per_point_last_year",
+        "expected_progress_last_year",
+        "expected_points_last_year",
+        "expected_points_per_dollar_last_year",
+        "progress_ratio_last_year",
+        "progress_residual_last_year",
+        "roi_ratio_last_year",
+    ]
+    ds = ds[cols].copy()
+    ds = ds.drop_duplicates(subset=["_school_norm"], keep="first")
+    return ds
+
+
+def _merge_last_year(
+    *, cur: pd.DataFrame, prev_features: Optional[pd.DataFrame]
+) -> pd.DataFrame:
+    out = cur.copy()
+    if "school_name" not in out.columns:
+        return out
+
+    out["_school_norm"] = out["school_name"].apply(_norm_school_name)
+    if prev_features is None or prev_features.empty:
+        out["has_last_year"] = 0.0
+        for c in [
+            "wins_last_year",
+            "byes_last_year",
+            "progress_last_year",
+            "points_last_year",
+            "total_bid_amount_last_year",
+            "team_share_of_pool_last_year",
+            "points_per_dollar_last_year",
+            "bid_per_point_last_year",
+            "expected_progress_last_year",
+            "expected_points_last_year",
+            "expected_points_per_dollar_last_year",
+            "progress_ratio_last_year",
+            "progress_residual_last_year",
+            "roi_ratio_last_year",
+        ]:
+            out[c] = 0.0
+        out = out.drop(columns=["_school_norm"], errors="ignore")
+        return out
+
+    out = out.merge(prev_features, on="_school_norm", how="left")
+    fill0 = [
+        "has_last_year",
+        "wins_last_year",
+        "byes_last_year",
+        "progress_last_year",
+        "points_last_year",
+        "total_bid_amount_last_year",
+        "team_share_of_pool_last_year",
+        "points_per_dollar_last_year",
+        "bid_per_point_last_year",
+        "expected_progress_last_year",
+        "expected_points_last_year",
+        "expected_points_per_dollar_last_year",
+        "progress_ratio_last_year",
+        "progress_residual_last_year",
+        "roi_ratio_last_year",
+    ]
+    for c in fill0:
+        if c in out.columns:
+            out[c] = pd.to_numeric(out[c], errors="coerce").fillna(0.0)
+    out = out.drop(columns=["_school_norm"], errors="ignore")
+    return out
+
+
+def _find_snapshot_dirs(out_root: Path) -> Dict[str, Path]:
+    if not out_root.exists():
+        return {}
+
+    out: Dict[str, Path] = {}
+    for p in sorted(out_root.iterdir()):
+        if not p.is_dir():
+            continue
+        if (p / "derived" / "team_dataset.parquet").exists():
+            out[p.name] = p
+    return out
+
+
+def _load_team_dataset(snapshot_dir: Path) -> pd.DataFrame:
+    p = snapshot_dir / "derived" / "team_dataset.parquet"
+    df = pd.read_parquet(p)
+    df["snapshot"] = snapshot_dir.name
+    return df
+
+
+def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
+    fs = str(feature_set)
+    if fs not in FEATURE_SETS:
+        raise ValueError(f"unknown feature_set: {fs}")
+
+    if fs == "basic":
+        required = ["seed", "region", "kenpom_net"]
+    else:
+        required = [
+            "seed",
+            "region",
+            "kenpom_net",
+            "kenpom_o",
+            "kenpom_d",
+            "kenpom_adj_t",
+        ]
+
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"team_dataset missing columns: {missing}")
+
+    base = df[required].copy()
+
+    base["seed"] = pd.to_numeric(base["seed"], errors="coerce")
+    base["kenpom_net"] = pd.to_numeric(base["kenpom_net"], errors="coerce")
+
+    if fs != "basic":
+        base["kenpom_o"] = pd.to_numeric(base["kenpom_o"], errors="coerce")
+        base["kenpom_d"] = pd.to_numeric(base["kenpom_d"], errors="coerce")
+        base["kenpom_adj_t"] = pd.to_numeric(
+            base["kenpom_adj_t"],
+            errors="coerce",
+        )
+
+        base["seed_sq"] = base["seed"] ** 2
+        base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
+
+    if fs in (
+        "expanded_last_year_core",
+        "expanded_last_year",
+        "expanded_last_year_expected",
+    ):
+        raw_last_year = [
+            "has_last_year",
+            "wins_last_year",
+            "byes_last_year",
+            "progress_last_year",
+            "points_last_year",
+            "total_bid_amount_last_year",
+            "team_share_of_pool_last_year",
+            "points_per_dollar_last_year",
+            "bid_per_point_last_year",
+        ]
+        if fs == "expanded_last_year_core":
+            raw_last_year = [
+                "has_last_year",
+                "wins_last_year",
+                "byes_last_year",
+                "progress_last_year",
+                "total_bid_amount_last_year",
+                "team_share_of_pool_last_year",
+            ]
+        for c in raw_last_year:
+            if c in df.columns:
+                base[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
+            else:
+                base[c] = 0.0
+
+    if fs == "expanded_last_year_expected":
+        expected_last_year = [
+            "expected_progress_last_year",
+            "expected_points_last_year",
+            "expected_points_per_dollar_last_year",
+            "progress_ratio_last_year",
+            "progress_residual_last_year",
+            "roi_ratio_last_year",
+        ]
+        for c in expected_last_year:
+            if c in df.columns:
+                base[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
+            else:
+                base[c] = 0.0
+
+    X = pd.get_dummies(base, columns=["region"], dummy_na=True)
+    return X
+
+
+def _align_columns(
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    cols = sorted(set(train.columns).union(set(test.columns)))
+    return train.reindex(columns=cols, fill_value=0.0), test.reindex(
+        columns=cols,
+        fill_value=0.0,
+    )
+
+
+def _fit_ridge(
+    X: pd.DataFrame,
+    y: pd.Series,
+    alpha: float,
+) -> Optional[np.ndarray]:
+    if alpha < 0:
+        raise ValueError("ridge alpha must be non-negative")
+
+    m = X.copy()
+    m.insert(0, "intercept", 1.0)
+
+    valid = y.notna()
+    for c in m.columns:
+        valid &= m[c].notna()
+
+    if int(valid.sum()) < 5:
+        return None
+
+    Xv = m.loc[valid].to_numpy(dtype=float)
+    yv = y.loc[valid].to_numpy(dtype=float)
+
+    xtx = Xv.T @ Xv
+    reg = np.eye(xtx.shape[0], dtype=float) * float(alpha)
+    reg[0, 0] = 0.0
+    coef = np.linalg.solve(xtx + reg, Xv.T @ yv)
+    return coef
+
+
+def _predict_ridge(X: pd.DataFrame, coef: np.ndarray) -> np.ndarray:
+    m = X.copy()
+    m.insert(0, "intercept", 1.0)
+    Xv = m.to_numpy(dtype=float)
+    return Xv @ coef
+
+
+def predict_auction_share_of_pool(
+    *,
+    train_team_dataset: pd.DataFrame,
+    predict_team_dataset: pd.DataFrame,
+    ridge_alpha: float = 1.0,
+    feature_set: str = DEFAULT_FEATURE_SET,
+) -> pd.DataFrame:
+    if train_team_dataset.empty:
+        raise ValueError("train_team_dataset must not be empty")
+    if predict_team_dataset.empty:
+        raise ValueError("predict_team_dataset must not be empty")
+
+    if "team_share_of_pool" not in train_team_dataset.columns:
+        raise ValueError("train team_dataset missing team_share_of_pool")
+
+    X_train = _prepare_features_set(train_team_dataset, str(feature_set))
+    y_train = pd.to_numeric(
+        train_team_dataset["team_share_of_pool"],
+        errors="coerce",
+    )
+
+    X_pred = _prepare_features_set(predict_team_dataset, str(feature_set))
+    X_train, X_pred = _align_columns(X_train, X_pred)
+
+    coef = _fit_ridge(X_train, y_train, alpha=float(ridge_alpha))
+    if coef is None:
+        raise ValueError("not enough valid training rows to fit model")
+
+    yhat = _predict_ridge(X_pred, coef)
+    yhat = np.asarray(yhat, dtype=float)
+    yhat = np.where(np.isfinite(yhat), yhat, 0.0)
+    yhat = np.maximum(yhat, 0.0)
+
+    s = float(yhat.sum())
+    if s > 0:
+        yhat = yhat / s
+    else:
+        yhat = np.ones_like(yhat, dtype=float) / float(len(yhat))
+
+    out = predict_team_dataset.copy()
+    out["predicted_auction_share_of_pool"] = yhat.astype(float)
+
+    cols = [
+        c
+        for c in [
+            "snapshot",
+            "tournament_key",
+            "calcutta_key",
+            "team_key",
+            "school_name",
+            "school_slug",
+            "seed",
+            "region",
+            "kenpom_net",
+            "predicted_auction_share_of_pool",
+        ]
+        if c in out.columns
+    ]
+    return out[cols].copy()
+
+
+def predict_auction_share_of_pool_from_out_root(
+    *,
+    out_root: Path,
+    predict_snapshot: str,
+    train_snapshots: Optional[List[str]] = None,
+    ridge_alpha: float = 1.0,
+    feature_set: str = DEFAULT_FEATURE_SET,
+    exclude_entry_names: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    snapshot_dirs_by_name = _find_snapshot_dirs(Path(out_root))
+    if not snapshot_dirs_by_name:
+        raise FileNotFoundError(f"no snapshots found under: {out_root}")
+
+    ps = str(predict_snapshot).strip()
+    if ps not in snapshot_dirs_by_name:
+        raise FileNotFoundError(
+            "predict snapshot not found under out_root: "
+            f"{predict_snapshot}"
+        )
+
+    if train_snapshots is None:
+        train_names = [k for k in snapshot_dirs_by_name.keys() if k != ps]
+    else:
+        train_names = [
+            str(s).strip() for s in train_snapshots if str(s).strip()
+        ]
+
+    missing_train = [s for s in train_names if s not in snapshot_dirs_by_name]
+    if missing_train:
+        raise FileNotFoundError(
+            "train snapshots not found under out_root: "
+            f"{missing_train}"
+        )
+
+    exclude = [str(n) for n in (exclude_entry_names or []) if str(n).strip()]
+
+    pred_df = _load_team_dataset(snapshot_dirs_by_name[ps])
+    if pred_df.empty:
+        raise ValueError(f"empty team_dataset for snapshot: {ps}")
+
+    pred_prev_features: Optional[pd.DataFrame] = None
+    pred_prev_name = _prev_snapshot_name(str(ps))
+    if pred_prev_name and pred_prev_name in snapshot_dirs_by_name:
+        pred_prev_sd = snapshot_dirs_by_name[pred_prev_name]
+        pred_prev_features = _build_last_year_features(
+            prev_snapshot=str(pred_prev_name),
+            prev_sd=pred_prev_sd,
+            snapshot_dirs_by_name=snapshot_dirs_by_name,
+            exclude_entry_names=exclude,
+        )
+    pred_df = _merge_last_year(cur=pred_df, prev_features=pred_prev_features)
+
+    if not train_names:
+        out = pred_df.copy()
+        out["predicted_auction_share_of_pool"] = 1.0 / float(len(out))
+        cols = [
+            c
+            for c in [
+                "snapshot",
+                "tournament_key",
+                "calcutta_key",
+                "team_key",
+                "school_name",
+                "school_slug",
+                "seed",
+                "region",
+                "kenpom_net",
+                "predicted_auction_share_of_pool",
+            ]
+            if c in out.columns
+        ]
+        return out[cols].copy()
+
+    train_frames: List[pd.DataFrame] = []
+    for s in train_names:
+        sd = snapshot_dirs_by_name[s]
+        tables = backtest_scaffold._load_snapshot_tables(sd)
+        ds = _load_team_dataset(sd)
+        ck = backtest_scaffold._choose_calcutta_key(ds, None)
+        ds = ds[ds["calcutta_key"] == ck].copy()
+
+        prev_features: Optional[pd.DataFrame] = None
+        prev_name = _prev_snapshot_name(str(s))
+        if prev_name and prev_name in snapshot_dirs_by_name:
+            prev_sd = snapshot_dirs_by_name[prev_name]
+            prev_features = _build_last_year_features(
+                prev_snapshot=str(prev_name),
+                prev_sd=prev_sd,
+                snapshot_dirs_by_name=snapshot_dirs_by_name,
+                exclude_entry_names=exclude,
+            )
+        ds = _merge_last_year(cur=ds, prev_features=prev_features)
+
+        teams = tables.get("teams")
+        required = {
+            "team_key",
+            "wins",
+            "byes",
+            "calcutta_key",
+        }
+        if teams is not None and required.issubset(set(teams.columns)):
+            tt = teams[teams["calcutta_key"] == ck].copy()
+            tt["wins"] = (
+                pd.to_numeric(tt["wins"], errors="coerce")
+                .fillna(0)
+                .astype(int)
+            )
+            tt["byes"] = (
+                pd.to_numeric(tt["byes"], errors="coerce")
+                .fillna(0)
+                .astype(int)
+            )
+            eligible_team_keys = set(
+                tt[(tt["wins"] != 0) | (tt["byes"] != 0)][
+                    "team_key"
+                ]
+                .astype(str)
+                .tolist()
+            )
+            ds = ds[ds["team_key"].astype(str).isin(eligible_team_keys)].copy()
+
+        shares = compute_team_shares_from_bids(
+            tables=tables,
+            calcutta_key=ck,
+            exclude_entry_names=exclude,
+        )
+        ds["team_share_of_pool"] = ds["team_key"].apply(
+            lambda tk: float(shares.get(str(tk), 0.0))
+        )
+        train_frames.append(ds)
+
+    train_df = pd.concat(train_frames, ignore_index=True)
+
+    return predict_auction_share_of_pool(
+        train_team_dataset=train_df,
+        predict_team_dataset=pred_df,
+        ridge_alpha=float(ridge_alpha),
+        feature_set=str(feature_set),
+    )
