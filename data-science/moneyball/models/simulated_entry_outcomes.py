@@ -6,9 +6,9 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from calcutta_ds import bracket
-from calcutta_ds.points import team_points_fixed
-from calcutta_ds.standings import (
+from moneyball.utils import bracket
+from moneyball.utils.points import team_points_fixed
+from moneyball.utils.standings import (
     compute_entry_points,
     compute_finish_positions_and_payouts,
 )

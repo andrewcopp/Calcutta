@@ -6,9 +6,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-import backtest_scaffold
-from calcutta_ds import points
-from calcutta_ds.investment_report.market_bids import (
+from moneyball.utils import io, points
+from moneyball.utils.market_bids import (
     compute_team_shares_from_bids,
     filter_market_bids,
 )
@@ -63,7 +62,7 @@ def _fit_expected_progress_model(
         ds = _load_team_dataset(sd)
         if ds is None or ds.empty:
             continue
-        ck = backtest_scaffold._choose_calcutta_key(ds, None)
+        ck = io.choose_calcutta_key(ds, None)
         ds = ds[ds["calcutta_key"] == ck].copy()
         if ds.empty:
             continue
@@ -126,7 +125,7 @@ def _build_last_year_features(
             ]
         )
 
-    ck = backtest_scaffold._choose_calcutta_key(ds, None)
+    ck = io.choose_calcutta_key(ds, None)
     ds = ds[ds["calcutta_key"] == ck].copy()
     if ds.empty:
         return pd.DataFrame()
@@ -148,7 +147,7 @@ def _build_last_year_features(
         lambda p: float(points.team_points_fixed(int(p)))
     )
 
-    tables = backtest_scaffold._load_snapshot_tables(prev_sd)
+    tables = io.load_snapshot_tables(prev_sd)
     bids = filter_market_bids(
         tables=tables,
         calcutta_key=ck,
@@ -643,9 +642,9 @@ def predict_auction_share_of_pool_from_out_root(
     train_frames: List[pd.DataFrame] = []
     for s in train_names:
         sd = snapshot_dirs_by_name[s]
-        tables = backtest_scaffold._load_snapshot_tables(sd)
+        tables = io.load_snapshot_tables(sd)
         ds = _load_team_dataset(sd)
-        ck = backtest_scaffold._choose_calcutta_key(ds, None)
+        ck = io.choose_calcutta_key(ds, None)
         ds = ds[ds["calcutta_key"] == ck].copy()
 
         prev_features: Optional[pd.DataFrame] = None

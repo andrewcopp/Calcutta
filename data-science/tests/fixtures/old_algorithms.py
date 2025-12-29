@@ -1,3 +1,12 @@
+"""
+Old algorithms from calcutta_ds preserved for testing and comparison.
+
+These algorithms have been replaced by newer implementations in moneyball,
+but are preserved here for:
+- Baseline comparison testing
+- Validating that new implementations outperform old ones
+- Historical replay and backtesting
+"""
 from typing import List
 
 
@@ -6,6 +15,19 @@ def waterfill_equal(
     budget: float,
     max_per_team: float,
 ) -> List[float]:
+    """
+    Old allocation algorithm: equal distribution with max-per-team caps.
+    
+    Replaced by: Greedy optimizer in recommended_entry_bids.py
+    
+    Algorithm:
+    - Initialize all bids to 0
+    - Iterate through teams, incrementing each by 1 until budget exhausted
+    - Skip teams that have reached max_per_team cap
+    
+    Use case: Baseline for testing that greedy optimizer outperforms
+    naive equal allocation.
+    """
     if k <= 0:
         return []
     if budget < 0:

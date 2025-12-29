@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
-from calcutta_ds import bracket
+from moneyball.utils import bracket
 
 
 def predict_game_outcomes(

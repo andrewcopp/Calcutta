@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from calcutta_ds import points
+from moneyball.utils import points
 
 
 def expected_team_points_from_predicted_game_outcomes(

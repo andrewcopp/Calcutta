@@ -40,6 +40,13 @@ All tests follow this structure:
 - **WHEN**: Single action being tested
 - **THEN**: Single assertion (one reason to fail)
 
+### 4. Unit Tests Cover Pure Logic
+Unit tests should cover pure business logic (deterministic inputs → outputs).
+
+- Do not write unit tests that assert filesystem/DB/HTTP behavior.
+- Keep I/O in thin wrappers (handlers/CLIs/runners) and keep core logic in pure
+  functions so it is easy to test.
+
 ## Bracket Logic Test Coverage Needed
 
 ### Deterministic Game IDs

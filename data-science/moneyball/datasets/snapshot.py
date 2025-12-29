@@ -5,7 +5,7 @@ from typing import Dict
 
 import pandas as pd
 
-from calcutta_ds import io
+from moneyball.utils import io
 
 
 def load_snapshot_tables(snapshot_dir: Path) -> Dict[str, pd.DataFrame]:
