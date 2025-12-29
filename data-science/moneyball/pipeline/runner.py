@@ -23,9 +23,11 @@ from moneyball.models.simulated_entry_outcomes import (
 from moneyball.models.investment_report import (
     generate_investment_report,
 )
+from moneyball.pipeline.orchestrator import (
+    ArtifactStore,
+    PipelineOrchestrator,
+)
 from moneyball.pipeline.artifacts import (
-    build_run_dir,
-    default_artifacts_root,
     ensure_dir,
     fingerprint_file,
     fingerprints_to_dict,
@@ -745,78 +747,68 @@ def run(
     regenerate_tournaments: bool = False,
     use_cache: bool = True,
 ) -> Dict[str, Any]:
+    """
+    Run pipeline stages using orchestrator pattern.
+
+    Refactored to use ArtifactStore and PipelineOrchestrator for
+    cleaner separation of concerns.
+    """
+    # Validate inputs
     sd = Path(snapshot_dir)
     if not sd.exists():
         raise FileNotFoundError(f"snapshot_dir not found: {sd}")
 
-    root = (
-        Path(artifacts_root)
-        if artifacts_root is not None
-        else default_artifacts_root(sd)
-    )
     sname = str(snapshot_name) if snapshot_name is not None else sd.name
 
-    rid = (
-        str(run_id)
-        if run_id is not None
-        else utc_now_iso().replace(":", "").replace("-", "")
-    )
-
-    run_dir = build_run_dir(
-        artifacts_root=root,
+    # Initialize artifact store and orchestrator
+    store = ArtifactStore(
+        snapshot_dir=sd,
         snapshot_name=sname,
-        run_id=rid,
+        artifacts_root=artifacts_root,
+        run_id=run_id,
     )
-    ensure_dir(run_dir)
 
-    manifest: Dict[str, Any] = {
-        "moneyball": {
-            "snapshot_dir": str(sd),
-            "snapshot_name": str(sname),
-            "run_id": str(rid),
-            "created_at": utc_now_iso(),
-        },
-        "stages": {},
-    }
+    orchestrator = PipelineOrchestrator(
+        artifact_store=store,
+        use_cache=use_cache,
+    )
 
+    # Determine which stages to run
     wanted = (
         list(stages) if stages is not None else ["predicted_game_outcomes"]
     )
 
-    results: Dict[str, Any] = {
-        "run_dir": str(run_dir),
-    }
-
+    # Run stages in order
     if "predicted_game_outcomes" in wanted:
-        out_path, manifest = _stage_predicted_game_outcomes(
-            snapshot_dir=sd,
-            out_dir=run_dir,
+        out_path = orchestrator.run_stage(
+            stage_name="predicted_game_outcomes",
+            stage_func=_stage_predicted_game_outcomes,
             calcutta_key=calcutta_key,
             kenpom_scale=float(kenpom_scale),
             n_sims=int(n_sims),
             seed=int(seed),
-            use_cache=bool(use_cache),
-            manifest=manifest,
         )
-        results["predicted_game_outcomes_parquet"] = str(out_path)
+        orchestrator.results["predicted_game_outcomes_parquet"] = str(
+            out_path
+        )
 
     if "predicted_auction_share_of_pool" in wanted:
-        out_path, manifest = _stage_predicted_auction_share_of_pool(
-            snapshot_dir=sd,
-            out_dir=run_dir,
+        out_path = orchestrator.run_stage(
+            stage_name="predicted_auction_share_of_pool",
+            stage_func=_stage_predicted_auction_share_of_pool,
             train_snapshots=auction_train_snapshots,
             ridge_alpha=float(auction_ridge_alpha),
             feature_set=str(auction_feature_set),
             exclude_entry_names=auction_exclude_entry_names,
-            use_cache=bool(use_cache),
-            manifest=manifest,
         )
-        results["predicted_auction_share_of_pool_parquet"] = str(out_path)
+        orchestrator.results["predicted_auction_share_of_pool_parquet"] = str(
+            out_path
+        )
 
     if "recommended_entry_bids" in wanted:
-        out_path, manifest = _stage_recommended_entry_bids(
-            snapshot_dir=sd,
-            out_dir=run_dir,
+        out_path = orchestrator.run_stage(
+            stage_name="recommended_entry_bids",
+            stage_func=_stage_recommended_entry_bids,
             budget_points=int(bids_budget_points),
             min_teams=int(bids_min_teams),
             max_teams=int(bids_max_teams),
@@ -825,50 +817,43 @@ def run(
             predicted_total_pool_bids_points=(
                 bids_predicted_total_pool_bids_points
             ),
-            use_cache=bool(use_cache),
-            manifest=manifest,
         )
-        results["recommended_entry_bids_parquet"] = str(out_path)
+        orchestrator.results["recommended_entry_bids_parquet"] = str(out_path)
 
     if "simulated_tournaments" in wanted:
-        out_path, manifest = _stage_simulated_tournaments(
-            snapshot_dir=sd,
-            out_dir=run_dir,
+        out_path = orchestrator.run_stage(
+            stage_name="simulated_tournaments",
+            stage_func=_stage_simulated_tournaments,
             n_sims=int(sim_n_sims),
             seed=int(sim_seed),
             regenerate=bool(regenerate_tournaments),
-            use_cache=bool(use_cache),
-            manifest=manifest,
         )
-        results["simulated_tournaments_parquet"] = str(out_path)
+        orchestrator.results["simulated_tournaments_parquet"] = str(out_path)
 
     if "simulated_entry_outcomes" in wanted:
-        out_path, manifest = _stage_simulated_entry_outcomes(
-            snapshot_dir=sd,
-            out_dir=run_dir,
+        out_path = orchestrator.run_stage(
+            stage_name="simulated_entry_outcomes",
+            stage_func=_stage_simulated_entry_outcomes,
             calcutta_key=calcutta_key,
             n_sims=int(sim_n_sims),
             seed=int(sim_seed),
             budget_points=int(sim_budget_points),
             keep_sims=bool(sim_keep_sims),
-            use_cache=bool(use_cache),
-            manifest=manifest,
         )
-        results["simulated_entry_outcomes_parquet"] = str(out_path)
+        orchestrator.results["simulated_entry_outcomes_parquet"] = str(
+            out_path
+        )
 
     if "investment_report" in wanted:
-        out_path, manifest = _stage_investment_report(
-            snapshot_dir=sd,
-            out_dir=run_dir,
+        out_path = orchestrator.run_stage(
+            stage_name="investment_report",
+            stage_func=_stage_investment_report,
             snapshot_name=sname,
             budget_points=int(sim_budget_points),
             n_sims=int(sim_n_sims),
             seed=int(sim_seed),
-            use_cache=bool(use_cache),
-            manifest=manifest,
         )
-        results["investment_report_parquet"] = str(out_path)
+        orchestrator.results["investment_report_parquet"] = str(out_path)
 
-    write_json(run_dir / "manifest.json", manifest)
-    results["manifest"] = str(run_dir / "manifest.json")
-    return results
+    # Finalize and return results
+    return orchestrator.finalize()
