@@ -155,6 +155,33 @@ def main() -> int:
         default=True,
     )
 
+    p_tournaments = sub.add_parser("simulate-tournaments")
+    p_tournaments.add_argument("snapshot_dir")
+    p_tournaments.add_argument(
+        "--snapshot-name", dest="snapshot_name", default=None
+    )
+    p_tournaments.add_argument(
+        "--artifacts-root", dest="artifacts_root", default=None
+    )
+    p_tournaments.add_argument("--run-id", dest="run_id", default=None)
+    p_tournaments.add_argument(
+        "--n-sims", dest="n_sims", type=int, default=5000
+    )
+    p_tournaments.add_argument("--seed", dest="seed", type=int, default=123)
+    p_tournaments.add_argument(
+        "--regenerate",
+        dest="regenerate_tournaments",
+        action="store_true",
+        default=False,
+        help="Force regeneration of tournaments (ignore cache)",
+    )
+    p_tournaments.add_argument(
+        "--no-cache",
+        dest="use_cache",
+        action="store_false",
+        default=True,
+    )
+
     p_report = sub.add_parser("investment-report")
     p_report.add_argument("snapshot_dir")
     p_report.add_argument(
@@ -285,6 +312,23 @@ def main() -> int:
                 if args.predicted_total_pool_bids_points
                 else None
             ),
+            use_cache=bool(args.use_cache),
+        )
+        print(json.dumps(out, indent=2))
+        return 0
+
+    if args.cmd == "simulate-tournaments":
+        out = run(
+            snapshot_dir=Path(args.snapshot_dir),
+            snapshot_name=args.snapshot_name,
+            artifacts_root=Path(args.artifacts_root)
+            if args.artifacts_root
+            else None,
+            run_id=args.run_id,
+            stages=["predicted_game_outcomes", "simulated_tournaments"],
+            n_sims=int(args.n_sims),
+            seed=int(args.seed),
+            regenerate_tournaments=bool(args.regenerate_tournaments),
             use_cache=bool(args.use_cache),
         )
         print(json.dumps(out, indent=2))

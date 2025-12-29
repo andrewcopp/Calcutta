@@ -49,7 +49,7 @@ def read_json(p: Path) -> Dict[str, Any]:
 
 
 def default_artifacts_root(snapshot_dir: Path) -> Path:
-    return snapshot_dir / "derived" / "moneyball"
+    return snapshot_dir / "derived" / "calcutta"
 
 
 def build_run_dir(
@@ -58,7 +58,8 @@ def build_run_dir(
     snapshot_name: str,
     run_id: str,
 ) -> Path:
-    return artifacts_root / str(snapshot_name) / str(run_id)
+    # Don't include snapshot_name - it's already in the path
+    return artifacts_root / str(run_id)
 
 
 def load_manifest(manifest_path: Path) -> Optional[Dict[str, Any]]:

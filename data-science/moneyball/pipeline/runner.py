@@ -62,13 +62,20 @@ def _stage_predicted_game_outcomes(
 ) -> Tuple[Path, Dict[str, Any]]:
     stage = "predicted_game_outcomes"
 
-    games_path = snapshot_dir / "games.parquet"
-    teams_path = snapshot_dir / "teams.parquet"
+    sd = Path(snapshot_dir)
+    games_path = sd / "games.parquet"
+    teams_path = sd / "teams.parquet"
 
     if not games_path.exists():
         raise FileNotFoundError(f"missing required file: {games_path}")
     if not teams_path.exists():
         raise FileNotFoundError(f"missing required file: {teams_path}")
+
+    # Store in canonical location (no timestamp)
+    canonical_dir = sd / "derived"
+    ensure_dir(canonical_dir)
+    out_path = canonical_dir / "predicted_game_outcomes.parquet"
+    manifest_path = canonical_dir / "predicted_game_outcomes_manifest.json"
 
     input_fps = {
         "games": fingerprint_file(games_path),
@@ -82,19 +89,32 @@ def _stage_predicted_game_outcomes(
         "seed": int(seed),
     }
 
-    out_path = out_dir / "predicted_game_outcomes.parquet"
-
-    if use_cache:
-        existing = load_manifest(out_dir / "manifest.json")
-        if existing is not None and manifest_matches(
-            existing=existing,
+    # Check cache using canonical manifest
+    if use_cache and out_path.exists():
+        existing_manifest = load_manifest(manifest_path)
+        if existing_manifest is not None and manifest_matches(
+            existing=existing_manifest,
             stage=stage,
             stage_config=stage_config,
             input_fingerprints=input_fps,
         ):
-            if out_path.exists():
-                return out_path, existing
+            print("✓ Using cached predicted_game_outcomes")
+            stage_manifest = {
+                "stage_config_hash": sha256_jsonable(stage_config),
+                "stage_config": stage_config,
+                "inputs": fingerprints_to_dict(input_fps),
+                "outputs": {
+                    "predicted_game_outcomes": str(out_path),
+                },
+                "cached": True,
+            }
+            stages = manifest.setdefault("stages", {})
+            if isinstance(stages, dict):
+                stages[stage] = stage_manifest
+            return out_path, manifest
 
+    # Generate predictions
+    print("⚙ Generating predicted_game_outcomes...")
     df = predict_game_outcomes_from_snapshot(
         snapshot_dir=snapshot_dir,
         calcutta_key=calcutta_key,
@@ -103,7 +123,6 @@ def _stage_predicted_game_outcomes(
         seed=int(seed),
     )
 
-    ensure_dir(out_path.parent)
     df.to_parquet(out_path, index=False)
 
     stage_manifest = {
@@ -114,6 +133,10 @@ def _stage_predicted_game_outcomes(
             "predicted_game_outcomes": str(out_path),
         },
     }
+
+    # Save canonical manifest
+    canonical_manifest = {"stages": {stage: stage_manifest}}
+    write_json(manifest_path, canonical_manifest)
 
     stages = manifest.setdefault("stages", {})
     if isinstance(stages, dict):
@@ -354,7 +377,8 @@ def _stage_simulated_tournaments(
     if not games_path.exists():
         raise FileNotFoundError(f"missing required file: {games_path}")
 
-    predicted_game_outcomes_path = out_dir / "predicted_game_outcomes.parquet"
+    # Load from canonical location (no timestamp)
+    predicted_game_outcomes_path = sd / "derived" / "predicted_game_outcomes.parquet"
 
     if not predicted_game_outcomes_path.exists():
         raise FileNotFoundError(
