@@ -505,7 +505,7 @@ def _stage_simulated_entry_outcomes(
     # Add simulated_tournaments to inputs if it exists
     if simulated_tournaments_df is not None:
         input_fps["simulated_tournaments"] = fingerprint_file(
-            simulated_tournaments_path
+            tournaments_path
         )
 
     ck = calcutta_key
