@@ -269,7 +269,8 @@ def _stage_recommended_entry_bids(
 ) -> Tuple[Path, Dict[str, Any]]:
     stage = "recommended_entry_bids"
 
-    predicted_game_outcomes_path = out_dir / "predicted_game_outcomes.parquet"
+    # Load from canonical location (no timestamp)
+    predicted_game_outcomes_path = Path(snapshot_dir) / "derived" / "predicted_game_outcomes.parquet"
     predicted_share_path = out_dir / "predicted_auction_share_of_pool.parquet"
     entries_path = Path(snapshot_dir) / "entries.parquet"
 
@@ -489,7 +490,8 @@ def _stage_simulated_entry_outcomes(
     if not entry_bids_path.exists():
         raise FileNotFoundError(f"missing required file: {entry_bids_path}")
 
-    predicted_game_outcomes_path = out_dir / "predicted_game_outcomes.parquet"
+    # Load from canonical location (no timestamp)
+    predicted_game_outcomes_path = Path(snapshot_dir) / "derived" / "predicted_game_outcomes.parquet"
     recommended_entry_bids_path = out_dir / "recommended_entry_bids.parquet"
 
     if not predicted_game_outcomes_path.exists():
@@ -632,7 +634,9 @@ def _stage_investment_report(
 ) -> Tuple[Path, Dict[str, Any]]:
     stage = "investment_report"
 
-    pgo_path = out_dir / "predicted_game_outcomes.parquet"
+    # Load canonical artifacts (no timestamp)
+    pgo_path = Path(snapshot_dir) / "derived" / "predicted_game_outcomes.parquet"
+    # Load timestamped Calcutta artifacts
     pas_path = out_dir / "predicted_auction_share_of_pool.parquet"
     reb_path = out_dir / "recommended_entry_bids.parquet"
     seo_path = out_dir / "simulated_entry_outcomes.parquet"
