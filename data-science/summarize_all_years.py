@@ -10,7 +10,7 @@ from typing import Optional
 
 def find_latest_report(year: int) -> Optional[Path]:
     """Find the most recent investment report for a given year."""
-    base = Path(f"out/{year}/derived/moneyball/{year}")
+    base = Path(f"out/{year}/derived/calcutta")
     if not base.exists():
         return None
     
