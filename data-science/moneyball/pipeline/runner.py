@@ -361,13 +361,16 @@ def _stage_simulated_tournaments(
             f"missing required artifact: {predicted_game_outcomes_path}"
         )
 
-    out_path = out_dir / "simulated_tournaments.parquet"
+    # Store tournaments in canonical location (independent of Calcutta runs)
+    tournaments_dir = sd / "derived"
+    ensure_dir(tournaments_dir)
+    out_path = tournaments_dir / "tournaments.parquet"
+    manifest_path = tournaments_dir / "tournaments_manifest.json"
 
+    # Cache key only depends on games data, not predicted_game_outcomes
+    # (since predicted_game_outcomes is regenerated each run)
     input_fps = {
         "games": fingerprint_file(games_path),
-        "predicted_game_outcomes": fingerprint_file(
-            predicted_game_outcomes_path
-        ),
     }
 
     stage_config = {
@@ -377,7 +380,14 @@ def _stage_simulated_tournaments(
 
     # Check cache unless regenerate flag is set
     if use_cache and not regenerate and out_path.exists():
-        if manifest_matches(manifest, stage, stage_config, input_fps):
+        existing_manifest = load_manifest(manifest_path)
+        if existing_manifest is not None and manifest_matches(
+            existing=existing_manifest,
+            stage=stage,
+            stage_config=stage_config,
+            input_fingerprints=input_fps,
+        ):
+            print(f"✓ Using cached tournaments ({n_sims} sims)")
             stage_manifest = {
                 "stage_config_hash": sha256_jsonable(stage_config),
                 "stage_config": stage_config,
@@ -393,6 +403,7 @@ def _stage_simulated_tournaments(
             return out_path, manifest
 
     # Run simulation
+    print(f"⚙ Generating tournaments ({n_sims} sims)...")
     games = pd.read_parquet(games_path)
     predicted_game_outcomes = pd.read_parquet(predicted_game_outcomes_path)
 
@@ -414,9 +425,14 @@ def _stage_simulated_tournaments(
         },
     }
 
+    # Save manifest for future cache checks
+    tournament_manifest = {"stages": {stage: stage_manifest}}
+    write_json(manifest_path, tournament_manifest)
+
     stages = manifest.setdefault("stages", {})
     if isinstance(stages, dict):
         stages[stage] = stage_manifest
+
     return out_path, manifest
 
 
@@ -451,7 +467,6 @@ def _stage_simulated_entry_outcomes(
 
     predicted_game_outcomes_path = out_dir / "predicted_game_outcomes.parquet"
     recommended_entry_bids_path = out_dir / "recommended_entry_bids.parquet"
-    simulated_tournaments_path = out_dir / "simulated_tournaments.parquet"
 
     if not predicted_game_outcomes_path.exists():
         raise FileNotFoundError(
@@ -464,10 +479,15 @@ def _stage_simulated_entry_outcomes(
             f"{recommended_entry_bids_path}"
         )
 
-    # Load cached tournaments if available
+    # Load tournaments from canonical location
+    tournaments_path = sd / "derived" / "tournaments.parquet"
+
     simulated_tournaments_df = None
-    if simulated_tournaments_path.exists():
-        simulated_tournaments_df = pd.read_parquet(simulated_tournaments_path)
+    if tournaments_path.exists():
+        simulated_tournaments_df = pd.read_parquet(tournaments_path)
+        print("✓ Loaded tournaments for entry outcomes")
+    else:
+        print("⚠ No tournaments found - run simulate-tournaments first")
 
     input_fps = {
         "games": fingerprint_file(games_path),
