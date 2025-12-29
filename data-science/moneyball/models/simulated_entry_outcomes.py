@@ -173,6 +173,7 @@ def simulate_entry_outcomes(
 
     rng = random.Random(int(seed))
     payouts_cents: List[int] = []
+    normalized_payouts: List[float] = []
     total_points_list: List[float] = []
     finish_positions: List[int] = []
     is_tied_list: List[bool] = []
@@ -273,7 +274,16 @@ def simulate_entry_outcomes(
 
         n_entries = len(standings)
 
+        # Calculate normalized payout (1.0 for 1st place, scaled for others)
+        first_place_payout = payouts["amount_cents"].max()
+        normalized_payout = (
+            float(payout) / float(first_place_payout)
+            if first_place_payout > 0
+            else 0.0
+        )
+
         payouts_cents.append(payout)
+        normalized_payouts.append(normalized_payout)
         total_points_list.append(total_points)
         finish_positions.append(finish_pos)
         is_tied_list.append(is_tied)
@@ -284,6 +294,7 @@ def simulate_entry_outcomes(
                 {
                     "sim": int(sim_i),
                     "payout_cents": int(payout),
+                    "normalized_payout": float(normalized_payout),
                     "total_points": float(total_points),
                     "finish_position": int(finish_pos),
                     "is_tied": bool(is_tied),
@@ -323,6 +334,9 @@ def simulate_entry_outcomes(
         "mean_payout_cents": float(sum(payouts_cents) / denom),
         "p50_payout_cents": _pct([float(x) for x in payouts_cents], 0.50),
         "p90_payout_cents": _pct([float(x) for x in payouts_cents], 0.90),
+        "mean_normalized_payout": float(sum(normalized_payouts) / denom),
+        "p50_normalized_payout": _pct(normalized_payouts, 0.50),
+        "p90_normalized_payout": _pct(normalized_payouts, 0.90),
         "mean_total_points": float(sum(total_points_list) / denom),
         "p50_total_points": _pct(total_points_list, 0.50),
         "p90_total_points": _pct(total_points_list, 0.90),
