@@ -112,6 +112,15 @@ def generate_detailed_investment_report(
     report = report.merge(our_bids, on="team_key", how="left")
     report["our_bid"] = report["our_bid"].fillna(0).astype(int)
 
+    # Calculate our ROI (accounting for our bid moving the market)
+    report["our_roi"] = report.apply(
+        lambda r: (
+            r["expected_points"] / (r["expected_market"] + r["our_bid"])
+            if (r["expected_market"] + r["our_bid"]) > 0 else 0.0
+        ),
+        axis=1
+    )
+
     # Calculate actual market (excluding our bid)
     actual_market = entry_bids.groupby("team_key")["bid_amount"].sum().reset_index()
     actual_market.columns = ["team_key", "actual_market_total"]
@@ -138,6 +147,7 @@ def generate_detailed_investment_report(
         "expected_market",
         "expected_roi",
         "our_bid",
+        "our_roi",
         "actual_market",
         "actual_roi",
     ]

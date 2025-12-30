@@ -59,10 +59,10 @@ print()
 
 # Show our portfolio
 print("Our Portfolio (teams with bids > 0):")
-print("-" * 100)
+print("-" * 110)
 portfolio = report[report['our_bid'] > 0].copy()
-print(f"{'Team':<30s} {'Seed':>4s} {'Exp Pts':>8s} {'Exp Mkt':>8s} {'Exp ROI':>8s} {'Our Bid':>8s} {'Act Mkt':>8s} {'Act ROI':>8s}")
-print("-" * 100)
+print(f"{'Team':<30s} {'Seed':>4s} {'Exp Pts':>8s} {'Exp Mkt':>8s} {'Exp ROI':>8s} {'Our Bid':>8s} {'Our ROI':>8s} {'Act Mkt':>8s} {'Act ROI':>8s}")
+print("-" * 110)
 for _, row in portfolio.iterrows():
     print(f"{row['school_name'][:29]:<30s} "
           f"{int(row['seed']):>4d} "
@@ -70,6 +70,7 @@ for _, row in portfolio.iterrows():
           f"{row['expected_market']:>8.1f} "
           f"{row['expected_roi']:>8.2f} "
           f"{int(row['our_bid']):>8d} "
+          f"{row['our_roi']:>8.2f} "
           f"{row['actual_market']:>8.1f} "
           f"{row['actual_roi']:>8.2f}")
 print()
