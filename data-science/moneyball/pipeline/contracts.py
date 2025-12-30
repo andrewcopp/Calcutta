@@ -180,9 +180,7 @@ def _validate_simulated_entry_outcomes(df: pd.DataFrame) -> None:
             "mean_finish_position",
             "mean_n_entries",
             "p_top1",
-            "p_top3",
-            "p_top6",
-            "p_top10",
+            "p_in_money",
         ],
         name="simulated_entry_outcomes",
     )
@@ -197,7 +195,7 @@ def _validate_simulated_entry_outcomes(df: pd.DataFrame) -> None:
     if budget.isna().any() or (budget <= 0).any():
         raise ValueError("budget_points must be positive")
 
-    for c in ["p_top1", "p_top3", "p_top6", "p_top10"]:
+    for c in ["p_top1", "p_in_money"]:
         _require_in_0_1(df[c], col=c)
 
     payout = pd.to_numeric(df["mean_payout_cents"], errors="coerce")
@@ -211,7 +209,7 @@ def _validate_investment_report(df: pd.DataFrame) -> None:
     hhi_col = "portfolio_concentration_hhi"
     if ((df[hhi_col] < 0) | (df[hhi_col] > 1)).any():
         raise ValueError(f"{hhi_col} must be in [0, 1]")
-    prob_cols = ["p_top1", "p_top3", "p_top6", "p_top10"]
+    prob_cols = ["p_top1", "p_in_money"]
     for col in prob_cols:
         if ((df[col] < 0) | (df[col] > 1)).any():
             raise ValueError(f"{col} must be in [0, 1]")
@@ -281,9 +279,7 @@ CONTRACTS: Dict[str, ArtifactContract] = {
             "mean_expected_finish_position",
             "mean_n_entries",
             "p_top1",
-            "p_top3",
-            "p_top6",
-            "p_top10",
+            "p_in_money",
             "portfolio_concentration_hhi",
             "portfolio_teams_json",
         ],

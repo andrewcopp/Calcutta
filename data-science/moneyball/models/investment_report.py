@@ -77,9 +77,7 @@ def generate_investment_report(
         "mean_finish_position",
         "mean_n_entries",
         "p_top1",
-        "p_top3",
-        "p_top6",
-        "p_top10",
+        "p_in_money",
     ]
     missing = [c for c in required_outcomes if c not in outcomes.columns]
     if missing:
@@ -96,9 +94,7 @@ def generate_investment_report(
     mean_finish = float(outcome_row["mean_finish_position"])
     mean_n_entries = float(outcome_row["mean_n_entries"])
     p_top1 = float(outcome_row["p_top1"])
-    p_top3 = float(outcome_row["p_top3"])
-    p_top6 = float(outcome_row["p_top6"])
-    p_top10 = float(outcome_row["p_top10"])
+    p_in_money = float(outcome_row["p_in_money"])
 
     bid_shares = bids["bid_amount_points"] / portfolio_total_bids
     hhi = float((bid_shares ** 2).sum())
@@ -117,9 +113,7 @@ def generate_investment_report(
         "mean_expected_finish_position": mean_finish,
         "mean_n_entries": mean_n_entries,
         "p_top1": p_top1,
-        "p_top3": p_top3,
-        "p_top6": p_top6,
-        "p_top10": p_top10,
+        "p_in_money": p_in_money,
         "portfolio_concentration_hhi": hhi,
         "portfolio_teams_json": str(portfolio_teams),
     }])

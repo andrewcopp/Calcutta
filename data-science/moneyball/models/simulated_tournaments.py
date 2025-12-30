@@ -95,15 +95,18 @@ def simulate_tournaments(
         raise ValueError(f"predicted_game_outcomes missing columns: {missing}")
 
     # Build game graph for simulation
+    # Match on game_id AND team keys to get the specific matchup probability
     games_graph = games.merge(
         predicted_game_outcomes[
             [
                 "game_id",
+                "team1_key",
+                "team2_key",
                 "p_team1_wins_given_matchup",
                 "p_team2_wins_given_matchup",
             ]
         ],
-        on="game_id",
+        on=["game_id", "team1_key", "team2_key"],
         how="left",
     )
 

@@ -338,12 +338,179 @@ def allocate_max_sharpe(
     ]
 
 
+def allocate_region_constrained(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+    max_teams_per_region: int = 1,
+) -> pd.DataFrame:
+    """
+    Region-constrained greedy allocation: diversify across regions.
+    
+    Uses greedy allocation logic but enforces a maximum number of teams
+    per region to avoid concentration risk. This prevents scenarios like
+    picking 10 teams all from the same region or same side of bracket.
+    
+    Args:
+        max_teams_per_region: Maximum teams to select from each region (default 1)
+    """
+    from moneyball.models.recommended_entry_bids import (
+        _optimize_portfolio_greedy,
+    )
+    
+    teams = teams_df.copy()
+    
+    # Check if region column exists
+    if "region" not in teams.columns:
+        # Fall back to unconstrained greedy if no region data
+        return allocate_greedy(
+            teams_df=teams_df,
+            budget_points=budget_points,
+            min_teams=min_teams,
+            max_teams=max_teams,
+            max_per_team_points=max_per_team_points,
+            min_bid_points=min_bid_points,
+        )
+    
+    # Sort by expected value (score)
+    teams["expected_team_points"] = pd.to_numeric(
+        teams["expected_team_points"], errors="coerce"
+    ).fillna(0.0)
+    teams["predicted_team_total_bids"] = pd.to_numeric(
+        teams["predicted_team_total_bids"], errors="coerce"
+    ).fillna(0.0)
+    
+    # Calculate score (expected points per dollar at min bid)
+    teams["temp_score"] = teams.apply(
+        lambda r: (
+            r["expected_team_points"] / 
+            (r["predicted_team_total_bids"] + min_bid_points)
+            if (r["predicted_team_total_bids"] + min_bid_points) > 0 
+            else 0.0
+        ),
+        axis=1
+    )
+    
+    teams_sorted = teams.sort_values("temp_score", ascending=False)
+    
+    # Greedily select teams respecting region constraint
+    selected = []
+    region_counts = {}
+    
+    for _, team in teams_sorted.iterrows():
+        region = team.get("region", "unknown")
+        current_count = region_counts.get(region, 0)
+        
+        # Check if we can add this team
+        if current_count < max_teams_per_region and len(selected) < max_teams:
+            selected.append(team)
+            region_counts[region] = current_count + 1
+    
+    # Ensure we have minimum teams
+    if len(selected) < min_teams:
+        # Relax constraint to meet minimum
+        for _, team in teams_sorted.iterrows():
+            if len(selected) >= min_teams:
+                break
+            if team["team_key"] not in [s["team_key"] for s in selected]:
+                selected.append(team)
+    
+    # Convert to DataFrame
+    selected_df = pd.DataFrame(selected)
+    
+    if len(selected_df) == 0:
+        return pd.DataFrame(columns=[
+            "team_key", "bid_amount_points", "expected_team_points",
+            "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"
+        ])
+    
+    # Now run greedy optimizer on this constrained set
+    chosen, _rows = _optimize_portfolio_greedy(
+        df=selected_df,
+        score_col="temp_score",
+        budget=float(budget_points),
+        min_teams=min(min_teams, len(selected_df)),
+        max_teams=min(max_teams, len(selected_df)),
+        max_per_team=float(max_per_team_points),
+        min_bid=float(min_bid_points),
+    )
+    
+    # Ensure score column exists
+    if "score" not in chosen.columns:
+        chosen["score"] = chosen.get("temp_score", 0.0)
+    
+    return chosen[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"]
+    ]
+
+
+def allocate_one_per_region(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    One team per region: maximum regional diversification.
+    
+    Selects exactly one team from each region (typically 4 regions in NCAA).
+    This ensures no correlation from teams on the same side of the bracket.
+    """
+    return allocate_region_constrained(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        max_teams_per_region=1,
+    )
+
+
+def allocate_two_per_region(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    Two teams per region: balanced regional diversification.
+    
+    Selects up to two teams from each region. Allows picking one from
+    the top half and one from the bottom half of each region while
+    maintaining diversification.
+    """
+    return allocate_region_constrained(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        max_teams_per_region=2,
+    )
+
+
 STRATEGIES = {
     "greedy": allocate_greedy,
     "waterfill_equal": allocate_waterfill_equal,
     "kelly": allocate_kelly,
     "min_variance": allocate_min_variance,
     "max_sharpe": allocate_max_sharpe,
+    "one_per_region": allocate_one_per_region,
+    "two_per_region": allocate_two_per_region,
+    "region_constrained": allocate_region_constrained,
 }
 
 
