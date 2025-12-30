@@ -94,61 +94,80 @@ def simulate_tournaments(
     if missing:
         raise ValueError(f"predicted_game_outcomes missing columns: {missing}")
 
-    # Build game graph for simulation
-    # Match on game_id AND team keys to get the specific matchup probability
-    games_graph = games.merge(
-        predicted_game_outcomes[
-            [
-                "game_id",
-                "team1_key",
-                "team2_key",
-                "p_team1_wins_given_matchup",
-                "p_team2_wins_given_matchup",
-            ]
-        ],
-        on=["game_id", "team1_key", "team2_key"],
-        how="left",
-    )
+    # Build bracket graph with next_game tracking
+    from moneyball.utils import bracket
+    games_graph, prev_by_next = bracket.prepare_bracket_graph(games)
 
-    # Collect all teams that participate in the tournament
-    # (appear in any game, including first_four)
+    # Collect all teams from round 1 and 2 only (actual participants)
     all_teams = set()
     for _, gr in games_graph.iterrows():
-        t1 = str(gr.get("team1_key") or "")
-        t2 = str(gr.get("team2_key") or "")
-        if t1:
-            all_teams.add(t1)
-        if t2:
-            all_teams.add(t2)
+        round_order = int(gr.get("round_order") or 999)
+        if round_order <= 2:
+            t1 = str(gr.get("team1_key") or "")
+            t2 = str(gr.get("team2_key") or "")
+            if t1:
+                all_teams.add(t1)
+            if t2:
+                all_teams.add(t2)
 
     rng = random.Random(int(seed))
     sim_rows: List[Dict[str, object]] = []
 
     for sim_i in range(int(n_sims)):
         wins_sim: Dict[str, int] = {}
+        winners_by_game: Dict[str, str] = {}
 
         # Initialize all teams with 0 wins
         for team in all_teams:
             wins_sim[team] = 0
 
+        # Simulate games in bracket order
         for _, gr in games_graph.iterrows():
             gid = str(gr.get("game_id") or "")
             if not gid:
                 continue
 
-            t1 = str(gr.get("team1_key") or "")
-            t2 = str(gr.get("team2_key") or "")
+            round_order = int(gr.get("round_order") or 999)
+
+            # For rounds 1-2, use pre-filled team keys
+            if round_order <= 2:
+                t1 = str(gr.get("team1_key") or "")
+                t2 = str(gr.get("team2_key") or "")
+            else:
+                # For later rounds, determine teams from previous winners
+                t1 = ""
+                t2 = ""
+                prev = prev_by_next.get(gid, {}).get(1)
+                if prev:
+                    t1 = winners_by_game.get(prev, "")
+                prev = prev_by_next.get(gid, {}).get(2)
+                if prev:
+                    t2 = winners_by_game.get(prev, "")
+
             if not t1 or not t2:
                 continue
 
-            p1 = float(gr.get("p_team1_wins_given_matchup") or 0.0)
+            # Look up win probability for this matchup
+            matchup = predicted_game_outcomes[
+                (predicted_game_outcomes["game_id"] == gid) &
+                (predicted_game_outcomes["team1_key"] == t1) &
+                (predicted_game_outcomes["team2_key"] == t2)
+            ]
+
+            if len(matchup) == 0:
+                p1 = 0.5
+            else:
+                p1 = float(matchup.iloc[0]["p_team1_wins_given_matchup"])
 
             # Simulate game outcome
             roll = rng.random()
             winner = t1 if roll < p1 else t2
 
+            # Track winner for bracket progression
+            winners_by_game[gid] = winner
+
             # Increment wins for winner
-            wins_sim[winner] += 1
+            wins_sim[winner] = wins_sim.get(winner, 0) + 1
 
         # Record results for this simulation - include ALL teams
         for team_key, wins in wins_sim.items():

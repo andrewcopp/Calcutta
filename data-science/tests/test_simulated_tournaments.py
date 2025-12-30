@@ -10,19 +10,22 @@ from moneyball.models.simulated_tournaments import simulate_tournaments
 def _toy_games() -> pd.DataFrame:
     return pd.DataFrame({
         "game_id": ["g1", "g2", "g3"],
-        "team1_key": ["t1", "t2", "t1"],
-        "team2_key": ["t3", "t4", "t2"],
-        "round": [1, 1, 2],
+        "team1_key": ["t1", "t2", ""],
+        "team2_key": ["t3", "t4", ""],
+        "round": ["round_of_64", "round_of_64", "championship"],
+        "sort_order": [1, 2, 1],
+        "next_game_id": ["g3", "g3", ""],
+        "next_game_slot": [1, 2, 0],
     })
 
 
 def _toy_predicted_game_outcomes() -> pd.DataFrame:
     return pd.DataFrame({
-        "game_id": ["g1", "g2", "g3"],
-        "team1_key": ["t1", "t2", "t1"],
-        "team2_key": ["t3", "t4", "t2"],
-        "p_team1_wins_given_matchup": [0.6, 0.7, 0.5],
-        "p_team2_wins_given_matchup": [0.4, 0.3, 0.5],
+        "game_id": ["g1", "g1", "g2", "g2", "g3", "g3", "g3", "g3"],
+        "team1_key": ["t1", "t1", "t2", "t2", "t1", "t1", "t2", "t2"],
+        "team2_key": ["t3", "t4", "t3", "t4", "t2", "t3", "t3", "t4"],
+        "p_team1_wins_given_matchup": [0.6, 0.6, 0.7, 0.7, 0.5, 0.5, 0.5, 0.5],
+        "p_team2_wins_given_matchup": [0.4, 0.4, 0.3, 0.3, 0.5, 0.5, 0.5, 0.5],
     })
 
 
@@ -109,11 +112,14 @@ class TestThatSimulatedTournamentsIncludeAllTeams(unittest.TestCase):
             seed=999,
         )
 
-        # Get all unique teams from games
+        # Get all unique teams from round 1-2 games only
+        # (later rounds have empty team keys for bracket progression)
         all_teams = set()
         for _, row in games.iterrows():
-            all_teams.add(row["team1_key"])
-            all_teams.add(row["team2_key"])
+            if row["team1_key"]:
+                all_teams.add(row["team1_key"])
+            if row["team2_key"]:
+                all_teams.add(row["team2_key"])
 
         # Each simulation should have ALL teams
         for sim_id in range(50):
@@ -215,7 +221,10 @@ class TestThatSimulatedTournamentsProducesReasonableWinDistribution(unittest.Tes
             "game_id": ["g1", "g2"],
             "team1_key": ["t1", "t2"],
             "team2_key": ["t3", "t4"],
-            "round": [1, 1],
+            "round": ["round_of_64", "round_of_64"],
+            "sort_order": [1, 2],
+            "next_game_id": ["", ""],
+            "next_game_slot": [0, 0],
         })
         
         # t1 has 90% to win, t2 has 50%
@@ -242,6 +251,59 @@ class TestThatSimulatedTournamentsProducesReasonableWinDistribution(unittest.Tes
         # t1 should win more than t2, and t2 should win more than t3
         self.assertGreater(t1_wins, t2_wins, "t1 (90% prob) should win more than t2 (50% prob)")
         self.assertGreater(t2_wins, t3_wins, "t2 (50% prob) should win more than t3 (10% prob)")
+
+
+class TestThatChampionshipProbabilitiesSumToOneHundredPercent(unittest.TestCase):
+    def test_that_championship_probabilities_sum_to_100_percent(self) -> None:
+        """GIVEN a tournament bracket with proper bracket progression
+        WHEN simulations are run
+        THEN championship probabilities should sum to 100%
+        
+        This test prevents the bug where hardcoded team keys in later rounds
+        caused only specific teams to reach the championship, resulting in
+        championship probabilities summing to only 17.56% instead of 100%.
+        """
+        # Create a simple 4-team bracket with proper structure
+        games = pd.DataFrame({
+            "game_id": ["g1", "g2", "g3"],
+            "team1_key": ["t1", "t2", ""],
+            "team2_key": ["t3", "t4", ""],
+            "round": ["round_of_64", "round_of_64", "championship"],
+            "sort_order": [1, 2, 1],
+            "next_game_id": ["g3", "g3", ""],
+            "next_game_slot": [1, 2, 0],
+        })
+        
+        # All teams have equal probability
+        predicted = pd.DataFrame({
+            "game_id": ["g1", "g1", "g2", "g2", "g3", "g3", "g3", "g3"],
+            "team1_key": ["t1", "t1", "t2", "t2", "t1", "t1", "t2", "t2"],
+            "team2_key": ["t3", "t4", "t3", "t4", "t2", "t3", "t3", "t4"],
+            "p_team1_wins_given_matchup": [0.5] * 8,
+            "p_team2_wins_given_matchup": [0.5] * 8,
+        })
+        
+        result = simulate_tournaments(
+            games=games,
+            predicted_game_outcomes=predicted,
+            n_sims=1000,
+            seed=42,
+        )
+        
+        # Calculate championship probability (2 wins = champion)
+        champ_probs = result.groupby("team_key").agg({
+            "wins": lambda x: (x >= 2).sum() / len(x) * 100
+        }).reset_index()
+        
+        total_champ_prob = champ_probs["wins"].sum()
+        
+        # Should sum to 100% (allow 1% tolerance for randomness)
+        self.assertAlmostEqual(
+            total_champ_prob,
+            100.0,
+            delta=1.0,
+            msg=f"Championship probabilities sum to {total_champ_prob:.2f}%, not 100%"
+        )
 
 
 if __name__ == "__main__":
