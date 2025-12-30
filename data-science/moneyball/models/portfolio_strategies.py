@@ -146,6 +146,7 @@ def allocate_kelly(
         allocation = min(kelly_allocation, max_per_team_points)
         allocation = max(allocation, min_bid_points)
         allocation = min(allocation, remaining_budget)
+        allocation = round(allocation)  # Round to integer
         
         if allocation >= min_bid_points:
             selected.append({
@@ -173,7 +174,33 @@ def allocate_kelly(
         })
         remaining_budget -= allocation
     
-    return pd.DataFrame(selected)
+    # Distribute any remaining budget to existing selections
+    if remaining_budget > 0 and len(selected) > 0:
+        # Add to teams that haven't hit max_per_team_points
+        for item in selected:
+            if remaining_budget <= 0:
+                break
+            can_add = max_per_team_points - item["bid_amount_points"]
+            add_amount = min(can_add, remaining_budget)
+            item["bid_amount_points"] += add_amount
+            remaining_budget -= add_amount
+    
+    # Convert to DataFrame and merge with original data to get required columns
+    result_df = pd.DataFrame(selected)
+    if len(result_df) == 0:
+        return pd.DataFrame(columns=["team_key", "bid_amount_points", "expected_team_points", "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"])
+    
+    # Merge with teams_df to get all required columns
+    result_df = result_df.merge(teams_df, on="team_key", how="left")
+    
+    # Ensure score column exists
+    if "score" not in result_df.columns:
+        result_df["score"] = 0.0
+    
+    return result_df[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"]
+    ]
 
 
 def allocate_min_variance(
@@ -215,7 +242,14 @@ def allocate_min_variance(
             "bid_amount_points"
         ].round()
     
-    return selected_teams[["team_key", "bid_amount_points"]]
+    # Ensure we have all required columns
+    if "score" not in selected_teams.columns:
+        selected_teams["score"] = 0.0
+    
+    return selected_teams[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"]
+    ]
 
 
 def allocate_max_sharpe(
@@ -266,6 +300,7 @@ def allocate_max_sharpe(
         allocation = min(allocation, max_per_team_points)
         allocation = max(allocation, min_bid_points)
         allocation = min(allocation, remaining_budget)
+        allocation = round(allocation)  # Round to integer
         
         if allocation >= min_bid_points:
             selected.append({
@@ -274,7 +309,33 @@ def allocate_max_sharpe(
             })
             remaining_budget -= allocation
     
-    return pd.DataFrame(selected)
+    # Distribute any remaining budget to existing selections
+    if remaining_budget > 0 and len(selected) > 0:
+        # Add to teams that haven't hit max_per_team_points
+        for item in selected:
+            if remaining_budget <= 0:
+                break
+            can_add = max_per_team_points - item["bid_amount_points"]
+            add_amount = min(can_add, remaining_budget)
+            item["bid_amount_points"] += add_amount
+            remaining_budget -= add_amount
+    
+    # Convert to DataFrame and merge with original data to get required columns
+    result_df = pd.DataFrame(selected)
+    if len(result_df) == 0:
+        return pd.DataFrame(columns=["team_key", "bid_amount_points", "expected_team_points", "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"])
+    
+    # Merge with teams_df to get all required columns
+    result_df = result_df.merge(teams_df, on="team_key", how="left")
+    
+    # Ensure score column exists
+    if "score" not in result_df.columns:
+        result_df["score"] = 0.0
+    
+    return result_df[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool", "score"]
+    ]
 
 
 STRATEGIES = {

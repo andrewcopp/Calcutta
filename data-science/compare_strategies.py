@@ -29,6 +29,7 @@ def run_strategy_for_year(year: int, strategy: str) -> dict:
         "--seed", str(SEED),
         "--budget-points", str(BUDGET_POINTS),
         "--strategy", strategy,
+        # Default behavior uses cached tournaments - no flag needed!
     ]
     
     result = subprocess.run(
@@ -39,11 +40,30 @@ def run_strategy_for_year(year: int, strategy: str) -> dict:
     )
     
     if result.returncode != 0:
-        print(f"  ERROR: {result.stderr}")
+        print(f"  ERROR: Command failed with code {result.returncode}")
+        print(f"  STDERR: {result.stderr[-200:]}")
         return None
     
-    output = json.loads(result.stdout)
-    return output
+    # Try to parse JSON output
+    # The CLI outputs progress messages before JSON, so find the JSON part
+    try:
+        # Find the JSON object (starts with { and ends with })
+        stdout = result.stdout
+        json_start = stdout.find('{')
+        json_end = stdout.rfind('}')
+        
+        if json_start == -1 or json_end == -1:
+            print(f"  ERROR: No JSON found in output")
+            print(f"  Stdout: {stdout[:200]}")
+            return None
+        
+        json_str = stdout[json_start:json_end+1]
+        output = json.loads(json_str)
+        return output
+    except json.JSONDecodeError:
+        print(f"  ERROR: Failed to parse JSON output")
+        print(f"  Attempted to parse: {json_str[:200]}")
+        return None
 
 
 def load_results(year: int, strategy: str) -> dict:
@@ -81,10 +101,18 @@ def load_results(year: int, strategy: str) -> dict:
 
 def main():
     """Run all strategies across all years and generate comparison report."""
+    import time
+    
     print("=" * 80)
     print("STRATEGY COMPARISON ACROSS ALL YEARS")
     print("=" * 80)
+    print(f"Running {len(STRATEGIES)} strategies x {len(YEARS)} years = {len(STRATEGIES) * len(YEARS)} reports")
+    print("Using cached tournaments - should be fast!")
     print()
+    
+    start_time = time.time()
+    completed = 0
+    total = len(STRATEGIES) * len(YEARS)
     
     # Run all strategies for all years
     for year in YEARS:
@@ -94,6 +122,12 @@ def main():
         
         for strategy in STRATEGIES:
             run_strategy_for_year(year, strategy)
+            completed += 1
+            elapsed = time.time() - start_time
+            avg_time = elapsed / completed
+            remaining = (total - completed) * avg_time
+            print(f"  Progress: {completed}/{total} ({completed/total*100:.0f}%) | "
+                  f"Elapsed: {elapsed:.0f}s | ETA: {remaining:.0f}s")
     
     print("\n" + "=" * 80)
     print("COLLECTING RESULTS")
