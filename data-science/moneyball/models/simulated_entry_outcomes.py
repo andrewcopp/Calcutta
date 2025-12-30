@@ -274,11 +274,13 @@ def simulate_entry_outcomes(
 
         n_entries = len(standings)
 
-        # Calculate normalized payout (1.0 for 1st place, scaled for others)
-        first_place_payout = payouts["amount_cents"].max()
+        # Calculate normalized payout by maximum prize money
+        # 1.0 = winning max prize ($650), 0.5 = winning half of max prize ($325)
+        # This is independent of pool size and comparable across years
+        max_payout_cents = payouts["amount_cents"].max()
         normalized_payout = (
-            float(payout) / float(first_place_payout)
-            if first_place_payout > 0
+            float(payout) / float(max_payout_cents)
+            if max_payout_cents > 0
             else 0.0
         )
 
