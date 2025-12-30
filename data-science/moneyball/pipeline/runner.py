@@ -266,6 +266,7 @@ def _stage_recommended_entry_bids(
     max_per_team_points: int,
     min_bid_points: int,
     predicted_total_pool_bids_points: Optional[float],
+    strategy: str = "greedy",
     use_cache: bool,
     manifest: Dict[str, Any],
 ) -> Tuple[Path, Dict[str, Any]]:
@@ -315,6 +316,7 @@ def _stage_recommended_entry_bids(
         "predicted_total_pool_bids_points": float(
             predicted_total_pool_bids_points
         ),
+        "strategy": str(strategy),
     }
 
     out_path = out_dir / "recommended_entry_bids.parquet"
@@ -342,6 +344,7 @@ def _stage_recommended_entry_bids(
         max_teams=int(max_teams),
         max_per_team_points=int(max_per_team_points),
         min_bid_points=int(min_bid_points),
+        strategy=str(strategy),
     )
 
     ensure_dir(out_path.parent)
@@ -740,6 +743,7 @@ def run(
     bids_max_per_team_points: int = 50,
     bids_min_bid_points: int = 1,
     bids_predicted_total_pool_bids_points: Optional[float] = None,
+    bids_strategy: str = "greedy",
     sim_n_sims: int = 5000,
     sim_seed: int = 123,
     sim_budget_points: int = 100,
@@ -817,6 +821,7 @@ def run(
             predicted_total_pool_bids_points=(
                 bids_predicted_total_pool_bids_points
             ),
+            strategy=str(bids_strategy),
         )
         orchestrator.results["recommended_entry_bids_parquet"] = str(out_path)
 

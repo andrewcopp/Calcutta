@@ -317,6 +317,9 @@ def simulate_entry_outcomes(
     p_top10 = float(
         sum(1 for fp in finish_positions if int(fp) <= 10) / denom
     )
+    p_in_money = float(
+        sum(1 for p in payouts_cents if int(p) > 0) / denom
+    )
 
     payout_per_fake_dollar = [
         float(p) / (float(budget_points) * 100.0) for p in payouts_cents
@@ -354,6 +357,7 @@ def simulate_entry_outcomes(
         "p_top3": float(p_top3),
         "p_top6": float(p_top6),
         "p_top10": float(p_top10),
+        "p_in_money": float(p_in_money),
         "mean_payout_per_fake_dollar": float(
             sum(payout_per_fake_dollar) / denom
         ),

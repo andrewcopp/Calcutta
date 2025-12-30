@@ -200,6 +200,14 @@ def main() -> int:
         default=100,
     )
     p_report.add_argument(
+        "--strategy",
+        dest="strategy",
+        type=str,
+        default="greedy",
+        choices=["greedy", "waterfill_equal", "kelly", "min_variance", "max_sharpe"],
+        help="Portfolio allocation strategy",
+    )
+    p_report.add_argument(
         "--no-include-upstream",
         dest="include_upstream",
         action="store_false",
@@ -357,6 +365,7 @@ def main() -> int:
             sim_n_sims=int(args.n_sims),
             sim_seed=int(args.seed),
             sim_budget_points=int(args.budget_points),
+            bids_strategy=str(args.strategy),
             regenerate_tournaments=bool(args.regenerate_tournaments),
             use_cache=bool(args.use_cache),
         )

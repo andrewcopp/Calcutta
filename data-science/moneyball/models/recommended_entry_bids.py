@@ -262,6 +262,7 @@ def recommend_entry_bids(
     max_teams: int = 10,
     max_per_team_points: int = 50,
     min_bid_points: int = 1,
+    strategy: str = "greedy",
 ) -> pd.DataFrame:
     if predicted_total_pool_bids_points <= 0:
         raise ValueError("predicted_total_pool_bids_points must be positive")
@@ -309,15 +310,30 @@ def recommend_entry_bids(
 
     df["score"] = df.apply(_ppd_at_min_bid, axis=1)
 
-    chosen, _rows = _optimize_portfolio_greedy(
-        df=df,
-        score_col="score",
-        budget=float(int(budget_points)),
-        min_teams=int(min_teams),
-        max_teams=int(max_teams),
-        max_per_team=float(int(max_per_team_points)),
-        min_bid=float(int(min_bid_points)),
-    )
+    # Use strategy-specific allocation
+    if strategy == "greedy":
+        chosen, _rows = _optimize_portfolio_greedy(
+            df=df,
+            score_col="score",
+            budget=float(int(budget_points)),
+            min_teams=int(min_teams),
+            max_teams=int(max_teams),
+            max_per_team=float(int(max_per_team_points)),
+            min_bid=float(int(min_bid_points)),
+        )
+    else:
+        # Use portfolio_strategies module for other strategies
+        from moneyball.models.portfolio_strategies import get_strategy
+        
+        strategy_func = get_strategy(strategy)
+        chosen = strategy_func(
+            teams_df=df,
+            budget_points=int(budget_points),
+            min_teams=int(min_teams),
+            max_teams=int(max_teams),
+            max_per_team_points=int(max_per_team_points),
+            min_bid_points=int(min_bid_points),
+        )
 
     out_cols = [
         "team_key",
