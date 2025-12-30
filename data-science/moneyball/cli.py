@@ -204,7 +204,18 @@ def main() -> int:
         dest="strategy",
         type=str,
         default="greedy",
-        choices=["greedy", "waterfill_equal", "kelly", "min_variance", "max_sharpe"],
+        choices=[
+            "greedy",
+            "waterfill_equal",
+            "kelly",
+            "min_variance",
+            "max_sharpe",
+            "one_per_region",
+            "two_per_region",
+            "variance_aware_light",
+            "variance_aware_medium",
+            "variance_aware_heavy",
+        ],
         help="Portfolio allocation strategy",
     )
     p_report.add_argument(

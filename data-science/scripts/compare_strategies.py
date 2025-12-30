@@ -10,13 +10,16 @@ import pandas as pd
 
 
 STRATEGIES = [
-    "greedy", 
-    "waterfill_equal", 
-    "kelly", 
-    "min_variance", 
+    "greedy",
+    "waterfill_equal",
+    "kelly",
+    "min_variance",
     "max_sharpe",
     "one_per_region",
     "two_per_region",
+    "variance_aware_light",
+    "variance_aware_medium",
+    "variance_aware_heavy",
 ]
 YEARS = [2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 N_SIMS = 5000

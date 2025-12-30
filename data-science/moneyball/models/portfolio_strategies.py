@@ -22,23 +22,57 @@ def allocate_greedy(
     max_teams: int,
     max_per_team_points: int,
     min_bid_points: int,
+    variance_weight: float = 0.0,
 ) -> pd.DataFrame:
     """
     Greedy allocation: maximize expected value.
-    
+
     This is the current default strategy. Greedily selects teams
     with highest expected value until budget is exhausted.
+
+    Args:
+        variance_weight: Weight for variance bonus (0.0 = pure expected value,
+            >0 = favor high-variance teams for tail-risk optimization)
     """
-    from moneyball.models.recommended_entry_bids import recommend_entry_bids
-    
-    return recommend_entry_bids(
-        teams=teams_df,
-        budget_points=budget_points,
+    from moneyball.models.recommended_entry_bids import (
+        _optimize_portfolio_greedy,
+    )
+
+    teams = teams_df.copy()
+
+    if variance_weight > 0 and "std_team_points" in teams.columns:
+        teams["variance_adjusted_score"] = teams.apply(
+            lambda r: (
+                (r.get("expected_team_points", 0) +
+                 variance_weight * r.get("std_team_points", 0)) /
+                (r.get("predicted_team_total_bids", 0) + min_bid_points)
+                if (r.get("predicted_team_total_bids", 0) + min_bid_points) > 0
+                else 0.0
+            ),
+            axis=1
+        )
+        score_col = "variance_adjusted_score"
+    else:
+        score_col = "score"
+
+    chosen, _rows = _optimize_portfolio_greedy(
+        df=teams,
+        score_col=score_col,
+        budget=float(budget_points),
         min_teams=min_teams,
         max_teams=max_teams,
-        max_per_team_points=max_per_team_points,
-        min_bid_points=min_bid_points,
+        max_per_team=float(max_per_team_points),
+        min_bid=float(min_bid_points),
     )
+
+    if "score" not in chosen.columns:
+        chosen["score"] = chosen.get(score_col, 0.0)
+
+    return chosen[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool",
+         "score"]
+    ]
 
 
 def allocate_waterfill_equal(
@@ -502,6 +536,85 @@ def allocate_two_per_region(
     )
 
 
+def allocate_variance_aware_light(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    Variance-aware greedy (light): slight preference for high-variance teams.
+
+    Uses variance_weight=0.3 to give a small bonus to teams with high
+    variance (longshots). This helps capture tail-risk scenarios where
+    favorites underperform.
+    """
+    return allocate_greedy(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        variance_weight=0.3,
+    )
+
+
+def allocate_variance_aware_medium(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    Variance-aware greedy (medium): moderate preference for high-variance.
+
+    Uses variance_weight=0.5 to balance expected value with variance.
+    Favors portfolios that perform well in tail scenarios.
+    """
+    return allocate_greedy(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        variance_weight=0.5,
+    )
+
+
+def allocate_variance_aware_heavy(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    Variance-aware greedy (heavy): strong preference for high-variance.
+
+    Uses variance_weight=1.0 to heavily favor high-variance teams.
+    Optimizes for winning in scenarios where favorites fail.
+    """
+    return allocate_greedy(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        variance_weight=1.0,
+    )
+
+
 STRATEGIES = {
     "greedy": allocate_greedy,
     "waterfill_equal": allocate_waterfill_equal,
@@ -511,6 +624,9 @@ STRATEGIES = {
     "one_per_region": allocate_one_per_region,
     "two_per_region": allocate_two_per_region,
     "region_constrained": allocate_region_constrained,
+    "variance_aware_light": allocate_variance_aware_light,
+    "variance_aware_medium": allocate_variance_aware_medium,
+    "variance_aware_heavy": allocate_variance_aware_heavy,
 }
 
 

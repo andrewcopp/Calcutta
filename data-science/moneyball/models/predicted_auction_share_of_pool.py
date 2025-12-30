@@ -21,9 +21,10 @@ FEATURE_SETS = [
     "expanded_last_year_expected",
     "enhanced",
     "expanded_last_year_expected_with_market_features",
+    "optimal",
 ]
 
-DEFAULT_FEATURE_SET = "expanded_last_year_expected_with_market_features"
+DEFAULT_FEATURE_SET = "optimal"
 
 
 def _norm_school_name(v: object) -> str:
@@ -464,6 +465,40 @@ def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
             errors="coerce",
         )
 
+    # Optimal feature set (data-driven from forward selection)
+    if fs == "optimal":
+        # 1. Championship equity (smart seed encoding)
+        seed_title_prob = {
+            1: 0.20, 2: 0.12, 3: 0.08, 4: 0.05, 5: 0.03, 6: 0.02,
+            7: 0.01, 8: 0.01, 9: 0.005, 10: 0.003, 11: 0.002,
+            12: 0.001, 13: 0.0005, 14: 0.0002, 15: 0.0001,
+            16: 0.00001
+        }
+        base["champ_equity"] = base["seed"].map(seed_title_prob)
+
+        # 2. KenPom percentile (relative strength)
+        base["kenpom_net_pct"] = base["kenpom_net"].rank(pct=True)
+
+        # 3. KenPom balance (offensive/defensive imbalance)
+        kenpom_o_pct = base["kenpom_o"].rank(pct=True)
+        kenpom_d_pct = base["kenpom_d"].rank(pct=True)
+        base["kenpom_balance"] = np.abs(kenpom_o_pct - kenpom_d_pct)
+
+        # 4. Points per equity (value play indicator)
+        seed_expected_points = {
+            1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
+            9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3,
+            15: 0.2, 16: 0.1
+        }
+        base["expected_points"] = base["seed"].map(seed_expected_points)
+        base["points_per_equity"] = (
+            base["expected_points"] / (base["champ_equity"] + 0.001)
+        )
+
+        # 5. KenPom percentile cubed (non-linear strength effect)
+        base["kenpom_pct_cubed"] = base["kenpom_net_pct"] ** 3
+
+    if fs != "basic" and fs != "optimal":
         base["seed_sq"] = base["seed"] ** 2
         base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
 
@@ -516,7 +551,10 @@ def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
             else:
                 base[c] = 0.0
 
-    if fs == "expanded_last_year_expected_with_market_features":
+    if fs in (
+        "expanded_last_year_expected_with_market_features",
+        "optimal",
+    ):
         # Add KenPom interaction features (27.7% improvement)
         base["seed_sq"] = base["seed"] ** 2
         base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
