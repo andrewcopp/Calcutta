@@ -383,7 +383,7 @@ def recommend_entry_bids(
     max_teams: int = 10,
     max_per_team_points: int = 50,
     min_bid_points: int = 1,
-    strategy: str = "greedy",
+    strategy: str = "minlp",
     variance_weight: float = 0.0,
 ) -> pd.DataFrame:
     if predicted_total_pool_bids_points <= 0:

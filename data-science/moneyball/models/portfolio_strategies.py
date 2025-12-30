@@ -2,7 +2,8 @@
 Portfolio allocation strategies for Calcutta entry optimization.
 
 Different approaches to allocating budget across teams:
-- greedy: Current approach - maximize expected value
+- greedy: Current approach - maximize expected value (has local maximum bug)
+- minlp: MINLP optimizer - avoids local maximum trap (RECOMMENDED)
 - waterfill_equal: Baseline from OLD_ALGORITHMS - equal allocation
 - kelly: Kelly criterion for optimal betting
 - min_variance: Conservative approach minimizing variance
@@ -615,8 +616,87 @@ def allocate_variance_aware_heavy(
     )
 
 
+def allocate_minlp(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    MINLP optimizer: avoids local maximum trap.
+
+    Uses Mixed Integer Nonlinear Programming to find globally optimal
+    portfolio allocation. Avoids the local maximum trap where greedy
+    algorithm over-invests in small-market teams.
+
+    Maximizes total expected return while avoiding guaranteed losses.
+    """
+    from moneyball.models.portfolio_optimizer_minlp import (
+        optimize_portfolio_minlp,
+    )
+
+    chosen, _ = optimize_portfolio_minlp(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        initial_solution="greedy",
+    )
+
+    return chosen[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool",
+         "score"]
+    ]
+
+
+def allocate_maxmin(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+) -> pd.DataFrame:
+    """
+    Max-min optimizer: maximizes minimum ROI.
+
+    Maximizes the minimum ROI across all teams in the portfolio.
+    This is a conservative strategy that ensures every dollar invested
+    has a guaranteed minimum return (typically ~1.4x).
+
+    Trades off total expected return for risk reduction.
+    """
+    from moneyball.models.portfolio_optimizer_maxmin import (
+        optimize_portfolio_maxmin,
+    )
+
+    chosen, _ = optimize_portfolio_maxmin(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+    )
+
+    return chosen[
+        ["team_key", "bid_amount_points", "expected_team_points",
+         "predicted_team_total_bids", "predicted_auction_share_of_pool",
+         "score"]
+    ]
+
+
 STRATEGIES = {
     "greedy": allocate_greedy,
+    "minlp": allocate_minlp,
+    "maxmin": allocate_maxmin,
     "waterfill_equal": allocate_waterfill_equal,
     "kelly": allocate_kelly,
     "min_variance": allocate_min_variance,
