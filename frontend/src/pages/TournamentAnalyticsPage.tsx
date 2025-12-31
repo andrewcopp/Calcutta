@@ -382,24 +382,31 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
   });
 
   const formatPoints = (points: number) => points.toFixed(1);
+  const formatPercent = (percent: number) => {
+    const formatted = percent.toFixed(1);
+    return percent > 0 ? `+${formatted}%` : `${formatted}%`;
+  };
 
-  const getDeltaIndicator = (delta: number) => {
-    if (delta < -0.1) {
-      // Underinvested - opportunity (green down arrow)
-      return <span className="text-green-600">↓</span>;
-    } else if (delta > 0.1) {
-      // Overinvested - avoid (red up arrow)
-      return <span className="text-red-600">↑</span>;
-    }
-    return null;
+  const getDeltaColor = (delta: number) => {
+    if (delta < -5) return 'text-green-700 font-semibold'; // Undervalued - opportunity
+    if (delta > 5) return 'text-red-700 font-semibold'; // Overvalued - avoid
+    return 'text-gray-700';
   };
 
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Predicted Investment</h2>
       <p className="text-gray-600 mb-6">
-        Investment opportunities based on expected value and market inefficiencies.
+        Market inefficiency analysis comparing rational investment (equal ROI) vs. predicted market behavior.
       </p>
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-900 mb-2"><strong>Column Definitions:</strong></p>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li><strong>Naive:</strong> Proportional investment if everyone invested for equal ROI (rational market)</li>
+          <li><strong>Edge:</strong> ML model prediction of actual market investment (ridge regression)</li>
+          <li><strong>Delta:</strong> Market inefficiency as % difference (positive = overvalued, negative = undervalued)</li>
+        </ul>
+      </div>
 
       {isLoading ? (
         <div className="text-gray-500">Loading predicted investment data...</div>
@@ -443,8 +450,8 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
                     {formatPoints(team.naive)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {formatPoints(team.delta)} {getDeltaIndicator(team.delta)}
+                  <td className={`px-4 py-3 text-sm text-center ${getDeltaColor(team.delta)}`}>
+                    {formatPercent(team.delta)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center font-semibold text-green-700 bg-green-50">
                     {formatPoints(team.edge)}
@@ -459,8 +466,8 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                 <td className="px-4 py-3 text-sm text-center text-gray-900">
                   {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.naive, 0))}
                 </td>
-                <td className="px-4 py-3 text-sm text-center text-gray-900">
-                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.delta, 0))}
+                <td className="px-4 py-3 text-sm text-center text-gray-500">
+                  -
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-green-700 bg-green-100">
                   {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.edge, 0))}

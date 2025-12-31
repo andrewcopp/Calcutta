@@ -54,22 +54,67 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 		),
 		total_pool AS (
 			SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
+		),
+		team_win_counts AS (
+			SELECT 
+				st.team_id,
+				st.wins,
+				COUNT(*) as sim_count
+			FROM silver_simulated_tournaments st
+			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
+			GROUP BY st.team_id, st.wins
+		),
+		team_probabilities AS (
+			SELECT 
+				team_id,
+				SUM(sim_count)::float as total_sims,
+				SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
+				SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
+				SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
+				SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
+				SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
+				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
+			FROM team_win_counts
+			GROUP BY team_id
+		),
+		team_expected_points AS (
+			SELECT 
+				team_id,
+				(COALESCE(win_r64 / NULLIF(total_sims, 0), 0) * 50 + 
+				 COALESCE(win_r32 / NULLIF(total_sims, 0), 0) * 150 + 
+				 COALESCE(win_s16 / NULLIF(total_sims, 0), 0) * 300 + 
+				 COALESCE(win_e8 / NULLIF(total_sims, 0), 0) * 500 + 
+				 COALESCE(win_ff / NULLIF(total_sims, 0), 0) * 750 + 
+				 COALESCE(win_champ / NULLIF(total_sims, 0), 0) * 1050) as expected_points
+			FROM team_probabilities
+		),
+		total_expected_points AS (
+			SELECT SUM(expected_points) as total_ev
+			FROM team_expected_points
 		)
 		SELECT 
 			t.id as team_id,
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Naive: ML model prediction of market share × total pool
-			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as naive,
-			0.0 as delta,  -- For now, delta is always 0
-			-- Edge: Same as naive for now (will incorporate market inefficiencies later)
-			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as edge
+			-- Naive: Proportional investment based on expected points (equal ROI scenario)
+			(tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) as naive,
+			-- Edge: ML model prediction of market share × total pool
+			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as edge,
+			-- Delta: Percentage difference (Edge - Naive) / Naive * 100
+			CASE 
+				WHEN (tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) > 0
+				THEN ((COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool)) - 
+				      ((tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool))) /
+				     ((tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
+				ELSE 0
+			END as delta
 		FROM bronze_teams t
+		LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 		LEFT JOIN silver_predicted_market_share spms 
 			ON spms.tournament_id = (SELECT id FROM bronze_tournament) AND spms.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
-		ORDER BY naive DESC, t.seed ASC
+		ORDER BY edge DESC, t.seed ASC
 	`
 
 	rows, err := s.pool.Query(ctx, query, tournamentID)
