@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Tournament } from '../types/calcutta';
 import { tournamentService } from '../services/tournamentService';
+import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
 
 interface SimulationStats {
@@ -27,13 +28,11 @@ export function TournamentAnalyticsPage() {
   });
 
   // Fetch simulation stats for selected tournament
-  const { data: simulationStats, isLoading: statsLoading } = useQuery<SimulationStats>({
+  const { data: simulationStats, isLoading: statsLoading } = useQuery<SimulationStats | null>({
     queryKey: ['analytics', 'simulations', selectedTournamentId],
     queryFn: async () => {
       if (!selectedTournamentId) return null;
-      const response = await fetch(`/api/analytics/tournaments/${selectedTournamentId}/simulations`);
-      if (!response.ok) throw new Error('Failed to fetch simulation stats');
-      return response.json();
+      return apiClient.get<SimulationStats>(`/analytics/tournaments/${selectedTournamentId}/simulations`);
     },
     enabled: !!selectedTournamentId,
   });
