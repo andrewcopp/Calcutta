@@ -352,21 +352,70 @@ function PredictedReturnsTab({ tournamentId }: { tournamentId: string }) {
 
 // Predicted Investment Tab Component
 function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
+  const { data: predictedReturns, isLoading } = useQuery<{ teams: TeamPredictedReturns[] } | null>({
+    queryKey: ['analytics', 'predicted-returns', tournamentId],
+    queryFn: async () => {
+      if (!tournamentId) return null;
+      return apiClient.get<{ teams: TeamPredictedReturns[] }>(`/analytics/tournaments/${tournamentId}/predicted-returns`);
+    },
+    enabled: !!tournamentId,
+  });
+
+  const formatPoints = (points: number) => points.toFixed(1);
+
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Predicted Investment</h2>
-      <div className="text-gray-500">
-        <p className="mb-4">Recommended portfolio allocations and algorithm metadata.</p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800 mb-2">Coming soon:</p>
-          <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
-            <li>Optimization run details (algorithm, parameters, timestamp)</li>
-            <li>Recommended entry bids by team</li>
-            <li>Portfolio allocation strategy</li>
-            <li>Budget constraints and limits</li>
-          </ul>
+      <p className="text-gray-600 mb-6">
+        Expected value for each team to guide investment decisions.
+      </p>
+
+      {isLoading ? (
+        <div className="text-gray-500">Loading predicted investment data...</div>
+      ) : predictedReturns?.teams ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
+                  Team
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Seed
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Region
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                  EV (invst)
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {predictedReturns.teams.map((team) => (
+                <tr key={team.team_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">
+                    {team.school_name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {team.seed}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600">
+                    {team.region}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center font-semibold text-green-700 bg-green-50">
+                    {formatPoints(team.expected_value)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+      ) : (
+        <div className="text-gray-500">
+          No predicted investment data available for this tournament.
+        </div>
+      )}
     </div>
   );
 }
