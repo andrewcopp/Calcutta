@@ -1,0 +1,319 @@
+"""
+DB-first pipeline runner.
+
+This module provides pipeline stages that read from and write to PostgreSQL
+as the primary data source, eliminating parquet file dependencies.
+"""
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+import uuid
+
+from moneyball.db.readers import (
+    read_tournament,
+    read_teams,
+    tournament_exists,
+    get_latest_run_id,
+)
+from moneyball.db.writers.bronze_writers import get_or_create_tournament
+from moneyball.models.predicted_game_outcomes import (
+    predict_game_outcomes_from_teams_df,
+)
+from moneyball.models.simulated_tournaments import (
+    simulate_tournaments_from_predictions,
+)
+from moneyball.models.recommended_entry_bids import (
+    recommend_entry_bids_from_simulations,
+)
+from moneyball.pipeline.db_writer import get_db_writer
+
+
+def stage_predicted_game_outcomes(
+    *,
+    year: int,
+    calcutta_id: Optional[str] = None,
+    kenpom_scale: float = 10.0,
+    n_sims: int = 5000,
+    seed: int = 42,
+    model_version: str = "kenpom-v1",
+) -> Dict[str, Any]:
+    """
+    Generate predicted game outcomes from database teams data.
+    
+    Args:
+        year: Tournament year
+        calcutta_id: Optional calcutta UUID
+        kenpom_scale: KenPom scaling factor
+        n_sims: Number of simulations for prediction
+        seed: Random seed
+        model_version: Model version identifier
+        
+    Returns:
+        Dictionary with stage results
+    """
+    print(f"⚙ Generating predicted_game_outcomes for {year}...")
+    
+    # Ensure tournament exists
+    if not tournament_exists(year):
+        raise ValueError(f"Tournament for year {year} not found in database")
+    
+    # Read teams from database
+    teams_df = read_teams(year)
+    if teams_df.empty:
+        raise ValueError(f"No teams found for year {year}")
+    
+    print(f"  Found {len(teams_df)} teams")
+    
+    # Generate predictions
+    predictions_df = predict_game_outcomes_from_teams_df(
+        teams_df=teams_df,
+        kenpom_scale=kenpom_scale,
+        n_sims=n_sims,
+        seed=seed,
+    )
+    
+    print(f"  Generated {len(predictions_df)} game predictions")
+    
+    # Write to database
+    db_writer = get_db_writer()
+    tournament_key = f"ncaa-tournament-{year}"
+    db_writer.write_predicted_game_outcomes(
+        tournament_key=tournament_key,
+        predictions_df=predictions_df,
+        model_version=model_version,
+    )
+    
+    print(f"✓ Predicted game outcomes written to database")
+    
+    return {
+        "year": year,
+        "n_predictions": len(predictions_df),
+        "model_version": model_version,
+    }
+
+
+def stage_simulate_tournaments(
+    *,
+    year: int,
+    n_sims: int = 5000,
+    seed: int = 42,
+    run_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Simulate tournaments using predictions from database.
+    
+    Args:
+        year: Tournament year
+        n_sims: Number of simulations
+        seed: Random seed
+        run_id: Optional run ID (generated if not provided)
+        
+    Returns:
+        Dictionary with stage results including run_id
+    """
+    print(f"⚙ Simulating tournaments for {year} (n_sims={n_sims})...")
+    
+    # Ensure tournament exists
+    if not tournament_exists(year):
+        raise ValueError(f"Tournament for year {year} not found in database")
+    
+    # Read teams and predictions from database
+    teams_df = read_teams(year)
+    
+    # For now, we'll generate predictions inline if they don't exist
+    # In production, you'd read from silver_predicted_game_outcomes
+    from moneyball.models.predicted_game_outcomes import predict_game_outcomes_from_teams_df
+    predictions_df = predict_game_outcomes_from_teams_df(
+        teams_df=teams_df,
+        kenpom_scale=10.0,
+        n_sims=n_sims,
+        seed=seed,
+    )
+    
+    print(f"  Running {n_sims} simulations...")
+    
+    # Generate simulations
+    simulations_df = simulate_tournaments_from_predictions(
+        predictions_df=predictions_df,
+        teams_df=teams_df,
+        n_sims=n_sims,
+        seed=seed,
+    )
+    
+    print(f"  Generated {len(simulations_df)} simulation results")
+    
+    # Generate run_id if not provided
+    if run_id is None:
+        run_id = str(uuid.uuid4())
+    
+    # Write to database
+    db_writer = get_db_writer()
+    tournament_key = f"ncaa-tournament-{year}"
+    db_writer.write_simulated_tournaments(
+        tournament_key=tournament_key,
+        simulations_df=simulations_df,
+        run_id=run_id,
+    )
+    
+    print(f"✓ Simulated tournaments written to database (run_id={run_id})")
+    
+    return {
+        "year": year,
+        "n_sims": n_sims,
+        "run_id": run_id,
+        "n_results": len(simulations_df),
+    }
+
+
+def stage_recommended_entry_bids(
+    *,
+    year: int,
+    strategy: str = "greedy",
+    budget_points: int = 100,
+    min_teams: int = 3,
+    max_teams: int = 10,
+    min_bid: int = 1,
+    max_bid: int = 50,
+    run_id: Optional[str] = None,
+    calcutta_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Generate recommended entry bids from simulations in database.
+    
+    Args:
+        year: Tournament year
+        strategy: Portfolio strategy (greedy, minlp, etc.)
+        budget_points: Total budget in points
+        min_teams: Minimum number of teams
+        max_teams: Maximum number of teams
+        min_bid: Minimum bid per team
+        max_bid: Maximum bid per team
+        run_id: Simulation run_id to use (uses latest if not provided)
+        calcutta_id: Optional calcutta UUID
+        
+    Returns:
+        Dictionary with stage results including run_id
+    """
+    print(f"⚙ Generating recommended entry bids for {year}...")
+    
+    # Get run_id if not provided
+    if run_id is None:
+        run_id = get_latest_run_id(year)
+        if run_id is None:
+            raise ValueError(f"No simulation runs found for year {year}")
+    
+    print(f"  Using run_id: {run_id}")
+    
+    # Read simulations from database
+    from moneyball.db.readers import read_simulated_tournaments
+    simulations_df = read_simulated_tournaments(year, run_id)
+    
+    if simulations_df.empty:
+        raise ValueError(f"No simulations found for year {year}, run_id {run_id}")
+    
+    print(f"  Found {len(simulations_df)} simulation results")
+    
+    # Generate recommendations
+    recommendations_df = recommend_entry_bids_from_simulations(
+        simulations_df=simulations_df,
+        strategy=strategy,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        min_bid=min_bid,
+        max_bid=max_bid,
+    )
+    
+    print(f"  Generated {len(recommendations_df)} recommendations")
+    
+    # Write to database
+    db_writer = get_db_writer()
+    tournament_key = f"ncaa-tournament-{year}"
+    
+    # Create optimization run record
+    optimization_run_id = str(uuid.uuid4())
+    db_writer.write_optimization_run(
+        tournament_key=tournament_key,
+        run_id=optimization_run_id,
+        strategy=strategy,
+        n_sims=simulations_df['sim_id'].max() + 1,
+        seed=42,  # TODO: track seed properly
+        budget_points=budget_points,
+        calcutta_id=calcutta_id,
+    )
+    
+    # Write recommendations
+    db_writer.write_recommended_entry_bids(
+        run_id=optimization_run_id,
+        recommendations_df=recommendations_df,
+    )
+    
+    print(f"✓ Recommended entry bids written to database (run_id={optimization_run_id})")
+    
+    return {
+        "year": year,
+        "strategy": strategy,
+        "run_id": optimization_run_id,
+        "n_recommendations": len(recommendations_df),
+        "total_bid": recommendations_df['bid_amount_points'].sum(),
+    }
+
+
+def run_full_pipeline(
+    *,
+    year: int,
+    n_sims: int = 5000,
+    seed: int = 42,
+    strategy: str = "greedy",
+    kenpom_scale: float = 10.0,
+    calcutta_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Run the full pipeline for a given year.
+    
+    Args:
+        year: Tournament year
+        n_sims: Number of simulations
+        seed: Random seed
+        strategy: Portfolio strategy
+        kenpom_scale: KenPom scaling factor
+        calcutta_id: Optional calcutta UUID
+        
+    Returns:
+        Dictionary with results from all stages
+    """
+    print(f"\n{'='*60}")
+    print(f"Running full pipeline for {year}")
+    print(f"{'='*60}\n")
+    
+    results = {}
+    
+    # Stage 1: Predicted game outcomes
+    results['predicted_game_outcomes'] = stage_predicted_game_outcomes(
+        year=year,
+        calcutta_id=calcutta_id,
+        kenpom_scale=kenpom_scale,
+        n_sims=n_sims,
+        seed=seed,
+    )
+    
+    # Stage 2: Simulate tournaments
+    results['simulated_tournaments'] = stage_simulate_tournaments(
+        year=year,
+        n_sims=n_sims,
+        seed=seed,
+    )
+    
+    # Stage 3: Recommended entry bids
+    results['recommended_entry_bids'] = stage_recommended_entry_bids(
+        year=year,
+        strategy=strategy,
+        run_id=results['simulated_tournaments']['run_id'],
+        calcutta_id=calcutta_id,
+    )
+    
+    print(f"\n{'='*60}")
+    print(f"Pipeline complete for {year}")
+    print(f"{'='*60}\n")
+    
+    return results

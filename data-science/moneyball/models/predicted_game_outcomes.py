@@ -164,3 +164,87 @@ def predict_game_outcomes_from_snapshot(
         n_sims=n_sims,
         seed=seed,
     )
+
+
+def predict_game_outcomes_from_teams_df(
+    *,
+    teams_df: pd.DataFrame,
+    kenpom_scale: float = 10.0,
+    n_sims: int = 5000,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """
+    Generate game predictions directly from a teams DataFrame.
+    
+    This function generates the bracket structure from teams and then
+    predicts outcomes. Used for DB-first pipeline.
+    
+    Args:
+        teams_df: DataFrame with team data (must have id, school_name, 
+                  seed, region, kenpom_net columns)
+        kenpom_scale: KenPom scaling factor
+        n_sims: Number of simulations
+        seed: Random seed
+        
+    Returns:
+        DataFrame with predicted game outcomes
+    """
+    # Generate bracket structure from teams
+    games = _generate_bracket_from_teams(teams_df)
+    
+    # Add team_key column for compatibility with existing function
+    teams = teams_df.copy()
+    teams['team_key'] = teams['id']
+    
+    return predict_game_outcomes(
+        games=games,
+        teams=teams,
+        calcutta_key=None,
+        kenpom_scale=kenpom_scale,
+        n_sims=n_sims,
+        seed=seed,
+    )
+
+
+def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Generate bracket structure from teams DataFrame.
+    
+    Args:
+        teams_df: DataFrame with team data
+        
+    Returns:
+        DataFrame with game structure
+    """
+    games = []
+    game_id = 1
+    
+    regions = teams_df['region'].unique()
+    
+    for region in sorted(regions):
+        region_teams = teams_df[teams_df['region'] == region].copy()
+        region_teams = region_teams.sort_values('seed')
+        
+        # Round 1 matchups
+        matchups = [
+            (1, 16), (8, 9), (5, 12), (4, 13),
+            (6, 11), (3, 14), (7, 10), (2, 15)
+        ]
+        
+        for seed1, seed2 in matchups:
+            team1 = region_teams[region_teams['seed'] == seed1]
+            team2 = region_teams[region_teams['seed'] == seed2]
+            
+            if len(team1) > 0 and len(team2) > 0:
+                games.append({
+                    'game_id': f'R1-{region}-{seed1}v{seed2}',
+                    'round': 'R64',
+                    'round_order': 1,
+                    'sort_order': game_id,
+                    'team1_key': str(team1.iloc[0]['id']),
+                    'team2_key': str(team2.iloc[0]['id']),
+                    'region': region,
+                })
+                game_id += 1
+    
+    return pd.DataFrame(games)
