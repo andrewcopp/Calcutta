@@ -194,13 +194,22 @@ func (s *Service) getEntries(ctx context.Context, tournamentID string, runID str
 	}
 
 	// Add our simulated entry from gold_recommended_entry_bids
+	// Map bronze_teams IDs to tournament_teams IDs
 	ourQuery := `
-		SELECT team_id, recommended_bid_points
-		FROM gold_recommended_entry_bids
-		WHERE run_id = $1
+		SELECT 
+			tt.id as tournament_team_id,
+			greb.recommended_bid_points
+		FROM gold_recommended_entry_bids greb
+		JOIN bronze_teams bt ON greb.team_id = bt.id
+		JOIN schools s ON bt.school_name = s.name
+		JOIN tournament_teams tt ON tt.school_id = s.id
+		JOIN tournaments t ON tt.tournament_id = t.id
+		JOIN bronze_tournaments btr ON t.name LIKE '%' || btr.season || '%'
+		WHERE greb.run_id = $1
+		  AND btr.id = $2
 	`
 
-	ourRows, err := s.pool.Query(ctx, ourQuery, runID)
+	ourRows, err := s.pool.Query(ctx, ourQuery, runID, tournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -228,11 +237,22 @@ func (s *Service) getEntries(ctx context.Context, tournamentID string, runID str
 }
 
 func (s *Service) getSimulations(ctx context.Context, tournamentID string) (map[int][]TeamSimResult, error) {
+	// Map bronze_teams IDs to tournament_teams IDs via school_id
+	// Simulations use bronze_teams, but entries use tournament_teams
 	query := `
-		SELECT sim_id, team_id, wins
-		FROM silver_simulated_tournaments
-		WHERE tournament_id = $1
-		ORDER BY sim_id, team_id
+		SELECT 
+			sst.sim_id,
+			tt.id as tournament_team_id,
+			sst.wins
+		FROM silver_simulated_tournaments sst
+		JOIN bronze_teams bt ON sst.team_id = bt.id
+		JOIN schools s ON bt.school_name = s.name
+		JOIN tournament_teams tt ON tt.school_id = s.id
+		JOIN tournaments t ON tt.tournament_id = t.id
+		JOIN bronze_tournaments btr ON t.name LIKE '%' || btr.season || '%'
+		WHERE sst.tournament_id = $1
+		  AND btr.id = $1
+		ORDER BY sst.sim_id, tt.id
 	`
 
 	rows, err := s.pool.Query(ctx, query, tournamentID)
@@ -307,6 +327,14 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 		teamPoints[tr.TeamID] = tr.Points
 	}
 
+	// Calculate total bids per team across all entries
+	totalBidsPerTeam := make(map[string]int)
+	for _, entry := range entries {
+		for teamID, bidPoints := range entry.Teams {
+			totalBidsPerTeam[teamID] += bidPoints
+		}
+	}
+
 	// Calculate total points for each entry
 	type entryScore struct {
 		name   string
@@ -318,7 +346,11 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 		totalPoints := 0
 		for teamID, bidPoints := range entry.Teams {
 			if points, ok := teamPoints[teamID]; ok {
-				totalPoints += points * bidPoints / 100 // Proportional ownership
+				totalBids := totalBidsPerTeam[teamID]
+				if totalBids > 0 {
+					// Proportional ownership: (my_bid / total_bids) * team_points
+					totalPoints += points * bidPoints / totalBids
+				}
 			}
 		}
 		scores = append(scores, entryScore{name: entry.Name, points: totalPoints})
