@@ -24,8 +24,8 @@ def write_predicted_game_outcomes(
     Args:
         tournament_id: Tournament ID
         predictions_df: DataFrame with columns:
-            - game_id, round, team1_slug, team2_slug
-            - p_team1_wins, p_matchup
+            - game_id, round, team1_key, team2_key
+            - p_team1_wins_given_matchup, p_matchup
         team_id_map: Dict mapping school_slug to team_id
         model_version: Optional model version
     
@@ -40,10 +40,24 @@ def write_predicted_game_outcomes(
                 WHERE tournament_id = %s
             """, (tournament_id,))
             
-            # Map school slugs to team IDs
+            # Extract school slugs from team keys and map to IDs
             df = predictions_df.copy()
+            df['team1_slug'] = df['team1_key'].str.split(':').str[-1]
+            df['team2_slug'] = df['team2_key'].str.split(':').str[-1]
             df['team1_id'] = df['team1_slug'].map(team_id_map)
             df['team2_id'] = df['team2_slug'].map(team_id_map)
+            
+            # Map round names to inverted integers (championship = 0)
+            round_mapping = {
+                'championship': 0,
+                'final_four': 1,
+                'elite_8': 2,
+                'sweet_16': 3,
+                'round_of_32': 4,
+                'round_of_64': 5,
+                'first_four': 6,
+            }
+            df['round_int'] = df['round'].map(round_mapping)
             
             # Check for unmapped teams
             if df['team1_id'].isna().any() or df['team2_id'].isna().any():
@@ -58,10 +72,11 @@ def write_predicted_game_outcomes(
                 (
                     tournament_id,
                     row['game_id'],
-                    int(row['round']),
+                    int(row['round_int']),
                     int(row['team1_id']),
                     int(row['team2_id']),
-                    float(row['p_team1_wins']),
+                    float(row.get('p_team1_wins_given_matchup',
+                          row.get('p_team1_wins', 0.5))),
                     float(row.get('p_matchup', 1.0)),
                     model_version
                 )
@@ -73,6 +88,13 @@ def write_predicted_game_outcomes(
                 (tournament_id, game_id, round, team1_id, team2_id,
                  p_team1_wins, p_matchup, model_version)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (tournament_id, game_id) DO UPDATE SET
+                    round = EXCLUDED.round,
+                    team1_id = EXCLUDED.team1_id,
+                    team2_id = EXCLUDED.team2_id,
+                    p_team1_wins = EXCLUDED.p_team1_wins,
+                    p_matchup = EXCLUDED.p_matchup,
+                    model_version = EXCLUDED.model_version
             """, values)
             
             conn.commit()
