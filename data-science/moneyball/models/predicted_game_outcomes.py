@@ -208,24 +208,32 @@ def predict_game_outcomes_from_teams_df(
 
 def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Generate bracket structure from teams DataFrame.
+    Generate complete bracket structure from teams DataFrame.
+    
+    Creates all 63 games across 6 rounds:
+    - Round 1 (Round of 64): 32 games with known teams
+    - Round 2 (Round of 32): 16 games (TBD teams)
+    - Round 3 (Sweet 16): 8 games (TBD teams)
+    - Round 4 (Elite 8): 4 games (TBD teams)
+    - Round 5 (Final Four): 2 games (TBD teams)
+    - Round 6 (Championship): 1 game (TBD teams)
     
     Args:
         teams_df: DataFrame with team data
         
     Returns:
-        DataFrame with game structure including next_game_id and next_game_slot
+        DataFrame with complete bracket structure
     """
     games = []
     game_id = 1
     
-    regions = teams_df['region'].unique()
+    regions = sorted(teams_df['region'].unique())
     
-    for region in sorted(regions):
+    # Round 1: 32 games (8 per region) with known teams
+    for region in regions:
         region_teams = teams_df[teams_df['region'] == region].copy()
         region_teams = region_teams.sort_values('seed')
         
-        # Round 1 matchups (8 games per region)
         matchups = [
             (1, 16), (8, 9), (5, 12), (4, 13),
             (6, 11), (3, 14), (7, 10), (2, 15)
@@ -236,25 +244,92 @@ def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
             team2 = region_teams[region_teams['seed'] == seed2]
             
             if len(team1) > 0 and len(team2) > 0:
-                # Calculate next game (Round 2)
                 next_game_num = (idx // 2) + 1
                 next_slot = (idx % 2) + 1
                 
-                # Use school_slug in team_key format
                 team1_key = f"ncaa-tournament-2025:{team1.iloc[0]['school_slug']}"
                 team2_key = f"ncaa-tournament-2025:{team2.iloc[0]['school_slug']}"
                 
                 games.append({
-                    'game_id': f'R1-{region}-{seed1}v{seed2}',
-                    'round': 'round_of_64',  # Use correct round naming
-                    'round_order': 1,
+                    'game_id': f'R1-{region}-{idx+1}',
+                    'round': 'round_of_64',
                     'sort_order': game_id,
                     'team1_key': team1_key,
                     'team2_key': team2_key,
                     'region': region,
-                    'next_game_id': f'R2-{region}-G{next_game_num}',
+                    'next_game_id': f'R2-{region}-{next_game_num}',
                     'next_game_slot': next_slot,
                 })
                 game_id += 1
+    
+    # Round 2: 16 games (4 per region)
+    for region in regions:
+        for game_num in range(1, 5):
+            games.append({
+                'game_id': f'R2-{region}-{game_num}',
+                'round': 'round_of_32',
+                'sort_order': game_id,
+                'team1_key': '',
+                'team2_key': '',
+                'region': region,
+                'next_game_id': f'R3-{region}-{(game_num + 1) // 2}',
+                'next_game_slot': 1 if game_num % 2 == 1 else 2,
+            })
+            game_id += 1
+    
+    # Round 3: 8 games (2 per region) - Sweet 16
+    for region in regions:
+        for game_num in range(1, 3):
+            games.append({
+                'game_id': f'R3-{region}-{game_num}',
+                'round': 'sweet_16',
+                'sort_order': game_id,
+                'team1_key': '',
+                'team2_key': '',
+                'region': region,
+                'next_game_id': f'R4-{region}-1',
+                'next_game_slot': game_num,
+            })
+            game_id += 1
+    
+    # Round 4: 4 games (1 per region) - Elite 8
+    for region in regions:
+        games.append({
+            'game_id': f'R4-{region}-1',
+            'round': 'elite_8',
+            'sort_order': game_id,
+            'team1_key': '',
+            'team2_key': '',
+            'region': region,
+            'next_game_id': f'R5-{regions.index(region) // 2 + 1}',
+            'next_game_slot': 1 if regions.index(region) % 2 == 0 else 2,
+        })
+        game_id += 1
+    
+    # Round 5: 2 games - Final Four
+    for game_num in range(1, 3):
+        games.append({
+            'game_id': f'R5-{game_num}',
+            'round': 'final_four',
+            'sort_order': game_id,
+            'team1_key': '',
+            'team2_key': '',
+            'region': '',
+            'next_game_id': 'R6-1',
+            'next_game_slot': game_num,
+        })
+        game_id += 1
+    
+    # Round 6: 1 game - Championship
+    games.append({
+        'game_id': 'R6-1',
+        'round': 'championship',
+        'sort_order': game_id,
+        'team1_key': '',
+        'team2_key': '',
+        'region': '',
+        'next_game_id': '',
+        'next_game_slot': 0,
+    })
     
     return pd.DataFrame(games)
