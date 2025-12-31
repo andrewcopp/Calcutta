@@ -22,13 +22,13 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     if _pool is None:
         logger.info("Creating database connection pool")
         _pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=1,
-            maxconn=10,
-            host=os.getenv("CALCUTTA_ANALYTICS_DB_HOST", "localhost"),
-            port=int(os.getenv("CALCUTTA_ANALYTICS_DB_PORT", "5433")),
-            database=os.getenv("CALCUTTA_ANALYTICS_DB_NAME", "calcutta_analytics"),
-            user=os.getenv("CALCUTTA_ANALYTICS_DB_USER", "postgres"),
-            password=os.getenv("CALCUTTA_ANALYTICS_DB_PASSWORD", "postgres"),
+            minconn=int(os.getenv("DB_MIN_CONN", "1")),
+            maxconn=int(os.getenv("DB_MAX_CONN", "10")),
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            database=os.getenv("DB_NAME", "calcutta"),
+            user=os.getenv("DB_USER", "calcutta"),
+            password=os.getenv("DB_PASSWORD", "calcutta"),
         )
     return _pool
 

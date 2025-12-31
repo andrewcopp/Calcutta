@@ -50,8 +50,8 @@ class DatabaseWriter:
         if self.enabled:
             # Verify database connection is configured
             required_vars = [
-                "CALCUTTA_ANALYTICS_DB_HOST",
-                "CALCUTTA_ANALYTICS_DB_NAME",
+                "DB_HOST",
+                "DB_NAME",
             ]
             missing = [v for v in required_vars if not os.getenv(v)]
             if missing:

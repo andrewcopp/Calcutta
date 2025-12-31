@@ -15,11 +15,13 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    CALCUTTA_ANALYTICS_DB_HOST: postgres-analytics
-    CALCUTTA_ANALYTICS_DB_PORT: 5432
-    CALCUTTA_ANALYTICS_DB_NAME: calcutta_analytics
-    CALCUTTA_ANALYTICS_DB_USER: postgres
-    CALCUTTA_ANALYTICS_DB_PASSWORD: postgres
+    # Database connection (connects to main Calcutta DB)
+    CALCUTTA_WRITE_TO_DB: 'true'
+    DB_HOST: db
+    DB_PORT: 5432
+    DB_NAME: calcutta
+    DB_USER: calcutta
+    DB_PASSWORD: calcutta
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
@@ -183,3 +185,8 @@ services:
 volumes:
   postgres-airflow-data:
   postgres-analytics-data:
+
+networks:
+  default:
+    name: calcutta_default
+    external: true

@@ -37,6 +37,7 @@ from moneyball.pipeline.artifacts import (
     utc_now_iso,
     write_json,
 )
+from moneyball.pipeline.db_writer import get_db_writer
 
 
 def _list_snapshots_under_out_root(out_root: Path) -> Dict[str, Path]:
@@ -126,6 +127,15 @@ def _stage_predicted_game_outcomes(
     )
 
     df.to_parquet(out_path, index=False)
+
+    # Write to database
+    db_writer = get_db_writer()
+    tournament_key = f"ncaa-tournament-{snapshot_dir.name}"
+    db_writer.write_predicted_game_outcomes(
+        tournament_key=tournament_key,
+        predictions_df=df,
+        model_version="kenpom-v1",
+    )
 
     stage_manifest = {
         "stage_config_hash": sha256_jsonable(stage_config),
@@ -350,6 +360,20 @@ def _stage_recommended_entry_bids(
     ensure_dir(out_path.parent)
     df.to_parquet(out_path, index=False)
 
+    # Write to database
+    db_writer = get_db_writer()
+    # Extract calcutta_key from snapshot_dir or use placeholder
+    calcutta_key_val = f"calcutta-{snapshot_dir.name}"
+    db_writer.write_optimization_results(
+        run_id=out_dir.name,
+        calcutta_key=calcutta_key_val,
+        strategy=strategy,
+        n_sims=5000,  # Default from pipeline
+        seed=42,  # Default from pipeline
+        budget_points=budget_points,
+        recommended_bids_df=df,
+    )
+
     stage_manifest = {
         "stage_config_hash": sha256_jsonable(stage_config),
         "stage_config": stage_config,
@@ -445,6 +469,14 @@ def _stage_simulated_tournaments(
     )
 
     result.to_parquet(out_path, index=False)
+
+    # Write to database
+    db_writer = get_db_writer()
+    tournament_key = f"ncaa-tournament-{snapshot_dir.name}"
+    db_writer.write_simulated_tournaments(
+        tournament_key=tournament_key,
+        simulations_df=result,
+    )
 
     stage_manifest = {
         "stage_config_hash": sha256_jsonable(stage_config),
