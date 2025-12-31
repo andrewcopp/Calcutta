@@ -30,7 +30,7 @@ ops-migrate:
 airflow-up:
 	@echo "Starting Airflow (this may take 30-60 seconds)..."
 	$(DC_AIRFLOW) up -d
-	@echo "Airflow UI: http://localhost:8080 (airflow/airflow)"
+	@echo "Airflow UI: http://localhost:8081 (airflow/airflow)"
 
 airflow-down:
 	$(DC_AIRFLOW) down

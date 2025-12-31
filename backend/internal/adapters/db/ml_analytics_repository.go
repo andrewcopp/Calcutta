@@ -31,12 +31,12 @@ func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year 
 	}
 
 	return &ports.TournamentSimStats{
-		TournamentKey: row.TournamentKey,
-		Season:        int(row.Season),
-		NSims:         int(row.NSims),
-		NTeams:        int(row.NTeams),
-		AvgProgress:   row.AvgProgress,
-		MaxProgress:   int(row.MaxProgress),
+		TournamentID: row.TournamentID,
+		Season:       int(row.Season),
+		NSims:        int(row.NSims),
+		NTeams:       int(row.NTeams),
+		AvgProgress:  row.AvgProgress,
+		MaxProgress:  int(row.MaxProgress),
 	}, nil
 }
 

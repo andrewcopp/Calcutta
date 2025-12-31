@@ -1,302 +1,158 @@
 """
-Bronze layer writers - Raw simulation data.
+Bronze layer database writers.
 
-These functions are called by Go services to write tournament simulations
-and related data directly to Postgres.
+Write raw tournament and simulation data using integer IDs.
 """
 import logging
 import pandas as pd
 import psycopg2.extras
-from typing import Optional
+from typing import Dict
 from moneyball.db.connection import get_db_connection
 
 logger = logging.getLogger(__name__)
 
 
-def write_tournaments(tournaments_df: pd.DataFrame) -> int:
+def get_or_create_tournament(season: int) -> int:
     """
-    Write tournament metadata to bronze_tournaments.
-
+    Get or create tournament by season, return tournament_id.
+    
     Args:
-        tournaments_df: DataFrame with columns:
-            - tournament_key (str)
-            - season (int)
-            - tournament_name (str)
-
+        season: Tournament year (e.g., 2025)
+    
     Returns:
-        Number of rows inserted
+        tournament_id
     """
+    tournament_name = f"NCAA Tournament {season}"
+    
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            values = [
-                (row['tournament_key'], int(row['season']),
-                 row['tournament_name'])
-                for _, row in tournaments_df.iterrows()
-            ]
-
-            psycopg2.extras.execute_batch(cur, """
-                INSERT INTO bronze_tournaments
-                (tournament_key, season, tournament_name)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (tournament_key) DO NOTHING
-            """, values)
-
+            cur.execute("""
+                SELECT id FROM bronze_tournaments
+                WHERE season = %s AND tournament_name = %s
+            """, (season, tournament_name))
+            
+            result = cur.fetchone()
+            if result:
+                return result[0]
+            
+            cur.execute("""
+                INSERT INTO bronze_tournaments (season, tournament_name)
+                VALUES (%s, %s)
+                RETURNING id
+            """, (season, tournament_name))
+            
+            tournament_id = cur.fetchone()[0]
             conn.commit()
-            logger.info(f"Inserted {len(values)} tournaments")
-            return len(values)
+            return tournament_id
 
 
-def write_teams(teams_df: pd.DataFrame) -> int:
+def write_teams(tournament_id: int, teams_df: pd.DataFrame) -> Dict[str, int]:
     """
-    Write team data to bronze_teams.
-
+    Write teams for a tournament, return school_slug -> team_id mapping.
+    
     Args:
+        tournament_id: Tournament ID
         teams_df: DataFrame with columns:
-            - team_key (str)
-            - tournament_key (str)
-            - school_slug (str)
-            - school_name (str)
-            - seed (int)
-            - region (str)
-            - byes (int, optional)
-            - kenpom_net (float, optional)
-            - kenpom_o (float, optional)
-            - kenpom_d (float, optional)
-            - kenpom_adj_t (float, optional)
-
+            - school_slug, school_name, seed, region
+            - byes (optional), kenpom_* (optional)
+    
     Returns:
-        Number of rows inserted
+        Dict mapping school_slug to team_id
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            values = [
-                (
-                    row['team_key'],
-                    row['tournament_key'],
+            team_ids = {}
+            
+            for _, row in teams_df.iterrows():
+                cur.execute("""
+                    INSERT INTO bronze_teams
+                    (tournament_id, school_slug, school_name, seed, region,
+                     byes, kenpom_net, kenpom_o, kenpom_d, kenpom_adj_t)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (tournament_id, school_slug)
+                    DO UPDATE SET
+                        school_name = EXCLUDED.school_name,
+                        seed = EXCLUDED.seed,
+                        region = EXCLUDED.region,
+                        byes = EXCLUDED.byes,
+                        kenpom_net = EXCLUDED.kenpom_net,
+                        kenpom_o = EXCLUDED.kenpom_o,
+                        kenpom_d = EXCLUDED.kenpom_d,
+                        kenpom_adj_t = EXCLUDED.kenpom_adj_t
+                    RETURNING id
+                """, (
+                    tournament_id,
                     row['school_slug'],
                     row['school_name'],
                     int(row['seed']),
                     row['region'],
                     int(row.get('byes', 0)),
-                    float(row['kenpom_net']) if pd.notna(
-                        row.get('kenpom_net')) else None,
-                    float(row['kenpom_o']) if pd.notna(
-                        row.get('kenpom_o')) else None,
-                    float(row['kenpom_d']) if pd.notna(
-                        row.get('kenpom_d')) else None,
-                    float(row['kenpom_adj_t']) if pd.notna(
-                        row.get('kenpom_adj_t')) else None,
-                )
-                for _, row in teams_df.iterrows()
-            ]
-
-            psycopg2.extras.execute_batch(cur, """
-                INSERT INTO bronze_teams
-                (team_key, tournament_key, school_slug, school_name,
-                 seed, region, byes, kenpom_net, kenpom_o, kenpom_d,
-                 kenpom_adj_t)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (team_key) DO UPDATE SET
-                    seed = EXCLUDED.seed,
-                    region = EXCLUDED.region,
-                    byes = EXCLUDED.byes,
-                    kenpom_net = EXCLUDED.kenpom_net,
-                    kenpom_o = EXCLUDED.kenpom_o,
-                    kenpom_d = EXCLUDED.kenpom_d,
-                    kenpom_adj_t = EXCLUDED.kenpom_adj_t
-            """, values)
-
+                    float(row['kenpom_net']) if pd.notna(row.get('kenpom_net')) else None,
+                    float(row['kenpom_o']) if pd.notna(row.get('kenpom_o')) else None,
+                    float(row['kenpom_d']) if pd.notna(row.get('kenpom_d')) else None,
+                    float(row['kenpom_adj_t']) if pd.notna(row.get('kenpom_adj_t')) else None,
+                ))
+                
+                team_id = cur.fetchone()[0]
+                team_ids[row['school_slug']] = team_id
+            
             conn.commit()
-            logger.info(f"Inserted {len(values)} teams")
-            return len(values)
+            return team_ids
 
 
 def write_simulated_tournaments(
-    tournament_key: str,
+    tournament_id: int,
     simulations_df: pd.DataFrame,
-    batch_size: int = 10000
+    team_id_map: Dict[str, int]
 ) -> int:
     """
-    Write simulated tournament outcomes to bronze_simulated_tournaments.
-
-    This is a high-volume table (320K rows per year for 5000 sims).
-    Uses batch inserts for performance.
-
+    Write simulated tournament outcomes.
+    
     Args:
-        tournament_key: Tournament identifier
+        tournament_id: Tournament ID
         simulations_df: DataFrame with columns:
-            - sim_id (int)
-            - team_key (str)
-            - wins (int)
-            - byes (int)
-            - eliminated (bool)
-        batch_size: Number of rows per batch (default: 10000)
-
+            - sim_id, school_slug, wins, byes, eliminated
+        team_id_map: Dict mapping school_slug to team_id
+    
     Returns:
         Number of rows inserted
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Clear existing data for this tournament
+            # Clear existing simulations
             cur.execute("""
                 DELETE FROM bronze_simulated_tournaments
-                WHERE tournament_key = %s
-            """, (tournament_key,))
-
-            # Prepare all values
+                WHERE tournament_id = %s
+            """, (tournament_id,))
+            
+            # Map school_slug to team_id
+            df = simulations_df.copy()
+            df['team_id'] = df['school_slug'].map(team_id_map)
+            
+            # Check for unmapped teams
+            if df['team_id'].isna().any():
+                unmapped = df[df['team_id'].isna()]['school_slug'].unique()
+                raise ValueError(f"Unmapped teams: {list(unmapped)}")
+            
+            # Prepare values
             values = [
                 (
-                    tournament_key,
+                    tournament_id,
                     int(row['sim_id']),
-                    row['team_key'],
+                    int(row['team_id']),
                     int(row['wins']),
                     int(row['byes']),
                     bool(row['eliminated'])
                 )
-                for _, row in simulations_df.iterrows()
+                for _, row in df.iterrows()
             ]
-
-            # Insert in batches
-            total_inserted = 0
-            for i in range(0, len(values), batch_size):
-                batch = values[i:i+batch_size]
-                psycopg2.extras.execute_batch(cur, """
-                    INSERT INTO bronze_simulated_tournaments
-                    (tournament_key, sim_id, team_key, wins, byes,
-                     eliminated)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, batch)
-                total_inserted += len(batch)
-                logger.info(
-                    f"Inserted batch {i//batch_size + 1}: "
-                    f"{total_inserted}/{len(values)} rows"
-                )
-
-            conn.commit()
-            logger.info(
-                f"Completed: Inserted {total_inserted} simulation records"
-            )
-            return total_inserted
-
-
-def write_calcuttas(calcuttas_df: pd.DataFrame) -> int:
-    """
-    Write calcutta metadata to bronze_calcuttas.
-
-    Args:
-        calcuttas_df: DataFrame with columns:
-            - calcutta_key (str)
-            - tournament_key (str)
-            - calcutta_name (str)
-            - budget_points (int, optional, default: 100)
-
-    Returns:
-        Number of rows inserted
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            values = [
-                (
-                    row['calcutta_key'],
-                    row['tournament_key'],
-                    row['calcutta_name'],
-                    int(row.get('budget_points', 100))
-                )
-                for _, row in calcuttas_df.iterrows()
-            ]
-
+            
+            # Batch insert
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO bronze_calcuttas
-                (calcutta_key, tournament_key, calcutta_name, budget_points)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (calcutta_key) DO NOTHING
-            """, values)
-
+                INSERT INTO bronze_simulated_tournaments
+                (tournament_id, sim_id, team_id, wins, byes, eliminated)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, values, page_size=10000)
+            
             conn.commit()
-            logger.info(f"Inserted {len(values)} calcuttas")
-            return len(values)
-
-
-def write_entry_bids(
-    calcutta_key: str,
-    entry_bids_df: pd.DataFrame
-) -> int:
-    """
-    Write actual entry bids to bronze_entry_bids.
-
-    Args:
-        calcutta_key: Calcutta identifier
-        entry_bids_df: DataFrame with columns:
-            - entry_key (str)
-            - team_key (str)
-            - bid_amount (int)
-
-    Returns:
-        Number of rows inserted
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            # Clear existing data for this calcutta
-            cur.execute("""
-                DELETE FROM bronze_entry_bids WHERE calcutta_key = %s
-            """, (calcutta_key,))
-
-            values = [
-                (
-                    calcutta_key,
-                    row['entry_key'],
-                    row['team_key'],
-                    int(row['bid_amount'])
-                )
-                for _, row in entry_bids_df.iterrows()
-            ]
-
-            psycopg2.extras.execute_batch(cur, """
-                INSERT INTO bronze_entry_bids
-                (calcutta_key, entry_key, team_key, bid_amount)
-                VALUES (%s, %s, %s, %s)
-            """, values)
-
-            conn.commit()
-            logger.info(f"Inserted {len(values)} entry bids")
-            return len(values)
-
-
-def write_payouts(calcutta_key: str, payouts_df: pd.DataFrame) -> int:
-    """
-    Write payout structure to bronze_payouts.
-
-    Args:
-        calcutta_key: Calcutta identifier
-        payouts_df: DataFrame with columns:
-            - position (int)
-            - amount_cents (int)
-
-    Returns:
-        Number of rows inserted
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            # Clear existing data for this calcutta
-            cur.execute("""
-                DELETE FROM bronze_payouts WHERE calcutta_key = %s
-            """, (calcutta_key,))
-
-            values = [
-                (
-                    calcutta_key,
-                    int(row['position']),
-                    int(row['amount_cents'])
-                )
-                for _, row in payouts_df.iterrows()
-            ]
-
-            psycopg2.extras.execute_batch(cur, """
-                INSERT INTO bronze_payouts
-                (calcutta_key, position, amount_cents)
-                VALUES (%s, %s, %s)
-            """, values)
-
-            conn.commit()
-            logger.info(f"Inserted {len(values)} payout positions")
             return len(values)

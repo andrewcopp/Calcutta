@@ -32,58 +32,58 @@ type AuthSession struct {
 }
 
 type BronzeCalcutta struct {
-	CalcuttaKey   string
-	TournamentKey string
-	CalcuttaName  string
-	BudgetPoints  int32
-	CreatedAt     pgtype.Timestamp
+	ID           int64
+	TournamentID int64
+	CalcuttaName string
+	BudgetPoints int32
+	CreatedAt    pgtype.Timestamp
 }
 
 type BronzeEntryBid struct {
-	ID          int64
-	CalcuttaKey string
-	EntryKey    string
-	TeamKey     string
-	BidAmount   int32
-	CreatedAt   pgtype.Timestamp
+	ID              int64
+	CalcuttaID      int64
+	TeamID          int64
+	EntryName       string
+	BidAmountPoints int32
+	CreatedAt       pgtype.Timestamp
 }
 
 type BronzePayout struct {
-	ID          int32
-	CalcuttaKey string
-	Position    int32
-	AmountCents int32
-	CreatedAt   pgtype.Timestamp
+	ID           int64
+	CalcuttaID   int64
+	Place        int32
+	PayoutPoints int32
+	CreatedAt    pgtype.Timestamp
 }
 
 type BronzeSimulatedTournament struct {
-	ID            int64
-	TournamentKey string
-	SimID         int32
-	TeamKey       string
-	Wins          int32
-	Byes          int32
-	Eliminated    bool
-	CreatedAt     pgtype.Timestamp
+	ID           int64
+	TournamentID int64
+	SimID        int32
+	TeamID       int64
+	Wins         int32
+	Byes         int32
+	Eliminated   bool
+	CreatedAt    pgtype.Timestamp
 }
 
 type BronzeTeam struct {
-	TeamKey       string
-	TournamentKey string
-	SchoolSlug    string
-	SchoolName    string
-	Seed          int32
-	Region        string
-	Byes          *int32
-	KenpomNet     pgtype.Numeric
-	KenpomO       pgtype.Numeric
-	KenpomD       pgtype.Numeric
-	KenpomAdjT    pgtype.Numeric
-	CreatedAt     pgtype.Timestamp
+	ID           int64
+	TournamentID int64
+	SchoolSlug   string
+	SchoolName   string
+	Seed         int32
+	Region       string
+	Byes         *int32
+	KenpomNet    pgtype.Numeric
+	KenpomO      pgtype.Numeric
+	KenpomD      pgtype.Numeric
+	KenpomAdjT   pgtype.Numeric
+	CreatedAt    pgtype.Timestamp
 }
 
 type BronzeTournament struct {
-	TournamentKey  string
+	ID             int64
 	Season         int32
 	TournamentName string
 	CreatedAt      pgtype.Timestamp
@@ -184,18 +184,15 @@ type CalcuttaRound struct {
 }
 
 type GoldDetailedInvestmentReport struct {
-	ID                    int64
-	RunID                 string
-	TeamKey               string
-	OurBidPoints          int32
-	ExpectedPoints        pgtype.Numeric
-	PredictedMarketPoints pgtype.Numeric
-	ActualMarketPoints    pgtype.Numeric
-	OurOwnership          pgtype.Numeric
-	ExpectedRoi           pgtype.Numeric
-	OurRoi                pgtype.Numeric
-	RoiDegradation        pgtype.Numeric
-	CreatedAt             pgtype.Timestamp
+	ID                   int64
+	RunID                string
+	TeamID               int64
+	ExpectedPoints       pgtype.Numeric
+	ExpectedMarketPoints pgtype.Numeric
+	OurBidPoints         int32
+	OurRoi               pgtype.Numeric
+	RoiDegradation       pgtype.Numeric
+	CreatedAt            pgtype.Timestamp
 }
 
 type GoldEntryPerformance struct {
@@ -231,22 +228,24 @@ type GoldEntrySimulationOutcome struct {
 }
 
 type GoldOptimizationRun struct {
+	ID           int64
 	RunID        string
-	CalcuttaKey  string
+	CalcuttaID   int64
 	Strategy     string
 	NSims        int32
 	Seed         int32
 	BudgetPoints int32
-	RunTimestamp pgtype.Timestamp
 	CreatedAt    pgtype.Timestamp
 }
 
 type GoldRecommendedEntryBid struct {
-	ID              int64
-	RunID           string
-	TeamKey         string
-	BidAmountPoints int32
-	CreatedAt       pgtype.Timestamp
+	ID                   int64
+	RunID                string
+	TeamID               int64
+	RecommendedBidPoints int32
+	ExpectedRoi          pgtype.Numeric
+	AllocationRank       int32
+	CreatedAt            pgtype.Timestamp
 }
 
 type Grant struct {
@@ -295,39 +294,60 @@ type School struct {
 	Slug      string
 }
 
+type SilverEntryPerformance struct {
+	ID                 int64
+	CalcuttaID         int64
+	EntryName          string
+	MeanPayoutPoints   pgtype.Numeric
+	MedianPayoutPoints pgtype.Numeric
+	P10PayoutPoints    pgtype.Numeric
+	P90PayoutPoints    pgtype.Numeric
+	WinProbability     pgtype.Numeric
+	MeanRoi            pgtype.Numeric
+	CreatedAt          pgtype.Timestamp
+}
+
+type SilverEntrySimulationOutcome struct {
+	ID                int64
+	CalcuttaID        int64
+	SimID             int32
+	EntryName         string
+	TotalPointsWon    pgtype.Numeric
+	TotalPayoutPoints pgtype.Numeric
+	Roi               pgtype.Numeric
+	CreatedAt         pgtype.Timestamp
+}
+
 type SilverPredictedGameOutcome struct {
-	ID            int64
-	TournamentKey string
-	GameID        string
-	Round         int32
-	Team1Key      string
-	Team2Key      string
-	PTeam1Wins    pgtype.Numeric
-	PMatchup      pgtype.Numeric
-	ModelVersion  *string
-	CreatedAt     pgtype.Timestamp
+	ID           int64
+	TournamentID int64
+	GameID       string
+	Round        int32
+	Team1ID      int64
+	Team2ID      int64
+	PTeam1Wins   pgtype.Numeric
+	PMatchup     pgtype.Numeric
+	ModelVersion *string
+	CreatedAt    pgtype.Timestamp
 }
 
 type SilverPredictedMarketShare struct {
 	ID                   int64
-	CalcuttaKey          string
-	TeamKey              string
-	PredictedShareOfPool pgtype.Numeric
+	CalcuttaID           int64
+	TeamID               int64
+	PredictedShare       pgtype.Numeric
+	PredictedPricePoints pgtype.Numeric
 	ModelVersion         *string
 	CreatedAt            pgtype.Timestamp
 }
 
 type SilverTeamTournamentValue struct {
 	ID             int64
-	TournamentKey  string
-	TeamKey        string
+	TournamentID   int64
+	TeamID         int64
+	ExpectedWins   pgtype.Numeric
 	ExpectedPoints pgtype.Numeric
-	PChampion      pgtype.Numeric
-	PFinals        pgtype.Numeric
-	PFinalFour     pgtype.Numeric
-	PEliteEight    pgtype.Numeric
-	PSweetSixteen  pgtype.Numeric
-	PRound32       pgtype.Numeric
+	WinProbability pgtype.Numeric
 	CreatedAt      pgtype.Timestamp
 }
 

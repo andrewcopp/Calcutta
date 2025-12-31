@@ -11,19 +11,13 @@ from pathlib import Path
 from typing import Optional
 import pandas as pd
 
-from moneyball.db.writers import (
-    write_tournaments,
+from moneyball.db.writers.bronze_writers import (
+    get_or_create_tournament,
     write_teams,
     write_simulated_tournaments,
-    write_calcuttas,
-    write_entry_bids,
-    write_payouts,
+)
+from moneyball.db.writers.silver_writers import (
     write_predicted_game_outcomes,
-    write_predicted_market_share,
-    write_optimization_run,
-    write_recommended_entry_bids,
-    write_entry_simulation_outcomes,
-    write_entry_performance,
 )
 
 
@@ -118,14 +112,44 @@ class DatabaseWriter:
         *,
         tournament_key: str,
         simulations_df: pd.DataFrame,
+        snapshot_dir: Path = None,
     ) -> None:
         """Write simulated tournaments to database."""
         if not self.enabled:
             return
         
         try:
-            write_simulated_tournaments(tournament_key, simulations_df)
-            print(f"✓ Wrote {len(simulations_df)} simulation records to database")
+            if not snapshot_dir:
+                raise ValueError("snapshot_dir required for ID-based writes")
+            
+            # Extract season from tournament_key
+            season = int(tournament_key.split('-')[-1])
+            
+            # Get or create tournament
+            tournament_id = get_or_create_tournament(season)
+            
+            # Write teams and get ID mapping
+            teams_path = snapshot_dir / "teams.parquet"
+            if not teams_path.exists():
+                raise ValueError(f"Teams file not found: {teams_path}")
+            
+            teams_df = pd.read_parquet(teams_path)
+            team_id_map = write_teams(tournament_id, teams_df)
+            
+            # Extract school_slug from team_key
+            # team_key format: "ncaa-tournament-2025:duke"
+            df = simulations_df.copy()
+            df['school_slug'] = df['team_key'].str.split(':').str[-1]
+            
+            # Add required columns
+            df['byes'] = 1  # Default: all teams get 1 bye
+            df['eliminated'] = df['wins'] < 6  # Champion has 6 wins
+            
+            # Write simulations with ID mapping
+            write_simulated_tournaments(
+                tournament_id, df, team_id_map
+            )
+            print(f"✓ Wrote {len(df)} simulation records to database")
         except Exception as e:
             print(f"⚠ Failed to write simulations: {e}")
     
@@ -135,18 +159,55 @@ class DatabaseWriter:
         tournament_key: str,
         predictions_df: pd.DataFrame,
         model_version: str = None,
+        snapshot_dir: Path = None,
     ) -> None:
         """Write game outcome predictions to database."""
         if not self.enabled:
             return
         
         try:
+            if not snapshot_dir:
+                raise ValueError("snapshot_dir required for ID-based writes")
+            
+            # Extract season and get tournament_id
+            season = int(tournament_key.split('-')[-1])
+            tournament_id = get_or_create_tournament(season)
+            
+            # Get team ID mapping
+            teams_path = snapshot_dir / "teams.parquet"
+            if not teams_path.exists():
+                raise ValueError(f"Teams file not found: {teams_path}")
+            
+            teams_df = pd.read_parquet(teams_path)
+            team_id_map = write_teams(tournament_id, teams_df)
+            
+            # Transform data
+            df = predictions_df.copy()
+            
+            # Map round names to inverted integers (championship = 0)
+            round_mapping = {
+                'championship': 0,
+                'final_four': 1,
+                'elite_8': 2,
+                'sweet_16': 3,
+                'round_of_32': 4,
+                'round_of_64': 5,
+                'first_four': 6,
+            }
+            df['round'] = df['round'].map(round_mapping)
+            
+            # Rename columns and extract school slugs from team keys
+            if 'p_team1_wins_given_matchup' in df.columns:
+                df['p_team1_wins'] = df['p_team1_wins_given_matchup']
+            
+            # Extract school_slug from team_key (format: "ncaa-tournament-2025:duke")
+            df['team1_slug'] = df['team1_key'].str.split(':').str[-1]
+            df['team2_slug'] = df['team2_key'].str.split(':').str[-1]
+            
             write_predicted_game_outcomes(
-                tournament_key,
-                predictions_df,
-                model_version=model_version
+                tournament_id, df, team_id_map, model_version
             )
-            print(f"✓ Wrote {len(predictions_df)} game predictions to database")
+            print(f"✓ Wrote {len(df)} game predictions to database")
         except Exception as e:
             print(f"⚠ Failed to write game predictions: {e}")
     

@@ -135,6 +135,7 @@ def _stage_predicted_game_outcomes(
         tournament_key=tournament_key,
         predictions_df=df,
         model_version="kenpom-v1",
+        snapshot_dir=snapshot_dir,
     )
 
     stage_manifest = {
@@ -476,6 +477,7 @@ def _stage_simulated_tournaments(
     db_writer.write_simulated_tournaments(
         tournament_key=tournament_key,
         simulations_df=result,
+        snapshot_dir=snapshot_dir,
     )
 
     stage_manifest = {
