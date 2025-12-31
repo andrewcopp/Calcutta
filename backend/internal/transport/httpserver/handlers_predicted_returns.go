@@ -62,14 +62,14 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 			SELECT 
 				team_id,
 				SUM(sim_count)::float as total_sims,
-				-- Probability of reaching each round (cumulative)
-				SUM(CASE WHEN wins >= 0 THEN sim_count ELSE 0 END)::float as reach_pi,
-				SUM(CASE WHEN wins >= 1 THEN sim_count ELSE 0 END)::float as reach_r64,
-				SUM(CASE WHEN wins >= 2 THEN sim_count ELSE 0 END)::float as reach_r32,
-				SUM(CASE WHEN wins >= 3 THEN sim_count ELSE 0 END)::float as reach_s16,
-				SUM(CASE WHEN wins >= 4 THEN sim_count ELSE 0 END)::float as reach_e8,
-				SUM(CASE WHEN wins >= 5 THEN sim_count ELSE 0 END)::float as reach_ff,
-				SUM(CASE WHEN wins >= 6 THEN sim_count ELSE 0 END)::float as reach_champ
+				-- Probability of winning each specific round (not cumulative)
+				SUM(CASE WHEN wins = 0 THEN sim_count ELSE 0 END)::float as win_pi,
+				SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
+				SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
+				SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
+				SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
+				SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
+				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
 			FROM team_win_counts
 			GROUP BY team_id
 		)
@@ -78,21 +78,21 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 			t.school_name,
 			t.seed,
 			t.region,
-			COALESCE(tp.reach_pi / NULLIF(tp.total_sims, 0), 0) as prob_pi,
-			COALESCE(tp.reach_r64 / NULLIF(tp.total_sims, 0), 0) as prob_r64,
-			COALESCE(tp.reach_r32 / NULLIF(tp.total_sims, 0), 0) as prob_r32,
-			COALESCE(tp.reach_s16 / NULLIF(tp.total_sims, 0), 0) as prob_s16,
-			COALESCE(tp.reach_e8 / NULLIF(tp.total_sims, 0), 0) as prob_e8,
-			COALESCE(tp.reach_ff / NULLIF(tp.total_sims, 0), 0) as prob_ff,
-			COALESCE(tp.reach_champ / NULLIF(tp.total_sims, 0), 0) as prob_champ,
-			-- Expected value calculation (cumulative points)
-			-- 0 for PI, 50 for R32, 150 for S16, 300 for E8, 500 for FF, 750 for Champ, 1050 for Winner
-			(COALESCE(tp.reach_r32 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-			 COALESCE(tp.reach_s16 / NULLIF(tp.total_sims, 0), 0) * 100 + 
-			 COALESCE(tp.reach_e8 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-			 COALESCE(tp.reach_ff / NULLIF(tp.total_sims, 0), 0) * 200 + 
-			 COALESCE(tp.reach_champ / NULLIF(tp.total_sims, 0), 0) * 250 + 
-			 COALESCE(tp.reach_champ / NULLIF(tp.total_sims, 0), 0) * 300) as expected_value
+			COALESCE(tp.win_pi / NULLIF(tp.total_sims, 0), 0) as prob_pi,
+			COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) as prob_r64,
+			COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) as prob_r32,
+			COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) as prob_s16,
+			COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) as prob_e8,
+			COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) as prob_ff,
+			COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) as prob_champ,
+			-- Expected value calculation (points per round)
+			-- 0 for PI, 50 for R64, 150 for R32, 300 for S16, 500 for E8, 750 for FF, 1050 for Champ
+			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
+			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
+			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
+			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
+			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
+			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_value
 		FROM bronze_teams t
 		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
