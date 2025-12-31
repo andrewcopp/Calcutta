@@ -40,7 +40,7 @@ func (s *Server) handleGetTournamentSimStats(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// handleGetTeamPerformance handles GET /tournaments/{year}/teams/{team_key}/performance
+// handleGetTeamPerformance handles GET /tournaments/{year}/teams/{team_id}/performance
 func (s *Server) handleGetTeamPerformance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -49,9 +49,13 @@ func (s *Server) handleGetTeamPerformance(w http.ResponseWriter, r *http.Request
 		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
 		return
 	}
-	teamKey := vars["team_key"]
+	teamID, err := strconv.ParseInt(vars["team_id"], 10, 64)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid team_id parameter", "team_id")
+		return
+	}
 
-	perf, err := s.app.MLAnalytics.GetTeamPerformance(ctx, year, teamKey)
+	perf, err := s.app.MLAnalytics.GetTeamPerformance(ctx, year, teamID)
 	if err != nil {
 		log.Printf("Error getting team performance: %v", err)
 		writeErrorFromErr(w, r, err)
@@ -64,7 +68,7 @@ func (s *Server) handleGetTeamPerformance(w http.ResponseWriter, r *http.Request
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"team_key":           perf.TeamKey,
+		"team_id":            perf.TeamID,
 		"school_name":        perf.SchoolName,
 		"seed":               perf.Seed,
 		"region":             perf.Region,
@@ -72,12 +76,6 @@ func (s *Server) handleGetTeamPerformance(w http.ResponseWriter, r *http.Request
 		"total_sims":         perf.TotalSims,
 		"avg_wins":           perf.AvgWins,
 		"avg_points":         perf.AvgPoints,
-		"p_champion":         perf.PChampion,
-		"p_finals":           perf.PFinals,
-		"p_final_four":       perf.PFinalFour,
-		"p_elite_eight":      perf.PEliteEight,
-		"p_sweet_sixteen":    perf.PSweetSixteen,
-		"p_round_32":         perf.PRound32,
 		"round_distribution": perf.RoundDistribution,
 	})
 }
@@ -108,15 +106,11 @@ func (s *Server) handleGetTeamPredictions(w http.ResponseWriter, r *http.Request
 	teams := make([]map[string]interface{}, len(predictions))
 	for i, pred := range predictions {
 		teams[i] = map[string]interface{}{
-			"team_key":                pred.TeamKey,
-			"school_name":             pred.SchoolName,
-			"seed":                    pred.Seed,
-			"region":                  pred.Region,
-			"expected_points":         pred.ExpectedPoints,
-			"predicted_market_share":  pred.PredictedMarketShare,
-			"predicted_market_points": pred.PredictedMarketPoints,
-			"p_champion":              pred.PChampion,
-			"kenpom_net":              pred.KenpomNet,
+			"team_id":     pred.TeamID,
+			"school_name": pred.SchoolName,
+			"seed":        pred.Seed,
+			"region":      pred.Region,
+			"kenpom_net":  pred.KenpomNet,
 		}
 	}
 
@@ -152,30 +146,24 @@ func (s *Server) handleGetOurEntryDetails(w http.ResponseWriter, r *http.Request
 	portfolio := make([]map[string]interface{}, len(details.Portfolio))
 	for i, bid := range details.Portfolio {
 		portfolio[i] = map[string]interface{}{
-			"team_key":                bid.TeamKey,
-			"school_name":             bid.SchoolName,
-			"seed":                    bid.Seed,
-			"region":                  bid.Region,
-			"bid_amount_points":       bid.BidAmountPoints,
-			"expected_points":         bid.ExpectedPoints,
-			"predicted_market_points": bid.PredictedMarketPoints,
-			"actual_market_points":    bid.ActualMarketPoints,
-			"our_ownership":           bid.OurOwnership,
-			"expected_roi":            bid.ExpectedROI,
-			"our_roi":                 bid.OurROI,
-			"roi_degradation":         bid.ROIDegradation,
+			"team_id":                bid.TeamID,
+			"school_name":            bid.SchoolName,
+			"seed":                   bid.Seed,
+			"region":                 bid.Region,
+			"recommended_bid_points": bid.RecommendedBidPoints,
+			"expected_roi":           bid.ExpectedROI,
 		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"run": map[string]interface{}{
 			"run_id":        details.Run.RunID,
-			"calcutta_key":  details.Run.CalcuttaKey,
+			"calcutta_id":   details.Run.CalcuttaID,
 			"strategy":      details.Run.Strategy,
 			"n_sims":        details.Run.NSims,
 			"seed":          details.Run.Seed,
 			"budget_points": details.Run.BudgetPoints,
-			"run_timestamp": details.Run.RunTimestamp,
+			"created_at":    details.Run.CreatedAt,
 		},
 		"portfolio": portfolio,
 		"summary": map[string]interface{}{
@@ -345,11 +333,11 @@ func (s *Server) handleGetEntryPortfolio(w http.ResponseWriter, r *http.Request)
 	teams := make([]map[string]interface{}, len(portfolio.Teams))
 	for i, team := range portfolio.Teams {
 		teams[i] = map[string]interface{}{
-			"team_key":    team.TeamKey,
-			"school_name": team.SchoolName,
-			"seed":        team.Seed,
-			"region":      team.Region,
-			"bid_amount":  team.BidAmount,
+			"team_id":           team.TeamID,
+			"school_name":       team.SchoolName,
+			"seed":              team.Seed,
+			"region":            team.Region,
+			"bid_amount_points": team.BidAmountPoints,
 		}
 	}
 
@@ -382,12 +370,12 @@ func (s *Server) handleGetOptimizationRuns(w http.ResponseWriter, r *http.Reques
 	for i, run := range runs {
 		runsData[i] = map[string]interface{}{
 			"run_id":        run.RunID,
-			"calcutta_key":  run.CalcuttaKey,
+			"calcutta_id":   run.CalcuttaID,
 			"strategy":      run.Strategy,
 			"n_sims":        run.NSims,
 			"seed":          run.Seed,
 			"budget_points": run.BudgetPoints,
-			"run_timestamp": run.RunTimestamp,
+			"created_at":    run.CreatedAt,
 		}
 	}
 
