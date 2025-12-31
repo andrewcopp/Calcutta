@@ -354,12 +354,17 @@ def stage_recommended_entry_bids(
         data_science_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
         env['PYTHONPATH'] = data_science_root
         
+        # Use venv Python explicitly
+        venv_python = os.path.join(data_science_root, '.venv', 'bin', 'python')
+        python_executable = venv_python if os.path.exists(venv_python) else sys.executable
+        
         # Run the standalone script
         result = subprocess.run(
-            [sys.executable, script_path, str(year)],
+            [python_executable, script_path, str(year)],
             capture_output=True,
             text=True,
             env=env,
+            cwd=data_science_root,
         )
         
         if result.returncode != 0:
