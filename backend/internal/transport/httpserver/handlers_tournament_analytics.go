@@ -3,6 +3,7 @@ package httpserver
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -62,14 +63,14 @@ func (s *Server) handleGetTournamentSimStatsByID(w http.ResponseWriter, r *http.
 	`
 
 	var stats struct {
-		TournamentID     string  `db:"tournament_id"`
-		Season           int     `db:"season"`
-		TotalSimulations int     `db:"total_simulations"`
-		TotalPredictions int     `db:"total_predictions"`
-		MeanWins         float64 `db:"mean_wins"`
-		MedianWins       float64 `db:"median_wins"`
-		MaxWins          int     `db:"max_wins"`
-		LastUpdated      string  `db:"last_updated"`
+		TournamentID     string    `db:"tournament_id"`
+		Season           int       `db:"season"`
+		TotalSimulations int       `db:"total_simulations"`
+		TotalPredictions int       `db:"total_predictions"`
+		MeanWins         float64   `db:"mean_wins"`
+		MedianWins       float64   `db:"median_wins"`
+		MaxWins          int       `db:"max_wins"`
+		LastUpdated      time.Time `db:"last_updated"`
 	}
 
 	err := s.pool.QueryRow(ctx, query, tournamentID).Scan(

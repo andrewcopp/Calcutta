@@ -26,6 +26,9 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 	})
 	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
 	r.HandleFunc("/api/ready", s.readyHandler).Methods("GET")
+
+	// ML Analytics (public read-only endpoints)
+	s.registerMLAnalyticsRoutes(r)
 }
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
@@ -35,7 +38,6 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	s.registerPortfolioRoutes(r)
 	s.registerCalcuttaRoutes(r)
 	s.registerAnalyticsRoutes(r)
-	s.registerMLAnalyticsRoutes(r)
 	s.registerHallOfFameRoutes(r)
 }
 
