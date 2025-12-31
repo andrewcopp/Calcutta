@@ -154,11 +154,11 @@ type TeamSimResult struct {
 func (s *Service) getEntries(ctx context.Context, tournamentID string, runID string, excludedEntry string) (map[string]*Entry, error) {
 	// Get actual entries from calcutta_entries via tournaments -> calcuttas
 	// Navigate: bronze_tournaments -> tournaments -> calcuttas -> calcutta_entries -> calcutta_entry_teams
-	// Use entry_id as the unique identifier (one user can have multiple entries)
+	// Use entry name from calcutta_entries.name (human-readable)
 	// Exclude by entry_id if provided (format: UUID string)
 	query := `
 		SELECT 
-			ce.id::text as entry_name,
+			ce.name as entry_name,
 			cet.team_id,
 			cet.bid as bid_points
 		FROM calcutta_entry_teams cet
