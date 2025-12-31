@@ -10,10 +10,10 @@ These tests verify that:
 import unittest
 
 
-class TestExpectedValueCalculation(unittest.TestCase):
+class TestThatExpectedValueCalculationIsCorrect(unittest.TestCase):
     """Test expected value calculations for NCAA tournament."""
-    
-    def test_guaranteed_champion_ev(self):
+
+    def test_that_guaranteed_champion_has_ev_of_1050(self) -> None:
         """A team that always wins championship should have EV = 1050."""
         # Team wins 6 games in all simulations
         wins_distribution = {
@@ -29,7 +29,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         ev = self._calculate_ev(wins_distribution)
         self.assertAlmostEqual(ev, 1050.0, places=2)
     
-    def test_guaranteed_r64_elimination_ev(self):
+    def test_that_guaranteed_r64_elimination_has_ev_of_50(self) -> None:
         """A team that always loses in R64 should have EV = 50."""
         # Team wins 1 game in all simulations
         wins_distribution = {
@@ -45,7 +45,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         ev = self._calculate_ev(wins_distribution)
         self.assertAlmostEqual(ev, 50.0, places=2)
     
-    def test_guaranteed_first_round_loss_ev(self):
+    def test_that_guaranteed_first_round_loss_has_ev_of_zero(self) -> None:
         """A team that always loses first game should have EV = 0."""
         # Team wins 0 games in all simulations
         wins_distribution = {
@@ -61,7 +61,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         ev = self._calculate_ev(wins_distribution)
         self.assertAlmostEqual(ev, 0.0, places=2)
     
-    def test_fifty_fifty_r64_vs_r32_ev(self):
+    def test_that_fifty_fifty_r64_vs_r32_has_ev_of_100(self) -> None:
         """A team with 50% R64, 50% R32 should have EV = 100."""
         wins_distribution = {
             0: 0,
@@ -78,7 +78,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         self.assertAlmostEqual(ev, expected, places=2)
         self.assertAlmostEqual(ev, 100.0, places=2)
     
-    def test_uniform_distribution_ev(self):
+    def test_that_uniform_distribution_has_ev_of_400(self) -> None:
         """Test EV with uniform distribution across all outcomes."""
         # Equal probability for each outcome
         prob = 1.0 / 7
@@ -97,7 +97,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         self.assertAlmostEqual(ev, expected, places=2)
         self.assertAlmostEqual(ev, 400.0, places=2)
     
-    def test_realistic_one_seed_ev(self):
+    def test_that_realistic_one_seed_ev_is_reasonable(self) -> None:
         """Test EV for a realistic 1-seed distribution."""
         # Approximate distribution for a strong 1-seed
         wins_distribution = {
@@ -129,7 +129,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         self.assertGreater(ev, 300)
         self.assertLess(ev, 400)
     
-    def test_ev_never_exceeds_max(self):
+    def test_that_ev_never_exceeds_max_of_1050(self) -> None:
         """EV should never exceed 1050 (max possible points)."""
         # Even with impossible probabilities, EV should be capped
         wins_distribution = {
@@ -145,7 +145,7 @@ class TestExpectedValueCalculation(unittest.TestCase):
         ev = self._calculate_ev(wins_distribution)
         self.assertLessEqual(ev, 1050.0)
     
-    def test_ev_never_negative(self):
+    def test_that_ev_is_never_negative(self) -> None:
         """EV should never be negative."""
         wins_distribution = {
             0: 1.0,  # 100% first round loss
@@ -191,10 +191,10 @@ class TestExpectedValueCalculation(unittest.TestCase):
         return ev
 
 
-class TestProbabilityNormalization(unittest.TestCase):
+class TestThatProbabilitiesAreNormalized(unittest.TestCase):
     """Test that probabilities are properly normalized."""
-    
-    def test_probabilities_sum_to_one(self):
+
+    def test_that_probabilities_sum_to_one(self) -> None:
         """All win probabilities for a team should sum to 1.0."""
         # Simulate a team's win distribution
         wins_distribution = {
@@ -210,7 +210,7 @@ class TestProbabilityNormalization(unittest.TestCase):
         total = sum(wins_distribution.values())
         self.assertAlmostEqual(total, 1.0, places=6)
     
-    def test_no_probability_exceeds_one(self):
+    def test_that_no_probability_exceeds_one(self) -> None:
         """No single outcome should have probability > 1.0."""
         wins_distribution = {
             0: 0.1,
@@ -223,14 +223,18 @@ class TestProbabilityNormalization(unittest.TestCase):
         }
         
         for wins, prob in wins_distribution.items():
-            self.assertLessEqual(prob, 1.0, f"Probability for {wins} wins exceeds 1.0")
-            self.assertGreaterEqual(prob, 0.0, f"Probability for {wins} wins is negative")
+            self.assertLessEqual(
+                prob, 1.0, f"Probability for {wins} wins exceeds 1.0"
+            )
+            self.assertGreaterEqual(
+                prob, 0.0, f"Probability for {wins} wins is negative"
+            )
 
 
-class TestNCAAPointValues(unittest.TestCase):
+class TestThatNCAAPointValuesAreCorrect(unittest.TestCase):
     """Test that NCAA tournament point values are correct."""
-    
-    def test_point_values_match_ncaa_scoring(self):
+
+    def test_that_point_values_match_ncaa_scoring(self) -> None:
         """Verify point values match standard NCAA tournament scoring."""
         # Standard NCAA tournament scoring (cumulative)
         expected_points = {
@@ -245,10 +249,13 @@ class TestNCAAPointValues(unittest.TestCase):
         
         # These should match the backend SQL calculation
         for wins, points in expected_points.items():
-            self.assertEqual(points, expected_points[wins],
-                           f"Points for {wins} wins should be {points}")
+            self.assertEqual(
+                points,
+                expected_points[wins],
+                f"Points for {wins} wins should be {points}",
+            )
     
-    def test_incremental_points_per_round(self):
+    def test_that_incremental_points_per_round_are_correct(self) -> None:
         """Verify incremental points awarded per round."""
         incremental_points = {
             1: 50,   # R64
