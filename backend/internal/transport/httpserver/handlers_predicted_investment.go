@@ -29,9 +29,10 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 		return
 	}
 
-	// Query to calculate investment metrics for each team
-	// For now, Naive and Edge are both set to EV, Delta is 0
-	// In the future, Edge will incorporate market inefficiencies
+	// Query to get predicted market investment from ridge regression model
+	// Naive = ML model prediction of market investment
+	// Edge = Same as naive for now (will incorporate market inefficiencies later)
+	// Delta = Edge - Naive (currently 0)
 	query := `
 		WITH main_tournament AS (
 			SELECT 
@@ -41,56 +42,39 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			WHERE id = $1
 		),
 		bronze_tournament AS (
-			SELECT id
+			SELECT id, tournament_key
 			FROM bronze_tournaments
 			WHERE season = (SELECT season FROM main_tournament)
 		),
-		team_win_counts AS (
-			SELECT 
-				st.team_id,
-				st.wins,
-				COUNT(*) as sim_count
-			FROM silver_simulated_tournaments st
-			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
-			GROUP BY st.team_id, st.wins
+		latest_calcutta AS (
+			SELECT calcutta_key
+			FROM bronze_calcuttas
+			WHERE tournament_key = (SELECT tournament_key FROM bronze_tournament)
+			ORDER BY created_at DESC
+			LIMIT 1
 		),
-		team_probabilities AS (
-			SELECT 
-				team_id,
-				SUM(sim_count)::float as total_sims,
-				-- Probability of winning each specific round (not cumulative)
-				SUM(CASE WHEN wins = 0 THEN sim_count ELSE 0 END)::float as win_pi,
-				SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
-				SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
-				SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
-				SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
-				SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
-				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
-			FROM team_win_counts
-			GROUP BY team_id
+		entry_count AS (
+			SELECT COUNT(*) as num_entries
+			FROM bronze_entries
+			WHERE calcutta_key = (SELECT calcutta_key FROM latest_calcutta)
+		),
+		total_pool AS (
+			SELECT (SELECT num_entries FROM entry_count) * 100.0 as pool_size
 		)
 		SELECT 
 			t.id as team_id,
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Naive: Predicted market investment (proportional share of 6800 point pool)
-			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
-			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
-			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) / 6000.0 * 6800.0 as naive,
+			-- Naive: ML model prediction of market share × total pool
+			COALESCE(spms.predicted_share_of_pool, 0.0) * (SELECT pool_size FROM total_pool) as naive,
 			0.0 as delta,  -- For now, delta is always 0
-			-- Edge is same as naive for now (will incorporate market inefficiencies later)
-			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
-			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
-			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) / 6000.0 * 6800.0 as edge
+			-- Edge: Same as naive for now (will incorporate market inefficiencies later)
+			COALESCE(spms.predicted_share_of_pool, 0.0) * (SELECT pool_size FROM total_pool) as edge
 		FROM bronze_teams t
-		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
+		LEFT JOIN latest_calcutta lc ON true
+		LEFT JOIN silver_predicted_market_share spms 
+			ON spms.calcutta_key = lc.calcutta_key AND spms.team_key = t.school_slug
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 		ORDER BY naive DESC, t.seed ASC
 	`

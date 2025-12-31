@@ -32,7 +32,7 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 	}
 
 	// Query to calculate simulated entry metrics for each team
-	// Uses Naive from predicted-investment as expected_market
+	// Uses ridge regression predictions from silver_predicted_market_share for expected_market
 	// Reads Our Bid from gold_recommended_entry_bids if available (from MINLP optimizer)
 	query := `
 		WITH main_tournament AS (
@@ -43,9 +43,24 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 			WHERE id = $1
 		),
 		bronze_tournament AS (
-			SELECT id
+			SELECT id, tournament_key
 			FROM bronze_tournaments
 			WHERE season = (SELECT season FROM main_tournament)
+		),
+		latest_calcutta AS (
+			SELECT calcutta_key
+			FROM bronze_calcuttas
+			WHERE tournament_key = (SELECT tournament_key FROM bronze_tournament)
+			ORDER BY created_at DESC
+			LIMIT 1
+		),
+		entry_count AS (
+			SELECT COUNT(*) as num_entries
+			FROM bronze_entries
+			WHERE calcutta_key = (SELECT calcutta_key FROM latest_calcutta)
+		),
+		total_pool AS (
+			SELECT (SELECT num_entries FROM entry_count) * 100.0 as pool_size
 		),
 		team_win_counts AS (
 			SELECT 
@@ -88,18 +103,15 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
 			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_points,
-			-- Expected market: proportional share of total pool (68 entries * 100 points = 6800)
-			-- Each team gets (their EV / total EV) * 6800
-			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
-			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
-			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) / 6000.0 * 6800.0 as expected_market,
+			-- Expected market: ML model prediction × total pool (based on actual entry count)
+			COALESCE(spms.predicted_share_of_pool, 0.0) * (SELECT pool_size FROM total_pool) as expected_market,
 			-- Our bid from MINLP optimizer (0 if not available)
 			COALESCE(reb.recommended_bid_points, 0.0) as our_bid
 		FROM bronze_teams t
 		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
+		LEFT JOIN latest_calcutta lc ON true
+		LEFT JOIN silver_predicted_market_share spms 
+			ON spms.calcutta_key = lc.calcutta_key AND spms.team_key = t.school_slug
 		LEFT JOIN latest_optimization lo ON true
 		LEFT JOIN gold_recommended_entry_bids reb ON reb.run_id = lo.run_id AND reb.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
