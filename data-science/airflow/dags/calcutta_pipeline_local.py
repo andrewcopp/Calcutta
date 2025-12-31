@@ -1,8 +1,8 @@
 """
-Calcutta Analytics Pipeline - Local Development
+Calcutta Analytics Pipeline - DB-First Architecture
 
-Simplified DAG for local testing that uses the moneyball CLI directly.
-Writes to both parquet (for debugging) and database (for API serving).
+Pipeline that uses PostgreSQL as the primary data source.
+No parquet file dependencies - all data flows through the database.
 """
 from datetime import datetime, timedelta
 from airflow import DAG
@@ -20,18 +20,18 @@ default_args = {
 dag = DAG(
     'calcutta_pipeline_local',
     default_args=default_args,
-    description='Local Calcutta analytics pipeline with database writes',
+    description='DB-first Calcutta analytics pipeline',
     schedule_interval=None,  # Manual trigger
     start_date=datetime(2025, 1, 1),
     catchup=False,
-    tags=['calcutta', 'local', 'development'],
+    tags=['calcutta', 'local', 'development', 'db-first'],
 )
 
 # Configuration from DAG run
 YEAR = '{{ dag_run.conf.get("year", "2025") }}'
 N_SIMS = '{{ dag_run.conf.get("n_sims", "5000") }}'
 SEED = '{{ dag_run.conf.get("seed", "42") }}'
-STRATEGY = '{{ dag_run.conf.get("strategy", "minlp") }}'
+STRATEGY = '{{ dag_run.conf.get("strategy", "greedy") }}'
 
 # Base command with environment
 BASE_CMD = """
@@ -43,21 +43,16 @@ export DB_USER=calcutta
 export DB_PASSWORD=calcutta
 """
 
-# Run full pipeline with all stages
+# Run full pipeline using DB-first CLI
 run_pipeline = BashOperator(
     task_id='run_full_pipeline',
     bash_command=f"""
 {BASE_CMD}
-# Create snapshot directory if it doesn't exist
-mkdir -p /tmp/out/{YEAR}
-
-# Run each stage of the pipeline
-python -m moneyball.cli predicted-game-outcomes /tmp/out/{YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
-python -m moneyball.cli simulate-tournaments /tmp/out/{YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
-python -m moneyball.cli predicted-auction-share-of-pool /tmp/out/{YEAR} && \\
-python -m moneyball.cli recommended-entry-bids /tmp/out/{YEAR} --strategy {STRATEGY} && \\
-python -m moneyball.cli simulated-entry-outcomes /tmp/out/{YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
-python -m moneyball.cli investment-report /tmp/out/{YEAR}
+# Run the full DB-first pipeline
+python -m moneyball.cli_db full-pipeline {YEAR} \\
+    --n-sims {N_SIMS} \\
+    --seed {SEED} \\
+    --strategy {STRATEGY}
     """,
     dag=dag,
 )
