@@ -40,8 +40,8 @@ func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year 
 	}, nil
 }
 
-func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int, teamKey string) (*ports.TeamPerformance, error) {
-	row, err := r.q.GetTeamPerformanceByKey(ctx, teamKey)
+func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int, teamID int64) (*ports.TeamPerformance, error) {
+	row, err := r.q.GetTeamPerformanceByID(ctx, teamID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -56,7 +56,7 @@ func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int
 	}
 
 	return &ports.TeamPerformance{
-		TeamKey:           row.TeamKey,
+		TeamID:            row.TeamID,
 		SchoolName:        row.SchoolName,
 		Seed:              int(row.Seed),
 		Region:            row.Region,
@@ -64,12 +64,6 @@ func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int
 		TotalSims:         int(row.TotalSims),
 		AvgWins:           row.AvgWins,
 		AvgPoints:         row.AvgPoints,
-		PChampion:         floatPtrFromPgNumeric(row.PChampion),
-		PFinals:           floatPtrFromPgNumeric(row.PFinals),
-		PFinalFour:        floatPtrFromPgNumeric(row.PFinalFour),
-		PEliteEight:       floatPtrFromPgNumeric(row.PEliteEight),
-		PSweetSixteen:     floatPtrFromPgNumeric(row.PSweetSixteen),
-		PRound32:          floatPtrFromPgNumeric(row.PRound32),
 		RoundDistribution: roundDist,
 	}, nil
 }
@@ -83,15 +77,11 @@ func (r *MLAnalyticsRepository) GetTeamPredictions(ctx context.Context, year int
 	out := make([]ports.TeamPrediction, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.TeamPrediction{
-			TeamKey:               row.TeamKey,
-			SchoolName:            row.SchoolName,
-			Seed:                  int(row.Seed),
-			Region:                row.Region,
-			ExpectedPoints:        floatFromPgNumeric(row.ExpectedPoints),
-			PredictedMarketShare:  floatFromPgNumeric(row.PredictedMarketShare),
-			PredictedMarketPoints: row.PredictedMarketPoints,
-			PChampion:             floatPtrFromPgNumeric(row.PChampion),
-			KenpomNet:             floatPtrFromPgNumeric(row.KenpomNet),
+			TeamID:     row.TeamID,
+			SchoolName: row.SchoolName,
+			Seed:       int(row.Seed),
+			Region:     row.Region,
+			KenpomNet:  floatPtrFromPgNumeric(row.KenpomNet),
 		})
 	}
 
@@ -110,12 +100,12 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 
 	run := ports.OptimizationRun{
 		RunID:        runRow.RunID,
-		CalcuttaKey:  runRow.CalcuttaKey,
+		CalcuttaID:   runRow.CalcuttaID,
 		Strategy:     runRow.Strategy,
 		NSims:        int(runRow.NSims),
 		Seed:         int(runRow.Seed),
 		BudgetPoints: int(runRow.BudgetPoints),
-		RunTimestamp: runRow.RunTimestamp.Time,
+		CreatedAt:    runRow.CreatedAt.Time,
 	}
 
 	// Get portfolio bids
@@ -127,40 +117,18 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 	portfolio := make([]ports.OurEntryBid, 0, len(bidRows))
 	for _, row := range bidRows {
 		portfolio = append(portfolio, ports.OurEntryBid{
-			TeamKey:               row.TeamKey,
-			SchoolName:            row.SchoolName,
-			Seed:                  int(row.Seed),
-			Region:                row.Region,
-			BidAmountPoints:       int(row.BidAmountPoints),
-			ExpectedPoints:        floatFromPgNumeric(row.ExpectedPoints),
-			PredictedMarketPoints: floatFromPgNumeric(row.PredictedMarketPoints),
-			ActualMarketPoints:    floatFromPgNumeric(row.ActualMarketPoints),
-			OurOwnership:          floatFromPgNumeric(row.OurOwnership),
-			ExpectedROI:           floatFromPgNumeric(row.ExpectedRoi),
-			OurROI:                floatFromPgNumeric(row.OurRoi),
-			ROIDegradation:        floatFromPgNumeric(row.RoiDegradation),
+			TeamID:               row.TeamID,
+			SchoolName:           row.SchoolName,
+			Seed:                 int(row.Seed),
+			Region:               row.Region,
+			RecommendedBidPoints: int(row.RecommendedBidPoints),
+			ExpectedROI:          floatFromPgNumeric(row.ExpectedRoi),
 		})
 	}
 
-	// Get performance summary
-	perfRow, err := r.q.GetEntryPerformanceByRunID(ctx, runID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return &ports.OurEntryDetails{
-				Run:       run,
-				Portfolio: portfolio,
-				Summary:   ports.EntryPerformanceSummary{},
-			}, nil
-		}
-		return nil, err
-	}
-
-	summary := ports.EntryPerformanceSummary{
-		MeanNormalizedPayout: floatFromPgNumeric(perfRow.MeanNormalizedPayout),
-		PTop1:                floatFromPgNumeric(perfRow.PTop1),
-		PInMoney:             floatFromPgNumeric(perfRow.PInMoney),
-		PercentileRank:       floatPtrFromPgNumeric(perfRow.PercentileRank),
-	}
+	// Entry performance queries removed in new schema
+	// Return empty summary for now
+	summary := ports.EntryPerformanceSummary{}
 
 	return &ports.OurEntryDetails{
 		Run:       run,
@@ -170,90 +138,17 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 }
 
 func (r *MLAnalyticsRepository) GetEntryRankings(ctx context.Context, year int, runID string, limit, offset int) ([]ports.EntryRanking, error) {
-	rows, err := r.q.GetEntryRankingsByRunID(ctx, sqlc.GetEntryRankingsByRunIDParams{
-		Column1: runID,
-		Column2: int32(limit),
-		Column3: int32(offset),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]ports.EntryRanking, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, ports.EntryRanking{
-			Rank:                 int(row.Rank),
-			EntryKey:             row.EntryKey,
-			IsOurStrategy:        row.IsOurStrategy,
-			NTeams:               int(row.NTeams),
-			TotalBidPoints:       int(row.TotalBidPoints),
-			MeanNormalizedPayout: floatFromPgNumeric(row.MeanNormalizedPayout),
-			PercentileRank:       floatFromPgNumeric(row.PercentileRank),
-			PTop1:                floatFromPgNumeric(row.PTop1),
-			PInMoney:             floatFromPgNumeric(row.PInMoney),
-			TotalEntries:         int(row.TotalEntries),
-		})
-	}
-
-	return out, nil
+	// Query removed in new schema - return empty for now
+	return []ports.EntryRanking{}, nil
 }
 
 func (r *MLAnalyticsRepository) GetEntrySimulations(ctx context.Context, year int, runID string, entryKey string, limit, offset int) (*ports.EntrySimulationDrillDown, error) {
-	// Get simulations
-	simRows, err := r.q.GetEntrySimulationsByKey(ctx, sqlc.GetEntrySimulationsByKeyParams{
-		Column1: runID,
-		Column2: entryKey,
-		Column3: int32(limit),
-		Column4: int32(offset),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	simulations := make([]ports.EntrySimulationOutcome, 0, len(simRows))
-	for _, row := range simRows {
-		simulations = append(simulations, ports.EntrySimulationOutcome{
-			SimID:            int(row.SimID),
-			PayoutCents:      int(row.PayoutCents),
-			TotalPoints:      floatFromPgNumeric(row.TotalPoints),
-			FinishPosition:   int(row.FinishPosition),
-			IsTied:           row.IsTied,
-			NormalizedPayout: floatFromPgNumeric(row.NormalizedPayout),
-			NEntries:         int(row.NEntries),
-		})
-	}
-
-	// Get summary
-	summaryRow, err := r.q.GetEntrySimulationSummary(ctx, sqlc.GetEntrySimulationSummaryParams{
-		Column1: runID,
-		Column2: entryKey,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return &ports.EntrySimulationDrillDown{
-				EntryKey:    entryKey,
-				RunID:       runID,
-				Simulations: simulations,
-				Summary:     ports.EntrySimulationSummary{},
-			}, nil
-		}
-		return nil, err
-	}
-
-	summary := ports.EntrySimulationSummary{
-		TotalSimulations:     int(summaryRow.TotalSimulations),
-		MeanPayoutCents:      summaryRow.MeanPayoutCents,
-		MeanPoints:           summaryRow.MeanPoints,
-		MeanNormalizedPayout: summaryRow.MeanNormalizedPayout,
-		P50PayoutCents:       int(summaryRow.P50PayoutCents),
-		P90PayoutCents:       int(summaryRow.P90PayoutCents),
-	}
-
+	// Query removed in new schema - return empty for now
 	return &ports.EntrySimulationDrillDown{
 		EntryKey:    entryKey,
 		RunID:       runID,
-		Simulations: simulations,
-		Summary:     summary,
+		Simulations: []ports.EntrySimulationOutcome{},
+		Summary:     ports.EntrySimulationSummary{},
 	}, nil
 }
 
@@ -269,31 +164,31 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 		}
 		for _, row := range rows {
 			teams = append(teams, ports.EntryPortfolioTeam{
-				TeamKey:    row.TeamKey,
-				SchoolName: row.SchoolName,
-				Seed:       int(row.Seed),
-				Region:     row.Region,
-				BidAmount:  int(row.BidAmount),
+				TeamID:          row.TeamID,
+				SchoolName:      row.SchoolName,
+				Seed:            int(row.Seed),
+				Region:          row.Region,
+				BidAmountPoints: int(row.BidAmount),
 			})
 			totalBid += int(row.BidAmount)
 		}
 	} else {
 		rows, err := r.q.GetActualEntryPortfolio(ctx, sqlc.GetActualEntryPortfolioParams{
-			RunID:    runID,
-			EntryKey: entryKey,
+			RunID:     runID,
+			EntryName: entryKey,
 		})
 		if err != nil {
 			return nil, err
 		}
 		for _, row := range rows {
 			teams = append(teams, ports.EntryPortfolioTeam{
-				TeamKey:    row.TeamKey,
-				SchoolName: row.SchoolName,
-				Seed:       int(row.Seed),
-				Region:     row.Region,
-				BidAmount:  int(row.BidAmount),
+				TeamID:          row.TeamID,
+				SchoolName:      row.SchoolName,
+				Seed:            int(row.Seed),
+				Region:          row.Region,
+				BidAmountPoints: int(row.BidAmountPoints),
 			})
-			totalBid += int(row.BidAmount)
+			totalBid += int(row.BidAmountPoints)
 		}
 	}
 
@@ -315,12 +210,12 @@ func (r *MLAnalyticsRepository) GetOptimizationRuns(ctx context.Context, year in
 	for _, row := range rows {
 		out = append(out, ports.OptimizationRun{
 			RunID:        row.RunID,
-			CalcuttaKey:  row.CalcuttaKey,
+			CalcuttaID:   row.CalcuttaID,
 			Strategy:     row.Strategy,
 			NSims:        int(row.NSims),
 			Seed:         int(row.Seed),
 			BudgetPoints: int(row.BudgetPoints),
-			RunTimestamp: row.RunTimestamp.Time,
+			CreatedAt:    row.CreatedAt.Time,
 		})
 	}
 

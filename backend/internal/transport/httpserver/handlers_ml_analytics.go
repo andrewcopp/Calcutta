@@ -31,12 +31,12 @@ func (s *Server) handleGetTournamentSimStats(w http.ResponseWriter, r *http.Requ
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tournament_key": stats.TournamentKey,
-		"season":         stats.Season,
-		"n_sims":         stats.NSims,
-		"n_teams":        stats.NTeams,
-		"avg_progress":   stats.AvgProgress,
-		"max_progress":   stats.MaxProgress,
+		"tournament_id": stats.TournamentID,
+		"season":        stats.Season,
+		"n_sims":        stats.NSims,
+		"n_teams":       stats.NTeams,
+		"avg_progress":  stats.AvgProgress,
+		"max_progress":  stats.MaxProgress,
 	})
 }
 

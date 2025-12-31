@@ -22,8 +22,8 @@ func (s *Service) GetTournamentSimStats(ctx context.Context, year int) (*ports.T
 }
 
 // GetTeamPerformance retrieves performance metrics for a specific team
-func (s *Service) GetTeamPerformance(ctx context.Context, year int, teamKey string) (*ports.TeamPerformance, error) {
-	return s.repo.GetTeamPerformance(ctx, year, teamKey)
+func (s *Service) GetTeamPerformance(ctx context.Context, year int, teamID int64) (*ports.TeamPerformance, error) {
+	return s.repo.GetTeamPerformance(ctx, year, teamID)
 }
 
 // GetTeamPredictions retrieves ML predictions for all teams in a tournament

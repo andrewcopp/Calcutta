@@ -9,17 +9,17 @@ import (
 
 // TournamentSimStats represents aggregated simulation statistics
 type TournamentSimStats struct {
-	TournamentKey string
-	Season        int
-	NSims         int
-	NTeams        int
-	AvgProgress   float64
-	MaxProgress   int
+	TournamentID int64
+	Season       int
+	NSims        int
+	NTeams       int
+	AvgProgress  float64
+	MaxProgress  int
 }
 
 // TeamPerformance represents a team's performance across all simulations
 type TeamPerformance struct {
-	TeamKey           string
+	TeamID            int64
 	SchoolName        string
 	Seed              int
 	Region            string
@@ -27,37 +27,27 @@ type TeamPerformance struct {
 	TotalSims         int
 	AvgWins           float64
 	AvgPoints         float64
-	PChampion         *float64
-	PFinals           *float64
-	PFinalFour        *float64
-	PEliteEight       *float64
-	PSweetSixteen     *float64
-	PRound32          *float64
 	RoundDistribution map[string]int // e.g., "R64": 0, "R32": 150, etc.
 }
 
 // TeamPrediction represents ML predictions and investment metrics for a team
 type TeamPrediction struct {
-	TeamKey               string
-	SchoolName            string
-	Seed                  int
-	Region                string
-	ExpectedPoints        float64
-	PredictedMarketShare  float64
-	PredictedMarketPoints float64
-	PChampion             *float64
-	KenpomNet             *float64
+	TeamID     int64
+	SchoolName string
+	Seed       int
+	Region     string
+	KenpomNet  *float64
 }
 
 // OptimizationRun represents a strategy execution
 type OptimizationRun struct {
 	RunID        string
-	CalcuttaKey  string
+	CalcuttaID   int64
 	Strategy     string
 	NSims        int
 	Seed         int
 	BudgetPoints int
-	RunTimestamp time.Time
+	CreatedAt    time.Time
 }
 
 // OurEntryDetails represents our optimized entry with portfolio and performance
@@ -69,18 +59,12 @@ type OurEntryDetails struct {
 
 // OurEntryBid represents a single team in our portfolio
 type OurEntryBid struct {
-	TeamKey               string
-	SchoolName            string
-	Seed                  int
-	Region                string
-	BidAmountPoints       int
-	ExpectedPoints        float64
-	PredictedMarketPoints float64
-	ActualMarketPoints    float64
-	OurOwnership          float64
-	ExpectedROI           float64
-	OurROI                float64
-	ROIDegradation        float64
+	TeamID               int64
+	SchoolName           string
+	Seed                 int
+	Region               string
+	RecommendedBidPoints int
+	ExpectedROI          float64
 }
 
 // EntryRanking represents an entry's ranking in the competition
@@ -144,18 +128,18 @@ type EntryPortfolio struct {
 
 // EntryPortfolioTeam represents a single team in an entry's portfolio
 type EntryPortfolioTeam struct {
-	TeamKey    string
-	SchoolName string
-	Seed       int
-	Region     string
-	BidAmount  int
+	TeamID          int64
+	SchoolName      string
+	Seed            int
+	Region          string
+	BidAmountPoints int
 }
 
 // MLAnalyticsRepo defines the interface for ML analytics data access
 type MLAnalyticsRepo interface {
 	// Tournament simulations
 	GetTournamentSimStats(ctx context.Context, year int) (*TournamentSimStats, error)
-	GetTeamPerformance(ctx context.Context, year int, teamKey string) (*TeamPerformance, error)
+	GetTeamPerformance(ctx context.Context, year int, teamID int64) (*TeamPerformance, error)
 
 	// Team predictions
 	GetTeamPredictions(ctx context.Context, year int, runID *string) ([]TeamPrediction, error)
