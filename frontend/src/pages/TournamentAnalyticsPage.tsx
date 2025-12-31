@@ -366,9 +366,9 @@ interface TeamPredictedInvestment {
   school_name: string;
   seed: number;
   region: string;
-  naive: number;
+  rational: number;
+  predicted: number;
   delta: number;
-  edge: number;
 }
 
 function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
@@ -402,9 +402,9 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-900 mb-2"><strong>Column Definitions:</strong></p>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li><strong>Naive:</strong> Proportional investment if everyone invested for equal ROI (rational market)</li>
-          <li><strong>Edge:</strong> ML model prediction of actual market investment (ridge regression)</li>
-          <li><strong>Delta:</strong> Market inefficiency as % difference (positive = overvalued, negative = undervalued)</li>
+          <li><strong>Rational:</strong> Efficient market baseline - proportional investment for equal ROI across all teams</li>
+          <li><strong>Predicted:</strong> ML model prediction of actual market behavior (ridge regression on historical data)</li>
+          <li><strong>Delta:</strong> Market inefficiency as % difference - positive means overvalued, negative means undervalued</li>
         </ul>
       </div>
 
@@ -425,13 +425,13 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                   Region
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Naive
+                  Rational
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                  Predicted
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Delta
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
-                  Edge
                 </th>
               </tr>
             </thead>
@@ -448,13 +448,13 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                     {team.region}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {formatPoints(team.naive)}
+                    {formatPoints(team.rational)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center font-semibold text-green-700 bg-green-50">
+                    {formatPoints(team.predicted)}
                   </td>
                   <td className={`px-4 py-3 text-sm text-center ${getDeltaColor(team.delta)}`}>
                     {formatPercent(team.delta)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center font-semibold text-green-700 bg-green-50">
-                    {formatPoints(team.edge)}
                   </td>
                 </tr>
               ))}
@@ -464,13 +464,13 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                 </td>
                 <td className="px-4 py-3 text-sm text-center" colSpan={2}></td>
                 <td className="px-4 py-3 text-sm text-center text-gray-900">
-                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.naive, 0))}
+                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.rational, 0))}
+                </td>
+                <td className="px-4 py-3 text-sm text-center text-green-700 bg-green-100">
+                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.predicted, 0))}
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-gray-500">
                   -
-                </td>
-                <td className="px-4 py-3 text-sm text-center text-green-700 bg-green-100">
-                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.edge, 0))}
                 </td>
               </tr>
             </tbody>

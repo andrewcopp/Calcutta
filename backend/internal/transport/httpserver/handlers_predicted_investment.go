@@ -13,9 +13,9 @@ type TeamPredictedInvestment struct {
 	SchoolName string  `json:"school_name"`
 	Seed       int     `json:"seed"`
 	Region     string  `json:"region"`
-	Naive      float64 `json:"naive"` // Naive expected value (what you might eyeball)
-	Delta      float64 `json:"delta"` // Difference between edge and naive (positive = overinvested, negative = underinvested)
-	Edge       float64 `json:"edge"`  // Our edge calculation (opportunities for under/over investment)
+	Rational   float64 `json:"rational"`  // Rational market investment (equal ROI baseline)
+	Predicted  float64 `json:"predicted"` // ML model prediction (ridge regression)
+	Delta      float64 `json:"delta"`     // Percentage difference (market inefficiency)
 }
 
 // handleGetTournamentPredictedInvestment handles GET /analytics/tournaments/{id}/predicted-investment
@@ -97,11 +97,11 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Naive: Proportional investment based on expected points (equal ROI scenario)
-			(tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) as naive,
-			-- Edge: ML model prediction of market share × total pool
-			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as edge,
-			-- Delta: Percentage difference (Edge - Naive) / Naive * 100
+			-- Rational: Proportional investment based on expected points (equal ROI scenario)
+			(tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) as rational,
+			-- Predicted: ML model prediction of market share × total pool
+			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as predicted,
+			-- Delta: Percentage difference (Predicted - Rational) / Rational * 100
 			CASE 
 				WHEN (tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) > 0
 				THEN ((COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool)) - 
@@ -114,7 +114,7 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 		LEFT JOIN silver_predicted_market_share spms 
 			ON spms.tournament_id = (SELECT id FROM bronze_tournament) AND spms.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
-		ORDER BY edge DESC, t.seed ASC
+		ORDER BY predicted DESC, t.seed ASC
 	`
 
 	rows, err := s.pool.Query(ctx, query, tournamentID)
@@ -127,21 +127,20 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 
 	var results []TeamPredictedInvestment
 	for rows.Next() {
-		var ti TeamPredictedInvestment
-		err := rows.Scan(
-			&ti.TeamID,
-			&ti.SchoolName,
-			&ti.Seed,
-			&ti.Region,
-			&ti.Naive,
-			&ti.Delta,
-			&ti.Edge,
-		)
-		if err != nil {
+		var team TeamPredictedInvestment
+		if err := rows.Scan(
+			&team.TeamID,
+			&team.SchoolName,
+			&team.Seed,
+			&team.Region,
+			&team.Rational,
+			&team.Predicted,
+			&team.Delta,
+		); err != nil {
 			log.Printf("Error scanning predicted investment row: %v", err)
 			continue
 		}
-		results = append(results, ti)
+		results = append(results, team)
 	}
 
 	if len(results) == 0 {
