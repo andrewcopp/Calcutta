@@ -54,8 +54,8 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			LIMIT 1
 		),
 		entry_count AS (
-			SELECT COUNT(*) as num_entries
-			FROM bronze_entries
+			SELECT COUNT(DISTINCT entry_name) as num_entries
+			FROM bronze_entry_bids
 			WHERE calcutta_id = (SELECT calcutta_id FROM latest_calcutta)
 		),
 		total_pool AS (
