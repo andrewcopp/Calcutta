@@ -74,22 +74,21 @@ def stage_predicted_game_outcomes(
     
     # Write to database using direct writer
     from moneyball.db.writers.silver_writers import write_predicted_game_outcomes
-    from moneyball.db.writers.bronze_writers import get_or_create_tournament, write_teams
+    from moneyball.db.writers.bronze_writers import get_or_create_tournament
     
     tournament_id = get_or_create_tournament(year)
     
-    # Create team_id mapping from teams_df
-    team_id_map = {str(row['id']): str(row['id']) for _, row in teams_df.iterrows()}
-    
-    # Prepare predictions with team IDs
-    pred_df = predictions_df.copy()
-    pred_df['team1_id'] = pred_df['team1_key']
-    pred_df['team2_id'] = pred_df['team2_key']
+    # Create team_id mapping: school_slug -> team_id
+    team_id_map = {
+        str(row['school_slug']): str(row['id'])
+        for _, row in teams_df.iterrows()
+    }
     
     try:
         write_predicted_game_outcomes(
             tournament_id=tournament_id,
-            predictions_df=pred_df,
+            predictions_df=predictions_df,
+            team_id_map=team_id_map,
             model_version=model_version,
         )
         print(f"✓ Predicted game outcomes written to database")
@@ -163,13 +162,25 @@ def stage_simulate_tournaments(
     
     tournament_id = get_or_create_tournament(year)
     
-    # Create team_id mapping
-    team_id_map = {str(row['team_id']): str(row['team_id']) 
-                   for _, row in simulations_df.iterrows()}
+    # Read teams to get school_slug mapping
+    teams_df = read_teams(year)
+    team_id_map = {
+        str(row['school_slug']): str(row['id'])
+        for _, row in teams_df.iterrows()
+    }
     
-    # Add run_id to simulations
+    # Prepare simulations with school_slug and eliminated flag
     sim_df = simulations_df.copy()
-    sim_df['run_id'] = run_id
+    
+    # Map team_id back to school_slug for the writer
+    id_to_slug = {
+        str(row['id']): str(row['school_slug'])
+        for _, row in teams_df.iterrows()
+    }
+    sim_df['school_slug'] = sim_df['team_id'].map(id_to_slug)
+    
+    # Add eliminated flag (teams with < 6 wins are eliminated)
+    sim_df['eliminated'] = sim_df['wins'] < 6
     
     try:
         write_simulated_tournaments(

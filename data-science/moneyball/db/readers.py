@@ -189,52 +189,50 @@ def read_simulated_tournaments(year: int, run_id: Optional[str] = None) -> pd.Da
     """
     conn = get_db_connection()
     try:
-        if run_id:
-            query = """
-            SELECT 
-                st.id,
-                st.tournament_id,
-                st.team_id,
-                st.sim_id,
-                st.wins,
-                st.byes,
-                st.points,
-                st.run_id,
-                st.created_at,
-                t.school_name,
-                t.seed,
-                t.region
-            FROM silver_simulated_tournaments st
-            JOIN bronze_tournaments tour ON st.tournament_id = tour.id
-            JOIN bronze_teams t ON st.team_id = t.id
-            WHERE tour.season = %s AND st.run_id = %s
-            ORDER BY st.sim_id, t.seed
-            """
-            params = (year, run_id)
-        else:
-            query = """
-            SELECT 
-                st.id,
-                st.tournament_id,
-                st.team_id,
-                st.sim_id,
-                st.wins,
-                st.byes,
-                st.points,
-                st.run_id,
-                st.created_at,
-                t.school_name,
-                t.seed,
-                t.region
-            FROM silver_simulated_tournaments st
-            JOIN bronze_tournaments tour ON st.tournament_id = tour.id
-            JOIN bronze_teams t ON st.team_id = t.id
-            WHERE tour.season = %s
-            ORDER BY st.sim_id, t.seed
-            """
-            params = (year,)
+        # Note: Schema doesn't have points column, we calculate it from wins+byes
+        # Also doesn't have run_id yet, so we ignore it for now
+        query = """
+        SELECT 
+            st.id,
+            st.tournament_id,
+            st.team_id,
+            st.sim_id,
+            st.wins,
+            st.byes,
+            st.eliminated,
+            st.created_at,
+            t.school_name,
+            t.seed,
+            t.region
+        FROM silver_simulated_tournaments st
+        JOIN bronze_tournaments tour ON st.tournament_id = tour.id
+        JOIN bronze_teams t ON st.team_id = t.id
+        WHERE tour.season = %s
+        ORDER BY st.sim_id, t.seed
+        LIMIT 100000
+        """
+        df = pd.read_sql_query(query, conn, params=(year,))
         
-        return pd.read_sql_query(query, conn, params=params)
+        # Calculate points from wins+byes using standard scoring
+        def calc_points(row):
+            total = row['wins'] + row['byes']
+            if total <= 1:
+                return 0
+            elif total == 2:
+                return 50
+            elif total == 3:
+                return 150
+            elif total == 4:
+                return 300
+            elif total == 5:
+                return 500
+            elif total == 6:
+                return 750
+            else:
+                return 1050
+        
+        df['points'] = df.apply(calc_points, axis=1)
+        return df
     finally:
         conn.close()
 
