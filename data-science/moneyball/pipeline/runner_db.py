@@ -66,9 +66,10 @@ def stage_simulated_calcuttas(
     print(f"Run ID: {run_id}")
     
     # Call the Go service
+    # Navigate from data-science/moneyball/pipeline to backend/bin
     go_binary = os.path.join(
         os.path.dirname(__file__),
-        "../../backend/bin/calculate-simulated-calcuttas"
+        "../../../backend/bin/calculate-simulated-calcuttas"
     )
     
     # Resolve to absolute path
