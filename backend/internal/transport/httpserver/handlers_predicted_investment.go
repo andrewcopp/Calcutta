@@ -46,17 +46,11 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			FROM bronze_tournaments
 			WHERE season = (SELECT season FROM main_tournament)
 		),
-		latest_calcutta AS (
-			SELECT id as calcutta_id
-			FROM bronze_calcuttas
-			WHERE tournament_id = (SELECT id FROM bronze_tournament)
-			ORDER BY created_at DESC
-			LIMIT 1
-		),
 		entry_count AS (
 			SELECT COUNT(DISTINCT entry_name) as num_entries
-			FROM bronze_entry_bids
-			WHERE calcutta_id = (SELECT calcutta_id FROM latest_calcutta)
+			FROM bronze_entry_bids beb
+			JOIN bronze_calcuttas bc ON beb.calcutta_id = bc.id
+			WHERE bc.tournament_id = (SELECT id FROM bronze_tournament)
 		),
 		total_pool AS (
 			SELECT (SELECT num_entries FROM entry_count) * 100.0 as pool_size
@@ -72,9 +66,8 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			-- Edge: Same as naive for now (will incorporate market inefficiencies later)
 			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as edge
 		FROM bronze_teams t
-		LEFT JOIN latest_calcutta lc ON true
 		LEFT JOIN silver_predicted_market_share spms 
-			ON spms.calcutta_id = lc.calcutta_id AND spms.team_id = t.id
+			ON spms.tournament_id = (SELECT id FROM bronze_tournament) AND spms.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 		ORDER BY naive DESC, t.seed ASC
 	`

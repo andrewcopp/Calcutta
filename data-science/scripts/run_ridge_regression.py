@@ -22,7 +22,7 @@ def run_ridge_regression(year: int = 2025):
     print(f"Running ridge regression for {year}...")
     print("=" * 80)
     
-    # Get tournament and calcutta IDs from database
+    # Get tournament ID from database
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             # Get tournament ID
@@ -35,20 +35,6 @@ def run_ridge_regression(year: int = 2025):
                 return
             tournament_id = result[0]
             print(f"Tournament ID: {tournament_id}")
-            
-            # Get latest calcutta ID
-            cur.execute("""
-                SELECT id FROM bronze_calcuttas
-                WHERE tournament_id = %s
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, (tournament_id,))
-            result = cur.fetchone()
-            if not result:
-                print(f"Error: No calcutta found for tournament {tournament_id}")
-                return
-            calcutta_id = result[0]
-            print(f"Calcutta ID: {calcutta_id}")
             
             # Get team_id map (school_slug -> team_id)
             cur.execute("""
@@ -91,9 +77,9 @@ def run_ridge_regression(year: int = 2025):
     print("\nWriting predictions to database...")
     try:
         count = write_predicted_market_share(
-            calcutta_id=calcutta_id,
             predictions_df=predictions,
             team_id_map=team_id_map,
+            tournament_id=tournament_id,
         )
         print(f"✓ Wrote {count} predictions to silver_predicted_market_share")
         

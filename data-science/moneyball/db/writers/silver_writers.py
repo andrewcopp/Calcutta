@@ -155,31 +155,44 @@ def write_simulated_tournaments(
 
 
 def write_predicted_market_share(
-    calcutta_id: str,
     predictions_df: pd.DataFrame,
     team_id_map: Dict[str, str],
+    calcutta_id: str = None,
+    tournament_id: str = None,
     model_version: str = None
 ) -> int:
     """
     Write predicted market share from ridge regression model.
     
     Args:
-        calcutta_id: Calcutta ID
         predictions_df: DataFrame with columns:
             - team_key, predicted_auction_share_of_pool
         team_id_map: Dict mapping school_slug to team_id
+        calcutta_id: Calcutta ID (optional, for production use)
+        tournament_id: Tournament ID (optional, for migration period)
         model_version: Optional model version
+    
+    Note: Must provide either calcutta_id or tournament_id
     
     Returns:
         Number of rows inserted
     """
+    if not calcutta_id and not tournament_id:
+        raise ValueError("Must provide either calcutta_id or tournament_id")
+    
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Clear existing predictions for this calcutta
-            cur.execute("""
-                DELETE FROM silver_predicted_market_share
-                WHERE calcutta_id = %s
-            """, (calcutta_id,))
+            # Clear existing predictions
+            if calcutta_id:
+                cur.execute("""
+                    DELETE FROM silver_predicted_market_share
+                    WHERE calcutta_id = %s
+                """, (calcutta_id,))
+            else:
+                cur.execute("""
+                    DELETE FROM silver_predicted_market_share
+                    WHERE tournament_id = %s
+                """, (tournament_id,))
             
             # Map team_key to team_id
             df = predictions_df.copy()
@@ -194,9 +207,10 @@ def write_predicted_market_share(
             values = [
                 (
                     calcutta_id,
-                    str(row['team_id']),  # team_id is UUID string
+                    tournament_id,
+                    str(row['team_id']),
                     float(row['predicted_auction_share_of_pool']),
-                    float(row['predicted_auction_share_of_pool']) * 100.0,  # predicted_points (share * 100)
+                    float(row['predicted_auction_share_of_pool']) * 100.0,
                 )
                 for _, row in df.iterrows()
             ]
@@ -204,14 +218,12 @@ def write_predicted_market_share(
             # Batch insert
             psycopg2.extras.execute_batch(cur, """
                 INSERT INTO silver_predicted_market_share
-                (calcutta_id, team_id, predicted_share, predicted_points)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (calcutta_id, team_id)
-                DO UPDATE SET
-                    predicted_share = EXCLUDED.predicted_share,
-                    predicted_points = EXCLUDED.predicted_points
+                (calcutta_id, tournament_id, team_id, predicted_share,
+                 predicted_points)
+                VALUES (%s, %s, %s, %s, %s)
             """, values)
             
             conn.commit()
-            logger.info(f"Wrote {len(values)} predicted market shares for calcutta {calcutta_id}")
+            ref = calcutta_id or tournament_id
+            logger.info(f"Wrote {len(values)} market shares for {ref}")
             return len(values)
