@@ -25,12 +25,12 @@ func main() {
 		runID = os.Args[2]
 	}
 
-	// Optional: excluded_entry_id can be provided via command line or env var
-	excludedEntryID := ""
+	// Optional: excluded_entry_name can be provided via command line or env var
+	excludedEntryName := ""
 	if len(os.Args) >= 4 {
-		excludedEntryID = os.Args[3]
+		excludedEntryName = os.Args[3]
 	} else {
-		excludedEntryID = os.Getenv("EXCLUDED_ENTRY_ID")
+		excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
 	}
 
 	// Connect to database
@@ -57,10 +57,9 @@ func main() {
 		log.Printf("Using latest run ID: %s", runID)
 	}
 
-	// Set excluded entry ID in environment if provided
-	if excludedEntryID != "" {
-		os.Setenv("EXCLUDED_ENTRY_ID", excludedEntryID)
-		log.Printf("Excluding entry ID: %s", excludedEntryID)
+	// Log excluded entry name if provided
+	if excludedEntryName != "" {
+		log.Printf("Excluding entry name: %s", excludedEntryName)
 	}
 
 	// Create service and run calculation

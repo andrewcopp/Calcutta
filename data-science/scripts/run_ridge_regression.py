@@ -22,6 +22,11 @@ def run_ridge_regression(year: int = 2025):
     print(f"Running ridge regression for {year}...")
     print("=" * 80)
     
+    # Get excluded entry name from environment
+    import os
+    excluded_entry_name = os.getenv('EXCLUDED_ENTRY_NAME', 'Andrew Copp')
+    print(f"Excluding entry from training: {excluded_entry_name}")
+    
     # Get tournament ID from database
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -59,6 +64,7 @@ def run_ridge_regression(year: int = 2025):
             train_snapshots=["2017", "2018", "2019", "2021", "2022", "2023", "2024"],
             ridge_alpha=1.0,
             feature_set="optimal",
+            exclude_entry_names=[excluded_entry_name] if excluded_entry_name else None,
         )
         
         print(f"Generated predictions for {len(predictions)} teams")

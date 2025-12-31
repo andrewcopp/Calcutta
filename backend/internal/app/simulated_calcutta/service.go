@@ -44,15 +44,12 @@ type EntryPerformance struct {
 
 // CalculateSimulatedCalcutta calculates entry outcomes for all simulations
 func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID string, runID string) error {
-	// Get excluded entry ID from environment (UUID format)
-	excludedEntryID := os.Getenv("EXCLUDED_ENTRY_ID")
-	if excludedEntryID == "" {
-		excludedEntryID = "00000000-0000-0000-0000-000000000000" // Default: no exclusion
-	}
+	// Get excluded entry name from environment (e.g., "Andrew Copp")
+	excludedEntryName := os.Getenv("EXCLUDED_ENTRY_NAME")
 
 	log.Printf("Calculating simulated calcutta for tournament %s, run %s", tournamentID, runID)
-	if excludedEntryID != "00000000-0000-0000-0000-000000000000" {
-		log.Printf("Excluding entry ID: %s", excludedEntryID)
+	if excludedEntryName != "" {
+		log.Printf("Excluding entry name: %s", excludedEntryName)
 	}
 
 	// Get payout structure from database
@@ -64,7 +61,7 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
 
 	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, tournamentID, runID, excludedEntryID)
+	entries, err := s.getEntries(ctx, tournamentID, runID, excludedEntryName)
 	if err != nil {
 		return fmt.Errorf("failed to get entries: %w", err)
 	}
@@ -155,7 +152,7 @@ func (s *Service) getEntries(ctx context.Context, tournamentID string, runID str
 	// Get actual entries from calcutta_entries via tournaments -> calcuttas
 	// Navigate: bronze_tournaments -> tournaments -> calcuttas -> calcutta_entries -> calcutta_entry_teams
 	// Use entry name from calcutta_entries.name (human-readable)
-	// Exclude by entry_id if provided (format: UUID string)
+	// Exclude by entry name if provided (e.g., "Andrew Copp")
 	query := `
 		SELECT 
 			ce.name as entry_name,
@@ -167,7 +164,7 @@ func (s *Service) getEntries(ctx context.Context, tournamentID string, runID str
 		JOIN tournaments t ON c.tournament_id = t.id
 		JOIN bronze_tournaments bt ON t.name LIKE '%' || bt.season || '%'
 		WHERE bt.id = $1
-		  AND ce.id::text != $2
+		  AND (ce.name != $2 OR $2 = '')
 	`
 
 	rows, err := s.pool.Query(ctx, query, tournamentID, excludedEntry)
