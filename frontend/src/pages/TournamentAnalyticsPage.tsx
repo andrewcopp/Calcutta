@@ -351,28 +351,49 @@ function PredictedReturnsTab({ tournamentId }: { tournamentId: string }) {
 }
 
 // Predicted Investment Tab Component
+interface TeamPredictedInvestment {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  naive: number;
+  delta: number;
+  edge: number;
+}
+
 function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
-  const { data: predictedReturns, isLoading } = useQuery<{ teams: TeamPredictedReturns[] } | null>({
-    queryKey: ['analytics', 'predicted-returns', tournamentId],
+  const { data: predictedInvestment, isLoading } = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
+    queryKey: ['analytics', 'predicted-investment', tournamentId],
     queryFn: async () => {
       if (!tournamentId) return null;
-      return apiClient.get<{ teams: TeamPredictedReturns[] }>(`/analytics/tournaments/${tournamentId}/predicted-returns`);
+      return apiClient.get<{ teams: TeamPredictedInvestment[] }>(`/analytics/tournaments/${tournamentId}/predicted-investment`);
     },
     enabled: !!tournamentId,
   });
 
   const formatPoints = (points: number) => points.toFixed(1);
 
+  const getDeltaIndicator = (delta: number) => {
+    if (delta < -0.1) {
+      // Underinvested - opportunity (green down arrow)
+      return <span className="text-green-600">↓</span>;
+    } else if (delta > 0.1) {
+      // Overinvested - avoid (red up arrow)
+      return <span className="text-red-600">↑</span>;
+    }
+    return null;
+  };
+
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Predicted Investment</h2>
       <p className="text-gray-600 mb-6">
-        Expected value for each team to guide investment decisions.
+        Investment opportunities based on expected value and market inefficiencies.
       </p>
 
       {isLoading ? (
         <div className="text-gray-500">Loading predicted investment data...</div>
-      ) : predictedReturns?.teams ? (
+      ) : predictedInvestment?.teams ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -386,13 +407,19 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Region
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Naive
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Delta
+                </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
-                  EV (invst)
+                  Edge
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {predictedReturns.teams.map((team) => (
+              {predictedInvestment.teams.map((team) => (
                 <tr key={team.team_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">
                     {team.school_name}
@@ -403,8 +430,14 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                   <td className="px-4 py-3 text-sm text-center text-gray-600">
                     {team.region}
                   </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {formatPoints(team.naive)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {formatPoints(team.delta)} {getDeltaIndicator(team.delta)}
+                  </td>
                   <td className="px-4 py-3 text-sm text-center font-semibold text-green-700 bg-green-50">
-                    {formatPoints(team.expected_value)}
+                    {formatPoints(team.edge)}
                   </td>
                 </tr>
               ))}

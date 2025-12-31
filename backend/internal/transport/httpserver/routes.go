@@ -105,6 +105,7 @@ func (s *Server) registerMLAnalyticsRoutes(r *mux.Router) {
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/simulations", s.handleGetTournamentSimStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/tournaments/{id}/simulations", s.handleGetTournamentSimStatsByID).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/tournaments/{id}/predicted-returns", s.handleGetTournamentPredictedReturns).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/tournaments/{id}/predicted-investment", s.handleGetTournamentPredictedInvestment).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/{team_id}/performance", s.handleGetTeamPerformance).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/predictions", s.handleGetTeamPredictions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs", s.handleGetOptimizationRuns).Methods("GET", "OPTIONS")
