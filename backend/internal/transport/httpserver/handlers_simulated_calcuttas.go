@@ -102,7 +102,29 @@ func (s *Server) handleGetTournamentSimulatedCalcuttas(w http.ResponseWriter, r 
 }
 
 func (s *Server) getLatestOptimizationRun(ctx context.Context, tournamentID string) (string, error) {
+	// First try to find runs via gold_entry_performance (simulated calcuttas)
+	// This works for runs that have simulated calcutta results
 	query := `
+		SELECT DISTINCT gep.run_id
+		FROM gold_entry_performance gep
+		WHERE EXISTS (
+			SELECT 1 FROM gold_recommended_entry_bids greb
+			JOIN bronze_teams bt ON greb.team_id = bt.id
+			WHERE greb.run_id = gep.run_id
+			AND bt.tournament_id = $1
+		)
+		ORDER BY gep.run_id DESC
+		LIMIT 1
+	`
+
+	var runID string
+	err := s.pool.QueryRow(ctx, query, tournamentID).Scan(&runID)
+	if err == nil {
+		return runID, nil
+	}
+
+	// Fallback: try via bronze_calcuttas (for older data)
+	fallbackQuery := `
 		SELECT gor.run_id
 		FROM gold_optimization_runs gor
 		JOIN bronze_calcuttas bc ON gor.calcutta_id = bc.id
@@ -111,8 +133,7 @@ func (s *Server) getLatestOptimizationRun(ctx context.Context, tournamentID stri
 		LIMIT 1
 	`
 
-	var runID string
-	err := s.pool.QueryRow(ctx, query, tournamentID).Scan(&runID)
+	err = s.pool.QueryRow(ctx, fallbackQuery, tournamentID).Scan(&runID)
 	if err != nil {
 		return "", err
 	}
