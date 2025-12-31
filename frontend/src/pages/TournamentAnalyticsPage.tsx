@@ -50,30 +50,31 @@ export function TournamentAnalyticsPage() {
 
       {/* Tournament Selector */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Select Tournament</h2>
-        
-        {tournamentsLoading ? (
-          <div className="text-gray-500">Loading tournaments...</div>
-        ) : tournaments.length === 0 ? (
-          <div className="text-gray-500">No tournaments found</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tournaments.map((tournament) => (
-              <button
-                key={tournament.id}
-                onClick={() => setSelectedTournamentId(tournament.id)}
-                className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                  selectedTournamentId === tournament.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="font-semibold">{tournament.name}</div>
-                <div className="text-sm text-gray-600">{tournament.rounds} rounds</div>
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          <label htmlFor="tournament-select" className="text-lg font-semibold whitespace-nowrap">
+            Select Tournament:
+          </label>
+          
+          {tournamentsLoading ? (
+            <div className="text-gray-500">Loading tournaments...</div>
+          ) : tournaments.length === 0 ? (
+            <div className="text-gray-500">No tournaments found</div>
+          ) : (
+            <select
+              id="tournament-select"
+              value={selectedTournamentId || ''}
+              onChange={(e) => setSelectedTournamentId(e.target.value || null)}
+              className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="">-- Select a tournament --</option>
+              {tournaments.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {/* Analytics Tabs */}
