@@ -338,6 +338,16 @@ function PredictedReturnsTab({ tournamentId }: { tournamentId: string }) {
                   </td>
                 </tr>
               ))}
+              <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                <td className="px-4 py-3 text-sm text-gray-900 sticky left-0 bg-gray-100">
+                  TOTAL
+                </td>
+                <td className="px-4 py-3 text-sm text-center" colSpan={2}></td>
+                <td className="px-4 py-3 text-sm text-center" colSpan={6}></td>
+                <td className="px-4 py-3 text-sm text-center text-blue-700 bg-blue-100">
+                  {formatPoints(predictedReturns.teams.reduce((sum, team) => sum + team.expected_value, 0))}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -441,6 +451,21 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
                   </td>
                 </tr>
               ))}
+              <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                <td className="px-4 py-3 text-sm text-gray-900 sticky left-0 bg-gray-100">
+                  TOTAL
+                </td>
+                <td className="px-4 py-3 text-sm text-center" colSpan={2}></td>
+                <td className="px-4 py-3 text-sm text-center text-gray-900">
+                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.naive, 0))}
+                </td>
+                <td className="px-4 py-3 text-sm text-center text-gray-900">
+                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.delta, 0))}
+                </td>
+                <td className="px-4 py-3 text-sm text-center text-green-700 bg-green-100">
+                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.edge, 0))}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

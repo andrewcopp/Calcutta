@@ -74,13 +74,13 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Expected value calculation (points per round)
+			-- Naive: Predicted market investment (proportional share of 6800 point pool)
 			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
 			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
 			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
 			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as naive,
+			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) / 6000.0 * 6800.0 as naive,
 			0.0 as delta,  -- For now, delta is always 0
 			-- Edge is same as naive for now (will incorporate market inefficiencies later)
 			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
@@ -88,7 +88,7 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
 			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as edge
+			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) / 6000.0 * 6800.0 as edge
 		FROM bronze_teams t
 		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
