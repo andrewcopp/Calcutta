@@ -246,7 +246,7 @@ def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
                 
                 games.append({
                     'game_id': f'R1-{region}-{seed1}v{seed2}',
-                    'round': 'R64',
+                    'round': 'round_of_64',  # Use correct round naming
                     'round_order': 1,
                     'sort_order': game_id,
                     'team1_key': team1_key,
