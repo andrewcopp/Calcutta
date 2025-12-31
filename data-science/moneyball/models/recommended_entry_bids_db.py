@@ -44,7 +44,67 @@ def recommend_entry_bids_from_simulations(
     
     team_stats.rename(columns={'points': 'expected_points'}, inplace=True)
     
-    # Simple greedy strategy: allocate budget proportional to expected points
+    # Use MINLP optimizer if strategy is "minlp"
+    if strategy == "minlp":
+        print(f"🔧 Using MINLP optimizer (strategy={strategy})")
+        from moneyball.models.portfolio_optimizer_minlp import optimize_portfolio_minlp
+        
+        # MINLP optimizer expects specific column names
+        teams_for_minlp = team_stats.copy()
+        teams_for_minlp['team_key'] = teams_for_minlp['school_name']
+        teams_for_minlp['expected_team_points'] = teams_for_minlp['expected_points']
+        
+        # Use a simple predicted market based on expected points
+        # (In reality, this should come from predicted_market_share table)
+        total_points = teams_for_minlp['expected_points'].sum()
+        teams_for_minlp['predicted_team_total_bids'] = (
+            teams_for_minlp['expected_points'] / total_points * budget_points
+        )
+        
+        print(f"  Running MINLP with {len(teams_for_minlp)} teams, budget={budget_points}")
+        
+        # Run MINLP optimizer
+        try:
+            result, _ = optimize_portfolio_minlp(
+                teams_df=teams_for_minlp,
+                budget_points=budget_points,
+                min_teams=min_teams,
+                max_teams=max_teams,
+                max_per_team_points=max_bid,
+                min_bid_points=min_bid,
+            )
+            print(f"  MINLP returned {len(result) if result is not None else 0} teams")
+        except Exception as e:
+            print(f"⚠ MINLP optimization error: {e}")
+            result = None
+        
+        if result is None or result.empty:
+            print("⚠ MINLP optimization failed, falling back to greedy")
+            # Fall through to greedy strategy below
+        else:
+            print("✓ MINLP optimization succeeded")
+            # Format MINLP results - result already has bid_amount_points column
+            selected_teams = result.copy()
+            # Rename expected_team_points back to expected_points for consistency
+            if 'expected_team_points' in selected_teams.columns:
+                selected_teams['expected_points'] = selected_teams['expected_team_points']
+            
+            selected_teams['expected_roi'] = (
+                selected_teams['expected_points'] / 
+                selected_teams['bid_amount_points'].replace(0, 1)
+            )
+            
+            return selected_teams[[
+                'team_id',
+                'bid_amount_points',
+                'expected_points',
+                'expected_roi',
+                'school_name',
+                'seed',
+                'region',
+            ]]
+    
+    # Greedy strategy: allocate budget proportional to expected points
     team_stats = team_stats.sort_values('expected_points', ascending=False)
     
     # Select top teams
