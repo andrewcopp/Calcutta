@@ -41,7 +41,6 @@ export DB_PORT=5432
 export DB_NAME=calcutta
 export DB_USER=calcutta
 export DB_PASSWORD=calcutta
-cd /opt/airflow/data-science
 """
 
 # Run full pipeline with all stages
