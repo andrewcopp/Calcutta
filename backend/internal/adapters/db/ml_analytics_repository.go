@@ -21,6 +21,29 @@ func NewMLAnalyticsRepository(pool *pgxpool.Pool) *MLAnalyticsRepository {
 	return &MLAnalyticsRepository{pool: pool, q: sqlc.New(pool)}
 }
 
+// Helper functions for nullable types
+func derefInt32(v *int32) int32 {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+func derefString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func uuidToStringPtr(v pgtype.UUID) *string {
+	if !v.Valid {
+		return nil
+	}
+	s := v.Bytes.String()
+	return &s
+}
+
 func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year int) (*ports.TournamentSimStats, error) {
 	row, err := r.q.GetTournamentSimStatsByYear(ctx, int32(year))
 	if err != nil {
@@ -58,9 +81,9 @@ func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int
 	return &ports.TeamPerformance{
 		TeamID:            row.TeamID,
 		SchoolName:        row.SchoolName,
-		Seed:              int(row.Seed),
-		Region:            row.Region,
-		KenpomNet:         floatPtrFromPgNumeric(row.KenpomNet),
+		Seed:              int(derefInt32(row.Seed)),
+		Region:            derefString(row.Region),
+		KenpomNet:         row.KenpomNet,
 		TotalSims:         int(row.TotalSims),
 		AvgWins:           row.AvgWins,
 		AvgPoints:         row.AvgPoints,
@@ -79,9 +102,9 @@ func (r *MLAnalyticsRepository) GetTeamPredictions(ctx context.Context, year int
 		out = append(out, ports.TeamPrediction{
 			TeamID:     row.TeamID,
 			SchoolName: row.SchoolName,
-			Seed:       int(row.Seed),
-			Region:     row.Region,
-			KenpomNet:  floatPtrFromPgNumeric(row.KenpomNet),
+			Seed:       int(derefInt32(row.Seed)),
+			Region:     derefString(row.Region),
+			KenpomNet:  row.KenpomNet,
 		})
 	}
 

@@ -59,7 +59,7 @@ type OurEntryDetails struct {
 
 // OurEntryBid represents a single team in our portfolio
 type OurEntryBid struct {
-	TeamID               int64
+	TeamID               string
 	SchoolName           string
 	Seed                 int
 	Region               string
