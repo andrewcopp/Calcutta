@@ -36,7 +36,7 @@ def run_optimizer(year: int = 2025):
             tournament_id = result[0]
             print(f"Tournament ID: {tournament_id}")
             
-            # Get team data with expected points from simulations
+            # Get team data with expected points from simulations and market predictions
             cur.execute("""
                 WITH team_win_counts AS (
                     SELECT 
@@ -59,6 +59,15 @@ def run_optimizer(year: int = 2025):
                         SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
                     FROM team_win_counts
                     GROUP BY team_id
+                ),
+                entry_count AS (
+                    SELECT COUNT(DISTINCT entry_name) as num_entries
+                    FROM bronze_entry_bids beb
+                    JOIN bronze_calcuttas bc ON beb.calcutta_id = bc.id
+                    WHERE bc.tournament_id = %s
+                ),
+                total_pool AS (
+                    SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
                 )
                 SELECT 
                     t.id as team_id,
@@ -72,23 +81,26 @@ def run_optimizer(year: int = 2025):
                      COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
                      COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
                      COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-                     COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_team_points
+                     COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_team_points,
+                    -- Predicted market from ridge regression model
+                    COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as predicted_team_total_bids
                 FROM bronze_teams t
                 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
+                LEFT JOIN silver_predicted_market_share spms 
+                    ON spms.tournament_id = %s AND spms.team_id = t.id
                 WHERE t.tournament_id = %s
                 ORDER BY t.seed ASC, t.school_name ASC
-            """, (tournament_id, tournament_id))
+            """, (tournament_id, tournament_id, tournament_id, tournament_id))
             
             rows = cur.fetchall()
             teams_df = pd.DataFrame(rows, columns=[
-                'team_id', 'team_key', 'school_name', 'seed', 'region', 'expected_team_points'
+                'team_id', 'team_key', 'school_name', 'seed', 'region', 
+                'expected_team_points', 'predicted_team_total_bids'
             ])
     
     print(f"Loaded {len(teams_df)} teams")
     print(f"Total expected points: {teams_df['expected_team_points'].sum():.1f}")
-    
-    # Use expected points as predicted market (Naive approach)
-    teams_df['predicted_team_total_bids'] = teams_df['expected_team_points']
+    print(f"Total predicted market: {teams_df['predicted_team_total_bids'].sum():.1f}")
     
     # Calculate expected ROI for reference
     teams_df['expected_roi'] = teams_df['expected_team_points'] / teams_df['predicted_team_total_bids'].replace(0, 1)
