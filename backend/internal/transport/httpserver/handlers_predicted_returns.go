@@ -53,8 +53,7 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 			SELECT 
 				st.team_id,
 				st.wins,
-				COUNT(*) as sim_count,
-				COUNT(*) OVER (PARTITION BY st.team_id) as total_sims
+				COUNT(*) as sim_count
 			FROM silver_simulated_tournaments st
 			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
 			GROUP BY st.team_id, st.wins
@@ -62,7 +61,7 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 		team_probabilities AS (
 			SELECT 
 				team_id,
-				MAX(total_sims) as total_sims,
+				SUM(sim_count)::float as total_sims,
 				-- Probability of reaching each round (cumulative)
 				SUM(CASE WHEN wins >= 0 THEN sim_count ELSE 0 END)::float as reach_pi,
 				SUM(CASE WHEN wins >= 1 THEN sim_count ELSE 0 END)::float as reach_r64,
