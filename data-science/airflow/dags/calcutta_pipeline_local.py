@@ -48,17 +48,13 @@ run_pipeline = BashOperator(
     task_id='run_full_pipeline',
     bash_command=f"""
 {BASE_CMD}
-python -m moneyball.cli report \\
-    --year {YEAR} \\
-    --n-sims {N_SIMS} \\
-    --seed {SEED} \\
-    --strategy {STRATEGY} \\
-    --stages predicted_game_outcomes \\
-             predicted_auction_share_of_pool \\
-             recommended_entry_bids \\
-             simulated_tournaments \\
-             simulated_entry_outcomes \\
-             investment_report
+# Run each stage of the pipeline
+python -m moneyball.cli predicted-game-outcomes --year {YEAR} && \\
+python -m moneyball.cli simulate-tournaments --year {YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
+python -m moneyball.cli predicted-auction-share-of-pool --year {YEAR} && \\
+python -m moneyball.cli recommended-entry-bids --year {YEAR} --strategy {STRATEGY} && \\
+python -m moneyball.cli simulated-entry-outcomes --year {YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
+python -m moneyball.cli investment-report --year {YEAR}
     """,
     dag=dag,
 )
