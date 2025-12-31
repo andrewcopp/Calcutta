@@ -57,11 +57,17 @@ def run_ridge_regression(year: int = 2025):
     print("\nRunning ridge regression model...")
     out_root = Path("out")
     
+    # Dynamically determine training years (all years except target year)
+    all_years = ["2017", "2018", "2019", "2021", "2022", "2023", "2024", "2025"]
+    train_snapshots = [y for y in all_years if y != str(year)]
+    print(f"Training on years: {train_snapshots}")
+    print(f"Predicting for year: {year}")
+    
     try:
         predictions = predict_auction_share_of_pool_from_out_root(
             out_root=out_root,
             predict_snapshot=str(year),
-            train_snapshots=["2017", "2018", "2019", "2021", "2022", "2023", "2024"],
+            train_snapshots=train_snapshots,
             ridge_alpha=1.0,
             feature_set="optimal",
             exclude_entry_names=[excluded_entry_name] if excluded_entry_name else None,
