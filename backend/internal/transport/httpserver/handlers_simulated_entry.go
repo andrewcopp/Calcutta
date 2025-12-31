@@ -54,7 +54,7 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 			WHERE bc.tournament_id = (SELECT id FROM bronze_tournament)
 		),
 		total_pool AS (
-			SELECT (SELECT num_entries FROM entry_count) * 100.0 as pool_size
+			SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
 		),
 		team_win_counts AS (
 			SELECT 

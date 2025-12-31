@@ -53,7 +53,7 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			WHERE bc.tournament_id = (SELECT id FROM bronze_tournament)
 		),
 		total_pool AS (
-			SELECT (SELECT num_entries FROM entry_count) * 100.0 as pool_size
+			SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
 		)
 		SELECT 
 			t.id as team_id,
