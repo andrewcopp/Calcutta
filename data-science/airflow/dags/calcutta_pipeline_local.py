@@ -48,13 +48,16 @@ run_pipeline = BashOperator(
     task_id='run_full_pipeline',
     bash_command=f"""
 {BASE_CMD}
+# Create snapshot directory if it doesn't exist
+mkdir -p /tmp/out/{YEAR}
+
 # Run each stage of the pipeline
-python -m moneyball.cli predicted-game-outcomes --year {YEAR} && \\
-python -m moneyball.cli simulate-tournaments --year {YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
-python -m moneyball.cli predicted-auction-share-of-pool --year {YEAR} && \\
-python -m moneyball.cli recommended-entry-bids --year {YEAR} --strategy {STRATEGY} && \\
-python -m moneyball.cli simulated-entry-outcomes --year {YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
-python -m moneyball.cli investment-report --year {YEAR}
+python -m moneyball.cli predicted-game-outcomes /tmp/out/{YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
+python -m moneyball.cli simulate-tournaments /tmp/out/{YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
+python -m moneyball.cli predicted-auction-share-of-pool /tmp/out/{YEAR} && \\
+python -m moneyball.cli recommended-entry-bids /tmp/out/{YEAR} --strategy {STRATEGY} && \\
+python -m moneyball.cli simulated-entry-outcomes /tmp/out/{YEAR} --n-sims {N_SIMS} --seed {SEED} && \\
+python -m moneyball.cli investment-report /tmp/out/{YEAR}
     """,
     dag=dag,
 )
