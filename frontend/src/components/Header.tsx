@@ -17,6 +17,9 @@ export const Header: React.FC = () => {
               <Link to="/calcuttas" className="text-gray-600 hover:text-gray-800">
                 Calcuttas
               </Link>
+              <Link to="/analytics" className="text-gray-600 hover:text-gray-800">
+                Analytics
+              </Link>
               <Link to="/rules" className="text-gray-600 hover:text-gray-800">
                 How It Works
               </Link>
