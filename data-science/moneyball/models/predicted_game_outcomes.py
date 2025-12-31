@@ -192,9 +192,9 @@ def predict_game_outcomes_from_teams_df(
     # Generate bracket structure from teams
     games = _generate_bracket_from_teams(teams_df)
     
-    # Add team_key column for compatibility with existing function
+    # Add team_key column using school_slug for compatibility
     teams = teams_df.copy()
-    teams['team_key'] = teams['id']
+    teams['team_key'] = 'ncaa-tournament-2025:' + teams['school_slug']
     
     return predict_game_outcomes(
         games=games,
@@ -240,13 +240,17 @@ def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
                 next_game_num = (idx // 2) + 1
                 next_slot = (idx % 2) + 1
                 
+                # Use school_slug in team_key format
+                team1_key = f"ncaa-tournament-2025:{team1.iloc[0]['school_slug']}"
+                team2_key = f"ncaa-tournament-2025:{team2.iloc[0]['school_slug']}"
+                
                 games.append({
                     'game_id': f'R1-{region}-{seed1}v{seed2}',
                     'round': 'R64',
                     'round_order': 1,
                     'sort_order': game_id,
-                    'team1_key': str(team1.iloc[0]['id']),
-                    'team2_key': str(team2.iloc[0]['id']),
+                    'team1_key': team1_key,
+                    'team2_key': team2_key,
                     'region': region,
                     'next_game_id': f'R2-{region}-G{next_game_num}',
                     'next_game_slot': next_slot,

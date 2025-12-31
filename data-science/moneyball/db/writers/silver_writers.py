@@ -73,8 +73,8 @@ def write_predicted_game_outcomes(
                     tournament_id,
                     row['game_id'],
                     int(row['round_int']),
-                    int(row['team1_id']),
-                    int(row['team2_id']),
+                    str(row['team1_id']),  # team_id is UUID string
+                    str(row['team2_id']),  # team_id is UUID string
                     float(row.get('p_team1_wins_given_matchup',
                           row.get('p_team1_wins', 0.5))),
                     float(row.get('p_matchup', 1.0)),
@@ -143,7 +143,7 @@ def write_simulated_tournaments(
                 (
                     tournament_id,
                     int(row['sim_id']),
-                    int(row['team_id']),
+                    str(row['team_id']),  # team_id is UUID string
                     int(row['wins']),
                     int(row['byes']),
                     bool(row['eliminated'])
