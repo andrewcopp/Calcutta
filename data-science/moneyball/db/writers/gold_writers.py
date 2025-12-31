@@ -60,7 +60,7 @@ def write_recommended_entry_bids(
     Args:
         run_id: Optimization run ID
         bids_df: DataFrame with columns:
-            - school_slug, recommended_bid_points, expected_roi
+            - team_key, bid_amount_points, score (expected_roi)
         team_id_map: Dict mapping school_slug to team_id
     
     Returns:
@@ -74,8 +74,9 @@ def write_recommended_entry_bids(
                 WHERE run_id = %s
             """, (run_id,))
             
-            # Map school slugs to team IDs
+            # Extract school slugs from team keys and map to IDs
             df = bids_df.copy()
+            df['school_slug'] = df['team_key'].str.split(':').str[-1]
             df['team_id'] = df['school_slug'].map(team_id_map)
             
             # Check for unmapped teams
@@ -87,8 +88,8 @@ def write_recommended_entry_bids(
                 (
                     run_id,
                     int(row['team_id']),
-                    int(row['recommended_bid_points']),
-                    float(row['expected_roi'])
+                    int(row['bid_amount_points']),
+                    float(row.get('score', row.get('expected_roi', 0.0)))
                 )
                 for _, row in df.iterrows()
             ]

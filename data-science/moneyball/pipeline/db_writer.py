@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 import pandas as pd
 
 from moneyball.db.writers.bronze_writers import (
@@ -240,12 +240,13 @@ class DatabaseWriter:
         self,
         *,
         run_id: str,
-        calcutta_key: str,
+        calcutta_id: int,
         strategy: str,
         n_sims: int,
         seed: int,
         budget_points: int,
         recommended_bids_df: pd.DataFrame,
+        team_id_map: Dict[str, int],
     ) -> None:
         """Write optimization run and recommended bids to database."""
         if not self.enabled:
@@ -254,8 +255,8 @@ class DatabaseWriter:
         try:
             # Write optimization run metadata
             write_optimization_run(
+                calcutta_id=calcutta_id,
                 run_id=run_id,
-                calcutta_key=calcutta_key,
                 strategy=strategy,
                 n_sims=n_sims,
                 seed=seed,
@@ -263,9 +264,11 @@ class DatabaseWriter:
             )
             
             # Write recommended bids
-            write_recommended_entry_bids(run_id, recommended_bids_df)
+            count = write_recommended_entry_bids(
+                run_id, recommended_bids_df, team_id_map
+            )
             
-            print(f"✓ Wrote optimization run {run_id} to database")
+            print(f"✓ Wrote optimization run {run_id} with {count} bids to database")
         except Exception as e:
             print(f"⚠ Failed to write optimization results: {e}")
     
