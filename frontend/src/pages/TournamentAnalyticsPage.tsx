@@ -492,6 +492,9 @@ interface TeamSimulatedEntry {
 }
 
 function SimulatedEntriesTab({ tournamentId }: { tournamentId: string }) {
+  const [sortColumn, setSortColumn] = React.useState<keyof TeamSimulatedEntry>('seed');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+
   const { data: simulatedEntry, isLoading } = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
     queryKey: ['analytics', 'simulated-entry', tournamentId],
     queryFn: async () => {
@@ -503,6 +506,49 @@ function SimulatedEntriesTab({ tournamentId }: { tournamentId: string }) {
 
   const formatPoints = (points: number) => points.toFixed(1);
   const formatROI = (roi: number) => roi.toFixed(2);
+
+  const handleSort = (column: keyof TeamSimulatedEntry) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedTeams = React.useMemo(() => {
+    if (!simulatedEntry?.teams) return [];
+    
+    return [...simulatedEntry.teams].sort((a, b) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
+      
+      // Handle string comparison for school_name and region
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDirection === 'asc' 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      
+      // Handle numeric comparison
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      
+      return 0;
+    });
+  }, [simulatedEntry?.teams, sortColumn, sortDirection]);
+
+  const SortIcon = ({ column }: { column: keyof TeamSimulatedEntry }) => {
+    if (sortColumn !== column) {
+      return <span className="ml-1 text-gray-400">⇅</span>;
+    }
+    return sortDirection === 'asc' ? (
+      <span className="ml-1">↑</span>
+    ) : (
+      <span className="ml-1">↓</span>
+    );
+  };
 
   return (
     <div>
@@ -518,34 +564,58 @@ function SimulatedEntriesTab({ tournamentId }: { tournamentId: string }) {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
-                  Team
+                <th 
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('school_name')}
+                >
+                  Team <SortIcon column="school_name" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Seed
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('seed')}
+                >
+                  Seed <SortIcon column="seed" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Region
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('region')}
+                >
+                  Region <SortIcon column="region" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exp Pts
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('expected_points')}
+                >
+                  Exp Pts <SortIcon column="expected_points" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exp Mkt
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('expected_market')}
+                >
+                  Exp Mkt <SortIcon column="expected_market" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exp ROI
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('expected_roi')}
+                >
+                  Exp ROI <SortIcon column="expected_roi" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
-                  Our Bid
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 cursor-pointer hover:bg-blue-100"
+                  onClick={() => handleSort('our_bid')}
+                >
+                  Our Bid <SortIcon column="our_bid" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
-                  Our ROI
+                <th 
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 cursor-pointer hover:bg-blue-100"
+                  onClick={() => handleSort('our_roi')}
+                >
+                  Our ROI <SortIcon column="our_roi" />
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {simulatedEntry.teams.map((team) => (
+              {sortedTeams.map((team) => (
                 <tr key={team.team_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">
                     {team.school_name}
