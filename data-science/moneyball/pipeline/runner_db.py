@@ -349,12 +349,17 @@ def stage_recommended_entry_bids(
         )
         script_path = os.path.abspath(script_path)
         
+        # Set up environment with PYTHONPATH
+        env = os.environ.copy()
+        data_science_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        env['PYTHONPATH'] = data_science_root
+        
         # Run the standalone script
         result = subprocess.run(
             [sys.executable, script_path, str(year)],
             capture_output=True,
             text=True,
-            env=os.environ.copy(),
+            env=env,
         )
         
         if result.returncode != 0:
@@ -526,13 +531,12 @@ def run_full_pipeline(
         year=year,
         strategy=strategy,
         run_id=results['simulated_tournaments']['run_id'],
-        calcutta_id=calcutta_id,
     )
     
     # Stage 4: Evaluate simulated entry via simulated calcuttas
     results['simulated_calcuttas'] = stage_simulated_calcuttas(
         year=year,
-        run_id=results['simulated_tournaments']['run_id'],
+        run_id=results['recommended_entry_bids']['run_id'],
     )
     
     print(f"\n{'='*60}")
