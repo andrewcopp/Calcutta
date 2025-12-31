@@ -24,11 +24,12 @@ func New(pool *pgxpool.Pool) *Service {
 
 // SimulationResult represents the outcome of one simulation
 type SimulationResult struct {
-	SimID        int
-	EntryName    string
-	TotalPoints  int
-	Rank         int
-	PayoutPoints int
+	SimID            int
+	EntryName        string
+	TotalPoints      int
+	Rank             int
+	PayoutCents      int
+	NormalizedPayout float64
 }
 
 // EntryPerformance represents aggregated performance metrics for an entry
@@ -50,6 +51,14 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 
 	log.Printf("Calculating simulated calcutta for tournament %s, run %s", tournamentID, runID)
 	log.Printf("Excluding entry: %s", excludedEntry)
+
+	// Get payout structure from database
+	payouts, firstPlacePayout, err := s.getPayoutStructure(ctx, tournamentID)
+	if err != nil {
+		return fmt.Errorf("failed to get payout structure: %w", err)
+	}
+
+	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
 
 	// Get all entries and their bids
 	entries, err := s.getEntries(ctx, tournamentID, runID, excludedEntry)
@@ -81,7 +90,7 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 			semaphore <- struct{}{}        // Acquire
 			defer func() { <-semaphore }() // Release
 
-			simResults, err := s.calculateSimulationOutcomes(ctx, sid, entries, simulations[sid])
+			simResults, err := s.calculateSimulationOutcomes(ctx, sid, entries, simulations[sid], payouts, firstPlacePayout)
 			if err != nil {
 				errors <- fmt.Errorf("simulation %d: %w", sid, err)
 				return
@@ -240,7 +249,43 @@ func (s *Service) getSimulations(ctx context.Context, tournamentID string) (map[
 	return simulations, nil
 }
 
-func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, entries map[string]*Entry, teamResults []TeamSimResult) ([]SimulationResult, error) {
+func (s *Service) getPayoutStructure(ctx context.Context, tournamentID string) (map[int]int, int, error) {
+	query := `
+		SELECT cp.position, cp.amount_cents
+		FROM calcutta_payouts cp
+		JOIN bronze_calcuttas bc ON cp.calcutta_id = bc.id
+		WHERE bc.tournament_id = $1
+		ORDER BY cp.position
+	`
+
+	rows, err := s.pool.Query(ctx, query, tournamentID)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	payouts := make(map[int]int)
+	var firstPlacePayout int
+
+	for rows.Next() {
+		var position, amountCents int
+		if err := rows.Scan(&position, &amountCents); err != nil {
+			return nil, 0, err
+		}
+		payouts[position] = amountCents
+		if position == 1 {
+			firstPlacePayout = amountCents
+		}
+	}
+
+	if firstPlacePayout == 0 {
+		return nil, 0, fmt.Errorf("no first place payout found")
+	}
+
+	return payouts, firstPlacePayout, nil
+}
+
+func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
 	// Build team points map for this simulation
 	teamPoints := make(map[string]int)
 	for _, tr := range teamResults {
@@ -273,35 +318,30 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 	results := make([]SimulationResult, len(scores))
 	for i, score := range scores {
 		rank := i + 1
-		payout := s.calculatePayout(rank, len(scores))
+
+		// Get payout from actual payout structure
+		payoutCents := 0
+		if amount, ok := payouts[rank]; ok {
+			payoutCents = amount
+		}
+
+		// Normalize by first place payout
+		normalizedPayout := 0.0
+		if firstPlacePayout > 0 {
+			normalizedPayout = float64(payoutCents) / float64(firstPlacePayout)
+		}
 
 		results[i] = SimulationResult{
-			SimID:        simID,
-			EntryName:    score.name,
-			TotalPoints:  score.points,
-			Rank:         rank,
-			PayoutPoints: payout,
+			SimID:            simID,
+			EntryName:        score.name,
+			TotalPoints:      score.points,
+			Rank:             rank,
+			PayoutCents:      payoutCents,
+			NormalizedPayout: normalizedPayout,
 		}
 	}
 
 	return results, nil
-}
-
-func (s *Service) calculatePayout(rank int, totalEntries int) int {
-	// Simple payout structure: top 3 get paid
-	// 1st: 50%, 2nd: 30%, 3rd: 20%
-	totalPool := totalEntries * 100 // Each entry pays 100 points
-
-	switch rank {
-	case 1:
-		return totalPool * 50 / 100
-	case 2:
-		return totalPool * 30 / 100
-	case 3:
-		return totalPool * 20 / 100
-	default:
-		return 0
-	}
 }
 
 func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, results []SimulationResult) error {
@@ -317,7 +357,7 @@ func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, res
 		batch.Queue(`
 			INSERT INTO gold_entry_simulation_outcomes (run_id, entry_name, sim_id, payout_points, rank)
 			VALUES ($1, $2, $3, $4, $5)
-		`, runID, r.EntryName, r.SimID, r.PayoutPoints, r.Rank)
+		`, runID, r.EntryName, r.SimID, r.PayoutCents, r.Rank)
 	}
 
 	br := s.pool.SendBatch(ctx, batch)
@@ -333,32 +373,32 @@ func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, res
 }
 
 func (s *Service) calculatePerformanceMetrics(results []SimulationResult) map[string]*EntryPerformance {
-	entryPayouts := make(map[string][]int)
+	entryPayouts := make(map[string][]float64)
 
 	for _, r := range results {
-		entryPayouts[r.EntryName] = append(entryPayouts[r.EntryName], r.PayoutPoints)
+		entryPayouts[r.EntryName] = append(entryPayouts[r.EntryName], r.NormalizedPayout)
 	}
 
 	performance := make(map[string]*EntryPerformance)
 	for entryName, payouts := range entryPayouts {
-		sort.Ints(payouts)
+		sort.Float64s(payouts)
 
 		// Calculate metrics
-		var sum int
+		var sum float64
 		var top1Count, inMoneyCount int
 		for _, payout := range payouts {
 			sum += payout
 			if payout > 0 {
 				inMoneyCount++
 			}
-			// Top 1 is when payout is 50% of pool (assuming standard payout structure)
-			if payout >= len(payouts)*100*50/100 {
+			// Top 1 is when normalized payout is 1.0 (first place)
+			if payout >= 1.0 {
 				top1Count++
 			}
 		}
 
-		mean := float64(sum) / float64(len(payouts))
-		median := float64(payouts[len(payouts)/2])
+		mean := sum / float64(len(payouts))
+		median := payouts[len(payouts)/2]
 
 		performance[entryName] = &EntryPerformance{
 			EntryName:    entryName,
