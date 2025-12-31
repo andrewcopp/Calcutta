@@ -36,14 +36,17 @@ def run_ridge_regression(year: int = 2025):
             tournament_id = result[0]
             print(f"Tournament ID: {tournament_id}")
             
-            # Get team_id map (school_slug -> team_id)
+            # Get team_id map (school_slug -> team_id UUID)
+            # Ridge regression returns keys like "ncaa-tournament-2025:duke"
+            # We need to map "duke" (school_slug) -> UUID
             cur.execute("""
                 SELECT school_slug, id
                 FROM bronze_teams
                 WHERE tournament_id = %s
             """, (tournament_id,))
-            team_id_map = {row[0]: row[1] for row in cur.fetchall()}
+            team_id_map = {row[0]: str(row[1]) for row in cur.fetchall()}
             print(f"Loaded {len(team_id_map)} teams")
+            print(f"Sample mapping: {list(team_id_map.items())[:3]}")
     
     # Run ridge regression model
     print("\nRunning ridge regression model...")
@@ -76,6 +79,9 @@ def run_ridge_regression(year: int = 2025):
     # Write to database
     print("\nWriting predictions to database...")
     try:
+        # Strip tournament prefix from team_key (e.g., "ncaa-tournament-2025:duke" -> "duke")
+        predictions['team_key'] = predictions['team_key'].str.split(':').str[-1]
+        
         count = write_predicted_market_share(
             predictions_df=predictions,
             team_id_map=team_id_map,
