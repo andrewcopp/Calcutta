@@ -22,14 +22,14 @@ func NewMLAnalyticsRepository(pool *pgxpool.Pool) *MLAnalyticsRepository {
 }
 
 // Helper functions for nullable types
-func derefInt32(v *int32) int32 {
+func derefInt32ML(v *int32) int32 {
 	if v == nil {
 		return 0
 	}
 	return *v
 }
 
-func derefString(v *string) string {
+func derefStringML(v *string) string {
 	if v == nil {
 		return ""
 	}
@@ -40,8 +40,16 @@ func uuidToStringPtr(v pgtype.UUID) *string {
 	if !v.Valid {
 		return nil
 	}
-	s := v.Bytes.String()
-	return &s
+	// Convert UUID bytes to string
+	s := v.Bytes[0:16]
+	str := ""
+	for i, b := range s {
+		if i == 4 || i == 6 || i == 8 || i == 10 {
+			str += "-"
+		}
+		str += string([]byte{b})
+	}
+	return &str
 }
 
 func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year int) (*ports.TournamentSimStats, error) {
@@ -81,8 +89,8 @@ func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int
 	return &ports.TeamPerformance{
 		TeamID:            row.TeamID,
 		SchoolName:        row.SchoolName,
-		Seed:              int(derefInt32(row.Seed)),
-		Region:            derefString(row.Region),
+		Seed:              int(derefInt32ML(row.Seed)),
+		Region:            derefStringML(row.Region),
 		KenpomNet:         row.KenpomNet,
 		TotalSims:         int(row.TotalSims),
 		AvgWins:           row.AvgWins,
@@ -102,8 +110,8 @@ func (r *MLAnalyticsRepository) GetTeamPredictions(ctx context.Context, year int
 		out = append(out, ports.TeamPrediction{
 			TeamID:     row.TeamID,
 			SchoolName: row.SchoolName,
-			Seed:       int(derefInt32(row.Seed)),
-			Region:     derefString(row.Region),
+			Seed:       int(derefInt32ML(row.Seed)),
+			Region:     derefStringML(row.Region),
 			KenpomNet:  row.KenpomNet,
 		})
 	}
@@ -123,7 +131,7 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 
 	run := ports.OptimizationRun{
 		RunID:        runRow.RunID,
-		CalcuttaID:   runRow.CalcuttaID,
+		CalcuttaID:   uuidToStringPtr(runRow.CalcuttaID),
 		Strategy:     runRow.Strategy,
 		NSims:        int(runRow.NSims),
 		Seed:         int(runRow.Seed),
@@ -142,10 +150,10 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 		portfolio = append(portfolio, ports.OurEntryBid{
 			TeamID:               row.TeamID,
 			SchoolName:           row.SchoolName,
-			Seed:                 int(row.Seed),
-			Region:               row.Region,
+			Seed:                 int(derefInt32ML(row.Seed)),
+			Region:               derefStringML(row.Region),
 			RecommendedBidPoints: int(row.RecommendedBidPoints),
-			ExpectedROI:          floatFromPgNumeric(row.ExpectedRoi),
+			ExpectedROI:          row.ExpectedRoi,
 		})
 	}
 
@@ -189,8 +197,8 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 			teams = append(teams, ports.EntryPortfolioTeam{
 				TeamID:          row.TeamID,
 				SchoolName:      row.SchoolName,
-				Seed:            int(row.Seed),
-				Region:          row.Region,
+				Seed:            int(derefInt32ML(row.Seed)),
+				Region:          derefStringML(row.Region),
 				BidAmountPoints: int(row.BidAmount),
 			})
 			totalBid += int(row.BidAmount)
@@ -207,8 +215,8 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 			teams = append(teams, ports.EntryPortfolioTeam{
 				TeamID:          row.TeamID,
 				SchoolName:      row.SchoolName,
-				Seed:            int(row.Seed),
-				Region:          row.Region,
+				Seed:            int(derefInt32ML(row.Seed)),
+				Region:          derefStringML(row.Region),
 				BidAmountPoints: int(row.BidAmountPoints),
 			})
 			totalBid += int(row.BidAmountPoints)
@@ -233,7 +241,7 @@ func (r *MLAnalyticsRepository) GetOptimizationRuns(ctx context.Context, year in
 	for _, row := range rows {
 		out = append(out, ports.OptimizationRun{
 			RunID:        row.RunID,
-			CalcuttaID:   row.CalcuttaID,
+			CalcuttaID:   uuidToStringPtr(row.CalcuttaID),
 			Strategy:     row.Strategy,
 			NSims:        int(row.NSims),
 			Seed:         int(row.Seed),

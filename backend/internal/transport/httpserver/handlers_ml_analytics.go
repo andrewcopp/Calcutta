@@ -49,9 +49,9 @@ func (s *Server) handleGetTeamPerformance(w http.ResponseWriter, r *http.Request
 		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
 		return
 	}
-	teamID, err := strconv.ParseInt(vars["team_id"], 10, 64)
-	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid team_id parameter", "team_id")
+	teamID := vars["team_id"]
+	if teamID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing team_id parameter", "team_id")
 		return
 	}
 

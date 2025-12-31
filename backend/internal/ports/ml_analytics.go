@@ -42,7 +42,7 @@ type TeamPrediction struct {
 // OptimizationRun represents a strategy execution
 type OptimizationRun struct {
 	RunID        string
-	CalcuttaID   int64
+	CalcuttaID   *string
 	Strategy     string
 	NSims        int
 	Seed         int
@@ -128,7 +128,7 @@ type EntryPortfolio struct {
 
 // EntryPortfolioTeam represents a single team in an entry's portfolio
 type EntryPortfolioTeam struct {
-	TeamID          int64
+	TeamID          string
 	SchoolName      string
 	Seed            int
 	Region          string
