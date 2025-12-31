@@ -152,3 +152,66 @@ def write_simulated_tournaments(
             
             conn.commit()
             return len(values)
+
+
+def write_predicted_market_share(
+    calcutta_id: str,
+    predictions_df: pd.DataFrame,
+    team_id_map: Dict[str, str],
+    model_version: str = None
+) -> int:
+    """
+    Write predicted market share from ridge regression model.
+    
+    Args:
+        calcutta_id: Calcutta ID
+        predictions_df: DataFrame with columns:
+            - team_key, predicted_auction_share_of_pool
+        team_id_map: Dict mapping school_slug to team_id
+        model_version: Optional model version
+    
+    Returns:
+        Number of rows inserted
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # Clear existing predictions for this calcutta
+            cur.execute("""
+                DELETE FROM silver_predicted_market_share
+                WHERE calcutta_id = %s
+            """, (calcutta_id,))
+            
+            # Map team_key to team_id
+            df = predictions_df.copy()
+            df['team_id'] = df['team_key'].map(team_id_map)
+            
+            # Check for unmapped teams
+            if df['team_id'].isna().any():
+                unmapped = df[df['team_id'].isna()]['team_key'].unique()
+                raise ValueError(f"Unmapped teams: {list(unmapped)}")
+            
+            # Prepare values
+            values = [
+                (
+                    calcutta_id,
+                    str(row['team_id']),  # team_id is UUID string
+                    float(row['predicted_auction_share_of_pool']),
+                    float(row['predicted_auction_share_of_pool']) * 100.0,  # predicted_points (share * 100)
+                )
+                for _, row in df.iterrows()
+            ]
+            
+            # Batch insert
+            psycopg2.extras.execute_batch(cur, """
+                INSERT INTO silver_predicted_market_share
+                (calcutta_id, team_id, predicted_share, predicted_points)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (calcutta_id, team_id)
+                DO UPDATE SET
+                    predicted_share = EXCLUDED.predicted_share,
+                    predicted_points = EXCLUDED.predicted_points
+            """, values)
+            
+            conn.commit()
+            logger.info(f"Wrote {len(values)} predicted market shares for calcutta {calcutta_id}")
+            return len(values)
