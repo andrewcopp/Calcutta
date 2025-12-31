@@ -174,36 +174,24 @@ def predict_game_outcomes_from_teams_df(
     seed: int = 42,
 ) -> pd.DataFrame:
     """
-    Generate game predictions directly from a teams DataFrame.
+    Generate ALL theoretical matchup predictions for tournament.
     
-    This function generates the bracket structure from teams and then
-    predicts outcomes. Used for DB-first pipeline.
+    Creates predictions for every possible team pairing across all rounds.
+    For a 68-team field, this generates all possible matchups accounting
+    for First Four games.
     
     Args:
-        teams_df: DataFrame with team data (must have id, school_name, 
-                  seed, region, kenpom_net columns)
+        teams_df: DataFrame with all teams (68 for NCAA tournament)
         kenpom_scale: KenPom scaling factor
-        n_sims: Number of simulations
-        seed: Random seed
+        n_sims: Unused (kept for API compatibility)
+        seed: Unused (kept for API compatibility)
         
     Returns:
-        DataFrame with predicted game outcomes
+        DataFrame with all theoretical matchup predictions
     """
-    # Generate bracket structure from teams
-    games = _generate_bracket_from_teams(teams_df)
+    from moneyball.models.all_matchups import generate_all_theoretical_matchups
     
-    # Add team_key column using school_slug for compatibility
-    teams = teams_df.copy()
-    teams['team_key'] = 'ncaa-tournament-2025:' + teams['school_slug']
-    
-    return predict_game_outcomes(
-        games=games,
-        teams=teams,
-        calcutta_key=None,
-        kenpom_scale=kenpom_scale,
-        n_sims=n_sims,
-        seed=seed,
-    )
+    return generate_all_theoretical_matchups(teams_df, kenpom_scale)
 
 
 def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:

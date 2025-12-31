@@ -78,17 +78,11 @@ def stage_predicted_game_outcomes(
     
     tournament_id = get_or_create_tournament(year)
     
-    # Create team_id mapping: school_slug -> team_id
-    team_id_map = {
-        str(row['school_slug']): str(row['id'])
-        for _, row in teams_df.iterrows()
-    }
-    
     try:
         write_predicted_game_outcomes(
             tournament_id=tournament_id,
             predictions_df=predictions_df,
-            team_id_map=team_id_map,
+            team_id_map={},  # Not needed - predictions already have team_id
             model_version=model_version,
         )
         print(f"✓ Predicted game outcomes written to database")

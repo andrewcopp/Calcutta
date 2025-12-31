@@ -40,12 +40,8 @@ def write_predicted_game_outcomes(
                 WHERE tournament_id = %s
             """, (tournament_id,))
             
-            # Extract school slugs from team keys and map to IDs
+            # Predictions already have team1_id and team2_id
             df = predictions_df.copy()
-            df['team1_slug'] = df['team1_key'].str.split(':').str[-1]
-            df['team2_slug'] = df['team2_key'].str.split(':').str[-1]
-            df['team1_id'] = df['team1_slug'].map(team_id_map)
-            df['team2_id'] = df['team2_slug'].map(team_id_map)
             
             # Map round names to inverted integers (championship = 0)
             round_mapping = {
@@ -57,16 +53,13 @@ def write_predicted_game_outcomes(
                 'round_of_64': 5,
                 'first_four': 6,
             }
-            df['round_int'] = df['round'].map(round_mapping)
             
-            # Check for unmapped teams
-            if df['team1_id'].isna().any() or df['team2_id'].isna().any():
-                unmapped = set()
-                if df['team1_id'].isna().any():
-                    unmapped.update(df[df['team1_id'].isna()]['team1_slug'])
-                if df['team2_id'].isna().any():
-                    unmapped.update(df[df['team2_id'].isna()]['team2_slug'])
-                raise ValueError(f"Unmapped teams: {list(unmapped)}")
+            # Use round_int if provided, otherwise map from round name
+            if 'round_int' not in df.columns:
+                df['round_int'] = df['round'].map(round_mapping)
+            else:
+                # Invert the round_int (our data has 1=R1, but DB wants 5=R1)
+                df['round_int'] = df['round'].map(round_mapping)
             
             values = [
                 (
@@ -88,10 +81,9 @@ def write_predicted_game_outcomes(
                 (tournament_id, game_id, round, team1_id, team2_id,
                  p_team1_wins, p_matchup, model_version)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (tournament_id, game_id) DO UPDATE SET
+                ON CONFLICT (tournament_id, game_id, team1_id, team2_id)
+                DO UPDATE SET
                     round = EXCLUDED.round,
-                    team1_id = EXCLUDED.team1_id,
-                    team2_id = EXCLUDED.team2_id,
                     p_team1_wins = EXCLUDED.p_team1_wins,
                     p_matchup = EXCLUDED.p_matchup,
                     model_version = EXCLUDED.model_version
