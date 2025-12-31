@@ -255,29 +255,52 @@ def stage_recommended_entry_bids(
     
     print(f"  Generated {len(recommendations_df)} recommendations")
     
+    # Convert numpy types to Python types
+    recommendations_df = recommendations_df.copy()
+    if 'bid_amount_points' in recommendations_df.columns:
+        recommendations_df['bid_amount_points'] = recommendations_df['bid_amount_points'].astype(int)
+    if 'score' in recommendations_df.columns:
+        recommendations_df['score'] = recommendations_df['score'].astype(float)
+    
     # Write to database
-    db_writer = get_db_writer()
-    tournament_key = f"ncaa-tournament-{year}"
+    from moneyball.db.writers.gold_writers import (
+        write_optimization_run,
+        write_recommended_entry_bids,
+    )
+    from moneyball.db.writers.bronze_writers import get_or_create_tournament
+    
+    tournament_id = get_or_create_tournament(year)
+    
+    # Create team_id mapping
+    teams_df = read_teams(year)
+    team_id_map = {
+        str(row['school_slug']): str(row['id'])
+        for _, row in teams_df.iterrows()
+    }
     
     # Create optimization run record
-    optimization_run_id = str(uuid.uuid4())
-    db_writer.write_optimization_run(
-        tournament_key=tournament_key,
-        run_id=optimization_run_id,
-        strategy=strategy,
-        n_sims=simulations_df['sim_id'].max() + 1,
-        seed=42,  # TODO: track seed properly
-        budget_points=budget_points,
-        calcutta_id=calcutta_id,
-    )
+    optimization_run_id = run_id if run_id else str(uuid.uuid4())
     
-    # Write recommendations
-    db_writer.write_recommended_entry_bids(
-        run_id=optimization_run_id,
-        recommendations_df=recommendations_df,
-    )
-    
-    print(f"✓ Recommended entry bids written to database (run_id={optimization_run_id})")
+    try:
+        write_optimization_run(
+            run_id=optimization_run_id,
+            strategy=strategy,
+            n_sims=int(simulations_df['sim_id'].max() + 1),
+            seed=42,  # TODO: track seed properly
+            budget_points=int(budget_points),
+            calcutta_id=calcutta_id,
+        )
+        
+        # Write recommendations
+        write_recommended_entry_bids(
+            run_id=optimization_run_id,
+            bids_df=recommendations_df,
+            team_id_map=team_id_map,
+        )
+        
+        print(f"✓ Recommended entry bids written to database (run_id={optimization_run_id})")
+    except Exception as e:
+        print(f"⚠ Failed to write recommendations: {e}")
     
     return {
         "year": year,

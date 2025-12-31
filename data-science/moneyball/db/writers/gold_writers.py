@@ -76,8 +76,15 @@ def write_recommended_entry_bids(
             
             # Extract school slugs from team keys and map to IDs
             df = bids_df.copy()
-            df['school_slug'] = df['team_key'].str.split(':').str[-1]
-            df['team_id'] = df['school_slug'].map(team_id_map)
+            
+            # Handle different column formats
+            if 'team_key' in df.columns:
+                df['school_slug'] = df['team_key'].str.split(':').str[-1]
+                df['team_id'] = df['school_slug'].map(team_id_map)
+            elif 'school_slug' in df.columns:
+                df['team_id'] = df['school_slug'].map(team_id_map)
+            elif 'team_id' not in df.columns:
+                raise ValueError("DataFrame must have team_key, school_slug, or team_id column")
             
             # Check for unmapped teams
             if df['team_id'].isna().any():
@@ -87,8 +94,8 @@ def write_recommended_entry_bids(
             values = [
                 (
                     run_id,
-                    int(row['team_id']),
-                    int(row['bid_amount_points']),
+                    str(row['team_id']),
+                    int(float(row['bid_amount_points'])),
                     float(row.get('score', row.get('expected_roi', 0.0)))
                 )
                 for _, row in df.iterrows()
