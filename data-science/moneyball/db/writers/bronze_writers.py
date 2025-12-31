@@ -1,7 +1,7 @@
 """
 Bronze layer database writers.
 
-Write raw tournament and simulation data using integer IDs.
+Write raw tournament and simulation data using UUIDs.
 """
 import logging
 import pandas as pd
@@ -12,52 +12,50 @@ from moneyball.db.connection import get_db_connection
 logger = logging.getLogger(__name__)
 
 
-def get_or_create_tournament(season: int) -> int:
+def get_or_create_tournament(season: int) -> str:
     """
-    Get or create tournament by season, return tournament_id.
+    Get or create tournament by season, return tournament UUID.
     
     Args:
         season: Tournament year (e.g., 2025)
     
     Returns:
-        tournament_id
+        tournament_id (UUID as string)
     """
-    tournament_name = f"NCAA Tournament {season}"
-    
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id FROM bronze_tournaments
-                WHERE season = %s AND tournament_name = %s
-            """, (season, tournament_name))
+                WHERE season = %s
+            """, (season,))
             
             result = cur.fetchone()
             if result:
-                return result[0]
+                return str(result[0])
             
             cur.execute("""
-                INSERT INTO bronze_tournaments (season, tournament_name)
-                VALUES (%s, %s)
+                INSERT INTO bronze_tournaments (season)
+                VALUES (%s)
                 RETURNING id
-            """, (season, tournament_name))
+            """, (season,))
             
             tournament_id = cur.fetchone()[0]
             conn.commit()
-            return tournament_id
+            return str(tournament_id)
 
 
-def write_teams(tournament_id: int, teams_df: pd.DataFrame) -> Dict[str, int]:
+def write_teams(tournament_id: str, teams_df: pd.DataFrame) -> Dict[str, str]:
     """
     Write teams for a tournament, return school_slug -> team_id mapping.
     
     Args:
-        tournament_id: Tournament ID
+        tournament_id: Tournament UUID
         teams_df: DataFrame with columns:
             - school_slug, school_name, seed, region
-            - byes (optional), kenpom_* (optional)
+            - kenpom_* (optional)
     
     Returns:
-        Dict mapping school_slug to team_id
+        Dict mapping school_slug to team_id (UUID as string)
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -67,17 +65,18 @@ def write_teams(tournament_id: int, teams_df: pd.DataFrame) -> Dict[str, int]:
                 cur.execute("""
                     INSERT INTO bronze_teams
                     (tournament_id, school_slug, school_name, seed, region,
-                     byes, kenpom_net, kenpom_o, kenpom_d, kenpom_adj_t)
+                     kenpom_net, kenpom_adj_em, kenpom_adj_o, 
+                     kenpom_adj_d, kenpom_adj_t)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (tournament_id, school_slug)
                     DO UPDATE SET
                         school_name = EXCLUDED.school_name,
                         seed = EXCLUDED.seed,
                         region = EXCLUDED.region,
-                        byes = EXCLUDED.byes,
                         kenpom_net = EXCLUDED.kenpom_net,
-                        kenpom_o = EXCLUDED.kenpom_o,
-                        kenpom_d = EXCLUDED.kenpom_d,
+                        kenpom_adj_em = EXCLUDED.kenpom_adj_em,
+                        kenpom_adj_o = EXCLUDED.kenpom_adj_o,
+                        kenpom_adj_d = EXCLUDED.kenpom_adj_d,
                         kenpom_adj_t = EXCLUDED.kenpom_adj_t
                     RETURNING id
                 """, (
@@ -86,15 +85,15 @@ def write_teams(tournament_id: int, teams_df: pd.DataFrame) -> Dict[str, int]:
                     row['school_name'],
                     int(row['seed']),
                     row['region'],
-                    int(row.get('byes', 0)),
                     float(row['kenpom_net']) if pd.notna(row.get('kenpom_net')) else None,
-                    float(row['kenpom_o']) if pd.notna(row.get('kenpom_o')) else None,
-                    float(row['kenpom_d']) if pd.notna(row.get('kenpom_d')) else None,
+                    float(row['kenpom_adj_em']) if pd.notna(row.get('kenpom_adj_em')) else None,
+                    float(row['kenpom_adj_o']) if pd.notna(row.get('kenpom_adj_o')) else None,
+                    float(row['kenpom_adj_d']) if pd.notna(row.get('kenpom_adj_d')) else None,
                     float(row['kenpom_adj_t']) if pd.notna(row.get('kenpom_adj_t')) else None,
                 ))
                 
                 team_id = cur.fetchone()[0]
-                team_ids[row['school_slug']] = team_id
+                team_ids[row['school_slug']] = str(team_id)
             
             conn.commit()
             return team_ids

@@ -240,13 +240,13 @@ class DatabaseWriter:
         self,
         *,
         run_id: str,
-        calcutta_id: int,
+        calcutta_id: Optional[str],
         strategy: str,
         n_sims: int,
         seed: int,
         budget_points: int,
         recommended_bids_df: pd.DataFrame,
-        team_id_map: Dict[str, int],
+        team_id_map: Dict[str, str],
     ) -> None:
         """Write optimization run and recommended bids to database."""
         if not self.enabled:
@@ -255,12 +255,12 @@ class DatabaseWriter:
         try:
             # Write optimization run metadata
             write_optimization_run(
-                calcutta_id=calcutta_id,
                 run_id=run_id,
                 strategy=strategy,
                 n_sims=n_sims,
                 seed=seed,
                 budget_points=budget_points,
+                calcutta_id=calcutta_id,
             )
             
             # Write recommended bids

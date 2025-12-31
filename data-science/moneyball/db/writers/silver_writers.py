@@ -1,7 +1,7 @@
 """
 Silver layer database writers.
 
-Write ML predictions, simulations, and enriched data using integer IDs.
+Write ML predictions, simulations, and enriched data using UUIDs.
 """
 import logging
 import pandas as pd
@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def write_predicted_game_outcomes(
-    tournament_id: int,
+    tournament_id: str,
     predictions_df: pd.DataFrame,
-    team_id_map: Dict[str, int],
+    team_id_map: Dict[str, str],
     model_version: str = None
 ) -> int:
     """
@@ -102,9 +102,9 @@ def write_predicted_game_outcomes(
 
 
 def write_simulated_tournaments(
-    tournament_id: int,
+    tournament_id: str,
     simulations_df: pd.DataFrame,
-    team_id_map: Dict[str, int]
+    team_id_map: Dict[str, str]
 ) -> int:
     """
     Write simulated tournament outcomes to silver layer.

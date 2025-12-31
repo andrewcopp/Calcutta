@@ -1,24 +1,24 @@
 """
 Gold layer database writers.
 
-Write optimization results and recommendations using integer IDs.
+Write optimization results and recommendations using UUIDs.
 """
 import logging
 import pandas as pd
 import psycopg2.extras
-from typing import Dict
+from typing import Dict, Optional
 from moneyball.db.connection import get_db_connection
 
 logger = logging.getLogger(__name__)
 
 
 def write_optimization_run(
-    calcutta_id: int,
     run_id: str,
     strategy: str,
     n_sims: int,
     seed: int,
-    budget_points: int
+    budget_points: int,
+    calcutta_id: Optional[str] = None
 ) -> None:
     """
     Write optimization run metadata.
@@ -52,7 +52,7 @@ def write_optimization_run(
 def write_recommended_entry_bids(
     run_id: str,
     bids_df: pd.DataFrame,
-    team_id_map: Dict[str, int]
+    team_id_map: Dict[str, str]
 ) -> int:
     """
     Write recommended entry bids.
