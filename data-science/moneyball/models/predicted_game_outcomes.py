@@ -214,7 +214,7 @@ def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
         teams_df: DataFrame with team data
         
     Returns:
-        DataFrame with game structure
+        DataFrame with game structure including next_game_id and next_game_slot
     """
     games = []
     game_id = 1
@@ -225,17 +225,21 @@ def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
         region_teams = teams_df[teams_df['region'] == region].copy()
         region_teams = region_teams.sort_values('seed')
         
-        # Round 1 matchups
+        # Round 1 matchups (8 games per region)
         matchups = [
             (1, 16), (8, 9), (5, 12), (4, 13),
             (6, 11), (3, 14), (7, 10), (2, 15)
         ]
         
-        for seed1, seed2 in matchups:
+        for idx, (seed1, seed2) in enumerate(matchups):
             team1 = region_teams[region_teams['seed'] == seed1]
             team2 = region_teams[region_teams['seed'] == seed2]
             
             if len(team1) > 0 and len(team2) > 0:
+                # Calculate next game (Round 2)
+                next_game_num = (idx // 2) + 1
+                next_slot = (idx % 2) + 1
+                
                 games.append({
                     'game_id': f'R1-{region}-{seed1}v{seed2}',
                     'round': 'R64',
@@ -244,6 +248,8 @@ def _generate_bracket_from_teams(teams_df: pd.DataFrame) -> pd.DataFrame:
                     'team1_key': str(team1.iloc[0]['id']),
                     'team2_key': str(team2.iloc[0]['id']),
                     'region': region,
+                    'next_game_id': f'R2-{region}-G{next_game_num}',
+                    'next_game_slot': next_slot,
                 })
                 game_id += 1
     

@@ -72,16 +72,29 @@ def stage_predicted_game_outcomes(
     
     print(f"  Generated {len(predictions_df)} game predictions")
     
-    # Write to database
-    db_writer = get_db_writer()
-    tournament_key = f"ncaa-tournament-{year}"
-    db_writer.write_predicted_game_outcomes(
-        tournament_key=tournament_key,
-        predictions_df=predictions_df,
-        model_version=model_version,
-    )
+    # Write to database using direct writer
+    from moneyball.db.writers.silver_writers import write_predicted_game_outcomes
+    from moneyball.db.writers.bronze_writers import get_or_create_tournament, write_teams
     
-    print(f"✓ Predicted game outcomes written to database")
+    tournament_id = get_or_create_tournament(year)
+    
+    # Create team_id mapping from teams_df
+    team_id_map = {str(row['id']): str(row['id']) for _, row in teams_df.iterrows()}
+    
+    # Prepare predictions with team IDs
+    pred_df = predictions_df.copy()
+    pred_df['team1_id'] = pred_df['team1_key']
+    pred_df['team2_id'] = pred_df['team2_key']
+    
+    try:
+        write_predicted_game_outcomes(
+            tournament_id=tournament_id,
+            predictions_df=pred_df,
+            model_version=model_version,
+        )
+        print(f"✓ Predicted game outcomes written to database")
+    except Exception as e:
+        print(f"⚠ Failed to write predictions: {e}")
     
     return {
         "year": year,
@@ -144,16 +157,29 @@ def stage_simulate_tournaments(
     if run_id is None:
         run_id = str(uuid.uuid4())
     
-    # Write to database
-    db_writer = get_db_writer()
-    tournament_key = f"ncaa-tournament-{year}"
-    db_writer.write_simulated_tournaments(
-        tournament_key=tournament_key,
-        simulations_df=simulations_df,
-        run_id=run_id,
-    )
+    # Write to database using direct writer
+    from moneyball.db.writers.silver_writers import write_simulated_tournaments
+    from moneyball.db.writers.bronze_writers import get_or_create_tournament
     
-    print(f"✓ Simulated tournaments written to database (run_id={run_id})")
+    tournament_id = get_or_create_tournament(year)
+    
+    # Create team_id mapping
+    team_id_map = {str(row['team_id']): str(row['team_id']) 
+                   for _, row in simulations_df.iterrows()}
+    
+    # Add run_id to simulations
+    sim_df = simulations_df.copy()
+    sim_df['run_id'] = run_id
+    
+    try:
+        write_simulated_tournaments(
+            tournament_id=tournament_id,
+            simulations_df=sim_df,
+            team_id_map=team_id_map,
+        )
+        print(f"✓ Simulated tournaments written to database (run_id={run_id})")
+    except Exception as e:
+        print(f"⚠ Failed to write simulations: {e}")
     
     return {
         "year": year,
