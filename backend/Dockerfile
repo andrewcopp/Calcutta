@@ -12,7 +12,9 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o /app/bin/api ./cmd/api
+RUN go build -o /app/bin/api ./cmd/api \
+    && go build -o /app/bin/workers ./cmd/workers \
+    && go build -o /app/bin/migrate ./cmd/migrate
 
 EXPOSE 8080
 

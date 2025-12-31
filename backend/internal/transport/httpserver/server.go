@@ -11,14 +11,13 @@ import (
 )
 
 type Server struct {
-	app               *app.App
-	authRepo          *AuthRepository
-	authzRepo         *AuthorizationRepository
-	apiKeysRepo       *APIKeysRepository
-	tokenManager      *auth.TokenManager
-	pool              *pgxpool.Pool
-	cfg               platform.Config
-	bundleImportQueue chan string
+	app          *app.App
+	authRepo     *AuthRepository
+	authzRepo    *AuthorizationRepository
+	apiKeysRepo  *APIKeysRepository
+	tokenManager *auth.TokenManager
+	pool         *pgxpool.Pool
+	cfg          platform.Config
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) *Server {
@@ -32,13 +31,12 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) *Server {
 	}
 
 	return &Server{
-		app:               a,
-		authRepo:          authRepo,
-		authzRepo:         authzRepo,
-		apiKeysRepo:       apiKeysRepo,
-		tokenManager:      tm,
-		pool:              pool,
-		cfg:               cfg,
-		bundleImportQueue: make(chan string, 32),
+		app:          a,
+		authRepo:     authRepo,
+		authzRepo:    authzRepo,
+		apiKeysRepo:  apiKeysRepo,
+		tokenManager: tm,
+		pool:         pool,
+		cfg:          cfg,
 	}
 }

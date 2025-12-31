@@ -30,6 +30,19 @@ services:
         condition: service_healthy
     command: sh -c "go run ./cmd/api"
 
+  worker:
+    build: ./backend
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+      - NODE_ENV=${NODE_ENV}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "go run ./cmd/workers"
+
   db:
     image: postgres:16-alpine
     ports:

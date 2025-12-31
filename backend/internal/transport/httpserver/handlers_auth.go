@@ -4,11 +4,51 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 )
+
+func refreshCookieSettingsFromEnv() (secure bool, sameSite http.SameSite) {
+	env := os.Getenv("NODE_ENV")
+	if env == "" {
+		env = "development"
+	}
+
+	secure = env != "development"
+	if secure {
+		sameSite = http.SameSiteNoneMode
+	} else {
+		sameSite = http.SameSiteLaxMode
+	}
+
+	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
+		if strings.EqualFold(v, "true") || v == "1" || strings.EqualFold(v, "yes") {
+			secure = true
+		}
+		if strings.EqualFold(v, "false") || v == "0" || strings.EqualFold(v, "no") {
+			secure = false
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))) {
+	case "none":
+		sameSite = http.SameSiteNoneMode
+	case "lax":
+		sameSite = http.SameSiteLaxMode
+	case "strict":
+		sameSite = http.SameSiteStrictMode
+	}
+
+	if sameSite == http.SameSiteNoneMode && !secure {
+		sameSite = http.SameSiteLaxMode
+	}
+
+	return secure, sameSite
+}
 
 func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var req dtos.LoginRequest
@@ -81,18 +121,20 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setRefreshCookie(w http.ResponseWriter, r *http.Request, refreshToken string, expiresAt time.Time) {
+	secure, sameSite := refreshCookieSettingsFromEnv()
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		Path:     "/api/auth",
 		Expires:  expiresAt,
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   secure,
+		SameSite: sameSite,
 	})
 }
 
 func clearRefreshCookie(w http.ResponseWriter) {
+	secure, sameSite := refreshCookieSettingsFromEnv()
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
@@ -100,7 +142,7 @@ func clearRefreshCookie(w http.ResponseWriter) {
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   secure,
+		SameSite: sameSite,
 	})
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -123,13 +122,6 @@ func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
-	}
-
-	select {
-	case s.bundleImportQueue <- uploadID:
-		// queued
-	default:
-		log.Printf("Bundle import queue is full; upload %s will remain pending", uploadID)
 	}
 
 	writeJSON(w, http.StatusAccepted, adminBundlesImportResponse{UploadID: uploadID, Status: "pending", Filename: header.Filename, SHA256: sha, SizeBytes: len(zipBytes)})
