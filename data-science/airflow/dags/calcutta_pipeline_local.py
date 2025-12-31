@@ -36,12 +36,12 @@ STRATEGY = '{{ dag_run.conf.get("strategy", "minlp") }}'
 # Base command with environment
 BASE_CMD = """
 export CALCUTTA_WRITE_TO_DB=true
-export CALCUTTA_ANALYTICS_DB_HOST=localhost
-export CALCUTTA_ANALYTICS_DB_PORT=5433
-export CALCUTTA_ANALYTICS_DB_NAME=calcutta_analytics
-export CALCUTTA_ANALYTICS_DB_USER=postgres
-export CALCUTTA_ANALYTICS_DB_PASSWORD=postgres
-cd /Users/andrewcopp/Developer/Calcutta/data-science
+export DB_HOST=calcutta-db-1
+export DB_PORT=5432
+export DB_NAME=calcutta
+export DB_USER=calcutta
+export DB_PASSWORD=calcutta
+cd /opt/airflow/data-science
 """
 
 # Run full pipeline with all stages
@@ -69,21 +69,31 @@ verify_database = BashOperator(
     task_id='verify_database',
     bash_command=f"""
 {BASE_CMD}
-psql -h localhost -p 5433 -U postgres -d calcutta_analytics -c "
-SELECT 
-    'bronze_simulated_tournaments' as table_name,
-    COUNT(*) as row_count 
-FROM bronze_simulated_tournaments
+psql -h calcutta-db-1 -p 5432 -U calcutta -d calcutta -c "
+SELECT
+    'bronze_tournaments' as table_name,
+    COUNT(*) as row_count
+FROM bronze_tournaments
 UNION ALL
-SELECT 
+SELECT
+    'bronze_teams',
+    COUNT(*)
+FROM bronze_teams
+UNION ALL
+SELECT
+    'silver_simulated_tournaments',
+    COUNT(*)
+FROM silver_simulated_tournaments
+UNION ALL
+SELECT
     'silver_predicted_game_outcomes',
-    COUNT(*) 
+    COUNT(*)
 FROM silver_predicted_game_outcomes
 UNION ALL
-SELECT 
-    'gold_optimization_runs',
-    COUNT(*) 
-FROM gold_optimization_runs;
+SELECT
+    'gold_recommended_entry_bids',
+    COUNT(*)
+FROM gold_recommended_entry_bids;
 "
     """,
     dag=dag,
