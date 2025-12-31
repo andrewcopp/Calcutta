@@ -32,7 +32,8 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 	}
 
 	// Query to calculate simulated entry metrics for each team
-	// For now, OurBid is 0 (no portfolio optimization yet)
+	// Uses Naive from predicted-investment as expected_market
+	// Reads Our Bid from gold_recommended_entry_bids if available (from MINLP optimizer)
 	query := `
 		WITH main_tournament AS (
 			SELECT 
@@ -68,42 +69,39 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
 			FROM team_win_counts
 			GROUP BY team_id
+		),
+		latest_optimization AS (
+			SELECT run_id
+			FROM gold_optimization_runs
+			WHERE tournament_id = (SELECT id FROM bronze_tournament)
+			ORDER BY created_at DESC
+			LIMIT 1
 		)
 		SELECT 
 			t.id as team_id,
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Expected points (EV calculation)
+			-- Expected points (EV calculation - same as Naive in predicted-investment)
 			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
 			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
 			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
 			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
 			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_points,
-			-- Expected market (naive estimate based on seed for now)
-			-- Better seeds get more investment: 1-seed ~20 points, 16-seed ~1 point
-			CASE 
-				WHEN t.seed = 1 THEN 20.0
-				WHEN t.seed = 2 THEN 15.0
-				WHEN t.seed = 3 THEN 12.0
-				WHEN t.seed = 4 THEN 10.0
-				WHEN t.seed = 5 THEN 8.0
-				WHEN t.seed = 6 THEN 7.0
-				WHEN t.seed = 7 THEN 6.0
-				WHEN t.seed = 8 THEN 5.0
-				WHEN t.seed = 9 THEN 4.0
-				WHEN t.seed = 10 THEN 3.5
-				WHEN t.seed = 11 THEN 3.0
-				WHEN t.seed = 12 THEN 2.5
-				WHEN t.seed = 13 THEN 2.0
-				WHEN t.seed = 14 THEN 1.5
-				WHEN t.seed = 15 THEN 1.2
-				ELSE 1.0
-			END as expected_market,
-			0.0 as our_bid  -- No portfolio optimization yet
+			-- Expected market = Naive (same EV calculation, used as market estimate)
+			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
+			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
+			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
+			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
+			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
+			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_market,
+			-- Our bid from MINLP optimizer (0 if not available)
+			COALESCE(reb.recommended_bid_points, 0.0) as our_bid
 		FROM bronze_teams t
 		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
+		LEFT JOIN latest_optimization lo ON true
+		LEFT JOIN gold_recommended_entry_bids reb ON reb.run_id = lo.run_id AND reb.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 		ORDER BY t.seed ASC, t.school_name ASC
 	`
