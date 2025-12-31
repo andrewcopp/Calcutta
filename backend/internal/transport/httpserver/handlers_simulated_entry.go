@@ -80,9 +80,10 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 			GROUP BY team_id
 		),
 		latest_optimization AS (
-			SELECT run_id
-			FROM gold_optimization_runs
-			ORDER BY created_at DESC
+			SELECT gor.run_id
+			FROM gold_optimization_runs gor
+			WHERE gor.tournament_id = (SELECT id FROM bronze_tournament)
+			ORDER BY gor.created_at DESC
 			LIMIT 1
 		)
 		SELECT 
