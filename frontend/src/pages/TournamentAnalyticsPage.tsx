@@ -316,22 +316,22 @@ function PredictedReturnsTab({ tournamentId }: { tournamentId: string }) {
                     {team.region}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {team.prob_r64 > 0 ? formatPercent(team.prob_r64) : '-'}
+                    {formatPercent(team.prob_r64)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {team.prob_r32 > 0 ? formatPercent(team.prob_r32) : '-'}
+                    {formatPercent(team.prob_r32)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {team.prob_s16 > 0 ? formatPercent(team.prob_s16) : '-'}
+                    {formatPercent(team.prob_s16)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {team.prob_e8 > 0 ? formatPercent(team.prob_e8) : '-'}
+                    {formatPercent(team.prob_e8)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {team.prob_ff > 0 ? formatPercent(team.prob_ff) : '-'}
+                    {formatPercent(team.prob_ff)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">
-                    {team.prob_champ > 0 ? formatPercent(team.prob_champ) : '-'}
+                    {formatPercent(team.prob_champ)}
                   </td>
                   <td className="px-4 py-3 text-sm text-center font-semibold text-blue-700 bg-blue-50">
                     {formatPoints(team.expected_value)}
