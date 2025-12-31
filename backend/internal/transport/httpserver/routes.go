@@ -25,6 +25,7 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 		w.WriteHeader(http.StatusOK)
 	})
 	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
+	r.HandleFunc("/api/ready", s.readyHandler).Methods("GET")
 }
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
@@ -34,6 +35,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	s.registerPortfolioRoutes(r)
 	s.registerCalcuttaRoutes(r)
 	s.registerAnalyticsRoutes(r)
+	s.registerMLAnalyticsRoutes(r)
 	s.registerHallOfFameRoutes(r)
 }
 
@@ -94,6 +96,18 @@ func (s *Server) registerAnalyticsRoutes(r *mux.Router) {
 	r.HandleFunc("/api/analytics/variance", s.requirePermission("admin.analytics.read", s.seedVarianceAnalyticsHandler)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/seed-investment-distribution", s.requirePermission("admin.analytics.read", s.seedInvestmentDistributionHandler)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/best-investments", s.requirePermission("admin.analytics.read", s.bestInvestmentsHandler)).Methods("GET", "OPTIONS")
+}
+
+func (s *Server) registerMLAnalyticsRoutes(r *mux.Router) {
+	// ML Analytics (read-only)
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/simulations", s.handleGetTournamentSimStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/{team_key}/performance", s.handleGetTeamPerformance).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/predictions", s.handleGetTeamPredictions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs", s.handleGetOptimizationRuns).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/our-entry", s.handleGetOurEntryDetails).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/rankings", s.handleGetEntryRankings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/entries/{entry_key}/simulations", s.handleGetEntrySimulations).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/entries/{entry_key}/portfolio", s.handleGetEntryPortfolio).Methods("GET", "OPTIONS")
 }
 
 func (s *Server) registerHallOfFameRoutes(r *mux.Router) {

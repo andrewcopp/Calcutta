@@ -1,0 +1,398 @@
+package httpserver
+
+import (
+	"log"
+	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
+)
+
+// handleGetTournamentSimStats handles GET /tournaments/{year}/simulations
+func (s *Server) handleGetTournamentSimStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+
+	stats, err := s.app.MLAnalytics.GetTournamentSimStats(ctx, year)
+	if err != nil {
+		log.Printf("Error getting tournament sim stats: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if stats == nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "Tournament simulations not found", "")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"tournament_key": stats.TournamentKey,
+		"season":         stats.Season,
+		"n_sims":         stats.NSims,
+		"n_teams":        stats.NTeams,
+		"avg_progress":   stats.AvgProgress,
+		"max_progress":   stats.MaxProgress,
+	})
+}
+
+// handleGetTeamPerformance handles GET /tournaments/{year}/teams/{team_key}/performance
+func (s *Server) handleGetTeamPerformance(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+	teamKey := vars["team_key"]
+
+	perf, err := s.app.MLAnalytics.GetTeamPerformance(ctx, year, teamKey)
+	if err != nil {
+		log.Printf("Error getting team performance: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if perf == nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "Team performance not found", "")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"team_key":           perf.TeamKey,
+		"school_name":        perf.SchoolName,
+		"seed":               perf.Seed,
+		"region":             perf.Region,
+		"kenpom_net":         perf.KenpomNet,
+		"total_sims":         perf.TotalSims,
+		"avg_wins":           perf.AvgWins,
+		"avg_points":         perf.AvgPoints,
+		"p_champion":         perf.PChampion,
+		"p_finals":           perf.PFinals,
+		"p_final_four":       perf.PFinalFour,
+		"p_elite_eight":      perf.PEliteEight,
+		"p_sweet_sixteen":    perf.PSweetSixteen,
+		"p_round_32":         perf.PRound32,
+		"round_distribution": perf.RoundDistribution,
+	})
+}
+
+// handleGetTeamPredictions handles GET /tournaments/{year}/teams/predictions
+func (s *Server) handleGetTeamPredictions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+
+	// Optional run_id query parameter
+	var runID *string
+	if rid := r.URL.Query().Get("run_id"); rid != "" {
+		runID = &rid
+	}
+
+	predictions, err := s.app.MLAnalytics.GetTeamPredictions(ctx, year, runID)
+	if err != nil {
+		log.Printf("Error getting team predictions: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	teams := make([]map[string]interface{}, len(predictions))
+	for i, pred := range predictions {
+		teams[i] = map[string]interface{}{
+			"team_key":                pred.TeamKey,
+			"school_name":             pred.SchoolName,
+			"seed":                    pred.Seed,
+			"region":                  pred.Region,
+			"expected_points":         pred.ExpectedPoints,
+			"predicted_market_share":  pred.PredictedMarketShare,
+			"predicted_market_points": pred.PredictedMarketPoints,
+			"p_champion":              pred.PChampion,
+			"kenpom_net":              pred.KenpomNet,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"year":  year,
+		"teams": teams,
+	})
+}
+
+// handleGetOurEntryDetails handles GET /tournaments/{year}/runs/{run_id}/our-entry
+func (s *Server) handleGetOurEntryDetails(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+	runID := vars["run_id"]
+
+	details, err := s.app.MLAnalytics.GetOurEntryDetails(ctx, year, runID)
+	if err != nil {
+		log.Printf("Error getting our entry details: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if details == nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "Entry details not found", "")
+		return
+	}
+
+	portfolio := make([]map[string]interface{}, len(details.Portfolio))
+	for i, bid := range details.Portfolio {
+		portfolio[i] = map[string]interface{}{
+			"team_key":                bid.TeamKey,
+			"school_name":             bid.SchoolName,
+			"seed":                    bid.Seed,
+			"region":                  bid.Region,
+			"bid_amount_points":       bid.BidAmountPoints,
+			"expected_points":         bid.ExpectedPoints,
+			"predicted_market_points": bid.PredictedMarketPoints,
+			"actual_market_points":    bid.ActualMarketPoints,
+			"our_ownership":           bid.OurOwnership,
+			"expected_roi":            bid.ExpectedROI,
+			"our_roi":                 bid.OurROI,
+			"roi_degradation":         bid.ROIDegradation,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"run": map[string]interface{}{
+			"run_id":        details.Run.RunID,
+			"calcutta_key":  details.Run.CalcuttaKey,
+			"strategy":      details.Run.Strategy,
+			"n_sims":        details.Run.NSims,
+			"seed":          details.Run.Seed,
+			"budget_points": details.Run.BudgetPoints,
+			"run_timestamp": details.Run.RunTimestamp,
+		},
+		"portfolio": portfolio,
+		"summary": map[string]interface{}{
+			"mean_normalized_payout": details.Summary.MeanNormalizedPayout,
+			"p_top1":                 details.Summary.PTop1,
+			"p_in_money":             details.Summary.PInMoney,
+			"percentile_rank":        details.Summary.PercentileRank,
+		},
+	})
+}
+
+// handleGetEntryRankings handles GET /tournaments/{year}/runs/{run_id}/rankings
+func (s *Server) handleGetEntryRankings(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+	runID := vars["run_id"]
+
+	// Parse pagination parameters
+	limit := 100
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil {
+			limit = parsed
+		}
+	}
+
+	offset := 0
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil {
+			offset = parsed
+		}
+	}
+
+	rankings, err := s.app.MLAnalytics.GetEntryRankings(ctx, year, runID, limit, offset)
+	if err != nil {
+		log.Printf("Error getting entry rankings: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	entries := make([]map[string]interface{}, len(rankings))
+	for i, rank := range rankings {
+		entries[i] = map[string]interface{}{
+			"rank":                   rank.Rank,
+			"entry_key":              rank.EntryKey,
+			"is_our_strategy":        rank.IsOurStrategy,
+			"n_teams":                rank.NTeams,
+			"total_bid_points":       rank.TotalBidPoints,
+			"mean_normalized_payout": rank.MeanNormalizedPayout,
+			"percentile_rank":        rank.PercentileRank,
+			"p_top1":                 rank.PTop1,
+			"p_in_money":             rank.PInMoney,
+		}
+	}
+
+	var totalEntries int
+	if len(rankings) > 0 {
+		totalEntries = rankings[0].TotalEntries
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"run_id":        runID,
+		"total_entries": totalEntries,
+		"limit":         limit,
+		"offset":        offset,
+		"entries":       entries,
+	})
+}
+
+// handleGetEntrySimulations handles GET /tournaments/{year}/runs/{run_id}/entries/{entry_key}/simulations
+func (s *Server) handleGetEntrySimulations(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+	runID := vars["run_id"]
+	entryKey := vars["entry_key"]
+
+	// Parse pagination parameters
+	limit := 100
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil {
+			limit = parsed
+		}
+	}
+
+	offset := 0
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil {
+			offset = parsed
+		}
+	}
+
+	drillDown, err := s.app.MLAnalytics.GetEntrySimulations(ctx, year, runID, entryKey, limit, offset)
+	if err != nil {
+		log.Printf("Error getting entry simulations: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if drillDown == nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "Entry simulations not found", "")
+		return
+	}
+
+	simulations := make([]map[string]interface{}, len(drillDown.Simulations))
+	for i, sim := range drillDown.Simulations {
+		simulations[i] = map[string]interface{}{
+			"sim_id":            sim.SimID,
+			"payout_cents":      sim.PayoutCents,
+			"total_points":      sim.TotalPoints,
+			"finish_position":   sim.FinishPosition,
+			"is_tied":           sim.IsTied,
+			"normalized_payout": sim.NormalizedPayout,
+			"n_entries":         sim.NEntries,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"entry_key": entryKey,
+		"run_id":    runID,
+		"summary": map[string]interface{}{
+			"total_simulations":      drillDown.Summary.TotalSimulations,
+			"mean_payout_cents":      drillDown.Summary.MeanPayoutCents,
+			"mean_points":            drillDown.Summary.MeanPoints,
+			"mean_normalized_payout": drillDown.Summary.MeanNormalizedPayout,
+			"p50_payout_cents":       drillDown.Summary.P50PayoutCents,
+			"p90_payout_cents":       drillDown.Summary.P90PayoutCents,
+		},
+		"limit":       limit,
+		"offset":      offset,
+		"simulations": simulations,
+	})
+}
+
+// handleGetEntryPortfolio handles GET /tournaments/{year}/runs/{run_id}/entries/{entry_key}/portfolio
+func (s *Server) handleGetEntryPortfolio(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+	runID := vars["run_id"]
+	entryKey := vars["entry_key"]
+
+	portfolio, err := s.app.MLAnalytics.GetEntryPortfolio(ctx, year, runID, entryKey)
+	if err != nil {
+		log.Printf("Error getting entry portfolio: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if portfolio == nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "Entry portfolio not found", "")
+		return
+	}
+
+	teams := make([]map[string]interface{}, len(portfolio.Teams))
+	for i, team := range portfolio.Teams {
+		teams[i] = map[string]interface{}{
+			"team_key":    team.TeamKey,
+			"school_name": team.SchoolName,
+			"seed":        team.Seed,
+			"region":      team.Region,
+			"bid_amount":  team.BidAmount,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"entry_key": portfolio.EntryKey,
+		"teams":     teams,
+		"total_bid": portfolio.TotalBid,
+		"n_teams":   portfolio.NTeams,
+	})
+}
+
+// handleGetOptimizationRuns handles GET /tournaments/{year}/runs
+func (s *Server) handleGetOptimizationRuns(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid year parameter", "year")
+		return
+	}
+
+	runs, err := s.app.MLAnalytics.GetOptimizationRuns(ctx, year)
+	if err != nil {
+		log.Printf("Error getting optimization runs: %v", err)
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	runsData := make([]map[string]interface{}, len(runs))
+	for i, run := range runs {
+		runsData[i] = map[string]interface{}{
+			"run_id":        run.RunID,
+			"calcutta_key":  run.CalcuttaKey,
+			"strategy":      run.Strategy,
+			"n_sims":        run.NSims,
+			"seed":          run.Seed,
+			"budget_points": run.BudgetPoints,
+			"run_timestamp": run.RunTimestamp,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"year": year,
+		"runs": runsData,
+	})
+}
