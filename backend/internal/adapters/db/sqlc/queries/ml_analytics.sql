@@ -32,7 +32,7 @@ WITH round_distribution AS (
         COUNT(*)::int as count
     FROM silver_simulated_tournaments st
     JOIN bronze_teams t ON t.id = st.team_id
-    WHERE st.team_id = $1::bigint
+    WHERE st.team_id = $1::uuid
     GROUP BY st.team_id, round_name
 )
 SELECT 
@@ -58,7 +58,7 @@ SELECT
 FROM bronze_teams t
 JOIN silver_simulated_tournaments st ON st.team_id = t.id
 LEFT JOIN round_distribution rd ON rd.team_id = t.id
-WHERE t.id = $1::bigint
+WHERE t.id = $1::uuid
 GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net;
 
 -- name: GetTeamPredictionsByYear :many

@@ -40,7 +40,7 @@ func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year 
 	}, nil
 }
 
-func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int, teamID int64) (*ports.TeamPerformance, error) {
+func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int, teamID string) (*ports.TeamPerformance, error) {
 	row, err := r.q.GetTeamPerformanceByID(ctx, teamID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

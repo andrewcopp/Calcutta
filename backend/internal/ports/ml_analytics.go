@@ -7,9 +7,9 @@ import (
 
 // ML Analytics Ports - For tournament simulation and entry evaluation data
 
-// TournamentSimStats represents aggregated simulation statistics
+// TournamentSimStats represents simulation statistics for a tournament
 type TournamentSimStats struct {
-	TournamentID int64
+	TournamentID string
 	Season       int
 	NSims        int
 	NTeams       int
@@ -17,9 +17,9 @@ type TournamentSimStats struct {
 	MaxProgress  int
 }
 
-// TeamPerformance represents a team's performance across all simulations
+// TeamPerformance represents a team's performance across simulations
 type TeamPerformance struct {
-	TeamID            int64
+	TeamID            string
 	SchoolName        string
 	Seed              int
 	Region            string
@@ -32,7 +32,7 @@ type TeamPerformance struct {
 
 // TeamPrediction represents ML predictions and investment metrics for a team
 type TeamPrediction struct {
-	TeamID     int64
+	TeamID     string
 	SchoolName string
 	Seed       int
 	Region     string
@@ -136,10 +136,10 @@ type EntryPortfolioTeam struct {
 }
 
 // MLAnalyticsRepo defines the interface for ML analytics data access
-type MLAnalyticsRepo interface {
+type MLAnalyticsRepository interface {
 	// Tournament simulations
 	GetTournamentSimStats(ctx context.Context, year int) (*TournamentSimStats, error)
-	GetTeamPerformance(ctx context.Context, year int, teamID int64) (*TeamPerformance, error)
+	GetTeamPerformance(ctx context.Context, year int, teamID string) (*TeamPerformance, error)
 
 	// Team predictions
 	GetTeamPredictions(ctx context.Context, year int, runID *string) ([]TeamPrediction, error)

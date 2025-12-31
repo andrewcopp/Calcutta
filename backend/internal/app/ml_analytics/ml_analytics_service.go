@@ -8,11 +8,11 @@ import (
 
 // Service handles business logic for ML analytics
 type Service struct {
-	repo ports.MLAnalyticsRepo
+	repo ports.MLAnalyticsRepository
 }
 
 // New creates a new ML analytics service
-func New(repo ports.MLAnalyticsRepo) *Service {
+func New(repo ports.MLAnalyticsRepository) *Service {
 	return &Service{repo: repo}
 }
 
@@ -22,7 +22,7 @@ func (s *Service) GetTournamentSimStats(ctx context.Context, year int) (*ports.T
 }
 
 // GetTeamPerformance retrieves performance metrics for a specific team
-func (s *Service) GetTeamPerformance(ctx context.Context, year int, teamID int64) (*ports.TeamPerformance, error) {
+func (s *Service) GetTeamPerformance(ctx context.Context, year int, teamID string) (*ports.TeamPerformance, error) {
 	return s.repo.GetTeamPerformance(ctx, year, teamID)
 }
 
