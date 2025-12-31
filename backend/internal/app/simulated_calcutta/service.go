@@ -44,13 +44,16 @@ type EntryPerformance struct {
 
 // CalculateSimulatedCalcutta calculates entry outcomes for all simulations
 func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID string, runID string) error {
-	excludedEntry := os.Getenv("EXCLUDED_ENTRY_NAME")
-	if excludedEntry == "" {
-		excludedEntry = "Andrew Copp" // Default
+	// Get excluded entry ID from environment (UUID format)
+	excludedEntryID := os.Getenv("EXCLUDED_ENTRY_ID")
+	if excludedEntryID == "" {
+		excludedEntryID = "00000000-0000-0000-0000-000000000000" // Default: no exclusion
 	}
 
 	log.Printf("Calculating simulated calcutta for tournament %s, run %s", tournamentID, runID)
-	log.Printf("Excluding entry: %s", excludedEntry)
+	if excludedEntryID != "00000000-0000-0000-0000-000000000000" {
+		log.Printf("Excluding entry ID: %s", excludedEntryID)
+	}
 
 	// Get payout structure from database
 	payouts, firstPlacePayout, err := s.getPayoutStructure(ctx, tournamentID)
@@ -61,12 +64,12 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
 
 	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, tournamentID, runID, excludedEntry)
+	entries, err := s.getEntries(ctx, tournamentID, runID, excludedEntryID)
 	if err != nil {
 		return fmt.Errorf("failed to get entries: %w", err)
 	}
 
-	log.Printf("Found %d entries (excluding %s)", len(entries), excludedEntry)
+	log.Printf("Found %d entries", len(entries))
 
 	// Get all simulations
 	simulations, err := s.getSimulations(ctx, tournamentID)
@@ -149,13 +152,22 @@ type TeamSimResult struct {
 }
 
 func (s *Service) getEntries(ctx context.Context, tournamentID string, runID string, excludedEntry string) (map[string]*Entry, error) {
-	// Get actual entries from bronze_entry_bids
+	// Get actual entries from calcutta_entries via tournaments -> calcuttas
+	// Navigate: bronze_tournaments -> tournaments -> calcuttas -> calcutta_entries -> calcutta_entry_teams
+	// Use entry_id as the unique identifier (one user can have multiple entries)
+	// Exclude by entry_id if provided (format: UUID string)
 	query := `
-		SELECT DISTINCT eb.entry_name, eb.team_id, eb.bid_amount_points
-		FROM bronze_entry_bids eb
-		JOIN bronze_calcuttas c ON eb.calcutta_id = c.id
-		WHERE c.tournament_id = $1
-		  AND eb.entry_name != $2
+		SELECT 
+			ce.id::text as entry_name,
+			cet.team_id,
+			cet.bid as bid_points
+		FROM calcutta_entry_teams cet
+		JOIN calcutta_entries ce ON cet.entry_id = ce.id
+		JOIN calcuttas c ON ce.calcutta_id = c.id
+		JOIN tournaments t ON c.tournament_id = t.id
+		JOIN bronze_tournaments bt ON t.name LIKE '%' || bt.season || '%'
+		WHERE bt.id = $1
+		  AND ce.id::text != $2
 	`
 
 	rows, err := s.pool.Query(ctx, query, tournamentID, excludedEntry)

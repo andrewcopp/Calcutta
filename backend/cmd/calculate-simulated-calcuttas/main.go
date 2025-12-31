@@ -14,7 +14,7 @@ func main() {
 
 	// Get tournament ID from command line args
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: calculate-simulated-calcuttas <tournament_id> [run_id]")
+		log.Fatal("Usage: calculate-simulated-calcuttas <tournament_id> [run_id] [excluded_entry_id]")
 	}
 
 	tournamentID := os.Args[1]
@@ -23,6 +23,14 @@ func main() {
 	var runID string
 	if len(os.Args) >= 3 {
 		runID = os.Args[2]
+	}
+
+	// Optional: excluded_entry_id can be provided via command line or env var
+	excludedEntryID := ""
+	if len(os.Args) >= 4 {
+		excludedEntryID = os.Args[3]
+	} else {
+		excludedEntryID = os.Getenv("EXCLUDED_ENTRY_ID")
 	}
 
 	// Connect to database
@@ -47,6 +55,12 @@ func main() {
 			log.Fatalf("Failed to get latest run ID: %v", err)
 		}
 		log.Printf("Using latest run ID: %s", runID)
+	}
+
+	// Set excluded entry ID in environment if provided
+	if excludedEntryID != "" {
+		os.Setenv("EXCLUDED_ENTRY_ID", excludedEntryID)
+		log.Printf("Excluding entry ID: %s", excludedEntryID)
 	}
 
 	// Create service and run calculation
