@@ -32,7 +32,7 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
         year: Tournament year (e.g., 2025)
         
     Returns:
-        Dictionary with tournament metadata including id, year, name
+        Dictionary with tournament metadata including id, season, created_at
         Returns None if tournament not found
     """
     conn = get_db_connection()
@@ -40,9 +40,9 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, year, name, created_at, updated_at
+                SELECT id, season, created_at
                 FROM bronze_tournaments
-                WHERE year = %s
+                WHERE season = %s
                 """,
                 (year,)
             )
@@ -60,27 +60,28 @@ def read_teams(year: int) -> pd.DataFrame:
         year: Tournament year
         
     Returns:
-        DataFrame with columns: id, tournament_id, school_name, seed, region, 
+        DataFrame with columns: id, tournament_id, school_name, seed, region,
         kenpom_net, adj_o, adj_d, adj_t, created_at, updated_at
     """
     conn = get_db_connection()
     try:
         query = """
-        SELECT 
+        SELECT
             t.id,
             t.tournament_id,
+            t.school_slug,
             t.school_name,
             t.seed,
             t.region,
             t.kenpom_net,
-            t.adj_o,
-            t.adj_d,
-            t.adj_t,
-            t.created_at,
-            t.updated_at
+            t.kenpom_adj_em,
+            t.kenpom_adj_o,
+            t.kenpom_adj_d,
+            t.kenpom_adj_t,
+            t.created_at
         FROM bronze_teams t
         JOIN bronze_tournaments tour ON t.tournament_id = tour.id
-        WHERE tour.year = %s
+        WHERE tour.season = %s
         ORDER BY t.seed, t.school_name
         """
         return pd.read_sql_query(query, conn, params=(year,))
@@ -167,7 +168,7 @@ def read_predicted_game_outcomes(year: int, model_version: str = "kenpom-v1") ->
         JOIN bronze_tournaments tour ON pgo.tournament_id = tour.id
         JOIN bronze_teams t1 ON pgo.team1_id = t1.id
         JOIN bronze_teams t2 ON pgo.team2_id = t2.id
-        WHERE tour.year = %s AND pgo.model_version = %s
+        WHERE tour.season = %s AND pgo.model_version = %s
         ORDER BY pgo.round, t1.seed
         """
         return pd.read_sql_query(query, conn, params=(year, model_version))
@@ -206,7 +207,7 @@ def read_simulated_tournaments(year: int, run_id: Optional[str] = None) -> pd.Da
             FROM silver_simulated_tournaments st
             JOIN bronze_tournaments tour ON st.tournament_id = tour.id
             JOIN bronze_teams t ON st.team_id = t.id
-            WHERE tour.year = %s AND st.run_id = %s
+            WHERE tour.season = %s AND st.run_id = %s
             ORDER BY st.sim_id, t.seed
             """
             params = (year, run_id)
@@ -228,7 +229,7 @@ def read_simulated_tournaments(year: int, run_id: Optional[str] = None) -> pd.Da
             FROM silver_simulated_tournaments st
             JOIN bronze_tournaments tour ON st.tournament_id = tour.id
             JOIN bronze_teams t ON st.team_id = t.id
-            WHERE tour.year = %s
+            WHERE tour.season = %s
             ORDER BY st.sim_id, t.seed
             """
             params = (year,)
@@ -263,12 +264,12 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
             t.school_name,
             t.seed,
             t.region,
-            tour.year
+            tour.season
         FROM gold_recommended_entry_bids reb
         JOIN gold_optimization_runs run ON reb.run_id = run.run_id
         JOIN bronze_tournaments tour ON run.tournament_id = tour.id
         JOIN bronze_teams t ON reb.team_id = t.id
-        WHERE tour.year = %s AND reb.run_id = %s
+        WHERE tour.season = %s AND reb.run_id = %s
         ORDER BY reb.bid_amount_points DESC
         """
         return pd.read_sql_query(query, conn, params=(year, run_id))
@@ -294,7 +295,7 @@ def read_calcutta(year: int) -> Optional[Dict[str, Any]]:
                 SELECT c.id, c.tournament_id, c.name, c.created_at, c.updated_at
                 FROM bronze_calcuttas c
                 JOIN bronze_tournaments t ON c.tournament_id = t.id
-                WHERE t.year = %s
+                WHERE t.season = %s
                 LIMIT 1
                 """,
                 (year,)
@@ -337,7 +338,7 @@ def get_latest_run_id(year: int) -> Optional[str]:
                 SELECT run.run_id
                 FROM gold_optimization_runs run
                 JOIN bronze_tournaments tour ON run.tournament_id = tour.id
-                WHERE tour.year = %s
+                WHERE tour.season = %s
                 ORDER BY run.created_at DESC
                 LIMIT 1
                 """,
