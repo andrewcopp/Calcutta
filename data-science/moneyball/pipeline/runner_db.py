@@ -434,6 +434,7 @@ def stage_recommended_entry_bids(
     # Generate recommendations
     recommendations_df = recommend_entry_bids_from_simulations(
         simulations_df=simulations_df,
+        year=year,
         strategy=strategy,
         budget_points=budget_points,
         min_teams=min_teams,

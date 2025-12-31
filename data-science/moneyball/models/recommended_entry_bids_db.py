@@ -11,6 +11,7 @@ import pandas as pd
 def recommend_entry_bids_from_simulations(
     *,
     simulations_df: pd.DataFrame,
+    year: int,
     strategy: str = "greedy",
     budget_points: int = 100,
     min_teams: int = 3,
@@ -67,9 +68,9 @@ def recommend_entry_bids_from_simulations(
                         SELECT team_id, predicted_share
                         FROM silver_predicted_market_share
                         WHERE tournament_id = (
-                            SELECT id FROM bronze_tournaments WHERE season = 2025
+                            SELECT id FROM bronze_tournaments WHERE season = %s
                         )
-                    """)
+                    """, (year,))
                     
                     market_share_map = {str(row[0]): row[1] * total_pool for row in cur.fetchall()}
             
