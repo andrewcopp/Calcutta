@@ -250,11 +250,14 @@ func (s *Service) getSimulations(ctx context.Context, tournamentID string) (map[
 }
 
 func (s *Service) getPayoutStructure(ctx context.Context, tournamentID string) (map[int]int, int, error) {
+	// Navigate from bronze_tournaments -> tournaments -> calcuttas -> calcutta_payouts
 	query := `
 		SELECT cp.position, cp.amount_cents
 		FROM calcutta_payouts cp
-		JOIN bronze_calcuttas bc ON cp.calcutta_id = bc.id
-		WHERE bc.tournament_id = $1
+		JOIN calcuttas c ON cp.calcutta_id = c.id
+		JOIN tournaments t ON c.tournament_id = t.id
+		JOIN bronze_tournaments bt ON t.name LIKE '%' || bt.season || '%'
+		WHERE bt.id = $1
 		ORDER BY cp.position
 	`
 
