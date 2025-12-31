@@ -103,15 +103,17 @@ func (s *Server) handleGetTournamentSimulatedCalcuttas(w http.ResponseWriter, r 
 
 func (s *Server) getLatestOptimizationRun(ctx context.Context, tournamentID string) (string, error) {
 	// First try to find runs via gold_entry_performance (simulated calcuttas)
-	// This works for runs that have simulated calcutta results
+	// Need to map tournaments.id -> bronze_tournaments.id via year/name
 	query := `
 		SELECT DISTINCT gep.run_id
 		FROM gold_entry_performance gep
 		WHERE EXISTS (
 			SELECT 1 FROM gold_recommended_entry_bids greb
 			JOIN bronze_teams bt ON greb.team_id = bt.id
+			JOIN bronze_tournaments btr ON bt.tournament_id = btr.id
+			JOIN tournaments t ON t.name LIKE '%' || btr.season || '%'
 			WHERE greb.run_id = gep.run_id
-			AND bt.tournament_id = $1
+			AND t.id = $1
 		)
 		ORDER BY gep.run_id DESC
 		LIMIT 1
