@@ -454,22 +454,119 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
 }
 
 // Simulated Entries Tab Component
+interface TeamSimulatedEntry {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  expected_points: number;
+  expected_market: number;
+  expected_roi: number;
+  our_bid: number;
+  our_roi: number;
+}
+
 function SimulatedEntriesTab({ tournamentId }: { tournamentId: string }) {
+  const { data: simulatedEntry, isLoading } = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
+    queryKey: ['analytics', 'simulated-entry', tournamentId],
+    queryFn: async () => {
+      if (!tournamentId) return null;
+      return apiClient.get<{ teams: TeamSimulatedEntry[] }>(`/analytics/tournaments/${tournamentId}/simulated-entry`);
+    },
+    enabled: !!tournamentId,
+  });
+
+  const formatPoints = (points: number) => points.toFixed(1);
+  const formatROI = (roi: number) => roi.toFixed(2);
+
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Simulated Entries</h2>
-      <div className="text-gray-500">
-        <p className="mb-4">Detailed investment report showing simulated entry performance.</p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800 mb-2">Coming soon:</p>
-          <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
-            <li>Entry-level performance metrics</li>
-            <li>Team ownership percentages</li>
-            <li>Expected vs actual ROI</li>
-            <li>Win probability distributions</li>
+      <h2 className="text-xl font-semibold mb-4">Simulated Entry</h2>
+      <p className="text-gray-600 mb-6">
+        Detailed investment report showing expected performance, market predictions, and ROI analysis for all teams.
+      </p>
+
+      {isLoading ? (
+        <div className="text-gray-500">Loading simulated entry data...</div>
+      ) : simulatedEntry?.teams ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
+                  Team
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Seed
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Region
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Exp Pts
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Exp Mkt
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Exp ROI
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                  Our Bid
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                  Our ROI
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {simulatedEntry.teams.map((team) => (
+                <tr key={team.team_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">
+                    {team.school_name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {team.seed}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600">
+                    {team.region}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {formatPoints(team.expected_points)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {formatPoints(team.expected_market)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700">
+                    {formatROI(team.expected_roi)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center font-semibold text-blue-700 bg-blue-50">
+                    {team.our_bid > 0 ? formatPoints(team.our_bid) : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center font-semibold text-blue-700 bg-blue-50">
+                    {team.our_bid > 0 ? formatROI(team.our_roi) : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-gray-500">
+          No simulated entry data available for this tournament.
+        </div>
+      )}
+      
+      {simulatedEntry?.teams && (
+        <div className="mt-4 text-sm text-gray-600">
+          <p className="mb-2">Coming soon:</p>
+          <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+            <li>Portfolio optimization (Our Bid column will show recommended allocations)</li>
+            <li>Actual market data integration</li>
+            <li>ROI degradation analysis</li>
           </ul>
         </div>
-      </div>
+      )}
     </div>
   );
 }
