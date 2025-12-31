@@ -24,6 +24,114 @@ from moneyball.models.recommended_entry_bids_db import (
     recommend_entry_bids_from_simulations,
 )
 from moneyball.pipeline.db_writer import get_db_writer
+import subprocess
+import os
+
+
+def stage_simulated_calcuttas(
+    *,
+    year: int,
+    run_id: str,
+) -> Dict[str, Any]:
+    """
+    Stage 4: Calculate simulated calcutta outcomes.
+    
+    Calls the Go service to calculate entry performance across all simulations.
+    
+    Args:
+        year: Tournament year
+        run_id: Optimization run ID
+        
+    Returns:
+        Dictionary with results
+    """
+    print(f"\n{'='*60}")
+    print(f"Stage 4: Calculating simulated calcutta outcomes")
+    print(f"{'='*60}\n")
+    
+    # Get tournament ID from database
+    from moneyball.db.connection import get_db_connection
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM bronze_tournaments WHERE season = %s",
+                (year,)
+            )
+            result = cur.fetchone()
+            if not result:
+                raise ValueError(f"No tournament found for year {year}")
+            tournament_id = str(result[0])
+    
+    print(f"Tournament ID: {tournament_id}")
+    print(f"Run ID: {run_id}")
+    
+    # Call the Go service
+    go_binary = os.path.join(
+        os.path.dirname(__file__),
+        "../../backend/bin/calculate-simulated-calcuttas"
+    )
+    
+    # Resolve to absolute path
+    go_binary = os.path.abspath(go_binary)
+    
+    if not os.path.exists(go_binary):
+        raise FileNotFoundError(
+            f"Go binary not found at {go_binary}. "
+            "Please build it first: cd backend && go build -o bin/calculate-simulated-calcuttas ./cmd/calculate-simulated-calcuttas"
+        )
+    
+    env = os.environ.copy()
+    env['EXCLUDED_ENTRY_NAME'] = env.get('EXCLUDED_ENTRY_NAME', 'Andrew Copp')
+    env['DB_HOST'] = env.get('DB_HOST', 'localhost')
+    env['DB_PORT'] = env.get('DB_PORT', '5432')
+    env['DB_USER'] = env.get('DB_USER', 'calcutta')
+    env['DB_PASSWORD'] = env.get('DB_PASSWORD', 'calcutta')
+    env['DB_NAME'] = env.get('DB_NAME', 'calcutta')
+    
+    print(f"Calling Go service: {go_binary}")
+    print(f"Excluded entry: {env['EXCLUDED_ENTRY_NAME']}")
+    
+    result = subprocess.run(
+        [go_binary, tournament_id, run_id],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    
+    if result.returncode != 0:
+        print(f"STDOUT: {result.stdout}")
+        print(f"STDERR: {result.stderr}")
+        raise RuntimeError(f"Go service failed with exit code {result.returncode}")
+    
+    print(result.stdout)
+    
+    # Query results from database
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 
+                    entry_name,
+                    mean_payout,
+                    p_top1,
+                    p_in_money
+                FROM gold_entry_performance
+                WHERE run_id = %s
+                ORDER BY mean_payout DESC
+                """,
+                (run_id,)
+            )
+            entries = cur.fetchall()
+    
+    print(f"\nEntry Performance:")
+    for entry_name, mean_payout, p_top1, p_in_money in entries:
+        print(f"  {entry_name}: mean={mean_payout:.3f}, P(top1)={p_top1:.1%}, P(in money)={p_in_money:.1%}")
+    
+    return {
+        'run_id': run_id,
+        'tournament_id': tournament_id,
+        'entries_evaluated': len(entries),
+    }
 
 
 def stage_predicted_game_outcomes(
@@ -362,6 +470,12 @@ def run_full_pipeline(
         strategy=strategy,
         run_id=results['simulated_tournaments']['run_id'],
         calcutta_id=calcutta_id,
+    )
+    
+    # Stage 4: Evaluate simulated entry via simulated calcuttas
+    results['simulated_calcuttas'] = stage_simulated_calcuttas(
+        year=year,
+        run_id=results['simulated_tournaments']['run_id'],
     )
     
     print(f"\n{'='*60}")
