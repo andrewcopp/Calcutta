@@ -104,7 +104,7 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
 			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_points,
 			-- Expected market: ML model prediction × total pool (based on actual entry count)
-			COALESCE(spms.predicted_share_of_pool, 0.0) * (SELECT pool_size FROM total_pool) as expected_market,
+			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as expected_market,
 			-- Our bid from MINLP optimizer (0 if not available)
 			COALESCE(reb.recommended_bid_points, 0.0) as our_bid
 		FROM bronze_teams t

@@ -67,10 +67,10 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			t.seed,
 			t.region,
 			-- Naive: ML model prediction of market share × total pool
-			COALESCE(spms.predicted_share_of_pool, 0.0) * (SELECT pool_size FROM total_pool) as naive,
+			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as naive,
 			0.0 as delta,  -- For now, delta is always 0
 			-- Edge: Same as naive for now (will incorporate market inefficiencies later)
-			COALESCE(spms.predicted_share_of_pool, 0.0) * (SELECT pool_size FROM total_pool) as edge
+			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as edge
 		FROM bronze_teams t
 		LEFT JOIN latest_calcutta lc ON true
 		LEFT JOIN silver_predicted_market_share spms 
