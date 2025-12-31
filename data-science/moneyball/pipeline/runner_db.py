@@ -307,47 +307,117 @@ def stage_recommended_entry_bids(
     *,
     year: int,
     strategy: str = "greedy",
+    run_id: str = None,
     budget_points: int = 100,
     min_teams: int = 3,
     max_teams: int = 10,
     min_bid: int = 1,
     max_bid: int = 50,
-    run_id: Optional[str] = None,
-    calcutta_id: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict:
     """
-    Generate recommended entry bids from simulations in database.
+    Generate recommended entry bids by calling standalone optimizer scripts.
+    
+    For MINLP strategy, calls scripts/run_minlp_optimizer.py which works correctly.
+    For other strategies, uses the inline implementation.
     
     Args:
         year: Tournament year
         strategy: Portfolio strategy (greedy, minlp, etc.)
+        run_id: Run ID from simulations (if None, will find latest)
         budget_points: Total budget in points
         min_teams: Minimum number of teams
         max_teams: Maximum number of teams
         min_bid: Minimum bid per team
         max_bid: Maximum bid per team
-        run_id: Simulation run_id to use (uses latest if not provided)
-        calcutta_id: Optional calcutta UUID
         
     Returns:
-        Dictionary with stage results including run_id
+        Dictionary with results
     """
     print(f"⚙ Generating recommended entry bids for {year}...")
     
-    # Get run_id if not provided
-    if run_id is None:
-        run_id = get_latest_run_id(year)
-        if run_id is None:
-            raise ValueError(f"No simulation runs found for year {year}")
+    # For MINLP strategy, call the standalone script that works correctly
+    if strategy == "minlp":
+        print(f"  Calling standalone MINLP optimizer script...")
+        
+        import subprocess
+        import sys
+        
+        # Get the path to the standalone script
+        script_path = os.path.join(
+            os.path.dirname(__file__),
+            "../../scripts/run_minlp_optimizer.py"
+        )
+        script_path = os.path.abspath(script_path)
+        
+        # Run the standalone script
+        result = subprocess.run(
+            [sys.executable, script_path, str(year)],
+            capture_output=True,
+            text=True,
+            env=os.environ.copy(),
+        )
+        
+        if result.returncode != 0:
+            print(f"  ⚠ MINLP optimizer failed:")
+            print(result.stderr)
+            raise RuntimeError(f"MINLP optimizer failed with code {result.returncode}")
+        
+        # Parse the run_id from the output
+        import re
+        match = re.search(r'Run ID: (minlp_\d+_\d+T\d+)', result.stdout)
+        if match:
+            run_id = match.group(1)
+            print(f"  ✓ MINLP optimization complete (run_id={run_id})")
+        else:
+            raise RuntimeError("Failed to parse run_id from MINLP optimizer output")
+        
+        # Count recommendations
+        from moneyball.db.readers import get_db_connection
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*), SUM(recommended_bid_points)
+                    FROM gold_recommended_entry_bids
+                    WHERE run_id = %s
+                """, (run_id,))
+                n_recs, total_bid = cur.fetchone()
+        
+        return {
+            'year': year,
+            'strategy': strategy,
+            'run_id': run_id,
+            'n_recommendations': n_recs,
+            'total_bid': int(total_bid) if total_bid else 0,
+        }
     
-    print(f"  Using run_id: {run_id}")
+    # For other strategies, use inline implementation
+    if run_id is None:
+        # Find latest run_id for this year
+        from moneyball.db.readers import get_db_connection
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT gor.run_id
+                    FROM gold_optimization_runs gor
+                    JOIN bronze_calcuttas bc ON gor.calcutta_id = bc.id
+                    WHERE bc.tournament_id = (
+                        SELECT id FROM bronze_tournaments WHERE season = %s
+                    )
+                    ORDER BY gor.created_at DESC
+                    LIMIT 1
+                """, (year,))
+                result = cur.fetchone()
+                if result:
+                    run_id = result[0]
+                    print(f"  Using run_id: {run_id}")
+                else:
+                    raise ValueError(f"No optimization runs found for year {year}")
+    else:
+        print(f"  Using run_id: {run_id}")
     
     # Read simulations from database
     from moneyball.db.readers import read_simulated_tournaments
-    simulations_df = read_simulated_tournaments(year, run_id)
-    
-    if simulations_df.empty:
-        raise ValueError(f"No simulations found for year {year}, run_id {run_id}")
+    simulations_df = read_simulated_tournaments(year)
     
     print(f"  Found {len(simulations_df)} simulation results")
     
@@ -364,59 +434,45 @@ def stage_recommended_entry_bids(
     
     print(f"  Generated {len(recommendations_df)} recommendations")
     
-    # Convert numpy types to Python types
-    recommendations_df = recommendations_df.copy()
-    if 'bid_amount_points' in recommendations_df.columns:
-        recommendations_df['bid_amount_points'] = recommendations_df['bid_amount_points'].astype(int)
-    if 'score' in recommendations_df.columns:
-        recommendations_df['score'] = recommendations_df['score'].astype(float)
-    
     # Write to database
-    from moneyball.db.writers.gold_writers import (
-        write_optimization_run,
-        write_recommended_entry_bids,
+    from moneyball.db.writers.gold_writers import write_optimization_run, write_recommended_entry_bids
+    from moneyball.db.readers import get_db_connection
+    
+    # Get tournament_id and calcutta_id
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT bt.id, bc.id
+                FROM bronze_tournaments bt
+                LEFT JOIN bronze_calcuttas bc ON bc.tournament_id = bt.id
+                WHERE bt.season = %s
+            """, (year,))
+            result = cur.fetchone()
+            if not result:
+                raise ValueError(f"No tournament found for year {year}")
+            tournament_id, calcutta_id = result
+    
+    # Write optimization run
+    write_optimization_run(
+        run_id=run_id,
+        calcutta_id=calcutta_id,
+        strategy=strategy,
     )
-    from moneyball.db.writers.bronze_writers import get_or_create_tournament
     
-    tournament_id = get_or_create_tournament(year)
+    # Write recommendations
+    write_recommended_entry_bids(
+        run_id=run_id,
+        recommendations_df=recommendations_df,
+    )
     
-    # Create team_id mapping
-    teams_df = read_teams(year)
-    team_id_map = {
-        str(row['school_slug']): str(row['id'])
-        for _, row in teams_df.iterrows()
-    }
-    
-    # Create optimization run record
-    optimization_run_id = run_id if run_id else str(uuid.uuid4())
-    
-    try:
-        write_optimization_run(
-            run_id=optimization_run_id,
-            strategy=strategy,
-            n_sims=int(simulations_df['sim_id'].max() + 1),
-            seed=42,  # TODO: track seed properly
-            budget_points=int(budget_points),
-            calcutta_id=calcutta_id,
-        )
-        
-        # Write recommendations
-        write_recommended_entry_bids(
-            run_id=optimization_run_id,
-            bids_df=recommendations_df,
-            team_id_map=team_id_map,
-        )
-        
-        print(f"✓ Recommended entry bids written to database (run_id={optimization_run_id})")
-    except Exception as e:
-        print(f"⚠ Failed to write recommendations: {e}")
+    print(f"✓ Recommended entry bids written to database (run_id={run_id})")
     
     return {
-        "year": year,
-        "strategy": strategy,
-        "run_id": optimization_run_id,
-        "n_recommendations": len(recommendations_df),
-        "total_bid": recommendations_df['bid_amount_points'].sum(),
+        'year': year,
+        'strategy': strategy,
+        'run_id': run_id,
+        'n_recommendations': len(recommendations_df),
+        'total_bid': recommendations_df['bid_amount_points'].sum(),
     }
 
 

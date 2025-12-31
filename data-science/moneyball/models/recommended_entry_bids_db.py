@@ -54,12 +54,43 @@ def recommend_entry_bids_from_simulations(
         teams_for_minlp['team_key'] = teams_for_minlp['school_name']
         teams_for_minlp['expected_team_points'] = teams_for_minlp['expected_points']
         
-        # Use a simple predicted market based on expected points
-        # (In reality, this should come from predicted_market_share table)
-        total_points = teams_for_minlp['expected_points'].sum()
-        teams_for_minlp['predicted_team_total_bids'] = (
-            teams_for_minlp['expected_points'] / total_points * budget_points
-        )
+        # Get predicted market share from database (ridge regression model)
+        # This is critical for finding market inefficiencies!
+        from moneyball.db.readers import get_db_connection
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    # Assume 47 entries * 100 points = 4700 total pool
+                    total_pool = 47 * 100.0
+                    
+                    cur.execute("""
+                        SELECT team_id, predicted_share
+                        FROM silver_predicted_market_share
+                        WHERE tournament_id = (
+                            SELECT id FROM bronze_tournaments WHERE season = 2025
+                        )
+                    """)
+                    
+                    market_share_map = {str(row[0]): row[1] * total_pool for row in cur.fetchall()}
+            
+            # Map predicted market share to teams
+            teams_for_minlp['predicted_team_total_bids'] = teams_for_minlp['team_id'].map(market_share_map)
+            
+            # Fill missing values with naive estimate
+            missing_mask = teams_for_minlp['predicted_team_total_bids'].isna()
+            if missing_mask.any():
+                print(f"  ⚠ {missing_mask.sum()} teams missing predicted market share, using naive estimate")
+                total_points = teams_for_minlp['expected_points'].sum()
+                teams_for_minlp.loc[missing_mask, 'predicted_team_total_bids'] = (
+                    teams_for_minlp.loc[missing_mask, 'expected_points'] / total_points * budget_points
+                )
+        except Exception as e:
+            print(f"  ⚠ Failed to load predicted market share: {e}, using naive estimate")
+            # Fallback to naive estimate
+            total_points = teams_for_minlp['expected_points'].sum()
+            teams_for_minlp['predicted_team_total_bids'] = (
+                teams_for_minlp['expected_points'] / total_points * budget_points
+            )
         
         print(f"  Running MINLP with {len(teams_for_minlp)} teams, budget={budget_points}")
         
