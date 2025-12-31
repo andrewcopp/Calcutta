@@ -31,7 +31,7 @@ def simulate_tournaments_from_predictions(
     
     Args:
         predictions_df: All possible matchup predictions (lookup table)
-            Required columns: team1_id, team2_id, p_team1_wins
+            Required columns: team1_id, team2_id, p_team1_wins_given_matchup
         teams_df: Team data with seed and region
             Required columns: id, school_name, seed, region
         n_sims: Number of simulations
@@ -67,7 +67,7 @@ def simulate_tournaments_from_predictions(
     for _, row in predictions_df.iterrows():
         t1 = str(row['team1_id'])
         t2 = str(row['team2_id'])
-        p = float(row['p_team1_wins'])
+        p = float(row['p_team1_wins_given_matchup'])
         pred_lookup[(t1, t2)] = p
         pred_lookup[(t2, t1)] = 1.0 - p  # Reverse matchup
     

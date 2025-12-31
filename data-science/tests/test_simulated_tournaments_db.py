@@ -196,7 +196,7 @@ def _create_64_team_bracket():
             predictions.append({
                 'team1_id': team1['id'],
                 'team2_id': team2['id'],
-                'p_team1_wins': p_team1_wins,
+                'p_team1_wins_given_matchup': p_team1_wins,
                 'round': 0,  # Not used in DB-first simulation
             })
     
