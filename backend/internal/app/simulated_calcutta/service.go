@@ -26,7 +26,7 @@ func New(pool *pgxpool.Pool) *Service {
 type SimulationResult struct {
 	SimID            int
 	EntryName        string
-	TotalPoints      int
+	TotalPoints      float64
 	Rank             int
 	PayoutCents      int
 	NormalizedPayout float64
@@ -338,18 +338,18 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 	// Calculate total points for each entry
 	type entryScore struct {
 		name   string
-		points int
+		points float64
 	}
 
 	var scores []entryScore
 	for _, entry := range entries {
-		totalPoints := 0
+		totalPoints := 0.0
 		for teamID, bidPoints := range entry.Teams {
 			if points, ok := teamPoints[teamID]; ok {
 				totalBids := totalBidsPerTeam[teamID]
 				if totalBids > 0 {
 					// Proportional ownership: (my_bid / total_bids) * team_points
-					totalPoints += points * bidPoints / totalBids
+					totalPoints += float64(points) * float64(bidPoints) / float64(totalBids)
 				}
 			}
 		}
@@ -402,9 +402,9 @@ func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, res
 	batch := &pgx.Batch{}
 	for _, r := range results {
 		batch.Queue(`
-			INSERT INTO gold_entry_simulation_outcomes (run_id, entry_name, sim_id, payout_points, rank)
-			VALUES ($1, $2, $3, $4, $5)
-		`, runID, r.EntryName, r.SimID, r.PayoutCents, r.Rank)
+			INSERT INTO gold_entry_simulation_outcomes (run_id, entry_name, sim_id, points_scored, payout_points, rank)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, runID, r.EntryName, r.SimID, r.TotalPoints, r.PayoutCents, r.Rank)
 	}
 
 	br := s.pool.SendBatch(ctx, batch)
