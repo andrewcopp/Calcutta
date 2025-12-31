@@ -14,10 +14,14 @@ import pandas as pd
 from moneyball.db.writers.bronze_writers import (
     get_or_create_tournament,
     write_teams,
-    write_simulated_tournaments,
 )
 from moneyball.db.writers.silver_writers import (
     write_predicted_game_outcomes,
+    write_simulated_tournaments,
+)
+from moneyball.db.writers.gold_writers import (
+    write_optimization_run,
+    write_recommended_entry_bids,
 )
 
 

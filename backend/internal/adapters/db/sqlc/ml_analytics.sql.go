@@ -279,7 +279,7 @@ WITH round_distribution AS (
             ELSE 'Unknown'
         END as round_name,
         COUNT(*)::int as count
-    FROM bronze_simulated_tournaments st
+    FROM silver_simulated_tournaments st
     JOIN bronze_teams t ON t.id = st.team_id
     WHERE st.team_id = $1::bigint
     GROUP BY st.team_id, round_name
@@ -305,7 +305,7 @@ SELECT
     END)::float as avg_points,
     jsonb_object_agg(rd.round_name, rd.count) as round_distribution
 FROM bronze_teams t
-JOIN bronze_simulated_tournaments st ON st.team_id = t.id
+JOIN silver_simulated_tournaments st ON st.team_id = t.id
 LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = $1::bigint
 GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net
@@ -397,7 +397,7 @@ SELECT
     AVG(st.wins + st.byes)::float as avg_progress,
     MAX(st.wins + st.byes)::int as max_progress
 FROM bronze_tournaments t
-JOIN bronze_simulated_tournaments st ON t.id = st.tournament_id
+JOIN silver_simulated_tournaments st ON t.id = st.tournament_id
 WHERE t.season = $1::int
 GROUP BY t.id, t.season
 `

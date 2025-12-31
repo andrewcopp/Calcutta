@@ -56,17 +56,6 @@ type BronzePayout struct {
 	CreatedAt    pgtype.Timestamp
 }
 
-type BronzeSimulatedTournament struct {
-	ID           int64
-	TournamentID int64
-	SimID        int32
-	TeamID       int64
-	Wins         int32
-	Byes         int32
-	Eliminated   bool
-	CreatedAt    pgtype.Timestamp
-}
-
 type BronzeTeam struct {
 	ID           int64
 	TournamentID int64
@@ -339,6 +328,17 @@ type SilverPredictedMarketShare struct {
 	PredictedPricePoints pgtype.Numeric
 	ModelVersion         *string
 	CreatedAt            pgtype.Timestamp
+}
+
+type SilverSimulatedTournament struct {
+	ID           int64
+	TournamentID int64
+	SimID        int32
+	TeamID       int64
+	Wins         int32
+	Byes         int32
+	Eliminated   bool
+	CreatedAt    pgtype.Timestamptz
 }
 
 type SilverTeamTournamentValue struct {
