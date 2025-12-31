@@ -81,20 +81,21 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Expected points (EV calculation - same as Naive in predicted-investment)
+			-- Expected points (EV calculation)
 			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
 			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
 			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
 			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
 			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_points,
-			-- Expected market = Naive (same EV calculation, used as market estimate)
+			-- Expected market: proportional share of total pool (68 entries * 100 points = 6800)
+			-- Each team gets (their EV / total EV) * 6800
 			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
 			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
 			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
 			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
 			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_market,
+			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) / 6000.0 * 6800.0 as expected_market,
 			-- Our bid from MINLP optimizer (0 if not available)
 			COALESCE(reb.recommended_bid_points, 0.0) as our_bid
 		FROM bronze_teams t
