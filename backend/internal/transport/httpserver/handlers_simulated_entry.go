@@ -82,7 +82,7 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 		latest_optimization AS (
 			SELECT gor.run_id
 			FROM gold_optimization_runs gor
-			WHERE gor.tournament_id = (SELECT id FROM bronze_tournament)
+			WHERE gor.run_id LIKE 'minlp_' || (SELECT season FROM main_tournament) || '_%'
 			ORDER BY gor.created_at DESC
 			LIMIT 1
 		)
