@@ -27,9 +27,11 @@ This repo follows simple, practical rules that keep code clear and change-safe w
 - Unit tests only for now. No DB/integration tests.
 - Unit tests should cover pure business logic (deterministic inputs → outputs).
 - Do not write unit tests that assert filesystem/DB/HTTP behavior.
+- Unit tests must not read/write external state (DB, network/API calls, filesystem, or any external storage).
 - Prefer a “pure core + thin runner” structure:
   - Core functions: no I/O, return values.
   - Runners/handlers: load/save/log, call core, translate errors.
+- If you need a dependency for unit tests, inject an interface and use a fake/in-memory implementation.
 - Structure tests as GIVEN / WHEN / THEN with one reason to fail.
 - Determinism: fix time, randomness, and sort before comparing.
 

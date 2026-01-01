@@ -44,8 +44,10 @@ All tests follow this structure:
 Unit tests should cover pure business logic (deterministic inputs → outputs).
 
 - Do not write unit tests that assert filesystem/DB/HTTP behavior.
+- Unit tests must not read/write external state (DB, network/API calls, filesystem, or any external storage).
 - Keep I/O in thin wrappers (handlers/CLIs/runners) and keep core logic in pure
   functions so it is easy to test.
+- If you need a dependency for unit tests, inject an interface and use a fake/in-memory implementation.
 
 ## Bracket Logic Test Coverage Needed
 
