@@ -21,19 +21,18 @@ func (s *Server) handleGetTournamentSimStatsByID(w http.ResponseWriter, r *http.
 	}
 
 	// Query the database to get simulation statistics for this tournament
-	// First, get the season from the main tournaments table, then query analytics data
+	// Resolve the bronze tournament row for this core tournament.
 	query := `
 		WITH main_tournament AS (
 			SELECT 
-				id,
-				CAST(SUBSTRING(name FROM '[0-9]{4}') AS INTEGER) as season
+				id
 			FROM core.tournaments
 			WHERE id = $1
 		),
 		tournament_info AS (
 			SELECT bt.id, bt.season
 			FROM bronze.tournaments bt
-			JOIN main_tournament mt ON bt.season = mt.season
+			JOIN main_tournament mt ON bt.core_tournament_id = mt.id
 		),
 		sim_stats AS (
 			SELECT 

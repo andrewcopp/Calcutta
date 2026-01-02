@@ -144,9 +144,10 @@ WITH latest_calcutta AS (
   SELECT c.id AS calcutta_id
   FROM core.calcuttas c
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.seasons seas ON seas.id = t.season_id
   WHERE c.deleted_at IS NULL
   ORDER BY
-    COALESCE(substring(t.name from '([0-9]{4})')::int, 0) DESC,
+    seas.year DESC,
     c.created_at DESC
   LIMIT 1
 ),
@@ -311,7 +312,7 @@ LIMIT $1::int;
 WITH bid_points AS (
   SELECT
     t.name AS tournament_name,
-    COALESCE(substring(t.name from '([0-9]{4})')::int, 0)::int AS tournament_year,
+    seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     ce.id AS entry_id,
     ce.name AS entry_name,
@@ -327,6 +328,7 @@ WITH bid_points AS (
   JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.seasons seas ON seas.id = t.season_id
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
 ),
@@ -375,7 +377,7 @@ LIMIT $1::int;
 WITH entry_points AS (
   SELECT
     t.name AS tournament_name,
-    COALESCE(substring(t.name from '([0-9]{4})')::int, 0)::int AS tournament_year,
+    seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     ce.id AS entry_id,
     ce.name AS entry_name,
@@ -393,6 +395,7 @@ WITH entry_points AS (
   FROM core.entries ce
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.seasons seas ON seas.id = t.season_id
   LEFT JOIN core.entry_teams cet ON cet.entry_id = ce.id AND cet.deleted_at IS NULL
   LEFT JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
   LEFT JOIN LATERAL (
@@ -437,7 +440,7 @@ LIMIT $1::int;
 WITH team_bids AS (
   SELECT
     t.name AS tournament_name,
-    COALESCE(substring(t.name from '([0-9]{4})')::int, 0)::int AS tournament_year,
+    seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     tt.id AS team_id,
     s.name AS school_name,
@@ -449,6 +452,7 @@ WITH team_bids AS (
   JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.seasons seas ON seas.id = t.season_id
   JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
@@ -491,7 +495,7 @@ WITH team_bids AS (
   SELECT
     tt.seed,
     t.name AS tournament_name,
-    COALESCE(substring(t.name from '([0-9]{4})')::int, 0)::int AS tournament_year,
+    seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     tt.id AS team_id,
     s.name AS school_name,
@@ -500,6 +504,7 @@ WITH team_bids AS (
   JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.seasons seas ON seas.id = t.season_id
   JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
