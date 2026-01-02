@@ -289,6 +289,10 @@ A calcutta always has a tournament, so any endpoint can join tournament data as 
     - frontend still loads correctly
     - `backend/ops/core_sanity_checks.sql` passes
 
+### Drop public bronze core-context views (after compat window)
+- [x] Migration: `20260102095000_drop_public_bronze_core_ctx_views`
+- [x] Verified: runtime `sqlc` no longer depends on `public.bronze_*_core_ctx`
+
 ### Drop legacy schema (after verification window)
 - [x] **Go/no-go checklist**:
   - [x] Bundle tooling reads/writes `core.*` only (no `legacy.*` dependencies)
@@ -352,3 +356,5 @@ Add dated notes here as work is completed.
   - ML analytics: simulated calcuttas, team performance-by-calcutta
   - Admin bundles + bundle import worker: bundle upload lifecycle via sqlc queries
   - Tournament analytics: sim stats by `core.tournaments.id` via MLAnalytics/sqlc
+
+- [2026-01-02] Dropped deprecated compatibility views `public.bronze_*_core_ctx` via migration: `20260102095000_drop_public_bronze_core_ctx_views`
