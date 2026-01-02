@@ -25,9 +25,9 @@ This plan is designed to be safe with respect to historical cleaned data. When i
 ## Safety rails (must do)
 - [x] **DB snapshot** taken (before any migration/backfill work)
 - [x] **Freeze invariants** (row counts + relational invariants) for protected data tables
-- [ ] **Inventory** current tables + mark each as: protected / derived / deprecated / unknown
+- [x] **Inventory** current tables + mark each as: protected / derived / deprecated / unknown
 
-### Inventory (repo-derived; verify against live DB)
+### Inventory (repo-derived; verified against live DB 2026-01-02)
 
 #### Protected (must preserve + verify)
 
@@ -40,6 +40,7 @@ This plan is designed to be safe with respect to historical cleaned data. When i
 - `public.grants`
 - `public.api_keys`
 - `public.bundle_uploads`
+- `public.schema_migrations`
 
 ##### Core schema (product)
 - `core.seasons`
