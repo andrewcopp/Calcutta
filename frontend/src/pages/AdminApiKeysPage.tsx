@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/apiClient';
 
@@ -26,8 +26,6 @@ type ListAPIKeysResponse = {
 };
 
 export const AdminApiKeysPage: React.FC = () => {
-  const API_URL = useMemo(() => import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080', []);
-
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,7 +93,7 @@ export const AdminApiKeysPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
         <Link to="/admin" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-           Back to Admin Console
+          Back to Admin Console
         </Link>
         <h1 className="text-3xl font-bold">Admin: API Keys</h1>
         <p className="text-gray-600 mt-2">Create API keys for server-to-server access (e.g. the Python data science client).</p>
@@ -200,7 +198,6 @@ export const AdminApiKeysPage: React.FC = () => {
 
         <div className="mt-6 text-sm text-gray-600">
           <div>Use in Python as: <code>Authorization: Bearer &lt;api_key&gt;</code></div>
-          <div>Export URL: <code>{API_URL}/api/admin/analytics/export?tournamentId=...&amp;calcuttaId=...</code></div>
         </div>
       </div>
     </div>

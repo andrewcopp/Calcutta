@@ -1,10 +1,8 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { UserMenu } from './Header/UserMenu';
 
 export const Header: React.FC = () => {
-  const location = useLocation();
-
   return (
     <header className="bg-white shadow-md">
       <div className="container mx-auto px-4 py-4">
@@ -16,9 +14,6 @@ export const Header: React.FC = () => {
             <nav className="hidden md:flex space-x-4">
               <Link to="/calcuttas" className="text-gray-600 hover:text-gray-800">
                 Calcuttas
-              </Link>
-              <Link to="/analytics" className="text-gray-600 hover:text-gray-800">
-                Analytics
               </Link>
               <Link to="/rules" className="text-gray-600 hover:text-gray-800">
                 How It Works

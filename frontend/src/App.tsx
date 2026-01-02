@@ -12,8 +12,7 @@ import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
 import { TournamentBracketPage } from './pages/TournamentBracketPage';
 import { AdminPage } from './pages/AdminPage';
 import { AdminBundlesPage } from './pages/AdminBundlesPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { TournamentAnalyticsPage } from './pages/TournamentAnalyticsPage';
+import { AdminApiKeysPage } from './pages/AdminApiKeysPage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -36,10 +35,9 @@ const AppLayout: React.FC = () => {
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
-        <Route path="/analytics" element={<TournamentAnalyticsPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/api-keys" element={<AdminApiKeysPage />} />
         <Route path="/admin/bundles" element={<AdminBundlesPage />} />
-        <Route path="/admin/analytics" element={<AnalyticsPage />} />
         <Route path="/admin/hall-of-fame" element={<HallOfFamePage />} />
         <Route path="/admin/tournaments" element={<TournamentListPage />} />
         <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />
