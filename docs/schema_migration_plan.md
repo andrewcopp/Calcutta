@@ -81,8 +81,8 @@ This list should be kept short and explicit.
   - [x] Read/write on `bronze/silver/gold.*`
 
 ### 3) Standard triggers
-- [ ] Create a standard `updated_at` trigger function
-- [ ] Add `updated_at` triggers for all new tables
+- [x] Create a standard `updated_at` trigger function
+- [x] Add `updated_at` triggers for all new tables
 
 ---
 
@@ -98,8 +98,8 @@ This list should be kept short and explicit.
 - [x] Backfill `core.tournaments`
 
 ### Verification
-- [ ] Every old tournament maps to exactly one `core.tournaments.id`
-- [ ] No string parsing joins remain in application queries
+- [x] Every old tournament maps to exactly one `core.tournaments.id`
+- [x] No string parsing joins remain in application queries
 
 ---
 
@@ -164,8 +164,8 @@ This list should be kept short and explicit.
 - [x] Backfill from `tournament_team_kenpom_stats` into `core.team_kenpom_stats`
 
 ### Verification
-- [ ] Per-team stats row counts match (excluding soft-deleted)
-- [ ] Spot-check known teams across historical tournaments
+- [x] Per-team stats row counts match (excluding soft-deleted)
+- [x] Spot-check known teams across historical tournaments
 
 ---
 
@@ -279,3 +279,6 @@ Add dated notes here as work is completed.
 - [2026-01-01] Analytics snapshot exporter refactored to core-only
 - [2026-01-01] Dropped legacy schema: `20260101128000_drop_legacy_schema`
 - [2026-01-01] Ops verification scripts updated to core-only: `backend/ops/core_sanity_checks.sql`, `backend/ops/freeze_invariants.sql`
+
+- [2026-01-01] Standard `updated_at` trigger function + triggers added for core + medallion tables
+- [2026-01-01] Core identity verification: core/bronze ID linkage validated; removed remaining join-relevant string parsing from runtime analytics queries
