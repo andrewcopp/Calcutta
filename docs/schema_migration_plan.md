@@ -79,9 +79,7 @@ This plan is designed to be safe with respect to historical cleaned data. When i
 #### Deprecated / transitional (remove after verification window)
 
 ##### Public compatibility / core-context views
-- `public.bronze_tournaments_core_ctx`
-- `public.bronze_teams_core_ctx`
-- `public.bronze_calcuttas_core_ctx`
+- (dropped)
 
 #### Unknown / needs decision
 - (none listed yet)
@@ -142,6 +140,10 @@ This list should be kept short and explicit.
 ### 3) Standard triggers
 - [x] Create a standard `updated_at` trigger function
 - [x] Add `updated_at` triggers for all new tables
+
+### Current trigger strategy
+- **Core**: `core.set_updated_at()` on `core.*`
+- **Lab tiers + public ops tables**: `public.set_updated_at()` on `bronze/silver/gold/public.*`
 
 ---
 
@@ -293,6 +295,22 @@ A calcutta always has a tournament, so any endpoint can join tournament data as 
 - [x] Migration: `20260102095000_drop_public_bronze_core_ctx_views`
 - [x] Verified: runtime `sqlc` no longer depends on `public.bronze_*_core_ctx`
 
+### Drop unused public legacy functions
+- [x] Migration: `20260102102200_drop_unused_public_functions`
+- [x] Dropped:
+  - `public.get_entry_portfolio`
+  - `public.set_schools_slug`
+  - `public.set_tournaments_import_key`
+
+### Audit columns everywhere
+- [x] Migration: `20260102103000_add_audit_columns_to_lab_and_public_tables`
+- [x] Added `updated_at` + nullable `deleted_at` to all `bronze/silver/gold` tables and remaining public tables missing them
+- [x] Ensured `set_updated_at` triggers exist for tables with `updated_at` in `bronze/silver/gold/public`
+
+### Core owns core triggers
+- [x] Migration: `20260102104500_standardize_core_updated_at_triggers`
+- [x] Ensured `core.*` uses `core.set_updated_at()` (removed legacy core triggers that called `public.set_updated_at()`)
+
 ### Drop legacy schema (after verification window)
 - [x] **Go/no-go checklist**:
   - [x] Bundle tooling reads/writes `core.*` only (no `legacy.*` dependencies)
@@ -358,3 +376,7 @@ Add dated notes here as work is completed.
   - Tournament analytics: sim stats by `core.tournaments.id` via MLAnalytics/sqlc
 
 - [2026-01-02] Dropped deprecated compatibility views `public.bronze_*_core_ctx` via migration: `20260102095000_drop_public_bronze_core_ctx_views`
+
+- [2026-01-02] Dropped unused public legacy functions via migration: `20260102102200_drop_unused_public_functions`
+- [2026-01-02] Added audit columns + updated_at triggers for lab tiers and remaining public tables via migration: `20260102103000_add_audit_columns_to_lab_and_public_tables`
+- [2026-01-02] Standardized core updated_at triggers to `core.set_updated_at()` via migration: `20260102104500_standardize_core_updated_at_triggers`
