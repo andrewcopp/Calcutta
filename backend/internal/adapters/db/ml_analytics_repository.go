@@ -71,6 +71,36 @@ func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year 
 	}, nil
 }
 
+func (r *MLAnalyticsRepository) GetTeamPerformanceByCalcutta(ctx context.Context, calcuttaID string, teamID string) (*ports.TeamPerformance, error) {
+	row, err := r.q.GetTeamPerformanceByCalcutta(ctx, sqlc.GetTeamPerformanceByCalcuttaParams{
+		CalcuttaID: calcuttaID,
+		TeamID:     teamID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var roundDist map[string]int
+	if err := json.Unmarshal(row.RoundDistribution, &roundDist); err != nil {
+		return nil, err
+	}
+
+	return &ports.TeamPerformance{
+		TeamID:            row.TeamID,
+		SchoolName:        row.SchoolName,
+		Seed:              int(derefInt32ML(row.Seed)),
+		Region:            derefStringML(row.Region),
+		KenpomNet:         row.KenpomNet,
+		TotalSims:         int(row.TotalSims),
+		AvgWins:           row.AvgWins,
+		AvgPoints:         row.AvgPoints,
+		RoundDistribution: roundDist,
+	}, nil
+}
+
 func (r *MLAnalyticsRepository) GetTeamPerformance(ctx context.Context, year int, teamID string) (*ports.TeamPerformance, error) {
 	row, err := r.q.GetTeamPerformanceByID(ctx, teamID)
 	if err != nil {
@@ -117,6 +147,36 @@ func (r *MLAnalyticsRepository) GetTeamPredictions(ctx context.Context, year int
 	}
 
 	return out, nil
+}
+
+func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string) (string, []ports.SimulatedCalcuttaEntryRanking, error) {
+	runID, err := r.q.GetLatestOptimizationRunIDByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil, nil
+		}
+		return "", nil, err
+	}
+
+	rows, err := r.q.GetEntryPerformanceByRunID(ctx, runID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.SimulatedCalcuttaEntryRanking{
+			Rank:             int(row.Rank),
+			EntryName:        row.EntryName,
+			MeanPayout:       row.MeanPayout,
+			MedianPayout:     row.MedianPayout,
+			PTop1:            row.PTop1,
+			PInMoney:         row.PInMoney,
+			TotalSimulations: int(row.TotalSimulations),
+		})
+	}
+
+	return runID, out, nil
 }
 
 func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int, runID string) (*ports.OurEntryDetails, error) {

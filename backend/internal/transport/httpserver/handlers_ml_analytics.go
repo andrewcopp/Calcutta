@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -95,129 +94,28 @@ func (s *Server) handleGetTeamPerformanceByCalcutta(w http.ResponseWriter, r *ht
 		return
 	}
 
-	query := `
-		WITH calcutta AS (
-			SELECT
-				c.id AS calcutta_id,
-				c.tournament_id,
-				s.year AS season
-			FROM core.calcuttas c
-			JOIN core.tournaments tr ON tr.id = c.tournament_id AND tr.deleted_at IS NULL
-			JOIN core.seasons s ON s.id = tr.season_id AND s.deleted_at IS NULL
-			WHERE c.id = $1
-			  AND c.deleted_at IS NULL
-			LIMIT 1
-		),
-		team_ctx AS (
-			SELECT
-				t.id AS team_id,
-				bt.core_tournament_id,
-				bt.season
-			FROM bronze.teams t
-			JOIN bronze.tournaments bt ON bt.id = t.tournament_id
-			WHERE t.id = $2::uuid
-			LIMIT 1
-		),
-		valid AS (
-			SELECT 1
-			FROM calcutta c
-			JOIN team_ctx tc ON (tc.core_tournament_id = c.tournament_id OR tc.season = c.season)
-			LIMIT 1
-		),
-		round_distribution AS (
-			SELECT
-				st.team_id,
-				CASE (st.wins + st.byes)
-					WHEN 0 THEN 'R64'
-					WHEN 1 THEN 'R64'
-					WHEN 2 THEN 'R32'
-					WHEN 3 THEN 'S16'
-					WHEN 4 THEN 'E8'
-					WHEN 5 THEN 'F4'
-					WHEN 6 THEN 'Finals'
-					WHEN 7 THEN 'Champion'
-					ELSE 'Unknown'
-				END as round_name,
-				COUNT(*)::int as count
-			FROM silver.simulated_tournaments st
-			JOIN bronze.teams t ON t.id = st.team_id
-			WHERE st.team_id = $2::uuid
-			GROUP BY st.team_id, round_name
-		)
-		SELECT
-			t.id as team_id,
-			t.school_name,
-			t.seed,
-			t.region,
-			t.kenpom_net,
-			COUNT(DISTINCT st.sim_id)::int as total_sims,
-			AVG(st.wins)::float as avg_wins,
-			AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float as avg_points,
-			jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-		FROM bronze.teams t
-		JOIN valid v ON true
-		JOIN silver.simulated_tournaments st ON st.team_id = t.id
-		LEFT JOIN round_distribution rd ON rd.team_id = t.id
-		WHERE t.id = $2::uuid
-		GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net;
-	`
-
-	var resp struct {
-		TeamID            string
-		SchoolName        string
-		Seed              *int32
-		Region            *string
-		KenpomNet         *float64
-		TotalSims         int32
-		AvgWins           float64
-		AvgPoints         float64
-		RoundDistribution []byte
-	}
-
-	err := s.pool.QueryRow(ctx, query, calcuttaID, teamID).Scan(
-		&resp.TeamID,
-		&resp.SchoolName,
-		&resp.Seed,
-		&resp.Region,
-		&resp.KenpomNet,
-		&resp.TotalSims,
-		&resp.AvgWins,
-		&resp.AvgPoints,
-		&resp.RoundDistribution,
-	)
+	perf, err := s.app.MLAnalytics.GetTeamPerformanceByCalcutta(ctx, calcuttaID, teamID)
 	if err != nil {
 		log.Printf("Error getting team performance by calcutta: %v", err)
+		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to get team performance", "")
+		return
+	}
+	if perf == nil {
 		writeError(w, r, http.StatusNotFound, "not_found", "Team performance not found", "")
 		return
 	}
 
-	var roundDist map[string]int
-	if err := json.Unmarshal(resp.RoundDistribution, &roundDist); err != nil {
-		log.Printf("Error parsing round distribution: %v", err)
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "Failed to parse round distribution", "")
-		return
-	}
-
-	seed := 0
-	if resp.Seed != nil {
-		seed = int(*resp.Seed)
-	}
-	region := ""
-	if resp.Region != nil {
-		region = *resp.Region
-	}
-
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"calcutta_id":        calcuttaID,
-		"team_id":            resp.TeamID,
-		"school_name":        resp.SchoolName,
-		"seed":               seed,
-		"region":             region,
-		"kenpom_net":         resp.KenpomNet,
-		"total_sims":         int(resp.TotalSims),
-		"avg_wins":           resp.AvgWins,
-		"avg_points":         resp.AvgPoints,
-		"round_distribution": roundDist,
+		"team_id":            perf.TeamID,
+		"school_name":        perf.SchoolName,
+		"seed":               perf.Seed,
+		"region":             perf.Region,
+		"kenpom_net":         perf.KenpomNet,
+		"total_sims":         perf.TotalSims,
+		"avg_wins":           perf.AvgWins,
+		"avg_points":         perf.AvgPoints,
+		"round_distribution": perf.RoundDistribution,
 	})
 }
 

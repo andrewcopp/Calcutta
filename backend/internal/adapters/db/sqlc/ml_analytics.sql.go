@@ -63,6 +63,62 @@ func (q *Queries) GetActualEntryPortfolio(ctx context.Context, arg GetActualEntr
 	return items, nil
 }
 
+const getEntryPerformanceByRunID = `-- name: GetEntryPerformanceByRunID :many
+SELECT
+    ROW_NUMBER() OVER (ORDER BY gep.mean_payout DESC)::int as rank,
+    gep.entry_name,
+    COALESCE(gep.mean_payout, 0.0)::double precision as mean_payout,
+    COALESCE(gep.median_payout, 0.0)::double precision as median_payout,
+    COALESCE(gep.p_top1, 0.0)::double precision as p_top1,
+    COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
+    (
+        SELECT COUNT(*)::int
+        FROM gold.entry_simulation_outcomes eso
+        WHERE eso.run_id = $1::text AND eso.entry_name = gep.entry_name
+    ) as total_simulations
+FROM gold.entry_performance gep
+WHERE gep.run_id = $1::text
+ORDER BY gep.mean_payout DESC
+`
+
+type GetEntryPerformanceByRunIDRow struct {
+	Rank             int32
+	EntryName        string
+	MeanPayout       float64
+	MedianPayout     float64
+	PTop1            float64
+	PInMoney         float64
+	TotalSimulations int32
+}
+
+func (q *Queries) GetEntryPerformanceByRunID(ctx context.Context, dollar_1 string) ([]GetEntryPerformanceByRunIDRow, error) {
+	rows, err := q.db.Query(ctx, getEntryPerformanceByRunID, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEntryPerformanceByRunIDRow
+	for rows.Next() {
+		var i GetEntryPerformanceByRunIDRow
+		if err := rows.Scan(
+			&i.Rank,
+			&i.EntryName,
+			&i.MeanPayout,
+			&i.MedianPayout,
+			&i.PTop1,
+			&i.PInMoney,
+			&i.TotalSimulations,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEntryPortfolio = `-- name: GetEntryPortfolio :many
 
 
@@ -117,6 +173,22 @@ func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEnt
 		return nil, err
 	}
 	return items, nil
+}
+
+const getLatestOptimizationRunIDByCoreCalcuttaID = `-- name: GetLatestOptimizationRunIDByCoreCalcuttaID :one
+SELECT gor.run_id
+FROM gold.optimization_runs gor
+JOIN public.bronze_calcuttas_core_ctx bcc ON bcc.id = gor.calcutta_id
+WHERE bcc.core_calcutta_id = $1::uuid
+ORDER BY gor.created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestOptimizationRunIDByCoreCalcuttaID(ctx context.Context, dollar_1 string) (string, error) {
+	row := q.db.QueryRow(ctx, getLatestOptimizationRunIDByCoreCalcuttaID, dollar_1)
+	var run_id string
+	err := row.Scan(&run_id)
+	return run_id, err
 }
 
 const getOptimizationRunByID = `-- name: GetOptimizationRunByID :one
@@ -239,6 +311,102 @@ func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) (
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTeamPerformanceByCalcutta = `-- name: GetTeamPerformanceByCalcutta :one
+WITH calcutta AS (
+	SELECT
+		c.id AS calcutta_id,
+		c.tournament_id
+	FROM core.calcuttas c
+	WHERE c.id = $2::uuid
+	  AND c.deleted_at IS NULL
+	LIMIT 1
+),
+team_ctx AS (
+	SELECT
+		t.id AS team_id,
+		bt.core_tournament_id
+	FROM bronze.teams t
+	JOIN bronze.tournaments bt ON bt.id = t.tournament_id
+	WHERE t.id = $1::uuid
+	LIMIT 1
+),
+valid AS (
+	SELECT 1
+	FROM calcutta c
+	JOIN team_ctx tc ON tc.core_tournament_id = c.tournament_id
+	LIMIT 1
+),
+round_distribution AS (
+	SELECT
+		st.team_id,
+		CASE (st.wins + st.byes)
+			WHEN 0 THEN 'R64'
+			WHEN 1 THEN 'R64'
+			WHEN 2 THEN 'R32'
+			WHEN 3 THEN 'S16'
+			WHEN 4 THEN 'E8'
+			WHEN 5 THEN 'F4'
+			WHEN 6 THEN 'Finals'
+			WHEN 7 THEN 'Champion'
+			ELSE 'Unknown'
+		END as round_name,
+		COUNT(*)::int as count
+	FROM silver.simulated_tournaments st
+	WHERE st.team_id = $1::uuid
+	GROUP BY st.team_id, round_name
+)
+SELECT
+	t.id as team_id,
+	t.school_name,
+	t.seed,
+	t.region,
+	t.kenpom_net,
+	COUNT(DISTINCT st.sim_id)::int as total_sims,
+	AVG(st.wins)::float as avg_wins,
+	AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float as avg_points,
+	jsonb_object_agg(rd.round_name, rd.count) as round_distribution
+FROM bronze.teams t
+JOIN valid v ON true
+JOIN silver.simulated_tournaments st ON st.team_id = t.id
+	LEFT JOIN round_distribution rd ON rd.team_id = t.id
+WHERE t.id = $1::uuid
+GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net
+`
+
+type GetTeamPerformanceByCalcuttaParams struct {
+	TeamID     string
+	CalcuttaID string
+}
+
+type GetTeamPerformanceByCalcuttaRow struct {
+	TeamID            string
+	SchoolName        string
+	Seed              *int32
+	Region            *string
+	KenpomNet         *float64
+	TotalSims         int32
+	AvgWins           float64
+	AvgPoints         float64
+	RoundDistribution []byte
+}
+
+func (q *Queries) GetTeamPerformanceByCalcutta(ctx context.Context, arg GetTeamPerformanceByCalcuttaParams) (GetTeamPerformanceByCalcuttaRow, error) {
+	row := q.db.QueryRow(ctx, getTeamPerformanceByCalcutta, arg.TeamID, arg.CalcuttaID)
+	var i GetTeamPerformanceByCalcuttaRow
+	err := row.Scan(
+		&i.TeamID,
+		&i.SchoolName,
+		&i.Seed,
+		&i.Region,
+		&i.KenpomNet,
+		&i.TotalSims,
+		&i.AvgWins,
+		&i.AvgPoints,
+		&i.RoundDistribution,
+	)
+	return i, err
 }
 
 const getTeamPerformanceByID = `-- name: GetTeamPerformanceByID :one

@@ -110,6 +110,17 @@ type EntrySimulationSummary struct {
 	P90PayoutCents       int
 }
 
+// SimulatedCalcuttaEntryRanking represents an entry's performance in simulated calcuttas (gold.entry_performance)
+type SimulatedCalcuttaEntryRanking struct {
+	Rank             int
+	EntryName        string
+	MeanPayout       float64
+	MedianPayout     float64
+	PTop1            float64
+	PInMoney         float64
+	TotalSimulations int
+}
+
 // EntryPerformanceSummary represents aggregated performance metrics
 type EntryPerformanceSummary struct {
 	MeanNormalizedPayout float64
@@ -140,6 +151,7 @@ type MLAnalyticsRepository interface {
 	// Tournament simulations
 	GetTournamentSimStats(ctx context.Context, year int) (*TournamentSimStats, error)
 	GetTeamPerformance(ctx context.Context, year int, teamID string) (*TeamPerformance, error)
+	GetTeamPerformanceByCalcutta(ctx context.Context, calcuttaID string, teamID string) (*TeamPerformance, error)
 
 	// Team predictions
 	GetTeamPredictions(ctx context.Context, year int, runID *string) ([]TeamPrediction, error)
@@ -158,4 +170,7 @@ type MLAnalyticsRepository interface {
 
 	// Available runs
 	GetOptimizationRuns(ctx context.Context, year int) ([]OptimizationRun, error)
+
+	// Calcutta-scoped simulated calcuttas
+	GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string) (string, []SimulatedCalcuttaEntryRanking, error)
 }

@@ -165,3 +165,89 @@ JOIN bronze.calcuttas bc ON bc.id = r.calcutta_id
 JOIN bronze.tournaments bt ON bt.id = bc.tournament_id
 WHERE bt.season = $1::int
 ORDER BY r.created_at DESC;
+
+-- name: GetLatestOptimizationRunIDByCoreCalcuttaID :one
+SELECT gor.run_id
+FROM gold.optimization_runs gor
+JOIN public.bronze_calcuttas_core_ctx bcc ON bcc.id = gor.calcutta_id
+WHERE bcc.core_calcutta_id = $1::uuid
+ORDER BY gor.created_at DESC
+LIMIT 1;
+
+-- name: GetEntryPerformanceByRunID :many
+SELECT
+    ROW_NUMBER() OVER (ORDER BY gep.mean_payout DESC)::int as rank,
+    gep.entry_name,
+    COALESCE(gep.mean_payout, 0.0)::double precision as mean_payout,
+    COALESCE(gep.median_payout, 0.0)::double precision as median_payout,
+    COALESCE(gep.p_top1, 0.0)::double precision as p_top1,
+    COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
+    (
+        SELECT COUNT(*)::int
+        FROM gold.entry_simulation_outcomes eso
+        WHERE eso.run_id = $1::text AND eso.entry_name = gep.entry_name
+    ) as total_simulations
+FROM gold.entry_performance gep
+WHERE gep.run_id = $1::text
+ORDER BY gep.mean_payout DESC;
+
+-- name: GetTeamPerformanceByCalcutta :one
+WITH calcutta AS (
+	SELECT
+		c.id AS calcutta_id,
+		c.tournament_id
+	FROM core.calcuttas c
+	WHERE c.id = sqlc.arg(calcutta_id)::uuid
+	  AND c.deleted_at IS NULL
+	LIMIT 1
+),
+team_ctx AS (
+	SELECT
+		t.id AS team_id,
+		bt.core_tournament_id
+	FROM bronze.teams t
+	JOIN bronze.tournaments bt ON bt.id = t.tournament_id
+	WHERE t.id = sqlc.arg(team_id)::uuid
+	LIMIT 1
+),
+valid AS (
+	SELECT 1
+	FROM calcutta c
+	JOIN team_ctx tc ON tc.core_tournament_id = c.tournament_id
+	LIMIT 1
+),
+round_distribution AS (
+	SELECT
+		st.team_id,
+		CASE (st.wins + st.byes)
+			WHEN 0 THEN 'R64'
+			WHEN 1 THEN 'R64'
+			WHEN 2 THEN 'R32'
+			WHEN 3 THEN 'S16'
+			WHEN 4 THEN 'E8'
+			WHEN 5 THEN 'F4'
+			WHEN 6 THEN 'Finals'
+			WHEN 7 THEN 'Champion'
+			ELSE 'Unknown'
+		END as round_name,
+		COUNT(*)::int as count
+	FROM silver.simulated_tournaments st
+	WHERE st.team_id = sqlc.arg(team_id)::uuid
+	GROUP BY st.team_id, round_name
+)
+SELECT
+	t.id as team_id,
+	t.school_name,
+	t.seed,
+	t.region,
+	t.kenpom_net,
+	COUNT(DISTINCT st.sim_id)::int as total_sims,
+	AVG(st.wins)::float as avg_wins,
+	AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float as avg_points,
+	jsonb_object_agg(rd.round_name, rd.count) as round_distribution
+FROM bronze.teams t
+JOIN valid v ON true
+JOIN silver.simulated_tournaments st ON st.team_id = t.id
+	LEFT JOIN round_distribution rd ON rd.team_id = t.id
+WHERE t.id = sqlc.arg(team_id)::uuid
+GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net;
