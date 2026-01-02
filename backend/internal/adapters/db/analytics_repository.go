@@ -84,6 +84,77 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.Tea
 	return out, nil
 }
 
+func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string) ([]ports.CalcuttaPredictedInvestmentData, error) {
+	rows, err := r.q.GetCalcuttaPredictedInvestment(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.CalcuttaPredictedInvestmentData, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.CalcuttaPredictedInvestmentData{
+			TeamID:     row.TeamID,
+			SchoolName: row.SchoolName,
+			Seed:       int(row.Seed),
+			Region:     row.Region,
+			Rational:   row.Rational,
+			Predicted:  row.Predicted,
+			Delta:      row.Delta,
+		})
+	}
+
+	return out, nil
+}
+
+func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string) ([]ports.CalcuttaPredictedReturnsData, error) {
+	rows, err := r.q.GetCalcuttaPredictedReturns(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.CalcuttaPredictedReturnsData, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.CalcuttaPredictedReturnsData{
+			TeamID:        row.TeamID,
+			SchoolName:    row.SchoolName,
+			Seed:          int(row.Seed),
+			Region:        row.Region,
+			ProbPI:        row.ProbPi,
+			ProbR64:       row.ProbR64,
+			ProbR32:       row.ProbR32,
+			ProbS16:       row.ProbS16,
+			ProbE8:        row.ProbE8,
+			ProbFF:        row.ProbFf,
+			ProbChamp:     row.ProbChamp,
+			ExpectedValue: row.ExpectedValue,
+		})
+	}
+
+	return out, nil
+}
+
+func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string) ([]ports.CalcuttaSimulatedEntryData, error) {
+	rows, err := r.q.GetCalcuttaSimulatedEntry(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.CalcuttaSimulatedEntryData, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.CalcuttaSimulatedEntryData{
+			TeamID:         row.TeamID,
+			SchoolName:     row.SchoolName,
+			Seed:           int(row.Seed),
+			Region:         row.Region,
+			ExpectedPoints: row.ExpectedPoints,
+			ExpectedMarket: row.ExpectedMarket,
+			OurBid:         row.OurBid,
+		})
+	}
+
+	return out, nil
+}
+
 func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]ports.SeedVarianceData, error) {
 	rows, err := r.q.GetSeedVarianceAnalytics(ctx)
 	if err != nil {

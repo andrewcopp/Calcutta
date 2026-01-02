@@ -156,6 +156,41 @@ type AnalyticsResult struct {
 	BaselineROI           float64
 }
 
+type CalcuttaPredictedInvestmentResult struct {
+	TeamID     string
+	SchoolName string
+	Seed       int
+	Region     string
+	Rational   float64
+	Predicted  float64
+	Delta      float64
+}
+
+type CalcuttaPredictedReturnsResult struct {
+	TeamID        string
+	SchoolName    string
+	Seed          int
+	Region        string
+	ProbPI        float64
+	ProbR64       float64
+	ProbR32       float64
+	ProbS16       float64
+	ProbE8        float64
+	ProbFF        float64
+	ProbChamp     float64
+	ExpectedValue float64
+}
+
+type CalcuttaSimulatedEntryResult struct {
+	TeamID         string
+	SchoolName     string
+	Seed           int
+	Region         string
+	ExpectedPoints float64
+	ExpectedMarket float64
+	OurBid         float64
+}
+
 type SeedInvestmentDistributionResult struct {
 	Points    []SeedInvestmentPointResult
 	Summaries []SeedInvestmentSummaryResult
@@ -193,6 +228,80 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 			PointsShare:      d.PointsShare,
 			RawROI:           d.RawROI,
 			NormalizedROI:    d.NormalizedROI,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string) ([]CalcuttaPredictedInvestmentResult, error) {
+	data, err := s.repo.GetCalcuttaPredictedInvestment(ctx, calcuttaID)
+	if err != nil {
+		log.Printf("Error getting predicted investment: %v", err)
+		return nil, err
+	}
+
+	results := make([]CalcuttaPredictedInvestmentResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, CalcuttaPredictedInvestmentResult{
+			TeamID:     d.TeamID,
+			SchoolName: d.SchoolName,
+			Seed:       d.Seed,
+			Region:     d.Region,
+			Rational:   d.Rational,
+			Predicted:  d.Predicted,
+			Delta:      d.Delta,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string) ([]CalcuttaPredictedReturnsResult, error) {
+	data, err := s.repo.GetCalcuttaPredictedReturns(ctx, calcuttaID)
+	if err != nil {
+		log.Printf("Error getting predicted returns: %v", err)
+		return nil, err
+	}
+
+	results := make([]CalcuttaPredictedReturnsResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, CalcuttaPredictedReturnsResult{
+			TeamID:        d.TeamID,
+			SchoolName:    d.SchoolName,
+			Seed:          d.Seed,
+			Region:        d.Region,
+			ProbPI:        d.ProbPI,
+			ProbR64:       d.ProbR64,
+			ProbR32:       d.ProbR32,
+			ProbS16:       d.ProbS16,
+			ProbE8:        d.ProbE8,
+			ProbFF:        d.ProbFF,
+			ProbChamp:     d.ProbChamp,
+			ExpectedValue: d.ExpectedValue,
+		})
+	}
+
+	return results, nil
+}
+
+func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string) ([]CalcuttaSimulatedEntryResult, error) {
+	data, err := s.repo.GetCalcuttaSimulatedEntry(ctx, calcuttaID)
+	if err != nil {
+		log.Printf("Error getting simulated entry: %v", err)
+		return nil, err
+	}
+
+	results := make([]CalcuttaSimulatedEntryResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, CalcuttaSimulatedEntryResult{
+			TeamID:         d.TeamID,
+			SchoolName:     d.SchoolName,
+			Seed:           d.Seed,
+			Region:         d.Region,
+			ExpectedPoints: d.ExpectedPoints,
+			ExpectedMarket: d.ExpectedMarket,
+			OurBid:         d.OurBid,
 		})
 	}
 

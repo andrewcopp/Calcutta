@@ -103,6 +103,41 @@ type CareerLeaderboardData struct {
 	ActiveInLatestCalcutta bool
 }
 
+type CalcuttaPredictedInvestmentData struct {
+	TeamID     string
+	SchoolName string
+	Seed       int
+	Region     string
+	Rational   float64
+	Predicted  float64
+	Delta      float64
+}
+
+type CalcuttaPredictedReturnsData struct {
+	TeamID        string
+	SchoolName    string
+	Seed          int
+	Region        string
+	ProbPI        float64
+	ProbR64       float64
+	ProbR32       float64
+	ProbS16       float64
+	ProbE8        float64
+	ProbFF        float64
+	ProbChamp     float64
+	ExpectedValue float64
+}
+
+type CalcuttaSimulatedEntryData struct {
+	TeamID         string
+	SchoolName     string
+	Seed           int
+	Region         string
+	ExpectedPoints float64
+	ExpectedMarket float64
+	OurBid         float64
+}
+
 type AnalyticsRepo interface {
 	GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error)
 	GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsData, float64, float64, error)
@@ -113,4 +148,7 @@ type AnalyticsRepo interface {
 	GetBestInvestmentBids(ctx context.Context, limit int) ([]InvestmentLeaderboardData, error)
 	GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderboardData, error)
 	GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardData, error)
+	GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string) ([]CalcuttaPredictedInvestmentData, error)
+	GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string) ([]CalcuttaPredictedReturnsData, error)
+	GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string) ([]CalcuttaSimulatedEntryData, error)
 }
