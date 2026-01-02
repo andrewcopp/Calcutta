@@ -54,7 +54,7 @@ def stage_simulated_calcuttas(
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id FROM bronze.tournaments WHERE season = %s",
+                "SELECT id FROM lab_bronze.tournaments WHERE season = %s",
                 (year,)
             )
             result = cur.fetchone()
@@ -120,7 +120,7 @@ def stage_simulated_calcuttas(
                     mean_payout,
                     p_top1,
                     p_in_money
-                FROM gold.entry_performance
+                FROM analytics.entry_performance
                 WHERE run_id = %s
                 ORDER BY mean_payout DESC
                 """,
@@ -417,7 +417,7 @@ def stage_recommended_entry_bids(
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT COUNT(*), SUM(recommended_bid_points)
-                    FROM gold_recommended_entry_bids
+                    FROM lab_gold.recommended_entry_bids
                     WHERE run_id = %s
                 """, (run_id,))
                 n_recs, total_bid = cur.fetchone()
@@ -438,10 +438,10 @@ def stage_recommended_entry_bids(
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT gor.run_id
-                    FROM gold.optimization_runs gor
-                    JOIN bronze.calcuttas bc ON gor.calcutta_id = bc.id
+                    FROM lab_gold.optimization_runs gor
+                    JOIN lab_bronze.calcuttas bc ON gor.calcutta_id = bc.id
                     WHERE bc.tournament_id = (
-                        SELECT id FROM bronze.tournaments WHERE season = %s
+                        SELECT id FROM lab_bronze.tournaments WHERE season = %s
                     )
                     ORDER BY gor.created_at DESC
                     LIMIT 1
@@ -489,8 +489,8 @@ def stage_recommended_entry_bids(
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT bt.id, bc.id
-                FROM bronze.tournaments bt
-                LEFT JOIN bronze.calcuttas bc ON bc.tournament_id = bt.id
+                FROM lab_bronze.tournaments bt
+                LEFT JOIN lab_bronze.calcuttas bc ON bc.tournament_id = bt.id
                 WHERE bt.season = %s
             """, (year,))
             result = cur.fetchone()
@@ -508,7 +508,8 @@ def stage_recommended_entry_bids(
     # Write recommendations
     write_recommended_entry_bids(
         run_id=run_id,
-        recommendations_df=recommendations_df,
+        bids_df=recommendations_df,
+        team_id_map={},
     )
     
     print(f"✓ Recommended entry bids written to database (run_id={run_id})")

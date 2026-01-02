@@ -34,7 +34,7 @@ def write_optimization_run(
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO gold.optimization_runs
+                INSERT INTO lab_gold.optimization_runs
                 (run_id, calcutta_id, strategy, n_sims, seed, budget_points)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (run_id) DO UPDATE SET
@@ -70,7 +70,7 @@ def write_recommended_entry_bids(
         with conn.cursor() as cur:
             # Clear existing bids for this run
             cur.execute("""
-                DELETE FROM gold.recommended_entry_bids
+                DELETE FROM lab_gold.recommended_entry_bids
                 WHERE run_id = %s
             """, (run_id,))
             
@@ -105,7 +105,7 @@ def write_recommended_entry_bids(
             ]
             
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO gold.recommended_entry_bids
+                INSERT INTO lab_gold.recommended_entry_bids
                 (run_id, team_id, recommended_bid_points, expected_roi)
                 VALUES (%s, %s, %s, %s)
             """, values)

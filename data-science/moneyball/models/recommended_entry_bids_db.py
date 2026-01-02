@@ -66,9 +66,9 @@ def recommend_entry_bids_from_simulations(
                     
                     cur.execute("""
                         SELECT team_id, predicted_share
-                        FROM silver.predicted_market_share
+                        FROM lab_silver.predicted_market_share
                         WHERE tournament_id = (
-                            SELECT id FROM bronze.tournaments WHERE season = %s
+                            SELECT id FROM lab_bronze.tournaments WHERE season = %s
                         )
                     """, (year,))
                     

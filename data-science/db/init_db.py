@@ -60,29 +60,28 @@ def drop_all_tables():
             
             # Drop gold tables
             cur.execute("""
-                DROP TABLE IF EXISTS gold.detailed_investment_report CASCADE;
-                DROP TABLE IF EXISTS gold.entry_performance CASCADE;
-                DROP TABLE IF EXISTS gold.entry_simulation_outcomes CASCADE;
-                DROP TABLE IF EXISTS gold.recommended_entry_bids CASCADE;
-                DROP TABLE IF EXISTS gold.optimization_runs CASCADE;
+                DROP TABLE IF EXISTS lab_gold.detailed_investment_report CASCADE;
+                DROP TABLE IF EXISTS lab_gold.recommended_entry_bids CASCADE;
+                DROP TABLE IF EXISTS lab_gold.optimization_runs CASCADE;
+                DROP TABLE IF EXISTS analytics.entry_performance CASCADE;
+                DROP TABLE IF EXISTS analytics.entry_simulation_outcomes CASCADE;
             """)
             
             # Drop silver tables
             cur.execute("""
-                DROP TABLE IF EXISTS silver.team_tournament_value CASCADE;
-                DROP TABLE IF EXISTS silver.predicted_market_share CASCADE;
-                DROP TABLE IF EXISTS silver.predicted_game_outcomes CASCADE;
-                DROP TABLE IF EXISTS silver.simulated_tournaments CASCADE;
+                DROP TABLE IF EXISTS lab_silver.team_tournament_value CASCADE;
+                DROP TABLE IF EXISTS lab_silver.predicted_market_share CASCADE;
+                DROP TABLE IF EXISTS lab_silver.predicted_game_outcomes CASCADE;
+                DROP TABLE IF EXISTS analytics.simulated_tournaments CASCADE;
             """)
             
             # Drop bronze tables
             cur.execute("""
-                DROP TABLE IF EXISTS bronze.payouts CASCADE;
-                DROP TABLE IF EXISTS bronze.entry_bids CASCADE;
-                DROP TABLE IF EXISTS bronze.calcuttas CASCADE;
-                DROP TABLE IF EXISTS bronze.simulated_tournaments CASCADE;
-                DROP TABLE IF EXISTS bronze.teams CASCADE;
-                DROP TABLE IF EXISTS bronze.tournaments CASCADE;
+                DROP TABLE IF EXISTS lab_bronze.payouts CASCADE;
+                DROP TABLE IF EXISTS lab_bronze.entry_bids CASCADE;
+                DROP TABLE IF EXISTS lab_bronze.calcuttas CASCADE;
+                DROP TABLE IF EXISTS lab_bronze.teams CASCADE;
+                DROP TABLE IF EXISTS lab_bronze.tournaments CASCADE;
             """)
             
             conn.commit()

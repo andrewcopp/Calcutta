@@ -9,8 +9,8 @@ SELECT
     COUNT(DISTINCT st.team_id)::int as n_teams,
     AVG(st.wins + st.byes)::float as avg_progress,
     MAX(st.wins + st.byes)::int as max_progress
-FROM bronze.tournaments t
-JOIN silver.simulated_tournaments st ON t.id = st.tournament_id
+FROM lab_bronze.tournaments t
+JOIN analytics.simulated_tournaments st ON t.id = st.tournament_id
 WHERE t.season = $1::int
 GROUP BY t.id, t.season;
 
@@ -19,7 +19,7 @@ WITH tournament_info AS (
 	SELECT
 		bt.id as tournament_id,
 		bt.season
-	FROM bronze.tournaments bt
+	FROM lab_bronze.tournaments bt
 	WHERE bt.core_tournament_id = sqlc.arg(core_tournament_id)::uuid
 	LIMIT 1
 ),
@@ -27,12 +27,12 @@ sim_stats AS (
 	SELECT
 		COUNT(DISTINCT sim_id)::int as total_simulations,
 		COUNT(DISTINCT team_id)::int as total_teams
-	FROM silver.simulated_tournaments st
+	FROM analytics.simulated_tournaments st
 	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
 ),
 prediction_stats AS (
 	SELECT COUNT(*)::int as total_predictions
-	FROM silver.predicted_game_outcomes pgo
+	FROM lab_silver.predicted_game_outcomes pgo
 	JOIN tournament_info ti ON pgo.tournament_id = ti.tournament_id
 ),
 win_stats AS (
@@ -40,7 +40,7 @@ win_stats AS (
 		AVG(wins)::double precision as mean_wins,
 		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY wins)::double precision as median_wins,
 		MAX(wins)::int as max_wins
-	FROM silver.simulated_tournaments st
+	FROM analytics.simulated_tournaments st
 	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
 )
 SELECT
@@ -60,8 +60,8 @@ LEFT JOIN win_stats ws ON true;
 -- name: GetTeamPerformanceByID :one
 WITH season_ctx AS (
     SELECT bt.core_tournament_id
-    FROM bronze.teams t
-    JOIN bronze.tournaments bt ON bt.id = t.tournament_id
+    FROM lab_bronze.teams t
+    JOIN lab_bronze.tournaments bt ON bt.id = t.tournament_id
     WHERE t.id = $1::uuid
     LIMIT 1
 ),
@@ -96,8 +96,8 @@ round_distribution AS (
             ELSE 'Unknown'
         END as round_name,
         COUNT(*)::int as count
-    FROM silver.simulated_tournaments st
-    JOIN bronze.teams t ON t.id = st.team_id
+    FROM analytics.simulated_tournaments st
+    JOIN lab_bronze.teams t ON t.id = st.team_id
     WHERE st.team_id = $1::uuid
     GROUP BY st.team_id, round_name
 )
@@ -116,8 +116,8 @@ SELECT
         END
     )::float as avg_points,
     jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-FROM bronze.teams t
-JOIN silver.simulated_tournaments st ON st.team_id = t.id
+FROM lab_bronze.teams t
+JOIN analytics.simulated_tournaments st ON st.team_id = t.id
 LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = $1::uuid
 GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net;
@@ -129,8 +129,8 @@ SELECT
     t.seed,
     t.region,
     t.kenpom_net
-FROM bronze.teams t
-JOIN bronze.tournaments bt ON bt.id = t.tournament_id
+FROM lab_bronze.teams t
+JOIN lab_bronze.tournaments bt ON bt.id = t.tournament_id
 WHERE bt.season = $1::int
 ORDER BY t.seed;
 
@@ -143,7 +143,7 @@ SELECT
     seed,
     budget_points,
     created_at
-FROM gold.optimization_runs
+FROM lab_gold.optimization_runs
 WHERE run_id = $1::text;
 
 -- name: GetOurEntryBidsByRunID :many
@@ -154,8 +154,8 @@ SELECT
     t.region,
     reb.recommended_bid_points,
     reb.expected_roi
-FROM gold.recommended_entry_bids reb
-JOIN bronze.teams t ON t.id = reb.team_id
+FROM lab_gold.recommended_entry_bids reb
+JOIN lab_bronze.teams t ON t.id = reb.team_id
 WHERE reb.run_id = $1::text
 ORDER BY reb.recommended_bid_points DESC;
 
@@ -175,8 +175,8 @@ SELECT
     t.seed,
     t.region,
     reb.recommended_bid_points as bid_amount
-FROM gold.recommended_entry_bids reb
-JOIN bronze.teams t ON reb.team_id = t.id
+FROM lab_gold.recommended_entry_bids reb
+JOIN lab_bronze.teams t ON reb.team_id = t.id
 WHERE reb.run_id = sqlc.arg(run_id)
 ORDER BY reb.recommended_bid_points DESC;
 
@@ -188,9 +188,9 @@ SELECT
     t.seed,
     t.region,
     eb.bid_amount_points
-FROM bronze.entry_bids eb
-JOIN bronze.teams t ON eb.team_id = t.id
-JOIN gold.optimization_runs r ON eb.calcutta_id = r.calcutta_id
+FROM lab_bronze.entry_bids eb
+JOIN lab_bronze.teams t ON eb.team_id = t.id
+JOIN lab_gold.optimization_runs r ON eb.calcutta_id = r.calcutta_id
 WHERE r.run_id = sqlc.arg(run_id) AND eb.entry_name = sqlc.arg(entry_name)
 ORDER BY eb.bid_amount_points DESC;
 
@@ -203,16 +203,16 @@ SELECT
     r.seed,
     r.budget_points,
     r.created_at
-FROM gold.optimization_runs r
-JOIN bronze.calcuttas bc ON bc.id = r.calcutta_id
-JOIN bronze.tournaments bt ON bt.id = bc.tournament_id
+FROM lab_gold.optimization_runs r
+JOIN lab_bronze.calcuttas bc ON bc.id = r.calcutta_id
+JOIN lab_bronze.tournaments bt ON bt.id = bc.tournament_id
 WHERE bt.season = $1::int
 ORDER BY r.created_at DESC;
 
 -- name: GetLatestOptimizationRunIDByCoreCalcuttaID :one
 SELECT gor.run_id
-FROM gold.optimization_runs gor
-JOIN bronze.calcuttas bc ON bc.id = gor.calcutta_id
+FROM lab_gold.optimization_runs gor
+JOIN lab_bronze.calcuttas bc ON bc.id = gor.calcutta_id
 WHERE bc.core_calcutta_id = $1::uuid
 ORDER BY gor.created_at DESC
 LIMIT 1;
@@ -227,10 +227,10 @@ SELECT
     COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
     (
         SELECT COUNT(*)::int
-        FROM gold.entry_simulation_outcomes eso
+        FROM analytics.entry_simulation_outcomes eso
         WHERE eso.run_id = $1::text AND eso.entry_name = gep.entry_name
     ) as total_simulations
-FROM gold.entry_performance gep
+FROM analytics.entry_performance gep
 WHERE gep.run_id = $1::text
 ORDER BY gep.mean_payout DESC;
 
@@ -248,8 +248,8 @@ team_ctx AS (
 	SELECT
 		t.id AS team_id,
 		bt.core_tournament_id
-	FROM bronze.teams t
-	JOIN bronze.tournaments bt ON bt.id = t.tournament_id
+	FROM lab_bronze.teams t
+	JOIN lab_bronze.tournaments bt ON bt.id = t.tournament_id
 	WHERE t.id = sqlc.arg(team_id)::uuid
 	LIMIT 1
 ),
@@ -274,7 +274,7 @@ round_distribution AS (
 			ELSE 'Unknown'
 		END as round_name,
 		COUNT(*)::int as count
-	FROM silver.simulated_tournaments st
+	FROM analytics.simulated_tournaments st
 	WHERE st.team_id = sqlc.arg(team_id)::uuid
 	GROUP BY st.team_id, round_name
 )
@@ -288,9 +288,10 @@ SELECT
 	AVG(st.wins)::float as avg_wins,
 	AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float as avg_points,
 	jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-FROM bronze.teams t
+FROM lab_bronze.teams t
 JOIN valid v ON true
-JOIN silver.simulated_tournaments st ON st.team_id = t.id
+
+JOIN analytics.simulated_tournaments st ON st.team_id = t.id
 	LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = sqlc.arg(team_id)::uuid
 GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net;

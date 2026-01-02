@@ -121,7 +121,7 @@ type EntrySimulationSummary struct {
 	P90PayoutCents       int
 }
 
-// SimulatedCalcuttaEntryRanking represents an entry's performance in simulated calcuttas (gold.entry_performance)
+// SimulatedCalcuttaEntryRanking represents an entry's performance in simulated calcuttas (analytics.entry_performance)
 type SimulatedCalcuttaEntryRanking struct {
 	Rank             int
 	EntryName        string

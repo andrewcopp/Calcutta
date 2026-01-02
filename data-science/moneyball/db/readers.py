@@ -43,7 +43,7 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
             cur.execute(
                 """
                 SELECT id, season, created_at
-                FROM bronze.tournaments
+                FROM lab_bronze.tournaments
                 WHERE season = %s
                 """,
                 (year,)
@@ -161,8 +161,8 @@ def read_teams(year: int) -> pd.DataFrame:
             t.kenpom_adj_d,
             t.kenpom_adj_t,
             t.created_at
-        FROM bronze.teams t
-        JOIN bronze.tournaments tour ON t.tournament_id = tour.id
+        FROM lab_bronze.teams t
+        JOIN lab_bronze.tournaments tour ON t.tournament_id = tour.id
         WHERE tour.season = %s
         ORDER BY t.seed, t.school_name
         """
@@ -251,10 +251,10 @@ def read_predicted_game_outcomes(
             t1.seed as team1_seed,
             t2.school_name as team2_school,
             t2.seed as team2_seed
-        FROM silver.predicted_game_outcomes pgo
-        JOIN bronze.tournaments tour ON pgo.tournament_id = tour.id
-        JOIN bronze.teams t1 ON pgo.team1_id = t1.id
-        JOIN bronze.teams t2 ON pgo.team2_id = t2.id
+        FROM lab_silver.predicted_game_outcomes pgo
+        JOIN lab_bronze.tournaments tour ON pgo.tournament_id = tour.id
+        JOIN lab_bronze.teams t1 ON pgo.team1_id = t1.id
+        JOIN lab_bronze.teams t2 ON pgo.team2_id = t2.id
         WHERE tour.season = %s AND pgo.model_version = %s
         ORDER BY pgo.round, t1.seed
         """
@@ -296,9 +296,9 @@ def read_simulated_tournaments(
             t.school_name,
             t.seed,
             t.region
-        FROM silver.simulated_tournaments st
-        JOIN bronze.tournaments tour ON st.tournament_id = tour.id
-        JOIN bronze.teams t ON st.team_id = t.id
+        FROM analytics.simulated_tournaments st
+        JOIN lab_bronze.tournaments tour ON st.tournament_id = tour.id
+        JOIN lab_bronze.teams t ON st.team_id = t.id
         WHERE tour.season = %s
         ORDER BY st.sim_id, t.seed
         LIMIT 100000
@@ -346,11 +346,11 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
             t.seed,
             t.region,
             tour.season
-        FROM gold.recommended_entry_bids reb
-        JOIN gold.optimization_runs run ON reb.run_id = run.run_id
-        JOIN bronze.calcuttas bc ON run.calcutta_id = bc.id
-        JOIN bronze.tournaments tour ON bc.tournament_id = tour.id
-        JOIN bronze.teams t ON reb.team_id = t.id
+        FROM lab_gold.recommended_entry_bids reb
+        JOIN lab_gold.optimization_runs run ON reb.run_id = run.run_id
+        JOIN lab_bronze.calcuttas bc ON run.calcutta_id = bc.id
+        JOIN lab_bronze.tournaments tour ON bc.tournament_id = tour.id
+        JOIN lab_bronze.teams t ON reb.team_id = t.id
         WHERE tour.season = %s AND reb.run_id = %s
         ORDER BY reb.recommended_bid_points DESC
         """
@@ -380,8 +380,8 @@ def read_calcutta(year: int) -> Optional[Dict[str, Any]]:
                     c.name,
                     c.created_at,
                     c.updated_at
-                FROM bronze.calcuttas c
-                JOIN bronze.tournaments t ON c.tournament_id = t.id
+                FROM lab_bronze.calcuttas c
+                JOIN lab_bronze.tournaments t ON c.tournament_id = t.id
                 WHERE t.season = %s
                 LIMIT 1
                 """,
@@ -423,9 +423,9 @@ def get_latest_run_id(year: int) -> Optional[str]:
             cur.execute(
                 """
                 SELECT run.run_id
-                FROM gold.optimization_runs run
-                JOIN bronze.calcuttas bc ON run.calcutta_id = bc.id
-                JOIN bronze.tournaments tour ON bc.tournament_id = tour.id
+                FROM lab_gold.optimization_runs run
+                JOIN lab_bronze.calcuttas bc ON run.calcutta_id = bc.id
+                JOIN lab_bronze.tournaments tour ON bc.tournament_id = tour.id
                 WHERE tour.season = %s
                 ORDER BY run.created_at DESC
                 LIMIT 1

@@ -31,7 +31,7 @@ def run_ridge_regression(year: int = 2025):
         with conn.cursor() as cur:
             # Get tournament ID
             cur.execute("""
-                SELECT id FROM bronze.tournaments WHERE season = %s
+                SELECT id FROM lab_bronze.tournaments WHERE season = %s
             """, (year,))
             result = cur.fetchone()
             if not result:
@@ -45,7 +45,7 @@ def run_ridge_regression(year: int = 2025):
             # We need to map "duke" (school_slug) -> UUID
             cur.execute("""
                 SELECT school_slug, id
-                FROM bronze.teams
+                FROM lab_bronze.teams
                 WHERE tournament_id = %s
             """, (tournament_id,))
             team_id_map = {row[0]: str(row[1]) for row in cur.fetchall()}

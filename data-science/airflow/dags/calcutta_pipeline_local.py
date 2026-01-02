@@ -66,27 +66,27 @@ psql -h calcutta-db-1 -p 5432 -U calcutta -d calcutta -c "
 SELECT
     'bronze_tournaments' as table_name,
     COUNT(*) as row_count
-FROM bronze.tournaments
+FROM lab_bronze.tournaments
 UNION ALL
 SELECT
     'bronze_teams',
     COUNT(*)
-FROM bronze.teams
+FROM lab_bronze.teams
 UNION ALL
 SELECT
     'silver_simulated_tournaments',
     COUNT(*)
-FROM silver.simulated_tournaments
+FROM analytics.simulated_tournaments
 UNION ALL
 SELECT
     'silver_predicted_game_outcomes',
     COUNT(*)
-FROM silver.predicted_game_outcomes
+FROM lab_silver.predicted_game_outcomes
 UNION ALL
 SELECT
     'gold_recommended_entry_bids',
     COUNT(*)
-FROM gold.recommended_entry_bids;
+FROM lab_gold.recommended_entry_bids;
 "
     """,
     dag=dag,

@@ -29,7 +29,7 @@ def run_optimizer(year: int = 2025):
         with conn.cursor() as cur:
             # Get tournament ID
             cur.execute("""
-                SELECT id FROM bronze.tournaments WHERE season = %s
+                SELECT id FROM lab_bronze.tournaments WHERE season = %s
             """, (year,))
             result = cur.fetchone()
             if not result:
@@ -43,7 +43,7 @@ def run_optimizer(year: int = 2025):
             cur.execute("""
                 WITH calcutta_ctx AS (
                     SELECT c.id AS calcutta_id
-                    FROM bronze.tournaments bt
+                    FROM lab_bronze.tournaments bt
                     JOIN core.calcuttas c
                         ON c.tournament_id = bt.core_tournament_id
                     WHERE bt.id = %s
@@ -56,7 +56,7 @@ def run_optimizer(year: int = 2025):
                         st.team_id,
                         st.wins,
                         COUNT(*) as sim_count
-                    FROM silver.simulated_tournaments st
+                    FROM analytics.simulated_tournaments st
                     WHERE st.tournament_id = %s
                     GROUP BY st.team_id, st.wins
                 ),
@@ -87,8 +87,8 @@ def run_optimizer(year: int = 2025):
                 ),
                 entry_count AS (
                     SELECT COUNT(DISTINCT entry_name) as num_entries
-                    FROM bronze.entry_bids beb
-                    JOIN bronze.calcuttas bc ON beb.calcutta_id = bc.id
+                    FROM lab_bronze.entry_bids beb
+                    JOIN lab_bronze.calcuttas bc ON beb.calcutta_id = bc.id
                     WHERE bc.tournament_id = %s
                 ),
                 total_pool AS (
@@ -124,11 +124,11 @@ def run_optimizer(year: int = 2025):
                     COALESCE(spms.predicted_share, 0.0)
                         * (SELECT pool_size FROM total_pool)
                         as predicted_team_total_bids
-                FROM bronze.teams t
-                LEFT JOIN silver.simulated_tournaments st
+                FROM lab_bronze.teams t
+                LEFT JOIN analytics.simulated_tournaments st
                     ON st.team_id = t.id AND st.tournament_id = %s
                 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
-                LEFT JOIN silver.predicted_market_share spms
+                LEFT JOIN lab_silver.predicted_market_share spms
                     ON spms.tournament_id = %s AND spms.team_id = t.id
                 WHERE t.tournament_id = %s
                 GROUP BY

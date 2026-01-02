@@ -40,3 +40,4 @@ backend/exports/
 invariants_*.txt
 *_output.txt
 core_sanity_post_*.txt
+docs/submissions_byom.md

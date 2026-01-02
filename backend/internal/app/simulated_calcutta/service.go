@@ -163,7 +163,7 @@ func (s *Service) getCalcuttaContext(ctx context.Context, bronzeTournamentID str
 	// This intentionally isolates the season/name join in one place.
 	query := `
 		SELECT c.id, c.tournament_id
-		FROM bronze.tournaments bt
+		FROM lab_bronze.tournaments bt
 		JOIN core.tournaments t ON t.id = bt.core_tournament_id AND t.deleted_at IS NULL
 		JOIN core.calcuttas c ON c.tournament_id = t.id AND c.deleted_at IS NULL
 		WHERE bt.id = $1
@@ -222,8 +222,8 @@ func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc 
 		SELECT 
 			tt.id as tournament_team_id,
 			greb.recommended_bid_points
-		FROM gold.recommended_entry_bids greb
-		JOIN bronze.teams bt ON greb.team_id = bt.id
+		FROM lab_gold.recommended_entry_bids greb
+		JOIN lab_bronze.teams bt ON greb.team_id = bt.id
 		JOIN core.schools s ON bt.school_name = s.name
 		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $3
 		WHERE greb.run_id = $1
@@ -265,8 +265,8 @@ func (s *Service) getSimulations(ctx context.Context, bronzeTournamentID string,
 			sst.sim_id,
 			tt.id as tournament_team_id,
 			core.calcutta_points_for_progress($3, sst.wins, sst.byes) as points
-		FROM silver.simulated_tournaments sst
-		JOIN bronze.teams bt ON sst.team_id = bt.id
+		FROM analytics.simulated_tournaments sst
+		JOIN lab_bronze.teams bt ON sst.team_id = bt.id
 		JOIN core.schools s ON bt.school_name = s.name
 		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $2
 		WHERE sst.tournament_id = $1
@@ -405,7 +405,7 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 
 func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, results []SimulationResult) error {
 	// Delete existing results for this run
-	_, err := s.pool.Exec(ctx, "DELETE FROM gold.entry_simulation_outcomes WHERE run_id = $1", runID)
+	_, err := s.pool.Exec(ctx, "DELETE FROM analytics.entry_simulation_outcomes WHERE run_id = $1", runID)
 	if err != nil {
 		return err
 	}
@@ -414,7 +414,7 @@ func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, res
 	batch := &pgx.Batch{}
 	for _, r := range results {
 		batch.Queue(`
-			INSERT INTO gold.entry_simulation_outcomes (run_id, entry_name, sim_id, points_scored, payout_points, rank)
+			INSERT INTO analytics.entry_simulation_outcomes (run_id, entry_name, sim_id, points_scored, payout_points, rank)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, runID, r.EntryName, r.SimID, r.TotalPoints, r.PayoutCents, r.Rank)
 	}
@@ -474,7 +474,7 @@ func (s *Service) calculatePerformanceMetrics(results []SimulationResult) map[st
 
 func (s *Service) writePerformanceMetrics(ctx context.Context, runID string, performance map[string]*EntryPerformance) error {
 	// Delete existing performance for this run
-	_, err := s.pool.Exec(ctx, "DELETE FROM gold.entry_performance WHERE run_id = $1", runID)
+	_, err := s.pool.Exec(ctx, "DELETE FROM analytics.entry_performance WHERE run_id = $1", runID)
 	if err != nil {
 		return err
 	}
@@ -482,7 +482,7 @@ func (s *Service) writePerformanceMetrics(ctx context.Context, runID string, per
 	// Insert new performance metrics
 	for _, p := range performance {
 		_, err := s.pool.Exec(ctx, `
-			INSERT INTO gold.entry_performance (run_id, entry_name, mean_payout, median_payout, p_top1, p_in_money)
+			INSERT INTO analytics.entry_performance (run_id, entry_name, mean_payout, median_payout, p_top1, p_in_money)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, runID, p.EntryName, p.MeanPayout, p.MedianPayout, p.PTop1, p.PInMoney)
 		if err != nil {

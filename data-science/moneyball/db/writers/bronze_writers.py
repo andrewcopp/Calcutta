@@ -24,7 +24,7 @@ def get_or_create_tournament(season: int) -> str:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id FROM bronze.tournaments
+                SELECT id FROM lab_bronze.tournaments
                 WHERE season = %s
             """, (season,))
             
@@ -33,7 +33,7 @@ def get_or_create_tournament(season: int) -> str:
                 return str(result[0])
             
             cur.execute("""
-                INSERT INTO bronze.tournaments (season)
+                INSERT INTO lab_bronze.tournaments (season)
                 VALUES (%s)
                 RETURNING id
             """, (season,))
@@ -62,7 +62,7 @@ def write_teams(tournament_id: str, teams_df: pd.DataFrame) -> Dict[str, str]:
             
             for _, row in teams_df.iterrows():
                 cur.execute("""
-                    INSERT INTO bronze.teams
+                    INSERT INTO lab_bronze.teams
                     (tournament_id, school_slug, school_name, seed, region,
                      kenpom_net, kenpom_adj_em, kenpom_adj_o,
                      kenpom_adj_d, kenpom_adj_t)

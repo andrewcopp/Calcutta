@@ -77,8 +77,8 @@ func main() {
 func getLatestRunID(pool *pgxpool.Pool, tournamentID string) (string, error) {
 	query := `
 		SELECT gor.run_id
-		FROM gold.optimization_runs gor
-		JOIN bronze.calcuttas bc ON gor.calcutta_id = bc.id
+		FROM lab_gold.optimization_runs gor
+		JOIN lab_bronze.calcuttas bc ON gor.calcutta_id = bc.id
 		WHERE bc.tournament_id = $1
 		ORDER BY gor.created_at DESC
 		LIMIT 1

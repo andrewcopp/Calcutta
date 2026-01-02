@@ -36,7 +36,7 @@ def write_predicted_game_outcomes(
         with conn.cursor() as cur:
             # Clear existing predictions
             cur.execute("""
-                DELETE FROM silver.predicted_game_outcomes
+                DELETE FROM lab_silver.predicted_game_outcomes
                 WHERE tournament_id = %s
             """, (tournament_id,))
             
@@ -77,7 +77,7 @@ def write_predicted_game_outcomes(
             ]
             
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO silver.predicted_game_outcomes
+                INSERT INTO lab_silver.predicted_game_outcomes
                 (tournament_id, game_id, round, team1_id, team2_id,
                  p_team1_wins, p_matchup, model_version)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -117,7 +117,7 @@ def write_simulated_tournaments(
         with conn.cursor() as cur:
             # Clear existing simulations
             cur.execute("""
-                DELETE FROM silver.simulated_tournaments
+                DELETE FROM analytics.simulated_tournaments
                 WHERE tournament_id = %s
             """, (tournament_id,))
             
@@ -145,7 +145,7 @@ def write_simulated_tournaments(
             
             # Batch insert
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO silver.simulated_tournaments
+                INSERT INTO analytics.simulated_tournaments
                 (tournament_id, sim_id, team_id, wins, byes, eliminated)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, values, page_size=10000)
@@ -185,12 +185,12 @@ def write_predicted_market_share(
             # Clear existing predictions
             if calcutta_id:
                 cur.execute("""
-                    DELETE FROM silver.predicted_market_share
+                    DELETE FROM lab_silver.predicted_market_share
                     WHERE calcutta_id = %s
                 """, (calcutta_id,))
             else:
                 cur.execute("""
-                    DELETE FROM silver.predicted_market_share
+                    DELETE FROM lab_silver.predicted_market_share
                     WHERE tournament_id = %s
                 """, (tournament_id,))
             
@@ -217,7 +217,7 @@ def write_predicted_market_share(
             
             # Batch insert
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO silver.predicted_market_share
+                INSERT INTO lab_silver.predicted_market_share
                 (calcutta_id, tournament_id, team_id, predicted_share,
                  predicted_points)
                 VALUES (%s, %s, %s, %s, %s)
