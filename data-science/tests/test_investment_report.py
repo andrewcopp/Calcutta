@@ -23,6 +23,7 @@ def _toy_simulated_entry_outcomes() -> pd.DataFrame:
         "mean_finish_position": [2.5],
         "mean_n_entries": [50.0],
         "p_top1": [0.2],
+        "p_in_money": [0.9],
         "p_top3": [0.6],
         "p_top6": [0.9],
         "p_top10": [1.0],

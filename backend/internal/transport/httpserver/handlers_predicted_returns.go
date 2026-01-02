@@ -23,43 +23,48 @@ type TeamPredictedReturns struct {
 	ExpectedValue float64 `json:"expected_value"` // Expected value in points
 }
 
-// handleGetTournamentPredictedReturns handles GET /analytics/tournaments/{id}/predicted-returns
-func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *http.Request) {
+// handleGetCalcuttaPredictedReturns handles GET /analytics/calcuttas/{id}/predicted-returns
+func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	calcuttaID := vars["id"]
 
-	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing tournament ID", "id")
+	if calcuttaID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing calcutta ID", "id")
 		return
 	}
 
 	// Query to calculate probabilities for each team
 	// Wins mapping: 0=eliminated before R64, 1=won R64, 2=won R32, 3=won S16, 4=won E8, 5=won FF, 6=won Championship
 	query := `
-		WITH main_tournament AS (
-			SELECT 
-				id,
-				CAST(SUBSTRING(name FROM '[0-9]{4}') AS INTEGER) as season
-			FROM tournaments
-			WHERE id = $1
+		WITH calcutta AS (
+			SELECT c.id AS calcutta_id
+			FROM core.calcuttas c
+			WHERE c.id = $1
+			  AND c.deleted_at IS NULL
+			LIMIT 1
+		),
+		bronze_calcutta AS (
+			SELECT bcc.tournament_id AS bronze_tournament_id
+			FROM bronze_calcuttas_core_ctx bcc
+			JOIN calcutta c ON c.calcutta_id = bcc.core_calcutta_id
+			LIMIT 1
 		),
 		bronze_tournament AS (
-			SELECT id
-			FROM bronze_tournaments
-			WHERE season = (SELECT season FROM main_tournament)
+			SELECT bronze_tournament_id AS id
+			FROM bronze_calcutta
 		),
 		team_win_counts AS (
-			SELECT 
+			SELECT
 				st.team_id,
 				st.wins,
 				COUNT(*) as sim_count
-			FROM silver_simulated_tournaments st
+			FROM silver.simulated_tournaments st
 			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
 			GROUP BY st.team_id, st.wins
 		),
 		team_probabilities AS (
-			SELECT 
+			SELECT
 				team_id,
 				SUM(sim_count)::float as total_sims,
 				-- Probability of winning each specific round (not cumulative)
@@ -72,8 +77,16 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
 			FROM team_win_counts
 			GROUP BY team_id
+		),
+		team_expected_value AS (
+			SELECT
+				st.team_id,
+				AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float AS expected_value
+			FROM silver.simulated_tournaments st
+			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
+			GROUP BY st.team_id
 		)
-		SELECT 
+		SELECT
 			t.id as team_id,
 			t.school_name,
 			t.seed,
@@ -85,21 +98,15 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 			COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) as prob_e8,
 			COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) as prob_ff,
 			COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) as prob_champ,
-			-- Expected value calculation (points per round)
-			-- 0 for PI, 50 for R64, 150 for R32, 300 for S16, 500 for E8, 750 for FF, 1050 for Champ
-			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
-			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
-			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_value
-		FROM bronze_teams t
+			COALESCE(tev.expected_value, 0.0) as expected_value
+		FROM bronze.teams t
 		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
+		LEFT JOIN team_expected_value tev ON t.id = tev.team_id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 		ORDER BY expected_value DESC, t.seed ASC
 	`
 
-	rows, err := s.pool.Query(ctx, query, tournamentID)
+	rows, err := s.pool.Query(ctx, query, calcuttaID)
 	if err != nil {
 		log.Printf("Error querying predicted returns: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted returns", "")
@@ -132,13 +139,13 @@ func (s *Server) handleGetTournamentPredictedReturns(w http.ResponseWriter, r *h
 	}
 
 	if len(results) == 0 {
-		writeError(w, r, http.StatusNotFound, "not_found", "No predicted returns found for tournament", "")
+		writeError(w, r, http.StatusNotFound, "not_found", "No predicted returns found for calcutta", "")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tournament_id": tournamentID,
-		"teams":         results,
-		"count":         len(results),
+		"calcutta_id": calcuttaID,
+		"teams":       results,
+		"count":       len(results),
 	})
 }

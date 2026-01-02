@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -15,18 +14,12 @@ func (s *Server) recalculatePortfoliosHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	calcuttas, err := s.app.Calcutta.GetCalcuttasByTournament(r.Context(), tournamentID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	for _, calcutta := range calcuttas {
-		if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
-			log.Printf("Error ensuring portfolios/recalculating for calcutta %s: %v", calcutta.ID, err)
-			continue
-		}
-	}
-
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	writeError(
+		w,
+		r,
+		http.StatusGone,
+		"gone",
+		"Portfolios are fully derived and no longer require recalculation",
+		"",
+	)
 }

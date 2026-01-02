@@ -1,47 +1,139 @@
 -- name: GetSeedAnalytics :many
+WITH entry_bids AS (
+  SELECT
+    cet.team_id,
+    ce.calcutta_id,
+    cet.bid_points::float AS bid_points,
+    SUM(cet.bid_points::float) OVER (
+      PARTITION BY ce.calcutta_id, cet.team_id
+    ) AS team_total_bid_points,
+    tt.wins,
+    tt.byes
+  FROM core.entry_teams cet
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  WHERE cet.deleted_at IS NULL
+),
+team_agg AS (
+  SELECT
+    team_id,
+    COALESCE(
+      SUM(
+        CASE
+          WHEN team_total_bid_points > 0 THEN
+            core.calcutta_points_for_progress(calcutta_id, wins, byes)::float
+            * (bid_points / team_total_bid_points)
+          ELSE 0
+        END
+      ),
+      0
+    )::float AS total_points,
+    COALESCE(SUM(bid_points), 0)::float AS total_investment
+  FROM entry_bids
+  GROUP BY team_id
+)
 SELECT
   tt.seed,
-  COALESCE(SUM(cpt.actual_points), 0)::float AS total_points,
-  COALESCE(SUM(cet.bid), 0)::float AS total_investment,
+  COALESCE(SUM(ta.total_points), 0)::float AS total_points,
+  COALESCE(SUM(ta.total_investment), 0)::float AS total_investment,
   COUNT(DISTINCT tt.id)::int AS team_count
-FROM tournament_teams tt
-LEFT JOIN calcutta_entry_teams cet ON cet.team_id = tt.id AND cet.deleted_at IS NULL
-LEFT JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
-LEFT JOIN calcutta_portfolio_teams cpt ON cpt.team_id = tt.id AND cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
+FROM core.teams tt
+LEFT JOIN team_agg ta ON ta.team_id = tt.id
 WHERE tt.deleted_at IS NULL
 GROUP BY tt.seed
 ORDER BY tt.seed;
 
 -- name: GetRegionAnalytics :many
+WITH entry_bids AS (
+  SELECT
+    cet.team_id,
+    ce.calcutta_id,
+    cet.bid_points::float AS bid_points,
+    SUM(cet.bid_points::float) OVER (
+      PARTITION BY ce.calcutta_id, cet.team_id
+    ) AS team_total_bid_points,
+    tt.wins,
+    tt.byes
+  FROM core.entry_teams cet
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  WHERE cet.deleted_at IS NULL
+),
+team_agg AS (
+  SELECT
+    team_id,
+    COALESCE(
+      SUM(
+        CASE
+          WHEN team_total_bid_points > 0 THEN
+            core.calcutta_points_for_progress(calcutta_id, wins, byes)::float
+            * (bid_points / team_total_bid_points)
+          ELSE 0
+        END
+      ),
+      0
+    )::float AS total_points,
+    COALESCE(SUM(bid_points), 0)::float AS total_investment
+  FROM entry_bids
+  GROUP BY team_id
+)
 SELECT
   tt.region,
-  COALESCE(SUM(cpt.actual_points), 0)::float AS total_points,
-  COALESCE(SUM(cet.bid), 0)::float AS total_investment,
+  COALESCE(SUM(ta.total_points), 0)::float AS total_points,
+  COALESCE(SUM(ta.total_investment), 0)::float AS total_investment,
   COUNT(DISTINCT tt.id)::int AS team_count
-FROM tournament_teams tt
-LEFT JOIN calcutta_entry_teams cet ON cet.team_id = tt.id AND cet.deleted_at IS NULL
-LEFT JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
-LEFT JOIN calcutta_portfolio_teams cpt ON cpt.team_id = tt.id AND cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
+FROM core.teams tt
+LEFT JOIN team_agg ta ON ta.team_id = tt.id
 WHERE tt.deleted_at IS NULL
 GROUP BY tt.region
 ORDER BY tt.region;
 
 -- name: GetTeamAnalytics :many
+WITH entry_bids AS (
+  SELECT
+    cet.team_id,
+    ce.calcutta_id,
+    cet.bid_points::float AS bid_points,
+    SUM(cet.bid_points::float) OVER (
+      PARTITION BY ce.calcutta_id, cet.team_id
+    ) AS team_total_bid_points,
+    tt.school_id,
+    tt.wins,
+    tt.byes
+  FROM core.entry_teams cet
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  WHERE cet.deleted_at IS NULL
+),
+team_agg AS (
+  SELECT
+    team_id,
+    school_id,
+    COALESCE(
+      SUM(
+        CASE
+          WHEN team_total_bid_points > 0 THEN
+            core.calcutta_points_for_progress(calcutta_id, wins, byes)::float
+            * (bid_points / team_total_bid_points)
+          ELSE 0
+        END
+      ),
+      0
+    )::float AS total_points,
+    COALESCE(SUM(bid_points), 0)::float AS total_investment
+  FROM entry_bids
+  GROUP BY team_id, school_id
+)
 SELECT
   s.id AS school_id,
   s.name AS school_name,
-  COALESCE(SUM(cpt.actual_points), 0)::float AS total_points,
-  COALESCE(SUM(cet.bid), 0)::float AS total_investment,
+  COALESCE(SUM(ta.total_points), 0)::float AS total_points,
+  COALESCE(SUM(ta.total_investment), 0)::float AS total_investment,
   COUNT(DISTINCT tt.id)::int AS appearances,
   COALESCE(SUM(tt.seed), 0)::int AS total_seed
-FROM schools s
-LEFT JOIN tournament_teams tt ON tt.school_id = s.id AND tt.deleted_at IS NULL
-LEFT JOIN calcutta_entry_teams cet ON cet.team_id = tt.id AND cet.deleted_at IS NULL
-LEFT JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
-LEFT JOIN calcutta_portfolio_teams cpt ON cpt.team_id = tt.id AND cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
+FROM core.schools s
+LEFT JOIN core.teams tt ON tt.school_id = s.id AND tt.deleted_at IS NULL
+LEFT JOIN team_agg ta ON ta.team_id = tt.id
 WHERE s.deleted_at IS NULL
 GROUP BY s.id, s.name
 HAVING COUNT(DISTINCT tt.id) > 0
@@ -50,8 +142,8 @@ ORDER BY total_points DESC;
 -- name: GetBestCareers :many
 WITH latest_calcutta AS (
   SELECT c.id AS calcutta_id
-  FROM calcuttas c
-  JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  FROM core.calcuttas c
+  JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
   WHERE c.deleted_at IS NULL
   ORDER BY
     COALESCE(substring(t.name from '([0-9]{4})')::int, 0) DESC,
@@ -60,7 +152,7 @@ WITH latest_calcutta AS (
 ),
 latest_entries AS (
   SELECT DISTINCT TRIM(ce.name) AS entry_name
-  FROM calcutta_entries ce
+  FROM core.entries ce
   JOIN latest_calcutta lc ON lc.calcutta_id = ce.calcutta_id
   WHERE ce.deleted_at IS NULL
     AND TRIM(ce.name) <> ''
@@ -71,11 +163,30 @@ entry_points AS (
     ce.id AS entry_id,
     ce.created_at AS entry_created_at,
     TRIM(ce.name) AS entry_name,
-    COALESCE(SUM(cpt.actual_points), 0)::float AS total_points
-  FROM calcutta_entries ce
-  JOIN calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
-  LEFT JOIN calcutta_portfolio_teams cpt ON cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
+    COALESCE(
+      SUM(
+        CASE
+          WHEN team_total_bid_points > 0 THEN
+            core.calcutta_points_for_progress(ce.calcutta_id, tt.wins, tt.byes)::float
+            * (cet.bid_points::float / team_total_bid_points)
+          ELSE 0
+        END
+      ),
+      0
+    )::float AS total_points
+  FROM core.entries ce
+  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+  LEFT JOIN core.entry_teams cet ON cet.entry_id = ce.id AND cet.deleted_at IS NULL
+  LEFT JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  LEFT JOIN LATERAL (
+    SELECT
+      SUM(cet2.bid_points::float) AS team_total_bid_points
+    FROM core.entry_teams cet2
+    JOIN core.entries ce2 ON ce2.id = cet2.entry_id AND ce2.deleted_at IS NULL
+    WHERE ce2.calcutta_id = ce.calcutta_id
+      AND cet2.team_id = cet.team_id
+      AND cet2.deleted_at IS NULL
+  ) team_bids ON true
   WHERE ce.deleted_at IS NULL
   GROUP BY c.id, ce.id, ce.created_at, ce.name
 ),
@@ -123,7 +234,7 @@ payout_calc AS (
   FROM enriched e
   LEFT JOIN LATERAL (
     SELECT COALESCE(SUM(cp.amount_cents), 0)::int AS group_payout_cents
-    FROM calcutta_payouts cp
+    FROM core.payouts cp
     WHERE cp.calcutta_id = e.calcutta_id
       AND cp.deleted_at IS NULL
       AND cp.position >= e.finish_position
@@ -153,7 +264,7 @@ paid_positions AS (
   SELECT
     cp.calcutta_id,
     MAX(cp.position)::int AS max_paid_position
-  FROM calcutta_payouts cp
+  FROM core.payouts cp
   WHERE cp.deleted_at IS NULL
     AND cp.amount_cents > 0
   GROUP BY cp.calcutta_id
@@ -207,26 +318,16 @@ WITH bid_points AS (
     tt.id AS team_id,
     s.name AS school_name,
     tt.seed,
-    CASE (tt.wins + tt.byes)
-      WHEN 0 THEN 0
-      WHEN 1 THEN 0
-      WHEN 2 THEN 50
-      WHEN 3 THEN 150
-      WHEN 4 THEN 300
-      WHEN 5 THEN 500
-      WHEN 6 THEN 750
-      WHEN 7 THEN 1050
-      ELSE 0
-    END::float AS team_points,
-    cet.bid::float AS bid,
-    SUM(cet.bid::float) OVER (PARTITION BY c.id, tt.id) AS team_total_bid,
-    SUM(cet.bid::float) OVER (PARTITION BY c.id) AS calcutta_total_bid
-  FROM calcutta_entry_teams cet
-  JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-  JOIN tournament_teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  JOIN schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
+    core.calcutta_points_for_progress(c.id, tt.wins, tt.byes)::float AS team_points,
+    cet.bid_points::float AS bid,
+    SUM(cet.bid_points::float) OVER (PARTITION BY c.id, tt.id) AS team_total_bid,
+    SUM(cet.bid_points::float) OVER (PARTITION BY c.id) AS calcutta_total_bid
+  FROM core.teams tt
+  JOIN core.entry_teams cet ON cet.team_id = tt.id AND cet.deleted_at IS NULL
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+  JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
 ),
 calcutta_points AS (
@@ -278,12 +379,31 @@ WITH entry_points AS (
     c.id AS calcutta_id,
     ce.id AS entry_id,
     ce.name AS entry_name,
-    COALESCE(SUM(cpt.actual_points), 0)::float AS total_points
-  FROM calcutta_entries ce
-  JOIN calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-  LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
-  LEFT JOIN calcutta_portfolio_teams cpt ON cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
+    COALESCE(
+      SUM(
+        CASE
+          WHEN team_total_bid_points > 0 THEN
+            core.calcutta_points_for_progress(ce.calcutta_id, tt.wins, tt.byes)::float
+            * (cet.bid_points::float / team_total_bid_points)
+          ELSE 0
+        END
+      ),
+      0
+    )::float AS total_points
+  FROM core.entries ce
+  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+  JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  LEFT JOIN core.entry_teams cet ON cet.entry_id = ce.id AND cet.deleted_at IS NULL
+  LEFT JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  LEFT JOIN LATERAL (
+    SELECT
+      SUM(cet2.bid_points::float) AS team_total_bid_points
+    FROM core.entry_teams cet2
+    JOIN core.entries ce2 ON ce2.id = cet2.entry_id AND ce2.deleted_at IS NULL
+    WHERE ce2.calcutta_id = ce.calcutta_id
+      AND cet2.team_id = cet.team_id
+      AND cet2.deleted_at IS NULL
+  ) team_bids ON true
   WHERE ce.deleted_at IS NULL
   GROUP BY t.name, tournament_year, c.id, ce.id, ce.name
 ),
@@ -323,24 +443,14 @@ WITH team_bids AS (
     s.name AS school_name,
     tt.seed,
     tt.region,
-    CASE (tt.wins + tt.byes)
-      WHEN 0 THEN 0
-      WHEN 1 THEN 0
-      WHEN 2 THEN 50
-      WHEN 3 THEN 150
-      WHEN 4 THEN 300
-      WHEN 5 THEN 500
-      WHEN 6 THEN 750
-      WHEN 7 THEN 1050
-      ELSE 0
-    END::float AS team_points,
-    SUM(cet.bid)::float AS total_bid
-  FROM calcutta_entry_teams cet
-  JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-  JOIN tournament_teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  JOIN schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
+    core.calcutta_points_for_progress(c.id, tt.wins, tt.byes)::float AS team_points,
+    SUM(cet.bid_points)::float AS total_bid
+  FROM core.entry_teams cet
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+  JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
   GROUP BY t.name, tournament_year, c.id, tt.id, s.name, tt.seed, tt.region, team_points
 ),
@@ -385,13 +495,13 @@ WITH team_bids AS (
     c.id AS calcutta_id,
     tt.id AS team_id,
     s.name AS school_name,
-    SUM(cet.bid)::float AS total_bid
-  FROM calcutta_entry_teams cet
-  JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  JOIN tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-  JOIN tournament_teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  JOIN schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
+    SUM(cet.bid_points)::float AS total_bid
+  FROM core.entry_teams cet
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+  JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
     AND (tt.byes > 0 OR tt.wins > 0)
   GROUP BY tt.seed, t.name, tournament_year, c.id, tt.id, s.name
@@ -418,14 +528,12 @@ WITH team_bids AS (
     tt.seed,
     c.id AS calcutta_id,
     tt.id AS team_id,
-    SUM(cet.bid)::float AS total_bid,
-    MAX(cpt.actual_points)::float AS actual_points
-  FROM calcutta_entry_teams cet
-  JOIN calcutta_entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  JOIN tournament_teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  LEFT JOIN calcutta_portfolios cp ON cp.entry_id = ce.id AND cp.deleted_at IS NULL
-  LEFT JOIN calcutta_portfolio_teams cpt ON cpt.team_id = tt.id AND cpt.portfolio_id = cp.id AND cpt.deleted_at IS NULL
+    SUM(cet.bid_points)::float AS total_bid,
+    core.calcutta_points_for_progress(c.id, tt.wins, tt.byes)::float AS actual_points
+  FROM core.entry_teams cet
+  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
     AND (tt.byes > 0 OR tt.wins > 0)
   GROUP BY tt.seed, c.id, tt.id

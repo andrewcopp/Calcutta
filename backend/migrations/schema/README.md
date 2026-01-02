@@ -17,6 +17,8 @@ For example:
 
 The timestamp ensures that migrations are applied in the correct order, even when working with multiple branches or collaborators.
 
+**Important:** Migration versions must be **unique**. Two different migration files may not share the same timestamp/version. If you create multiple migrations back-to-back, ensure each has a distinct version (e.g. wait 1 second between timestamps or manually increment by 1).
+
 ## Running Migrations
 
 To run migrations, use the `migrate` command-line tool:
@@ -45,6 +47,8 @@ When creating new migrations:
    - `{timestamp}_description.down.sql`
 3. Write your SQL in the up file to apply the migration
 4. Write your SQL in the down file to roll back the migration
+
+If you need to create multiple migrations quickly, you can generate a base timestamp and then increment it manually for subsequent migrations (e.g. `...70000`, `...70001`, `...70002`).
 
 ## Best Practices
 

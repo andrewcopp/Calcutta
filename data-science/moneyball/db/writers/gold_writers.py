@@ -34,7 +34,7 @@ def write_optimization_run(
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO gold_optimization_runs
+                INSERT INTO gold.optimization_runs
                 (run_id, calcutta_id, strategy, n_sims, seed, budget_points)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (run_id) DO UPDATE SET
@@ -70,7 +70,7 @@ def write_recommended_entry_bids(
         with conn.cursor() as cur:
             # Clear existing bids for this run
             cur.execute("""
-                DELETE FROM gold_recommended_entry_bids
+                DELETE FROM gold.recommended_entry_bids
                 WHERE run_id = %s
             """, (run_id,))
             
@@ -84,7 +84,10 @@ def write_recommended_entry_bids(
             elif 'school_slug' in df.columns:
                 df['team_id'] = df['school_slug'].map(team_id_map)
             elif 'team_id' not in df.columns:
-                raise ValueError("DataFrame must have team_key, school_slug, or team_id column")
+                raise ValueError(
+                    "DataFrame must have team_key, school_slug, or "
+                    "team_id column"
+                )
             
             # Check for unmapped teams
             if df['team_id'].isna().any():
@@ -102,7 +105,7 @@ def write_recommended_entry_bids(
             ]
             
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO gold_recommended_entry_bids
+                INSERT INTO gold.recommended_entry_bids
                 (run_id, team_id, recommended_bid_points, expected_roi)
                 VALUES (%s, %s, %s, %s)
             """, values)

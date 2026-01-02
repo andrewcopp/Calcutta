@@ -15,9 +15,9 @@ SELECT
   kps.d_rtg,
   kps.adj_t,
   s.name AS school_name
-FROM tournament_teams tt
-LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
-LEFT JOIN schools s ON tt.school_id = s.id
+FROM core.teams tt
+LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
+LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 ORDER BY tt.seed ASC;
 
@@ -38,13 +38,13 @@ SELECT
   kps.d_rtg,
   kps.adj_t,
   s.name AS school_name
-FROM tournament_teams tt
-LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
-LEFT JOIN schools s ON tt.school_id = s.id
+FROM core.teams tt
+LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
+LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE tt.id = $1 AND tt.deleted_at IS NULL;
 
 -- name: UpdateTournamentTeam :exec
-UPDATE tournament_teams
+UPDATE core.teams
 SET wins = $1,
     byes = $2,
     eliminated = $3,
@@ -52,7 +52,7 @@ SET wins = $1,
 WHERE id = $4 AND deleted_at IS NULL;
 
 -- name: CreateTournamentTeam :exec
-INSERT INTO tournament_teams (
+INSERT INTO core.teams (
   id,
   tournament_id,
   school_id,
@@ -82,8 +82,8 @@ SELECT
   kps.o_rtg,
   kps.d_rtg,
   kps.adj_t
-FROM tournament_teams tt
-LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
+FROM core.teams tt
+LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
 WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 ORDER BY tt.wins DESC
 LIMIT 1;

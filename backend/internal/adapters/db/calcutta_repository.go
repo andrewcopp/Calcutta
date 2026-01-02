@@ -79,14 +79,15 @@ func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID stri
 			continue
 		}
 		id := uuid.New().String()
-		if err = qtx.CreateEntryTeam(ctx, sqlc.CreateEntryTeamParams{
+		params := sqlc.CreateEntryTeamParams{
 			ID:        id,
 			EntryID:   entryID,
 			TeamID:    t.TeamID,
-			Bid:       int32(t.Bid),
+			BidPoints: int32(t.Bid),
 			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		}); err != nil {
+		}
+		if err = qtx.CreateEntryTeam(ctx, params); err != nil {
 			return err
 		}
 	}
@@ -149,7 +150,18 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 	calcutta.Created = now
 	calcutta.Updated = now
 
-	return r.q.CreateCalcutta(ctx, sqlc.CreateCalcuttaParams{
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.CreateCalcuttaParams{
 		ID:           calcutta.ID,
 		TournamentID: calcutta.TournamentID,
 		OwnerID:      calcutta.OwnerID,
@@ -159,13 +171,32 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 		MaxBid:       int32(calcutta.MaxBid),
 		CreatedAt:    pgtype.Timestamptz{Time: calcutta.Created, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
-	})
+	}
+	if err = qtx.CreateCalcutta(ctx, params); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcutta) error {
 	calcutta.Updated = time.Now()
 
-	affected, err := r.q.UpdateCalcutta(ctx, sqlc.UpdateCalcuttaParams{
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.UpdateCalcuttaParams{
 		TournamentID: calcutta.TournamentID,
 		OwnerID:      calcutta.OwnerID,
 		Name:         calcutta.Name,
@@ -174,28 +205,50 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 		MaxBid:       int32(calcutta.MaxBid),
 		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
 		ID:           calcutta.ID,
-	})
+	}
+	affected, err := qtx.UpdateCalcutta(ctx, params)
 	if err != nil {
 		return err
 	}
 	if affected == 0 {
 		return &apperrors.NotFoundError{Resource: "calcutta", ID: calcutta.ID}
 	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (r *CalcuttaRepository) Delete(ctx context.Context, id string) error {
 	now := time.Now()
-	affected, err := r.q.DeleteCalcutta(ctx, sqlc.DeleteCalcuttaParams{
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.DeleteCalcuttaParams{
 		DeletedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		ID:        id,
-	})
+	}
+	affected, err := qtx.DeleteCalcutta(ctx, params)
 	if err != nil {
 		return err
 	}
 	if affected == 0 {
 		return &apperrors.NotFoundError{Resource: "calcutta", ID: id}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
 	}
 	return nil
 }
@@ -227,14 +280,33 @@ func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.Calc
 	round.Created = now
 	round.Updated = now
 
-	return r.q.CreateCalcuttaRound(ctx, sqlc.CreateCalcuttaRoundParams{
-		ID:         round.ID,
-		CalcuttaID: round.CalcuttaID,
-		Round:      int32(round.Round),
-		Points:     int32(round.Points),
-		CreatedAt:  pgtype.Timestamptz{Time: round.Created, Valid: true},
-		UpdatedAt:  pgtype.Timestamptz{Time: round.Updated, Valid: true},
-	})
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.CreateCalcuttaRoundParams{
+		ID:            round.ID,
+		CalcuttaID:    round.CalcuttaID,
+		WinIndex:      int32(round.Round),
+		PointsAwarded: int32(round.Points),
+		CreatedAt:     pgtype.Timestamptz{Time: round.Created, Valid: true},
+		UpdatedAt:     pgtype.Timestamptz{Time: round.Updated, Valid: true},
+	}
+	if err = qtx.CreateCalcuttaRound(ctx, params); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *CalcuttaRepository) GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error) {
@@ -438,117 +510,6 @@ func (r *CalcuttaRepository) GetPortfolios(ctx context.Context, entryID string) 
 		})
 	}
 	return out, nil
-}
-
-func (r *CalcuttaRepository) CreatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {
-	now := time.Now()
-	portfolio.ID = uuid.New().String()
-	portfolio.Created = now
-	portfolio.Updated = now
-
-	maxPts, err := numericFromFloat64(portfolio.MaximumPoints)
-	if err != nil {
-		return err
-	}
-
-	return r.q.CreatePortfolio(ctx, sqlc.CreatePortfolioParams{
-		ID:            portfolio.ID,
-		EntryID:       portfolio.EntryID,
-		MaximumPoints: maxPts,
-		CreatedAt:     pgtype.Timestamptz{Time: portfolio.Created, Valid: true},
-		UpdatedAt:     pgtype.Timestamptz{Time: portfolio.Updated, Valid: true},
-	})
-}
-
-func (r *CalcuttaRepository) UpdatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {
-	maxPts, err := numericFromFloat64(portfolio.MaximumPoints)
-	if err != nil {
-		return err
-	}
-
-	affected, err := r.q.UpdatePortfolio(ctx, sqlc.UpdatePortfolioParams{
-		MaximumPoints: maxPts,
-		UpdatedAt:     pgtype.Timestamptz{Time: portfolio.Updated, Valid: true},
-		ID:            portfolio.ID,
-	})
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return &apperrors.NotFoundError{Resource: "portfolio", ID: portfolio.ID}
-	}
-	return nil
-}
-
-func (r *CalcuttaRepository) CreatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
-	now := time.Now()
-	team.ID = uuid.New().String()
-	team.Created = now
-	team.Updated = now
-
-	op, err := numericFromFloat64(team.OwnershipPercentage)
-	if err != nil {
-		return err
-	}
-	ap, err := numericFromFloat64(team.ActualPoints)
-	if err != nil {
-		return err
-	}
-	ep, err := numericFromFloat64(team.ExpectedPoints)
-	if err != nil {
-		return err
-	}
-	pp, err := numericFromFloat64(team.PredictedPoints)
-	if err != nil {
-		return err
-	}
-
-	return r.q.CreatePortfolioTeam(ctx, sqlc.CreatePortfolioTeamParams{
-		ID:                  team.ID,
-		PortfolioID:         team.PortfolioID,
-		TeamID:              team.TeamID,
-		OwnershipPercentage: op,
-		ActualPoints:        ap,
-		ExpectedPoints:      ep,
-		PredictedPoints:     pp,
-		CreatedAt:           pgtype.Timestamptz{Time: team.Created, Valid: true},
-		UpdatedAt:           pgtype.Timestamptz{Time: team.Updated, Valid: true},
-	})
-}
-
-func (r *CalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
-	op, err := numericFromFloat64(team.OwnershipPercentage)
-	if err != nil {
-		return err
-	}
-	ap, err := numericFromFloat64(team.ActualPoints)
-	if err != nil {
-		return err
-	}
-	ep, err := numericFromFloat64(team.ExpectedPoints)
-	if err != nil {
-		return err
-	}
-	pp, err := numericFromFloat64(team.PredictedPoints)
-	if err != nil {
-		return err
-	}
-
-	affected, err := r.q.UpdatePortfolioTeam(ctx, sqlc.UpdatePortfolioTeamParams{
-		OwnershipPercentage: op,
-		ActualPoints:        ap,
-		ExpectedPoints:      ep,
-		PredictedPoints:     pp,
-		UpdatedAt:           pgtype.Timestamptz{Time: team.Updated, Valid: true},
-		ID:                  team.ID,
-	})
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return &apperrors.NotFoundError{Resource: "portfolio team", ID: team.ID}
-	}
-	return nil
 }
 
 func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {

@@ -5,6 +5,19 @@ import unittest
 import pandas as pd
 
 from moneyball.models.recommended_entry_bids import recommend_entry_bids
+from moneyball.utils import points
+
+
+def _points_by_win_index_fixture() -> dict:
+    return {
+        1: 0,
+        2: 50,
+        3: 100,
+        4: 150,
+        5: 200,
+        6: 250,
+        7: 300,
+    }
 
 
 def _toy_predicted_game_outcomes() -> pd.DataFrame:
@@ -36,6 +49,7 @@ def _toy_predicted_auction_share_of_pool() -> pd.DataFrame:
 
 class TestThatEntryBidsSumToBudget(unittest.TestCase):
     def test_that_recommended_entry_bids_sum_to_budget(self) -> None:
+        points.set_default_points_by_win_index(_points_by_win_index_fixture())
         share_df = _toy_predicted_auction_share_of_pool()
         go_df = _toy_predicted_game_outcomes()
         out = recommend_entry_bids(
@@ -59,6 +73,7 @@ class TestThatEntryBidsRespectTeamCount(unittest.TestCase):
     def test_that_recommended_entry_bids_respect_team_count_constraints(
         self,
     ) -> None:
+        points.set_default_points_by_win_index(_points_by_win_index_fixture())
         share_df = _toy_predicted_auction_share_of_pool()
         go_df = _toy_predicted_game_outcomes()
         out = recommend_entry_bids(
@@ -77,6 +92,7 @@ class TestThatEntryBidsRespectTeamCount(unittest.TestCase):
 
 class TestThatEntryBidsRespectMaxPerTeam(unittest.TestCase):
     def test_that_recommended_entry_bids_respect_max_per_team(self) -> None:
+        points.set_default_points_by_win_index(_points_by_win_index_fixture())
         share_df = _toy_predicted_auction_share_of_pool()
         go_df = _toy_predicted_game_outcomes()
         out = recommend_entry_bids(
@@ -95,6 +111,7 @@ class TestThatEntryBidsRespectMaxPerTeam(unittest.TestCase):
 
 class TestThatEntryBidsAreDeterministic(unittest.TestCase):
     def test_that_recommended_entry_bids_are_deterministic(self) -> None:
+        points.set_default_points_by_win_index(_points_by_win_index_fixture())
         share_df = _toy_predicted_auction_share_of_pool()
         go_df = _toy_predicted_game_outcomes()
         out_a = recommend_entry_bids(

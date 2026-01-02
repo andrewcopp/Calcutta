@@ -15,6 +15,18 @@ from moneyball.models.simulated_tournaments_db import (
 )
 
 
+def _points_by_win_index_fixture() -> dict:
+    return {
+        1: 0,
+        2: 50,
+        3: 100,
+        4: 150,
+        5: 200,
+        6: 250,
+        7: 300,
+    }
+
+
 class TestDBFirstSimulationMaxWins(unittest.TestCase):
     """Test that DB-first simulation respects maximum win bounds."""
     
@@ -32,6 +44,7 @@ class TestDBFirstSimulationMaxWins(unittest.TestCase):
         result = simulate_tournaments_from_predictions(
             predictions_df=predictions_df,
             teams_df=teams_df,
+            points_by_win_index=_points_by_win_index_fixture(),
             n_sims=100,
             seed=42,
         )
@@ -59,6 +72,7 @@ class TestDBFirstSimulationMaxWins(unittest.TestCase):
         result = simulate_tournaments_from_predictions(
             predictions_df=predictions_df,
             teams_df=teams_df,
+            points_by_win_index=_points_by_win_index_fixture(),
             n_sims=1000,
             seed=42,
         )
@@ -83,6 +97,7 @@ class TestDBFirstSimulationMaxWins(unittest.TestCase):
         result = simulate_tournaments_from_predictions(
             predictions_df=predictions_df,
             teams_df=teams_df,
+            points_by_win_index=_points_by_win_index_fixture(),
             n_sims=10,
             seed=42,
         )
@@ -93,7 +108,10 @@ class TestDBFirstSimulationMaxWins(unittest.TestCase):
             self.assertEqual(
                 sim_teams,
                 n_teams,
-                f"Simulation {sim_id} has {sim_teams} teams, expected {n_teams}"
+                (
+                    f"Simulation {sim_id} has {sim_teams} teams, "
+                    f"expected {n_teams}"
+                ),
             )
 
 
@@ -111,6 +129,7 @@ class TestDBFirstSimulationDeterminism(unittest.TestCase):
         result1 = simulate_tournaments_from_predictions(
             predictions_df=predictions_df,
             teams_df=teams_df,
+            points_by_win_index=_points_by_win_index_fixture(),
             n_sims=50,
             seed=123,
         )
@@ -118,6 +137,7 @@ class TestDBFirstSimulationDeterminism(unittest.TestCase):
         result2 = simulate_tournaments_from_predictions(
             predictions_df=predictions_df,
             teams_df=teams_df,
+            points_by_win_index=_points_by_win_index_fixture(),
             n_sims=50,
             seed=123,
         )
@@ -130,27 +150,34 @@ class TestCalculatePoints(unittest.TestCase):
     
     def test_point_values_by_round(self):
         """Test standard NCAA tournament scoring."""
+        pbwi = _points_by_win_index_fixture()
         # Round of 64 (1 win) = 0 points
-        self.assertEqual(calculate_points(1, 0), 0)
+        self.assertEqual(calculate_points(1, 0, points_by_win_index=pbwi), 0)
         
         # Round of 32 (2 wins) = 50 points
-        self.assertEqual(calculate_points(2, 0), 50)
+        self.assertEqual(calculate_points(2, 0, points_by_win_index=pbwi), 50)
         
         # Sweet 16 (3 wins) = 150 points
-        self.assertEqual(calculate_points(3, 0), 150)
+        self.assertEqual(calculate_points(3, 0, points_by_win_index=pbwi), 150)
         
         # Elite 8 (4 wins) = 300 points
-        self.assertEqual(calculate_points(4, 0), 300)
+        self.assertEqual(calculate_points(4, 0, points_by_win_index=pbwi), 300)
         
         # Final Four (5 wins) = 500 points
-        self.assertEqual(calculate_points(5, 0), 500)
+        self.assertEqual(calculate_points(5, 0, points_by_win_index=pbwi), 500)
         
         # Championship (6 wins) = 750 points
-        self.assertEqual(calculate_points(6, 0), 750)
+        self.assertEqual(calculate_points(6, 0, points_by_win_index=pbwi), 750)
         
         # Winner (7 wins with bye) = 1050 points
-        self.assertEqual(calculate_points(6, 1), 1050)
-        self.assertEqual(calculate_points(7, 0), 1050)
+        self.assertEqual(
+            calculate_points(6, 1, points_by_win_index=pbwi),
+            1050,
+        )
+        self.assertEqual(
+            calculate_points(7, 0, points_by_win_index=pbwi),
+            1050,
+        )
 
 
 def _create_64_team_bracket():

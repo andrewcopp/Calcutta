@@ -12,7 +12,7 @@ import (
 )
 
 const createCalcutta = `-- name: CreateCalcutta :exec
-INSERT INTO calcuttas (id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at)
+INSERT INTO core.calcuttas (id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
@@ -44,7 +44,7 @@ func (q *Queries) CreateCalcutta(ctx context.Context, arg CreateCalcuttaParams) 
 }
 
 const deleteCalcutta = `-- name: DeleteCalcutta :execrows
-UPDATE calcuttas
+UPDATE core.calcuttas
 SET deleted_at = $1,
     updated_at = $2
 WHERE id = $3 AND deleted_at IS NULL
@@ -66,7 +66,7 @@ func (q *Queries) DeleteCalcutta(ctx context.Context, arg DeleteCalcuttaParams) 
 
 const getCalcuttaByID = `-- name: GetCalcuttaByID :one
 SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
-FROM calcuttas
+FROM core.calcuttas
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -101,32 +101,19 @@ func (q *Queries) GetCalcuttaByID(ctx context.Context, id string) (GetCalcuttaBy
 
 const getCalcuttasByTournament = `-- name: GetCalcuttasByTournament :many
 SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at, deleted_at
-FROM calcuttas
+FROM core.calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL
 `
 
-type GetCalcuttasByTournamentRow struct {
-	ID           string
-	TournamentID string
-	OwnerID      string
-	Name         string
-	MinTeams     int32
-	MaxTeams     int32
-	MaxBid       int32
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]GetCalcuttasByTournamentRow, error) {
+func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]CoreCalcutta, error) {
 	rows, err := q.db.Query(ctx, getCalcuttasByTournament, tournamentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalcuttasByTournamentRow
+	var items []CoreCalcutta
 	for rows.Next() {
-		var i GetCalcuttasByTournamentRow
+		var i CoreCalcutta
 		if err := rows.Scan(
 			&i.ID,
 			&i.TournamentID,
@@ -151,7 +138,7 @@ func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID str
 
 const listCalcuttas = `-- name: ListCalcuttas :many
 SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
-FROM calcuttas
+FROM core.calcuttas
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 `
@@ -199,7 +186,7 @@ func (q *Queries) ListCalcuttas(ctx context.Context) ([]ListCalcuttasRow, error)
 }
 
 const updateCalcutta = `-- name: UpdateCalcutta :execrows
-UPDATE calcuttas
+UPDATE core.calcuttas
 SET tournament_id = $1,
     owner_id = $2,
     name = $3,

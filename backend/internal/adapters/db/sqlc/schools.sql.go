@@ -13,7 +13,7 @@ import (
 
 const getSchoolByID = `-- name: GetSchoolByID :one
 SELECT id, name, created_at, updated_at
-FROM schools
+FROM core.schools
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -38,7 +38,7 @@ func (q *Queries) GetSchoolByID(ctx context.Context, id string) (GetSchoolByIDRo
 
 const listSchools = `-- name: ListSchools :many
 SELECT id, name, created_at, updated_at
-FROM schools
+FROM core.schools
 WHERE deleted_at IS NULL
 ORDER BY name ASC
 `

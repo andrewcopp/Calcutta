@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"context"
 	"log"
 	"net/http"
 
@@ -20,41 +19,52 @@ type EntryRanking struct {
 	TotalSimulations int     `json:"total_simulations"`
 }
 
-// handleGetTournamentSimulatedCalcuttas handles GET /analytics/tournaments/{id}/simulated-calcuttas
-func (s *Server) handleGetTournamentSimulatedCalcuttas(w http.ResponseWriter, r *http.Request) {
+// handleGetCalcuttaSimulatedCalcuttas handles GET /analytics/calcuttas/{id}/simulated-calcuttas
+func (s *Server) handleGetCalcuttaSimulatedCalcuttas(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	calcuttaID := vars["id"]
 
-	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing tournament ID", "id")
+	if calcuttaID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing calcutta ID", "id")
 		return
 	}
 
-	// Get the latest optimization run for this tournament
-	runID, err := s.getLatestOptimizationRun(ctx, tournamentID)
+	// Get the latest optimization run for this calcutta.
+	// This requires a mapping from core.calcuttas.id -> bronze_calcuttas.id via bronze_calcuttas.core_calcutta_id.
+	queryRun := `
+		SELECT gor.run_id
+		FROM gold.optimization_runs gor
+		JOIN bronze_calcuttas_core_ctx bcc ON bcc.id = gor.calcutta_id
+		WHERE bcc.core_calcutta_id = $1
+		ORDER BY gor.created_at DESC
+		LIMIT 1
+	`
+
+	var runID string
+	err := s.pool.QueryRow(ctx, queryRun, calcuttaID).Scan(&runID)
 	if err != nil {
 		log.Printf("Error getting latest optimization run: %v", err)
-		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to get optimization run", "")
+		writeError(w, r, http.StatusNotFound, "not_found", "No optimization run found for calcutta", "")
 		return
 	}
 
 	if runID == "" {
-		writeError(w, r, http.StatusNotFound, "not_found", "No optimization run found for tournament", "")
+		writeError(w, r, http.StatusNotFound, "not_found", "No optimization run found for calcutta", "")
 		return
 	}
 
 	// Query entry performance rankings
 	query := `
-		SELECT 
+		SELECT
 			ROW_NUMBER() OVER (ORDER BY mean_payout DESC) as rank,
 			entry_name,
 			mean_payout,
 			median_payout,
 			p_top1,
 			p_in_money,
-			(SELECT COUNT(*) FROM gold_entry_simulation_outcomes WHERE run_id = $1 AND entry_name = gep.entry_name) as total_sims
-		FROM gold_entry_performance gep
+			(SELECT COUNT(*) FROM gold.entry_simulation_outcomes WHERE run_id = $1 AND entry_name = gep.entry_name) as total_sims
+		FROM gold.entry_performance gep
 		WHERE run_id = $1
 		ORDER BY mean_payout DESC
 	`
@@ -90,55 +100,13 @@ func (s *Server) handleGetTournamentSimulatedCalcuttas(w http.ResponseWriter, r 
 	}
 
 	if len(results) == 0 {
-		writeError(w, r, http.StatusNotFound, "not_found", "No simulated calcutta data found for tournament", "")
+		writeError(w, r, http.StatusNotFound, "not_found", "No simulated calcutta data found for calcutta", "")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tournament_id": tournamentID,
-		"run_id":        runID,
-		"entries":       results,
+		"calcutta_id": calcuttaID,
+		"run_id":      runID,
+		"entries":     results,
 	})
-}
-
-func (s *Server) getLatestOptimizationRun(ctx context.Context, tournamentID string) (string, error) {
-	// First try to find runs via gold_entry_performance (simulated calcuttas)
-	// Need to map tournaments.id -> bronze_tournaments.id via year/name
-	query := `
-		SELECT DISTINCT gep.run_id
-		FROM gold_entry_performance gep
-		WHERE EXISTS (
-			SELECT 1 FROM gold_recommended_entry_bids greb
-			JOIN bronze_teams bt ON greb.team_id = bt.id
-			JOIN bronze_tournaments btr ON bt.tournament_id = btr.id
-			JOIN tournaments t ON t.name LIKE '%' || btr.season || '%'
-			WHERE greb.run_id = gep.run_id
-			AND t.id = $1
-		)
-		ORDER BY gep.run_id DESC
-		LIMIT 1
-	`
-
-	var runID string
-	err := s.pool.QueryRow(ctx, query, tournamentID).Scan(&runID)
-	if err == nil {
-		return runID, nil
-	}
-
-	// Fallback: try via bronze_calcuttas (for older data)
-	fallbackQuery := `
-		SELECT gor.run_id
-		FROM gold_optimization_runs gor
-		JOIN bronze_calcuttas bc ON gor.calcutta_id = bc.id
-		WHERE bc.tournament_id = $1
-		ORDER BY gor.created_at DESC
-		LIMIT 1
-	`
-
-	err = s.pool.QueryRow(ctx, fallbackQuery, tournamentID).Scan(&runID)
-	if err != nil {
-		return "", err
-	}
-
-	return runID, nil
 }

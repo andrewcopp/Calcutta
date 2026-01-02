@@ -26,8 +26,17 @@ data-science/.venv/
 data-science/in/
 data-science/out/
 
+# Airflow logs
+data-science/airflow/logs/
+
 # Generated artifacts
 backend/exports/
 
 # Log files
 *.log
+
+# Local DB snapshots / verification outputs
+*.dump
+invariants_*.txt
+*_output.txt
+core_sanity_post_*.txt

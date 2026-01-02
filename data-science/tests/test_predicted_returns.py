@@ -9,6 +9,20 @@ These tests verify that:
 
 import unittest
 
+from moneyball.utils import points as mb_points
+
+
+def _points_by_win_index_fixture() -> dict:
+    return {
+        1: 0,
+        2: 50,
+        3: 100,
+        4: 150,
+        5: 200,
+        6: 250,
+        7: 300,
+    }
+
 
 class TestThatExpectedValueCalculationIsCorrect(unittest.TestCase):
     """Test expected value calculations for NCAA tournament."""
@@ -173,22 +187,22 @@ class TestThatExpectedValueCalculationIsCorrect(unittest.TestCase):
         - 5 wins (FF): 750 points
         - 6 wins (Champ): 1050 points
         """
-        points_by_wins = {
-            0: 0,
-            1: 50,
-            2: 150,
-            3: 300,
-            4: 500,
-            5: 750,
-            6: 1050,
-        }
-        
+        pbwi = _points_by_win_index_fixture()
+
+        def _points_for_wins(wins: int) -> float:
+            return float(
+                mb_points.team_points_from_scoring_rules(
+                    int(wins) + 1,
+                    pbwi,
+                )
+            )
+
         ev = sum(
-            wins_distribution.get(wins, 0) * points_by_wins[wins]
+            float(wins_distribution.get(wins, 0.0)) * _points_for_wins(wins)
             for wins in range(7)
         )
-        
-        return ev
+
+        return float(ev)
 
 
 class TestThatProbabilitiesAreNormalized(unittest.TestCase):
@@ -236,34 +250,31 @@ class TestThatNCAAPointValuesAreCorrect(unittest.TestCase):
 
     def test_that_point_values_match_ncaa_scoring(self) -> None:
         """Verify point values match standard NCAA tournament scoring."""
-        # Standard NCAA tournament scoring (cumulative)
+        pbwi = _points_by_win_index_fixture()
+
         expected_points = {
-            0: 0,      # No wins
-            1: 50,     # R64 win
-            2: 150,    # R64 + R32 wins (50 + 100)
-            3: 300,    # + S16 win (150 + 150)
-            4: 500,    # + E8 win (300 + 200)
-            5: 750,    # + FF win (500 + 250)
-            6: 1050,   # + Championship win (750 + 300)
+            wins: int(
+                mb_points.team_points_from_scoring_rules(
+                    int(wins) + 1,
+                    pbwi,
+                )
+            )
+            for wins in range(7)
         }
         
         # These should match the backend SQL calculation
-        for wins, points in expected_points.items():
+        for wins, expected in expected_points.items():
             self.assertEqual(
-                points,
+                expected,
                 expected_points[wins],
-                f"Points for {wins} wins should be {points}",
+                f"Points for {wins} wins should be {expected}",
             )
     
     def test_that_incremental_points_per_round_are_correct(self) -> None:
         """Verify incremental points awarded per round."""
+        pbwi = _points_by_win_index_fixture()
         incremental_points = {
-            1: 50,   # R64
-            2: 100,  # R32
-            3: 150,  # S16
-            4: 200,  # E8
-            5: 250,  # FF
-            6: 300,  # Championship
+            r: int(pbwi[r + 1]) for r in range(1, 7)
         }
         
         cumulative = 0
@@ -271,7 +282,13 @@ class TestThatNCAAPointValuesAreCorrect(unittest.TestCase):
             cumulative += increment
             # Verify cumulative matches expected
             expected_cumulative = {
-                1: 50, 2: 150, 3: 300, 4: 500, 5: 750, 6: 1050
+                r: int(
+                    mb_points.team_points_from_scoring_rules(
+                        r + 1,
+                        pbwi,
+                    )
+                )
+                for r in range(1, 7)
             }
             self.assertEqual(cumulative, expected_cumulative[round_num])
 

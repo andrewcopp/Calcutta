@@ -12,7 +12,8 @@ import uuid
 from moneyball.db.readers import (
     read_teams,
     tournament_exists,
-    get_latest_run_id,
+    initialize_default_scoring_rules_for_year,
+    initialize_default_scoring_rules_for_calcutta,
 )
 from moneyball.models.predicted_game_outcomes import (
     predict_game_outcomes_from_teams_df,
@@ -23,7 +24,6 @@ from moneyball.models.simulated_tournaments_db import (
 from moneyball.models.recommended_entry_bids_db import (
     recommend_entry_bids_from_simulations,
 )
-from moneyball.pipeline.db_writer import get_db_writer
 import subprocess
 import os
 
@@ -46,7 +46,7 @@ def stage_simulated_calcuttas(
         Dictionary with results
     """
     print(f"\n{'='*60}")
-    print(f"Stage 4: Calculating simulated calcutta outcomes")
+    print("Stage 4: Calculating simulated calcutta outcomes")
     print(f"{'='*60}\n")
     
     # Get tournament ID from database
@@ -54,7 +54,7 @@ def stage_simulated_calcuttas(
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id FROM bronze_tournaments WHERE season = %s",
+                "SELECT id FROM bronze.tournaments WHERE season = %s",
                 (year,)
             )
             result = cur.fetchone()
@@ -78,7 +78,9 @@ def stage_simulated_calcuttas(
     if not os.path.exists(go_binary):
         raise FileNotFoundError(
             f"Go binary not found at {go_binary}. "
-            "Please build it first: cd backend && go build -o bin/calculate-simulated-calcuttas ./cmd/calculate-simulated-calcuttas"
+            "Please build it first: cd backend && go build -o "
+            "bin/calculate-simulated-calcuttas "
+            "./cmd/calculate-simulated-calcuttas"
         )
     
     env = os.environ.copy()
@@ -102,7 +104,9 @@ def stage_simulated_calcuttas(
     if result.returncode != 0:
         print(f"STDOUT: {result.stdout}")
         print(f"STDERR: {result.stderr}")
-        raise RuntimeError(f"Go service failed with exit code {result.returncode}")
+        raise RuntimeError(
+            f"Go service failed with exit code {result.returncode}"
+        )
     
     print(result.stdout)
     
@@ -116,7 +120,7 @@ def stage_simulated_calcuttas(
                     mean_payout,
                     p_top1,
                     p_in_money
-                FROM gold_entry_performance
+                FROM gold.entry_performance
                 WHERE run_id = %s
                 ORDER BY mean_payout DESC
                 """,
@@ -124,9 +128,12 @@ def stage_simulated_calcuttas(
             )
             entries = cur.fetchall()
     
-    print(f"\nEntry Performance:")
+    print("\nEntry Performance:")
     for entry_name, mean_payout, p_top1, p_in_money in entries:
-        print(f"  {entry_name}: mean={mean_payout:.3f}, P(top1)={p_top1:.1%}, P(in money)={p_in_money:.1%}")
+        print(
+            f"  {entry_name}: mean={mean_payout:.3f}, "
+            f"P(top1)={p_top1:.1%}, P(in money)={p_in_money:.1%}"
+        )
     
     return {
         'run_id': run_id,
@@ -163,7 +170,7 @@ def stage_predicted_game_outcomes(
     # Ensure tournament exists
     if not tournament_exists(year):
         raise ValueError(f"Tournament for year {year} not found in database")
-    
+
     # Read teams from database
     teams_df = read_teams(year)
     if teams_df.empty:
@@ -182,7 +189,9 @@ def stage_predicted_game_outcomes(
     print(f"  Generated {len(predictions_df)} game predictions")
     
     # Write to database using direct writer
-    from moneyball.db.writers.silver_writers import write_predicted_game_outcomes
+    from moneyball.db.writers.silver_writers import (
+        write_predicted_game_outcomes,
+    )
     from moneyball.db.writers.bronze_writers import get_or_create_tournament
     
     tournament_id = get_or_create_tournament(year)
@@ -194,7 +203,7 @@ def stage_predicted_game_outcomes(
             team_id_map={},  # Not needed - predictions already have team_id
             model_version=model_version,
         )
-        print(f"✓ Predicted game outcomes written to database")
+        print("✓ Predicted game outcomes written to database")
     except Exception as e:
         print(f"⚠ Failed to write predictions: {e}")
     
@@ -211,6 +220,7 @@ def stage_simulate_tournaments(
     n_sims: int = 5000,
     seed: int = 42,
     run_id: Optional[str] = None,
+    calcutta_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Simulate tournaments using predictions from database.
@@ -229,13 +239,22 @@ def stage_simulate_tournaments(
     # Ensure tournament exists
     if not tournament_exists(year):
         raise ValueError(f"Tournament for year {year} not found in database")
+
+    if calcutta_id is not None:
+        points_by_win_index = initialize_default_scoring_rules_for_calcutta(
+            calcutta_id
+        )
+    else:
+        points_by_win_index = initialize_default_scoring_rules_for_year(year)
     
     # Read teams and predictions from database
     teams_df = read_teams(year)
     
     # For now, we'll generate predictions inline if they don't exist
     # In production, you'd read from silver_predicted_game_outcomes
-    from moneyball.models.predicted_game_outcomes import predict_game_outcomes_from_teams_df
+    from moneyball.models.predicted_game_outcomes import (
+        predict_game_outcomes_from_teams_df,
+    )
     predictions_df = predict_game_outcomes_from_teams_df(
         teams_df=teams_df,
         kenpom_scale=10.0,
@@ -249,6 +268,7 @@ def stage_simulate_tournaments(
     simulations_df = simulate_tournaments_from_predictions(
         predictions_df=predictions_df,
         teams_df=teams_df,
+        points_by_win_index=points_by_win_index,
         n_sims=n_sims,
         seed=seed,
     )
@@ -313,11 +333,13 @@ def stage_recommended_entry_bids(
     max_teams: int = 10,
     min_bid: int = 1,
     max_bid: int = 50,
+    calcutta_id: Optional[str] = None,
 ) -> dict:
     """
     Generate recommended entry bids by calling standalone optimizer scripts.
     
-    For MINLP strategy, calls scripts/run_minlp_optimizer.py which works correctly.
+    For MINLP strategy, calls scripts/run_minlp_optimizer.py which works
+    correctly.
     For other strategies, uses the inline implementation.
     
     Args:
@@ -337,7 +359,7 @@ def stage_recommended_entry_bids(
     
     # For MINLP strategy, call the standalone script that works correctly
     if strategy == "minlp":
-        print(f"  Calling standalone MINLP optimizer script...")
+        print("  Calling standalone MINLP optimizer script...")
         
         import subprocess
         import sys
@@ -351,12 +373,16 @@ def stage_recommended_entry_bids(
         
         # Set up environment with PYTHONPATH
         env = os.environ.copy()
-        data_science_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        data_science_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../..")
+        )
         env['PYTHONPATH'] = data_science_root
         
         # Use venv Python explicitly
         venv_python = os.path.join(data_science_root, '.venv', 'bin', 'python')
-        python_executable = venv_python if os.path.exists(venv_python) else sys.executable
+        python_executable = (
+            venv_python if os.path.exists(venv_python) else sys.executable
+        )
         
         # Run the standalone script
         result = subprocess.run(
@@ -368,9 +394,11 @@ def stage_recommended_entry_bids(
         )
         
         if result.returncode != 0:
-            print(f"  ⚠ MINLP optimizer failed:")
+            print("  ⚠ MINLP optimizer failed:")
             print(result.stderr)
-            raise RuntimeError(f"MINLP optimizer failed with code {result.returncode}")
+            raise RuntimeError(
+                f"MINLP optimizer failed with code {result.returncode}"
+            )
         
         # Parse the run_id from the output
         import re
@@ -379,7 +407,9 @@ def stage_recommended_entry_bids(
             run_id = match.group(1)
             print(f"  ✓ MINLP optimization complete (run_id={run_id})")
         else:
-            raise RuntimeError("Failed to parse run_id from MINLP optimizer output")
+            raise RuntimeError(
+                "Failed to parse run_id from MINLP optimizer output"
+            )
         
         # Count recommendations
         from moneyball.db.readers import get_db_connection
@@ -408,10 +438,10 @@ def stage_recommended_entry_bids(
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT gor.run_id
-                    FROM gold_optimization_runs gor
-                    JOIN bronze_calcuttas bc ON gor.calcutta_id = bc.id
+                    FROM gold.optimization_runs gor
+                    JOIN bronze.calcuttas bc ON gor.calcutta_id = bc.id
                     WHERE bc.tournament_id = (
-                        SELECT id FROM bronze_tournaments WHERE season = %s
+                        SELECT id FROM bronze.tournaments WHERE season = %s
                     )
                     ORDER BY gor.created_at DESC
                     LIMIT 1
@@ -421,13 +451,15 @@ def stage_recommended_entry_bids(
                     run_id = result[0]
                     print(f"  Using run_id: {run_id}")
                 else:
-                    raise ValueError(f"No optimization runs found for year {year}")
+                    raise ValueError(
+                        f"No optimization runs found for year {year}"
+                    )
     else:
         print(f"  Using run_id: {run_id}")
     
     # Read simulations from database
     from moneyball.db.readers import read_simulated_tournaments
-    simulations_df = read_simulated_tournaments(year)
+    simulations_df = read_simulated_tournaments(year, calcutta_id=calcutta_id)
     
     print(f"  Found {len(simulations_df)} simulation results")
     
@@ -446,7 +478,10 @@ def stage_recommended_entry_bids(
     print(f"  Generated {len(recommendations_df)} recommendations")
     
     # Write to database
-    from moneyball.db.writers.gold_writers import write_optimization_run, write_recommended_entry_bids
+    from moneyball.db.writers.gold_writers import (
+        write_optimization_run,
+        write_recommended_entry_bids,
+    )
     from moneyball.db.readers import get_db_connection
     
     # Get tournament_id and calcutta_id
@@ -454,19 +489,19 @@ def stage_recommended_entry_bids(
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT bt.id, bc.id
-                FROM bronze_tournaments bt
-                LEFT JOIN bronze_calcuttas bc ON bc.tournament_id = bt.id
+                FROM bronze.tournaments bt
+                LEFT JOIN bronze.calcuttas bc ON bc.tournament_id = bt.id
                 WHERE bt.season = %s
             """, (year,))
             result = cur.fetchone()
             if not result:
                 raise ValueError(f"No tournament found for year {year}")
-            tournament_id, calcutta_id = result
+            tournament_id, db_calcutta_id = result
     
     # Write optimization run
     write_optimization_run(
         run_id=run_id,
-        calcutta_id=calcutta_id,
+        calcutta_id=db_calcutta_id,
         strategy=strategy,
     )
     
@@ -530,6 +565,7 @@ def run_full_pipeline(
         year=year,
         n_sims=n_sims,
         seed=seed,
+        calcutta_id=calcutta_id,
     )
     
     # Stage 3: Recommended entry bids
@@ -537,6 +573,7 @@ def run_full_pipeline(
         year=year,
         strategy=strategy,
         run_id=results['simulated_tournaments']['run_id'],
+        calcutta_id=calcutta_id,
     )
     
     # Stage 4: Evaluate simulated entry via simulated calcuttas

@@ -28,6 +28,7 @@ This repo follows simple, practical rules that keep code clear and change-safe w
 - Unit tests should cover pure business logic (deterministic inputs → outputs).
 - Do not write unit tests that assert filesystem/DB/HTTP behavior.
 - Unit tests must not read/write external state (DB, network/API calls, filesystem, or any external storage).
+- Even though unit tests are DB-free, GIVEN fixtures should mirror what production would have read from the DB (shape/types/contracts), as if the DB call succeeded.
 - Prefer a “pure core + thin runner” structure:
   - Core functions: no I/O, return values.
   - Runners/handlers: load/save/log, call core, translate errors.

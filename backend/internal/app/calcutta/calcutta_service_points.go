@@ -16,27 +16,21 @@ func (s *Service) CalculatePoints(team *models.TournamentTeam, rounds []*models.
 	// 5 wins/byes = Elite 8 Win (500 points)
 	// 6 wins/byes = Final Four Win (750 points)
 	// 7 wins/byes = Championship Game Win (1050 points)
-	switch totalProgress {
-	case 0:
-		return 0
-	case 1:
-		return 0
-	case 2:
-		return 50 // First Round Winner
-	case 3:
-		return 150 // Round of 32 Winner
-	case 4:
-		return 300 // Sweet 16 Winner
-	case 5:
-		return 500 // Elite 8 Winner
-	case 6:
-		return 750 // Final Four Winner
-	case 7:
-		return 1050 // Tournament Winner
-	default:
-		// For any other value (shouldn't happen in a normal tournament)
+	if totalProgress <= 0 {
 		return 0
 	}
+
+	points := 0
+	for _, r := range rounds {
+		if r == nil {
+			continue
+		}
+		if r.Round <= totalProgress {
+			points += r.Points
+		}
+	}
+
+	return float64(points)
 }
 
 // CalculatePlayerPoints calculates the points earned by a player based on their team ownerships

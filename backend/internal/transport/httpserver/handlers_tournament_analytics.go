@@ -27,24 +27,24 @@ func (s *Server) handleGetTournamentSimStatsByID(w http.ResponseWriter, r *http.
 			SELECT 
 				id,
 				CAST(SUBSTRING(name FROM '[0-9]{4}') AS INTEGER) as season
-			FROM tournaments
+			FROM core.tournaments
 			WHERE id = $1
 		),
 		tournament_info AS (
 			SELECT bt.id, bt.season
-			FROM bronze_tournaments bt
+			FROM bronze.tournaments bt
 			JOIN main_tournament mt ON bt.season = mt.season
 		),
 		sim_stats AS (
 			SELECT 
 				COUNT(DISTINCT sim_id) as total_simulations,
 				COUNT(DISTINCT team_id) as total_teams
-			FROM silver_simulated_tournaments st
+			FROM silver.simulated_tournaments st
 			JOIN tournament_info ti ON st.tournament_id = ti.id
 		),
 		prediction_stats AS (
 			SELECT COUNT(*) as total_predictions
-			FROM silver_predicted_game_outcomes pgo
+			FROM silver.predicted_game_outcomes pgo
 			JOIN tournament_info ti ON pgo.tournament_id = ti.id
 		),
 		win_stats AS (
@@ -52,7 +52,7 @@ func (s *Server) handleGetTournamentSimStatsByID(w http.ResponseWriter, r *http.
 				AVG(wins)::numeric as mean_wins,
 				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY wins) as median_wins,
 				MAX(wins) as max_wins
-			FROM silver_simulated_tournaments st
+			FROM silver.simulated_tournaments st
 			JOIN tournament_info ti ON st.tournament_id = ti.id
 		)
 		SELECT 

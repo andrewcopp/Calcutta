@@ -58,7 +58,6 @@ func (s *Server) registerTournamentRoutes(r *mux.Router) {
 	r.HandleFunc("/api/tournaments/{id}/teams", s.tournamentTeamsHandler).Methods("GET")
 	r.HandleFunc("/api/tournaments/{id}/teams", s.requirePermission("tournament.game.write", s.createTournamentTeamHandler)).Methods("POST")
 	r.HandleFunc("/api/tournaments/{tournamentId}/teams/{teamId}", s.requirePermission("tournament.game.write", s.updateTeamHandler)).Methods("PATCH", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{id}/recalculate-portfolios", s.requirePermission("tournament.game.write", s.recalculatePortfoliosHandler)).Methods("POST")
 }
 
 func (s *Server) registerBracketRoutes(r *mux.Router) {
@@ -70,10 +69,6 @@ func (s *Server) registerBracketRoutes(r *mux.Router) {
 }
 
 func (s *Server) registerPortfolioRoutes(r *mux.Router) {
-	// Portfolio scoring
-	r.HandleFunc("/api/portfolios/{id}/calculate-scores", s.requirePermission("tournament.game.write", s.calculatePortfolioScoresHandler)).Methods("POST")
-	r.HandleFunc("/api/portfolios/{id}/teams/{teamId}/scores", s.requirePermission("tournament.game.write", s.updatePortfolioTeamScoresHandler)).Methods("PUT")
-	r.HandleFunc("/api/portfolios/{id}/maximum-score", s.requirePermission("tournament.game.write", s.updatePortfolioMaximumScoreHandler)).Methods("PUT")
 	r.HandleFunc("/api/portfolios/{id}/teams", s.portfolioTeamsHandler).Methods("GET")
 }
 
@@ -104,11 +99,12 @@ func (s *Server) registerMLAnalyticsRoutes(r *mux.Router) {
 	// ML Analytics (read-only)
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/simulations", s.handleGetTournamentSimStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/tournaments/{id}/simulations", s.handleGetTournamentSimStatsByID).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/predicted-returns", s.handleGetTournamentPredictedReturns).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/predicted-investment", s.handleGetTournamentPredictedInvestment).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/simulated-entry", s.handleGetTournamentSimulatedEntry).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/simulated-calcuttas", s.handleGetTournamentSimulatedCalcuttas).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/calcuttas/{id}/predicted-returns", s.handleGetCalcuttaPredictedReturns).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/calcuttas/{id}/predicted-investment", s.handleGetCalcuttaPredictedInvestment).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/calcuttas/{id}/simulated-entry", s.handleGetCalcuttaSimulatedEntry).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/analytics/calcuttas/{id}/simulated-calcuttas", s.handleGetCalcuttaSimulatedCalcuttas).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/{team_id}/performance", s.handleGetTeamPerformance).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/calcuttas/{calcutta_id}/teams/{team_id}/performance", s.handleGetTeamPerformanceByCalcutta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/predictions", s.handleGetTeamPredictions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs", s.handleGetOptimizationRuns).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/our-entry", s.handleGetOurEntryDetails).Methods("GET", "OPTIONS")

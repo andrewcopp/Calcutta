@@ -18,7 +18,7 @@ func newTestCalcuttaService() *Service {
 		EntryWriter:     mockRepo,
 		PayoutReader:    mockRepo,
 		PortfolioReader: mockRepo,
-		PortfolioWriter: mockRepo,
+		RoundReader:     mockRepo,
 		RoundWriter:     mockRepo,
 		TeamReader:      mockRepo,
 	})
@@ -67,16 +67,8 @@ func (m *MockCalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfoli
 	return nil, nil
 }
 
-func (m *MockCalcuttaRepository) UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
-	return nil
-}
-
 func (m *MockCalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	return nil, nil
-}
-
-func (m *MockCalcuttaRepository) UpdatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {
-	return nil
 }
 
 func (m *MockCalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error) {
@@ -88,14 +80,6 @@ func (m *MockCalcuttaRepository) GetEntry(ctx context.Context, id string) (*mode
 }
 
 func (m *MockCalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
-	return nil
-}
-
-func (m *MockCalcuttaRepository) CreatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error {
-	return nil
-}
-
-func (m *MockCalcuttaRepository) CreatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error {
 	return nil
 }
 

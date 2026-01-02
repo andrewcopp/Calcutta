@@ -12,25 +12,25 @@ import (
 )
 
 const createCalcuttaRound = `-- name: CreateCalcuttaRound :exec
-INSERT INTO calcutta_rounds (id, calcutta_id, round, points, created_at, updated_at)
+INSERT INTO core.calcutta_scoring_rules (id, calcutta_id, win_index, points_awarded, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateCalcuttaRoundParams struct {
-	ID         string
-	CalcuttaID string
-	Round      int32
-	Points     int32
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
+	ID            string
+	CalcuttaID    string
+	WinIndex      int32
+	PointsAwarded int32
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
 }
 
 func (q *Queries) CreateCalcuttaRound(ctx context.Context, arg CreateCalcuttaRoundParams) error {
 	_, err := q.db.Exec(ctx, createCalcuttaRound,
 		arg.ID,
 		arg.CalcuttaID,
-		arg.Round,
-		arg.Points,
+		arg.WinIndex,
+		arg.PointsAwarded,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -38,10 +38,16 @@ func (q *Queries) CreateCalcuttaRound(ctx context.Context, arg CreateCalcuttaRou
 }
 
 const listCalcuttaRounds = `-- name: ListCalcuttaRounds :many
-SELECT id, calcutta_id, round, points, created_at, updated_at
-FROM calcutta_rounds
+SELECT
+    id,
+    calcutta_id,
+    win_index AS round,
+    points_awarded AS points,
+    created_at,
+    updated_at
+FROM core.calcutta_scoring_rules
 WHERE calcutta_id = $1 AND deleted_at IS NULL
-ORDER BY round ASC
+ORDER BY win_index ASC
 `
 
 type ListCalcuttaRoundsRow struct {

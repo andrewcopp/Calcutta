@@ -11,7 +11,7 @@ type Ports struct {
 	EntryWriter     ports.EntryWriter
 	PayoutReader    ports.PayoutReader
 	PortfolioReader ports.PortfolioReader
-	PortfolioWriter ports.PortfolioWriter
+	RoundReader     ports.RoundReader
 	RoundWriter     ports.RoundWriter
 	TeamReader      ports.TournamentTeamReader
 }

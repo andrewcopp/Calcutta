@@ -52,8 +52,13 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 		log.Printf("Excluding entry name: %s", excludedEntryName)
 	}
 
+	cc, err := s.getCalcuttaContext(ctx, tournamentID)
+	if err != nil {
+		return fmt.Errorf("failed to resolve calcutta context: %w", err)
+	}
+
 	// Get payout structure from database
-	payouts, firstPlacePayout, err := s.getPayoutStructure(ctx, tournamentID)
+	payouts, firstPlacePayout, err := s.getPayoutStructure(ctx, cc.CalcuttaID)
 	if err != nil {
 		return fmt.Errorf("failed to get payout structure: %w", err)
 	}
@@ -61,7 +66,7 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
 
 	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, tournamentID, runID, excludedEntryName)
+	entries, err := s.getEntries(ctx, tournamentID, cc, runID, excludedEntryName)
 	if err != nil {
 		return fmt.Errorf("failed to get entries: %w", err)
 	}
@@ -69,7 +74,7 @@ func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID s
 	log.Printf("Found %d entries", len(entries))
 
 	// Get all simulations
-	simulations, err := s.getSimulations(ctx, tournamentID)
+	simulations, err := s.getSimulations(ctx, tournamentID, cc)
 	if err != nil {
 		return fmt.Errorf("failed to get simulations: %w", err)
 	}
@@ -148,26 +153,47 @@ type TeamSimResult struct {
 	Points int
 }
 
-func (s *Service) getEntries(ctx context.Context, tournamentID string, runID string, excludedEntry string) (map[string]*Entry, error) {
-	// Get actual entries from calcutta_entries via tournaments -> calcuttas
-	// Navigate: bronze_tournaments -> tournaments -> calcuttas -> calcutta_entries -> calcutta_entry_teams
-	// Use entry name from calcutta_entries.name (human-readable)
-	// Exclude by entry name if provided (e.g., "Andrew Copp")
+type calcuttaContext struct {
+	CalcuttaID   string
+	TournamentID string
+}
+
+func (s *Service) getCalcuttaContext(ctx context.Context, bronzeTournamentID string) (*calcuttaContext, error) {
+	// Resolve a single calcutta_id (and its tournament_id) for a given bronze tournament.
+	// This intentionally isolates the season/name join in one place.
 	query := `
-		SELECT 
+		SELECT c.id, c.tournament_id
+		FROM bronze.tournaments bt
+		JOIN core.tournaments t ON t.id = bt.core_tournament_id AND t.deleted_at IS NULL
+		JOIN core.calcuttas c ON c.tournament_id = t.id AND c.deleted_at IS NULL
+		WHERE bt.id = $1
+		ORDER BY c.created_at DESC
+		LIMIT 1
+	`
+
+	var calcuttaID, tournamentID string
+	if err := s.pool.QueryRow(ctx, query, bronzeTournamentID).Scan(&calcuttaID, &tournamentID); err != nil {
+		return nil, err
+	}
+	return &calcuttaContext{CalcuttaID: calcuttaID, TournamentID: tournamentID}, nil
+}
+
+func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext, runID string, excludedEntry string) (map[string]*Entry, error) {
+	// Use canonical core tables for entries/bids.
+	query := `
+		SELECT
 			ce.name as entry_name,
 			cet.team_id,
-			cet.bid as bid_points
-		FROM calcutta_entry_teams cet
-		JOIN calcutta_entries ce ON cet.entry_id = ce.id
-		JOIN calcuttas c ON ce.calcutta_id = c.id
-		JOIN tournaments t ON c.tournament_id = t.id
-		JOIN bronze_tournaments bt ON t.name LIKE '%' || bt.season || '%'
-		WHERE bt.id = $1
+			cet.bid_points as bid_points
+		FROM core.entry_teams cet
+		JOIN core.entries ce ON cet.entry_id = ce.id
+		WHERE ce.calcutta_id = $1
+		  AND cet.deleted_at IS NULL
+		  AND ce.deleted_at IS NULL
 		  AND (ce.name != $2 OR $2 = '')
 	`
 
-	rows, err := s.pool.Query(ctx, query, tournamentID, excludedEntry)
+	rows, err := s.pool.Query(ctx, query, cc.CalcuttaID, excludedEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -191,22 +217,20 @@ func (s *Service) getEntries(ctx context.Context, tournamentID string, runID str
 	}
 
 	// Add our simulated entry from gold_recommended_entry_bids
-	// Map bronze_teams IDs to tournament_teams IDs
+	// Map bronze_teams IDs to core.teams IDs in this tournament.
 	ourQuery := `
 		SELECT 
 			tt.id as tournament_team_id,
 			greb.recommended_bid_points
-		FROM gold_recommended_entry_bids greb
-		JOIN bronze_teams bt ON greb.team_id = bt.id
-		JOIN schools s ON bt.school_name = s.name
-		JOIN tournament_teams tt ON tt.school_id = s.id
-		JOIN tournaments t ON tt.tournament_id = t.id
-		JOIN bronze_tournaments btr ON t.name LIKE '%' || btr.season || '%'
+		FROM gold.recommended_entry_bids greb
+		JOIN bronze.teams bt ON greb.team_id = bt.id
+		JOIN core.schools s ON bt.school_name = s.name
+		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $3
 		WHERE greb.run_id = $1
-		  AND btr.id = $2
+		  AND bt.tournament_id = $2
 	`
 
-	ourRows, err := s.pool.Query(ctx, ourQuery, runID, tournamentID)
+	ourRows, err := s.pool.Query(ctx, ourQuery, runID, bronzeTournamentID, cc.TournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -233,42 +257,36 @@ func (s *Service) getEntries(ctx context.Context, tournamentID string, runID str
 	return entries, nil
 }
 
-func (s *Service) getSimulations(ctx context.Context, tournamentID string) (map[int][]TeamSimResult, error) {
-	// Map bronze_teams IDs to tournament_teams IDs via school_id
-	// Simulations use bronze_teams, but entries use tournament_teams
+func (s *Service) getSimulations(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext) (map[int][]TeamSimResult, error) {
+	// Simulations are keyed by bronze tournaments; map bronze teams to core teams in the resolved tournament.
+	// Compute points using canonical scoring rules.
 	query := `
-		SELECT 
+		SELECT
 			sst.sim_id,
 			tt.id as tournament_team_id,
-			sst.wins
-		FROM silver_simulated_tournaments sst
-		JOIN bronze_teams bt ON sst.team_id = bt.id
-		JOIN schools s ON bt.school_name = s.name
-		JOIN tournament_teams tt ON tt.school_id = s.id
-		JOIN tournaments t ON tt.tournament_id = t.id
-		JOIN bronze_tournaments btr ON t.name LIKE '%' || btr.season || '%'
+			core.calcutta_points_for_progress($3, sst.wins, sst.byes) as points
+		FROM silver.simulated_tournaments sst
+		JOIN bronze.teams bt ON sst.team_id = bt.id
+		JOIN core.schools s ON bt.school_name = s.name
+		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $2
 		WHERE sst.tournament_id = $1
-		  AND btr.id = $1
 		ORDER BY sst.sim_id, tt.id
 	`
 
-	rows, err := s.pool.Query(ctx, query, tournamentID)
+	rows, err := s.pool.Query(ctx, query, bronzeTournamentID, cc.TournamentID, cc.CalcuttaID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	simulations := make(map[int][]TeamSimResult)
-	pointsPerWin := map[int]int{0: 0, 1: 50, 2: 150, 3: 300, 4: 500, 5: 750, 6: 1050}
 
 	for rows.Next() {
-		var simID, wins int
+		var simID, points int
 		var teamID string
-		if err := rows.Scan(&simID, &teamID, &wins); err != nil {
+		if err := rows.Scan(&simID, &teamID, &points); err != nil {
 			return nil, err
 		}
-
-		points := pointsPerWin[wins]
 		simulations[simID] = append(simulations[simID], TeamSimResult{
 			TeamID: teamID,
 			Points: points,
@@ -278,19 +296,16 @@ func (s *Service) getSimulations(ctx context.Context, tournamentID string) (map[
 	return simulations, nil
 }
 
-func (s *Service) getPayoutStructure(ctx context.Context, tournamentID string) (map[int]int, int, error) {
-	// Navigate from bronze_tournaments -> tournaments -> calcuttas -> calcutta_payouts
+func (s *Service) getPayoutStructure(ctx context.Context, calcuttaID string) (map[int]int, int, error) {
 	query := `
-		SELECT cp.position, cp.amount_cents
-		FROM calcutta_payouts cp
-		JOIN calcuttas c ON cp.calcutta_id = c.id
-		JOIN tournaments t ON c.tournament_id = t.id
-		JOIN bronze_tournaments bt ON t.name LIKE '%' || bt.season || '%'
-		WHERE bt.id = $1
-		ORDER BY cp.position
+		SELECT position, amount_cents
+		FROM core.payouts
+		WHERE calcutta_id = $1
+		  AND deleted_at IS NULL
+		ORDER BY position
 	`
 
-	rows, err := s.pool.Query(ctx, query, tournamentID)
+	rows, err := s.pool.Query(ctx, query, calcuttaID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -390,7 +405,7 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 
 func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, results []SimulationResult) error {
 	// Delete existing results for this run
-	_, err := s.pool.Exec(ctx, "DELETE FROM gold_entry_simulation_outcomes WHERE run_id = $1", runID)
+	_, err := s.pool.Exec(ctx, "DELETE FROM gold.entry_simulation_outcomes WHERE run_id = $1", runID)
 	if err != nil {
 		return err
 	}
@@ -399,7 +414,7 @@ func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, res
 	batch := &pgx.Batch{}
 	for _, r := range results {
 		batch.Queue(`
-			INSERT INTO gold_entry_simulation_outcomes (run_id, entry_name, sim_id, points_scored, payout_points, rank)
+			INSERT INTO gold.entry_simulation_outcomes (run_id, entry_name, sim_id, points_scored, payout_points, rank)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, runID, r.EntryName, r.SimID, r.TotalPoints, r.PayoutCents, r.Rank)
 	}
@@ -459,7 +474,7 @@ func (s *Service) calculatePerformanceMetrics(results []SimulationResult) map[st
 
 func (s *Service) writePerformanceMetrics(ctx context.Context, runID string, performance map[string]*EntryPerformance) error {
 	// Delete existing performance for this run
-	_, err := s.pool.Exec(ctx, "DELETE FROM gold_entry_performance WHERE run_id = $1", runID)
+	_, err := s.pool.Exec(ctx, "DELETE FROM gold.entry_performance WHERE run_id = $1", runID)
 	if err != nil {
 		return err
 	}
@@ -467,7 +482,7 @@ func (s *Service) writePerformanceMetrics(ctx context.Context, runID string, per
 	// Insert new performance metrics
 	for _, p := range performance {
 		_, err := s.pool.Exec(ctx, `
-			INSERT INTO gold_entry_performance (run_id, entry_name, mean_payout, median_payout, p_top1, p_in_money)
+			INSERT INTO gold.entry_performance (run_id, entry_name, mean_payout, median_payout, p_top1, p_in_money)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, runID, p.EntryName, p.MeanPayout, p.MedianPayout, p.PTop1, p.PInMoney)
 		if err != nil {

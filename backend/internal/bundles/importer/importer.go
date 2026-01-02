@@ -129,10 +129,10 @@ func importSchools(ctx context.Context, tx pgx.Tx, inDir string) (int, error) {
 	}
 	for _, s := range b.Schools {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO schools (slug, name)
+			INSERT INTO core.schools (slug, name)
 			VALUES ($1, $2)
 			ON CONFLICT (slug) WHERE deleted_at IS NULL
-			DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
+			DO UPDATE SET name = EXCLUDED.name, updated_at = NOW(), deleted_at = NULL
 		`, s.Slug, s.Name)
 		if err != nil {
 			return 0, err
@@ -157,8 +157,56 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 
 		var tournamentID string
 		err := tx.QueryRow(ctx, `
-			INSERT INTO tournaments (import_key, name, rounds, final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right)
-			VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''))
+			WITH year_ctx AS (
+				SELECT CAST(SUBSTRING($2 FROM '[0-9]{4}') AS INTEGER) AS year
+			),
+			competition_ins AS (
+				INSERT INTO core.competitions (name)
+				VALUES ('NCAA Men''s')
+				ON CONFLICT (name) DO NOTHING
+				RETURNING id
+			),
+			competition AS (
+				SELECT id FROM competition_ins
+				UNION ALL
+				SELECT id FROM core.competitions WHERE name = 'NCAA Men''s'
+				LIMIT 1
+			),
+			season_ins AS (
+				INSERT INTO core.seasons (year)
+				SELECT year FROM year_ctx
+				ON CONFLICT (year) DO NOTHING
+				RETURNING id
+			),
+			season AS (
+				SELECT id FROM season_ins
+				UNION ALL
+				SELECT id FROM core.seasons WHERE year = (SELECT year FROM year_ctx)
+				LIMIT 1
+			)
+			INSERT INTO core.tournaments (
+				id,
+				competition_id,
+				season_id,
+				name,
+				import_key,
+				rounds,
+				final_four_top_left,
+				final_four_bottom_left,
+				final_four_top_right,
+				final_four_bottom_right
+			)
+			SELECT
+				$1::uuid,
+				(SELECT id FROM competition),
+				(SELECT id FROM season),
+				$2,
+				$3,
+				$4,
+				NULLIF($5, ''),
+				NULLIF($6, ''),
+				NULLIF($7, ''),
+				NULLIF($8, '')
 			ON CONFLICT (import_key) WHERE deleted_at IS NULL
 			DO UPDATE SET
 				name = EXCLUDED.name,
@@ -167,9 +215,10 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 				final_four_bottom_left = EXCLUDED.final_four_bottom_left,
 				final_four_top_right = EXCLUDED.final_four_top_right,
 				final_four_bottom_right = EXCLUDED.final_four_bottom_right,
-				updated_at = NOW()
+				updated_at = NOW(),
+				deleted_at = NULL
 			RETURNING id
-		`, b.Tournament.ImportKey, b.Tournament.Name, b.Tournament.Rounds, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft, b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
+		`, b.Tournament.LegacyTournamentID, b.Tournament.Name, b.Tournament.ImportKey, b.Tournament.Rounds, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft, b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -178,7 +227,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 			var schoolID string
 			err := tx.QueryRow(ctx, `
 				SELECT id
-				FROM schools
+				FROM core.schools
 				WHERE slug = $1 AND deleted_at IS NULL
 			`, team.SchoolSlug).Scan(&schoolID)
 			if err != nil {
@@ -187,33 +236,37 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 
 			var tournamentTeamID string
 			err = tx.QueryRow(ctx, `
-				INSERT INTO tournament_teams (tournament_id, school_id, seed, region, byes, wins, eliminated)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)
-				ON CONFLICT (tournament_id, school_id) WHERE deleted_at IS NULL
+				INSERT INTO core.teams (id, tournament_id, school_id, seed, region, byes, wins, eliminated)
+				VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+				ON CONFLICT (id)
 				DO UPDATE SET
+					tournament_id = EXCLUDED.tournament_id,
+					school_id = EXCLUDED.school_id,
 					seed = EXCLUDED.seed,
 					region = EXCLUDED.region,
 					byes = EXCLUDED.byes,
 					wins = EXCLUDED.wins,
 					eliminated = EXCLUDED.eliminated,
-					updated_at = NOW()
+					updated_at = NOW(),
+					deleted_at = NULL
 				RETURNING id
-			`, tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.Eliminated).Scan(&tournamentTeamID)
+			`, team.LegacyTeamID, tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.Eliminated).Scan(&tournamentTeamID)
 			if err != nil {
 				return 0, 0, err
 			}
 
 			if team.KenPom != nil {
 				_, err := tx.Exec(ctx, `
-					INSERT INTO tournament_team_kenpom_stats (tournament_team_id, net_rtg, o_rtg, d_rtg, adj_t)
+					INSERT INTO core.team_kenpom_stats (team_id, net_rtg, o_rtg, d_rtg, adj_t)
 					VALUES ($1, $2, $3, $4, $5)
-					ON CONFLICT (tournament_team_id)
+					ON CONFLICT (team_id)
 					DO UPDATE SET
 						net_rtg = EXCLUDED.net_rtg,
 						o_rtg = EXCLUDED.o_rtg,
 						d_rtg = EXCLUDED.d_rtg,
 						adj_t = EXCLUDED.adj_t,
-						updated_at = NOW()
+						updated_at = NOW(),
+						deleted_at = NULL
 				`, tournamentTeamID, team.KenPom.NetRTG, team.KenPom.ORTG, team.KenPom.DRTG, team.KenPom.AdjT)
 				if err != nil {
 					return 0, 0, err
@@ -264,7 +317,7 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 		var tournamentID string
 		err := tx.QueryRow(ctx, `
 			SELECT id
-			FROM tournaments
+			FROM core.tournaments
 			WHERE import_key = $1 AND deleted_at IS NULL
 		`, b.Tournament.ImportKey).Scan(&tournamentID)
 		if err != nil {
@@ -276,27 +329,38 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 			return 0, 0, 0, 0, 0, err
 		}
 
-		var calcuttaID string
-		err = tx.QueryRow(ctx, `
-			INSERT INTO calcuttas (tournament_id, owner_id, name, key)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (tournament_id, key) WHERE deleted_at IS NULL AND key IS NOT NULL
-			DO UPDATE SET
-				owner_id = EXCLUDED.owner_id,
-				name = EXCLUDED.name,
-				updated_at = NOW()
-			RETURNING id
-		`, tournamentID, ownerID, b.Calcutta.Name, b.Calcutta.Key).Scan(&calcuttaID)
+		calcuttaID := strings.TrimSpace(b.Calcutta.LegacyID)
+		if calcuttaID == "" {
+			err = tx.QueryRow(ctx, `
+				INSERT INTO core.calcuttas (tournament_id, owner_id, name)
+				VALUES ($1, $2, $3)
+				RETURNING id
+			`, tournamentID, ownerID, b.Calcutta.Name).Scan(&calcuttaID)
+		} else {
+			err = tx.QueryRow(ctx, `
+				INSERT INTO core.calcuttas (id, tournament_id, owner_id, name)
+				VALUES ($1::uuid, $2, $3, $4)
+				ON CONFLICT (id)
+				DO UPDATE SET
+					tournament_id = EXCLUDED.tournament_id,
+					owner_id = EXCLUDED.owner_id,
+					name = EXCLUDED.name,
+					updated_at = NOW(),
+					deleted_at = NULL
+				RETURNING id
+			`, calcuttaID, tournamentID, ownerID, b.Calcutta.Name).Scan(&calcuttaID)
+		}
 		if err != nil {
 			return 0, 0, 0, 0, 0, err
 		}
 
 		for _, r := range b.Rounds {
+			// Canonical scoring rules
 			_, err := tx.Exec(ctx, `
-				INSERT INTO calcutta_rounds (calcutta_id, round, points)
+				INSERT INTO core.calcutta_scoring_rules (calcutta_id, win_index, points_awarded)
 				VALUES ($1, $2, $3)
-				ON CONFLICT (calcutta_id, round) WHERE deleted_at IS NULL
-				DO UPDATE SET points = EXCLUDED.points, updated_at = NOW()
+				ON CONFLICT (calcutta_id, win_index)
+				DO UPDATE SET points_awarded = EXCLUDED.points_awarded, updated_at = NOW(), deleted_at = NULL
 			`, calcuttaID, r.Round, r.Points)
 			if err != nil {
 				return 0, 0, 0, 0, 0, err
@@ -306,10 +370,10 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 
 		for _, p := range b.Payouts {
 			_, err := tx.Exec(ctx, `
-				INSERT INTO calcutta_payouts (calcutta_id, position, amount_cents)
+				INSERT INTO core.payouts (calcutta_id, position, amount_cents)
 				VALUES ($1, $2, $3)
 				ON CONFLICT (calcutta_id, position)
-				DO UPDATE SET amount_cents = EXCLUDED.amount_cents, updated_at = NOW()
+				DO UPDATE SET amount_cents = EXCLUDED.amount_cents, updated_at = NOW(), deleted_at = NULL
 			`, calcuttaID, p.Position, p.AmountCents)
 			if err != nil {
 				return 0, 0, 0, 0, 0, err
@@ -329,15 +393,27 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 			}
 
 			var entryID string
-			err := tx.QueryRow(ctx, `
-				INSERT INTO calcutta_entries (calcutta_id, name, user_id, key)
-				VALUES ($1, $2, $3, $4)
-				ON CONFLICT (calcutta_id, key) WHERE deleted_at IS NULL AND key IS NOT NULL
-				DO UPDATE SET name = EXCLUDED.name, user_id = EXCLUDED.user_id, updated_at = NOW()
-				RETURNING id
-			`, calcuttaID, e.Name, entryUserID, e.Key).Scan(&entryID)
-			if err != nil {
-				return 0, 0, 0, 0, 0, err
+			legacyEntryID := strings.TrimSpace(e.LegacyID)
+			if legacyEntryID == "" {
+				err := tx.QueryRow(ctx, `
+					INSERT INTO core.entries (name, user_id, calcutta_id)
+					VALUES ($1, $2, $3)
+					RETURNING id
+				`, e.Name, entryUserID, calcuttaID).Scan(&entryID)
+				if err != nil {
+					return 0, 0, 0, 0, 0, err
+				}
+			} else {
+				err := tx.QueryRow(ctx, `
+					INSERT INTO core.entries (id, name, user_id, calcutta_id)
+					VALUES ($1::uuid, $2, $3, $4)
+					ON CONFLICT (id)
+					DO UPDATE SET name = EXCLUDED.name, user_id = EXCLUDED.user_id, calcutta_id = EXCLUDED.calcutta_id, updated_at = NOW(), deleted_at = NULL
+					RETURNING id
+				`, legacyEntryID, e.Name, entryUserID, calcuttaID).Scan(&entryID)
+				if err != nil {
+					return 0, 0, 0, 0, 0, err
+				}
 			}
 			entryIDByKey[e.Key] = entryID
 			entryCount++
@@ -351,21 +427,29 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 
 			var teamID string
 			err := tx.QueryRow(ctx, `
-				SELECT tt.id
-				FROM tournament_teams tt
-				JOIN schools s ON s.id = tt.school_id
-				WHERE tt.tournament_id = $1 AND s.slug = $2 AND tt.deleted_at IS NULL AND s.deleted_at IS NULL
+				SELECT t.id
+				FROM core.teams t
+				JOIN core.schools s ON s.id = t.school_id
+				WHERE t.tournament_id = $1 AND s.slug = $2 AND t.deleted_at IS NULL AND s.deleted_at IS NULL
 			`, tournamentID, bid.SchoolSlug).Scan(&teamID)
 			if err != nil {
 				return 0, 0, 0, 0, 0, fmt.Errorf("tournament team not found for tournament %s school %s: %w", b.Tournament.ImportKey, bid.SchoolSlug, err)
 			}
 
-			_, err = tx.Exec(ctx, `
-				INSERT INTO calcutta_entry_teams (entry_id, team_id, bid)
-				VALUES ($1, $2, $3)
-				ON CONFLICT (entry_id, team_id) WHERE deleted_at IS NULL
-				DO UPDATE SET bid = EXCLUDED.bid, updated_at = NOW()
-			`, entryID, teamID, bid.Bid)
+			legacyEntryTeamID := strings.TrimSpace(bid.LegacyEntryTeamID)
+			if legacyEntryTeamID == "" {
+				_, err = tx.Exec(ctx, `
+					INSERT INTO core.entry_teams (entry_id, team_id, bid_points)
+					VALUES ($1, $2, $3)
+				`, entryID, teamID, bid.Bid)
+			} else {
+				_, err = tx.Exec(ctx, `
+					INSERT INTO core.entry_teams (id, entry_id, team_id, bid_points)
+					VALUES ($1::uuid, $2, $3, $4)
+					ON CONFLICT (id)
+					DO UPDATE SET entry_id = EXCLUDED.entry_id, team_id = EXCLUDED.team_id, bid_points = EXCLUDED.bid_points, updated_at = NOW(), deleted_at = NULL
+				`, legacyEntryTeamID, entryID, teamID, bid.Bid)
+			}
 			if err != nil {
 				return 0, 0, 0, 0, 0, err
 			}
@@ -429,7 +513,7 @@ func ensureUserByEmail(ctx context.Context, tx pgx.Tx, email string, fullName *s
 
 	var id string
 	err := tx.QueryRow(ctx, `
-		INSERT INTO users (email, first_name, last_name)
+		INSERT INTO public.users (email, first_name, last_name)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (email)
 		DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, updated_at = NOW()

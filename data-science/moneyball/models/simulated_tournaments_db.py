@@ -11,20 +11,23 @@ looked up dynamically during simulation.
 from __future__ import annotations
 
 import random
-from typing import Dict, Set, Tuple
+from typing import Dict, Optional, Set, Tuple
 import pandas as pd
+
+from moneyball.utils import points
 
 
 def simulate_tournaments_from_predictions(
     *,
     predictions_df: pd.DataFrame,
     teams_df: pd.DataFrame,
+    points_by_win_index: Optional[Dict[int, float]] = None,
     n_sims: int = 5000,
     seed: int = 42,
 ) -> pd.DataFrame:
     """
     Simulate NCAA tournament brackets using DB-first approach.
-    
+
     Uses team seed/region to determine bracket pairings, then looks up
     win probabilities from predictions_df (which contains all possible
     matchups as a lookup table).
@@ -42,7 +45,7 @@ def simulate_tournaments_from_predictions(
         school_name, seed, region
     """
     rng = random.Random(seed)
-    
+
     # Build team lookup by region and seed for bracket construction
     teams_by_region_seed: Dict[str, Dict[int, str]] = {}
     team_info: Dict[str, Dict] = {}
@@ -72,11 +75,11 @@ def simulate_tournaments_from_predictions(
         pred_lookup[(t2, t1)] = 1.0 - p  # Reverse matchup
     
     results = []
-    
+
     for sim_id in range(n_sims):
         team_wins: Dict[str, int] = {tid: 0 for tid in team_info.keys()}
         team_byes: Dict[str, int] = {tid: 0 for tid in team_info.keys()}
-        
+
         # Simulate bracket progression
         simulate_bracket(
             teams_by_region_seed=teams_by_region_seed,
@@ -85,24 +88,28 @@ def simulate_tournaments_from_predictions(
             team_byes=team_byes,
             rng=rng,
         )
-        
+
         # Record results for all teams
         for team_id in team_info.keys():
             wins = team_wins[team_id]
             byes = team_byes[team_id]
-            points = calculate_points(wins, byes)
-            
+            points_scored = calculate_points(
+                wins,
+                byes,
+                points_by_win_index=points_by_win_index,
+            )
+
             results.append({
                 'team_id': team_id,
                 'sim_id': sim_id,
                 'wins': wins,
                 'byes': byes,
-                'points': points,
+                'points': points_scored,
                 'school_name': team_info[team_id]['school_name'],
                 'seed': team_info[team_id]['seed'],
                 'region': team_info[team_id]['region'],
             })
-    
+
     return pd.DataFrame(results)
 
 
@@ -116,7 +123,7 @@ def simulate_bracket(
 ) -> None:
     """
     Simulate NCAA tournament bracket progression.
-    
+
     Standard NCAA bracket structure:
     - 4 regions with 16 teams each (seeds 1-16)
     - Round of 64: 32 games (1v16, 2v15, 3v14, 4v13, 5v12, 6v11, 7v10, 8v9)
@@ -130,10 +137,10 @@ def simulate_bracket(
     """
     # Track alive teams per region
     alive_by_region: Dict[str, Set[str]] = {}
-    
+
     for region, teams in teams_by_region_seed.items():
         alive: Set[str] = set(teams.values())
-        
+
         # TODO: Implement First Four play-in games
         # For now, all teams start in Round of 64
         
@@ -147,7 +154,7 @@ def simulate_bracket(
             team_wins=team_wins,
             rng=rng,
         )
-        
+
         # Round of 32 - winners advance (4 games per region)
         alive = simulate_round_any_matchup(
             alive_teams=alive,
@@ -156,7 +163,7 @@ def simulate_bracket(
             rng=rng,
             expected_games=4,
         )
-        
+
         # Sweet 16 - winners advance (2 games per region)
         alive = simulate_round_any_matchup(
             alive_teams=alive,
@@ -165,7 +172,7 @@ def simulate_bracket(
             rng=rng,
             expected_games=2,
         )
-        
+
         # Elite 8 - regional final (1 game per region)
         alive = simulate_round_any_matchup(
             alive_teams=alive,
@@ -174,20 +181,22 @@ def simulate_bracket(
             rng=rng,
             expected_games=1,
         )
-        
+
         alive_by_region[region] = alive
     
     # Final Four - combine regional champions
     all_alive = set()
     for alive in alive_by_region.values():
         all_alive.update(alive)
-    
+
     # Simulate Final Four (2 games) + Championship
     regions = list(alive_by_region.keys())
     if len(regions) >= 4 and len(all_alive) >= 4:
         # Semifinal 1
-        game1_teams = list(alive_by_region[regions[0]]) + \
-                      list(alive_by_region[regions[1]])
+        game1_teams = (
+            list(alive_by_region[regions[0]])
+            + list(alive_by_region[regions[1]])
+        )
         if len(game1_teams) == 2:
             winner1 = simulate_game(
                 game1_teams[0], game1_teams[1],
@@ -197,8 +206,10 @@ def simulate_bracket(
             winner1 = game1_teams[0] if game1_teams else None
         
         # Semifinal 2
-        game2_teams = list(alive_by_region[regions[2]]) + \
-                      list(alive_by_region[regions[3]])
+        game2_teams = (
+            list(alive_by_region[regions[2]])
+            + list(alive_by_region[regions[3]])
+        )
         if len(game2_teams) == 2:
             winner2 = simulate_game(
                 game2_teams[0], game2_teams[1],
@@ -293,18 +304,16 @@ def simulate_game(
     return winner
 
 
-def calculate_points(wins: int, byes: int) -> int:
+def calculate_points(
+    wins: int,
+    byes: int,
+    *,
+    points_by_win_index: Optional[Dict[int, float]] = None,
+) -> int:
     """
     Calculate points for a team based on wins and byes.
     
-    Standard NCAA tournament scoring:
-    - Round of 64: 0 points
-    - Round of 32: 50 points
-    - Sweet 16: 150 points
-    - Elite 8: 300 points
-    - Final 4: 500 points
-    - Championship: 750 points
-    - Winner: 1050 points
+    Uses scoring rules derived from core.calcutta_scoring_rules.
     
     Args:
         wins: Number of wins
@@ -313,23 +322,15 @@ def calculate_points(wins: int, byes: int) -> int:
     Returns:
         Total points
     """
-    total_rounds = wins + byes
-    
-    if total_rounds == 0:
-        return 0
-    elif total_rounds == 1:
-        return 0
-    elif total_rounds == 2:
-        return 50
-    elif total_rounds == 3:
-        return 150
-    elif total_rounds == 4:
-        return 300
-    elif total_rounds == 5:
-        return 500
-    elif total_rounds == 6:
-        return 750
-    elif total_rounds >= 7:
-        return 1050
-    else:
-        return 0
+    total_rounds = int(wins) + int(byes)
+    if points_by_win_index is not None:
+        return int(
+            round(
+                points.team_points_from_scoring_rules(
+                    total_rounds,
+                    points_by_win_index,
+                )
+            )
+        )
+
+    return int(round(points.team_points_fixed(total_rounds)))

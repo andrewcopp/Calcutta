@@ -11,39 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createPortfolio = `-- name: CreatePortfolio :exec
-INSERT INTO calcutta_portfolios (id, entry_id, maximum_points, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5)
-`
-
-type CreatePortfolioParams struct {
-	ID            string
-	EntryID       string
-	MaximumPoints pgtype.Numeric
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-}
-
-func (q *Queries) CreatePortfolio(ctx context.Context, arg CreatePortfolioParams) error {
-	_, err := q.db.Exec(ctx, createPortfolio,
-		arg.ID,
-		arg.EntryID,
-		arg.MaximumPoints,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
 const getPortfolioByID = `-- name: GetPortfolioByID :one
 SELECT
     id,
     entry_id,
     maximum_points::float8 AS maximum_points,
-    created_at,
-    updated_at,
-    deleted_at
-FROM calcutta_portfolios
+    created_at::timestamptz AS created_at,
+    updated_at::timestamptz AS updated_at,
+    deleted_at::timestamptz AS deleted_at
+FROM core.derived_portfolios
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -75,10 +51,10 @@ SELECT
     id,
     entry_id,
     maximum_points::float8 AS maximum_points,
-    created_at,
-    updated_at,
-    deleted_at
-FROM calcutta_portfolios
+    created_at::timestamptz AS created_at,
+    updated_at::timestamptz AS updated_at,
+    deleted_at::timestamptz AS deleted_at
+FROM core.derived_portfolios
 WHERE entry_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
@@ -120,8 +96,13 @@ func (q *Queries) ListPortfolios(ctx context.Context, entryID string) ([]ListPor
 }
 
 const listPortfoliosByEntryID = `-- name: ListPortfoliosByEntryID :many
-SELECT id, entry_id, created_at, updated_at, deleted_at
-FROM calcutta_portfolios
+SELECT
+    id,
+    entry_id,
+    created_at::timestamptz AS created_at,
+    updated_at::timestamptz AS updated_at,
+    deleted_at::timestamptz AS deleted_at
+FROM core.derived_portfolios
 WHERE entry_id = $1 AND deleted_at IS NULL
 `
 
@@ -157,25 +138,4 @@ func (q *Queries) ListPortfoliosByEntryID(ctx context.Context, entryID string) (
 		return nil, err
 	}
 	return items, nil
-}
-
-const updatePortfolio = `-- name: UpdatePortfolio :execrows
-UPDATE calcutta_portfolios
-SET maximum_points = $1,
-    updated_at = $2
-WHERE id = $3 AND deleted_at IS NULL
-`
-
-type UpdatePortfolioParams struct {
-	MaximumPoints pgtype.Numeric
-	UpdatedAt     pgtype.Timestamptz
-	ID            string
-}
-
-func (q *Queries) UpdatePortfolio(ctx context.Context, arg UpdatePortfolioParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updatePortfolio, arg.MaximumPoints, arg.UpdatedAt, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }

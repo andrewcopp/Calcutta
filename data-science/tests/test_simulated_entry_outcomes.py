@@ -5,10 +5,24 @@ import unittest
 import pandas as pd
 
 from moneyball.models.simulated_entry_outcomes import simulate_entry_outcomes
+from moneyball.utils import points
+
+
+def _points_by_win_index_fixture() -> dict:
+    return {
+        1: 0,
+        2: 50,
+        3: 100,
+        4: 150,
+        5: 200,
+        6: 250,
+        7: 300,
+    }
 
 
 class TestThatSimulatedEntryOutcomesAreDeterministic(unittest.TestCase):
     def test_that_simulated_entry_outcomes_are_deterministic(self) -> None:
+        points.set_default_points_by_win_index(_points_by_win_index_fixture())
         games = pd.DataFrame(
             {
                 "game_id": ["g1"],
@@ -96,6 +110,7 @@ class TestThatSimulatedEntryOutcomesAreDeterministic(unittest.TestCase):
 
 class TestThatSimulatedEntryOutcomesProduceExpectedPayout(unittest.TestCase):
     def test_that_simulation_produces_expected_payout(self) -> None:
+        points.set_default_points_by_win_index(_points_by_win_index_fixture())
         games = pd.DataFrame(
             {
                 "game_id": ["g1"],

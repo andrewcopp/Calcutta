@@ -8,7 +8,6 @@ This script:
 """
 import sys
 from pathlib import Path
-import pandas as pd
 
 from moneyball.db.connection import get_db_connection
 from moneyball.models.predicted_auction_share_of_pool import (
@@ -32,7 +31,7 @@ def run_ridge_regression(year: int = 2025):
         with conn.cursor() as cur:
             # Get tournament ID
             cur.execute("""
-                SELECT id FROM bronze_tournaments WHERE season = %s
+                SELECT id FROM bronze.tournaments WHERE season = %s
             """, (year,))
             result = cur.fetchone()
             if not result:
@@ -46,7 +45,7 @@ def run_ridge_regression(year: int = 2025):
             # We need to map "duke" (school_slug) -> UUID
             cur.execute("""
                 SELECT school_slug, id
-                FROM bronze_teams
+                FROM bronze.teams
                 WHERE tournament_id = %s
             """, (tournament_id,))
             team_id_map = {row[0]: str(row[1]) for row in cur.fetchall()}
@@ -58,10 +57,23 @@ def run_ridge_regression(year: int = 2025):
     out_root = Path("out")
     
     # Dynamically determine training years (all years except target year)
-    all_years = ["2017", "2018", "2019", "2021", "2022", "2023", "2024", "2025"]
+    all_years = [
+        "2017",
+        "2018",
+        "2019",
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025",
+    ]
     train_snapshots = [y for y in all_years if y != str(year)]
     print(f"Training on years: {train_snapshots}")
     print(f"Predicting for year: {year}")
+
+    exclude_entry_names = (
+        [excluded_entry_name] if excluded_entry_name else None
+    )
     
     try:
         predictions = predict_auction_share_of_pool_from_out_root(
@@ -70,17 +82,20 @@ def run_ridge_regression(year: int = 2025):
             train_snapshots=train_snapshots,
             ridge_alpha=1.0,
             feature_set="optimal",
-            exclude_entry_names=[excluded_entry_name] if excluded_entry_name else None,
+            exclude_entry_names=exclude_entry_names,
         )
         
         print(f"Generated predictions for {len(predictions)} teams")
-        print(f"Total predicted share: {predictions['predicted_auction_share_of_pool'].sum():.4f}")
+        total_share = predictions['predicted_auction_share_of_pool'].sum()
+        print(f"Total predicted share: {total_share:.4f}")
         
         # Show top 5 predictions
         print("\nTop 5 predicted market shares:")
         top5 = predictions.nlargest(5, 'predicted_auction_share_of_pool')
         for _, row in top5.iterrows():
-            print(f"  {row['team_key']:30s} {row['predicted_auction_share_of_pool']:.4f}")
+            team_key = row['team_key']
+            share = row['predicted_auction_share_of_pool']
+            print(f"  {team_key:30s} {share:.4f}")
         
     except Exception as e:
         print(f"Error running ridge regression: {e}")
@@ -91,7 +106,7 @@ def run_ridge_regression(year: int = 2025):
     # Write to database
     print("\nWriting predictions to database...")
     try:
-        # Strip tournament prefix from team_key (e.g., "ncaa-tournament-2025:duke" -> "duke")
+        # Strip tournament prefix from team_key (e.g., "...:duke" -> "duke")
         predictions['team_key'] = predictions['team_key'].str.split(':').str[-1]
         
         count = write_predicted_market_share(

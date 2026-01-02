@@ -62,7 +62,7 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 }
 
 func exportSchools(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time) error {
-	r, err := pool.Query(ctx, `SELECT slug, name FROM schools WHERE deleted_at IS NULL ORDER BY name ASC`)
+	r, err := pool.Query(ctx, `SELECT slug, name FROM core.schools WHERE deleted_at IS NULL ORDER BY name ASC`)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, g
 		       COALESCE(final_four_bottom_left, ''),
 		       COALESCE(final_four_top_right, ''),
 		       COALESCE(final_four_bottom_right, '')
-		FROM tournaments
+		FROM core.tournaments
 		WHERE deleted_at IS NULL
 		ORDER BY name ASC
 	`)
@@ -139,24 +139,24 @@ func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, g
 func loadTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) ([]bundles.TeamRecord, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			tt.id,
+			t.id,
 			s.slug,
 			s.name,
-			tt.seed,
-			tt.region,
-			tt.byes,
-			tt.wins,
-			tt.eliminated,
+			t.seed,
+			t.region,
+			t.byes,
+			t.wins,
+			t.eliminated,
 			k.net_rtg,
 			k.o_rtg,
 			k.d_rtg,
 			k.adj_t,
-			(k.tournament_team_id IS NOT NULL)
-		FROM tournament_teams tt
-		JOIN schools s ON s.id = tt.school_id
-		LEFT JOIN tournament_team_kenpom_stats k ON k.tournament_team_id = tt.id AND k.deleted_at IS NULL
-		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL AND s.deleted_at IS NULL
-		ORDER BY tt.created_at ASC
+			(k.team_id IS NOT NULL)
+		FROM core.teams t
+		JOIN core.schools s ON s.id = t.school_id
+		LEFT JOIN core.team_kenpom_stats k ON k.team_id = t.id AND k.deleted_at IS NULL
+		WHERE t.tournament_id = $1 AND t.deleted_at IS NULL AND s.deleted_at IS NULL
+		ORDER BY t.created_at ASC
 	`, tournamentID)
 	if err != nil {
 		return nil, err
@@ -199,9 +199,9 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 			COALESCE(u.email, ''),
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
-		FROM calcuttas c
-		JOIN tournaments t ON t.id = c.tournament_id
-		JOIN users u ON u.id = c.owner_id
+		FROM core.calcuttas c
+		JOIN core.tournaments t ON t.id = c.tournament_id
+		JOIN public.users u ON u.id = c.owner_id
 		WHERE c.deleted_at IS NULL AND t.deleted_at IS NULL AND u.deleted_at IS NULL
 		ORDER BY t.name ASC, c.created_at ASC
 	`)
@@ -274,7 +274,7 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 }
 
 func loadCalcuttaRounds(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]bundles.RoundRecord, error) {
-	r, err := pool.Query(ctx, `SELECT round, points FROM calcutta_rounds WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY round ASC`, calcuttaID)
+	r, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.calcutta_scoring_rules WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY win_index ASC`, calcuttaID)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func loadCalcuttaRounds(ctx context.Context, pool *pgxpool.Pool, calcuttaID stri
 }
 
 func loadCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]bundles.PayoutRecord, error) {
-	r, err := pool.Query(ctx, `SELECT position, amount_cents FROM calcutta_payouts WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY position ASC`, calcuttaID)
+	r, err := pool.Query(ctx, `SELECT position, amount_cents FROM core.payouts WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY position ASC`, calcuttaID)
 	if err != nil {
 		return nil, err
 	}
@@ -312,16 +312,16 @@ func loadCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID str
 func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, calcuttaKey string) ([]bundles.EntryRecord, []bundles.EntryTeamBid, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			ce.id,
-			ce.name,
-			ce.user_id,
+			e.id,
+			e.name,
+			e.user_id,
 			COALESCE(u.email, ''),
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
-		FROM calcutta_entries ce
-		LEFT JOIN users u ON u.id = ce.user_id
-		WHERE ce.calcutta_id = $1 AND ce.deleted_at IS NULL
-		ORDER BY ce.created_at ASC
+		FROM core.entries e
+		LEFT JOIN public.users u ON u.id = e.user_id
+		WHERE e.calcutta_id = $1 AND e.deleted_at IS NULL
+		ORDER BY e.created_at ASC
 	`, calcuttaID)
 	if err != nil {
 		return nil, nil, err
@@ -378,16 +378,16 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 func loadCalcuttaBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, entryKeyByLegacyID map[string]string) ([]bundles.EntryTeamBid, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			cet.id,
-			cet.entry_id,
-			cet.bid,
+			et.id,
+			et.entry_id,
+			et.bid_points,
 			s.slug
-		FROM calcutta_entry_teams cet
-		JOIN calcutta_entries ce ON ce.id = cet.entry_id
-		JOIN tournament_teams tt ON tt.id = cet.team_id
-		JOIN schools s ON s.id = tt.school_id
-		WHERE ce.calcutta_id = $1 AND cet.deleted_at IS NULL AND tt.deleted_at IS NULL AND s.deleted_at IS NULL
-		ORDER BY ce.created_at ASC, s.name ASC
+		FROM core.entry_teams et
+		JOIN core.entries e ON e.id = et.entry_id
+		JOIN core.teams t ON t.id = et.team_id
+		JOIN core.schools s ON s.id = t.school_id
+		WHERE e.calcutta_id = $1 AND et.deleted_at IS NULL AND t.deleted_at IS NULL AND s.deleted_at IS NULL AND e.deleted_at IS NULL
+		ORDER BY e.created_at ASC, s.name ASC
 	`, calcuttaID)
 	if err != nil {
 		return nil, err

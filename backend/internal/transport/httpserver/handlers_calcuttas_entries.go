@@ -119,10 +119,6 @@ func (s *Server) updateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(r.Context(), calcutta.ID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
 
 	updatedTeams, err := s.app.Calcutta.GetEntryTeams(r.Context(), entryID)
 	if err != nil {

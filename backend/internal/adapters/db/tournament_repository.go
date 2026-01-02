@@ -82,7 +82,18 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		startingAt = pgtype.Timestamptz{Time: *tournament.StartingAt, Valid: true}
 	}
 
-	return r.q.CreateTournament(ctx, sqlc.CreateTournamentParams{
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.CreateCoreTournamentParams{
 		ID:                   tournament.ID,
 		Name:                 tournament.Name,
 		Rounds:               int32(tournament.Rounds),
@@ -93,7 +104,15 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		StartingAt:           startingAt,
 		CreatedAt:            pgtype.Timestamptz{Time: tournament.Created, Valid: true},
 		UpdatedAt:            pgtype.Timestamptz{Time: tournament.Updated, Valid: true},
-	})
+	}
+	if err = qtx.CreateCoreTournament(ctx, params); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error {
@@ -104,12 +123,28 @@ func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentI
 		start = pgtype.Timestamptz{Time: *startingAt, Valid: true}
 	}
 
-	affected, err := r.q.UpdateTournamentStartingAt(ctx, sqlc.UpdateTournamentStartingAtParams{
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.UpdateCoreTournamentStartingAtParams{
 		StartingAt: start,
 		UpdatedAt:  pgtype.Timestamptz{Time: now, Valid: true},
 		ID:         tournamentID,
-	})
+	}
+	affected, err := qtx.UpdateCoreTournamentStartingAt(ctx, params)
 	if err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
 	if affected == 0 {
@@ -175,12 +210,31 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 }
 
 func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error {
-	return r.q.UpdateTournamentTeam(ctx, sqlc.UpdateTournamentTeamParams{
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.UpdateTournamentTeamParams{
 		Wins:       int32(team.Wins),
 		Byes:       int32(team.Byes),
 		Eliminated: team.Eliminated,
 		ID:         team.ID,
-	})
+	}
+	if err = qtx.UpdateTournamentTeam(ctx, params); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.TournamentTeam) error {
@@ -188,7 +242,18 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 	team.Created = now
 	team.Updated = now
 
-	return r.q.CreateTournamentTeam(ctx, sqlc.CreateTournamentTeamParams{
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.CreateTournamentTeamParams{
 		ID:           team.ID,
 		TournamentID: team.TournamentID,
 		SchoolID:     team.SchoolID,
@@ -199,7 +264,15 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		Eliminated:   team.Eliminated,
 		CreatedAt:    pgtype.Timestamptz{Time: team.Created, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: team.Updated, Valid: true},
-	})
+	}
+	if err = qtx.CreateTournamentTeam(ctx, params); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID string) (*models.TournamentTeam, error) {

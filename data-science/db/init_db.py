@@ -60,28 +60,29 @@ def drop_all_tables():
             
             # Drop gold tables
             cur.execute("""
-                DROP TABLE IF EXISTS gold_detailed_investment_report CASCADE;
-                DROP TABLE IF EXISTS gold_entry_performance CASCADE;
-                DROP TABLE IF EXISTS gold_entry_simulation_outcomes CASCADE;
-                DROP TABLE IF EXISTS gold_recommended_entry_bids CASCADE;
-                DROP TABLE IF EXISTS gold_optimization_runs CASCADE;
+                DROP TABLE IF EXISTS gold.detailed_investment_report CASCADE;
+                DROP TABLE IF EXISTS gold.entry_performance CASCADE;
+                DROP TABLE IF EXISTS gold.entry_simulation_outcomes CASCADE;
+                DROP TABLE IF EXISTS gold.recommended_entry_bids CASCADE;
+                DROP TABLE IF EXISTS gold.optimization_runs CASCADE;
             """)
             
             # Drop silver tables
             cur.execute("""
-                DROP TABLE IF EXISTS silver_team_tournament_value CASCADE;
-                DROP TABLE IF EXISTS silver_predicted_market_share CASCADE;
-                DROP TABLE IF EXISTS silver_predicted_game_outcomes CASCADE;
+                DROP TABLE IF EXISTS silver.team_tournament_value CASCADE;
+                DROP TABLE IF EXISTS silver.predicted_market_share CASCADE;
+                DROP TABLE IF EXISTS silver.predicted_game_outcomes CASCADE;
+                DROP TABLE IF EXISTS silver.simulated_tournaments CASCADE;
             """)
             
             # Drop bronze tables
             cur.execute("""
-                DROP TABLE IF EXISTS bronze_payouts CASCADE;
-                DROP TABLE IF EXISTS bronze_entry_bids CASCADE;
-                DROP TABLE IF EXISTS bronze_calcuttas CASCADE;
-                DROP TABLE IF EXISTS bronze_simulated_tournaments CASCADE;
-                DROP TABLE IF EXISTS bronze_teams CASCADE;
-                DROP TABLE IF EXISTS bronze_tournaments CASCADE;
+                DROP TABLE IF EXISTS bronze.payouts CASCADE;
+                DROP TABLE IF EXISTS bronze.entry_bids CASCADE;
+                DROP TABLE IF EXISTS bronze.calcuttas CASCADE;
+                DROP TABLE IF EXISTS bronze.simulated_tournaments CASCADE;
+                DROP TABLE IF EXISTS bronze.teams CASCADE;
+                DROP TABLE IF EXISTS bronze.tournaments CASCADE;
             """)
             
             conn.commit()
@@ -97,8 +98,14 @@ def drop_all_tables():
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Initialize Calcutta Analytics database")
-    parser.add_argument("--drop", action="store_true", help="Drop all tables first")
+    parser = argparse.ArgumentParser(
+        description="Initialize Calcutta Analytics database"
+    )
+    parser.add_argument(
+        "--drop",
+        action="store_true",
+        help="Drop all tables first",
+    )
     args = parser.parse_args()
     
     if args.drop:

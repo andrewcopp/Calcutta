@@ -35,13 +35,6 @@ type PortfolioReader interface {
 	GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
 }
 
-type PortfolioWriter interface {
-	CreatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error
-	CreatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error
-	UpdatePortfolio(ctx context.Context, portfolio *models.CalcuttaPortfolio) error
-	UpdatePortfolioTeam(ctx context.Context, team *models.CalcuttaPortfolioTeam) error
-}
-
 type RoundReader interface {
 	GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error)
 }

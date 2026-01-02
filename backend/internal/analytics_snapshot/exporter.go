@@ -177,7 +177,7 @@ func writeJSON(path string, v any) error {
 func loadTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (key string, name string, rounds int, err error) {
 	err = pool.QueryRow(ctx, `
 		SELECT import_key, name, rounds
-		FROM tournaments
+		FROM core.tournaments
 		WHERE id = $1 AND deleted_at IS NULL
 	`, tournamentID).Scan(&key, &name, &rounds)
 	return
@@ -186,19 +186,17 @@ func loadTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID string
 func loadCalcutta(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string) (key string, name string, err error) {
 	var tID string
 	err = pool.QueryRow(ctx, `
-		SELECT tournament_id, COALESCE(key, ''), name
-		FROM calcuttas
+		SELECT tournament_id, name
+		FROM core.calcuttas
 		WHERE id = $1 AND deleted_at IS NULL
-	`, calcuttaID).Scan(&tID, &key, &name)
+	`, calcuttaID).Scan(&tID, &name)
 	if err != nil {
 		return "", "", err
 	}
 	if tID != tournamentID {
 		return "", "", fmt.Errorf("calcutta %s does not belong to tournament %s", calcuttaID, tournamentID)
 	}
-	if key == "" {
-		key = "calcutta-" + calcuttaID
-	}
+	key = "calcutta-" + calcuttaID
 	return key, name, nil
 }
 
@@ -212,23 +210,23 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 		SELECT
 			s.slug,
 			s.name,
-			tt.school_id,
-			tt.seed,
-			tt.region,
-			tt.byes,
-			tt.wins,
-			tt.eliminated,
+			t.school_id,
+			t.seed,
+			t.region,
+			t.byes,
+			t.wins,
+			t.eliminated,
 			kps.net_rtg,
 			kps.o_rtg,
 			kps.d_rtg,
 			kps.adj_t,
-			(t.import_key)
-		FROM tournament_teams tt
-		JOIN schools s ON s.id = tt.school_id
-		JOIN tournaments t ON t.id = tt.tournament_id
-		LEFT JOIN tournament_team_kenpom_stats kps ON kps.tournament_team_id = tt.id AND kps.deleted_at IS NULL
-		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL AND s.deleted_at IS NULL AND t.deleted_at IS NULL
-		ORDER BY tt.region ASC, tt.seed ASC, s.slug ASC
+			(tr.import_key)
+		FROM core.teams t
+		JOIN core.schools s ON s.id = t.school_id
+		JOIN core.tournaments tr ON tr.id = t.tournament_id
+		LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = t.id AND kps.deleted_at IS NULL
+		WHERE t.tournament_id = $1 AND t.deleted_at IS NULL AND s.deleted_at IS NULL AND tr.deleted_at IS NULL
+		ORDER BY t.region ASC, t.seed ASC, s.slug ASC
 	`, tournamentID)
 	if err != nil {
 		return nil, csvTable{}, err
@@ -276,8 +274,8 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 
 func loadEntries(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (csvTable, error) {
 	r, err := pool.Query(ctx, `
-		SELECT COALESCE(key, ''), id, name
-		FROM calcutta_entries
+		SELECT id, name
+		FROM core.entries
 		WHERE calcutta_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at ASC
 	`, calcuttaID)
@@ -289,24 +287,15 @@ func loadEntries(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (cs
 	header := []string{"calcutta_key", "entry_key", "entry_name"}
 	rows := make([][]string, 0)
 
-	var calcuttaKey string
-	err = pool.QueryRow(ctx, `SELECT COALESCE(key, '') FROM calcuttas WHERE id = $1 AND deleted_at IS NULL`, calcuttaID).Scan(&calcuttaKey)
-	if err != nil {
-		return csvTable{}, err
-	}
-	if calcuttaKey == "" {
-		calcuttaKey = "calcutta-" + calcuttaID
-	}
+	calcuttaKey := "calcutta-" + calcuttaID
 
 	for r.Next() {
-		var key, id, name string
-		if err := r.Scan(&key, &id, &name); err != nil {
+		var id, name string
+		if err := r.Scan(&id, &name); err != nil {
 			return csvTable{}, err
 		}
-		if key == "" {
-			key = calcuttaKey + ":entry-" + id
-		}
-		rows = append(rows, []string{calcuttaKey, key, name})
+		entryKey := calcuttaKey + ":entry-" + id
+		rows = append(rows, []string{calcuttaKey, entryKey, name})
 	}
 	if err := r.Err(); err != nil {
 		return csvTable{}, err
@@ -318,16 +307,14 @@ func loadEntries(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (cs
 func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string, tournamentKey string, schoolSlugByID map[string]string) (csvTable, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			COALESCE(c.key, ''),
-			COALESCE(e.key, ''),
+			et.id,
 			e.id,
-			tt.school_id,
-			cet.bid
-		FROM calcutta_entry_teams cet
-		JOIN calcutta_entries e ON e.id = cet.entry_id
-		JOIN calcuttas c ON c.id = e.calcutta_id
-		JOIN tournament_teams tt ON tt.id = cet.team_id
-		WHERE c.id = $1 AND c.deleted_at IS NULL AND e.deleted_at IS NULL AND cet.deleted_at IS NULL AND tt.deleted_at IS NULL
+			t.school_id,
+			et.bid_points
+		FROM core.entry_teams et
+		JOIN core.entries e ON e.id = et.entry_id
+		JOIN core.teams t ON t.id = et.team_id
+		WHERE e.calcutta_id = $1 AND et.deleted_at IS NULL AND e.deleted_at IS NULL AND t.deleted_at IS NULL
 		ORDER BY e.created_at ASC
 	`, calcuttaID)
 	if err != nil {
@@ -335,25 +322,17 @@ func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, t
 	}
 	defer r.Close()
 
-	calcuttaKey := ""
+	calcuttaKey := "calcutta-" + calcuttaID
 	header := []string{"calcutta_key", "entry_key", "team_key", "bid_amount"}
 	rows := make([][]string, 0)
 
 	for r.Next() {
-		var cKey, eKey, entryID, schoolID string
+		var _bidID, entryID, schoolID string
 		var bid int
-		if err := r.Scan(&cKey, &eKey, &entryID, &schoolID, &bid); err != nil {
+		if err := r.Scan(&_bidID, &entryID, &schoolID, &bid); err != nil {
 			return csvTable{}, err
 		}
-		if calcuttaKey == "" {
-			calcuttaKey = cKey
-			if calcuttaKey == "" {
-				calcuttaKey = "calcutta-" + calcuttaID
-			}
-		}
-		if eKey == "" {
-			eKey = calcuttaKey + ":entry-" + entryID
-		}
+		eKey := calcuttaKey + ":entry-" + entryID
 		slug := schoolSlugByID[schoolID]
 		teamKey := ""
 		if slug != "" {
@@ -373,11 +352,10 @@ func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, t
 
 func loadRoundScoring(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (csvTable, error) {
 	r, err := pool.Query(ctx, `
-		SELECT COALESCE(c.key, ''), r.round, r.points
-		FROM calcutta_rounds r
-		JOIN calcuttas c ON c.id = r.calcutta_id
-		WHERE r.calcutta_id = $1 AND r.deleted_at IS NULL AND c.deleted_at IS NULL
-		ORDER BY r.round ASC
+		SELECT r.win_index, r.points_awarded
+		FROM core.calcutta_scoring_rules r
+		WHERE r.calcutta_id = $1 AND r.deleted_at IS NULL
+		ORDER BY r.win_index ASC
 	`, calcuttaID)
 	if err != nil {
 		return csvTable{}, err
@@ -386,15 +364,12 @@ func loadRoundScoring(ctx context.Context, pool *pgxpool.Pool, calcuttaID string
 
 	header := []string{"calcutta_key", "round", "points"}
 	rows := make([][]string, 0)
+	calcuttaKey := "calcutta-" + calcuttaID
 
 	for r.Next() {
-		var calcuttaKey string
 		var round, points int
-		if err := r.Scan(&calcuttaKey, &round, &points); err != nil {
+		if err := r.Scan(&round, &points); err != nil {
 			return csvTable{}, err
-		}
-		if calcuttaKey == "" {
-			calcuttaKey = "calcutta-" + calcuttaID
 		}
 		rows = append(rows, []string{calcuttaKey, strconv.Itoa(round), strconv.Itoa(points)})
 	}
@@ -407,10 +382,9 @@ func loadRoundScoring(ctx context.Context, pool *pgxpool.Pool, calcuttaID string
 
 func loadPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (csvTable, error) {
 	r, err := pool.Query(ctx, `
-		SELECT COALESCE(c.key, ''), p.position, p.amount_cents
-		FROM calcutta_payouts p
-		JOIN calcuttas c ON c.id = p.calcutta_id
-		WHERE p.calcutta_id = $1 AND p.deleted_at IS NULL AND c.deleted_at IS NULL
+		SELECT p.position, p.amount_cents
+		FROM core.payouts p
+		WHERE p.calcutta_id = $1 AND p.deleted_at IS NULL
 		ORDER BY p.position ASC
 	`, calcuttaID)
 	if err != nil {
@@ -420,15 +394,12 @@ func loadPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (cs
 
 	header := []string{"calcutta_key", "position", "amount_cents"}
 	rows := make([][]string, 0)
+	calcuttaKey := "calcutta-" + calcuttaID
 
 	for r.Next() {
-		var calcuttaKey string
 		var pos, amount int
-		if err := r.Scan(&calcuttaKey, &pos, &amount); err != nil {
+		if err := r.Scan(&pos, &amount); err != nil {
 			return csvTable{}, err
-		}
-		if calcuttaKey == "" {
-			calcuttaKey = "calcutta-" + calcuttaID
 		}
 		rows = append(rows, []string{calcuttaKey, strconv.Itoa(pos), strconv.Itoa(amount)})
 	}

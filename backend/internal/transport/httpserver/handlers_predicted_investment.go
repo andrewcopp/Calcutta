@@ -18,81 +18,60 @@ type TeamPredictedInvestment struct {
 	Delta      float64 `json:"delta"`     // Percentage difference (market inefficiency)
 }
 
-// handleGetTournamentPredictedInvestment handles GET /analytics/tournaments/{id}/predicted-investment
-func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r *http.Request) {
+// handleGetCalcuttaPredictedInvestment handles GET /analytics/calcuttas/{id}/predicted-investment
+func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	calcuttaID := vars["id"]
 
-	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing tournament ID", "id")
+	if calcuttaID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing calcutta ID", "id")
 		return
 	}
 
 	// Query to get predicted market investment from ridge regression model
-	// Naive = ML model prediction of market investment
-	// Edge = Same as naive for now (will incorporate market inefficiencies later)
-	// Delta = Edge - Naive (currently 0)
+	// Predicted market share is currently tournament-scoped in the analytics schema (silver_predicted_market_share.tournament_id)
 	query := `
-		WITH main_tournament AS (
-			SELECT 
-				id,
-				CAST(SUBSTRING(name FROM '[0-9]{4}') AS INTEGER) as season
-			FROM tournaments
-			WHERE id = $1
+		WITH calcutta AS (
+			SELECT c.id AS calcutta_id
+			FROM core.calcuttas c
+			WHERE c.id = $1
+			  AND c.deleted_at IS NULL
+			LIMIT 1
+		),
+		bronze_calcutta AS (
+			SELECT
+				bcc.id AS bronze_calcutta_id,
+				bcc.tournament_id AS bronze_tournament_id
+			FROM bronze_calcuttas_core_ctx bcc
+			JOIN calcutta c ON c.calcutta_id = bcc.core_calcutta_id
+			LIMIT 1
 		),
 		bronze_tournament AS (
-			SELECT id
-			FROM bronze_tournaments
-			WHERE season = (SELECT season FROM main_tournament)
+			SELECT bronze_tournament_id AS id
+			FROM bronze_calcutta
 		),
 		entry_count AS (
 			SELECT COUNT(DISTINCT entry_name) as num_entries
-			FROM bronze_entry_bids beb
-			JOIN bronze_calcuttas bc ON beb.calcutta_id = bc.id
-			WHERE bc.tournament_id = (SELECT id FROM bronze_tournament)
+			FROM bronze.entry_bids beb
+			WHERE beb.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta)
 		),
 		total_pool AS (
 			SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
 		),
-		team_win_counts AS (
-			SELECT 
-				st.team_id,
-				st.wins,
-				COUNT(*) as sim_count
-			FROM silver_simulated_tournaments st
-			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
-			GROUP BY st.team_id, st.wins
-		),
-		team_probabilities AS (
-			SELECT 
-				team_id,
-				SUM(sim_count)::float as total_sims,
-				SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
-				SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
-				SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
-				SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
-				SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
-				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
-			FROM team_win_counts
-			GROUP BY team_id
-		),
 		team_expected_points AS (
-			SELECT 
-				team_id,
-				(COALESCE(win_r64 / NULLIF(total_sims, 0), 0) * 50 + 
-				 COALESCE(win_r32 / NULLIF(total_sims, 0), 0) * 150 + 
-				 COALESCE(win_s16 / NULLIF(total_sims, 0), 0) * 300 + 
-				 COALESCE(win_e8 / NULLIF(total_sims, 0), 0) * 500 + 
-				 COALESCE(win_ff / NULLIF(total_sims, 0), 0) * 750 + 
-				 COALESCE(win_champ / NULLIF(total_sims, 0), 0) * 1050) as expected_points
-			FROM team_probabilities
+			SELECT
+				st.team_id,
+				AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float AS expected_points
+			FROM silver.simulated_tournaments st
+			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
+			GROUP BY st.team_id
 		),
 		total_expected_points AS (
 			SELECT SUM(expected_points) as total_ev
 			FROM team_expected_points
 		)
-		SELECT 
+		SELECT
 			t.id as team_id,
 			t.school_name,
 			t.seed,
@@ -100,24 +79,28 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 			-- Rational: Proportional investment based on expected points (equal ROI scenario)
 			(tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) as rational,
 			-- Predicted: ML model prediction of market share × total pool
-			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as predicted,
+			COALESCE(spms_c.predicted_share, spms_t.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as predicted,
 			-- Delta: Percentage difference (Predicted - Rational) / Rational * 100
-			CASE 
+			CASE
 				WHEN (tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) > 0
-				THEN ((COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool)) - 
+				THEN ((COALESCE(spms_c.predicted_share, spms_t.predicted_share, 0.0) * (SELECT pool_size FROM total_pool)) -
 				      ((tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool))) /
 				     ((tep.expected_points / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
 				ELSE 0
 			END as delta
-		FROM bronze_teams t
+		FROM bronze.teams t
 		LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-		LEFT JOIN silver_predicted_market_share spms 
-			ON spms.tournament_id = (SELECT id FROM bronze_tournament) AND spms.team_id = t.id
+		LEFT JOIN silver.predicted_market_share spms_c
+			ON spms_c.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta) AND spms_c.team_id = t.id
+		LEFT JOIN silver.predicted_market_share spms_t
+			ON spms_t.tournament_id = (SELECT id FROM bronze_tournament)
+			AND spms_t.calcutta_id IS NULL
+			AND spms_t.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 		ORDER BY predicted DESC, t.seed ASC
 	`
 
-	rows, err := s.pool.Query(ctx, query, tournamentID)
+	rows, err := s.pool.Query(ctx, query, calcuttaID)
 	if err != nil {
 		log.Printf("Error querying predicted investment: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted investment", "")
@@ -144,13 +127,13 @@ func (s *Server) handleGetTournamentPredictedInvestment(w http.ResponseWriter, r
 	}
 
 	if len(results) == 0 {
-		writeError(w, r, http.StatusNotFound, "not_found", "No predicted investment found for tournament", "")
+		writeError(w, r, http.StatusNotFound, "not_found", "No predicted investment found for calcutta", "")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tournament_id": tournamentID,
-		"teams":         results,
-		"count":         len(results),
+		"calcutta_id": calcuttaID,
+		"teams":       results,
+		"count":       len(results),
 	})
 }

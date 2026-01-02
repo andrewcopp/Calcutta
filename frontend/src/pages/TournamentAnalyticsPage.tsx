@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Tournament } from '../types/calcutta';
+import { Calcutta, Tournament } from '../types/calcutta';
 import { tournamentService } from '../services/tournamentService';
+import { calcuttaService } from '../services/calcuttaService';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
 
@@ -21,6 +22,7 @@ interface SimulationStats {
 
 export function TournamentAnalyticsPage() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+  const [selectedCalcuttaId, setSelectedCalcuttaId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('simulations');
 
   // Fetch all tournaments
@@ -28,6 +30,15 @@ export function TournamentAnalyticsPage() {
     queryKey: queryKeys.tournaments.all(),
     queryFn: tournamentService.getAllTournaments,
   });
+
+  // Fetch all calcuttas (used to select scoring context for points-based analytics)
+  const { data: calcuttas = [], isLoading: calcuttasLoading } = useQuery<Calcutta[]>({
+    queryKey: ['calcuttas', 'all'],
+    queryFn: calcuttaService.getAllCalcuttas,
+    enabled: !!selectedTournamentId,
+  });
+
+  const calcuttasForTournament = calcuttas.filter((c) => c.tournamentId === selectedTournamentId);
 
   // Fetch simulation stats for selected tournament
   const { data: simulationStats, isLoading: statsLoading } = useQuery<SimulationStats | null>({
@@ -63,7 +74,11 @@ export function TournamentAnalyticsPage() {
             <select
               id="tournament-select"
               value={selectedTournamentId || ''}
-              onChange={(e) => setSelectedTournamentId(e.target.value || null)}
+              onChange={(e) => {
+                const nextTournamentId = e.target.value || null;
+                setSelectedTournamentId(nextTournamentId);
+                setSelectedCalcuttaId(null);
+              }}
               className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
               <option value="">-- Select a tournament --</option>
@@ -76,6 +91,40 @@ export function TournamentAnalyticsPage() {
           )}
         </div>
       </div>
+
+      {/* Calcutta Selector */}
+      {selectedTournamentId && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex items-center gap-4">
+            <label htmlFor="calcutta-select" className="text-lg font-semibold whitespace-nowrap">
+              Select Calcutta:
+            </label>
+
+            {calcuttasLoading ? (
+              <div className="text-gray-500">Loading calcuttas...</div>
+            ) : calcuttasForTournament.length === 0 ? (
+              <div className="text-gray-500">No calcuttas found for this tournament</div>
+            ) : (
+              <select
+                id="calcutta-select"
+                value={selectedCalcuttaId || ''}
+                onChange={(e) => setSelectedCalcuttaId(e.target.value || null)}
+                className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="">-- Select a calcutta --</option>
+                {calcuttasForTournament.map((calcutta) => (
+                  <option key={calcutta.id} value={calcutta.id}>
+                    {calcutta.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="mt-2 text-sm text-gray-600">
+            Points-based analytics (returns, investment, simulated entries/calcuttas) are calcutta-scoped.
+          </div>
+        </div>
+      )}
 
       {/* Analytics Tabs */}
       {selectedTournamentId && (
@@ -139,10 +188,10 @@ export function TournamentAnalyticsPage() {
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'simulations' && <SimulationsTab tournamentId={selectedTournamentId} />}
-            {activeTab === 'predicted-returns' && <PredictedReturnsTab tournamentId={selectedTournamentId} />}
-            {activeTab === 'predicted-investment' && <PredictedInvestmentTab tournamentId={selectedTournamentId} />}
-            {activeTab === 'simulated-entries' && <SimulatedEntriesTab tournamentId={selectedTournamentId} />}
-            {activeTab === 'simulated-calcuttas' && <SimulatedCalcuttasTab tournamentId={selectedTournamentId} />}
+            {activeTab === 'predicted-returns' && <PredictedReturnsTab calcuttaId={selectedCalcuttaId} />}
+            {activeTab === 'predicted-investment' && <PredictedInvestmentTab calcuttaId={selectedCalcuttaId} />}
+            {activeTab === 'simulated-entries' && <SimulatedEntriesTab calcuttaId={selectedCalcuttaId} />}
+            {activeTab === 'simulated-calcuttas' && <SimulatedCalcuttasTab calcuttaId={selectedCalcuttaId} />}
           </div>
         </div>
       )}
@@ -244,18 +293,22 @@ interface TeamPredictedReturns {
   expected_value: number;
 }
 
-function PredictedReturnsTab({ tournamentId }: { tournamentId: string }) {
+function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
   const { data: predictedReturns, isLoading } = useQuery<{ teams: TeamPredictedReturns[] } | null>({
-    queryKey: ['analytics', 'predicted-returns', tournamentId],
+    queryKey: ['analytics', 'predicted-returns', calcuttaId],
     queryFn: async () => {
-      if (!tournamentId) return null;
-      return apiClient.get<{ teams: TeamPredictedReturns[] }>(`/analytics/tournaments/${tournamentId}/predicted-returns`);
+      if (!calcuttaId) return null;
+      return apiClient.get<{ teams: TeamPredictedReturns[] }>(`/analytics/calcuttas/${calcuttaId}/predicted-returns`);
     },
-    enabled: !!tournamentId,
+    enabled: !!calcuttaId,
   });
 
   const formatPercent = (prob: number) => `${(prob * 100).toFixed(1)}%`;
   const formatPoints = (points: number) => points.toFixed(1);
+
+  if (!calcuttaId) {
+    return <div className="text-gray-500">Select a calcutta above to view points-based predicted returns.</div>;
+  }
 
   return (
     <div>
@@ -353,7 +406,7 @@ function PredictedReturnsTab({ tournamentId }: { tournamentId: string }) {
         </div>
       ) : (
         <div className="text-gray-500">
-          No predicted returns data available for this tournament.
+          No predicted returns data available for this calcutta.
         </div>
       )}
     </div>
@@ -371,14 +424,14 @@ interface TeamPredictedInvestment {
   delta: number;
 }
 
-function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
+function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
   const { data: predictedInvestment, isLoading } = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
-    queryKey: ['analytics', 'predicted-investment', tournamentId],
+    queryKey: ['analytics', 'predicted-investment', calcuttaId],
     queryFn: async () => {
-      if (!tournamentId) return null;
-      return apiClient.get<{ teams: TeamPredictedInvestment[] }>(`/analytics/tournaments/${tournamentId}/predicted-investment`);
+      if (!calcuttaId) return null;
+      return apiClient.get<{ teams: TeamPredictedInvestment[] }>(`/analytics/calcuttas/${calcuttaId}/predicted-investment`);
     },
-    enabled: !!tournamentId,
+    enabled: !!calcuttaId,
   });
 
   const formatPoints = (points: number) => points.toFixed(1);
@@ -392,6 +445,10 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
     if (delta > 5) return 'text-red-700 font-semibold'; // Overvalued - avoid
     return 'text-gray-700';
   };
+
+  if (!calcuttaId) {
+    return <div className="text-gray-500">Select a calcutta above to view points-based predicted investment.</div>;
+  }
 
   return (
     <div>
@@ -478,7 +535,7 @@ function PredictedInvestmentTab({ tournamentId }: { tournamentId: string }) {
         </div>
       ) : (
         <div className="text-gray-500">
-          No predicted investment data available for this tournament.
+          No predicted investment data available for this calcutta.
         </div>
       )}
     </div>
@@ -498,21 +555,25 @@ interface TeamSimulatedEntry {
   our_roi: number;
 }
 
-function SimulatedEntriesTab({ tournamentId }: { tournamentId: string }) {
+function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null }) {
   const [sortColumn, setSortColumn] = React.useState<keyof TeamSimulatedEntry>('seed');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: simulatedEntry, isLoading } = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
-    queryKey: ['analytics', 'simulated-entry', tournamentId],
+    queryKey: ['analytics', 'simulated-entry', calcuttaId],
     queryFn: async () => {
-      if (!tournamentId) return null;
-      return apiClient.get<{ teams: TeamSimulatedEntry[] }>(`/analytics/tournaments/${tournamentId}/simulated-entry`);
+      if (!calcuttaId) return null;
+      return apiClient.get<{ teams: TeamSimulatedEntry[] }>(`/analytics/calcuttas/${calcuttaId}/simulated-entry`);
     },
-    enabled: !!tournamentId,
+    enabled: !!calcuttaId,
   });
 
   const formatPoints = (points: number) => points.toFixed(1);
   const formatROI = (roi: number) => roi.toFixed(2);
+
+  if (!calcuttaId) {
+    return <div className="text-gray-500">Select a calcutta above to view simulated entries.</div>;
+  }
 
   const handleSort = (column: keyof TeamSimulatedEntry) => {
     if (sortColumn === column) {
@@ -685,15 +746,19 @@ interface EntryRanking {
   total_simulations: number;
 }
 
-function SimulatedCalcuttasTab({ tournamentId }: { tournamentId: string }) {
+function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
   const { data: simulatedCalcuttas, isLoading } = useQuery<{ entries: EntryRanking[] } | null>({
-    queryKey: ['analytics', 'simulated-calcuttas', tournamentId],
+    queryKey: ['analytics', 'simulated-calcuttas', calcuttaId],
     queryFn: async () => {
-      if (!tournamentId) return null;
-      return apiClient.get<{ entries: EntryRanking[] }>(`/analytics/tournaments/${tournamentId}/simulated-calcuttas`);
+      if (!calcuttaId) return null;
+      return apiClient.get<{ entries: EntryRanking[] }>(`/analytics/calcuttas/${calcuttaId}/simulated-calcuttas`);
     },
-    enabled: !!tournamentId,
+    enabled: !!calcuttaId,
   });
+
+  if (!calcuttaId) {
+    return <div className="text-gray-500">Select a calcutta above to view simulated calcuttas.</div>;
+  }
 
   const formatPayout = (value: number) => value.toFixed(3);
   const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;

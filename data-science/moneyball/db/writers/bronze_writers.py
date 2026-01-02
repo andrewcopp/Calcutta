@@ -5,7 +5,6 @@ Write raw tournament and simulation data using UUIDs.
 """
 import logging
 import pandas as pd
-import psycopg2.extras
 from typing import Dict
 from moneyball.db.connection import get_db_connection
 
@@ -25,7 +24,7 @@ def get_or_create_tournament(season: int) -> str:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id FROM bronze_tournaments
+                SELECT id FROM bronze.tournaments
                 WHERE season = %s
             """, (season,))
             
@@ -34,7 +33,7 @@ def get_or_create_tournament(season: int) -> str:
                 return str(result[0])
             
             cur.execute("""
-                INSERT INTO bronze_tournaments (season)
+                INSERT INTO bronze.tournaments (season)
                 VALUES (%s)
                 RETURNING id
             """, (season,))
@@ -63,9 +62,9 @@ def write_teams(tournament_id: str, teams_df: pd.DataFrame) -> Dict[str, str]:
             
             for _, row in teams_df.iterrows():
                 cur.execute("""
-                    INSERT INTO bronze_teams
+                    INSERT INTO bronze.teams
                     (tournament_id, school_slug, school_name, seed, region,
-                     kenpom_net, kenpom_adj_em, kenpom_adj_o, 
+                     kenpom_net, kenpom_adj_em, kenpom_adj_o,
                      kenpom_adj_d, kenpom_adj_t)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (tournament_id, school_slug)
@@ -85,11 +84,31 @@ def write_teams(tournament_id: str, teams_df: pd.DataFrame) -> Dict[str, str]:
                     row['school_name'],
                     int(row['seed']),
                     row['region'],
-                    float(row['kenpom_net']) if pd.notna(row.get('kenpom_net')) else None,
-                    float(row['kenpom_adj_em']) if pd.notna(row.get('kenpom_adj_em')) else None,
-                    float(row['kenpom_adj_o']) if pd.notna(row.get('kenpom_adj_o')) else None,
-                    float(row['kenpom_adj_d']) if pd.notna(row.get('kenpom_adj_d')) else None,
-                    float(row['kenpom_adj_t']) if pd.notna(row.get('kenpom_adj_t')) else None,
+                    (
+                        float(row['kenpom_net'])
+                        if pd.notna(row.get('kenpom_net'))
+                        else None
+                    ),
+                    (
+                        float(row['kenpom_adj_em'])
+                        if pd.notna(row.get('kenpom_adj_em'))
+                        else None
+                    ),
+                    (
+                        float(row['kenpom_adj_o'])
+                        if pd.notna(row.get('kenpom_adj_o'))
+                        else None
+                    ),
+                    (
+                        float(row['kenpom_adj_d'])
+                        if pd.notna(row.get('kenpom_adj_d'))
+                        else None
+                    ),
+                    (
+                        float(row['kenpom_adj_t'])
+                        if pd.notna(row.get('kenpom_adj_t'))
+                        else None
+                    ),
                 ))
                 
                 team_id = cur.fetchone()[0]

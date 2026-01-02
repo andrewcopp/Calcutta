@@ -8,26 +8,28 @@ This script:
 4. Writes results to gold_recommended_entry_bids table
 """
 import sys
-import uuid
 from datetime import datetime
 import pandas as pd
 
 from moneyball.db.connection import get_db_connection
 from moneyball.models.portfolio_optimizer_minlp import optimize_portfolio_minlp
-from moneyball.db.writers.gold_writers import write_optimization_run, write_recommended_entry_bids
+from moneyball.db.writers.gold_writers import (
+    write_optimization_run,
+    write_recommended_entry_bids,
+)
 
 
 def run_optimizer(year: int = 2025):
     """Run MINLP optimizer for a tournament year."""
     print(f"Running MINLP optimizer for {year}...")
     print("=" * 80)
-    
+
     # Read team data from database
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             # Get tournament ID
             cur.execute("""
-                SELECT id FROM bronze_tournaments WHERE season = %s
+                SELECT id FROM bronze.tournaments WHERE season = %s
             """, (year,))
             result = cur.fetchone()
             if not result:
@@ -35,15 +37,26 @@ def run_optimizer(year: int = 2025):
                 return
             tournament_id = result[0]
             print(f"Tournament ID: {tournament_id}")
-            
-            # Get team data with expected points from simulations and market predictions
+
+            # Get team data with expected points from simulations and market
+            # predictions
             cur.execute("""
-                WITH team_win_counts AS (
+                WITH calcutta_ctx AS (
+                    SELECT c.id AS calcutta_id
+                    FROM bronze.tournaments bt
+                    JOIN core.calcuttas c
+                        ON c.tournament_id = bt.core_tournament_id
+                    WHERE bt.id = %s
+                      AND c.deleted_at IS NULL
+                    ORDER BY c.created_at DESC
+                    LIMIT 1
+                ),
+                team_win_counts AS (
                     SELECT 
                         st.team_id,
                         st.wins,
                         COUNT(*) as sim_count
-                    FROM silver_simulated_tournaments st
+                    FROM silver.simulated_tournaments st
                     WHERE st.tournament_id = %s
                     GROUP BY st.team_id, st.wins
                 ),
@@ -51,23 +64,39 @@ def run_optimizer(year: int = 2025):
                     SELECT 
                         team_id,
                         SUM(sim_count)::float as total_sims,
-                        SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
-                        SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
-                        SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
-                        SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
-                        SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
-                        SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
+                        SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)
+                            ::float
+                            as win_r64,
+                        SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)
+                            ::float
+                            as win_r32,
+                        SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)
+                            ::float
+                            as win_s16,
+                        SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)
+                            ::float
+                            as win_e8,
+                        SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)
+                            ::float
+                            as win_ff,
+                        SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)
+                            ::float
+                            as win_champ
                     FROM team_win_counts
                     GROUP BY team_id
                 ),
                 entry_count AS (
                     SELECT COUNT(DISTINCT entry_name) as num_entries
-                    FROM bronze_entry_bids beb
-                    JOIN bronze_calcuttas bc ON beb.calcutta_id = bc.id
+                    FROM bronze.entry_bids beb
+                    JOIN bronze.calcuttas bc ON beb.calcutta_id = bc.id
                     WHERE bc.tournament_id = %s
                 ),
                 total_pool AS (
-                    SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
+                    SELECT
+                        COALESCE(
+                            NULLIF((SELECT num_entries FROM entry_count), 0),
+                            47
+                        ) * 100.0 as pool_size
                 )
                 SELECT 
                     t.id as team_id,
@@ -76,42 +105,86 @@ def run_optimizer(year: int = 2025):
                     t.seed,
                     t.region,
                     -- Expected points (EV calculation)
-                    (COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-                     COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-                     COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
-                     COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
-                     COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-                     COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_team_points,
+                    COALESCE(
+                        AVG(
+                            CASE
+                                WHEN (SELECT calcutta_id FROM calcutta_ctx)
+                                    IS NULL
+                                    THEN 0
+                                ELSE core.calcutta_points_for_progress(
+                                    (SELECT calcutta_id FROM calcutta_ctx),
+                                    st.wins,
+                                    st.byes
+                                )
+                            END
+                        )::float,
+                        0
+                    ) as expected_team_points,
                     -- Predicted market from ridge regression model
-                    COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as predicted_team_total_bids
-                FROM bronze_teams t
+                    COALESCE(spms.predicted_share, 0.0)
+                        * (SELECT pool_size FROM total_pool)
+                        as predicted_team_total_bids
+                FROM bronze.teams t
+                LEFT JOIN silver.simulated_tournaments st
+                    ON st.team_id = t.id AND st.tournament_id = %s
                 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
-                LEFT JOIN silver_predicted_market_share spms 
+                LEFT JOIN silver.predicted_market_share spms
                     ON spms.tournament_id = %s AND spms.team_id = t.id
                 WHERE t.tournament_id = %s
+                GROUP BY
+                    t.id,
+                    t.school_slug,
+                    t.school_name,
+                    t.seed,
+                    t.region,
+                    spms.predicted_share
                 ORDER BY t.seed ASC, t.school_name ASC
-            """, (tournament_id, tournament_id, tournament_id, tournament_id))
+            """, (
+                tournament_id,
+                tournament_id,
+                tournament_id,
+                tournament_id,
+                tournament_id,
+                tournament_id,
+            ))
             
             rows = cur.fetchall()
-            teams_df = pd.DataFrame(rows, columns=[
-                'team_id', 'team_key', 'school_name', 'seed', 'region', 
-                'expected_team_points', 'predicted_team_total_bids'
-            ])
-    
+            teams_df = pd.DataFrame(
+                rows,
+                columns=[
+                    'team_id',
+                    'team_key',
+                    'school_name',
+                    'seed',
+                    'region',
+                    'expected_team_points',
+                    'predicted_team_total_bids',
+                ],
+            )
+
     print(f"Loaded {len(teams_df)} teams")
-    print(f"Total expected points: {teams_df['expected_team_points'].sum():.1f}")
-    print(f"Total predicted market: {teams_df['predicted_team_total_bids'].sum():.1f}")
-    
+    total_expected_points = teams_df['expected_team_points'].sum()
+    total_predicted_market = teams_df['predicted_team_total_bids'].sum()
+    print(f"Total expected points: {total_expected_points:.1f}")
+    print(f"Total predicted market: {total_predicted_market:.1f}")
+
     # Calculate expected ROI for reference
-    teams_df['expected_roi'] = teams_df['expected_team_points'] / teams_df['predicted_team_total_bids'].replace(0, 1)
-    
+    teams_df['expected_roi'] = (
+        teams_df['expected_team_points']
+        / teams_df['predicted_team_total_bids'].replace(0, 1)
+    )
+
     print("\nTop 10 teams by expected ROI:")
-    print(teams_df.nlargest(10, 'expected_roi')[['school_name', 'seed', 'expected_team_points', 'expected_roi']])
-    
+    print(
+        teams_df.nlargest(10, 'expected_roi')[
+            ['school_name', 'seed', 'expected_team_points', 'expected_roi']
+        ]
+    )
+
     # Run MINLP optimizer
     print("\nRunning MINLP optimizer...")
     try:
-        chosen_df, portfolio_rows = optimize_portfolio_minlp(
+        chosen_df, _ = optimize_portfolio_minlp(
             teams_df=teams_df,
             budget_points=100,
             min_teams=3,
@@ -122,14 +195,23 @@ def run_optimizer(year: int = 2025):
             max_iterations=1000,
         )
         
-        print(f"\nOptimization complete!")
+        print("\nOptimization complete!")
         print(f"Selected {len(chosen_df)} teams")
-        print(f"Total budget allocated: {chosen_df['bid_amount_points'].sum()}")
+        total_budget = chosen_df['bid_amount_points'].sum()
+        print(f"Total budget allocated: {total_budget}")
         
         print("\nPortfolio allocation:")
-        for _, row in chosen_df.sort_values('bid_amount_points', ascending=False).iterrows():
-            print(f"  {row['school_name']:30s} Seed {row['seed']:2d}  Bid: ${row['bid_amount_points']:2d}  "
-                  f"Exp Pts: {row['expected_team_points']:6.1f}  ROI: {row.get('score', 0):.2f}")
+        chosen_sorted = chosen_df.sort_values(
+            'bid_amount_points',
+            ascending=False,
+        )
+        for _, row in chosen_sorted.iterrows():
+            print(
+                f"  {row['school_name']:30s} Seed {row['seed']:2d}  "
+                f"Bid: ${row['bid_amount_points']:2d}  "
+                f"Exp Pts: {row['expected_team_points']:6.1f}  "
+                f"ROI: {row.get('score', 0):.2f}"
+            )
         
         # Calculate expected return
         total_return = 0
@@ -142,29 +224,29 @@ def run_optimizer(year: int = 2025):
         
         print(f"\nExpected total return: {total_return:.2f} points")
         print(f"Expected ROI: {total_return / 100:.2f}x")
-        
+
     except Exception as e:
         print(f"Error running optimizer: {e}")
         import traceback
         traceback.print_exc()
         return
-    
+
     # Write to database
     print("\nWriting results to database...")
-    
+
     # Create run_id
     run_id = f"minlp_{year}_{datetime.now().strftime('%Y%m%dT%H%M%S')}"
-    
+
     # Create team_id_map
     team_id_map = {
         str(row['team_key']): str(row['team_id'])
         for _, row in teams_df.iterrows()
     }
-    
+
     # Prepare bids DataFrame
     bids_df = chosen_df[['team_key', 'bid_amount_points']].copy()
     bids_df['expected_roi'] = chosen_df.get('score', 0.0)
-    
+
     try:
         # Write optimization run
         write_optimization_run(
@@ -187,8 +269,11 @@ def run_optimizer(year: int = 2025):
         
         print("\n✓ Success! Portfolio optimization complete.")
         print(f"  Run ID: {run_id}")
-        print("\nThe Simulated Entry tab will now show MINLP allocations in the 'Our Bid' column.")
-        
+        print(
+            "\nThe Simulated Entry tab will now show MINLP allocations "
+            "in the 'Our Bid' column."
+        )
+
     except Exception as e:
         print(f"Error writing to database: {e}")
         import traceback

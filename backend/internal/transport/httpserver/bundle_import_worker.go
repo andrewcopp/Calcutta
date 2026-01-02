@@ -153,16 +153,6 @@ func (s *Server) processBundleUpload(ctx context.Context, uploadID string) {
 			return err
 		}
 
-		calcuttas, err := s.app.Calcutta.GetAllCalcuttas(ctx)
-		if err != nil {
-			return err
-		}
-		for _, c := range calcuttas {
-			if err := s.app.Calcutta.EnsurePortfoliosAndRecalculate(ctx, c.ID); err != nil {
-				log.Printf("Error ensuring portfolios/recalculating for calcutta %s (upload %s): %v", c.ID, uploadID, err)
-			}
-		}
-
 		impJSON, _ := json.Marshal(impReport)
 		verJSON, _ := json.Marshal(verReport)
 

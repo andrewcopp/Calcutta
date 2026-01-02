@@ -45,6 +45,7 @@ Unit tests should cover pure business logic (deterministic inputs → outputs).
 
 - Do not write unit tests that assert filesystem/DB/HTTP behavior.
 - Unit tests must not read/write external state (DB, network/API calls, filesystem, or any external storage).
+- Even though unit tests are DB-free, GIVEN fixtures should mirror what production would have read from the DB (shape/types/contracts), as if the DB call succeeded.
 - Keep I/O in thin wrappers (handlers/CLIs/runners) and keep core logic in pure
   functions so it is easy to test.
 - If you need a dependency for unit tests, inject an interface and use a fake/in-memory implementation.

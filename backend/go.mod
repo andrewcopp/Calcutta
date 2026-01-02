@@ -8,7 +8,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.6
 	golang.org/x/crypto v0.37.0
-	gonum.org/v1/gonum v0.16.0
 )
 
 require (

@@ -11,48 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createPortfolioTeam = `-- name: CreatePortfolioTeam :exec
-INSERT INTO calcutta_portfolio_teams (
-    id,
-    portfolio_id,
-    team_id,
-    ownership_percentage,
-    actual_points,
-    expected_points,
-    predicted_points,
-    created_at,
-    updated_at
-)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-`
-
-type CreatePortfolioTeamParams struct {
-	ID                  string
-	PortfolioID         string
-	TeamID              string
-	OwnershipPercentage pgtype.Numeric
-	ActualPoints        pgtype.Numeric
-	ExpectedPoints      pgtype.Numeric
-	PredictedPoints     pgtype.Numeric
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-}
-
-func (q *Queries) CreatePortfolioTeam(ctx context.Context, arg CreatePortfolioTeamParams) error {
-	_, err := q.db.Exec(ctx, createPortfolioTeam,
-		arg.ID,
-		arg.PortfolioID,
-		arg.TeamID,
-		arg.OwnershipPercentage,
-		arg.ActualPoints,
-		arg.ExpectedPoints,
-		arg.PredictedPoints,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
 const listPortfolioTeamsByPortfolioID = `-- name: ListPortfolioTeamsByPortfolioID :many
 SELECT
     cpt.id,
@@ -62,9 +20,9 @@ SELECT
     cpt.actual_points::float8 AS actual_points,
     cpt.expected_points::float8 AS expected_points,
     cpt.predicted_points::float8 AS predicted_points,
-    cpt.created_at,
-    cpt.updated_at,
-    cpt.deleted_at,
+    cpt.created_at::timestamptz AS created_at,
+    cpt.updated_at::timestamptz AS updated_at,
+    cpt.deleted_at::timestamptz AS deleted_at,
     tt.id AS tournament_team_id,
     tt.school_id,
     tt.tournament_id,
@@ -76,9 +34,9 @@ SELECT
     tt.created_at AS team_created_at,
     tt.updated_at AS team_updated_at,
     s.name AS school_name
-FROM calcutta_portfolio_teams cpt
-JOIN tournament_teams tt ON cpt.team_id = tt.id
-LEFT JOIN schools s ON tt.school_id = s.id
+FROM core.derived_portfolio_teams cpt
+JOIN core.teams tt ON cpt.team_id = tt.id
+LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE cpt.portfolio_id = $1 AND cpt.deleted_at IS NULL
 `
 
@@ -146,38 +104,4 @@ func (q *Queries) ListPortfolioTeamsByPortfolioID(ctx context.Context, portfolio
 		return nil, err
 	}
 	return items, nil
-}
-
-const updatePortfolioTeam = `-- name: UpdatePortfolioTeam :execrows
-UPDATE calcutta_portfolio_teams
-SET ownership_percentage = $1,
-    actual_points = $2,
-    expected_points = $3,
-    predicted_points = $4,
-    updated_at = $5
-WHERE id = $6 AND deleted_at IS NULL
-`
-
-type UpdatePortfolioTeamParams struct {
-	OwnershipPercentage pgtype.Numeric
-	ActualPoints        pgtype.Numeric
-	ExpectedPoints      pgtype.Numeric
-	PredictedPoints     pgtype.Numeric
-	UpdatedAt           pgtype.Timestamptz
-	ID                  string
-}
-
-func (q *Queries) UpdatePortfolioTeam(ctx context.Context, arg UpdatePortfolioTeamParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updatePortfolioTeam,
-		arg.OwnershipPercentage,
-		arg.ActualPoints,
-		arg.ExpectedPoints,
-		arg.PredictedPoints,
-		arg.UpdatedAt,
-		arg.ID,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }

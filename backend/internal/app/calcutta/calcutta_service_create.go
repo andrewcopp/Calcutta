@@ -2,6 +2,7 @@ package calcutta
 
 import (
 	"context"
+	"errors"
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
@@ -12,23 +13,50 @@ func (s *Service) CreateCalcuttaWithRounds(ctx context.Context, calcutta *models
 		return err
 	}
 
-	rounds := []struct {
-		round  int
-		points int
-	}{
-		{1, 50},  // Round of 64
-		{2, 100}, // Round of 32
-		{3, 150}, // Sweet 16
-		{4, 200}, // Elite 8
-		{5, 250}, // Final 4
-		{6, 300}, // Championship
+	calcuttas, err := s.ports.CalcuttaReader.GetCalcuttasByTournament(
+		ctx,
+		calcutta.TournamentID,
+	)
+	if err != nil {
+		return err
 	}
 
-	for _, round := range rounds {
+	var template *models.Calcutta
+	for _, c := range calcuttas {
+		if c == nil {
+			continue
+		}
+		if c.ID == calcutta.ID {
+			continue
+		}
+		if template == nil || c.Created.After(template.Created) {
+			template = c
+		}
+	}
+	if template == nil {
+		return errors.New(
+			"no template calcutta found for tournament; cannot initialize scoring rules",
+		)
+	}
+
+	rounds, err := s.ports.RoundReader.GetRounds(ctx, template.ID)
+	if err != nil {
+		return err
+	}
+	if len(rounds) == 0 {
+		return errors.New(
+			"template calcutta has no scoring rules; cannot initialize scoring rules",
+		)
+	}
+
+	for _, r := range rounds {
+		if r == nil {
+			continue
+		}
 		calcuttaRound := &models.CalcuttaRound{
 			CalcuttaID: calcutta.ID,
-			Round:      round.round,
-			Points:     round.points,
+			Round:      r.Round,
+			Points:     r.Points,
 		}
 		if err := s.ports.RoundWriter.CreateRound(ctx, calcuttaRound); err != nil {
 			return err

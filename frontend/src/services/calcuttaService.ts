@@ -41,26 +41,4 @@ export const calcuttaService = {
   async getPortfolioTeams(portfolioId: string): Promise<CalcuttaPortfolioTeam[]> {
     return apiClient.get<CalcuttaPortfolioTeam[]>(`/portfolios/${portfolioId}/teams`);
   },
-
-  async calculatePortfolioScores(portfolioId: string): Promise<void> {
-    await apiClient.post<void>(`/portfolios/${portfolioId}/calculate-scores`);
-  },
-
-  async updatePortfolioTeamScores(
-    portfolioId: string,
-    teamId: string,
-    expectedPoints: number,
-    predictedPoints: number
-  ): Promise<void> {
-    await apiClient.put<void>(`/portfolios/${portfolioId}/teams/${teamId}/scores`, {
-      expectedPoints,
-      predictedPoints,
-    });
-  },
-
-  async updatePortfolioMaximumScore(portfolioId: string, maximumPoints: number): Promise<void> {
-    await apiClient.put<void>(`/portfolios/${portfolioId}/maximum-score`, {
-      maximumPoints,
-    });
-  },
 }; 

@@ -20,14 +20,14 @@ type TeamSimulatedEntry struct {
 	OurROI         float64 `json:"our_roi"`         // Our ROI accounting for our bid
 }
 
-// handleGetTournamentSimulatedEntry handles GET /analytics/tournaments/{id}/simulated-entry
-func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *http.Request) {
+// handleGetCalcuttaSimulatedEntry handles GET /analytics/calcuttas/{id}/simulated-entry
+func (s *Server) handleGetCalcuttaSimulatedEntry(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	calcuttaID := vars["id"]
 
-	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing tournament ID", "id")
+	if calcuttaID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing calcutta ID", "id")
 		return
 	}
 
@@ -35,84 +35,74 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 	// Uses ridge regression predictions from silver_predicted_market_share for expected_market
 	// Reads Our Bid from gold_recommended_entry_bids if available (from MINLP optimizer)
 	query := `
-		WITH main_tournament AS (
-			SELECT 
-				id,
-				CAST(SUBSTRING(name FROM '[0-9]{4}') AS INTEGER) as season
-			FROM tournaments
-			WHERE id = $1
+		WITH calcutta AS (
+			SELECT c.id AS calcutta_id
+			FROM core.calcuttas c
+			WHERE c.id = $1
+			  AND c.deleted_at IS NULL
+			LIMIT 1
+		),
+		bronze_calcutta AS (
+			SELECT
+				bcc.id AS bronze_calcutta_id,
+				bcc.tournament_id AS bronze_tournament_id,
+				bcc.season AS season
+			FROM bronze_calcuttas_core_ctx bcc
+			JOIN calcutta c ON c.calcutta_id = bcc.core_calcutta_id
+			LIMIT 1
 		),
 		bronze_tournament AS (
-			SELECT id
-			FROM bronze_tournaments
-			WHERE season = (SELECT season FROM main_tournament)
+			SELECT bronze_tournament_id AS id
+			FROM bronze_calcutta
 		),
 		entry_count AS (
 			SELECT COUNT(DISTINCT entry_name) as num_entries
-			FROM bronze_entry_bids beb
-			JOIN bronze_calcuttas bc ON beb.calcutta_id = bc.id
-			WHERE bc.tournament_id = (SELECT id FROM bronze_tournament)
+			FROM bronze.entry_bids beb
+			WHERE beb.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta)
 		),
 		total_pool AS (
 			SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47) * 100.0 as pool_size
 		),
-		team_win_counts AS (
-			SELECT 
+		team_expected_points AS (
+			SELECT
 				st.team_id,
-				st.wins,
-				COUNT(*) as sim_count
-			FROM silver_simulated_tournaments st
+				AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float AS expected_points
+			FROM silver.simulated_tournaments st
 			WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
-			GROUP BY st.team_id, st.wins
-		),
-		team_probabilities AS (
-			SELECT 
-				team_id,
-				SUM(sim_count)::float as total_sims,
-				SUM(CASE WHEN wins = 0 THEN sim_count ELSE 0 END)::float as win_pi,
-				SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
-				SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
-				SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
-				SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
-				SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
-				SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
-			FROM team_win_counts
-			GROUP BY team_id
+			GROUP BY st.team_id
 		),
 		latest_optimization AS (
 			SELECT gor.run_id
-			FROM gold_optimization_runs gor
-			WHERE gor.run_id LIKE 'minlp_' || (SELECT season FROM main_tournament) || '_%'
+			FROM gold.optimization_runs gor
+			WHERE gor.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta)
 			ORDER BY gor.created_at DESC
 			LIMIT 1
 		)
-		SELECT 
+		SELECT
 			t.id as team_id,
 			t.school_name,
 			t.seed,
 			t.region,
-			-- Expected points (EV calculation)
-			(COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0), 0) * 50 + 
-			 COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0), 0) * 150 + 
-			 COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0), 0) * 300 + 
-			 COALESCE(tp.win_e8 / NULLIF(tp.total_sims, 0), 0) * 500 + 
-			 COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0), 0) * 750 + 
-			 COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0), 0) * 1050) as expected_points,
+			COALESCE(tep.expected_points, 0.0) as expected_points,
 			-- Expected market: ML model prediction × total pool (based on actual entry count)
-			COALESCE(spms.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as expected_market,
+			COALESCE(spms_c.predicted_share, spms_t.predicted_share, 0.0) * (SELECT pool_size FROM total_pool) as expected_market,
 			-- Our bid from MINLP optimizer (0 if not available)
 			COALESCE(reb.recommended_bid_points, 0.0) as our_bid
-		FROM bronze_teams t
-		LEFT JOIN team_probabilities tp ON t.id = tp.team_id
-		LEFT JOIN silver_predicted_market_share spms 
-			ON spms.tournament_id = (SELECT id FROM bronze_tournament) AND spms.team_id = t.id
+		FROM bronze.teams t
+		LEFT JOIN team_expected_points tep ON t.id = tep.team_id
+		LEFT JOIN silver.predicted_market_share spms_c
+			ON spms_c.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta) AND spms_c.team_id = t.id
+		LEFT JOIN silver.predicted_market_share spms_t
+			ON spms_t.tournament_id = (SELECT id FROM bronze_tournament)
+			AND spms_t.calcutta_id IS NULL
+			AND spms_t.team_id = t.id
 		LEFT JOIN latest_optimization lo ON true
-		LEFT JOIN gold_recommended_entry_bids reb ON reb.run_id = lo.run_id AND reb.team_id = t.id
+		LEFT JOIN gold.recommended_entry_bids reb ON reb.run_id = lo.run_id AND reb.team_id = t.id
 		WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 		ORDER BY t.seed ASC, t.school_name ASC
 	`
 
-	rows, err := s.pool.Query(ctx, query, tournamentID)
+	rows, err := s.pool.Query(ctx, query, calcuttaID)
 	if err != nil {
 		log.Printf("Error querying simulated entry: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query simulated entry", "")
@@ -156,13 +146,13 @@ func (s *Server) handleGetTournamentSimulatedEntry(w http.ResponseWriter, r *htt
 	}
 
 	if len(results) == 0 {
-		writeError(w, r, http.StatusNotFound, "not_found", "No simulated entry found for tournament", "")
+		writeError(w, r, http.StatusNotFound, "not_found", "No simulated entry found for calcutta", "")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tournament_id": tournamentID,
-		"teams":         results,
-		"count":         len(results),
+		"calcutta_id": calcuttaID,
+		"teams":       results,
+		"count":       len(results),
 	})
 }

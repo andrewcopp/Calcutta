@@ -58,7 +58,7 @@ func verifySchools(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mism
 		return []Mismatch{{Where: "schools", What: err.Error()}}
 	}
 
-	rows, err := pool.Query(ctx, `SELECT slug, name FROM schools WHERE deleted_at IS NULL`)
+	rows, err := pool.Query(ctx, `SELECT slug, name FROM core.schools WHERE deleted_at IS NULL`)
 	if err != nil {
 		return []Mismatch{{Where: "schools", What: err.Error()}}
 	}
@@ -110,7 +110,7 @@ func verifyTournaments(ctx context.Context, pool *pgxpool.Pool, inDir string) []
 		var f1, f2, f3, f4 *string
 		err := pool.QueryRow(ctx, `
 			SELECT id, name, rounds, final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right
-			FROM tournaments
+			FROM core.tournaments
 			WHERE import_key = $1 AND deleted_at IS NULL
 		`, b.Tournament.ImportKey).Scan(&id, &name, &rounds, &f1, &f2, &f3, &f4)
 		if err != nil {
@@ -148,20 +148,20 @@ func verifyTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID
 		SELECT
 			s.slug,
 			s.name,
-			tt.seed,
-			tt.region,
-			tt.byes,
-			tt.wins,
-			tt.eliminated,
+			t.seed,
+			t.region,
+			t.byes,
+			t.wins,
+			t.eliminated,
 			k.net_rtg,
 			k.o_rtg,
 			k.d_rtg,
 			k.adj_t,
-			(k.tournament_team_id IS NOT NULL)
-		FROM tournament_teams tt
-		JOIN schools s ON s.id = tt.school_id
-		LEFT JOIN tournament_team_kenpom_stats k ON k.tournament_team_id = tt.id AND k.deleted_at IS NULL
-		WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL AND s.deleted_at IS NULL
+			(k.team_id IS NOT NULL)
+		FROM core.teams t
+		JOIN core.schools s ON s.id = t.school_id
+		LEFT JOIN core.team_kenpom_stats k ON k.team_id = t.id AND k.deleted_at IS NULL
+		WHERE t.tournament_id = $1 AND t.deleted_at IS NULL AND s.deleted_at IS NULL
 	`, tournamentID)
 	if err != nil {
 		return []Mismatch{{Where: "tournament_teams:" + tournamentKey, What: err.Error()}}
@@ -250,7 +250,7 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 		}
 
 		var tournamentID string
-		err := pool.QueryRow(ctx, `SELECT id FROM tournaments WHERE import_key = $1 AND deleted_at IS NULL`, b.Tournament.ImportKey).Scan(&tournamentID)
+		err := pool.QueryRow(ctx, `SELECT id FROM core.tournaments WHERE import_key = $1 AND deleted_at IS NULL`, b.Tournament.ImportKey).Scan(&tournamentID)
 		if err != nil {
 			out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: "tournament missing"})
 			continue
@@ -261,10 +261,10 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 		var ownerEmail string
 		err = pool.QueryRow(ctx, `
 			SELECT c.id, c.name, COALESCE(u.email, '')
-			FROM calcuttas c
-			JOIN users u ON u.id = c.owner_id
-			WHERE c.tournament_id = $1 AND c.key = $2 AND c.deleted_at IS NULL AND u.deleted_at IS NULL
-		`, tournamentID, b.Calcutta.Key).Scan(&calcuttaID, &calcuttaName, &ownerEmail)
+			FROM core.calcuttas c
+			JOIN public.users u ON u.id = c.owner_id
+			WHERE c.id = $1::uuid AND c.tournament_id = $2 AND c.deleted_at IS NULL AND u.deleted_at IS NULL
+		`, b.Calcutta.LegacyID, tournamentID).Scan(&calcuttaID, &calcuttaName, &ownerEmail)
 		if err != nil {
 			out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: "missing in db"})
 			continue
@@ -288,9 +288,9 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 }
 
 func verifyCalcuttaRounds(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, rounds []bundles.RoundRecord) []Mismatch {
-	rows, err := pool.Query(ctx, `SELECT round, points FROM calcutta_rounds WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
+	rows, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.calcutta_scoring_rules WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
 	if err != nil {
-		return []Mismatch{{Where: "calcutta_rounds:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}
 	}
 	defer rows.Close()
 
@@ -298,30 +298,30 @@ func verifyCalcuttaRounds(ctx context.Context, pool *pgxpool.Pool, calcuttaID, c
 	for rows.Next() {
 		var r, p int
 		if err := rows.Scan(&r, &p); err != nil {
-			return []Mismatch{{Where: "calcutta_rounds:" + calcuttaKey, What: err.Error()}}
+			return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}
 		}
 		inDB[r] = p
 	}
 	if err := rows.Err(); err != nil {
-		return []Mismatch{{Where: "calcutta_rounds:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}
 	}
 
 	var out []Mismatch
 	for _, rr := range rounds {
 		p, ok := inDB[rr.Round]
 		if !ok {
-			out = append(out, Mismatch{Where: "calcutta_rounds:" + calcuttaKey, What: fmt.Sprintf("missing round %d", rr.Round)})
+			out = append(out, Mismatch{Where: "calcutta_scoring_rules:" + calcuttaKey, What: fmt.Sprintf("missing round %d", rr.Round)})
 			continue
 		}
 		if p != rr.Points {
-			out = append(out, Mismatch{Where: "calcutta_rounds:" + calcuttaKey, What: fmt.Sprintf("round %d points mismatch db=%d bundle=%d", rr.Round, p, rr.Points)})
+			out = append(out, Mismatch{Where: "calcutta_scoring_rules:" + calcuttaKey, What: fmt.Sprintf("round %d points mismatch db=%d bundle=%d", rr.Round, p, rr.Points)})
 		}
 	}
 	return out
 }
 
 func verifyCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, payouts []bundles.PayoutRecord) []Mismatch {
-	rows, err := pool.Query(ctx, `SELECT position, amount_cents FROM calcutta_payouts WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
+	rows, err := pool.Query(ctx, `SELECT position, amount_cents FROM core.payouts WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
 	if err != nil {
 		return []Mismatch{{Where: "calcutta_payouts:" + calcuttaKey, What: err.Error()}}
 	}
@@ -355,10 +355,10 @@ func verifyCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID, 
 
 func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tournamentID, calcuttaID, calcuttaKey string, entries []bundles.EntryRecord, bids []bundles.EntryTeamBid) []Mismatch {
 	rows, err := pool.Query(ctx, `
-		SELECT ce.key, ce.name, COALESCE(u.email, '')
-		FROM calcutta_entries ce
-		LEFT JOIN users u ON u.id = ce.user_id
-		WHERE ce.calcutta_id = $1 AND ce.deleted_at IS NULL
+		SELECT e.id, e.name, COALESCE(u.email, '')
+		FROM core.entries e
+		LEFT JOIN public.users u ON u.id = e.user_id
+		WHERE e.calcutta_id = $1 AND e.deleted_at IS NULL
 	`, calcuttaID)
 	if err != nil {
 		return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
@@ -370,11 +370,11 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 		email string
 	}{}
 	for rows.Next() {
-		var k, n, e string
-		if err := rows.Scan(&k, &n, &e); err != nil {
+		var id, n, e string
+		if err := rows.Scan(&id, &n, &e); err != nil {
 			return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
 		}
-		inDB[k] = struct {
+		inDB[id] = struct {
 			name  string
 			email string
 		}{name: n, email: e}
@@ -385,7 +385,7 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 
 	var out []Mismatch
 	for _, e := range entries {
-		db, ok := inDB[e.Key]
+		db, ok := inDB[e.LegacyID]
 		if !ok {
 			out = append(out, Mismatch{Where: "calcutta_entries:" + calcuttaKey, What: fmt.Sprintf("missing entry_key %s", e.Key)})
 			continue
@@ -401,12 +401,12 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 	}
 
 	rows, err = pool.Query(ctx, `
-		SELECT ce.key, s.slug, cet.bid
-		FROM calcutta_entry_teams cet
-		JOIN calcutta_entries ce ON ce.id = cet.entry_id
-		JOIN tournament_teams tt ON tt.id = cet.team_id
-		JOIN schools s ON s.id = tt.school_id
-		WHERE ce.calcutta_id = $1 AND cet.deleted_at IS NULL AND ce.deleted_at IS NULL AND tt.deleted_at IS NULL AND s.deleted_at IS NULL
+		SELECT et.entry_id, s.slug, et.bid_points
+		FROM core.entry_teams et
+		JOIN core.entries e ON e.id = et.entry_id
+		JOIN core.teams t ON t.id = et.team_id
+		JOIN core.schools s ON s.id = t.school_id
+		WHERE e.calcutta_id = $1 AND et.deleted_at IS NULL AND e.deleted_at IS NULL AND t.deleted_at IS NULL AND s.deleted_at IS NULL
 	`, calcuttaID)
 	if err != nil {
 		return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
@@ -415,12 +415,12 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 
 	bidDB := map[string]int{}
 	for rows.Next() {
-		var entryKey, schoolSlug string
+		var entryID, schoolSlug string
 		var bid int
-		if err := rows.Scan(&entryKey, &schoolSlug, &bid); err != nil {
+		if err := rows.Scan(&entryID, &schoolSlug, &bid); err != nil {
 			return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
 		}
-		bidDB[entryKey+"|"+schoolSlug] = bid
+		bidDB[entryID+":"+schoolSlug] = bid
 	}
 	if err := rows.Err(); err != nil {
 		return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
@@ -428,14 +428,28 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 
 	_ = tournamentID
 	for _, b := range bids {
-		k := b.EntryKey + "|" + b.SchoolSlug
-		dbBid, ok := bidDB[k]
+		k := strings.TrimSpace(b.EntryKey)
+		entryID := ""
+		if parts := strings.SplitN(k, ":", 2); len(parts) == 2 {
+			entryID = parts[0]
+		}
+		if entryID == "" {
+			// Fall back to legacy id map via bundle
+			for _, e := range entries {
+				if e.Key == b.EntryKey {
+					entryID = e.LegacyID
+					break
+				}
+			}
+		}
+		k = entryID + ":" + b.SchoolSlug
+		v, ok := bidDB[k]
 		if !ok {
 			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("missing bid %s", k)})
 			continue
 		}
-		if dbBid != b.Bid {
-			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid mismatch %s db=%d bundle=%d", k, dbBid, b.Bid)})
+		if v != b.Bid {
+			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid mismatch %s db=%d bundle=%d", k, v, b.Bid)})
 		}
 	}
 	return out

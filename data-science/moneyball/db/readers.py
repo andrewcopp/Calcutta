@@ -12,6 +12,8 @@ import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from moneyball.utils import points
+
 
 def get_db_connection():
     """Get a database connection using environment variables."""
@@ -41,7 +43,7 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
             cur.execute(
                 """
                 SELECT id, season, created_at
-                FROM bronze_tournaments
+                FROM bronze.tournaments
                 WHERE season = %s
                 """,
                 (year,)
@@ -50,6 +52,86 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
             return dict(row) if row else None
     finally:
         conn.close()
+
+
+def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                WITH season AS (
+                    SELECT id
+                    FROM core.seasons
+                    WHERE year = %s AND deleted_at IS NULL
+                ),
+                tournament AS (
+                    SELECT t.id
+                    FROM core.tournaments t
+                    JOIN season s ON s.id = t.season_id
+                    WHERE t.deleted_at IS NULL
+                    ORDER BY t.created_at DESC
+                    LIMIT 1
+                ),
+                calcutta AS (
+                    SELECT c.id
+                    FROM core.calcuttas c
+                    JOIN tournament t ON t.id = c.tournament_id
+                    WHERE c.deleted_at IS NULL
+                    ORDER BY c.created_at DESC
+                    LIMIT 1
+                )
+                SELECT r.win_index, r.points_awarded
+                FROM core.calcutta_scoring_rules r
+                JOIN calcutta c ON c.id = r.calcutta_id
+                WHERE r.deleted_at IS NULL
+                ORDER BY r.win_index ASC
+                """,
+                (year,),
+            )
+            rows = cur.fetchall() or []
+
+        df = pd.DataFrame(rows)
+        return points.points_by_win_index_from_scoring_rules(df)
+    finally:
+        conn.close()
+
+
+def read_points_by_win_index_for_calcutta(
+    calcutta_id: str,
+) -> Dict[int, float]:
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT r.win_index, r.points_awarded
+                FROM core.calcutta_scoring_rules r
+                WHERE r.calcutta_id = %s AND r.deleted_at IS NULL
+                ORDER BY r.win_index ASC
+                """,
+                (calcutta_id,),
+            )
+            rows = cur.fetchall() or []
+
+        df = pd.DataFrame(rows)
+        return points.points_by_win_index_from_scoring_rules(df)
+    finally:
+        conn.close()
+
+
+def initialize_default_scoring_rules_for_year(year: int) -> Dict[int, float]:
+    pbwi = read_points_by_win_index_for_year(year)
+    points.set_default_points_by_win_index(pbwi)
+    return pbwi
+
+
+def initialize_default_scoring_rules_for_calcutta(
+    calcutta_id: str,
+) -> Dict[int, float]:
+    pbwi = read_points_by_win_index_for_calcutta(calcutta_id)
+    points.set_default_points_by_win_index(pbwi)
+    return pbwi
 
 
 def read_teams(year: int) -> pd.DataFrame:
@@ -79,8 +161,8 @@ def read_teams(year: int) -> pd.DataFrame:
             t.kenpom_adj_d,
             t.kenpom_adj_t,
             t.created_at
-        FROM bronze_teams t
-        JOIN bronze_tournaments tour ON t.tournament_id = tour.id
+        FROM bronze.teams t
+        JOIN bronze.tournaments tour ON t.tournament_id = tour.id
         WHERE tour.season = %s
         ORDER BY t.seed, t.school_name
         """
@@ -110,7 +192,9 @@ def read_games(year: int) -> pd.DataFrame:
     regions = teams_df['region'].unique()
     
     for region in regions:
-        region_teams = teams_df[teams_df['region'] == region].sort_values('seed')
+        region_teams = teams_df[
+            teams_df["region"] == region
+        ].sort_values("seed")
         
         # Round 1 matchups (1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15)
         matchups = [
@@ -137,7 +221,10 @@ def read_games(year: int) -> pd.DataFrame:
     return pd.DataFrame(games)
 
 
-def read_predicted_game_outcomes(year: int, model_version: str = "kenpom-v1") -> pd.DataFrame:
+def read_predicted_game_outcomes(
+    year: int,
+    model_version: str = "kenpom-v1",
+) -> pd.DataFrame:
     """
     Read predicted game outcomes from the database.
     
@@ -164,10 +251,10 @@ def read_predicted_game_outcomes(year: int, model_version: str = "kenpom-v1") ->
             t1.seed as team1_seed,
             t2.school_name as team2_school,
             t2.seed as team2_seed
-        FROM silver_predicted_game_outcomes pgo
-        JOIN bronze_tournaments tour ON pgo.tournament_id = tour.id
-        JOIN bronze_teams t1 ON pgo.team1_id = t1.id
-        JOIN bronze_teams t2 ON pgo.team2_id = t2.id
+        FROM silver.predicted_game_outcomes pgo
+        JOIN bronze.tournaments tour ON pgo.tournament_id = tour.id
+        JOIN bronze.teams t1 ON pgo.team1_id = t1.id
+        JOIN bronze.teams t2 ON pgo.team2_id = t2.id
         WHERE tour.season = %s AND pgo.model_version = %s
         ORDER BY pgo.round, t1.seed
         """
@@ -176,7 +263,11 @@ def read_predicted_game_outcomes(year: int, model_version: str = "kenpom-v1") ->
         conn.close()
 
 
-def read_simulated_tournaments(year: int, run_id: Optional[str] = None) -> pd.DataFrame:
+def read_simulated_tournaments(
+    year: int,
+    run_id: Optional[str] = None,
+    calcutta_id: Optional[str] = None,
+) -> pd.DataFrame:
     """
     Read simulated tournament outcomes from the database.
     
@@ -189,7 +280,8 @@ def read_simulated_tournaments(year: int, run_id: Optional[str] = None) -> pd.Da
     """
     conn = get_db_connection()
     try:
-        # Note: Schema doesn't have points column, we calculate it from wins+byes
+        # Note: Schema doesn't have points column, we calculate it from
+        # wins+byes
         # Also doesn't have run_id yet, so we ignore it for now
         query = """
         SELECT 
@@ -204,34 +296,26 @@ def read_simulated_tournaments(year: int, run_id: Optional[str] = None) -> pd.Da
             t.school_name,
             t.seed,
             t.region
-        FROM silver_simulated_tournaments st
-        JOIN bronze_tournaments tour ON st.tournament_id = tour.id
-        JOIN bronze_teams t ON st.team_id = t.id
+        FROM silver.simulated_tournaments st
+        JOIN bronze.tournaments tour ON st.tournament_id = tour.id
+        JOIN bronze.teams t ON st.team_id = t.id
         WHERE tour.season = %s
         ORDER BY st.sim_id, t.seed
         LIMIT 100000
         """
         df = pd.read_sql_query(query, conn, params=(year,))
-        
-        # Calculate points from wins+byes using standard scoring
-        def calc_points(row):
-            total = row['wins'] + row['byes']
-            if total <= 1:
-                return 0
-            elif total == 2:
-                return 50
-            elif total == 3:
-                return 150
-            elif total == 4:
-                return 300
-            elif total == 5:
-                return 500
-            elif total == 6:
-                return 750
-            else:
-                return 1050
-        
-        df['points'] = df.apply(calc_points, axis=1)
+
+        pbwi = (
+            read_points_by_win_index_for_calcutta(calcutta_id)
+            if calcutta_id
+            else read_points_by_win_index_for_year(year)
+        )
+        df["points"] = (df["wins"] + df["byes"]).apply(
+            lambda p: points.team_points_from_scoring_rules(
+                int(p),
+                pbwi,
+            )
+        )
         return df
     finally:
         conn.close()
@@ -255,20 +339,20 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
             reb.id,
             reb.run_id,
             reb.team_id,
-            reb.bid_amount_points,
-            reb.expected_points,
             reb.expected_roi,
+            reb.recommended_bid_points,
             reb.created_at,
             t.school_name,
             t.seed,
             t.region,
             tour.season
-        FROM gold_recommended_entry_bids reb
-        JOIN gold_optimization_runs run ON reb.run_id = run.run_id
-        JOIN bronze_tournaments tour ON run.tournament_id = tour.id
-        JOIN bronze_teams t ON reb.team_id = t.id
+        FROM gold.recommended_entry_bids reb
+        JOIN gold.optimization_runs run ON reb.run_id = run.run_id
+        JOIN bronze.calcuttas bc ON run.calcutta_id = bc.id
+        JOIN bronze.tournaments tour ON bc.tournament_id = tour.id
+        JOIN bronze.teams t ON reb.team_id = t.id
         WHERE tour.season = %s AND reb.run_id = %s
-        ORDER BY reb.bid_amount_points DESC
+        ORDER BY reb.recommended_bid_points DESC
         """
         return pd.read_sql_query(query, conn, params=(year, run_id))
     finally:
@@ -290,9 +374,14 @@ def read_calcutta(year: int) -> Optional[Dict[str, Any]]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT c.id, c.tournament_id, c.name, c.created_at, c.updated_at
-                FROM bronze_calcuttas c
-                JOIN bronze_tournaments t ON c.tournament_id = t.id
+                SELECT
+                    c.id,
+                    c.tournament_id,
+                    c.name,
+                    c.created_at,
+                    c.updated_at
+                FROM bronze.calcuttas c
+                JOIN bronze.tournaments t ON c.tournament_id = t.id
                 WHERE t.season = %s
                 LIMIT 1
                 """,
@@ -334,8 +423,9 @@ def get_latest_run_id(year: int) -> Optional[str]:
             cur.execute(
                 """
                 SELECT run.run_id
-                FROM gold_optimization_runs run
-                JOIN bronze_tournaments tour ON run.tournament_id = tour.id
+                FROM gold.optimization_runs run
+                JOIN bronze.calcuttas bc ON run.calcutta_id = bc.id
+                JOIN bronze.tournaments tour ON bc.tournament_id = tour.id
                 WHERE tour.season = %s
                 ORDER BY run.created_at DESC
                 LIMIT 1

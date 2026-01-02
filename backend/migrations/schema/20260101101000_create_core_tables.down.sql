@@ -1,0 +1,23 @@
+DROP TRIGGER IF EXISTS trg_core_payouts_updated_at ON core.payouts;
+DROP TRIGGER IF EXISTS trg_core_entry_teams_updated_at ON core.entry_teams;
+DROP TRIGGER IF EXISTS trg_core_entries_updated_at ON core.entries;
+DROP TRIGGER IF EXISTS trg_core_calcutta_scoring_rules_updated_at ON core.calcutta_scoring_rules;
+DROP TRIGGER IF EXISTS trg_core_calcuttas_updated_at ON core.calcuttas;
+DROP TRIGGER IF EXISTS trg_core_team_kenpom_stats_updated_at ON core.team_kenpom_stats;
+DROP TRIGGER IF EXISTS trg_core_teams_updated_at ON core.teams;
+DROP TRIGGER IF EXISTS trg_core_schools_updated_at ON core.schools;
+DROP TRIGGER IF EXISTS trg_core_tournaments_updated_at ON core.tournaments;
+DROP TRIGGER IF EXISTS trg_core_competitions_updated_at ON core.competitions;
+DROP TRIGGER IF EXISTS trg_core_seasons_updated_at ON core.seasons;
+
+DROP TABLE IF EXISTS core.payouts;
+DROP TABLE IF EXISTS core.entry_teams;
+DROP TABLE IF EXISTS core.entries;
+DROP TABLE IF EXISTS core.calcutta_scoring_rules;
+DROP TABLE IF EXISTS core.calcuttas;
+DROP TABLE IF EXISTS core.team_kenpom_stats;
+DROP TABLE IF EXISTS core.teams;
+DROP TABLE IF EXISTS core.schools;
+DROP TABLE IF EXISTS core.tournaments;
+DROP TABLE IF EXISTS core.competitions;
+DROP TABLE IF EXISTS core.seasons;
