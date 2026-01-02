@@ -27,6 +27,64 @@ This plan is designed to be safe with respect to historical cleaned data. When i
 - [x] **Freeze invariants** (row counts + relational invariants) for protected data tables
 - [ ] **Inventory** current tables + mark each as: protected / derived / deprecated / unknown
 
+### Inventory (repo-derived; verify against live DB)
+
+#### Protected (must preserve + verify)
+
+##### Public schema (auth + ops)
+- `public.users`
+- `public.auth_sessions`
+- `public.permissions`
+- `public.labels`
+- `public.label_permissions`
+- `public.grants`
+- `public.api_keys`
+- `public.bundle_uploads`
+
+##### Core schema (product)
+- `core.seasons`
+- `core.competitions`
+- `core.tournaments`
+- `core.schools`
+- `core.teams`
+- `core.team_kenpom_stats`
+- `core.calcuttas`
+- `core.calcutta_scoring_rules`
+- `core.entries`
+- `core.entry_teams`
+- `core.payouts`
+
+#### Derived / recomputable (safe to rebuild; keep for performance)
+
+##### Core derived views
+- `core.derived_portfolios`
+- `core.derived_portfolio_teams`
+
+##### Lab schemas (medallion tiers)
+- `bronze.tournaments`
+- `bronze.teams`
+- `bronze.calcuttas`
+- `bronze.entry_bids`
+- `bronze.payouts`
+- `silver.predicted_game_outcomes`
+- `silver.simulated_tournaments`
+- `silver.predicted_market_share`
+- `gold.optimization_runs`
+- `gold.recommended_entry_bids`
+- `gold.entry_simulation_outcomes`
+- `gold.entry_performance`
+- `gold.detailed_investment_report`
+
+#### Deprecated / transitional (remove after verification window)
+
+##### Public compatibility / core-context views
+- `public.bronze_tournaments_core_ctx`
+- `public.bronze_teams_core_ctx`
+- `public.bronze_calcuttas_core_ctx`
+
+#### Unknown / needs decision
+- (none listed yet)
+
 ### Orphan checks (baseline)
 - [x] `core.teams.tournament_id -> core.tournaments.id`
 - [x] `core.team_kenpom_stats.team_id -> core.teams.id`

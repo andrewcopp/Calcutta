@@ -180,8 +180,8 @@ func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEnt
 const getLatestOptimizationRunIDByCoreCalcuttaID = `-- name: GetLatestOptimizationRunIDByCoreCalcuttaID :one
 SELECT gor.run_id
 FROM gold.optimization_runs gor
-JOIN public.bronze_calcuttas_core_ctx bcc ON bcc.id = gor.calcutta_id
-WHERE bcc.core_calcutta_id = $1::uuid
+JOIN bronze.calcuttas bc ON bc.id = gor.calcutta_id
+WHERE bc.core_calcutta_id = $1::uuid
 ORDER BY gor.created_at DESC
 LIMIT 1
 `

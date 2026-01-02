@@ -560,10 +560,10 @@ WITH calcutta AS (
 ),
 bronze_calcutta AS (
   SELECT
-    bcc.id AS bronze_calcutta_id,
-    bcc.tournament_id AS bronze_tournament_id
-  FROM public.bronze_calcuttas_core_ctx bcc
-  JOIN calcutta c ON c.calcutta_id = bcc.core_calcutta_id
+    bc.id AS bronze_calcutta_id,
+    bc.tournament_id AS bronze_tournament_id
+  FROM bronze.calcuttas bc
+  JOIN calcutta c ON c.calcutta_id = bc.core_calcutta_id
   LIMIT 1
 ),
 bronze_tournament AS (
@@ -663,9 +663,9 @@ WITH calcutta AS (
   LIMIT 1
 ),
 bronze_calcutta AS (
-  SELECT bcc.tournament_id AS bronze_tournament_id
-  FROM public.bronze_calcuttas_core_ctx bcc
-  JOIN calcutta c ON c.calcutta_id = bcc.core_calcutta_id
+  SELECT bc.tournament_id AS bronze_tournament_id
+  FROM bronze.calcuttas bc
+  JOIN calcutta c ON c.calcutta_id = bc.core_calcutta_id
   LIMIT 1
 ),
 bronze_tournament AS (
@@ -781,11 +781,12 @@ WITH calcutta AS (
 ),
 bronze_calcutta AS (
   SELECT
-    bcc.id AS bronze_calcutta_id,
-    bcc.tournament_id AS bronze_tournament_id,
-    bcc.season AS season
-  FROM public.bronze_calcuttas_core_ctx bcc
-  JOIN calcutta c ON c.calcutta_id = bcc.core_calcutta_id
+    bc.id AS bronze_calcutta_id,
+    bc.tournament_id AS bronze_tournament_id,
+    bt.season AS season
+  FROM bronze.calcuttas bc
+  JOIN bronze.tournaments bt ON bt.id = bc.tournament_id
+  JOIN calcutta c ON c.calcutta_id = bc.core_calcutta_id
   LIMIT 1
 ),
 bronze_tournament AS (
