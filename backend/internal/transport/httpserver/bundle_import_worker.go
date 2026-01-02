@@ -8,10 +8,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/verifier"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -78,34 +80,15 @@ func (s *Server) claimNextBundleUpload(ctx context.Context, staleAfter time.Dura
 		_ = tx.Rollback(ctx)
 	}()
 
-	var uploadID string
-	err = tx.QueryRow(ctx, `
-		SELECT id
-		FROM bundle_uploads
-		WHERE deleted_at IS NULL
-		  AND finished_at IS NULL
-		  AND (
-			status = 'pending'
-			OR (status = 'running' AND started_at IS NOT NULL AND started_at < $1)
-		  )
-		ORDER BY created_at ASC
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
-	`, staleBefore).Scan(&uploadID)
+	q := sqlc.New(s.pool).WithTx(tx)
+	uploadID, err := q.ClaimNextBundleUpload(ctx, sqlc.ClaimNextBundleUploadParams{
+		Now:         pgtype.Timestamptz{Time: now, Valid: true},
+		StaleBefore: pgtype.Timestamptz{Time: staleBefore, Valid: true},
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false, nil
 		}
-		return "", false, err
-	}
-
-	_, err = tx.Exec(ctx, `
-		UPDATE bundle_uploads
-		SET status = 'running', started_at = $2, finished_at = NULL, error_message = NULL,
-		    import_report = NULL, verify_report = NULL, updated_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
-	`, uploadID, now)
-	if err != nil {
 		return "", false, err
 	}
 
@@ -123,12 +106,8 @@ func (s *Server) processBundleUpload(ctx context.Context, uploadID string) {
 	}
 
 	err := func() error {
-		var zipBytes []byte
-		err := s.pool.QueryRow(ctx, `
-			SELECT archive
-			FROM bundle_uploads
-			WHERE id = $1 AND deleted_at IS NULL
-		`, uploadID).Scan(&zipBytes)
+		q := sqlc.New(s.pool)
+		zipBytes, err := q.GetBundleUploadArchive(ctx, uploadID)
 		if err != nil {
 			return err
 		}
@@ -156,11 +135,11 @@ func (s *Server) processBundleUpload(ctx context.Context, uploadID string) {
 		impJSON, _ := json.Marshal(impReport)
 		verJSON, _ := json.Marshal(verReport)
 
-		_, err = s.pool.Exec(ctx, `
-			UPDATE bundle_uploads
-			SET status = 'succeeded', finished_at = NOW(), import_report = $2, verify_report = $3, updated_at = NOW()
-			WHERE id = $1 AND deleted_at IS NULL
-		`, uploadID, impJSON, verJSON)
+		err = q.MarkBundleUploadSucceeded(ctx, sqlc.MarkBundleUploadSucceededParams{
+			UploadID:     uploadID,
+			ImportReport: impJSON,
+			VerifyReport: verJSON,
+		})
 		if err != nil {
 			log.Printf("Error marking bundle upload %s succeeded: %v", uploadID, err)
 		}
@@ -181,11 +160,11 @@ func (s *Server) failBundleUpload(ctx context.Context, uploadID string, jobErr e
 		msg = "bundle upload not found"
 	}
 
-	_, err := s.pool.Exec(ctx, `
-		UPDATE bundle_uploads
-		SET status = 'failed', finished_at = NOW(), error_message = $2, updated_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
-	`, uploadID, msg)
+	q := sqlc.New(s.pool)
+	err := q.MarkBundleUploadFailed(ctx, sqlc.MarkBundleUploadFailedParams{
+		UploadID:     uploadID,
+		ErrorMessage: &msg,
+	})
 	if err != nil {
 		log.Printf("Error marking bundle upload %s failed: %v", uploadID, err)
 	}

@@ -21,6 +21,10 @@ func (s *Service) GetTournamentSimStats(ctx context.Context, year int) (*ports.T
 	return s.repo.GetTournamentSimStats(ctx, year)
 }
 
+func (s *Service) GetTournamentSimStatsByCoreTournamentID(ctx context.Context, coreTournamentID string) (*ports.TournamentSimStatsByID, error) {
+	return s.repo.GetTournamentSimStatsByCoreTournamentID(ctx, coreTournamentID)
+}
+
 // GetTeamPerformance retrieves performance metrics for a specific team
 func (s *Service) GetTeamPerformance(ctx context.Context, year int, teamID string) (*ports.TeamPerformance, error) {
 	return s.repo.GetTeamPerformance(ctx, year, teamID)

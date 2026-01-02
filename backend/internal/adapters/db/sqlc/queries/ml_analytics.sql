@@ -14,6 +14,49 @@ JOIN silver.simulated_tournaments st ON t.id = st.tournament_id
 WHERE t.season = $1::int
 GROUP BY t.id, t.season;
 
+-- name: GetTournamentSimStatsByCoreTournamentID :one
+WITH tournament_info AS (
+	SELECT
+		bt.id as tournament_id,
+		bt.season
+	FROM bronze.tournaments bt
+	WHERE bt.core_tournament_id = sqlc.arg(core_tournament_id)::uuid
+	LIMIT 1
+),
+sim_stats AS (
+	SELECT
+		COUNT(DISTINCT sim_id)::int as total_simulations,
+		COUNT(DISTINCT team_id)::int as total_teams
+	FROM silver.simulated_tournaments st
+	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
+),
+prediction_stats AS (
+	SELECT COUNT(*)::int as total_predictions
+	FROM silver.predicted_game_outcomes pgo
+	JOIN tournament_info ti ON pgo.tournament_id = ti.tournament_id
+),
+win_stats AS (
+	SELECT
+		AVG(wins)::double precision as mean_wins,
+		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY wins)::double precision as median_wins,
+		MAX(wins)::int as max_wins
+	FROM silver.simulated_tournaments st
+	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
+)
+SELECT
+	ti.tournament_id,
+	ti.season,
+	COALESCE(ss.total_simulations, 0)::int as total_simulations,
+	COALESCE(ps.total_predictions, 0)::int as total_predictions,
+	COALESCE(ws.mean_wins, 0.0)::double precision as mean_wins,
+	COALESCE(ws.median_wins, 0.0)::double precision as median_wins,
+	COALESCE(ws.max_wins, 0)::int as max_wins,
+	NOW()::timestamptz as last_updated
+FROM tournament_info ti
+LEFT JOIN sim_stats ss ON true
+LEFT JOIN prediction_stats ps ON true
+LEFT JOIN win_stats ws ON true;
+
 -- name: GetTeamPerformanceByID :one
 WITH season_ctx AS (
     SELECT bt.core_tournament_id

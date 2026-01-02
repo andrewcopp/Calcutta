@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/exporter"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
@@ -101,24 +102,13 @@ func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Reques
 	sum := sha256.Sum256(zipBytes)
 	sha := hex.EncodeToString(sum[:])
 
-	var uploadID string
-	err = s.pool.QueryRow(r.Context(), `
-		INSERT INTO bundle_uploads (filename, sha256, size_bytes, archive, status)
-		VALUES ($1, $2, $3, $4, 'pending')
-		ON CONFLICT (sha256) WHERE deleted_at IS NULL
-		DO UPDATE SET
-			filename = EXCLUDED.filename,
-			size_bytes = EXCLUDED.size_bytes,
-			archive = EXCLUDED.archive,
-			status = 'pending',
-			started_at = NULL,
-			finished_at = NULL,
-			error_message = NULL,
-			import_report = NULL,
-			verify_report = NULL,
-			updated_at = NOW()
-		RETURNING id
-	`, header.Filename, sha, len(zipBytes), zipBytes).Scan(&uploadID)
+	q := sqlc.New(s.pool)
+	uploadID, err := q.UpsertBundleUpload(r.Context(), sqlc.UpsertBundleUploadParams{
+		Filename:  header.Filename,
+		Sha256:    sha,
+		SizeBytes: int64(len(zipBytes)),
+		Archive:   zipBytes,
+	})
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -140,35 +130,34 @@ func (s *Server) adminBundlesImportStatusHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var (
-		filename, sha256, status string
-		sizeBytes                int
-		startedAt, finishedAt    *time.Time
-		errMsg                   *string
-		impJSON, verJSON         []byte
-	)
-
-	err := s.pool.QueryRow(r.Context(), `
-		SELECT filename, sha256, size_bytes, status, started_at, finished_at, error_message,
-		       COALESCE(import_report, '{}'::jsonb), COALESCE(verify_report, '{}'::jsonb)
-		FROM bundle_uploads
-		WHERE id = $1 AND deleted_at IS NULL
-	`, uploadID).Scan(&filename, &sha256, &sizeBytes, &status, &startedAt, &finishedAt, &errMsg, &impJSON, &verJSON)
+	q := sqlc.New(s.pool)
+	row, err := q.GetBundleUploadStatus(r.Context(), uploadID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	resp := adminBundlesImportStatusResponse{UploadID: uploadID, Filename: filename, SHA256: sha256, SizeBytes: sizeBytes, Status: status, StartedAt: startedAt, FinishedAt: finishedAt, ErrorMessage: errMsg}
-	if len(impJSON) > 0 && string(impJSON) != "{}" {
+	var startedAt *time.Time
+	if row.StartedAt.Valid {
+		t := row.StartedAt.Time
+		startedAt = &t
+	}
+	var finishedAt *time.Time
+	if row.FinishedAt.Valid {
+		t := row.FinishedAt.Time
+		finishedAt = &t
+	}
+
+	resp := adminBundlesImportStatusResponse{UploadID: uploadID, Filename: row.Filename, SHA256: row.Sha256, SizeBytes: int(row.SizeBytes), Status: row.Status, StartedAt: startedAt, FinishedAt: finishedAt, ErrorMessage: row.ErrorMessage}
+	if len(row.ImportReport) > 0 && string(row.ImportReport) != "{}" {
 		var rep importer.Report
-		if err := json.Unmarshal(impJSON, &rep); err == nil {
+		if err := json.Unmarshal(row.ImportReport, &rep); err == nil {
 			resp.ImportReport = &rep
 		}
 	}
-	if len(verJSON) > 0 && string(verJSON) != "{}" {
+	if len(row.VerifyReport) > 0 && string(row.VerifyReport) != "{}" {
 		var rep verifier.Report
-		if err := json.Unmarshal(verJSON, &rep); err == nil {
+		if err := json.Unmarshal(row.VerifyReport, &rep); err == nil {
 			resp.VerifyReport = &rep
 		}
 	}

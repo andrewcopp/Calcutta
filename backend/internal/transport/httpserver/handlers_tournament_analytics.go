@@ -3,7 +3,6 @@ package httpserver
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -20,79 +19,13 @@ func (s *Server) handleGetTournamentSimStatsByID(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Query the database to get simulation statistics for this tournament
-	// Resolve the bronze tournament row for this core tournament.
-	query := `
-		WITH main_tournament AS (
-			SELECT 
-				id
-			FROM core.tournaments
-			WHERE id = $1
-		),
-		tournament_info AS (
-			SELECT bt.id, bt.season
-			FROM bronze.tournaments bt
-			JOIN main_tournament mt ON bt.core_tournament_id = mt.id
-		),
-		sim_stats AS (
-			SELECT 
-				COUNT(DISTINCT sim_id) as total_simulations,
-				COUNT(DISTINCT team_id) as total_teams
-			FROM silver.simulated_tournaments st
-			JOIN tournament_info ti ON st.tournament_id = ti.id
-		),
-		prediction_stats AS (
-			SELECT COUNT(*) as total_predictions
-			FROM silver.predicted_game_outcomes pgo
-			JOIN tournament_info ti ON pgo.tournament_id = ti.id
-		),
-		win_stats AS (
-			SELECT 
-				AVG(wins)::numeric as mean_wins,
-				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY wins) as median_wins,
-				MAX(wins) as max_wins
-			FROM silver.simulated_tournaments st
-			JOIN tournament_info ti ON st.tournament_id = ti.id
-		)
-		SELECT 
-			ti.id as tournament_id,
-			ti.season,
-			COALESCE(ss.total_simulations, 0) as total_simulations,
-			COALESCE(ps.total_predictions, 0) as total_predictions,
-			COALESCE(ws.mean_wins, 0) as mean_wins,
-			COALESCE(ws.median_wins, 0) as median_wins,
-			COALESCE(ws.max_wins, 0) as max_wins,
-			NOW() as last_updated
-		FROM tournament_info ti
-		LEFT JOIN sim_stats ss ON true
-		LEFT JOIN prediction_stats ps ON true
-		LEFT JOIN win_stats ws ON true
-	`
-
-	var stats struct {
-		TournamentID     string    `db:"tournament_id"`
-		Season           int       `db:"season"`
-		TotalSimulations int       `db:"total_simulations"`
-		TotalPredictions int       `db:"total_predictions"`
-		MeanWins         float64   `db:"mean_wins"`
-		MedianWins       float64   `db:"median_wins"`
-		MaxWins          int       `db:"max_wins"`
-		LastUpdated      time.Time `db:"last_updated"`
-	}
-
-	err := s.pool.QueryRow(ctx, query, tournamentID).Scan(
-		&stats.TournamentID,
-		&stats.Season,
-		&stats.TotalSimulations,
-		&stats.TotalPredictions,
-		&stats.MeanWins,
-		&stats.MedianWins,
-		&stats.MaxWins,
-		&stats.LastUpdated,
-	)
-
+	stats, err := s.app.MLAnalytics.GetTournamentSimStatsByCoreTournamentID(ctx, tournamentID)
 	if err != nil {
 		log.Printf("Error getting tournament sim stats by ID: %v", err)
+		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to get tournament sim stats", "")
+		return
+	}
+	if stats == nil {
 		writeError(w, r, http.StatusNotFound, "not_found", "Tournament not found or no simulation data available", "")
 		return
 	}

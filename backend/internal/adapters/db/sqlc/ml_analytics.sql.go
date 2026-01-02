@@ -7,6 +7,8 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getActualEntryPortfolio = `-- name: GetActualEntryPortfolio :many
@@ -549,6 +551,77 @@ func (q *Queries) GetTeamPredictionsByYear(ctx context.Context, dollar_1 int32) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTournamentSimStatsByCoreTournamentID = `-- name: GetTournamentSimStatsByCoreTournamentID :one
+WITH tournament_info AS (
+	SELECT
+		bt.id as tournament_id,
+		bt.season
+	FROM bronze.tournaments bt
+	WHERE bt.core_tournament_id = $1::uuid
+	LIMIT 1
+),
+sim_stats AS (
+	SELECT
+		COUNT(DISTINCT sim_id)::int as total_simulations,
+		COUNT(DISTINCT team_id)::int as total_teams
+	FROM silver.simulated_tournaments st
+	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
+),
+prediction_stats AS (
+	SELECT COUNT(*)::int as total_predictions
+	FROM silver.predicted_game_outcomes pgo
+	JOIN tournament_info ti ON pgo.tournament_id = ti.tournament_id
+),
+win_stats AS (
+	SELECT
+		AVG(wins)::double precision as mean_wins,
+		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY wins)::double precision as median_wins,
+		MAX(wins)::int as max_wins
+	FROM silver.simulated_tournaments st
+	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
+)
+SELECT
+	ti.tournament_id,
+	ti.season,
+	COALESCE(ss.total_simulations, 0)::int as total_simulations,
+	COALESCE(ps.total_predictions, 0)::int as total_predictions,
+	COALESCE(ws.mean_wins, 0.0)::double precision as mean_wins,
+	COALESCE(ws.median_wins, 0.0)::double precision as median_wins,
+	COALESCE(ws.max_wins, 0)::int as max_wins,
+	NOW()::timestamptz as last_updated
+FROM tournament_info ti
+LEFT JOIN sim_stats ss ON true
+LEFT JOIN prediction_stats ps ON true
+LEFT JOIN win_stats ws ON true
+`
+
+type GetTournamentSimStatsByCoreTournamentIDRow struct {
+	TournamentID     string
+	Season           int32
+	TotalSimulations int32
+	TotalPredictions int32
+	MeanWins         float64
+	MedianWins       float64
+	MaxWins          int32
+	LastUpdated      pgtype.Timestamptz
+}
+
+func (q *Queries) GetTournamentSimStatsByCoreTournamentID(ctx context.Context, coreTournamentID string) (GetTournamentSimStatsByCoreTournamentIDRow, error) {
+	row := q.db.QueryRow(ctx, getTournamentSimStatsByCoreTournamentID, coreTournamentID)
+	var i GetTournamentSimStatsByCoreTournamentIDRow
+	err := row.Scan(
+		&i.TournamentID,
+		&i.Season,
+		&i.TotalSimulations,
+		&i.TotalPredictions,
+		&i.MeanWins,
+		&i.MedianWins,
+		&i.MaxWins,
+		&i.LastUpdated,
+	)
+	return i, err
 }
 
 const getTournamentSimStatsByYear = `-- name: GetTournamentSimStatsByYear :one

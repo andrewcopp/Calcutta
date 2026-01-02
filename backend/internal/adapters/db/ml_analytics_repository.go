@@ -71,6 +71,27 @@ func (r *MLAnalyticsRepository) GetTournamentSimStats(ctx context.Context, year 
 	}, nil
 }
 
+func (r *MLAnalyticsRepository) GetTournamentSimStatsByCoreTournamentID(ctx context.Context, coreTournamentID string) (*ports.TournamentSimStatsByID, error) {
+	row, err := r.q.GetTournamentSimStatsByCoreTournamentID(ctx, coreTournamentID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &ports.TournamentSimStatsByID{
+		TournamentID:     row.TournamentID,
+		Season:           int(row.Season),
+		TotalSimulations: int(row.TotalSimulations),
+		TotalPredictions: int(row.TotalPredictions),
+		MeanWins:         row.MeanWins,
+		MedianWins:       row.MedianWins,
+		MaxWins:          int(row.MaxWins),
+		LastUpdated:      row.LastUpdated.Time,
+	}, nil
+}
+
 func (r *MLAnalyticsRepository) GetTeamPerformanceByCalcutta(ctx context.Context, calcuttaID string, teamID string) (*ports.TeamPerformance, error) {
 	row, err := r.q.GetTeamPerformanceByCalcutta(ctx, sqlc.GetTeamPerformanceByCalcuttaParams{
 		CalcuttaID: calcuttaID,

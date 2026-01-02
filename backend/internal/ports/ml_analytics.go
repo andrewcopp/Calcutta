@@ -17,6 +17,17 @@ type TournamentSimStats struct {
 	MaxProgress  int
 }
 
+type TournamentSimStatsByID struct {
+	TournamentID     string
+	Season           int
+	TotalSimulations int
+	TotalPredictions int
+	MeanWins         float64
+	MedianWins       float64
+	MaxWins          int
+	LastUpdated      time.Time
+}
+
 // TeamPerformance represents a team's performance across simulations
 type TeamPerformance struct {
 	TeamID            string
@@ -150,6 +161,7 @@ type EntryPortfolioTeam struct {
 type MLAnalyticsRepository interface {
 	// Tournament simulations
 	GetTournamentSimStats(ctx context.Context, year int) (*TournamentSimStats, error)
+	GetTournamentSimStatsByCoreTournamentID(ctx context.Context, coreTournamentID string) (*TournamentSimStatsByID, error)
 	GetTeamPerformance(ctx context.Context, year int, teamID string) (*TeamPerformance, error)
 	GetTeamPerformanceByCalcutta(ctx context.Context, calcuttaID string, teamID string) (*TeamPerformance, error)
 
