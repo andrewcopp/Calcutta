@@ -8,6 +8,45 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AnalyticsEntryPerformance struct {
+	ID           string
+	RunID        string
+	EntryName    string
+	MeanPayout   float64
+	MedianPayout float64
+	PTop1        float64
+	PInMoney     float64
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type AnalyticsEntrySimulationOutcome struct {
+	ID           string
+	RunID        string
+	EntryName    string
+	SimID        int32
+	PayoutPoints int32
+	Rank         int32
+	CreatedAt    pgtype.Timestamptz
+	PointsScored float64
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type AnalyticsSimulatedTournament struct {
+	ID           string
+	TournamentID string
+	SimID        int32
+	TeamID       string
+	Wins         int32
+	Byes         int32
+	Eliminated   bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
 type ApiKey struct {
 	ID         string
 	UserID     string
@@ -16,6 +55,8 @@ type ApiKey struct {
 	CreatedAt  pgtype.Timestamptz
 	RevokedAt  pgtype.Timestamptz
 	LastUsedAt pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type AuthSession struct {
@@ -29,6 +70,7 @@ type AuthSession struct {
 	LastUsedAt       pgtype.Timestamptz
 	UserAgent        *string
 	IpAddress        *string
+	DeletedAt        pgtype.Timestamptz
 }
 
 type BronzeCalcutta struct {
@@ -40,19 +82,8 @@ type BronzeCalcutta struct {
 	MaxBidPoints   int32
 	CreatedAt      pgtype.Timestamptz
 	CoreCalcuttaID pgtype.UUID
-}
-
-type BronzeCalcuttasCoreCtx struct {
-	ID               string
-	TournamentID     string
-	Season           int32
-	CoreTournamentID pgtype.UUID
-	CoreCalcuttaID   pgtype.UUID
-	Name             string
-	MinTeams         int32
-	MaxTeams         int32
-	MaxBidPoints     int32
-	CreatedAt        pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	DeletedAt      pgtype.Timestamptz
 }
 
 type BronzeEntryBid struct {
@@ -62,6 +93,8 @@ type BronzeEntryBid struct {
 	TeamID          string
 	BidAmountPoints int32
 	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
 }
 
 type BronzePayout struct {
@@ -70,6 +103,8 @@ type BronzePayout struct {
 	Round      int32
 	Points     int32
 	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type BronzeTeam struct {
@@ -85,23 +120,8 @@ type BronzeTeam struct {
 	KenpomAdjD   *float64
 	KenpomAdjT   *float64
 	CreatedAt    pgtype.Timestamptz
-}
-
-type BronzeTeamsCoreCtx struct {
-	ID               string
-	TournamentID     string
-	Season           int32
-	CoreTournamentID pgtype.UUID
-	SchoolSlug       string
-	SchoolName       string
-	Seed             *int32
-	Region           *string
-	KenpomNet        *float64
-	KenpomAdjEm      *float64
-	KenpomAdjO       *float64
-	KenpomAdjD       *float64
-	KenpomAdjT       *float64
-	CreatedAt        pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type BronzeTournament struct {
@@ -109,13 +129,8 @@ type BronzeTournament struct {
 	Season           int32
 	CreatedAt        pgtype.Timestamptz
 	CoreTournamentID pgtype.UUID
-}
-
-type BronzeTournamentsCoreCtx struct {
-	ID               string
-	Season           int32
-	CoreTournamentID pgtype.UUID
-	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
 }
 
 type BundleUpload struct {
@@ -299,6 +314,8 @@ type GoldDetailedInvestmentReport struct {
 	ExpectedRoi           float64
 	OurRoi                *float64
 	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+	DeletedAt             pgtype.Timestamptz
 }
 
 type GoldEntryPerformance struct {
@@ -310,6 +327,8 @@ type GoldEntryPerformance struct {
 	PTop1        float64
 	PInMoney     float64
 	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type GoldEntrySimulationOutcome struct {
@@ -321,6 +340,8 @@ type GoldEntrySimulationOutcome struct {
 	Rank         int32
 	CreatedAt    pgtype.Timestamptz
 	PointsScored float64
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type GoldOptimizationRun struct {
@@ -331,6 +352,8 @@ type GoldOptimizationRun struct {
 	Seed         int32
 	BudgetPoints int32
 	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type GoldRecommendedEntryBid struct {
@@ -340,6 +363,8 @@ type GoldRecommendedEntryBid struct {
 	RecommendedBidPoints int32
 	ExpectedRoi          float64
 	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
 }
 
 type Grant struct {
@@ -353,6 +378,132 @@ type Grant struct {
 	UpdatedAt    pgtype.Timestamptz
 	ExpiresAt    pgtype.Timestamptz
 	RevokedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type LabBronzeCalcutta struct {
+	ID             string
+	TournamentID   string
+	Name           string
+	MinTeams       int32
+	MaxTeams       int32
+	MaxBidPoints   int32
+	CreatedAt      pgtype.Timestamptz
+	CoreCalcuttaID pgtype.UUID
+	UpdatedAt      pgtype.Timestamptz
+	DeletedAt      pgtype.Timestamptz
+}
+
+type LabBronzeEntryBid struct {
+	ID              string
+	CalcuttaID      string
+	EntryName       string
+	TeamID          string
+	BidAmountPoints int32
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
+}
+
+type LabBronzePayout struct {
+	ID         string
+	CalcuttaID string
+	Round      int32
+	Points     int32
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
+}
+
+type LabBronzeTeam struct {
+	ID           string
+	TournamentID string
+	SchoolSlug   string
+	SchoolName   string
+	Seed         *int32
+	Region       *string
+	KenpomNet    *float64
+	KenpomAdjEm  *float64
+	KenpomAdjO   *float64
+	KenpomAdjD   *float64
+	KenpomAdjT   *float64
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type LabBronzeTournament struct {
+	ID               string
+	Season           int32
+	CreatedAt        pgtype.Timestamptz
+	CoreTournamentID pgtype.UUID
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
+}
+
+type LabGoldDetailedInvestmentReport struct {
+	ID                    string
+	RunID                 string
+	TeamID                string
+	ExpectedPoints        float64
+	PredictedMarketPoints float64
+	ActualMarketPoints    *float64
+	OurBidPoints          *int32
+	ExpectedRoi           float64
+	OurRoi                *float64
+	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+	DeletedAt             pgtype.Timestamptz
+}
+
+type LabGoldOptimizationRun struct {
+	RunID        string
+	CalcuttaID   pgtype.UUID
+	Strategy     string
+	NSims        int32
+	Seed         int32
+	BudgetPoints int32
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type LabGoldRecommendedEntryBid struct {
+	ID                   string
+	RunID                string
+	TeamID               string
+	RecommendedBidPoints int32
+	ExpectedRoi          float64
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+}
+
+type LabSilverPredictedGameOutcome struct {
+	ID           string
+	TournamentID string
+	GameID       string
+	Round        int32
+	Team1ID      string
+	Team2ID      string
+	PTeam1Wins   float64
+	PMatchup     float64
+	ModelVersion *string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type LabSilverPredictedMarketShare struct {
+	ID              string
+	CalcuttaID      pgtype.UUID
+	TeamID          string
+	PredictedShare  float64
+	PredictedPoints float64
+	CreatedAt       pgtype.Timestamptz
+	TournamentID    pgtype.UUID
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
 }
 
 type Label struct {
@@ -368,6 +519,8 @@ type LabelPermission struct {
 	LabelID      string
 	PermissionID string
 	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type Permission struct {
@@ -390,6 +543,8 @@ type SilverPredictedGameOutcome struct {
 	PMatchup     float64
 	ModelVersion *string
 	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type SilverPredictedMarketShare struct {
@@ -400,6 +555,8 @@ type SilverPredictedMarketShare struct {
 	PredictedPoints float64
 	CreatedAt       pgtype.Timestamptz
 	TournamentID    pgtype.UUID
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
 }
 
 type SilverSimulatedTournament struct {
@@ -411,6 +568,8 @@ type SilverSimulatedTournament struct {
 	Byes         int32
 	Eliminated   bool
 	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type User struct {

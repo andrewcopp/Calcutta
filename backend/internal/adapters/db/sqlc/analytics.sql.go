@@ -562,7 +562,7 @@ bronze_calcutta AS (
   SELECT
     bc.id AS bronze_calcutta_id,
     bc.tournament_id AS bronze_tournament_id
-  FROM bronze.calcuttas bc
+  FROM lab_bronze.calcuttas bc
   JOIN calcutta c ON c.calcutta_id = bc.core_calcutta_id
   LIMIT 1
 ),
@@ -572,7 +572,7 @@ bronze_tournament AS (
 ),
 entry_count AS (
   SELECT COUNT(DISTINCT entry_name) as num_entries
-  FROM bronze.entry_bids beb
+  FROM lab_bronze.entry_bids beb
   WHERE beb.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta)
 ),
 total_pool AS (
@@ -582,7 +582,7 @@ team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float AS expected_points
-  FROM silver.simulated_tournaments st
+  FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
   GROUP BY st.team_id
 ),
@@ -604,11 +604,11 @@ SELECT
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
   END::double precision as delta
-FROM bronze.teams t
+FROM lab_bronze.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-LEFT JOIN silver.predicted_market_share spms_c
+LEFT JOIN lab_silver.predicted_market_share spms_c
   ON spms_c.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta) AND spms_c.team_id = t.id
-LEFT JOIN silver.predicted_market_share spms_t
+LEFT JOIN lab_silver.predicted_market_share spms_t
   ON spms_t.tournament_id = (SELECT id FROM bronze_tournament)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
@@ -664,7 +664,7 @@ WITH calcutta AS (
 ),
 bronze_calcutta AS (
   SELECT bc.tournament_id AS bronze_tournament_id
-  FROM bronze.calcuttas bc
+  FROM lab_bronze.calcuttas bc
   JOIN calcutta c ON c.calcutta_id = bc.core_calcutta_id
   LIMIT 1
 ),
@@ -677,7 +677,7 @@ team_win_counts AS (
     st.team_id,
     st.wins,
     COUNT(*) as sim_count
-  FROM silver.simulated_tournaments st
+  FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
   GROUP BY st.team_id, st.wins
 ),
@@ -699,7 +699,7 @@ team_expected_value AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float AS expected_value
-  FROM silver.simulated_tournaments st
+  FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
   GROUP BY st.team_id
 )
@@ -716,7 +716,7 @@ SELECT
   COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_ff,
   COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_champ,
   COALESCE(tev.expected_value, 0.0)::double precision as expected_value
-FROM bronze.teams t
+FROM lab_bronze.teams t
 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 LEFT JOIN team_expected_value tev ON t.id = tev.team_id
 WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
@@ -784,8 +784,8 @@ bronze_calcutta AS (
     bc.id AS bronze_calcutta_id,
     bc.tournament_id AS bronze_tournament_id,
     bt.season AS season
-  FROM bronze.calcuttas bc
-  JOIN bronze.tournaments bt ON bt.id = bc.tournament_id
+  FROM lab_bronze.calcuttas bc
+  JOIN lab_bronze.tournaments bt ON bt.id = bc.tournament_id
   JOIN calcutta c ON c.calcutta_id = bc.core_calcutta_id
   LIMIT 1
 ),
@@ -795,7 +795,7 @@ bronze_tournament AS (
 ),
 entry_count AS (
   SELECT COUNT(DISTINCT entry_name) as num_entries
-  FROM bronze.entry_bids beb
+  FROM lab_bronze.entry_bids beb
   WHERE beb.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta)
 ),
 total_pool AS (
@@ -805,13 +805,13 @@ team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float AS expected_points
-  FROM silver.simulated_tournaments st
+  FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT id FROM bronze_tournament)
   GROUP BY st.team_id
 ),
 latest_optimization AS (
   SELECT gor.run_id
-  FROM gold.optimization_runs gor
+  FROM lab_gold.optimization_runs gor
   WHERE gor.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta)
   ORDER BY gor.created_at DESC
   LIMIT 1
@@ -824,16 +824,16 @@ SELECT
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_c.predicted_share, spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.recommended_bid_points, 0.0)::double precision as our_bid
-FROM bronze.teams t
+FROM lab_bronze.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-LEFT JOIN silver.predicted_market_share spms_c
+LEFT JOIN lab_silver.predicted_market_share spms_c
   ON spms_c.calcutta_id = (SELECT bronze_calcutta_id FROM bronze_calcutta) AND spms_c.team_id = t.id
-LEFT JOIN silver.predicted_market_share spms_t
+LEFT JOIN lab_silver.predicted_market_share spms_t
   ON spms_t.tournament_id = (SELECT id FROM bronze_tournament)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
 LEFT JOIN latest_optimization lo ON true
-LEFT JOIN gold.recommended_entry_bids reb ON reb.run_id = lo.run_id AND reb.team_id = t.id
+LEFT JOIN lab_gold.recommended_entry_bids reb ON reb.run_id = lo.run_id AND reb.team_id = t.id
 WHERE t.tournament_id = (SELECT id FROM bronze_tournament)
 ORDER BY seed ASC, t.school_name ASC
 `
