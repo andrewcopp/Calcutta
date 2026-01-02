@@ -199,6 +199,11 @@ A calcutta always has a tournament, so any endpoint can join tournament data as 
 - [ ] Refactor endpoints to consistent layering:
   - handlers -> service -> sqlc
 - [ ] Remove direct SQL in handlers (where practical)
+  - [x] Calcutta analytics endpoints (predicted investment/returns/simulated entry) refactored to handlers -> service -> sqlc
+  - [x] ML analytics endpoints (simulated calcuttas, team performance-by-calcutta) refactored to handlers -> service -> sqlc
+  - [x] Bundle upload admin endpoints + bundle import worker refactored to sqlc
+  - [x] Tournament sim-stats-by-core-tournament-id endpoint refactored to MLAnalytics service -> sqlc
+  - [ ] Continue inventory + refactor remaining handler inline SQL
 
 ### Airflow
 - [ ] Use `lab_pipeline` role
@@ -282,3 +287,9 @@ Add dated notes here as work is completed.
 
 - [2026-01-01] Standard `updated_at` trigger function + triggers added for core + medallion tables
 - [2026-01-01] Core identity verification: core/bronze ID linkage validated; removed remaining join-relevant string parsing from runtime analytics queries
+
+- [2026-01-02] Backend cleanup: removed inline SQL from additional endpoints by refactoring to handlers -> service/repo -> sqlc
+  - Calcutta analytics: predicted investment/returns/simulated entry
+  - ML analytics: simulated calcuttas, team performance-by-calcutta
+  - Admin bundles + bundle import worker: bundle upload lifecycle via sqlc queries
+  - Tournament analytics: sim stats by `core.tournaments.id` via MLAnalytics/sqlc
