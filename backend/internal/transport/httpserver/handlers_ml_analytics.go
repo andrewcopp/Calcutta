@@ -227,19 +227,8 @@ func (s *Server) handleGetEntryRankings(w http.ResponseWriter, r *http.Request) 
 	runID := vars["run_id"]
 
 	// Parse pagination parameters
-	limit := 100
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil {
-			limit = parsed
-		}
-	}
-
-	offset := 0
-	if o := r.URL.Query().Get("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil {
-			offset = parsed
-		}
-	}
+	limit := getLimit(r, 100)
+	offset := getOffset(r, 0)
 
 	rankings, err := s.app.MLAnalytics.GetEntryRankings(ctx, year, runID, limit, offset)
 	if err != nil {
