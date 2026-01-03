@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
 import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
@@ -13,12 +13,15 @@ import { TournamentBracketPage } from './pages/TournamentBracketPage';
 import { AdminPage } from './pages/AdminPage';
 import { AdminBundlesPage } from './pages/AdminBundlesPage';
 import { AdminApiKeysPage } from './pages/AdminApiKeysPage';
-import { TournamentAnalyticsPage } from './pages/TournamentAnalyticsPage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
+import { SimulationsPage } from './pages/SimulationsPage';
+import { PredictionsPage } from './pages/PredictionsPage';
+import { EvaluationsPage } from './pages/EvaluationsPage';
+import { EvaluationDetailPage } from './pages/EvaluationDetailPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 import './App.css';
@@ -36,7 +39,11 @@ const AppLayout: React.FC = () => {
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
-        <Route path="/analytics" element={<TournamentAnalyticsPage />} />
+        <Route path="/simulations" element={<SimulationsPage />} />
+        <Route path="/predictions" element={<PredictionsPage />} />
+        <Route path="/evaluations" element={<EvaluationsPage />} />
+        <Route path="/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
+        <Route path="/analytics" element={<Navigate to="/predictions" replace />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/api-keys" element={<AdminApiKeysPage />} />
         <Route path="/admin/bundles" element={<AdminBundlesPage />} />
