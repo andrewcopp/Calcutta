@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"time"
 
-	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
+	appbracket "github.com/andrewcopp/Calcutta/backend/internal/features/bracket"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

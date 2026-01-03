@@ -3,17 +3,13 @@ package simulated_calcutta
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Service handles simulated calcutta analysis
-type Service struct {
-	pool *pgxpool.Pool
+type calcuttaContext struct {
+	CalcuttaID   string
+	TournamentID string
 }
 
 func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, bronzeTournamentID string, coreTournamentID string) (string, bool, error) {
@@ -42,164 +38,24 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, bron
 	return batchID, true, nil
 }
 
-// New creates a new simulated calcutta service
-func New(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
-}
+func (s *Service) getCalcuttaContext(ctx context.Context, bronzeTournamentID string) (*calcuttaContext, error) {
+	// Resolve a single calcutta_id (and its tournament_id) for a given bronze tournament.
+	// This intentionally isolates the season/name join in one place.
+	query := `
+		SELECT c.id, c.tournament_id
+		FROM lab_bronze.tournaments bt
+		JOIN core.tournaments t ON t.id = bt.core_tournament_id AND t.deleted_at IS NULL
+		JOIN core.calcuttas c ON c.tournament_id = t.id AND c.deleted_at IS NULL
+		WHERE bt.id = $1
+		ORDER BY c.created_at DESC
+		LIMIT 1
+	`
 
-// CalculateSimulatedCalcutta calculates entry outcomes for all simulations
-func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, tournamentID string, runID string) error {
-	// Get excluded entry name from environment (e.g., "Andrew Copp")
-	excludedEntryName := os.Getenv("EXCLUDED_ENTRY_NAME")
-	return s.calculateSimulatedCalcuttaInternal(ctx, tournamentID, runID, excludedEntryName, nil)
-}
-
-func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
-	ctx context.Context,
-	bronzeTournamentID string,
-	runID string,
-	excludedEntryName string,
-	tournamentSimulationBatchID *string,
-) error {
-	return s.calculateSimulatedCalcuttaInternal(ctx, bronzeTournamentID, runID, excludedEntryName, tournamentSimulationBatchID)
-}
-
-func (s *Service) calculateSimulatedCalcuttaInternal(
-	ctx context.Context,
-	bronzeTournamentID string,
-	runID string,
-	excludedEntryName string,
-	tournamentSimulationBatchIDOverride *string,
-) error {
-	log.Printf("Calculating simulated calcutta for tournament %s, run %s", bronzeTournamentID, runID)
-	if excludedEntryName != "" {
-		log.Printf("Excluding entry name: %s", excludedEntryName)
+	var calcuttaID, tournamentID string
+	if err := s.pool.QueryRow(ctx, query, bronzeTournamentID).Scan(&calcuttaID, &tournamentID); err != nil {
+		return nil, err
 	}
-
-	cc, err := s.getCalcuttaContext(ctx, bronzeTournamentID)
-	if err != nil {
-		return fmt.Errorf("failed to resolve calcutta context: %w", err)
-	}
-
-	tournamentSimulationBatchID := ""
-	if tournamentSimulationBatchIDOverride != nil {
-		tournamentSimulationBatchID = *tournamentSimulationBatchIDOverride
-	}
-
-	if tournamentSimulationBatchID == "" {
-		var ok bool
-		tournamentSimulationBatchID, ok, err = s.getLatestTournamentSimulationBatchID(ctx, bronzeTournamentID, cc.TournamentID)
-		if err != nil {
-			return fmt.Errorf("failed to resolve latest tournament simulation batch: %w", err)
-		}
-		if !ok {
-			tournamentStateSnapshotID, err := s.createTournamentStateSnapshot(ctx, cc.TournamentID)
-			if err != nil {
-				return fmt.Errorf("failed to create tournament state snapshot: %w", err)
-			}
-
-			tournamentSimulationBatchID, err = s.createTournamentSimulationBatch(ctx, bronzeTournamentID, cc.TournamentID, tournamentStateSnapshotID)
-			if err != nil {
-				return fmt.Errorf("failed to create tournament simulation batch: %w", err)
-			}
-
-			if err := s.attachSimulationBatchToSimulatedTournaments(ctx, bronzeTournamentID, tournamentSimulationBatchID); err != nil {
-				return fmt.Errorf("failed to attach tournament_simulation_batch_id to simulated_tournaments: %w", err)
-			}
-		}
-	}
-
-	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, bronzeTournamentID, runID, excludedEntryName)
-	if err != nil {
-		return fmt.Errorf("failed to create calcutta snapshot: %w", err)
-	}
-
-	calcuttaEvaluationRunID, err := s.createCalcuttaEvaluationRun(ctx, tournamentSimulationBatchID, calcuttaSnapshotID)
-	if err != nil {
-		return fmt.Errorf("failed to create calcutta evaluation run: %w", err)
-	}
-
-	// Get payout structure from database
-	payouts, firstPlacePayout, err := s.getPayoutStructure(ctx, cc.CalcuttaID)
-	if err != nil {
-		return fmt.Errorf("failed to get payout structure: %w", err)
-	}
-
-	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
-
-	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, bronzeTournamentID, cc, runID, excludedEntryName)
-	if err != nil {
-		return fmt.Errorf("failed to get entries: %w", err)
-	}
-
-	log.Printf("Found %d entries", len(entries))
-
-	simulations, err := s.getSimulations(ctx, bronzeTournamentID, cc, tournamentSimulationBatchID)
-	if err != nil {
-		return fmt.Errorf("failed to get simulations: %w", err)
-	}
-
-	log.Printf("Found %d simulations", len(simulations))
-
-	// Calculate outcomes for each simulation in parallel
-	results := make(chan []SimulationResult, len(simulations))
-	errors := make(chan error, len(simulations))
-
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent goroutines
-
-	for simID := range simulations {
-		wg.Add(1)
-		go func(sid int) {
-			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire
-			defer func() { <-semaphore }() // Release
-
-			simResults, err := s.calculateSimulationOutcomes(ctx, sid, entries, simulations[sid], payouts, firstPlacePayout)
-			if err != nil {
-				errors <- fmt.Errorf("simulation %d: %w", sid, err)
-				return
-			}
-			results <- simResults
-		}(simID)
-	}
-
-	// Wait for all goroutines to complete
-	go func() {
-		wg.Wait()
-		close(results)
-		close(errors)
-	}()
-
-	// Collect results
-	var allResults []SimulationResult
-	for simResults := range results {
-		allResults = append(allResults, simResults...)
-	}
-
-	// Check for errors
-	for err := range errors {
-		if err != nil {
-			return err
-		}
-	}
-
-	log.Printf("Calculated %d total outcomes", len(allResults))
-
-	// Write results to database
-	if err := s.writeSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID, allResults); err != nil {
-		return fmt.Errorf("failed to write simulation outcomes: %w", err)
-	}
-
-	// Calculate and write aggregated performance metrics
-	performance := s.calculatePerformanceMetrics(allResults)
-	if err := s.writePerformanceMetrics(ctx, runID, calcuttaEvaluationRunID, performance); err != nil {
-		return fmt.Errorf("failed to write performance metrics: %w", err)
-	}
-
-	log.Printf("Successfully calculated simulated calcutta for %d entries", len(entries))
-	return nil
+	return &calcuttaContext{CalcuttaID: calcuttaID, TournamentID: tournamentID}, nil
 }
 
 func (s *Service) createTournamentStateSnapshot(ctx context.Context, coreTournamentID string) (string, error) {
@@ -438,31 +294,6 @@ func (s *Service) createCalcuttaEvaluationRun(ctx context.Context, tournamentSim
 		return "", err
 	}
 	return evalID, nil
-}
-
-type calcuttaContext struct {
-	CalcuttaID   string
-	TournamentID string
-}
-
-func (s *Service) getCalcuttaContext(ctx context.Context, bronzeTournamentID string) (*calcuttaContext, error) {
-	// Resolve a single calcutta_id (and its tournament_id) for a given bronze tournament.
-	// This intentionally isolates the season/name join in one place.
-	query := `
-		SELECT c.id, c.tournament_id
-		FROM lab_bronze.tournaments bt
-		JOIN core.tournaments t ON t.id = bt.core_tournament_id AND t.deleted_at IS NULL
-		JOIN core.calcuttas c ON c.tournament_id = t.id AND c.deleted_at IS NULL
-		WHERE bt.id = $1
-		ORDER BY c.created_at DESC
-		LIMIT 1
-	`
-
-	var calcuttaID, tournamentID string
-	if err := s.pool.QueryRow(ctx, query, bronzeTournamentID).Scan(&calcuttaID, &tournamentID); err != nil {
-		return nil, err
-	}
-	return &calcuttaContext{CalcuttaID: calcuttaID, TournamentID: tournamentID}, nil
 }
 
 func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext, runID string, excludedEntry string) (map[string]*Entry, error) {

@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"sort"
 
-	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
+	appbracket "github.com/andrewcopp/Calcutta/backend/internal/features/bracket"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

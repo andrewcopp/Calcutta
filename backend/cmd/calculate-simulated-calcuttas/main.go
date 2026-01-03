@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

@@ -6,7 +6,7 @@ import (
 	"log"
 	"runtime"
 
-	pgo "github.com/andrewcopp/Calcutta/backend/internal/app/predicted_game_outcomes"
+	pgo "github.com/andrewcopp/Calcutta/backend/internal/features/predicted_game_outcomes"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 
