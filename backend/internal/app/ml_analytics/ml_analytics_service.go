@@ -86,6 +86,18 @@ func (s *Service) GetOptimizationRuns(ctx context.Context, year int) ([]ports.Op
 	return s.repo.GetOptimizationRuns(ctx, year)
 }
 
-func (s *Service) GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string) (string, []ports.SimulatedCalcuttaEntryRanking, error) {
-	return s.repo.GetSimulatedCalcuttaEntryRankings(ctx, calcuttaID)
+func (s *Service) GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string, calcuttaEvaluationRunID *string) (string, *string, []ports.SimulatedCalcuttaEntryRanking, error) {
+	return s.repo.GetSimulatedCalcuttaEntryRankings(ctx, calcuttaID, calcuttaEvaluationRunID)
+}
+
+func (s *Service) ListTournamentSimulationBatchesByCoreTournamentID(ctx context.Context, coreTournamentID string) ([]ports.TournamentSimulationBatch, error) {
+	return s.repo.ListTournamentSimulationBatchesByCoreTournamentID(ctx, coreTournamentID)
+}
+
+func (s *Service) ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.CalcuttaEvaluationRun, error) {
+	return s.repo.ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx, calcuttaID)
+}
+
+func (s *Service) ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.StrategyGenerationRun, error) {
+	return s.repo.ListStrategyGenerationRunsByCoreCalcuttaID(ctx, calcuttaID)
 }

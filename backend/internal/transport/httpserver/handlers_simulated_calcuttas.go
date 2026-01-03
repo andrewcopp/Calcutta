@@ -30,14 +30,19 @@ func (s *Server) handleGetCalcuttaSimulatedCalcuttas(w http.ResponseWriter, r *h
 		return
 	}
 
-	runID, data, err := s.app.MLAnalytics.GetSimulatedCalcuttaEntryRankings(ctx, calcuttaID)
+	var calcuttaEvaluationRunID *string
+	if v := r.URL.Query().Get("calcutta_evaluation_run_id"); v != "" {
+		calcuttaEvaluationRunID = &v
+	}
+
+	runID, evalRunID, data, err := s.app.MLAnalytics.GetSimulatedCalcuttaEntryRankings(ctx, calcuttaID, calcuttaEvaluationRunID)
 	if err != nil {
 		log.Printf("Error querying simulated calcuttas: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query simulated calcuttas", "")
 		return
 	}
 
-	if runID == "" || len(data) == 0 {
+	if (runID == "" && evalRunID == nil) || len(data) == 0 {
 		writeError(w, r, http.StatusNotFound, "not_found", "No simulated calcutta data found for calcutta", "")
 		return
 	}
@@ -56,9 +61,15 @@ func (s *Server) handleGetCalcuttaSimulatedCalcuttas(w http.ResponseWriter, r *h
 		})
 	}
 
+	var runIDOut interface{} = runID
+	if runID == "" {
+		runIDOut = nil
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"calcutta_id": calcuttaID,
-		"run_id":      runID,
-		"entries":     results,
+		"calcutta_id":                calcuttaID,
+		"run_id":                     runIDOut,
+		"calcutta_evaluation_run_id": evalRunID,
+		"entries":                    results,
 	})
 }

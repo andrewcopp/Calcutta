@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 def write_optimization_run(
     run_id: str,
     strategy: str,
-    n_sims: int,
-    seed: int,
-    budget_points: int,
+    n_sims: int = 0,
+    seed: int = 0,
+    budget_points: int = 100,
     calcutta_id: Optional[str] = None
 ) -> None:
     """
@@ -33,17 +33,33 @@ def write_optimization_run(
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO lab_gold.optimization_runs
-                (run_id, calcutta_id, strategy, n_sims, seed, budget_points)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (run_id) DO UPDATE SET
+            cur.execute(
+                """
+                INSERT INTO lab_gold.strategy_generation_runs (
+                    run_key,
+                    calcutta_id,
+                    purpose,
+                    returns_model_key,
+                    investment_model_key,
+                    optimizer_key,
+                    params_json,
+                    git_sha
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, '{}'::jsonb, NULL)
+                ON CONFLICT (run_key) DO UPDATE SET
                     calcutta_id = EXCLUDED.calcutta_id,
-                    strategy = EXCLUDED.strategy,
-                    n_sims = EXCLUDED.n_sims,
-                    seed = EXCLUDED.seed,
-                    budget_points = EXCLUDED.budget_points
-            """, (run_id, calcutta_id, strategy, n_sims, seed, budget_points))
+                    optimizer_key = EXCLUDED.optimizer_key,
+                    updated_at = NOW()
+                """,
+                (
+                    run_id,
+                    calcutta_id,
+                    'moneyball_pipeline',
+                    'legacy',
+                    'legacy',
+                    strategy,
+                ),
+            )
             
             conn.commit()
             logger.info(f"Wrote optimization run: {run_id}")
@@ -68,6 +84,22 @@ def write_recommended_entry_bids(
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM lab_gold.strategy_generation_runs
+                WHERE run_key = %s
+                  AND deleted_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (run_id,),
+            )
+            row = cur.fetchone()
+            if not row or not row[0]:
+                raise ValueError(f"No strategy_generation_run found for run_key={run_id}")
+            strategy_generation_run_id = str(row[0])
+
             # Clear existing bids for this run
             cur.execute("""
                 DELETE FROM lab_gold.recommended_entry_bids
@@ -97,6 +129,7 @@ def write_recommended_entry_bids(
             values = [
                 (
                     run_id,
+                    strategy_generation_run_id,
                     str(row['team_id']),
                     int(float(row['bid_amount_points'])),
                     float(row.get('score', row.get('expected_roi', 0.0)))
@@ -106,8 +139,8 @@ def write_recommended_entry_bids(
             
             psycopg2.extras.execute_batch(cur, """
                 INSERT INTO lab_gold.recommended_entry_bids
-                (run_id, team_id, recommended_bid_points, expected_roi)
-                VALUES (%s, %s, %s, %s)
+                (run_id, strategy_generation_run_id, team_id, recommended_bid_points, expected_roi)
+                VALUES (%s, %s, %s, %s, %s)
             """, values)
             
             conn.commit()

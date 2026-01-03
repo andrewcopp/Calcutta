@@ -437,13 +437,20 @@ def stage_recommended_entry_bids(
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT gor.run_id
-                    FROM lab_gold.optimization_runs gor
-                    JOIN lab_bronze.calcuttas bc ON gor.calcutta_id = bc.id
-                    WHERE bc.tournament_id = (
-                        SELECT id FROM lab_bronze.tournaments WHERE season = %s
-                    )
-                    ORDER BY gor.created_at DESC
+                    SELECT sgr.run_key
+                    FROM lab_gold.strategy_generation_runs sgr
+                    JOIN core.calcuttas c
+                      ON c.id = sgr.calcutta_id
+                     AND c.deleted_at IS NULL
+                    JOIN core.tournaments t
+                      ON t.id = c.tournament_id
+                     AND t.deleted_at IS NULL
+                    JOIN core.seasons seas
+                      ON seas.id = t.season_id
+                    WHERE sgr.deleted_at IS NULL
+                      AND sgr.run_key IS NOT NULL
+                      AND seas.year = %s
+                    ORDER BY sgr.created_at DESC
                     LIMIT 1
                 """, (year,))
                 result = cur.fetchone()
@@ -452,7 +459,7 @@ def stage_recommended_entry_bids(
                     print(f"  Using run_id: {run_id}")
                 else:
                     raise ValueError(
-                        f"No optimization runs found for year {year}"
+                        f"No strategy generation runs found for year {year}"
                     )
     else:
         print(f"  Using run_id: {run_id}")
@@ -503,13 +510,19 @@ def stage_recommended_entry_bids(
         run_id=run_id,
         calcutta_id=db_calcutta_id,
         strategy=strategy,
+        n_sims=int(simulations_df['sim_id'].nunique()),
+        seed=42,
+        budget_points=budget_points,
     )
     
     # Write recommendations
     write_recommended_entry_bids(
         run_id=run_id,
         bids_df=recommendations_df,
-        team_id_map={},
+        team_id_map={
+            str(row['school_slug']): str(row['id'])
+            for _, row in read_teams(year).iterrows()
+        },
     )
     
     print(f"✓ Recommended entry bids written to database (run_id={run_id})")
@@ -519,7 +532,7 @@ def stage_recommended_entry_bids(
         'strategy': strategy,
         'run_id': run_id,
         'n_recommendations': len(recommendations_df),
-        'total_bid': recommendations_df['bid_amount_points'].sum(),
+        'total_bid': int(recommendations_df['bid_amount_points'].sum()),
     }
 
 

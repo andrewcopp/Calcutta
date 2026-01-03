@@ -105,15 +105,28 @@ FROM core.calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]CoreCalcutta, error) {
+type GetCalcuttasByTournamentRow struct {
+	ID           string
+	TournamentID string
+	OwnerID      string
+	Name         string
+	MinTeams     int32
+	MaxTeams     int32
+	MaxBid       int32
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]GetCalcuttasByTournamentRow, error) {
 	rows, err := q.db.Query(ctx, getCalcuttasByTournament, tournamentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CoreCalcutta
+	var items []GetCalcuttasByTournamentRow
 	for rows.Next() {
-		var i CoreCalcutta
+		var i GetCalcuttasByTournamentRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TournamentID,

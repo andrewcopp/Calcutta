@@ -31,7 +31,12 @@ func (s *Server) handleGetCalcuttaSimulatedEntry(w http.ResponseWriter, r *http.
 		return
 	}
 
-	data, err := s.app.Analytics.GetCalcuttaSimulatedEntry(ctx, calcuttaID)
+	var strategyGenerationRunID *string
+	if v := r.URL.Query().Get("strategy_generation_run_id"); v != "" {
+		strategyGenerationRunID = &v
+	}
+
+	selectedID, data, err := s.app.Analytics.GetCalcuttaSimulatedEntry(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
 		log.Printf("Error querying simulated entry: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query simulated entry", "")
@@ -72,8 +77,9 @@ func (s *Server) handleGetCalcuttaSimulatedEntry(w http.ResponseWriter, r *http.
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"calcutta_id": calcuttaID,
-		"teams":       results,
-		"count":       len(results),
+		"calcutta_id":                calcuttaID,
+		"strategy_generation_run_id": selectedID,
+		"teams":                      results,
+		"count":                      len(results),
 	})
 }

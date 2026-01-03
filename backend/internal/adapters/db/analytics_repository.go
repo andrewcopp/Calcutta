@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
+	"errors"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -84,10 +86,66 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.Tea
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string) ([]ports.CalcuttaPredictedInvestmentData, error) {
+func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedInvestmentData, error) {
+	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
+		runID := *strategyGenerationRunID
+		rows, err := r.q.GetCalcuttaPredictedInvestmentByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDParams{
+			CalcuttaID:              calcuttaID,
+			StrategyGenerationRunID: runID,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		out := make([]ports.CalcuttaPredictedInvestmentData, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.CalcuttaPredictedInvestmentData{
+				TeamID:     row.TeamID,
+				SchoolName: row.SchoolName,
+				Seed:       int(row.Seed),
+				Region:     row.Region,
+				Rational:   row.Rational,
+				Predicted:  row.Predicted,
+				Delta:      row.Delta,
+			})
+		}
+
+		return &runID, out, nil
+	}
+
+	latestID, err := r.q.GetLatestStrategyGenerationRunIDByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, err
+		}
+	} else {
+		rows, err := r.q.GetCalcuttaPredictedInvestmentByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDParams{
+			CalcuttaID:              calcuttaID,
+			StrategyGenerationRunID: latestID,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		out := make([]ports.CalcuttaPredictedInvestmentData, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.CalcuttaPredictedInvestmentData{
+				TeamID:     row.TeamID,
+				SchoolName: row.SchoolName,
+				Seed:       int(row.Seed),
+				Region:     row.Region,
+				Rational:   row.Rational,
+				Predicted:  row.Predicted,
+				Delta:      row.Delta,
+			})
+		}
+
+		return &latestID, out, nil
+	}
+
 	rows, err := r.q.GetCalcuttaPredictedInvestment(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	out := make([]ports.CalcuttaPredictedInvestmentData, 0, len(rows))
@@ -103,13 +161,79 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context
 		})
 	}
 
-	return out, nil
+	return nil, out, nil
 }
 
-func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string) ([]ports.CalcuttaPredictedReturnsData, error) {
+func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {
+	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
+		runID := *strategyGenerationRunID
+		rows, err := r.q.GetCalcuttaPredictedReturnsByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaPredictedReturnsByStrategyGenerationRunIDParams{
+			CalcuttaID:              calcuttaID,
+			StrategyGenerationRunID: runID,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		out := make([]ports.CalcuttaPredictedReturnsData, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.CalcuttaPredictedReturnsData{
+				TeamID:        row.TeamID,
+				SchoolName:    row.SchoolName,
+				Seed:          int(row.Seed),
+				Region:        row.Region,
+				ProbPI:        row.ProbPi,
+				ProbR64:       row.ProbR64,
+				ProbR32:       row.ProbR32,
+				ProbS16:       row.ProbS16,
+				ProbE8:        row.ProbE8,
+				ProbFF:        row.ProbFf,
+				ProbChamp:     row.ProbChamp,
+				ExpectedValue: row.ExpectedValue,
+			})
+		}
+
+		return &runID, out, nil
+	}
+
+	latestID, err := r.q.GetLatestStrategyGenerationRunIDByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, err
+		}
+	} else {
+		rows, err := r.q.GetCalcuttaPredictedReturnsByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaPredictedReturnsByStrategyGenerationRunIDParams{
+			CalcuttaID:              calcuttaID,
+			StrategyGenerationRunID: latestID,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		out := make([]ports.CalcuttaPredictedReturnsData, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.CalcuttaPredictedReturnsData{
+				TeamID:        row.TeamID,
+				SchoolName:    row.SchoolName,
+				Seed:          int(row.Seed),
+				Region:        row.Region,
+				ProbPI:        row.ProbPi,
+				ProbR64:       row.ProbR64,
+				ProbR32:       row.ProbR32,
+				ProbS16:       row.ProbS16,
+				ProbE8:        row.ProbE8,
+				ProbFF:        row.ProbFf,
+				ProbChamp:     row.ProbChamp,
+				ExpectedValue: row.ExpectedValue,
+			})
+		}
+
+		return &latestID, out, nil
+	}
+
 	rows, err := r.q.GetCalcuttaPredictedReturns(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	out := make([]ports.CalcuttaPredictedReturnsData, 0, len(rows))
@@ -130,13 +254,71 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, c
 		})
 	}
 
-	return out, nil
+	return nil, out, nil
 }
 
-func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string) ([]ports.CalcuttaSimulatedEntryData, error) {
+func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaSimulatedEntryData, error) {
+	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
+		runID := *strategyGenerationRunID
+		rows, err := r.q.GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams{
+			StrategyGenerationRunID: runID,
+			CalcuttaID:              calcuttaID,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		out := make([]ports.CalcuttaSimulatedEntryData, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.CalcuttaSimulatedEntryData{
+				TeamID:         row.TeamID,
+				SchoolName:     row.SchoolName,
+				Seed:           int(row.Seed),
+				Region:         row.Region,
+				ExpectedPoints: row.ExpectedPoints,
+				ExpectedMarket: row.ExpectedMarket,
+				OurBid:         row.OurBid,
+			})
+		}
+
+		return &runID, out, nil
+	}
+
+	// Prefer latest strategy generation run if it exists.
+	latestID, err := r.q.GetLatestStrategyGenerationRunIDByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, err
+		}
+	} else {
+		rows, err := r.q.GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams{
+			StrategyGenerationRunID: latestID,
+			CalcuttaID:              calcuttaID,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		out := make([]ports.CalcuttaSimulatedEntryData, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.CalcuttaSimulatedEntryData{
+				TeamID:         row.TeamID,
+				SchoolName:     row.SchoolName,
+				Seed:           int(row.Seed),
+				Region:         row.Region,
+				ExpectedPoints: row.ExpectedPoints,
+				ExpectedMarket: row.ExpectedMarket,
+				OurBid:         row.OurBid,
+			})
+		}
+
+		return &latestID, out, nil
+	}
+
+	// Legacy fallback.
 	rows, err := r.q.GetCalcuttaSimulatedEntry(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	out := make([]ports.CalcuttaSimulatedEntryData, 0, len(rows))
@@ -152,7 +334,7 @@ func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, cal
 		})
 	}
 
-	return out, nil
+	return nil, out, nil
 }
 
 func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]ports.SeedVarianceData, error) {

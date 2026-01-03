@@ -267,6 +267,7 @@ def read_simulated_tournaments(
     year: int,
     run_id: Optional[str] = None,
     calcutta_id: Optional[str] = None,
+    tournament_simulation_batch_id: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Read simulated tournament outcomes from the database.
@@ -280,30 +281,78 @@ def read_simulated_tournaments(
     """
     conn = get_db_connection()
     try:
-        # Note: Schema doesn't have points column, we calculate it from
-        # wins+byes
-        # Also doesn't have run_id yet, so we ignore it for now
-        query = """
-        SELECT 
-            st.id,
-            st.tournament_id,
-            st.team_id,
-            st.sim_id,
-            st.wins,
-            st.byes,
-            st.eliminated,
-            st.created_at,
-            t.school_name,
-            t.seed,
-            t.region
-        FROM analytics.simulated_tournaments st
-        JOIN lab_bronze.tournaments tour ON st.tournament_id = tour.id
-        JOIN lab_bronze.teams t ON st.team_id = t.id
-        WHERE tour.season = %s
-        ORDER BY st.sim_id, t.seed
-        LIMIT 100000
-        """
-        df = pd.read_sql_query(query, conn, params=(year,))
+        # Note: Schema doesn't have points column, we calculate it from wins+byes.
+        # Also doesn't have run_id yet, so we ignore it for now.
+
+        batch_id = tournament_simulation_batch_id
+        if not batch_id:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT b.id
+                    FROM lab_bronze.tournaments tour
+                    JOIN analytics.tournament_simulation_batches b
+                      ON b.tournament_id = tour.core_tournament_id
+                     AND b.deleted_at IS NULL
+                    WHERE tour.season = %s
+                    ORDER BY b.created_at DESC
+                    LIMIT 1
+                    """,
+                    (year,),
+                )
+                row = cur.fetchone()
+                if row and row[0]:
+                    batch_id = str(row[0])
+
+        if batch_id:
+            query = """
+            SELECT
+                st.id,
+                st.tournament_id,
+                st.team_id,
+                st.sim_id,
+                st.wins,
+                st.byes,
+                st.eliminated,
+                st.created_at,
+                t.school_name,
+                t.seed,
+                t.region
+            FROM analytics.simulated_tournaments st
+            JOIN lab_bronze.tournaments tour ON st.tournament_id = tour.id
+            JOIN lab_bronze.teams t ON st.team_id = t.id
+            WHERE tour.season = %s
+              AND st.tournament_simulation_batch_id = %s
+              AND st.deleted_at IS NULL
+            ORDER BY st.sim_id, t.seed
+            LIMIT 100000
+            """
+            df = pd.read_sql_query(query, conn, params=(year, batch_id))
+        else:
+            # Legacy fallback: use rows without batch id.
+            query = """
+            SELECT
+                st.id,
+                st.tournament_id,
+                st.team_id,
+                st.sim_id,
+                st.wins,
+                st.byes,
+                st.eliminated,
+                st.created_at,
+                t.school_name,
+                t.seed,
+                t.region
+            FROM analytics.simulated_tournaments st
+            JOIN lab_bronze.tournaments tour ON st.tournament_id = tour.id
+            JOIN lab_bronze.teams t ON st.team_id = t.id
+            WHERE tour.season = %s
+              AND st.tournament_simulation_batch_id IS NULL
+              AND st.deleted_at IS NULL
+            ORDER BY st.sim_id, t.seed
+            LIMIT 100000
+            """
+            df = pd.read_sql_query(query, conn, params=(year,))
 
         pbwi = (
             read_points_by_win_index_for_calcutta(calcutta_id)
@@ -327,7 +376,7 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
     
     Args:
         year: Tournament year
-        run_id: Run ID for the optimization run
+        run_id: Run ID for the strategy generation run
         
     Returns:
         DataFrame with recommended bids
@@ -345,13 +394,22 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
             t.school_name,
             t.seed,
             t.region,
-            tour.season
+            seas.year AS season
         FROM lab_gold.recommended_entry_bids reb
-        JOIN lab_gold.optimization_runs run ON reb.run_id = run.run_id
-        JOIN lab_bronze.calcuttas bc ON run.calcutta_id = bc.id
-        JOIN lab_bronze.tournaments tour ON bc.tournament_id = tour.id
+        JOIN lab_gold.strategy_generation_runs sgr
+          ON sgr.id = reb.strategy_generation_run_id
+         AND sgr.deleted_at IS NULL
+        JOIN core.calcuttas c
+          ON c.id = sgr.calcutta_id
+         AND c.deleted_at IS NULL
+        JOIN core.tournaments tour
+          ON tour.id = c.tournament_id
+         AND tour.deleted_at IS NULL
+        JOIN core.seasons seas
+          ON seas.id = tour.season_id
         JOIN lab_bronze.teams t ON reb.team_id = t.id
-        WHERE tour.season = %s AND reb.run_id = %s
+        WHERE seas.year = %s
+          AND sgr.run_key = %s
         ORDER BY reb.recommended_bid_points DESC
         """
         return pd.read_sql_query(query, conn, params=(year, run_id))

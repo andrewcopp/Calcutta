@@ -8,10 +8,18 @@
   - which evaluation results came from them?
 - Enable safe caching and deletion policies.
 
+Terminology:
+- "Simulation" refers to tournament simulations (bracket Monte Carlo).
+- "Evaluation" refers to applying tournament simulations to a calcutta snapshot.
+
 ## Core concepts
 
 ### 1) Tournament state snapshots
-A **tournament state snapshot** is the authoritative input describing which game results are locked.
+A **tournament state snapshot** is the authoritative input describing the tournament state as per-team progress.
+
+Representation:
+- One row per tournament team (e.g., 68 teams)
+- `wins` and `byes` capture the current state, keeping this shape consistent with `simulated_tournaments`.
 
 Use cases:
 - **Pre-tournament** leaderboard (0 locked games)
@@ -27,11 +35,12 @@ Proposed data shape:
   - `created_at`
   - `source` (manual, ingest, derived)
   - `description`
-- `tournament_state_snapshot_games`
+- `tournament_state_snapshot_teams`
   - `tournament_state_snapshot_id`
-  - `game_id`
-  - `winner_team_id`
-  - `decided_at`
+  - `team_id`
+  - `wins`
+  - `byes`
+  - `eliminated`
 
 Invariant:
 - A snapshot is immutable once created.
@@ -49,7 +58,7 @@ Use cases:
 - safely delete batches not referenced by any evaluation
 
 Proposed data shape:
-- `simulation_batches`
+- `tournament_simulation_batches`
   - `id`
   - `tournament_id`
   - `tournament_state_snapshot_id`
@@ -60,7 +69,7 @@ Proposed data shape:
 
 Output table:
 - `simulated_tournaments`
-  - `simulation_batch_id`
+  - `tournament_simulation_batch_id`
   - `sim_id`
   - `team_id`
   - `wins`, `byes`
@@ -77,20 +86,20 @@ Use cases:
 - compare variant calcuttas (hot-swap an entry)
 
 Proposed data shape:
-- `evaluation_runs`
+- `calcutta_evaluation_runs`
   - `id`
-  - `simulation_batch_id`
+  - `tournament_simulation_batch_id`
   - `calcutta_snapshot_id`
   - `created_at`
   - `purpose` (live, hall_of_fame, sandbox_submission)
 
-Outputs keyed by `evaluation_run_id`:
+Outputs keyed by `calcutta_evaluation_run_id`:
 - `entry_simulation_outcomes`
 - `entry_performance`
 
 ## Retention and deletion
 - Simulation batches may be deleted only if:
-  - no `evaluation_runs` reference them
+  - no `calcutta_evaluation_runs` reference them
 - Evaluation outputs may be regenerated if their inputs still exist (snapshot + batch + calcutta snapshot)
 
 ## Caching policy (Airflow)

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,15 +42,8 @@ func uuidToStringPtr(v pgtype.UUID) *string {
 	if !v.Valid {
 		return nil
 	}
-	// Convert UUID bytes to string
-	s := v.Bytes[0:16]
-	str := ""
-	for i, b := range s {
-		if i == 4 || i == 6 || i == 8 || i == 10 {
-			str += "-"
-		}
-		str += string([]byte{b})
-	}
+	u := uuid.UUID(v.Bytes)
+	str := u.String()
 	return &str
 }
 
@@ -170,18 +165,138 @@ func (r *MLAnalyticsRepository) GetTeamPredictions(ctx context.Context, year int
 	return out, nil
 }
 
-func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string) (string, []ports.SimulatedCalcuttaEntryRanking, error) {
-	runID, err := r.q.GetLatestOptimizationRunIDByCoreCalcuttaID(ctx, calcuttaID)
+func (r *MLAnalyticsRepository) ListTournamentSimulationBatchesByCoreTournamentID(ctx context.Context, coreTournamentID string) ([]ports.TournamentSimulationBatch, error) {
+	rows, err := r.q.ListTournamentSimulationBatchesByCoreTournamentID(ctx, coreTournamentID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.TournamentSimulationBatch, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.TournamentSimulationBatch{
+			ID:                        row.ID,
+			TournamentID:              row.TournamentID,
+			TournamentStateSnapshotID: row.TournamentStateSnapshotID,
+			NSims:                     int(row.NSims),
+			Seed:                      int(row.Seed),
+			ProbabilitySourceKey:      row.ProbabilitySourceKey,
+			CreatedAt:                 row.CreatedAt.Time,
+		})
+	}
+
+	return out, nil
+}
+
+func (r *MLAnalyticsRepository) ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.CalcuttaEvaluationRun, error) {
+	rows, err := r.q.ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.CalcuttaEvaluationRun, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.CalcuttaEvaluationRun{
+			ID:                          row.ID,
+			TournamentSimulationBatchID: row.TournamentSimulationBatchID,
+			CalcuttaSnapshotID:          uuidToStringPtr(row.CalcuttaSnapshotID),
+			Purpose:                     row.Purpose,
+			CreatedAt:                   row.CreatedAt.Time,
+		})
+	}
+
+	return out, nil
+}
+
+func (r *MLAnalyticsRepository) ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.StrategyGenerationRun, error) {
+	rows, err := r.q.ListStrategyGenerationRunsByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.StrategyGenerationRun, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.StrategyGenerationRun{
+			ID:                          row.ID,
+			RunKey:                      row.RunKey,
+			TournamentSimulationBatchID: uuidToStringPtr(row.TournamentSimulationBatchID),
+			CalcuttaID:                  uuidToStringPtr(row.CalcuttaID),
+			Purpose:                     row.Purpose,
+			ReturnsModelKey:             row.ReturnsModelKey,
+			InvestmentModelKey:          row.InvestmentModelKey,
+			OptimizerKey:                row.OptimizerKey,
+			ParamsJSON:                  row.ParamsJson,
+			GitSHA:                      row.GitSha,
+			CreatedAt:                   row.CreatedAt.Time,
+		})
+	}
+
+	return out, nil
+}
+
+func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string, calcuttaEvaluationRunID *string) (string, *string, []ports.SimulatedCalcuttaEntryRanking, error) {
+	if calcuttaEvaluationRunID != nil && *calcuttaEvaluationRunID != "" {
+		evalID := *calcuttaEvaluationRunID
+		rows, err := r.q.GetEntryPerformanceByCalcuttaEvaluationRunID(ctx, evalID)
+		if err != nil {
+			return "", nil, nil, err
+		}
+
+		out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.SimulatedCalcuttaEntryRanking{
+				Rank:             int(row.Rank),
+				EntryName:        row.EntryName,
+				MeanPayout:       row.MeanPayout,
+				MedianPayout:     row.MedianPayout,
+				PTop1:            row.PTop1,
+				PInMoney:         row.PInMoney,
+				TotalSimulations: int(row.TotalSimulations),
+			})
+		}
+
+		return "", &evalID, out, nil
+	}
+
+	// Prefer lineage-native evaluation runs when available.
+	evalID, err := r.q.GetLatestCalcuttaEvaluationRunIDByCoreCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", nil, nil, err
+		}
+	} else {
+		rows, err := r.q.GetEntryPerformanceByCalcuttaEvaluationRunID(ctx, evalID)
+		if err != nil {
+			return "", nil, nil, err
+		}
+
+		out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, ports.SimulatedCalcuttaEntryRanking{
+				Rank:             int(row.Rank),
+				EntryName:        row.EntryName,
+				MeanPayout:       row.MeanPayout,
+				MedianPayout:     row.MedianPayout,
+				PTop1:            row.PTop1,
+				PInMoney:         row.PInMoney,
+				TotalSimulations: int(row.TotalSimulations),
+			})
+		}
+
+		return "", &evalID, out, nil
+	}
+
+	// Fallback: derive run_key and query by run_id.
+	runID, err := r.q.GetLatestStrategyGenerationRunKeyByCoreCalcuttaID(ctx, calcuttaID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", nil, nil
+			return "", nil, nil, nil
 		}
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
 	rows, err := r.q.GetEntryPerformanceByRunID(ctx, runID)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
 	out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
@@ -197,70 +312,169 @@ func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Co
 		})
 	}
 
-	return runID, out, nil
+	return runID, nil, out, nil
 }
 
 func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int, runID string) (*ports.OurEntryDetails, error) {
-	// Get optimization run metadata
-	runRow, err := r.q.GetOptimizationRunByID(ctx, runID)
+	// Prefer strategy_generation_runs resolved by run_key.
+	strategyRun, err := r.q.GetStrategyGenerationRunByRunKey(ctx, runID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		return nil, nil
+	} else {
+		strategy := ""
+		switch v := strategyRun.Strategy.(type) {
+		case string:
+			strategy = v
+		case []byte:
+			strategy = string(v)
+		case nil:
+			strategy = ""
+		default:
+			strategy = fmt.Sprint(v)
+		}
+		if strategy == "" {
+			strategy = "legacy"
+		}
+
+		run := ports.OptimizationRun{
+			RunID:        derefStringML(strategyRun.RunID),
+			CalcuttaID:   uuidToStringPtr(strategyRun.CalcuttaID),
+			Strategy:     strategy,
+			NSims:        int(strategyRun.NSims),
+			Seed:         int(strategyRun.Seed),
+			BudgetPoints: int(strategyRun.BudgetPoints),
+			CreatedAt:    strategyRun.CreatedAt.Time,
+		}
+
+		bidRows, err := r.q.GetOurEntryBidsByStrategyGenerationRunID(ctx, strategyRun.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		portfolio := make([]ports.OurEntryBid, 0, len(bidRows))
+		for _, row := range bidRows {
+			portfolio = append(portfolio, ports.OurEntryBid{
+				TeamID:               row.TeamID,
+				SchoolName:           row.SchoolName,
+				Seed:                 int(derefInt32ML(row.Seed)),
+				Region:               derefStringML(row.Region),
+				RecommendedBidPoints: int(row.RecommendedBidPoints),
+				ExpectedROI:          row.ExpectedRoi,
+			})
+		}
+
+		summary := ports.EntryPerformanceSummary{}
+		return &ports.OurEntryDetails{
+			Run:       run,
+			Portfolio: portfolio,
+			Summary:   summary,
+		}, nil
+	}
+}
+
+func (r *MLAnalyticsRepository) GetEntryRankings(ctx context.Context, year int, runID string, limit, offset int) ([]ports.EntryRanking, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	rows, err := r.q.GetEntryRankingsByRunKey(ctx, sqlc.GetEntryRankingsByRunKeyParams{
+		PageOffset: int32(offset),
+		PageLimit:  int32(limit),
+		RunID:      runID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ports.EntryRanking, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ports.EntryRanking{
+			Rank:                 int(row.Rank),
+			EntryKey:             row.EntryKey,
+			IsOurStrategy:        row.IsOurStrategy,
+			NTeams:               int(row.NTeams),
+			TotalBidPoints:       int(row.TotalBidPoints),
+			MeanNormalizedPayout: row.MeanNormalizedPayout,
+			PercentileRank:       row.PercentileRank,
+			PTop1:                row.PTop1,
+			PInMoney:             row.PInMoney,
+			TotalEntries:         int(row.TotalEntries),
+		})
+	}
+
+	return out, nil
+}
+
+func (r *MLAnalyticsRepository) GetEntrySimulations(ctx context.Context, year int, runID string, entryKey string, limit, offset int) (*ports.EntrySimulationDrillDown, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 5000 {
+		limit = 5000
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	summaryRow, err := r.q.GetEntrySimulationSummaryByRunKeyAndEntryName(ctx, sqlc.GetEntrySimulationSummaryByRunKeyAndEntryNameParams{
+		RunID:     runID,
+		EntryName: entryKey,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
-
-	run := ports.OptimizationRun{
-		RunID:        runRow.RunID,
-		CalcuttaID:   uuidToStringPtr(runRow.CalcuttaID),
-		Strategy:     runRow.Strategy,
-		NSims:        int(runRow.NSims),
-		Seed:         int(runRow.Seed),
-		BudgetPoints: int(runRow.BudgetPoints),
-		CreatedAt:    runRow.CreatedAt.Time,
+	if summaryRow.TotalSimulations == 0 {
+		return nil, nil
 	}
 
-	// Get portfolio bids
-	bidRows, err := r.q.GetOurEntryBidsByRunID(ctx, runID)
+	rows, err := r.q.GetEntrySimulationsByRunKeyAndEntryName(ctx, sqlc.GetEntrySimulationsByRunKeyAndEntryNameParams{
+		RunID:      runID,
+		EntryName:  entryKey,
+		PageOffset: int32(offset),
+		PageLimit:  int32(limit),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	portfolio := make([]ports.OurEntryBid, 0, len(bidRows))
-	for _, row := range bidRows {
-		portfolio = append(portfolio, ports.OurEntryBid{
-			TeamID:               row.TeamID,
-			SchoolName:           row.SchoolName,
-			Seed:                 int(derefInt32ML(row.Seed)),
-			Region:               derefStringML(row.Region),
-			RecommendedBidPoints: int(row.RecommendedBidPoints),
-			ExpectedROI:          row.ExpectedRoi,
+	sims := make([]ports.EntrySimulationOutcome, 0, len(rows))
+	for _, row := range rows {
+		payoutCents := int(row.PayoutPoints)
+		sims = append(sims, ports.EntrySimulationOutcome{
+			SimID:            int(row.SimID),
+			PayoutCents:      payoutCents,
+			TotalPoints:      row.PointsScored,
+			FinishPosition:   int(row.Rank),
+			IsTied:           row.IsTied,
+			NormalizedPayout: row.NormalizedPayout,
+			NEntries:         int(row.NEntries),
 		})
 	}
 
-	// Entry performance queries removed in new schema
-	// Return empty summary for now
-	summary := ports.EntryPerformanceSummary{}
-
-	return &ports.OurEntryDetails{
-		Run:       run,
-		Portfolio: portfolio,
-		Summary:   summary,
-	}, nil
-}
-
-func (r *MLAnalyticsRepository) GetEntryRankings(ctx context.Context, year int, runID string, limit, offset int) ([]ports.EntryRanking, error) {
-	// Query removed in new schema - return empty for now
-	return []ports.EntryRanking{}, nil
-}
-
-func (r *MLAnalyticsRepository) GetEntrySimulations(ctx context.Context, year int, runID string, entryKey string, limit, offset int) (*ports.EntrySimulationDrillDown, error) {
-	// Query removed in new schema - return empty for now
 	return &ports.EntrySimulationDrillDown{
 		EntryKey:    entryKey,
 		RunID:       runID,
-		Simulations: []ports.EntrySimulationOutcome{},
-		Summary:     ports.EntrySimulationSummary{},
+		Simulations: sims,
+		Summary: ports.EntrySimulationSummary{
+			TotalSimulations:     int(summaryRow.TotalSimulations),
+			MeanPayoutCents:      summaryRow.MeanPayoutPoints,
+			MeanPoints:           summaryRow.MeanPoints,
+			MeanNormalizedPayout: summaryRow.MeanNormalizedPayout,
+			P50PayoutCents:       int(summaryRow.P50PayoutPoints),
+			P90PayoutCents:       int(summaryRow.P90PayoutPoints),
+		},
 	}, nil
 }
 
@@ -270,6 +484,35 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 
 	// Check if this is our strategy or an actual entry
 	if entryKey == "our_strategy" {
+		strategyRun, err := r.q.GetStrategyGenerationRunByRunKey(ctx, runID)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return nil, err
+			}
+		} else {
+			rows, err := r.q.GetEntryPortfolioByStrategyGenerationRunID(ctx, strategyRun.ID)
+			if err != nil {
+				return nil, err
+			}
+			for _, row := range rows {
+				teams = append(teams, ports.EntryPortfolioTeam{
+					TeamID:          row.TeamID,
+					SchoolName:      row.SchoolName,
+					Seed:            int(derefInt32ML(row.Seed)),
+					Region:          derefStringML(row.Region),
+					BidAmountPoints: int(row.BidAmount),
+				})
+				totalBid += int(row.BidAmount)
+			}
+			return &ports.EntryPortfolio{
+				EntryKey: entryKey,
+				Teams:    teams,
+				TotalBid: totalBid,
+				NTeams:   len(teams),
+			}, nil
+		}
+
+		// Legacy fallback: use run_id join.
 		rows, err := r.q.GetEntryPortfolio(ctx, runID)
 		if err != nil {
 			return nil, err
@@ -285,8 +528,9 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 			totalBid += int(row.BidAmount)
 		}
 	} else {
+		runIDPtr := runID
 		rows, err := r.q.GetActualEntryPortfolio(ctx, sqlc.GetActualEntryPortfolioParams{
-			RunID:     runID,
+			RunID:     &runIDPtr,
 			EntryName: entryKey,
 		})
 		if err != nil {
@@ -320,10 +564,25 @@ func (r *MLAnalyticsRepository) GetOptimizationRuns(ctx context.Context, year in
 
 	out := make([]ports.OptimizationRun, 0, len(rows))
 	for _, row := range rows {
+		strategy := ""
+		switch v := row.Strategy.(type) {
+		case string:
+			strategy = v
+		case []byte:
+			strategy = string(v)
+		case nil:
+			strategy = ""
+		default:
+			strategy = fmt.Sprint(v)
+		}
+		if strategy == "" {
+			strategy = "legacy"
+		}
+
 		out = append(out, ports.OptimizationRun{
-			RunID:        row.RunID,
+			RunID:        derefStringML(row.RunID),
 			CalcuttaID:   uuidToStringPtr(row.CalcuttaID),
-			Strategy:     row.Strategy,
+			Strategy:     strategy,
 			NSims:        int(row.NSims),
 			Seed:         int(row.Seed),
 			BudgetPoints: int(row.BudgetPoints),

@@ -6,6 +6,7 @@ DC = docker compose -p $(DOCKER_PROJECT)
 DC_AIRFLOW = docker compose -f data-science/docker-compose.airflow.yml
 
 .PHONY: up down reset ops-migrate backend-test sqlc-generate
+.PHONY: reset-derived
 .PHONY: airflow-up airflow-down airflow-logs airflow-reset
 
 backend-test:
@@ -25,6 +26,9 @@ reset:
 
 ops-migrate:
 	$(ENV_DOCKER) $(DC) --profile ops run --rm migrate
+
+reset-derived:
+	$(ENV) psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" -v ON_ERROR_STOP=1 -f backend/ops/reset_derived_data.sql
 
 # Airflow (full stack - heavyweight)
 airflow-up:

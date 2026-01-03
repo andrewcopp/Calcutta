@@ -13,12 +13,18 @@ A **calcutta snapshot** is an immutable representation of:
 - payout structure (in cents)
 - scoring rules reference
 
+Terminology:
+- "Simulation" refers to tournament simulations.
+- "Evaluation" refers to applying tournament simulations to a calcutta snapshot.
+
 Use cases:
 - Evaluate the real calcutta at different tournament times (via tournament snapshots)
 - Evaluate counterfactual variants:
   - exclude a specific entry
   - swap in a user strategy (synthetic entry)
   - historical what-if analysis
+
+Calcutta snapshots are inputs to calcutta evaluation runs.
 
 Proposed data shape:
 - `calcutta_snapshots`
@@ -39,6 +45,11 @@ Proposed data shape:
 
 Invariant:
 - Snapshots are immutable; new variants create new snapshot IDs.
+
+## Calcutta evaluation outputs
+Evaluation outputs are stored in cached derived tables:
+- `entry_simulation_outcomes`: per-entry, per-simulation rows (the discrete distribution samples)
+- `entry_performance`: per-entry aggregates across simulations (e.g., mean/median, p_top1, p_in_money)
 
 ## Investment pools
 A pool is a long-running group of people who play together year over year.
@@ -76,6 +87,8 @@ To enable this, we need realized outcomes stored:
   - actual payout (cents) and/or normalized payout
   - final rank
   - scored points (if needed)
+
+For now, realized outcomes can be computed on demand (function/view) from core facts.
 
 ## Notes
 - Hall of fame UI can migrate from the admin console to pool-scoped pages.

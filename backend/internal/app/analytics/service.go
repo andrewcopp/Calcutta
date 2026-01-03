@@ -234,11 +234,11 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 	return results, nil
 }
 
-func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string) ([]CalcuttaPredictedInvestmentResult, error) {
-	data, err := s.repo.GetCalcuttaPredictedInvestment(ctx, calcuttaID)
+func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaPredictedInvestmentResult, error) {
+	selectedID, data, err := s.repo.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
 		log.Printf("Error getting predicted investment: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	results := make([]CalcuttaPredictedInvestmentResult, 0, len(data))
@@ -254,14 +254,14 @@ func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID
 		})
 	}
 
-	return results, nil
+	return selectedID, results, nil
 }
 
-func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string) ([]CalcuttaPredictedReturnsResult, error) {
-	data, err := s.repo.GetCalcuttaPredictedReturns(ctx, calcuttaID)
+func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaPredictedReturnsResult, error) {
+	selectedID, data, err := s.repo.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
 		log.Printf("Error getting predicted returns: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	results := make([]CalcuttaPredictedReturnsResult, 0, len(data))
@@ -282,14 +282,14 @@ func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID st
 		})
 	}
 
-	return results, nil
+	return selectedID, results, nil
 }
 
-func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string) ([]CalcuttaSimulatedEntryResult, error) {
-	data, err := s.repo.GetCalcuttaSimulatedEntry(ctx, calcuttaID)
+func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryResult, error) {
+	selectedID, data, err := s.repo.GetCalcuttaSimulatedEntry(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
 		log.Printf("Error getting simulated entry: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	results := make([]CalcuttaSimulatedEntryResult, 0, len(data))
@@ -305,7 +305,7 @@ func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID stri
 		})
 	}
 
-	return results, nil
+	return selectedID, results, nil
 }
 
 func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardResult, error) {

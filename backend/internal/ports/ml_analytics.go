@@ -157,6 +157,38 @@ type EntryPortfolioTeam struct {
 	BidAmountPoints int
 }
 
+type TournamentSimulationBatch struct {
+	ID                        string
+	TournamentID              string
+	TournamentStateSnapshotID string
+	NSims                     int
+	Seed                      int
+	ProbabilitySourceKey      string
+	CreatedAt                 time.Time
+}
+
+type CalcuttaEvaluationRun struct {
+	ID                          string
+	TournamentSimulationBatchID string
+	CalcuttaSnapshotID          *string
+	Purpose                     string
+	CreatedAt                   time.Time
+}
+
+type StrategyGenerationRun struct {
+	ID                          string
+	RunKey                      *string
+	TournamentSimulationBatchID *string
+	CalcuttaID                  *string
+	Purpose                     string
+	ReturnsModelKey             string
+	InvestmentModelKey          string
+	OptimizerKey                string
+	ParamsJSON                  []byte
+	GitSHA                      *string
+	CreatedAt                   time.Time
+}
+
 // MLAnalyticsRepo defines the interface for ML analytics data access
 type MLAnalyticsRepository interface {
 	// Tournament simulations
@@ -184,5 +216,9 @@ type MLAnalyticsRepository interface {
 	GetOptimizationRuns(ctx context.Context, year int) ([]OptimizationRun, error)
 
 	// Calcutta-scoped simulated calcuttas
-	GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string) (string, []SimulatedCalcuttaEntryRanking, error)
+	GetSimulatedCalcuttaEntryRankings(ctx context.Context, calcuttaID string, calcuttaEvaluationRunID *string) (string, *string, []SimulatedCalcuttaEntryRanking, error)
+
+	ListTournamentSimulationBatchesByCoreTournamentID(ctx context.Context, coreTournamentID string) ([]TournamentSimulationBatch, error)
+	ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]CalcuttaEvaluationRun, error)
+	ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]StrategyGenerationRun, error)
 }
