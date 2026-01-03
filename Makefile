@@ -28,7 +28,7 @@ ops-migrate:
 	$(ENV_DOCKER) $(DC) --profile ops run --rm migrate
 
 reset-derived:
-	$(ENV) psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" -v ON_ERROR_STOP=1 -f backend/ops/reset_derived_data.sql
+	$(ENV) psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" -v ON_ERROR_STOP=1 -f backend/ops/db/maintenance/reset_derived_data.sql
 
 # Airflow (full stack - heavyweight)
 airflow-up:

@@ -128,8 +128,8 @@ This list should be kept short and explicit.
 - [x] Create schema `gold`
 
 ### 2) Create DB roles + permissions
-- [x] Run ops script: `backend/ops/db_roles_grants.sql`
-- [x] Verify roles/grants: `backend/ops/verify_db_roles_grants.sql` (output: `verify_db_roles_grants_output.txt`)
+- [x] Run ops script: `backend/ops/db/admin/db_roles_grants.sql`
+- [x] Verify roles/grants: `backend/ops/db/admin/verify_db_roles_grants.sql` (output: `verify_db_roles_grants_output.txt`)
 - [x] Role: `app_writer`
   - [x] Read/write on `core.*`
   - [x] Read-only on `bronze/silver/gold.*` (optional)
@@ -289,7 +289,7 @@ A calcutta always has a tournament, so any endpoint can join tournament data as 
   - Verified:
     - bundle exporter maintains data
     - frontend still loads correctly
-    - `backend/ops/core_sanity_checks.sql` passes
+    - `backend/ops/db/audits/core_sanity_checks.sql` passes
 
 ### Drop public bronze core-context views (after compat window)
 - [x] Migration: `20260102095000_drop_public_bronze_core_ctx_views`
@@ -316,8 +316,8 @@ A calcutta always has a tournament, so any endpoint can join tournament data as 
   - [x] Bundle tooling reads/writes `core.*` only (no `legacy.*` dependencies)
   - [x] Analytics snapshot exporter reads `core.*` only (no `legacy.*` dependencies)
   - [x] Repo-wide search shows no runtime/tooling `legacy.*` usage
-  - [x] `backend/ops/core_sanity_checks.sql` passes (core-only)
-  - [x] `backend/ops/freeze_invariants.sql` passes (core-only)
+  - [x] `backend/ops/db/audits/core_sanity_checks.sql` passes (core-only)
+  - [x] `backend/ops/db/maintenance/freeze_invariants.sql` passes (core-only)
   - [x] DB snapshot taken
 - [x] Migration: `20260101128000_drop_legacy_schema`
 - [ ] Remove unused tables after verification period
@@ -345,7 +345,7 @@ Add dated notes here as work is completed.
 - [2026-01-01] Captured post Phase 3 invariants: `invariants_post_phase3_backfill.txt`
 - [2026-01-01] Captured post Phase 3 core sanity report: `core_sanity_post_phase3.txt`
 
-- [2026-01-01] Applied roles/grants ops script: `backend/ops/db_roles_grants.sql`
+- [2026-01-01] Applied roles/grants ops script: `backend/ops/db/admin/db_roles_grants.sql`
 - [2026-01-01] Verified roles/grants: `verify_db_roles_grants_output.txt`
 - [2026-01-01] Cutover completed: app + tools read/write core gameplay data in `core.*`
 
@@ -364,7 +364,7 @@ Add dated notes here as work is completed.
 - [2026-01-01] Bundle tooling refactored to core-only (exporter/importer/verifier)
 - [2026-01-01] Analytics snapshot exporter refactored to core-only
 - [2026-01-01] Dropped legacy schema: `20260101128000_drop_legacy_schema`
-- [2026-01-01] Ops verification scripts updated to core-only: `backend/ops/core_sanity_checks.sql`, `backend/ops/freeze_invariants.sql`
+- [2026-01-01] Ops verification scripts updated to core-only: `backend/ops/db/audits/core_sanity_checks.sql`, `backend/ops/db/maintenance/freeze_invariants.sql`
 
 - [2026-01-01] Standard `updated_at` trigger function + triggers added for core + medallion tables
 - [2026-01-01] Core identity verification: core/bronze ID linkage validated; removed remaining join-relevant string parsing from runtime analytics queries
