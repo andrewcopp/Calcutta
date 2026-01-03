@@ -155,7 +155,7 @@ To understand dispersion and “ugly duckling” effects:
 Note: Recharts doesn’t have a built-in box plot; for sandbox analysis it’s usually easiest to use Python plotting (seaborn/matplotlib) and export images.
 
 ## Existing related docs
-- `docs/investability_theories.md` (contains “Ugly Duckling Theory”, stddev analysis ideas, and future analytics roadmap)
-- `docs/analytics_future_enhancements.md` (seed normalization + bias score ideas)
+- `docs/archive/investability_theories.md` (contains “Ugly Duckling Theory”, stddev analysis ideas, and future analytics roadmap)
+- `docs/design/analytics_future_enhancements.md` (seed normalization + bias score ideas)
 
 This doc focuses on the *sandbox workflow + model architecture*.

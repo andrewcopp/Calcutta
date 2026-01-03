@@ -103,4 +103,4 @@ python backtest_scaffold.py "$SNAP" \
 ## Notes
 
 - This folder intentionally stays lightweight.
-- For more context, see `docs/data_science_sandbox.md`.
+- For more context, see `docs/runbooks/data_science_sandbox.md`.

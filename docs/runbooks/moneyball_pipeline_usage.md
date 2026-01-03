@@ -276,7 +276,7 @@ out/artifacts/main/2025-01-15T10-30-00Z/
 
 ## Artifact Contracts
 
-All artifacts are validated against contracts defined in `docs/moneyball_artifact_contracts.md`.
+All artifacts are validated against contracts defined in `docs/reference/moneyball_artifact_contracts.md`.
 
 Contracts specify:
 - Required columns
@@ -366,6 +366,6 @@ Use `--no-cache` to force recomputation.
 
 ## Next Steps
 
-- See `docs/moneyball_artifact_contracts.md` for artifact specifications
+- See `docs/reference/moneyball_artifact_contracts.md` for artifact specifications
 - See `PLANS.md` for future enhancements
 - See `IDEAS.md` for research directions

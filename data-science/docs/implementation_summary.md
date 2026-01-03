@@ -32,7 +32,7 @@
 - `get_entry_portfolio()` - Get portfolio for any entry
 
 ### 2. API Endpoints Specification
-**Location**: `docs/api_endpoints.md`
+**Location**: `docs/reference/api_endpoints.md`
 
 8 RESTful endpoints designed:
 1. `GET /tournaments/{year}/simulations` - Tournament overview
@@ -66,7 +66,7 @@ Complete DAG with 7 tasks:
 
 ### 5. Documentation
 
-**Airflow Setup** (`docs/airflow_setup.md`):
+**Airflow Setup** (`data-science/docs/airflow_setup.md`):
 - Local development with docker-compose
 - Production deployment options (AWS MWAA, K8s, self-hosted)
 - Best practices and troubleshooting
@@ -76,7 +76,7 @@ Complete DAG with 7 tasks:
 - Architecture overview
 - Query examples
 
-**Go Models** (`docs/go_models.md`):
+**Go Models** (`data-science/docs/go_models.md`):
 - Complete struct definitions for all analytics tables
 - Query helper functions
 - Usage examples
@@ -187,7 +187,7 @@ Future: Services write directly to Postgres (no parquet intermediaries)
 
 ## Testing Strategy
 
-Following `docs/engineering.md` and `docs/bracket_testing_guidelines.md`:
+Following `docs/standards/engineering.md` and `docs/standards/bracket_testing_guidelines.md`:
 
 ### Unit Tests Only (For Now)
 - No DB/integration tests initially

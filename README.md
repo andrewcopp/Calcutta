@@ -43,7 +43,7 @@ The backend is a standard Go module. The `backend/cmd/*` directories contain the
 
 **Current state:** Services and repositories are in `pkg/services/`. This works but doesn't follow strict clean architecture.
 
-**Future state (documented in [docs/engineering.md](docs/engineering.md)):** 
+**Future state (documented in [docs/standards/engineering.md](docs/standards/engineering.md)):** 
 - Interfaces in `internal/ports/`
 - Implementations in `internal/adapters/postgres/`
 - Services depend on ports, not concrete implementations
@@ -53,16 +53,16 @@ The backend is a standard Go module. The `backend/cmd/*` directories contain the
 ## Documentation
 
 ### Essential Reading
-- **[Engineering Standards](docs/engineering.md)** - Architecture principles and coding standards
-- **[Testing Guidelines](docs/bracket_testing_guidelines.md)** - **CRITICAL**: Strict testing conventions (one assert per test, TestThat naming)
-- [Complete Rules and Examples](docs/rules.md) - Business logic and game rules
-- [Data Science Sandbox](docs/data_science_sandbox.md) - Sandbox workflow + two-model framing (predict returns, predict investment, compute ROI)
+- **[Engineering Standards](docs/standards/engineering.md)** - Architecture principles and coding standards
+- **[Testing Guidelines](docs/standards/bracket_testing_guidelines.md)** - **CRITICAL**: Strict testing conventions (one assert per test, TestThat naming)
+- [Complete Rules and Examples](docs/reference/rules.md) - Business logic and game rules
+- [Data Science Sandbox](docs/runbooks/data_science_sandbox.md) - Sandbox workflow + two-model framing (predict returns, predict investment, compute ROI)
 
 ### Domain Documentation
-- [Bracket Management](docs/bracket_management.md)
-- [Bracket State Management](docs/bracket_state_management.md)
-- [Tournament Modeling](docs/tournament_modeling.md)
-- [Analytics](docs/analytics_future_enhancements.md)
+- [Bracket Management](docs/reference/bracket_management.md)
+- [Bracket State Management](docs/reference/bracket_state_management.md)
+- [Tournament Modeling](docs/reference/tournament_modeling.md)
+- [Analytics](docs/design/analytics_future_enhancements.md)
 
 ### API Reference
 See [API Endpoints](#api-endpoints) section below.
@@ -210,7 +210,7 @@ go test -v ./pkg/services/...
 go test -v ./pkg/services/ -run TestThatBracketBuilderGeneratesSameGameIDs
 ```
 
-**Note:** Tests follow strict conventions (see [Testing Guidelines](docs/bracket_testing_guidelines.md))
+**Note:** Tests follow strict conventions (see [Testing Guidelines](docs/standards/bracket_testing_guidelines.md))
 
 ## API Endpoints
 
@@ -263,8 +263,8 @@ go test -v ./pkg/services/ -run TestThatBracketBuilderGeneratesSameGameIDs
 ### Before You Start
 
 **Required Reading:**
-1. **[Engineering Standards](docs/engineering.md)** - Architecture and coding principles
-2. **[Testing Guidelines](docs/bracket_testing_guidelines.md)** - Testing conventions (non-negotiable)
+1. **[Engineering Standards](docs/standards/engineering.md)** - Architecture and coding principles
+2. **[Testing Guidelines](docs/standards/bracket_testing_guidelines.md)** - Testing conventions (non-negotiable)
 
 ### Code Review Expectations
 

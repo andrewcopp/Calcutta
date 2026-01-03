@@ -56,7 +56,7 @@
 - Well-defined domain models
 - Follows Single Responsibility Principle
 
-**API Endpoints**: `docs/api_endpoints.md`
+**API Endpoints**: `docs/reference/api_endpoints.md`
 - 8 RESTful endpoints specified
 - Request/response formats defined
 - Error handling patterns
@@ -100,7 +100,7 @@
 - Separate Postgres for Airflow metadata and analytics data
 - Redis for Celery executor
 
-**Documentation**: `docs/airflow_setup.md`
+**Documentation**: `data-science/docs/airflow_setup.md`
 - Local development setup
 - Production deployment options (AWS MWAA, K8s)
 - Best practices and troubleshooting
