@@ -271,31 +271,6 @@ class DatabaseWriter:
             print(f"✓ Wrote optimization run {run_id} with {count} bids to database")
         except Exception as e:
             print(f"⚠ Failed to write optimization results: {e}")
-    
-    def write_entry_outcomes(
-        self,
-        *,
-        run_id: str,
-        outcomes_df: pd.DataFrame,
-        summary_df: pd.DataFrame,
-    ) -> None:
-        """Write entry simulation outcomes and performance to database."""
-        if not self.enabled:
-            return
-        
-        try:
-            # Write simulation outcomes (high volume)
-            if not outcomes_df.empty:
-                write_entry_simulation_outcomes(run_id, outcomes_df)
-                print(f"✓ Wrote {len(outcomes_df)} entry outcomes to database")
-            
-            # Write performance summary
-            if not summary_df.empty:
-                write_entry_performance(run_id, summary_df)
-                print(f"✓ Wrote {len(summary_df)} entry performance records to database")
-                
-        except Exception as e:
-            print(f"⚠ Failed to write entry outcomes: {e}")
 
 
 # Global instance for easy access

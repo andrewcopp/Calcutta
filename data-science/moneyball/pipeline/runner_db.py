@@ -117,21 +117,21 @@ def stage_simulated_calcuttas(
                 """
                 SELECT 
                     entry_name,
-                    mean_payout,
+                    mean_normalized_payout,
                     p_top1,
                     p_in_money
-                FROM analytics.entry_performance
+                FROM derived.entry_performance
                 WHERE run_id = %s
-                ORDER BY mean_payout DESC
+                ORDER BY mean_normalized_payout DESC
                 """,
                 (run_id,)
             )
             entries = cur.fetchall()
     
     print("\nEntry Performance:")
-    for entry_name, mean_payout, p_top1, p_in_money in entries:
+    for entry_name, mean_normalized_payout, p_top1, p_in_money in entries:
         print(
-            f"  {entry_name}: mean={mean_payout:.3f}, "
+            f"  {entry_name}: mean={mean_normalized_payout:.3f}, "
             f"P(top1)={p_top1:.1%}, P(in money)={p_in_money:.1%}"
         )
     

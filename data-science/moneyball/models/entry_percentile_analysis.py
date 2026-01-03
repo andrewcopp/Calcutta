@@ -27,6 +27,10 @@ def calculate_entry_percentiles(
     seed: int,
     budget_points: int,
 ) -> pd.DataFrame:
+    raise RuntimeError(
+        "Python entry percentile analysis is deprecated; "
+        "use Go evaluation outputs from derived.entry_performance instead."
+    )
     """
     Calculate normalized payout percentiles for all entries.
     

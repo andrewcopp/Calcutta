@@ -122,39 +122,6 @@ def main() -> int:
         default=True,
     )
 
-    p_sim = sub.add_parser("simulated-entry-outcomes")
-    p_sim.add_argument("snapshot_dir")
-    p_sim.add_argument("--snapshot-name", dest="snapshot_name", default=None)
-    p_sim.add_argument("--artifacts-root", dest="artifacts_root", default=None)
-    p_sim.add_argument("--run-id", dest="run_id", default=None)
-    p_sim.add_argument("--calcutta-key", dest="calcutta_key", default=None)
-    p_sim.add_argument("--n-sims", dest="n_sims", type=int, default=5000)
-    p_sim.add_argument("--seed", dest="seed", type=int, default=123)
-    p_sim.add_argument(
-        "--budget-points",
-        dest="budget_points",
-        type=int,
-        default=100,
-    )
-    p_sim.add_argument(
-        "--keep-sims",
-        dest="keep_sims",
-        action="store_true",
-        default=False,
-    )
-    p_sim.add_argument(
-        "--no-include-upstream",
-        dest="include_upstream",
-        action="store_false",
-        default=True,
-    )
-    p_sim.add_argument(
-        "--no-cache",
-        dest="use_cache",
-        action="store_false",
-        default=True,
-    )
-
     p_tournaments = sub.add_parser("simulate-tournaments")
     p_tournaments.add_argument("snapshot_dir")
     p_tournaments.add_argument(
@@ -182,65 +149,6 @@ def main() -> int:
         default=True,
     )
 
-    p_report = sub.add_parser("investment-report")
-    p_report.add_argument("snapshot_dir")
-    p_report.add_argument(
-        "--snapshot-name", dest="snapshot_name", default=None
-    )
-    p_report.add_argument(
-        "--artifacts-root", dest="artifacts_root", default=None
-    )
-    p_report.add_argument("--run-id", dest="run_id", default=None)
-    p_report.add_argument("--n-sims", dest="n_sims", type=int, default=5000)
-    p_report.add_argument("--seed", dest="seed", type=int, default=123)
-    p_report.add_argument(
-        "--budget-points",
-        dest="budget_points",
-        type=int,
-        default=100,
-    )
-    p_report.add_argument(
-        "--strategy",
-        dest="strategy",
-        type=str,
-        default="minlp",
-        choices=[
-            "greedy",
-            "minlp",
-            "maxmin",
-            "waterfill_equal",
-            "kelly",
-            "min_variance",
-            "max_sharpe",
-            "one_per_region",
-            "two_per_region",
-            "region_constrained",
-            "variance_aware_light",
-            "variance_aware_medium",
-            "variance_aware_heavy",
-        ],
-        help="Portfolio allocation strategy",
-    )
-    p_report.add_argument(
-        "--no-include-upstream",
-        dest="include_upstream",
-        action="store_false",
-        default=True,
-    )
-    p_report.add_argument(
-        "--no-cache",
-        dest="use_cache",
-        action="store_false",
-        default=True,
-    )
-    p_report.add_argument(
-        "--regenerate-tournaments",
-        dest="regenerate_tournaments",
-        action="store_true",
-        default=False,
-        help="Force regeneration of tournament simulations (ignore cache)",
-    )
-
     args = parser.parse_args()
 
     if args.cmd == "predicted-game-outcomes":
@@ -256,34 +164,6 @@ def main() -> int:
             kenpom_scale=float(args.kenpom_scale),
             n_sims=int(args.n_sims),
             seed=int(args.seed),
-            use_cache=bool(args.use_cache),
-        )
-        print(json.dumps(out, indent=2))
-        return 0
-
-    if args.cmd == "simulated-entry-outcomes":
-        run_stages = ["simulated_entry_outcomes"]
-        if bool(args.include_upstream):
-            run_stages = [
-                "predicted_game_outcomes",
-                "predicted_auction_share_of_pool",
-                "recommended_entry_bids",
-                "simulated_entry_outcomes",
-            ]
-
-        out = run(
-            snapshot_dir=Path(args.snapshot_dir),
-            snapshot_name=args.snapshot_name,
-            artifacts_root=Path(args.artifacts_root)
-            if args.artifacts_root
-            else None,
-            run_id=args.run_id,
-            stages=run_stages,
-            calcutta_key=args.calcutta_key,
-            sim_n_sims=int(args.n_sims),
-            sim_seed=int(args.seed),
-            sim_budget_points=int(args.budget_points),
-            sim_keep_sims=bool(args.keep_sims),
             use_cache=bool(args.use_cache),
         )
         print(json.dumps(out, indent=2))
@@ -350,36 +230,6 @@ def main() -> int:
             stages=["predicted_game_outcomes", "simulated_tournaments"],
             n_sims=int(args.n_sims),
             seed=int(args.seed),
-            regenerate_tournaments=bool(args.regenerate_tournaments),
-            use_cache=bool(args.use_cache),
-        )
-        print(json.dumps(out, indent=2))
-        return 0
-
-    if args.cmd == "investment-report":
-        run_stages = ["investment_report"]
-        if bool(args.include_upstream):
-            run_stages = [
-                "predicted_game_outcomes",
-                "predicted_auction_share_of_pool",
-                "recommended_entry_bids",
-                "simulated_tournaments",
-                "simulated_entry_outcomes",
-                "investment_report",
-            ]
-
-        out = run(
-            snapshot_dir=Path(args.snapshot_dir),
-            snapshot_name=args.snapshot_name,
-            artifacts_root=Path(args.artifacts_root)
-            if args.artifacts_root
-            else None,
-            run_id=args.run_id,
-            stages=run_stages,
-            sim_n_sims=int(args.n_sims),
-            sim_seed=int(args.seed),
-            sim_budget_points=int(args.budget_points),
-            bids_strategy=str(args.strategy),
             regenerate_tournaments=bool(args.regenerate_tournaments),
             use_cache=bool(args.use_cache),
         )

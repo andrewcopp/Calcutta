@@ -17,12 +17,6 @@ from moneyball.models.recommended_entry_bids import (
 from moneyball.models.simulated_tournaments import (
     simulate_tournaments,
 )
-from moneyball.models.simulated_entry_outcomes import (
-    simulate_entry_outcomes,
-)
-from moneyball.models.investment_report import (
-    generate_investment_report,
-)
 from moneyball.pipeline.orchestrator import (
     ArtifactStore,
     PipelineOrchestrator,
@@ -34,10 +28,8 @@ from moneyball.pipeline.artifacts import (
     load_manifest,
     manifest_matches,
     sha256_jsonable,
-    utc_now_iso,
     write_json,
 )
-from moneyball.pipeline.db_writer import get_db_writer
 
 
 def _list_snapshots_under_out_root(out_root: Path) -> Dict[str, Path]:
@@ -127,16 +119,6 @@ def _stage_predicted_game_outcomes(
     )
 
     df.to_parquet(out_path, index=False)
-
-    # Write to database
-    db_writer = get_db_writer()
-    tournament_key = f"ncaa-tournament-{snapshot_dir.name}"
-    db_writer.write_predicted_game_outcomes(
-        tournament_key=tournament_key,
-        predictions_df=df,
-        model_version="kenpom-v1",
-        snapshot_dir=snapshot_dir,
-    )
 
     stage_manifest = {
         "stage_config_hash": sha256_jsonable(stage_config),
@@ -361,20 +343,6 @@ def _stage_recommended_entry_bids(
     ensure_dir(out_path.parent)
     df.to_parquet(out_path, index=False)
 
-    # Write to database
-    db_writer = get_db_writer()
-    # Extract calcutta_key from snapshot_dir or use placeholder
-    calcutta_key_val = f"calcutta-{snapshot_dir.name}"
-    db_writer.write_optimization_results(
-        run_id=out_dir.name,
-        calcutta_key=calcutta_key_val,
-        strategy=strategy,
-        n_sims=5000,  # Default from pipeline
-        seed=42,  # Default from pipeline
-        budget_points=budget_points,
-        recommended_bids_df=df,
-    )
-
     stage_manifest = {
         "stage_config_hash": sha256_jsonable(stage_config),
         "stage_config": stage_config,
@@ -471,15 +439,6 @@ def _stage_simulated_tournaments(
 
     result.to_parquet(out_path, index=False)
 
-    # Write to database
-    db_writer = get_db_writer()
-    tournament_key = f"ncaa-tournament-{snapshot_dir.name}"
-    db_writer.write_simulated_tournaments(
-        tournament_key=tournament_key,
-        simulations_df=result,
-        snapshot_dir=snapshot_dir,
-    )
-
     stage_manifest = {
         "stage_config_hash": sha256_jsonable(stage_config),
         "stage_config": stage_config,
@@ -512,152 +471,12 @@ def _stage_simulated_entry_outcomes(
     use_cache: bool,
     manifest: Dict[str, Any],
 ) -> Tuple[Path, Dict[str, Any]]:
-    stage = "simulated_entry_outcomes"
-
-    sd = Path(snapshot_dir)
-    games_path = sd / "games.parquet"
-    teams_path = sd / "teams.parquet"
-    payouts_path = sd / "payouts.parquet"
-    entry_bids_path = sd / "entry_bids.parquet"
-
-    if not games_path.exists():
-        raise FileNotFoundError(f"missing required file: {games_path}")
-    if not teams_path.exists():
-        raise FileNotFoundError(f"missing required file: {teams_path}")
-    if not payouts_path.exists():
-        raise FileNotFoundError(f"missing required file: {payouts_path}")
-    if not entry_bids_path.exists():
-        raise FileNotFoundError(f"missing required file: {entry_bids_path}")
-
-    # Load from canonical location (no timestamp)
-    predicted_game_outcomes_path = Path(snapshot_dir) / "derived" / "predicted_game_outcomes.parquet"
-    recommended_entry_bids_path = out_dir / "recommended_entry_bids.parquet"
-
-    if not predicted_game_outcomes_path.exists():
-        raise FileNotFoundError(
-            "missing required artifact: "
-            f"{predicted_game_outcomes_path}"
-        )
-    if not recommended_entry_bids_path.exists():
-        raise FileNotFoundError(
-            "missing required artifact: "
-            f"{recommended_entry_bids_path}"
-        )
-
-    # Load tournaments from canonical location
-    tournaments_path = sd / "derived" / "tournaments.parquet"
-
-    simulated_tournaments_df = None
-    if tournaments_path.exists():
-        simulated_tournaments_df = pd.read_parquet(tournaments_path)
-        print("✓ Loaded tournaments for entry outcomes")
-    else:
-        print("⚠ No tournaments found - run simulate-tournaments first")
-
-    input_fps = {
-        "games": fingerprint_file(games_path),
-        "teams": fingerprint_file(teams_path),
-        "payouts": fingerprint_file(payouts_path),
-        "entry_bids": fingerprint_file(entry_bids_path),
-        "predicted_game_outcomes": fingerprint_file(
-            predicted_game_outcomes_path
-        ),
-        "recommended_entry_bids": fingerprint_file(
-            recommended_entry_bids_path
-        ),
-    }
-    
-    # Add simulated_tournaments to inputs if it exists
-    if simulated_tournaments_df is not None:
-        input_fps["simulated_tournaments"] = fingerprint_file(
-            tournaments_path
-        )
-
-    ck = calcutta_key
-    if ck is None:
-        entry_bids_df = pd.read_parquet(entry_bids_path)
-        if "calcutta_key" in entry_bids_df.columns and not entry_bids_df.empty:
-            ck = str(entry_bids_df["calcutta_key"].iloc[0])
-        else:
-            teams_df = pd.read_parquet(teams_path)
-            if "calcutta_key" in teams_df.columns and not teams_df.empty:
-                ck = str(teams_df["calcutta_key"].iloc[0])
-            else:
-                raise ValueError(
-                    "calcutta_key not provided and cannot be inferred "
-                    "from entry_bids or teams"
-                )
-
-    teams_df = pd.read_parquet(teams_path)
-
-    stage_config: Dict[str, Any] = {
-        "calcutta_key": str(ck),
-        "n_sims": int(n_sims),
-        "seed": int(seed),
-        "budget_points": int(budget_points),
-        "keep_sims": bool(keep_sims),
-    }
-
-    out_summary_path = out_dir / "simulated_entry_outcomes.parquet"
-    out_sims_path = out_dir / "simulated_entry_outcomes_sims.parquet"
-
-    if use_cache:
-        existing = load_manifest(out_dir / "manifest.json")
-        if existing is not None and manifest_matches(
-            existing=existing,
-            stage=stage,
-            stage_config=stage_config,
-            input_fingerprints=input_fps,
-        ):
-            if out_summary_path.exists():
-                if not keep_sims:
-                    return out_summary_path, existing
-                if out_sims_path.exists():
-                    return out_summary_path, existing
-
-    games_df = pd.read_parquet(games_path)
-    payouts_df = pd.read_parquet(payouts_path)
-    entry_bids_df = pd.read_parquet(entry_bids_path)
-    predicted_game_outcomes_df = pd.read_parquet(predicted_game_outcomes_path)
-    recommended_entry_bids_df = pd.read_parquet(recommended_entry_bids_path)
-
-    summary_df, sims_df = simulate_entry_outcomes(
-        games=games_df,
-        teams=teams_df,
-        payouts=payouts_df,
-        entry_bids=entry_bids_df,
-        predicted_game_outcomes=predicted_game_outcomes_df,
-        recommended_entry_bids=recommended_entry_bids_df,
-        simulated_tournaments=simulated_tournaments_df,
-        calcutta_key=str(ck),
-        n_sims=int(n_sims),
-        seed=int(seed),
-        budget_points=int(budget_points),
-        keep_sims=bool(keep_sims),
+    raise RuntimeError(
+        "The file-based Python stage 'simulated_entry_outcomes' is deprecated; "
+        "use Go evaluation and derived.* tables instead."
     )
 
-    ensure_dir(out_summary_path.parent)
-    summary_df.to_parquet(out_summary_path, index=False)
-    if keep_sims and sims_df is not None:
-        sims_df.to_parquet(out_sims_path, index=False)
-
-    outputs: Dict[str, Any] = {
-        "simulated_entry_outcomes": str(out_summary_path),
-    }
-    if keep_sims:
-        outputs["simulated_entry_outcomes_sims"] = str(out_sims_path)
-
-    stage_manifest = {
-        "stage_config_hash": sha256_jsonable(stage_config),
-        "stage_config": stage_config,
-        "inputs": fingerprints_to_dict(input_fps),
-        "outputs": outputs,
-    }
-
-    stages = manifest.setdefault("stages", {})
-    if isinstance(stages, dict):
-        stages[stage] = stage_manifest
-    return out_summary_path, manifest
+    raise RuntimeError("unreachable")
 
 
 def _stage_investment_report(
@@ -671,89 +490,12 @@ def _stage_investment_report(
     use_cache: bool,
     manifest: Dict[str, Any],
 ) -> Tuple[Path, Dict[str, Any]]:
-    stage = "investment_report"
-
-    # Load canonical artifacts (no timestamp)
-    pgo_path = Path(snapshot_dir) / "derived" / "predicted_game_outcomes.parquet"
-    # Load timestamped Calcutta artifacts
-    pas_path = out_dir / "predicted_auction_share_of_pool.parquet"
-    reb_path = out_dir / "recommended_entry_bids.parquet"
-    seo_path = out_dir / "simulated_entry_outcomes.parquet"
-
-    if not pgo_path.exists():
-        raise FileNotFoundError(
-            f"missing required artifact: {pgo_path}"
-        )
-    if not pas_path.exists():
-        raise FileNotFoundError(
-            f"missing required artifact: {pas_path}"
-        )
-    if not reb_path.exists():
-        raise FileNotFoundError(
-            f"missing required artifact: {reb_path}"
-        )
-    if not seo_path.exists():
-        raise FileNotFoundError(
-            f"missing required artifact: {seo_path}"
-        )
-
-    input_fps = {
-        "predicted_game_outcomes": fingerprint_file(pgo_path),
-        "predicted_auction_share_of_pool": fingerprint_file(pas_path),
-        "recommended_entry_bids": fingerprint_file(reb_path),
-        "simulated_entry_outcomes": fingerprint_file(seo_path),
-    }
-
-    stage_config: Dict[str, Any] = {
-        "snapshot_name": str(snapshot_name),
-        "budget_points": int(budget_points),
-        "n_sims": int(n_sims),
-        "seed": int(seed),
-    }
-
-    out_path = out_dir / "investment_report.parquet"
-
-    if use_cache:
-        existing = load_manifest(out_dir / "manifest.json")
-        if existing is not None and manifest_matches(
-            existing=existing,
-            stage=stage,
-            stage_config=stage_config,
-            input_fingerprints=input_fps,
-        ):
-            if out_path.exists():
-                return out_path, existing
-
-    pgo_df = pd.read_parquet(pgo_path)
-    pas_df = pd.read_parquet(pas_path)
-    reb_df = pd.read_parquet(reb_path)
-    seo_df = pd.read_parquet(seo_path)
-
-    report_df = generate_investment_report(
-        recommended_entry_bids=reb_df,
-        simulated_entry_outcomes=seo_df,
-        predicted_game_outcomes=pgo_df,
-        predicted_auction_share_of_pool=pas_df,
-        snapshot_name=str(snapshot_name),
-        budget_points=int(budget_points),
-        n_sims=int(n_sims),
-        seed=int(seed),
+    raise RuntimeError(
+        "The file-based Python stage 'investment_report' is deprecated; "
+        "use Go evaluation outputs and DB-backed reports instead."
     )
 
-    ensure_dir(out_path.parent)
-    report_df.to_parquet(out_path, index=False)
-
-    stage_manifest = {
-        "stage_config_hash": sha256_jsonable(stage_config),
-        "stage_config": stage_config,
-        "inputs": fingerprints_to_dict(input_fps),
-        "outputs": {"investment_report": str(out_path)},
-    }
-
-    stages = manifest.setdefault("stages", {})
-    if isinstance(stages, dict):
-        stages[stage] = stage_manifest
-    return out_path, manifest
+    raise RuntimeError("unreachable")
 
 
 def run(
@@ -816,6 +558,14 @@ def run(
         list(stages) if stages is not None else ["predicted_game_outcomes"]
     )
 
+    deprecated = {"simulated_entry_outcomes", "investment_report"}
+    for s in wanted:
+        if s in deprecated:
+            raise RuntimeError(
+                f"Python stage '{s}' is deprecated; "
+                "use Go evaluation and DB-backed outputs instead."
+            )
+
     # Run stages in order
     if "predicted_game_outcomes" in wanted:
         out_path = orchestrator.run_stage(
@@ -868,31 +618,6 @@ def run(
             regenerate=bool(regenerate_tournaments),
         )
         orchestrator.results["simulated_tournaments_parquet"] = str(out_path)
-
-    if "simulated_entry_outcomes" in wanted:
-        out_path = orchestrator.run_stage(
-            stage_name="simulated_entry_outcomes",
-            stage_func=_stage_simulated_entry_outcomes,
-            calcutta_key=calcutta_key,
-            n_sims=int(sim_n_sims),
-            seed=int(sim_seed),
-            budget_points=int(sim_budget_points),
-            keep_sims=bool(sim_keep_sims),
-        )
-        orchestrator.results["simulated_entry_outcomes_parquet"] = str(
-            out_path
-        )
-
-    if "investment_report" in wanted:
-        out_path = orchestrator.run_stage(
-            stage_name="investment_report",
-            stage_func=_stage_investment_report,
-            snapshot_name=sname,
-            budget_points=int(sim_budget_points),
-            n_sims=int(sim_n_sims),
-            seed=int(sim_seed),
-        )
-        orchestrator.results["investment_report_parquet"] = str(out_path)
 
     # Finalize and return results
     return orchestrator.finalize()

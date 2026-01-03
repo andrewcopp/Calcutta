@@ -7,6 +7,10 @@ import pandas as pd
 from moneyball.models.simulated_entry_outcomes import simulate_entry_outcomes
 from moneyball.utils import points
 
+raise unittest.SkipTest(
+    "Python simulated_entry_outcomes is deprecated; use Go evaluation instead."
+)
+
 
 def _points_by_win_index_fixture() -> dict:
     return {

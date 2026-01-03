@@ -11,7 +11,7 @@ Orchestrates the end-to-end analytics pipeline:
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
-from airflow.operators.python import PythonOperator
+
 
 default_args = {
     'owner': 'calcutta',
@@ -151,19 +151,6 @@ evaluate_all_entries = DockerOperator(
     dag=dag,
 )
 
-calculate_entry_performance = DockerOperator(
-    task_id='calculate_entry_performance',
-    image='calcutta-python-analytics:latest',
-    command=f'python -m moneyball.calculate_entry_performance --year {YEAR}',
-    environment={
-        **DB_ENV,
-        'PYTHONPATH': '/app',
-    },
-    network_mode='bridge',
-    auto_remove=True,
-    dag=dag,
-)
-
 # ============================================================================
 # Task Dependencies
 # ============================================================================
@@ -181,4 +168,4 @@ simulate_tournaments >> [predict_game_outcomes, predict_market_share, calculate_
 optimize_portfolio >> evaluate_all_entries
 
 # Final aggregation
-evaluate_all_entries >> calculate_entry_performance
+# Go evaluation is the final step.

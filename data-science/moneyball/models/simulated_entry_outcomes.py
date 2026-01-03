@@ -83,6 +83,10 @@ def simulate_entry_outcomes(
     sim_entry_key: str = "simulated:entry",
     keep_sims: bool = False,
 ) -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
+    raise RuntimeError(
+        "Python simulated entry evaluation is deprecated; "
+        "use Go tournament simulation + calcutta evaluation."
+    )
     if n_sims <= 0:
         raise ValueError("n_sims must be positive")
     if budget_points <= 0:
