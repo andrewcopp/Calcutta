@@ -446,7 +446,7 @@ func (s *Server) handleListTournamentSimulationBatches(w http.ResponseWriter, r 
 		data = append(data, map[string]interface{}{
 			"id":                           b.ID,
 			"tournament_id":                b.TournamentID,
-			"tournament_state_snapshot_id": b.TournamentStateSnapshotID,
+			"tournament_state_snapshot_id": b.SimulationStateID,
 			"n_sims":                       b.NSims,
 			"seed":                         b.Seed,
 			"probability_source_key":       b.ProbabilitySourceKey,
@@ -481,7 +481,7 @@ func (s *Server) handleListCalcuttaEvaluationRuns(w http.ResponseWriter, r *http
 	for _, run := range runs {
 		data = append(data, map[string]interface{}{
 			"id":                             run.ID,
-			"tournament_simulation_batch_id": run.TournamentSimulationBatchID,
+			"tournament_simulation_batch_id": run.SimulatedTournamentID,
 			"calcutta_snapshot_id":           run.CalcuttaSnapshotID,
 			"purpose":                        run.Purpose,
 			"created_at":                     run.CreatedAt,
@@ -521,7 +521,7 @@ func (s *Server) handleListStrategyGenerationRuns(w http.ResponseWriter, r *http
 		data = append(data, map[string]interface{}{
 			"id":                             run.ID,
 			"run_key":                        run.RunKey,
-			"tournament_simulation_batch_id": run.TournamentSimulationBatchID,
+			"tournament_simulation_batch_id": run.SimulatedTournamentID,
 			"calcutta_id":                    run.CalcuttaID,
 			"purpose":                        run.Purpose,
 			"returns_model_key":              run.ReturnsModelKey,

@@ -71,33 +71,33 @@ func (q *Queries) GetActualEntryPortfolio(ctx context.Context, arg GetActualEntr
 
 const getEntryPerformanceByCalcuttaEvaluationRunID = `-- name: GetEntryPerformanceByCalcuttaEvaluationRunID :many
 SELECT
-	ROW_NUMBER() OVER (ORDER BY gep.mean_payout DESC)::int as rank,
+	ROW_NUMBER() OVER (ORDER BY gep.mean_normalized_payout DESC)::int as rank,
 	gep.entry_name,
-	COALESCE(gep.mean_payout, 0.0)::double precision as mean_payout,
-	COALESCE(gep.median_payout, 0.0)::double precision as median_payout,
+	COALESCE(gep.mean_normalized_payout, 0.0)::double precision as mean_normalized_payout,
+	COALESCE(gep.median_normalized_payout, 0.0)::double precision as median_normalized_payout,
 	COALESCE(gep.p_top1, 0.0)::double precision as p_top1,
 	COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
 	(
 		SELECT COUNT(*)::int
-		FROM analytics.entry_simulation_outcomes eso
+		FROM derived.entry_simulation_outcomes eso
 		WHERE eso.calcutta_evaluation_run_id = $1::uuid
 		  AND eso.entry_name = gep.entry_name
 		  AND eso.deleted_at IS NULL
 	) as total_simulations
-FROM analytics.entry_performance gep
+FROM derived.entry_performance gep
 WHERE gep.calcutta_evaluation_run_id = $1::uuid
 	AND gep.deleted_at IS NULL
-ORDER BY gep.mean_payout DESC
+ORDER BY gep.mean_normalized_payout DESC
 `
 
 type GetEntryPerformanceByCalcuttaEvaluationRunIDRow struct {
-	Rank             int32
-	EntryName        string
-	MeanPayout       float64
-	MedianPayout     float64
-	PTop1            float64
-	PInMoney         float64
-	TotalSimulations int32
+	Rank                   int32
+	EntryName              string
+	MeanNormalizedPayout   float64
+	MedianNormalizedPayout float64
+	PTop1                  float64
+	PInMoney               float64
+	TotalSimulations       int32
 }
 
 func (q *Queries) GetEntryPerformanceByCalcuttaEvaluationRunID(ctx context.Context, dollar_1 string) ([]GetEntryPerformanceByCalcuttaEvaluationRunIDRow, error) {
@@ -112,8 +112,8 @@ func (q *Queries) GetEntryPerformanceByCalcuttaEvaluationRunID(ctx context.Conte
 		if err := rows.Scan(
 			&i.Rank,
 			&i.EntryName,
-			&i.MeanPayout,
-			&i.MedianPayout,
+			&i.MeanNormalizedPayout,
+			&i.MedianNormalizedPayout,
 			&i.PTop1,
 			&i.PInMoney,
 			&i.TotalSimulations,
@@ -130,30 +130,30 @@ func (q *Queries) GetEntryPerformanceByCalcuttaEvaluationRunID(ctx context.Conte
 
 const getEntryPerformanceByRunID = `-- name: GetEntryPerformanceByRunID :many
 SELECT
-    ROW_NUMBER() OVER (ORDER BY gep.mean_payout DESC)::int as rank,
+    ROW_NUMBER() OVER (ORDER BY gep.mean_normalized_payout DESC)::int as rank,
     gep.entry_name,
-    COALESCE(gep.mean_payout, 0.0)::double precision as mean_payout,
-    COALESCE(gep.median_payout, 0.0)::double precision as median_payout,
+    COALESCE(gep.mean_normalized_payout, 0.0)::double precision as mean_normalized_payout,
+    COALESCE(gep.median_normalized_payout, 0.0)::double precision as median_normalized_payout,
     COALESCE(gep.p_top1, 0.0)::double precision as p_top1,
     COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
     (
         SELECT COUNT(*)::int
-        FROM analytics.entry_simulation_outcomes eso
+        FROM derived.entry_simulation_outcomes eso
         WHERE eso.run_id = $1::text AND eso.entry_name = gep.entry_name
     ) as total_simulations
-FROM analytics.entry_performance gep
+FROM derived.entry_performance gep
 WHERE gep.run_id = $1::text
-ORDER BY gep.mean_payout DESC
+ORDER BY gep.mean_normalized_payout DESC
 `
 
 type GetEntryPerformanceByRunIDRow struct {
-	Rank             int32
-	EntryName        string
-	MeanPayout       float64
-	MedianPayout     float64
-	PTop1            float64
-	PInMoney         float64
-	TotalSimulations int32
+	Rank                   int32
+	EntryName              string
+	MeanNormalizedPayout   float64
+	MedianNormalizedPayout float64
+	PTop1                  float64
+	PInMoney               float64
+	TotalSimulations       int32
 }
 
 func (q *Queries) GetEntryPerformanceByRunID(ctx context.Context, dollar_1 string) ([]GetEntryPerformanceByRunIDRow, error) {
@@ -168,8 +168,8 @@ func (q *Queries) GetEntryPerformanceByRunID(ctx context.Context, dollar_1 strin
 		if err := rows.Scan(
 			&i.Rank,
 			&i.EntryName,
-			&i.MeanPayout,
-			&i.MedianPayout,
+			&i.MeanNormalizedPayout,
+			&i.MedianNormalizedPayout,
 			&i.PTop1,
 			&i.PInMoney,
 			&i.TotalSimulations,
@@ -307,10 +307,10 @@ lab_calcutta AS (
 base AS (
 	SELECT
 		gep.entry_name,
-		COALESCE(gep.mean_payout, 0.0)::double precision AS mean_normalized_payout,
+		COALESCE(gep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
 		COALESCE(gep.p_top1, 0.0)::double precision AS p_top1,
 		COALESCE(gep.p_in_money, 0.0)::double precision AS p_in_money
-	FROM analytics.entry_performance gep
+	FROM derived.entry_performance gep
 	WHERE gep.run_id = $3::text
 		AND gep.deleted_at IS NULL
 ),
@@ -443,9 +443,9 @@ const getEntrySimulationSummaryByRunKeyAndEntryName = `-- name: GetEntrySimulati
 WITH per_sim AS (
 	SELECT
 		sim_id,
-		MAX(payout_points)::double precision AS max_payout_points,
+		MAX(payout_cents)::double precision AS max_payout_cents,
 		COUNT(*)::int AS n_entries
-	FROM analytics.entry_simulation_outcomes
+	FROM derived.entry_simulation_outcomes
 	WHERE run_id = $1::text
 		AND deleted_at IS NULL
 	GROUP BY sim_id
@@ -453,13 +453,13 @@ WITH per_sim AS (
 entry_sims AS (
 	SELECT
 		eso.sim_id,
-		eso.payout_points::double precision AS payout_points,
+		eso.payout_cents::double precision AS payout_cents,
 		eso.points_scored::double precision AS points_scored,
 		CASE
-			WHEN ps.max_payout_points > 0 THEN (eso.payout_points::double precision / ps.max_payout_points)
+			WHEN ps.max_payout_cents > 0 THEN (eso.payout_cents::double precision / ps.max_payout_cents)
 			ELSE 0.0::double precision
 		END AS normalized_payout
-	FROM analytics.entry_simulation_outcomes eso
+	FROM derived.entry_simulation_outcomes eso
 	JOIN per_sim ps ON ps.sim_id = eso.sim_id
 	WHERE eso.run_id = $1::text
 		AND eso.entry_name = $2::text
@@ -467,11 +467,11 @@ entry_sims AS (
 )
 SELECT
 	COUNT(*)::int AS total_simulations,
-	COALESCE(AVG(payout_points), 0.0)::double precision AS mean_payout_points,
+	COALESCE(AVG(payout_cents), 0.0)::double precision AS mean_payout_cents,
 	COALESCE(AVG(points_scored), 0.0)::double precision AS mean_points,
 	COALESCE(AVG(normalized_payout), 0.0)::double precision AS mean_normalized_payout,
-	COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY payout_points), 0.0)::double precision AS p50_payout_points,
-	COALESCE(PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY payout_points), 0.0)::double precision AS p90_payout_points
+	COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY payout_cents), 0.0)::double precision AS p50_payout_cents,
+	COALESCE(PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY payout_cents), 0.0)::double precision AS p90_payout_cents
 FROM entry_sims
 `
 
@@ -482,11 +482,11 @@ type GetEntrySimulationSummaryByRunKeyAndEntryNameParams struct {
 
 type GetEntrySimulationSummaryByRunKeyAndEntryNameRow struct {
 	TotalSimulations     int32
-	MeanPayoutPoints     float64
+	MeanPayoutCents      float64
 	MeanPoints           float64
 	MeanNormalizedPayout float64
-	P50PayoutPoints      float64
-	P90PayoutPoints      float64
+	P50PayoutCents       float64
+	P90PayoutCents       float64
 }
 
 func (q *Queries) GetEntrySimulationSummaryByRunKeyAndEntryName(ctx context.Context, arg GetEntrySimulationSummaryByRunKeyAndEntryNameParams) (GetEntrySimulationSummaryByRunKeyAndEntryNameRow, error) {
@@ -494,11 +494,11 @@ func (q *Queries) GetEntrySimulationSummaryByRunKeyAndEntryName(ctx context.Cont
 	var i GetEntrySimulationSummaryByRunKeyAndEntryNameRow
 	err := row.Scan(
 		&i.TotalSimulations,
-		&i.MeanPayoutPoints,
+		&i.MeanPayoutCents,
 		&i.MeanPoints,
 		&i.MeanNormalizedPayout,
-		&i.P50PayoutPoints,
-		&i.P90PayoutPoints,
+		&i.P50PayoutCents,
+		&i.P90PayoutCents,
 	)
 	return i, err
 }
@@ -506,33 +506,33 @@ func (q *Queries) GetEntrySimulationSummaryByRunKeyAndEntryName(ctx context.Cont
 const getEntrySimulationsByRunKeyAndEntryName = `-- name: GetEntrySimulationsByRunKeyAndEntryName :many
 SELECT
 	eso.sim_id,
-	eso.payout_points,
+	eso.payout_cents,
 	eso.points_scored,
 	eso.rank,
 	(
 		SELECT COUNT(*)::int
-		FROM analytics.entry_simulation_outcomes eso_all
+		FROM derived.entry_simulation_outcomes eso_all
 		WHERE eso_all.run_id = $1::text
 			AND eso_all.sim_id = eso.sim_id
 			AND eso_all.deleted_at IS NULL
 	) AS n_entries,
 	(
-		SELECT MAX(eso_all.payout_points)::int
-		FROM analytics.entry_simulation_outcomes eso_all
+		SELECT MAX(eso_all.payout_cents)::int
+		FROM derived.entry_simulation_outcomes eso_all
 		WHERE eso_all.run_id = $1::text
 			AND eso_all.sim_id = eso.sim_id
 			AND eso_all.deleted_at IS NULL
-	) AS max_payout_points,
+	) AS max_payout_cents,
 	CASE
 		WHEN (
-			SELECT MAX(eso_all.payout_points)
-			FROM analytics.entry_simulation_outcomes eso_all
+			SELECT MAX(eso_all.payout_cents)
+			FROM derived.entry_simulation_outcomes eso_all
 			WHERE eso_all.run_id = $1::text
 				AND eso_all.sim_id = eso.sim_id
 				AND eso_all.deleted_at IS NULL
-		) > 0 THEN (eso.payout_points::double precision / (
-			SELECT MAX(eso_all.payout_points)::double precision
-			FROM analytics.entry_simulation_outcomes eso_all
+		) > 0 THEN (eso.payout_cents::double precision / (
+			SELECT MAX(eso_all.payout_cents)::double precision
+			FROM derived.entry_simulation_outcomes eso_all
 			WHERE eso_all.run_id = $1::text
 				AND eso_all.sim_id = eso.sim_id
 				AND eso_all.deleted_at IS NULL
@@ -541,13 +541,13 @@ SELECT
 	END AS normalized_payout,
 	(
 		SELECT (COUNT(*) > 1)
-		FROM analytics.entry_simulation_outcomes eso_tie
+		FROM derived.entry_simulation_outcomes eso_tie
 		WHERE eso_tie.run_id = $1::text
 			AND eso_tie.sim_id = eso.sim_id
 			AND eso_tie.rank = eso.rank
 			AND eso_tie.deleted_at IS NULL
 	) AS is_tied
-FROM analytics.entry_simulation_outcomes eso
+FROM derived.entry_simulation_outcomes eso
 WHERE eso.run_id = $1::text
 	AND eso.entry_name = $2::text
 	AND eso.deleted_at IS NULL
@@ -565,11 +565,11 @@ type GetEntrySimulationsByRunKeyAndEntryNameParams struct {
 
 type GetEntrySimulationsByRunKeyAndEntryNameRow struct {
 	SimID            int32
-	PayoutPoints     int32
+	PayoutCents      int32
 	PointsScored     float64
 	Rank             int32
 	NEntries         int32
-	MaxPayoutPoints  int32
+	MaxPayoutCents   int32
 	NormalizedPayout float64
 	IsTied           bool
 }
@@ -590,11 +590,11 @@ func (q *Queries) GetEntrySimulationsByRunKeyAndEntryName(ctx context.Context, a
 		var i GetEntrySimulationsByRunKeyAndEntryNameRow
 		if err := rows.Scan(
 			&i.SimID,
-			&i.PayoutPoints,
+			&i.PayoutCents,
 			&i.PointsScored,
 			&i.Rank,
 			&i.NEntries,
-			&i.MaxPayoutPoints,
+			&i.MaxPayoutCents,
 			&i.NormalizedPayout,
 			&i.IsTied,
 		); err != nil {
@@ -611,7 +611,7 @@ func (q *Queries) GetEntrySimulationsByRunKeyAndEntryName(ctx context.Context, a
 const getLatestCalcuttaEvaluationRunIDByCoreCalcuttaID = `-- name: GetLatestCalcuttaEvaluationRunIDByCoreCalcuttaID :one
 SELECT
 	cer.id
-FROM analytics.calcutta_evaluation_runs cer
+FROM derived.calcutta_evaluation_runs cer
 JOIN core.calcutta_snapshots cs
 	ON cs.id = cer.calcutta_snapshot_id
 	AND cs.deleted_at IS NULL
@@ -641,7 +641,7 @@ perf AS (
 	SELECT
 		ep.run_id,
 		MAX(ep.created_at) AS created_at
-	FROM analytics.entry_performance ep
+	FROM derived.entry_performance ep
 	JOIN srg ON srg.run_key = ep.run_id
 	WHERE ep.deleted_at IS NULL
 	GROUP BY ep.run_id
@@ -672,8 +672,8 @@ FROM lab_gold.strategy_generation_runs sgr
 JOIN core.calcuttas c ON c.id = sgr.calcutta_id AND c.deleted_at IS NULL
 JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 JOIN core.seasons seas ON seas.id = t.season_id
-LEFT JOIN analytics.tournament_simulation_batches tsb
-	ON tsb.id = sgr.tournament_simulation_batch_id
+LEFT JOIN derived.simulated_tournaments tsb
+	ON tsb.id = sgr.simulated_tournament_id
 	AND tsb.deleted_at IS NULL
 WHERE sgr.deleted_at IS NULL
 	AND sgr.run_key IS NOT NULL
@@ -833,8 +833,8 @@ FROM lab_gold.strategy_generation_runs sgr
 LEFT JOIN core.calcuttas c
 	ON c.id = sgr.calcutta_id
 	AND c.deleted_at IS NULL
-LEFT JOIN analytics.tournament_simulation_batches tsb
-	ON tsb.id = sgr.tournament_simulation_batch_id
+LEFT JOIN derived.simulated_tournaments tsb
+	ON tsb.id = sgr.simulated_tournament_id
 	AND tsb.deleted_at IS NULL
 WHERE sgr.run_key = $1::text
 	AND sgr.deleted_at IS NULL
@@ -908,7 +908,7 @@ round_distribution AS (
 			ELSE 'Unknown'
 		END as round_name,
 		COUNT(*)::int as count
-	FROM analytics.simulated_tournaments st
+	FROM derived.simulated_teams st
 	WHERE st.team_id = $1::uuid
 	GROUP BY st.team_id, round_name
 )
@@ -925,7 +925,7 @@ SELECT
 FROM lab_bronze.teams t
 JOIN valid v ON true
 
-JOIN analytics.simulated_tournaments st ON st.team_id = t.id
+JOIN derived.simulated_teams st ON st.team_id = t.id
 	LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = $1::uuid
 GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net
@@ -1004,7 +1004,7 @@ round_distribution AS (
             ELSE 'Unknown'
         END as round_name,
         COUNT(*)::int as count
-    FROM analytics.simulated_tournaments st
+    FROM derived.simulated_teams st
     JOIN lab_bronze.teams t ON t.id = st.team_id
     WHERE st.team_id = $1::uuid
     GROUP BY st.team_id, round_name
@@ -1025,7 +1025,7 @@ SELECT
     )::float as avg_points,
     jsonb_object_agg(rd.round_name, rd.count) as round_distribution
 FROM lab_bronze.teams t
-JOIN analytics.simulated_tournaments st ON st.team_id = t.id
+JOIN derived.simulated_teams st ON st.team_id = t.id
 LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = $1::uuid
 GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net
@@ -1120,7 +1120,7 @@ sim_stats AS (
 	SELECT
 		COUNT(DISTINCT sim_id)::int as total_simulations,
 		COUNT(DISTINCT team_id)::int as total_teams
-	FROM analytics.simulated_tournaments st
+	FROM derived.simulated_teams st
 	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
 ),
 prediction_stats AS (
@@ -1133,7 +1133,7 @@ win_stats AS (
 		AVG(wins)::double precision as mean_wins,
 		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY wins)::double precision as median_wins,
 		MAX(wins)::int as max_wins
-	FROM analytics.simulated_tournaments st
+	FROM derived.simulated_teams st
 	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
 )
 SELECT
@@ -1188,7 +1188,7 @@ SELECT
     AVG(st.wins + st.byes)::float as avg_progress,
     MAX(st.wins + st.byes)::int as max_progress
 FROM lab_bronze.tournaments t
-JOIN analytics.simulated_tournaments st ON t.id = st.tournament_id
+JOIN derived.simulated_teams st ON t.id = st.tournament_id
 WHERE t.season = $1::int
 GROUP BY t.id, t.season
 `
@@ -1221,11 +1221,11 @@ func (q *Queries) GetTournamentSimStatsByYear(ctx context.Context, dollar_1 int3
 const listCalcuttaEvaluationRunsByCoreCalcuttaID = `-- name: ListCalcuttaEvaluationRunsByCoreCalcuttaID :many
 SELECT
 	cer.id,
-	cer.tournament_simulation_batch_id,
+	cer.simulated_tournament_id,
 	cer.calcutta_snapshot_id,
 	cer.purpose,
 	cer.created_at
-FROM analytics.calcutta_evaluation_runs cer
+FROM derived.calcutta_evaluation_runs cer
 JOIN core.calcutta_snapshots cs
 	ON cs.id = cer.calcutta_snapshot_id
 	AND cs.deleted_at IS NULL
@@ -1235,11 +1235,11 @@ ORDER BY cer.created_at DESC
 `
 
 type ListCalcuttaEvaluationRunsByCoreCalcuttaIDRow struct {
-	ID                          string
-	TournamentSimulationBatchID string
-	CalcuttaSnapshotID          pgtype.UUID
-	Purpose                     string
-	CreatedAt                   pgtype.Timestamptz
+	ID                    string
+	SimulatedTournamentID string
+	CalcuttaSnapshotID    pgtype.UUID
+	Purpose               string
+	CreatedAt             pgtype.Timestamptz
 }
 
 func (q *Queries) ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context, dollar_1 string) ([]ListCalcuttaEvaluationRunsByCoreCalcuttaIDRow, error) {
@@ -1253,7 +1253,7 @@ func (q *Queries) ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context
 		var i ListCalcuttaEvaluationRunsByCoreCalcuttaIDRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.TournamentSimulationBatchID,
+			&i.SimulatedTournamentID,
 			&i.CalcuttaSnapshotID,
 			&i.Purpose,
 			&i.CreatedAt,
@@ -1272,7 +1272,7 @@ const listStrategyGenerationRunsByCoreCalcuttaID = `-- name: ListStrategyGenerat
 SELECT
 	sgr.id,
 	sgr.run_key,
-	sgr.tournament_simulation_batch_id,
+	sgr.simulated_tournament_id,
 	sgr.calcutta_id,
 	sgr.purpose,
 	sgr.returns_model_key,
@@ -1288,17 +1288,17 @@ ORDER BY sgr.created_at DESC
 `
 
 type ListStrategyGenerationRunsByCoreCalcuttaIDRow struct {
-	ID                          string
-	RunKey                      *string
-	TournamentSimulationBatchID pgtype.UUID
-	CalcuttaID                  pgtype.UUID
-	Purpose                     string
-	ReturnsModelKey             string
-	InvestmentModelKey          string
-	OptimizerKey                string
-	ParamsJson                  []byte
-	GitSha                      *string
-	CreatedAt                   pgtype.Timestamptz
+	ID                    string
+	RunKey                *string
+	SimulatedTournamentID pgtype.UUID
+	CalcuttaID            pgtype.UUID
+	Purpose               string
+	ReturnsModelKey       string
+	InvestmentModelKey    string
+	OptimizerKey          string
+	ParamsJson            []byte
+	GitSha                *string
+	CreatedAt             pgtype.Timestamptz
 }
 
 func (q *Queries) ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context, dollar_1 string) ([]ListStrategyGenerationRunsByCoreCalcuttaIDRow, error) {
@@ -1313,7 +1313,7 @@ func (q *Queries) ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context
 		if err := rows.Scan(
 			&i.ID,
 			&i.RunKey,
-			&i.TournamentSimulationBatchID,
+			&i.SimulatedTournamentID,
 			&i.CalcuttaID,
 			&i.Purpose,
 			&i.ReturnsModelKey,
@@ -1337,25 +1337,25 @@ const listTournamentSimulationBatchesByCoreTournamentID = `-- name: ListTourname
 SELECT
 	b.id,
 	b.tournament_id,
-	b.tournament_state_snapshot_id,
+	b.simulation_state_id,
 	b.n_sims,
 	b.seed,
 	b.probability_source_key,
 	b.created_at
-FROM analytics.tournament_simulation_batches b
+FROM derived.simulated_tournaments b
 WHERE b.tournament_id = $1::uuid
 	AND b.deleted_at IS NULL
 ORDER BY b.created_at DESC
 `
 
 type ListTournamentSimulationBatchesByCoreTournamentIDRow struct {
-	ID                        string
-	TournamentID              string
-	TournamentStateSnapshotID string
-	NSims                     int32
-	Seed                      int32
-	ProbabilitySourceKey      string
-	CreatedAt                 pgtype.Timestamptz
+	ID                   string
+	TournamentID         string
+	SimulationStateID    string
+	NSims                int32
+	Seed                 int32
+	ProbabilitySourceKey string
+	CreatedAt            pgtype.Timestamptz
 }
 
 func (q *Queries) ListTournamentSimulationBatchesByCoreTournamentID(ctx context.Context, dollar_1 string) ([]ListTournamentSimulationBatchesByCoreTournamentIDRow, error) {
@@ -1370,7 +1370,7 @@ func (q *Queries) ListTournamentSimulationBatchesByCoreTournamentID(ctx context.
 		if err := rows.Scan(
 			&i.ID,
 			&i.TournamentID,
-			&i.TournamentStateSnapshotID,
+			&i.SimulationStateID,
 			&i.NSims,
 			&i.Seed,
 			&i.ProbabilitySourceKey,

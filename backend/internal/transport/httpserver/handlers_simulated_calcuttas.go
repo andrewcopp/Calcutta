@@ -12,8 +12,8 @@ type EntryRanking struct {
 	Rank             int     `json:"rank"`
 	EntryName        string  `json:"entry_name"`
 	IsOurStrategy    bool    `json:"is_our_strategy"`
-	MeanPayout       float64 `json:"mean_payout"`
-	MedianPayout     float64 `json:"median_payout"`
+	MeanPayout       float64 `json:"mean_normalized_payout"`
+	MedianPayout     float64 `json:"median_normalized_payout"`
 	PTop1            float64 `json:"p_top1"`
 	PInMoney         float64 `json:"p_in_money"`
 	TotalSimulations int     `json:"total_simulations"`
@@ -54,8 +54,8 @@ func (s *Server) handleGetCalcuttaSimulatedCalcuttas(w http.ResponseWriter, r *h
 			Rank:             d.Rank,
 			EntryName:        d.EntryName,
 			IsOurStrategy:    isOurStrategy,
-			MeanPayout:       d.MeanPayout,
-			MedianPayout:     d.MedianPayout,
+			MeanPayout:       d.MeanNormalizedPayout,
+			MedianPayout:     d.MedianNormalizedPayout,
 			PTop1:            d.PTop1,
 			PInMoney:         d.PInMoney,
 			TotalSimulations: d.TotalSimulations,

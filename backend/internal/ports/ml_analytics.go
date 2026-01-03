@@ -123,13 +123,13 @@ type EntrySimulationSummary struct {
 
 // SimulatedCalcuttaEntryRanking represents an entry's performance in simulated calcuttas (analytics.entry_performance)
 type SimulatedCalcuttaEntryRanking struct {
-	Rank             int
-	EntryName        string
-	MeanPayout       float64
-	MedianPayout     float64
-	PTop1            float64
-	PInMoney         float64
-	TotalSimulations int
+	Rank                   int
+	EntryName              string
+	MeanNormalizedPayout   float64
+	MedianNormalizedPayout float64
+	PTop1                  float64
+	PInMoney               float64
+	TotalSimulations       int
 }
 
 // EntryPerformanceSummary represents aggregated performance metrics
@@ -158,35 +158,35 @@ type EntryPortfolioTeam struct {
 }
 
 type TournamentSimulationBatch struct {
-	ID                        string
-	TournamentID              string
-	TournamentStateSnapshotID string
-	NSims                     int
-	Seed                      int
-	ProbabilitySourceKey      string
-	CreatedAt                 time.Time
+	ID                   string
+	TournamentID         string
+	SimulationStateID    string
+	NSims                int
+	Seed                 int
+	ProbabilitySourceKey string
+	CreatedAt            time.Time
 }
 
 type CalcuttaEvaluationRun struct {
-	ID                          string
-	TournamentSimulationBatchID string
-	CalcuttaSnapshotID          *string
-	Purpose                     string
-	CreatedAt                   time.Time
+	ID                    string
+	SimulatedTournamentID string
+	CalcuttaSnapshotID    *string
+	Purpose               string
+	CreatedAt             time.Time
 }
 
 type StrategyGenerationRun struct {
-	ID                          string
-	RunKey                      *string
-	TournamentSimulationBatchID *string
-	CalcuttaID                  *string
-	Purpose                     string
-	ReturnsModelKey             string
-	InvestmentModelKey          string
-	OptimizerKey                string
-	ParamsJSON                  []byte
-	GitSHA                      *string
-	CreatedAt                   time.Time
+	ID                    string
+	RunKey                *string
+	SimulatedTournamentID *string
+	CalcuttaID            *string
+	Purpose               string
+	ReturnsModelKey       string
+	InvestmentModelKey    string
+	OptimizerKey          string
+	ParamsJSON            []byte
+	GitSHA                *string
+	CreatedAt             time.Time
 }
 
 // MLAnalyticsRepo defines the interface for ML analytics data access

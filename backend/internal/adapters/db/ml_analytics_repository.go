@@ -174,13 +174,13 @@ func (r *MLAnalyticsRepository) ListTournamentSimulationBatchesByCoreTournamentI
 	out := make([]ports.TournamentSimulationBatch, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.TournamentSimulationBatch{
-			ID:                        row.ID,
-			TournamentID:              row.TournamentID,
-			TournamentStateSnapshotID: row.TournamentStateSnapshotID,
-			NSims:                     int(row.NSims),
-			Seed:                      int(row.Seed),
-			ProbabilitySourceKey:      row.ProbabilitySourceKey,
-			CreatedAt:                 row.CreatedAt.Time,
+			ID:                   row.ID,
+			TournamentID:         row.TournamentID,
+			SimulationStateID:    row.SimulationStateID,
+			NSims:                int(row.NSims),
+			Seed:                 int(row.Seed),
+			ProbabilitySourceKey: row.ProbabilitySourceKey,
+			CreatedAt:            row.CreatedAt.Time,
 		})
 	}
 
@@ -196,11 +196,11 @@ func (r *MLAnalyticsRepository) ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx c
 	out := make([]ports.CalcuttaEvaluationRun, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.CalcuttaEvaluationRun{
-			ID:                          row.ID,
-			TournamentSimulationBatchID: row.TournamentSimulationBatchID,
-			CalcuttaSnapshotID:          uuidToStringPtr(row.CalcuttaSnapshotID),
-			Purpose:                     row.Purpose,
-			CreatedAt:                   row.CreatedAt.Time,
+			ID:                    row.ID,
+			SimulatedTournamentID: row.SimulatedTournamentID,
+			CalcuttaSnapshotID:    uuidToStringPtr(row.CalcuttaSnapshotID),
+			Purpose:               row.Purpose,
+			CreatedAt:             row.CreatedAt.Time,
 		})
 	}
 
@@ -216,17 +216,17 @@ func (r *MLAnalyticsRepository) ListStrategyGenerationRunsByCoreCalcuttaID(ctx c
 	out := make([]ports.StrategyGenerationRun, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.StrategyGenerationRun{
-			ID:                          row.ID,
-			RunKey:                      row.RunKey,
-			TournamentSimulationBatchID: uuidToStringPtr(row.TournamentSimulationBatchID),
-			CalcuttaID:                  uuidToStringPtr(row.CalcuttaID),
-			Purpose:                     row.Purpose,
-			ReturnsModelKey:             row.ReturnsModelKey,
-			InvestmentModelKey:          row.InvestmentModelKey,
-			OptimizerKey:                row.OptimizerKey,
-			ParamsJSON:                  row.ParamsJson,
-			GitSHA:                      row.GitSha,
-			CreatedAt:                   row.CreatedAt.Time,
+			ID:                    row.ID,
+			RunKey:                row.RunKey,
+			SimulatedTournamentID: uuidToStringPtr(row.SimulatedTournamentID),
+			CalcuttaID:            uuidToStringPtr(row.CalcuttaID),
+			Purpose:               row.Purpose,
+			ReturnsModelKey:       row.ReturnsModelKey,
+			InvestmentModelKey:    row.InvestmentModelKey,
+			OptimizerKey:          row.OptimizerKey,
+			ParamsJSON:            row.ParamsJson,
+			GitSHA:                row.GitSha,
+			CreatedAt:             row.CreatedAt.Time,
 		})
 	}
 
@@ -244,13 +244,13 @@ func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Co
 		out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
 		for _, row := range rows {
 			out = append(out, ports.SimulatedCalcuttaEntryRanking{
-				Rank:             int(row.Rank),
-				EntryName:        row.EntryName,
-				MeanPayout:       row.MeanPayout,
-				MedianPayout:     row.MedianPayout,
-				PTop1:            row.PTop1,
-				PInMoney:         row.PInMoney,
-				TotalSimulations: int(row.TotalSimulations),
+				Rank:                   int(row.Rank),
+				EntryName:              row.EntryName,
+				MeanNormalizedPayout:   row.MeanNormalizedPayout,
+				MedianNormalizedPayout: row.MedianNormalizedPayout,
+				PTop1:                  row.PTop1,
+				PInMoney:               row.PInMoney,
+				TotalSimulations:       int(row.TotalSimulations),
 			})
 		}
 
@@ -272,13 +272,13 @@ func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Co
 		out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
 		for _, row := range rows {
 			out = append(out, ports.SimulatedCalcuttaEntryRanking{
-				Rank:             int(row.Rank),
-				EntryName:        row.EntryName,
-				MeanPayout:       row.MeanPayout,
-				MedianPayout:     row.MedianPayout,
-				PTop1:            row.PTop1,
-				PInMoney:         row.PInMoney,
-				TotalSimulations: int(row.TotalSimulations),
+				Rank:                   int(row.Rank),
+				EntryName:              row.EntryName,
+				MeanNormalizedPayout:   row.MeanNormalizedPayout,
+				MedianNormalizedPayout: row.MedianNormalizedPayout,
+				PTop1:                  row.PTop1,
+				PInMoney:               row.PInMoney,
+				TotalSimulations:       int(row.TotalSimulations),
 			})
 		}
 
@@ -302,13 +302,13 @@ func (r *MLAnalyticsRepository) GetSimulatedCalcuttaEntryRankings(ctx context.Co
 	out := make([]ports.SimulatedCalcuttaEntryRanking, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.SimulatedCalcuttaEntryRanking{
-			Rank:             int(row.Rank),
-			EntryName:        row.EntryName,
-			MeanPayout:       row.MeanPayout,
-			MedianPayout:     row.MedianPayout,
-			PTop1:            row.PTop1,
-			PInMoney:         row.PInMoney,
-			TotalSimulations: int(row.TotalSimulations),
+			Rank:                   int(row.Rank),
+			EntryName:              row.EntryName,
+			MeanNormalizedPayout:   row.MeanNormalizedPayout,
+			MedianNormalizedPayout: row.MedianNormalizedPayout,
+			PTop1:                  row.PTop1,
+			PInMoney:               row.PInMoney,
+			TotalSimulations:       int(row.TotalSimulations),
 		})
 	}
 
@@ -451,7 +451,7 @@ func (r *MLAnalyticsRepository) GetEntrySimulations(ctx context.Context, year in
 
 	sims := make([]ports.EntrySimulationOutcome, 0, len(rows))
 	for _, row := range rows {
-		payoutCents := int(row.PayoutPoints)
+		payoutCents := int(row.PayoutCents)
 		sims = append(sims, ports.EntrySimulationOutcome{
 			SimID:            int(row.SimID),
 			PayoutCents:      payoutCents,
@@ -469,11 +469,11 @@ func (r *MLAnalyticsRepository) GetEntrySimulations(ctx context.Context, year in
 		Simulations: sims,
 		Summary: ports.EntrySimulationSummary{
 			TotalSimulations:     int(summaryRow.TotalSimulations),
-			MeanPayoutCents:      summaryRow.MeanPayoutPoints,
+			MeanPayoutCents:      summaryRow.MeanPayoutCents,
 			MeanPoints:           summaryRow.MeanPoints,
 			MeanNormalizedPayout: summaryRow.MeanNormalizedPayout,
-			P50PayoutCents:       int(summaryRow.P50PayoutPoints),
-			P90PayoutCents:       int(summaryRow.P90PayoutPoints),
+			P50PayoutCents:       int(summaryRow.P50PayoutCents),
+			P90PayoutCents:       int(summaryRow.P90PayoutCents),
 		},
 	}, nil
 }

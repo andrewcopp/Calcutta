@@ -582,7 +582,7 @@ team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
 ),
@@ -655,7 +655,7 @@ func (q *Queries) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID
 const getCalcuttaPredictedInvestmentByStrategyGenerationRunID = `-- name: GetCalcuttaPredictedInvestmentByStrategyGenerationRunID :many
 WITH strategy_run AS (
   SELECT
-    sgr.tournament_simulation_batch_id
+    sgr.simulated_tournament_id
   FROM lab_gold.strategy_generation_runs sgr
   WHERE sgr.id = $1::uuid
     AND sgr.deleted_at IS NULL
@@ -692,9 +692,9 @@ team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
-    AND st.tournament_simulation_batch_id = (SELECT tournament_simulation_batch_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id
 ),
 total_expected_points AS (
@@ -790,7 +790,7 @@ team_win_counts AS (
     st.team_id,
     (st.wins + st.byes + 1)::int AS progress,
     COUNT(*) as sim_count
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id, progress
 ),
@@ -811,7 +811,7 @@ team_expected_value AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
 )
@@ -886,7 +886,7 @@ func (q *Queries) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID st
 const getCalcuttaPredictedReturnsByStrategyGenerationRunID = `-- name: GetCalcuttaPredictedReturnsByStrategyGenerationRunID :many
 WITH strategy_run AS (
   SELECT
-    sgr.tournament_simulation_batch_id
+    sgr.simulated_tournament_id
   FROM lab_gold.strategy_generation_runs sgr
   WHERE sgr.id = $1::uuid
     AND sgr.deleted_at IS NULL
@@ -913,9 +913,9 @@ team_win_counts AS (
     st.team_id,
     (st.wins + st.byes + 1)::int AS progress,
     COUNT(*) as sim_count
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
-    AND st.tournament_simulation_batch_id = (SELECT tournament_simulation_batch_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id, progress
 ),
 team_probabilities AS (
@@ -935,9 +935,9 @@ team_expected_value AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
-    AND st.tournament_simulation_batch_id = (SELECT tournament_simulation_batch_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id
 )
 SELECT
@@ -1047,7 +1047,7 @@ team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
 ),
@@ -1152,7 +1152,7 @@ team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
-  FROM analytics.simulated_tournaments st
+  FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
 )
