@@ -9,15 +9,20 @@ This script:
 import sys
 from pathlib import Path
 
-from moneyball.db.connection import get_db_connection
-from moneyball.models.predicted_auction_share_of_pool import (
-    predict_auction_share_of_pool_from_out_root,
-)
-from moneyball.db.writers import write_predicted_market_share
-
 
 def run_ridge_regression(year: int = 2025):
     """Run ridge regression for a tournament year."""
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
+    from moneyball.db.connection import get_db_connection
+    from moneyball.db.readers import initialize_default_scoring_rules_for_year
+    from moneyball.models.predicted_auction_share_of_pool import (
+        predict_auction_share_of_pool_from_out_root,
+    )
+    from moneyball.db.writers import write_predicted_market_share
+
     print(f"Running ridge regression for {year}...")
     print("=" * 80)
     
@@ -51,6 +56,8 @@ def run_ridge_regression(year: int = 2025):
             team_id_map = {row[0]: str(row[1]) for row in cur.fetchall()}
             print(f"Loaded {len(team_id_map)} teams")
             print(f"Sample mapping: {list(team_id_map.items())[:3]}")
+
+    initialize_default_scoring_rules_for_year(year)
     
     # Run ridge regression model
     print("\nRunning ridge regression model...")

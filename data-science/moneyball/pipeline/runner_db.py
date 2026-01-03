@@ -336,12 +336,8 @@ def stage_recommended_entry_bids(
     calcutta_id: Optional[str] = None,
 ) -> dict:
     """
-    Generate recommended entry bids by calling standalone optimizer scripts.
-    
-    For MINLP strategy, calls scripts/run_minlp_optimizer.py which works
-    correctly.
-    For other strategies, uses the inline implementation.
-    
+    Generate recommended entry bids from simulation results.
+
     Args:
         year: Tournament year
         strategy: Portfolio strategy (greedy, minlp, etc.)
@@ -356,81 +352,7 @@ def stage_recommended_entry_bids(
         Dictionary with results
     """
     print(f"⚙ Generating recommended entry bids for {year}...")
-    
-    # For MINLP strategy, call the standalone script that works correctly
-    if strategy == "minlp":
-        print("  Calling standalone MINLP optimizer script...")
-        
-        import subprocess
-        import sys
-        
-        # Get the path to the standalone script
-        script_path = os.path.join(
-            os.path.dirname(__file__),
-            "../../scripts/run_minlp_optimizer.py"
-        )
-        script_path = os.path.abspath(script_path)
-        
-        # Set up environment with PYTHONPATH
-        env = os.environ.copy()
-        data_science_root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../..")
-        )
-        env['PYTHONPATH'] = data_science_root
-        
-        # Use venv Python explicitly
-        venv_python = os.path.join(data_science_root, '.venv', 'bin', 'python')
-        python_executable = (
-            venv_python if os.path.exists(venv_python) else sys.executable
-        )
-        
-        # Run the standalone script
-        result = subprocess.run(
-            [python_executable, script_path, str(year)],
-            capture_output=True,
-            text=True,
-            env=env,
-            cwd=data_science_root,
-        )
-        
-        if result.returncode != 0:
-            print("  ⚠ MINLP optimizer failed:")
-            print(result.stderr)
-            raise RuntimeError(
-                f"MINLP optimizer failed with code {result.returncode}"
-            )
-        
-        # Parse the run_id from the output
-        import re
-        match = re.search(r'Run ID: (minlp_\d+_\d+T\d+)', result.stdout)
-        if match:
-            run_id = match.group(1)
-            print(f"  ✓ MINLP optimization complete (run_id={run_id})")
-        else:
-            raise RuntimeError(
-                "Failed to parse run_id from MINLP optimizer output"
-            )
-        
-        # Count recommendations
-        from moneyball.db.readers import get_db_connection
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT COUNT(*), SUM(recommended_bid_points)
-                    FROM lab_gold.recommended_entry_bids
-                    WHERE run_id = %s
-                """, (run_id,))
-                n_recs, total_bid = cur.fetchone()
-        
-        return {
-            'year': year,
-            'strategy': strategy,
-            'run_id': run_id,
-            'n_recommendations': n_recs,
-            'total_bid': int(total_bid) if total_bid else 0,
-        }
-    
-    # For other strategies, use inline implementation
+
     if run_id is None:
         # Find latest run_id for this year
         from moneyball.db.readers import get_db_connection
@@ -463,11 +385,41 @@ def stage_recommended_entry_bids(
                     )
     else:
         print(f"  Using run_id: {run_id}")
-    
-    # Read simulations from database
+
+    from moneyball.db.readers import get_db_connection
+
+    db_calcutta_id = calcutta_id
+    if db_calcutta_id is None:
+        # Resolve a core calcutta_id for the given year so the backend can
+        # reliably find the "latest" strategy_generation_run for a selected
+        # calcutta.
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT c.id
+                    FROM core.calcuttas c
+                    JOIN core.tournaments t
+                      ON t.id = c.tournament_id
+                     AND t.deleted_at IS NULL
+                    JOIN core.seasons seas
+                      ON seas.id = t.season_id
+                    WHERE c.deleted_at IS NULL
+                      AND seas.year = %s
+                    ORDER BY c.created_at DESC
+                    LIMIT 1
+                    """,
+                    (year,),
+                )
+                result = cur.fetchone()
+                if not result or not result[0]:
+                    raise ValueError(f"No calcutta found for year {year}")
+                db_calcutta_id = str(result[0])
+
+    # Read simulations from database (scored using the resolved calcutta rules).
     from moneyball.db.readers import read_simulated_tournaments
-    simulations_df = read_simulated_tournaments(year, calcutta_id=calcutta_id)
-    
+    simulations_df = read_simulated_tournaments(year, calcutta_id=db_calcutta_id)
+
     print(f"  Found {len(simulations_df)} simulation results")
     
     # Generate recommendations
@@ -489,26 +441,34 @@ def stage_recommended_entry_bids(
         write_optimization_run,
         write_recommended_entry_bids,
     )
-    from moneyball.db.readers import get_db_connection
-    
-    # Get tournament_id and calcutta_id
+
+    # Attach latest simulation batch id so "by strategy run" analytics can filter
+    # simulated_tournaments deterministically.
+    tournament_simulation_batch_id = None
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT bt.id, bc.id
-                FROM lab_bronze.tournaments bt
-                LEFT JOIN lab_bronze.calcuttas bc ON bc.tournament_id = bt.id
-                WHERE bt.season = %s
-            """, (year,))
-            result = cur.fetchone()
-            if not result:
-                raise ValueError(f"No tournament found for year {year}")
-            tournament_id, db_calcutta_id = result
+            cur.execute(
+                """
+                SELECT b.id
+                FROM lab_bronze.tournaments tour
+                JOIN analytics.tournament_simulation_batches b
+                  ON b.tournament_id = tour.core_tournament_id
+                 AND b.deleted_at IS NULL
+                WHERE tour.season = %s
+                ORDER BY b.created_at DESC
+                LIMIT 1
+                """,
+                (year,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                tournament_simulation_batch_id = str(row[0])
     
     # Write optimization run
     write_optimization_run(
         run_id=run_id,
         calcutta_id=db_calcutta_id,
+        tournament_simulation_batch_id=tournament_simulation_batch_id,
         strategy=strategy,
         n_sims=int(simulations_df['sim_id'].nunique()),
         seed=42,

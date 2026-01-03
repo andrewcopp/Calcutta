@@ -325,7 +325,6 @@ def read_simulated_tournaments(
               AND st.tournament_simulation_batch_id = %s
               AND st.deleted_at IS NULL
             ORDER BY st.sim_id, t.seed
-            LIMIT 100000
             """
             df = pd.read_sql_query(query, conn, params=(year, batch_id))
         else:
@@ -350,7 +349,6 @@ def read_simulated_tournaments(
               AND st.tournament_simulation_batch_id IS NULL
               AND st.deleted_at IS NULL
             ORDER BY st.sim_id, t.seed
-            LIMIT 100000
             """
             df = pd.read_sql_query(query, conn, params=(year,))
 

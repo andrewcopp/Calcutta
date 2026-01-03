@@ -318,7 +318,7 @@ with_totals AS (
 	SELECT
 		ROW_NUMBER() OVER (ORDER BY b.mean_normalized_payout DESC)::int AS rank,
 		b.entry_name,
-		(b.entry_name = 'our_strategy')::boolean AS is_our_strategy,
+		(b.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy'))::boolean AS is_our_strategy,
 		b.mean_normalized_payout,
 		b.p_top1,
 		b.p_in_money,

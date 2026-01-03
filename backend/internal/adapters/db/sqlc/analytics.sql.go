@@ -581,7 +581,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
@@ -691,7 +691,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
     AND st.tournament_simulation_batch_id = (SELECT tournament_simulation_batch_id FROM strategy_run)
@@ -788,30 +788,29 @@ lab_tournament AS (
 team_win_counts AS (
   SELECT
     st.team_id,
-    st.wins,
+    (st.wins + st.byes + 1)::int AS progress,
     COUNT(*) as sim_count
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
-  GROUP BY st.team_id, st.wins
+  GROUP BY st.team_id, progress
 ),
 team_probabilities AS (
   SELECT
     team_id,
     SUM(sim_count)::float as total_sims,
-    SUM(CASE WHEN wins = 0 THEN sim_count ELSE 0 END)::float as win_pi,
-    SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
-    SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
-    SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
-    SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
-    SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
-    SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
+    SUM(CASE WHEN progress >= 2 THEN sim_count ELSE 0 END)::float as win_r64,
+    SUM(CASE WHEN progress >= 3 THEN sim_count ELSE 0 END)::float as win_r32,
+    SUM(CASE WHEN progress >= 4 THEN sim_count ELSE 0 END)::float as win_s16,
+    SUM(CASE WHEN progress >= 5 THEN sim_count ELSE 0 END)::float as win_e8,
+    SUM(CASE WHEN progress >= 6 THEN sim_count ELSE 0 END)::float as win_ff,
+    SUM(CASE WHEN progress >= 7 THEN sim_count ELSE 0 END)::float as win_champ
   FROM team_win_counts
   GROUP BY team_id
 ),
 team_expected_value AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_value
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
@@ -821,7 +820,7 @@ SELECT
   t.school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
-  COALESCE(tp.win_pi / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_pi,
+  0.0::double precision as prob_pi,
   COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_r64,
   COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_r32,
   COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_s16,
@@ -912,31 +911,30 @@ lab_tournament AS (
 team_win_counts AS (
   SELECT
     st.team_id,
-    st.wins,
+    (st.wins + st.byes + 1)::int AS progress,
     COUNT(*) as sim_count
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
     AND st.tournament_simulation_batch_id = (SELECT tournament_simulation_batch_id FROM strategy_run)
-  GROUP BY st.team_id, st.wins
+  GROUP BY st.team_id, progress
 ),
 team_probabilities AS (
   SELECT
     team_id,
     SUM(sim_count)::float as total_sims,
-    SUM(CASE WHEN wins = 0 THEN sim_count ELSE 0 END)::float as win_pi,
-    SUM(CASE WHEN wins = 1 THEN sim_count ELSE 0 END)::float as win_r64,
-    SUM(CASE WHEN wins = 2 THEN sim_count ELSE 0 END)::float as win_r32,
-    SUM(CASE WHEN wins = 3 THEN sim_count ELSE 0 END)::float as win_s16,
-    SUM(CASE WHEN wins = 4 THEN sim_count ELSE 0 END)::float as win_e8,
-    SUM(CASE WHEN wins = 5 THEN sim_count ELSE 0 END)::float as win_ff,
-    SUM(CASE WHEN wins = 6 THEN sim_count ELSE 0 END)::float as win_champ
+    SUM(CASE WHEN progress >= 2 THEN sim_count ELSE 0 END)::float as win_r64,
+    SUM(CASE WHEN progress >= 3 THEN sim_count ELSE 0 END)::float as win_r32,
+    SUM(CASE WHEN progress >= 4 THEN sim_count ELSE 0 END)::float as win_s16,
+    SUM(CASE WHEN progress >= 5 THEN sim_count ELSE 0 END)::float as win_e8,
+    SUM(CASE WHEN progress >= 6 THEN sim_count ELSE 0 END)::float as win_ff,
+    SUM(CASE WHEN progress >= 7 THEN sim_count ELSE 0 END)::float as win_champ
   FROM team_win_counts
   GROUP BY team_id
 ),
 team_expected_value AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_value
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
     AND st.tournament_simulation_batch_id = (SELECT tournament_simulation_batch_id FROM strategy_run)
@@ -947,7 +945,7 @@ SELECT
   t.school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
-  COALESCE(tp.win_pi / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_pi,
+  0.0::double precision as prob_pi,
   COALESCE(tp.win_r64 / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_r64,
   COALESCE(tp.win_r32 / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_r32,
   COALESCE(tp.win_s16 / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_s16,
@@ -1048,7 +1046,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id
@@ -1153,7 +1151,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM analytics.simulated_tournaments st
   WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
   GROUP BY st.team_id

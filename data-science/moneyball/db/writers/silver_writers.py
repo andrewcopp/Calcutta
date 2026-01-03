@@ -81,12 +81,6 @@ def write_predicted_game_outcomes(
                 (tournament_id, game_id, round, team1_id, team2_id,
                  p_team1_wins, p_matchup, model_version)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (tournament_id, game_id, team1_id, team2_id)
-                DO UPDATE SET
-                    round = EXCLUDED.round,
-                    p_team1_wins = EXCLUDED.p_team1_wins,
-                    p_matchup = EXCLUDED.p_matchup,
-                    model_version = EXCLUDED.model_version
             """, values)
             
             conn.commit()

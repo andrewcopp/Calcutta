@@ -49,10 +49,11 @@ func (s *Server) handleGetCalcuttaSimulatedCalcuttas(w http.ResponseWriter, r *h
 
 	results := make([]EntryRanking, 0, len(data))
 	for _, d := range data {
+		isOurStrategy := d.EntryName == "Out Strategy" || d.EntryName == "our_strategy" || d.EntryName == "Our Strategy"
 		results = append(results, EntryRanking{
 			Rank:             d.Rank,
 			EntryName:        d.EntryName,
-			IsOurStrategy:    d.EntryName == "Our Strategy",
+			IsOurStrategy:    isOurStrategy,
 			MeanPayout:       d.MeanPayout,
 			MedianPayout:     d.MedianPayout,
 			PTop1:            d.PTop1,
