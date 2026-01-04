@@ -36,7 +36,7 @@ STRATEGY = '{{ dag_run.conf.get("strategy", "greedy") }}'
 # Base command with environment
 BASE_CMD = """
 export CALCUTTA_WRITE_TO_DB=true
-export DB_HOST=calcutta-db-1
+export DB_HOST=db
 export DB_PORT=5432
 export DB_NAME=calcutta
 export DB_USER=calcutta
@@ -62,7 +62,7 @@ verify_database = BashOperator(
     task_id='verify_database',
     bash_command=f"""
 {BASE_CMD}
-psql -h calcutta-db-1 -p 5432 -U calcutta -d calcutta -c "
+psql -h db -p 5432 -U calcutta -d calcutta -c "
 SELECT
     'bronze_tournaments' as table_name,
     COUNT(*) as row_count
