@@ -186,12 +186,12 @@ func (s *Server) handleGetOurEntryDetails(w http.ResponseWriter, r *http.Request
 	portfolio := make([]map[string]interface{}, len(details.Portfolio))
 	for i, bid := range details.Portfolio {
 		portfolio[i] = map[string]interface{}{
-			"team_id":                bid.TeamID,
-			"school_name":            bid.SchoolName,
-			"seed":                   bid.Seed,
-			"region":                 bid.Region,
-			"recommended_bid_points": bid.RecommendedBidPoints,
-			"expected_roi":           bid.ExpectedROI,
+			"team_id":      bid.TeamID,
+			"school_name":  bid.SchoolName,
+			"seed":         bid.Seed,
+			"region":       bid.Region,
+			"bid_points":   bid.BidPoints,
+			"expected_roi": bid.ExpectedROI,
 		}
 	}
 
@@ -362,11 +362,11 @@ func (s *Server) handleGetEntryPortfolio(w http.ResponseWriter, r *http.Request)
 	teams := make([]map[string]interface{}, len(portfolio.Teams))
 	for i, team := range portfolio.Teams {
 		teams[i] = map[string]interface{}{
-			"team_id":           team.TeamID,
-			"school_name":       team.SchoolName,
-			"seed":              team.Seed,
-			"region":            team.Region,
-			"bid_amount_points": team.BidAmountPoints,
+			"team_id":     team.TeamID,
+			"school_name": team.SchoolName,
+			"seed":        team.Seed,
+			"region":      team.Region,
+			"bid_points":  team.BidPoints,
 		}
 	}
 

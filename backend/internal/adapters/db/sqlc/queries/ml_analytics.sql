@@ -208,12 +208,12 @@ SELECT
     t.school_name,
     t.seed,
     t.region,
-    reb.recommended_bid_points,
+    reb.bid_points,
     reb.expected_roi
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON t.id = reb.team_id
 WHERE reb.run_id = $1::text
-ORDER BY reb.recommended_bid_points DESC;
+ORDER BY reb.bid_points DESC;
 
 -- name: GetOurEntryBidsByStrategyGenerationRunID :many
 SELECT
@@ -221,12 +221,12 @@ SELECT
 	t.school_name,
 	t.seed,
 	t.region,
-	reb.recommended_bid_points,
+	reb.bid_points,
 	reb.expected_roi
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON t.id = reb.team_id
 WHERE reb.strategy_generation_run_id = $1::uuid
-ORDER BY reb.recommended_bid_points DESC;
+ORDER BY reb.bid_points DESC;
 
 -- Removed - table doesn't exist in new schema
 
@@ -243,11 +243,11 @@ SELECT
     t.school_name,
     t.seed,
     t.region,
-    reb.recommended_bid_points as bid_amount
+    reb.bid_points as bid_points
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON reb.team_id = t.id
 WHERE reb.run_id = sqlc.arg(run_id)
-ORDER BY reb.recommended_bid_points DESC;
+ORDER BY reb.bid_points DESC;
 
 -- name: GetEntryPortfolioByStrategyGenerationRunID :many
 -- For our strategy entry (lineage-native)
@@ -256,11 +256,11 @@ SELECT
 	t.school_name,
 	t.seed,
 	t.region,
-	reb.recommended_bid_points as bid_amount
+	reb.bid_points as bid_points
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON reb.team_id = t.id
 WHERE reb.strategy_generation_run_id = sqlc.arg(strategy_generation_run_id)::uuid
-ORDER BY reb.recommended_bid_points DESC;
+ORDER BY reb.bid_points DESC;
 
 -- name: GetActualEntryPortfolio :many
 -- For actual entries from the auction
@@ -269,7 +269,7 @@ SELECT
     t.school_name,
     t.seed,
     t.region,
-    eb.bid_amount_points
+    eb.bid_points
 FROM lab_bronze.entry_bids eb
 JOIN lab_bronze.teams t ON eb.team_id = t.id
 JOIN lab_bronze.calcuttas bc ON bc.id = eb.calcutta_id
@@ -278,7 +278,7 @@ JOIN lab_gold.strategy_generation_runs sgr
 	AND sgr.run_key = sqlc.arg(run_id)
 	AND sgr.deleted_at IS NULL
 WHERE eb.entry_name = sqlc.arg(entry_name)
-ORDER BY eb.bid_amount_points DESC;
+ORDER BY eb.bid_points DESC;
 
 -- name: GetOptimizationRunsByYear :many
 SELECT
@@ -449,7 +449,7 @@ with_bids AS (
 	LEFT JOIN (
 		SELECT
 			COUNT(*)::int AS n_teams,
-			COALESCE(SUM(recommended_bid_points), 0)::int AS total_bid_points
+			COALESCE(SUM(bid_points), 0)::int AS total_bid_points
 		FROM lab_gold.recommended_entry_bids reb
 		JOIN strategy_run sr ON sr.strategy_generation_run_id = reb.strategy_generation_run_id
 		WHERE reb.deleted_at IS NULL
@@ -458,7 +458,7 @@ with_bids AS (
 		SELECT
 			eb.entry_name,
 			COUNT(*)::int AS n_teams,
-			COALESCE(SUM(eb.bid_amount_points), 0)::int AS total_bid_points
+			COALESCE(SUM(eb.bid_points), 0)::int AS total_bid_points
 		FROM lab_bronze.entry_bids eb
 		JOIN lab_calcutta lc ON lc.lab_calcutta_id = eb.calcutta_id
 		WHERE eb.deleted_at IS NULL

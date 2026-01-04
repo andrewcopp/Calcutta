@@ -70,12 +70,12 @@ type OurEntryDetails struct {
 
 // OurEntryBid represents a single team in our portfolio
 type OurEntryBid struct {
-	TeamID               string
-	SchoolName           string
-	Seed                 int
-	Region               string
-	RecommendedBidPoints int
-	ExpectedROI          float64
+	TeamID      string
+	SchoolName  string
+	Seed        int
+	Region      string
+	BidPoints   int
+	ExpectedROI float64
 }
 
 // EntryRanking represents an entry's ranking in the competition
@@ -150,11 +150,11 @@ type EntryPortfolio struct {
 
 // EntryPortfolioTeam represents a single team in an entry's portfolio
 type EntryPortfolioTeam struct {
-	TeamID          string
-	SchoolName      string
-	Seed            int
-	Region          string
-	BidAmountPoints int
+	TeamID     string
+	SchoolName string
+	Seed       int
+	Region     string
+	BidPoints  int
 }
 
 type TournamentSimulationBatch struct {

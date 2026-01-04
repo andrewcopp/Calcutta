@@ -499,14 +499,14 @@ type LabBronzeCalcutta struct {
 }
 
 type LabBronzeEntryBid struct {
-	ID              string
-	CalcuttaID      string
-	EntryName       string
-	TeamID          string
-	BidAmountPoints int32
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	DeletedAt       pgtype.Timestamptz
+	ID         string
+	CalcuttaID string
+	EntryName  string
+	TeamID     string
+	BidPoints  int32
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type LabBronzePayout struct {
@@ -578,7 +578,7 @@ type LabGoldRecommendedEntryBid struct {
 	ID                      string
 	RunID                   string
 	TeamID                  string
-	RecommendedBidPoints    int32
+	BidPoints               int32
 	ExpectedRoi             float64
 	CreatedAt               pgtype.Timestamptz
 	UpdatedAt               pgtype.Timestamptz

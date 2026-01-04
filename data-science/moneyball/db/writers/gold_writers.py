@@ -143,7 +143,7 @@ def write_recommended_entry_bids(
             
             psycopg2.extras.execute_batch(cur, """
                 INSERT INTO lab_gold.recommended_entry_bids
-                (run_id, strategy_generation_run_id, team_id, recommended_bid_points, expected_roi)
+                (run_id, strategy_generation_run_id, team_id, bid_points, expected_roi)
                 VALUES (%s, %s, %s, %s, %s)
             """, values)
             

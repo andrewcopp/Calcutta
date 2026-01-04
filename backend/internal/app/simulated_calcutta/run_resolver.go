@@ -264,7 +264,7 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 			SELECT
 				$1,
 				tt.id,
-				reb.recommended_bid_points
+				reb.bid_points
 			FROM lab_gold.recommended_entry_bids reb
 			JOIN lab_bronze.teams bt ON reb.team_id = bt.id
 			JOIN core.schools s ON bt.school_name = s.name
@@ -339,7 +339,7 @@ func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc 
 	ourQuery := `
 		SELECT 
 			tt.id as tournament_team_id,
-			greb.recommended_bid_points
+			greb.bid_points
 		FROM lab_gold.recommended_entry_bids greb
 		JOIN lab_bronze.teams bt ON greb.team_id = bt.id
 		JOIN core.schools s ON bt.school_name = s.name

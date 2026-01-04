@@ -329,7 +329,7 @@ SELECT
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
-  COALESCE(reb.recommended_bid_points, 0.0)::double precision as our_bid
+  COALESCE(reb.bid_points, 0.0)::double precision as our_bid
 FROM lab_bronze.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 LEFT JOIN lab_silver.predicted_market_share spms_t
@@ -395,7 +395,7 @@ SELECT
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
-  COALESCE(reb.recommended_bid_points, 0.0)::double precision as our_bid
+  COALESCE(reb.bid_points, 0.0)::double precision as our_bid
 FROM lab_bronze.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 LEFT JOIN lab_silver.predicted_market_share spms_t

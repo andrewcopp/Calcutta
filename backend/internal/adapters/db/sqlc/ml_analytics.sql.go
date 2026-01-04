@@ -17,7 +17,7 @@ SELECT
     t.school_name,
     t.seed,
     t.region,
-    eb.bid_amount_points
+    eb.bid_points
 FROM lab_bronze.entry_bids eb
 JOIN lab_bronze.teams t ON eb.team_id = t.id
 JOIN lab_bronze.calcuttas bc ON bc.id = eb.calcutta_id
@@ -26,7 +26,7 @@ JOIN lab_gold.strategy_generation_runs sgr
 	AND sgr.run_key = $1
 	AND sgr.deleted_at IS NULL
 WHERE eb.entry_name = $2
-ORDER BY eb.bid_amount_points DESC
+ORDER BY eb.bid_points DESC
 `
 
 type GetActualEntryPortfolioParams struct {
@@ -35,11 +35,11 @@ type GetActualEntryPortfolioParams struct {
 }
 
 type GetActualEntryPortfolioRow struct {
-	TeamID          string
-	SchoolName      string
-	Seed            *int32
-	Region          *string
-	BidAmountPoints int32
+	TeamID     string
+	SchoolName string
+	Seed       *int32
+	Region     *string
+	BidPoints  int32
 }
 
 // For actual entries from the auction
@@ -57,7 +57,7 @@ func (q *Queries) GetActualEntryPortfolio(ctx context.Context, arg GetActualEntr
 			&i.SchoolName,
 			&i.Seed,
 			&i.Region,
-			&i.BidAmountPoints,
+			&i.BidPoints,
 		); err != nil {
 			return nil, err
 		}
@@ -202,11 +202,11 @@ SELECT
     t.school_name,
     t.seed,
     t.region,
-    reb.recommended_bid_points as bid_amount
+    reb.bid_points as bid_points
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON reb.team_id = t.id
 WHERE reb.run_id = $1
-ORDER BY reb.recommended_bid_points DESC
+ORDER BY reb.bid_points DESC
 `
 
 type GetEntryPortfolioRow struct {
@@ -214,7 +214,7 @@ type GetEntryPortfolioRow struct {
 	SchoolName string
 	Seed       *int32
 	Region     *string
-	BidAmount  int32
+	BidPoints  int32
 }
 
 // Removed - table doesn't exist in new schema
@@ -236,7 +236,7 @@ func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEnt
 			&i.SchoolName,
 			&i.Seed,
 			&i.Region,
-			&i.BidAmount,
+			&i.BidPoints,
 		); err != nil {
 			return nil, err
 		}
@@ -254,11 +254,11 @@ SELECT
 	t.school_name,
 	t.seed,
 	t.region,
-	reb.recommended_bid_points as bid_amount
+	reb.bid_points as bid_points
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON reb.team_id = t.id
 WHERE reb.strategy_generation_run_id = $1::uuid
-ORDER BY reb.recommended_bid_points DESC
+ORDER BY reb.bid_points DESC
 `
 
 type GetEntryPortfolioByStrategyGenerationRunIDRow struct {
@@ -266,7 +266,7 @@ type GetEntryPortfolioByStrategyGenerationRunIDRow struct {
 	SchoolName string
 	Seed       *int32
 	Region     *string
-	BidAmount  int32
+	BidPoints  int32
 }
 
 // For our strategy entry (lineage-native)
@@ -284,7 +284,7 @@ func (q *Queries) GetEntryPortfolioByStrategyGenerationRunID(ctx context.Context
 			&i.SchoolName,
 			&i.Seed,
 			&i.Region,
-			&i.BidAmount,
+			&i.BidPoints,
 		); err != nil {
 			return nil, err
 		}
@@ -364,7 +364,7 @@ with_bids AS (
 	LEFT JOIN (
 		SELECT
 			COUNT(*)::int AS n_teams,
-			COALESCE(SUM(recommended_bid_points), 0)::int AS total_bid_points
+			COALESCE(SUM(bid_points), 0)::int AS total_bid_points
 		FROM lab_gold.recommended_entry_bids reb
 		JOIN strategy_run sr ON sr.strategy_generation_run_id = reb.strategy_generation_run_id
 		WHERE reb.deleted_at IS NULL
@@ -373,7 +373,7 @@ with_bids AS (
 		SELECT
 			eb.entry_name,
 			COUNT(*)::int AS n_teams,
-			COALESCE(SUM(eb.bid_amount_points), 0)::int AS total_bid_points
+			COALESCE(SUM(eb.bid_points), 0)::int AS total_bid_points
 		FROM lab_bronze.entry_bids eb
 		JOIN lab_calcutta lc ON lc.lab_calcutta_id = eb.calcutta_id
 		WHERE eb.deleted_at IS NULL
@@ -733,21 +733,21 @@ SELECT
     t.school_name,
     t.seed,
     t.region,
-    reb.recommended_bid_points,
+    reb.bid_points,
     reb.expected_roi
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON t.id = reb.team_id
 WHERE reb.run_id = $1::text
-ORDER BY reb.recommended_bid_points DESC
+ORDER BY reb.bid_points DESC
 `
 
 type GetOurEntryBidsByRunIDRow struct {
-	TeamID               string
-	SchoolName           string
-	Seed                 *int32
-	Region               *string
-	RecommendedBidPoints int32
-	ExpectedRoi          float64
+	TeamID      string
+	SchoolName  string
+	Seed        *int32
+	Region      *string
+	BidPoints   int32
+	ExpectedRoi float64
 }
 
 func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) ([]GetOurEntryBidsByRunIDRow, error) {
@@ -764,7 +764,7 @@ func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) (
 			&i.SchoolName,
 			&i.Seed,
 			&i.Region,
-			&i.RecommendedBidPoints,
+			&i.BidPoints,
 			&i.ExpectedRoi,
 		); err != nil {
 			return nil, err
@@ -783,21 +783,21 @@ SELECT
 	t.school_name,
 	t.seed,
 	t.region,
-	reb.recommended_bid_points,
+	reb.bid_points,
 	reb.expected_roi
 FROM lab_gold.recommended_entry_bids reb
 JOIN lab_bronze.teams t ON t.id = reb.team_id
 WHERE reb.strategy_generation_run_id = $1::uuid
-ORDER BY reb.recommended_bid_points DESC
+ORDER BY reb.bid_points DESC
 `
 
 type GetOurEntryBidsByStrategyGenerationRunIDRow struct {
-	TeamID               string
-	SchoolName           string
-	Seed                 *int32
-	Region               *string
-	RecommendedBidPoints int32
-	ExpectedRoi          float64
+	TeamID      string
+	SchoolName  string
+	Seed        *int32
+	Region      *string
+	BidPoints   int32
+	ExpectedRoi float64
 }
 
 func (q *Queries) GetOurEntryBidsByStrategyGenerationRunID(ctx context.Context, dollar_1 string) ([]GetOurEntryBidsByStrategyGenerationRunIDRow, error) {
@@ -814,7 +814,7 @@ func (q *Queries) GetOurEntryBidsByStrategyGenerationRunID(ctx context.Context, 
 			&i.SchoolName,
 			&i.Seed,
 			&i.Region,
-			&i.RecommendedBidPoints,
+			&i.BidPoints,
 			&i.ExpectedRoi,
 		); err != nil {
 			return nil, err

@@ -61,7 +61,7 @@ export function EntryPortfolioPage() {
                     <td className="px-4 py-3 text-sm text-gray-900">{t.school_name}</td>
                     <td className="px-4 py-3 text-sm text-right text-gray-700">{t.seed}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{t.region}</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">{t.bid_amount_points}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-700">{t.bid_points}</td>
                   </tr>
                 ))}
               </tbody>

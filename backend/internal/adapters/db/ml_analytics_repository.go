@@ -357,12 +357,12 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 		portfolio := make([]ports.OurEntryBid, 0, len(bidRows))
 		for _, row := range bidRows {
 			portfolio = append(portfolio, ports.OurEntryBid{
-				TeamID:               row.TeamID,
-				SchoolName:           row.SchoolName,
-				Seed:                 int(derefInt32ML(row.Seed)),
-				Region:               derefStringML(row.Region),
-				RecommendedBidPoints: int(row.RecommendedBidPoints),
-				ExpectedROI:          row.ExpectedRoi,
+				TeamID:      row.TeamID,
+				SchoolName:  row.SchoolName,
+				Seed:        int(derefInt32ML(row.Seed)),
+				Region:      derefStringML(row.Region),
+				BidPoints:   int(row.BidPoints),
+				ExpectedROI: row.ExpectedRoi,
 			})
 		}
 
@@ -496,13 +496,13 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 			}
 			for _, row := range rows {
 				teams = append(teams, ports.EntryPortfolioTeam{
-					TeamID:          row.TeamID,
-					SchoolName:      row.SchoolName,
-					Seed:            int(derefInt32ML(row.Seed)),
-					Region:          derefStringML(row.Region),
-					BidAmountPoints: int(row.BidAmount),
+					TeamID:     row.TeamID,
+					SchoolName: row.SchoolName,
+					Seed:       int(derefInt32ML(row.Seed)),
+					Region:     derefStringML(row.Region),
+					BidPoints:  int(row.BidPoints),
 				})
-				totalBid += int(row.BidAmount)
+				totalBid += int(row.BidPoints)
 			}
 			return &ports.EntryPortfolio{
 				EntryKey: entryKey,
@@ -519,13 +519,13 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 		}
 		for _, row := range rows {
 			teams = append(teams, ports.EntryPortfolioTeam{
-				TeamID:          row.TeamID,
-				SchoolName:      row.SchoolName,
-				Seed:            int(derefInt32ML(row.Seed)),
-				Region:          derefStringML(row.Region),
-				BidAmountPoints: int(row.BidAmount),
+				TeamID:     row.TeamID,
+				SchoolName: row.SchoolName,
+				Seed:       int(derefInt32ML(row.Seed)),
+				Region:     derefStringML(row.Region),
+				BidPoints:  int(row.BidPoints),
 			})
-			totalBid += int(row.BidAmount)
+			totalBid += int(row.BidPoints)
 		}
 	} else {
 		runIDPtr := runID
@@ -538,13 +538,13 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 		}
 		for _, row := range rows {
 			teams = append(teams, ports.EntryPortfolioTeam{
-				TeamID:          row.TeamID,
-				SchoolName:      row.SchoolName,
-				Seed:            int(derefInt32ML(row.Seed)),
-				Region:          derefStringML(row.Region),
-				BidAmountPoints: int(row.BidAmountPoints),
+				TeamID:     row.TeamID,
+				SchoolName: row.SchoolName,
+				Seed:       int(derefInt32ML(row.Seed)),
+				Region:     derefStringML(row.Region),
+				BidPoints:  int(row.BidPoints),
 			})
-			totalBid += int(row.BidAmountPoints)
+			totalBid += int(row.BidPoints)
 		}
 	}
 

@@ -40,7 +40,7 @@ export type EntryPortfolioTeam = {
   school_name: string;
   seed: number;
   region: string;
-  bid_amount_points: number;
+  bid_points: number;
 };
 
 export type EntryPortfolioResponse = {
@@ -65,7 +65,7 @@ export type OurEntryDetailsResponse = {
     school_name: string;
     seed: number;
     region: string;
-    recommended_bid_points: number;
+    bid_points: number;
     expected_roi: number;
   }>;
   summary: {

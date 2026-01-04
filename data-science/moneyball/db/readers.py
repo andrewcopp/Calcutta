@@ -387,7 +387,7 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
             reb.run_id,
             reb.team_id,
             reb.expected_roi,
-            reb.recommended_bid_points,
+            reb.bid_points,
             reb.created_at,
             t.school_name,
             t.seed,
@@ -408,7 +408,7 @@ def read_recommended_entry_bids(year: int, run_id: str) -> pd.DataFrame:
         JOIN lab_bronze.teams t ON reb.team_id = t.id
         WHERE seas.year = %s
           AND sgr.run_key = %s
-        ORDER BY reb.recommended_bid_points DESC
+        ORDER BY reb.bid_points DESC
         """
         return pd.read_sql_query(query, conn, params=(year, run_id))
     finally:
