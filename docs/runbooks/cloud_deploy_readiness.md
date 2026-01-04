@@ -150,7 +150,7 @@ Operational guidance:
 - [x] Choose auth: Cognito User Pool for `staging`/`prod`
 - [x] Implement backend auth behind an interface (Cognito verifier + local dev verifier)
 - [ ] Decide how roles are represented in JWT claims (Cognito Groups vs custom claims)
-- [ ] Explicit CORS allowlist for the CloudFront frontend domain
+- [x] Explicit CORS allowlist for the CloudFront frontend domain
 - [ ] Enforce TLS everywhere (CloudFront + ALB)
 - [x] Add basic request size limits to reduce abuse surface
 - [x] Add basic rate limiting to reduce abuse surface

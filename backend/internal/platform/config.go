@@ -180,8 +180,14 @@ func LoadConfigFromEnv() (Config, error) {
 		cfg.JWTSecret = "dev-jwt-secret"
 	}
 
-	if cfg.AllowedOrigin == "" {
-		cfg.AllowedOrigin = "http://localhost:3000"
+	if env == "development" {
+		if strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")) == "" && strings.TrimSpace(cfg.AllowedOrigin) == "" {
+			cfg.AllowedOrigin = "http://localhost:3000"
+		}
+	} else {
+		if strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")) == "" && strings.TrimSpace(cfg.AllowedOrigin) == "" {
+			return Config{}, fmt.Errorf("ALLOWED_ORIGINS or ALLOWED_ORIGIN must be set")
+		}
 	}
 	if cfg.Port == "" {
 		cfg.Port = "8080"

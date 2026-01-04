@@ -29,6 +29,7 @@ func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testi
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 
 	// WHEN
 	cfg, err := LoadConfigFromEnv()
@@ -48,6 +49,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInLegacyOutsideDev
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 
 	// WHEN
 	_, err := LoadConfigFromEnv()
@@ -64,6 +66,7 @@ func TestThatLoadConfigFromEnvParsesHTTPTimeoutsAndMaxBodyWhenValid(t *testing.T
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("HTTP_READ_TIMEOUT_SECONDS", "11")
 	t.Setenv("HTTP_WRITE_TIMEOUT_SECONDS", "12")
 	t.Setenv("HTTP_IDLE_TIMEOUT_SECONDS", "13")
@@ -88,6 +91,7 @@ func TestThatLoadConfigFromEnvUsesDefaultHTTPTimeoutsWhenInvalid(t *testing.T) {
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("HTTP_READ_TIMEOUT_SECONDS", "0")
 	t.Setenv("HTTP_WRITE_TIMEOUT_SECONDS", "-1")
 	t.Setenv("HTTP_IDLE_TIMEOUT_SECONDS", "abc")
@@ -112,6 +116,7 @@ func TestThatLoadConfigFromEnvParsesPGXPoolSettingsWhenValid(t *testing.T) {
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("PGX_POOL_MAX_CONNS", "21")
 	t.Setenv("PGX_POOL_MIN_CONNS", "2")
 	t.Setenv("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", "300")
@@ -135,6 +140,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T)
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("PGX_POOL_MAX_CONNS", "5")
 	t.Setenv("PGX_POOL_MIN_CONNS", "6")
 
@@ -153,6 +159,7 @@ func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
 	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("RATE_LIMIT_RPM", "123")
 
 	// WHEN
@@ -173,6 +180,7 @@ func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T)
 	t.Setenv("AUTH_MODE", "cognito")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("COGNITO_REGION", "us-east-1")
 	t.Setenv("COGNITO_USER_POOL_ID", "us-east-1_abc123")
 	t.Setenv("COGNITO_APP_CLIENT_ID", "client123")
@@ -195,6 +203,7 @@ func TestThatLoadConfigFromEnvRequiresCognitoEnvVarsInCognitoMode(t *testing.T) 
 	t.Setenv("AUTH_MODE", "cognito")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
 	t.Setenv("COGNITO_REGION", "")
 	t.Setenv("COGNITO_USER_POOL_ID", "")
 	t.Setenv("COGNITO_APP_CLIENT_ID", "")
@@ -321,6 +330,9 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "")
 	t.Setenv("PORT", "")
+	t.Setenv("NODE_ENV", "development")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "")
 
 	// WHEN
 	cfg, err := LoadConfigFromEnv()
@@ -331,6 +343,24 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 	}
 	if cfg.AllowedOrigin != "http://localhost:3000" || cfg.Port != "8080" {
 		t.Fatalf("expected defaults origin/port, got %q/%q", cfg.AllowedOrigin, cfg.Port)
+	}
+}
+
+func TestThatLoadConfigFromEnvReturnsErrorWhenCorsAllowlistMissingInProduction(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "")
+	t.Setenv("ALLOWED_ORIGINS", "")
+
+	// WHEN
+	_, err := LoadConfigFromEnv()
+
+	// THEN
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
 

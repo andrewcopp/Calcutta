@@ -69,7 +69,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 		if allowedOriginsEnv == "" {
 			allowedOriginsEnv = os.Getenv("ALLOWED_ORIGIN")
 		}
-		if allowedOriginsEnv == "" {
+		if allowedOriginsEnv == "" && os.Getenv("NODE_ENV") == "development" {
 			allowedOriginsEnv = "http://localhost:3000"
 		}
 
@@ -80,7 +80,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 				allowedOrigins = append(allowedOrigins, trimmed)
 			}
 		}
-		if len(allowedOrigins) == 0 {
+		if len(allowedOrigins) == 0 && os.Getenv("NODE_ENV") == "development" {
 			allowedOrigins = []string{"http://localhost:3000"}
 		}
 
