@@ -195,6 +195,11 @@ func (s *Server) handleGetOurEntryDetails(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	percentileRank := 0.0
+	if details.Summary.PercentileRank != nil {
+		percentileRank = *details.Summary.PercentileRank
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"run": map[string]interface{}{
 			"run_id":        details.Run.RunID,
@@ -211,7 +216,7 @@ func (s *Server) handleGetOurEntryDetails(w http.ResponseWriter, r *http.Request
 			"mean_normalized_payout": details.Summary.MeanNormalizedPayout,
 			"p_top1":                 details.Summary.PTop1,
 			"p_in_money":             details.Summary.PInMoney,
-			"percentile_rank":        details.Summary.PercentileRank,
+			"percentile_rank":        percentileRank,
 		},
 	})
 }

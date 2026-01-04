@@ -830,6 +830,67 @@ func (q *Queries) GetOurEntryBidsByStrategyGenerationRunID(ctx context.Context, 
 	return items, nil
 }
 
+const getOurEntryPerformanceSummaryByRunKey = `-- name: GetOurEntryPerformanceSummaryByRunKey :one
+WITH base AS (
+	SELECT
+		gep.entry_name,
+		COALESCE(gep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
+		COALESCE(gep.p_top1, 0.0)::double precision AS p_top1,
+		COALESCE(gep.p_in_money, 0.0)::double precision AS p_in_money
+	FROM derived.entry_performance gep
+	WHERE gep.run_id = $1::text
+		AND gep.deleted_at IS NULL
+),
+with_totals AS (
+	SELECT
+		ROW_NUMBER() OVER (ORDER BY b.mean_normalized_payout DESC)::int AS rank,
+		b.entry_name,
+		(b.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy'))::boolean AS is_our_strategy,
+		b.mean_normalized_payout,
+		b.p_top1,
+		b.p_in_money,
+		COUNT(*) OVER ()::int AS total_entries
+	FROM base b
+),
+with_percentile AS (
+	SELECT
+		wt.rank, wt.entry_name, wt.is_our_strategy, wt.mean_normalized_payout, wt.p_top1, wt.p_in_money, wt.total_entries,
+		CASE
+			WHEN wt.total_entries > 1 THEN (wt.total_entries - wt.rank)::double precision / (wt.total_entries - 1)::double precision
+			ELSE 1.0::double precision
+		END AS percentile_rank
+	FROM with_totals wt
+)
+SELECT
+	mean_normalized_payout,
+	p_top1,
+	p_in_money,
+	percentile_rank
+FROM with_percentile
+WHERE is_our_strategy
+ORDER BY rank ASC
+LIMIT 1
+`
+
+type GetOurEntryPerformanceSummaryByRunKeyRow struct {
+	MeanNormalizedPayout float64
+	PTop1                float64
+	PInMoney             float64
+	PercentileRank       float64
+}
+
+func (q *Queries) GetOurEntryPerformanceSummaryByRunKey(ctx context.Context, runID string) (GetOurEntryPerformanceSummaryByRunKeyRow, error) {
+	row := q.db.QueryRow(ctx, getOurEntryPerformanceSummaryByRunKey, runID)
+	var i GetOurEntryPerformanceSummaryByRunKeyRow
+	err := row.Scan(
+		&i.MeanNormalizedPayout,
+		&i.PTop1,
+		&i.PInMoney,
+		&i.PercentileRank,
+	)
+	return i, err
+}
+
 const getStrategyGenerationRunByRunKey = `-- name: GetStrategyGenerationRunByRunKey :one
 SELECT
 	sgr.id,

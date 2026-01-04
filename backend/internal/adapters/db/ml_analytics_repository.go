@@ -381,6 +381,18 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 		}
 
 		summary := ports.EntryPerformanceSummary{}
+		perfRow, err := r.q.GetOurEntryPerformanceSummaryByRunKey(ctx, runID)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return nil, err
+			}
+		} else {
+			summary.MeanNormalizedPayout = perfRow.MeanNormalizedPayout
+			summary.PTop1 = perfRow.PTop1
+			summary.PInMoney = perfRow.PInMoney
+			percentile := perfRow.PercentileRank
+			summary.PercentileRank = &percentile
+		}
 		return &ports.OurEntryDetails{
 			Run:       run,
 			Portfolio: portfolio,

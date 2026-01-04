@@ -483,6 +483,47 @@ ORDER BY rank ASC
 LIMIT sqlc.arg(page_limit)::int
 OFFSET sqlc.arg(page_offset)::int;
 
+-- name: GetOurEntryPerformanceSummaryByRunKey :one
+WITH base AS (
+	SELECT
+		gep.entry_name,
+		COALESCE(gep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
+		COALESCE(gep.p_top1, 0.0)::double precision AS p_top1,
+		COALESCE(gep.p_in_money, 0.0)::double precision AS p_in_money
+	FROM derived.entry_performance gep
+	WHERE gep.run_id = sqlc.arg(run_id)::text
+		AND gep.deleted_at IS NULL
+),
+with_totals AS (
+	SELECT
+		ROW_NUMBER() OVER (ORDER BY b.mean_normalized_payout DESC)::int AS rank,
+		b.entry_name,
+		(b.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy'))::boolean AS is_our_strategy,
+		b.mean_normalized_payout,
+		b.p_top1,
+		b.p_in_money,
+		COUNT(*) OVER ()::int AS total_entries
+	FROM base b
+),
+with_percentile AS (
+	SELECT
+		wt.*,
+		CASE
+			WHEN wt.total_entries > 1 THEN (wt.total_entries - wt.rank)::double precision / (wt.total_entries - 1)::double precision
+			ELSE 1.0::double precision
+		END AS percentile_rank
+	FROM with_totals wt
+)
+SELECT
+	mean_normalized_payout,
+	p_top1,
+	p_in_money,
+	percentile_rank
+FROM with_percentile
+WHERE is_our_strategy
+ORDER BY rank ASC
+LIMIT 1;
+
 -- name: GetEntrySimulationsByRunKeyAndEntryName :many
 SELECT
 	eso.sim_id,
