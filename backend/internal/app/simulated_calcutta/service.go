@@ -160,9 +160,17 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 
 	log.Printf("Calculated %d total outcomes", len(allResults))
 
-	// Write results to database
-	if err := s.writeSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID, allResults); err != nil {
-		return fmt.Errorf("failed to write simulation outcomes: %w", err)
+	persistDetails := os.Getenv("CALCUTTA_PERSIST_SIMULATION_DETAILS") == "true"
+	if persistDetails {
+		// Write detailed per-simulation outcomes (debug mode)
+		if err := s.writeSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID, allResults); err != nil {
+			return fmt.Errorf("failed to write simulation outcomes: %w", err)
+		}
+	} else {
+		// Ensure we don't accumulate detailed rows across runs.
+		if err := s.deleteSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID); err != nil {
+			return fmt.Errorf("failed to clear simulation outcomes: %w", err)
+		}
 	}
 
 	// Calculate and write aggregated performance metrics

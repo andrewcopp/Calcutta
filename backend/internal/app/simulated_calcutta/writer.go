@@ -6,6 +6,16 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+func (s *Service) deleteSimulationOutcomes(ctx context.Context, runID string, calcuttaEvaluationRunID string) error {
+	var err error
+	if calcuttaEvaluationRunID != "" {
+		_, err = s.pool.Exec(ctx, "DELETE FROM derived.entry_simulation_outcomes WHERE calcutta_evaluation_run_id = $1", calcuttaEvaluationRunID)
+	} else {
+		_, err = s.pool.Exec(ctx, "DELETE FROM derived.entry_simulation_outcomes WHERE run_id = $1", runID)
+	}
+	return err
+}
+
 func (s *Service) writeSimulationOutcomes(ctx context.Context, runID string, calcuttaEvaluationRunID string, results []SimulationResult) error {
 	var err error
 	if calcuttaEvaluationRunID != "" {

@@ -332,11 +332,16 @@ SELECT
     COALESCE(gep.median_normalized_payout, 0.0)::double precision as median_normalized_payout,
     COALESCE(gep.p_top1, 0.0)::double precision as p_top1,
     COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
-    (
-        SELECT COUNT(*)::int
-        FROM derived.entry_simulation_outcomes eso
-        WHERE eso.run_id = $1::text AND eso.entry_name = gep.entry_name
-    ) as total_simulations
+    COALESCE((
+		SELECT st.n_sims::int
+		FROM derived.calcutta_evaluation_runs cer
+		JOIN derived.simulated_tournaments st
+			ON st.id = cer.simulated_tournament_id
+			AND st.deleted_at IS NULL
+		WHERE cer.id = gep.calcutta_evaluation_run_id
+			AND cer.deleted_at IS NULL
+		LIMIT 1
+	), 0)::int as total_simulations
 FROM derived.entry_performance gep
 WHERE gep.run_id = $1::text
 ORDER BY gep.mean_normalized_payout DESC;
@@ -361,13 +366,16 @@ SELECT
 	COALESCE(gep.median_normalized_payout, 0.0)::double precision as median_normalized_payout,
 	COALESCE(gep.p_top1, 0.0)::double precision as p_top1,
 	COALESCE(gep.p_in_money, 0.0)::double precision as p_in_money,
-	(
-		SELECT COUNT(*)::int
-		FROM derived.entry_simulation_outcomes eso
-		WHERE eso.calcutta_evaluation_run_id = $1::uuid
-		  AND eso.entry_name = gep.entry_name
-		  AND eso.deleted_at IS NULL
-	) as total_simulations
+	COALESCE((
+		SELECT st.n_sims::int
+		FROM derived.calcutta_evaluation_runs cer
+		JOIN derived.simulated_tournaments st
+			ON st.id = cer.simulated_tournament_id
+			AND st.deleted_at IS NULL
+		WHERE cer.id = $1::uuid
+			AND cer.deleted_at IS NULL
+		LIMIT 1
+	), 0)::int as total_simulations
 FROM derived.entry_performance gep
 WHERE gep.calcutta_evaluation_run_id = $1::uuid
 	AND gep.deleted_at IS NULL
