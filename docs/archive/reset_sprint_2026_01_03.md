@@ -151,7 +151,9 @@ Update all foreign keys that reference these tables.
 
 ### Frontend
 -[ ] Replace/extend Simulations page to browse runs (Returns/Investments/Entries)
--[ ] Add drill-down: run -> year -> results
+-[ ] Add runs list page (by year): `/runs/:year`
+-[ ] Add run rankings page: `/runs/:year/:runId`
+-[ ] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`
 
 ## Open questions
 -[ ] Confirm the final names for evaluation tables in `derived` (whether to keep `entry_simulation_outcomes`/`entry_performance` naming or rename to `derived.simulated_entry_outcomes`/`derived.entry_performance`)

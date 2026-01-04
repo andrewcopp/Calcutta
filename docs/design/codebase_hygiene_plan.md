@@ -92,22 +92,7 @@ Tasks:
 - [x] Move `importCalcuttas` (+ helpers) to `import_calcuttas.go`.
 - [x] Keep `ImportFromDir` and transaction boundaries in `importer.go`.
 
-### 7) Frontend: Read-only runs viewer (ML analytics)
-
-Targets:
-
-- `frontend/src/pages/*`
-- `frontend/src/services/*`
-
-Outcome: Read-only UI for recent pipeline runs (Runs → Rankings → Entry drill-down), backed by `/api/v1/analytics/*`.
-
-Tasks:
-
-- [ ] Add runs list page (by year): `/runs/:year`.
-- [ ] Add run rankings page: `/runs/:year/:runId`.
-- [ ] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`.
-
-### 8) Frontend: Split large analytics pages into components
+### 7) Frontend: Split large analytics pages into components
 
 Targets:
 
@@ -130,5 +115,4 @@ Tasks:
 - [x] Then (4) ops script re-org.
 - [x] Then (5) handler mapping extraction.
 - [x] Then (6) importer split.
-- [ ] Then (7) frontend runs viewer.
-- [ ] Then (8) frontend cleanup.
+- [ ] Then (7) frontend cleanup.
