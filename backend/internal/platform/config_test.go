@@ -58,6 +58,95 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInLegacyOutsideDev
 	}
 }
 
+func TestThatLoadConfigFromEnvParsesHTTPTimeoutsAndMaxBodyWhenValid(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("HTTP_READ_TIMEOUT_SECONDS", "11")
+	t.Setenv("HTTP_WRITE_TIMEOUT_SECONDS", "12")
+	t.Setenv("HTTP_IDLE_TIMEOUT_SECONDS", "13")
+	t.Setenv("HTTP_READ_HEADER_TIMEOUT_SECONDS", "14")
+	t.Setenv("HTTP_MAX_BODY_BYTES", "12345")
+
+	// WHEN
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.HTTPReadTimeoutSeconds != 11 || cfg.HTTPWriteTimeoutSeconds != 12 || cfg.HTTPIdleTimeoutSeconds != 13 || cfg.HTTPReadHeaderTimeoutSeconds != 14 || cfg.HTTPMaxBodyBytes != 12345 {
+		t.Fatalf("expected timeouts/body 11/12/13/14/12345, got %d/%d/%d/%d/%d", cfg.HTTPReadTimeoutSeconds, cfg.HTTPWriteTimeoutSeconds, cfg.HTTPIdleTimeoutSeconds, cfg.HTTPReadHeaderTimeoutSeconds, cfg.HTTPMaxBodyBytes)
+	}
+}
+
+func TestThatLoadConfigFromEnvUsesDefaultHTTPTimeoutsWhenInvalid(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("HTTP_READ_TIMEOUT_SECONDS", "0")
+	t.Setenv("HTTP_WRITE_TIMEOUT_SECONDS", "-1")
+	t.Setenv("HTTP_IDLE_TIMEOUT_SECONDS", "abc")
+	t.Setenv("HTTP_READ_HEADER_TIMEOUT_SECONDS", "")
+	t.Setenv("HTTP_MAX_BODY_BYTES", "0")
+
+	// WHEN
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.HTTPReadTimeoutSeconds != 15 || cfg.HTTPWriteTimeoutSeconds != 15 || cfg.HTTPIdleTimeoutSeconds != 60 || cfg.HTTPReadHeaderTimeoutSeconds != 5 || cfg.HTTPMaxBodyBytes != 2*1024*1024 {
+		t.Fatalf("expected default http settings, got %d/%d/%d/%d/%d", cfg.HTTPReadTimeoutSeconds, cfg.HTTPWriteTimeoutSeconds, cfg.HTTPIdleTimeoutSeconds, cfg.HTTPReadHeaderTimeoutSeconds, cfg.HTTPMaxBodyBytes)
+	}
+}
+
+func TestThatLoadConfigFromEnvParsesPGXPoolSettingsWhenValid(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("PGX_POOL_MAX_CONNS", "21")
+	t.Setenv("PGX_POOL_MIN_CONNS", "2")
+	t.Setenv("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", "300")
+	t.Setenv("PGX_POOL_HEALTH_CHECK_PERIOD_SECONDS", "7")
+
+	// WHEN
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.PGXPoolMaxConns != 21 || cfg.PGXPoolMinConns != 2 || cfg.PGXPoolMaxConnLifetimeSeconds != 300 || cfg.PGXPoolHealthCheckPeriodSeconds != 7 {
+		t.Fatalf("expected pgx pool settings 21/2/300/7, got %d/%d/%d/%d", cfg.PGXPoolMaxConns, cfg.PGXPoolMinConns, cfg.PGXPoolMaxConnLifetimeSeconds, cfg.PGXPoolHealthCheckPeriodSeconds)
+	}
+}
+
+func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("PGX_POOL_MAX_CONNS", "5")
+	t.Setenv("PGX_POOL_MIN_CONNS", "6")
+
+	// WHEN
+	_, err := LoadConfigFromEnv()
+
+	// THEN
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")

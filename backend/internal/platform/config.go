@@ -10,19 +10,28 @@ import (
 )
 
 type Config struct {
-	DatabaseURL               string
-	AllowedOrigin             string
-	Port                      string
-	AuthMode                  string
-	JWTSecret                 string
-	AccessTokenTTLSeconds     int
-	RefreshTokenTTLHours      int
-	ShutdownTimeoutSeconds    int
-	CognitoRegion             string
-	CognitoUserPoolID         string
-	CognitoAppClientID        string
-	CognitoAutoProvision      bool
-	CognitoAllowUnprovisioned bool
+	DatabaseURL                     string
+	AllowedOrigin                   string
+	Port                            string
+	HTTPReadTimeoutSeconds          int
+	HTTPWriteTimeoutSeconds         int
+	HTTPIdleTimeoutSeconds          int
+	HTTPReadHeaderTimeoutSeconds    int
+	HTTPMaxBodyBytes                int64
+	PGXPoolMaxConns                 int32
+	PGXPoolMinConns                 int32
+	PGXPoolMaxConnLifetimeSeconds   int
+	PGXPoolHealthCheckPeriodSeconds int
+	AuthMode                        string
+	JWTSecret                       string
+	AccessTokenTTLSeconds           int
+	RefreshTokenTTLHours            int
+	ShutdownTimeoutSeconds          int
+	CognitoRegion                   string
+	CognitoUserPoolID               string
+	CognitoAppClientID              string
+	CognitoAutoProvision            bool
+	CognitoAllowUnprovisioned       bool
 }
 
 func envBool(key string, defaultValue bool) bool {
@@ -38,6 +47,36 @@ func envBool(key string, defaultValue bool) bool {
 	default:
 		return defaultValue
 	}
+}
+
+func envInt(key string, defaultValue int, minValue int) int {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.Atoi(v)
+	if err != nil {
+		return defaultValue
+	}
+	if parsed < minValue {
+		return defaultValue
+	}
+	return parsed
+}
+
+func envInt64(key string, defaultValue int64, minValue int64) int64 {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+	if parsed < minValue {
+		return defaultValue
+	}
+	return parsed
 }
 
 func LoadConfigFromEnv() (Config, error) {
@@ -67,6 +106,17 @@ func LoadConfigFromEnv() (Config, error) {
 			refreshTTLHours = parsed
 		}
 	}
+
+	httpReadTimeoutSeconds := envInt("HTTP_READ_TIMEOUT_SECONDS", 15, 1)
+	httpWriteTimeoutSeconds := envInt("HTTP_WRITE_TIMEOUT_SECONDS", 15, 1)
+	httpIdleTimeoutSeconds := envInt("HTTP_IDLE_TIMEOUT_SECONDS", 60, 1)
+	httpReadHeaderTimeoutSeconds := envInt("HTTP_READ_HEADER_TIMEOUT_SECONDS", 5, 1)
+	httpMaxBodyBytes := envInt64("HTTP_MAX_BODY_BYTES", 2*1024*1024, 1)
+
+	pgxPoolMaxConns := envInt("PGX_POOL_MAX_CONNS", 10, 1)
+	pgxPoolMinConns := envInt("PGX_POOL_MIN_CONNS", 0, 0)
+	pgxPoolMaxConnLifetimeSeconds := envInt("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", 1800, 0)
+	pgxPoolHealthCheckPeriodSeconds := envInt("PGX_POOL_HEALTH_CHECK_PERIOD_SECONDS", 30, 0)
 
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
@@ -99,19 +149,28 @@ func LoadConfigFromEnv() (Config, error) {
 	}
 
 	cfg := Config{
-		DatabaseURL:               databaseURL,
-		AllowedOrigin:             os.Getenv("ALLOWED_ORIGIN"),
-		Port:                      os.Getenv("PORT"),
-		AuthMode:                  authMode,
-		JWTSecret:                 os.Getenv("JWT_SECRET"),
-		AccessTokenTTLSeconds:     accessTTLSeconds,
-		RefreshTokenTTLHours:      refreshTTLHours,
-		ShutdownTimeoutSeconds:    30,
-		CognitoRegion:             os.Getenv("COGNITO_REGION"),
-		CognitoUserPoolID:         os.Getenv("COGNITO_USER_POOL_ID"),
-		CognitoAppClientID:        os.Getenv("COGNITO_APP_CLIENT_ID"),
-		CognitoAutoProvision:      envBool("COGNITO_AUTO_PROVISION", false),
-		CognitoAllowUnprovisioned: envBool("COGNITO_ALLOW_UNPROVISIONED", false),
+		DatabaseURL:                     databaseURL,
+		AllowedOrigin:                   os.Getenv("ALLOWED_ORIGIN"),
+		Port:                            os.Getenv("PORT"),
+		HTTPReadTimeoutSeconds:          httpReadTimeoutSeconds,
+		HTTPWriteTimeoutSeconds:         httpWriteTimeoutSeconds,
+		HTTPIdleTimeoutSeconds:          httpIdleTimeoutSeconds,
+		HTTPReadHeaderTimeoutSeconds:    httpReadHeaderTimeoutSeconds,
+		HTTPMaxBodyBytes:                httpMaxBodyBytes,
+		PGXPoolMaxConns:                 int32(pgxPoolMaxConns),
+		PGXPoolMinConns:                 int32(pgxPoolMinConns),
+		PGXPoolMaxConnLifetimeSeconds:   pgxPoolMaxConnLifetimeSeconds,
+		PGXPoolHealthCheckPeriodSeconds: pgxPoolHealthCheckPeriodSeconds,
+		AuthMode:                        authMode,
+		JWTSecret:                       os.Getenv("JWT_SECRET"),
+		AccessTokenTTLSeconds:           accessTTLSeconds,
+		RefreshTokenTTLHours:            refreshTTLHours,
+		ShutdownTimeoutSeconds:          30,
+		CognitoRegion:                   os.Getenv("COGNITO_REGION"),
+		CognitoUserPoolID:               os.Getenv("COGNITO_USER_POOL_ID"),
+		CognitoAppClientID:              os.Getenv("COGNITO_APP_CLIENT_ID"),
+		CognitoAutoProvision:            envBool("COGNITO_AUTO_PROVISION", false),
+		CognitoAllowUnprovisioned:       envBool("COGNITO_ALLOW_UNPROVISIONED", false),
 	}
 
 	if env == "development" && cfg.AuthMode != "cognito" && cfg.JWTSecret == "" {
@@ -123,6 +182,10 @@ func LoadConfigFromEnv() (Config, error) {
 	}
 	if cfg.Port == "" {
 		cfg.Port = "8080"
+	}
+
+	if cfg.PGXPoolMinConns > cfg.PGXPoolMaxConns {
+		return Config{}, fmt.Errorf("PGX_POOL_MIN_CONNS cannot exceed PGX_POOL_MAX_CONNS")
 	}
 
 	if cfg.DatabaseURL == "" {

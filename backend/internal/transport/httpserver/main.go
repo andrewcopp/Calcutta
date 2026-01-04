@@ -21,7 +21,12 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
+	pool, err := platform.OpenPGXPool(context.Background(), cfg, &platform.PGXPoolOptions{
+		MaxConns:          cfg.PGXPoolMaxConns,
+		MinConns:          cfg.PGXPoolMinConns,
+		MaxConnLifetime:   time.Duration(cfg.PGXPoolMaxConnLifetimeSeconds) * time.Second,
+		HealthCheckPeriod: time.Duration(cfg.PGXPoolHealthCheckPeriodSeconds) * time.Second,
+	})
 	if err != nil {
 		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
 	}
@@ -33,6 +38,7 @@ func Run() {
 	r.Use(requestIDMiddleware)
 	r.Use(loggingMiddleware)
 	r.Use(corsMiddleware)
+	r.Use(maxBodyBytesMiddleware(cfg.HTTPMaxBodyBytes))
 	r.Use(server.authenticateMiddleware)
 
 	// Routes
@@ -50,10 +56,10 @@ func Run() {
 	httpServer := &http.Server{
 		Addr:              ":" + port,
 		Handler:           r,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       time.Duration(cfg.HTTPReadTimeoutSeconds) * time.Second,
+		WriteTimeout:      time.Duration(cfg.HTTPWriteTimeoutSeconds) * time.Second,
+		IdleTimeout:       time.Duration(cfg.HTTPIdleTimeoutSeconds) * time.Second,
+		ReadHeaderTimeout: time.Duration(cfg.HTTPReadHeaderTimeoutSeconds) * time.Second,
 	}
 
 	// Start server in goroutine
