@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -41,6 +42,20 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, code string,
 
 func writeErrorFromErr(w http.ResponseWriter, r *http.Request, err error) {
 	if err == nil {
+		payload := map[string]any{
+			"ts":         time.Now().UTC().Format(time.RFC3339Nano),
+			"level":      "error",
+			"event":      "http_error",
+			"request_id": getRequestID(r.Context()),
+			"method":     r.Method,
+			"path":       r.URL.Path,
+			"status":     http.StatusInternalServerError,
+			"user_id":    authUserID(r.Context()),
+			"error":      "nil error",
+		}
+		if b, mErr := json.Marshal(payload); mErr == nil {
+			log.Print(string(b))
+		}
 		writeError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
 		return
 	}
@@ -75,6 +90,21 @@ func writeErrorFromErr(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
-	log.Printf("[%s] internal error: %v", getRequestID(r.Context()), err)
+	payload := map[string]any{
+		"ts":         time.Now().UTC().Format(time.RFC3339Nano),
+		"level":      "error",
+		"event":      "http_error",
+		"request_id": getRequestID(r.Context()),
+		"method":     r.Method,
+		"path":       r.URL.Path,
+		"status":     http.StatusInternalServerError,
+		"user_id":    authUserID(r.Context()),
+		"error":      err.Error(),
+	}
+	if b, mErr := json.Marshal(payload); mErr == nil {
+		log.Print(string(b))
+	} else {
+		log.Printf("[%s] internal error: %v", getRequestID(r.Context()), err)
+	}
 	writeError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
 }

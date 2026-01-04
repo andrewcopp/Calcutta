@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -70,6 +72,54 @@ func TestThatWriteErrorFromErrIncludesRequestIDInResponse(t *testing.T) {
 	want := "req-1"
 	if got != want {
 		t.Errorf("expected requestId %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrLogsStructuredJSONForUnknownError(t *testing.T) {
+	var buf strings.Builder
+	old := log.Writer()
+	oldFlags := log.Flags()
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(old)
+		log.SetFlags(oldFlags)
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/boom", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, errors.New("boom"))
+
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) < 1 {
+		t.Fatalf("expected at least 1 log line")
+	}
+	last := lines[len(lines)-1]
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(last), &payload); err != nil {
+		t.Fatalf("expected JSON log payload, got %q", last)
+	}
+
+	if got, want := payload["event"], "http_error"; got != want {
+		t.Errorf("expected event %v, got %v", want, got)
+	}
+	if got, want := payload["request_id"], "req-1"; got != want {
+		t.Errorf("expected request_id %v, got %v", want, got)
+	}
+	if got, want := payload["method"], http.MethodGet; got != want {
+		t.Errorf("expected method %v, got %v", want, got)
+	}
+	if got, want := payload["path"], "/boom"; got != want {
+		t.Errorf("expected path %v, got %v", want, got)
+	}
+	if got, want := payload["status"], float64(http.StatusInternalServerError); got != want {
+		t.Errorf("expected status %v, got %v", want, got)
+	}
+	if got, want := payload["error"], "boom"; got != want {
+		t.Errorf("expected error %v, got %v", want, got)
 	}
 }
 

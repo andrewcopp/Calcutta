@@ -143,6 +143,7 @@ Operational guidance:
 - [x] HTTP server timeouts are configured (read/write/idle)
 - [x] DB connection pool has explicit limits
 - [ ] Service exits cleanly on SIGTERM (ECS rolling deploys rely on this)
+  - TODO (defer): verify after first staging deploy by stopping an ECS task and confirming graceful shutdown + clean exit
 
 ## Authentication + authorization for admin/write paths
 - [ ] Define user roles: `admin`, `owner`, `viewer`
@@ -209,11 +210,11 @@ Post-drill:
 
 ## Observability baseline
 - [x] Structured logs (JSON) including request IDs
-- [ ] Error logging at boundaries (handlers/CLIs), not deep in services
+- [x] Error logging at boundaries (handlers/CLIs), not deep in services
 - [ ] Metrics for:
   - [x] request count / latency (p50/p95)
   - [x] 4xx/5xx rate
-  - [ ] DB query latency + pool saturation
+  - [ ] DB query latency + pool saturation (pool saturation done)
 - [ ] Alerts for:
   - [ ] high 5xx rate
   - [ ] high p95 latency
