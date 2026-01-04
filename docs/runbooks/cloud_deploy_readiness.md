@@ -161,6 +161,52 @@ Operational guidance:
 - [ ] Perform a restore drill into staging (practice the process before March)
 - [ ] Define RPO/RTO targets (even if modest)
 
+Backup policy (recommended defaults):
+- Retention: 7 days for `staging`, 14+ days for `prod`
+- Backup window: off-hours local time
+- Enable deletion protection for `prod`
+- Encrypt storage (KMS)
+
+RPO/RTO (recommended starting targets):
+- RPO (data loss): 24h (start) → 1h (goal if needed)
+- RTO (time to restore): 2h (start) → 30m (goal if needed)
+
+Restore drill runbook (restore `prod` snapshot into `staging`):
+
+Prereqs:
+- Identify the `prod` RDS instance identifier
+- Identify the `staging` RDS instance identifier
+- Confirm you have IAM permissions for RDS snapshot restore
+- Confirm you have a way to change the staging backend DB connection (SSM/Secrets Manager/env)
+
+Steps:
+- Create a manual snapshot of `prod` (or select a recent automated snapshot)
+- Restore snapshot to a new staging instance:
+  - Use a new instance identifier like `calcutta-staging-restore-YYYYMMDD`
+  - Same engine/major version as `prod`
+  - Same parameter group family as `prod` (or document diffs)
+  - Place into `staging` subnets / security groups
+- Update `staging` backend configuration to point to the restored instance
+- Restart staging service
+
+Verification checklist:
+- `GET /health/live` returns 200
+- `GET /health/ready` returns 200
+- Auth middleware works for your chosen staging mode (`AUTH_MODE=cognito` expected)
+- Can execute one read-only API call (e.g. `GET /api/tournaments`)
+- Confirm the DB has expected rows:
+  - tournaments present for the current season
+  - at least one calcutta/entry exists (if applicable)
+- Confirm migrations are in expected state (no pending/failed migrations)
+
+Post-drill:
+- Record:
+  - snapshot used
+  - restore start/end timestamps
+  - any issues encountered
+  - measured RTO
+- Tear down the restored staging instance when done (cost control)
+
 ## Observability baseline
 - [x] Structured logs (JSON) including request IDs
 - [ ] Error logging at boundaries (handlers/CLIs), not deep in services
