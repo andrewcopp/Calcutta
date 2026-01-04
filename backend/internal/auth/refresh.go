@@ -5,11 +5,16 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"io"
 )
 
 func NewRefreshToken() (string, error) {
+	return NewRefreshTokenFromReader(rand.Reader)
+}
+
+func NewRefreshTokenFromReader(r io.Reader) (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := io.ReadFull(r, b); err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil

@@ -3,11 +3,16 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"io"
 )
 
 func NewAPIKey() (string, error) {
+	return NewAPIKeyFromReader(rand.Reader)
+}
+
+func NewAPIKeyFromReader(r io.Reader) (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := io.ReadFull(r, b); err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
