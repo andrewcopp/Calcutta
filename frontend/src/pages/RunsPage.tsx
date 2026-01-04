@@ -14,15 +14,15 @@ export function RunsPage() {
   }
 
   const runsQuery = useQuery({
-    queryKey: ['mlAnalytics', 'optimizationRuns', parsedYear],
-    queryFn: () => mlAnalyticsService.getOptimizationRuns(parsedYear),
+    queryKey: ['mlAnalytics', 'strategyRuns', parsedYear],
+    queryFn: () => mlAnalyticsService.getStrategyRuns(parsedYear),
   });
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Runs</h1>
-        <p className="text-gray-600">Read-only viewer for recent ML pipeline runs.</p>
+        <p className="text-gray-600">Read-only viewer for recent strategy runs.</p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">

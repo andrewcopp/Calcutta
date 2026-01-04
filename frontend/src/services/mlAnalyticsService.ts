@@ -1,6 +1,6 @@
 import { apiClient } from '../api/apiClient';
 
-export type OptimizationRun = {
+export type StrategyRun = {
   run_id: string;
   name: string;
   calcutta_id: string | null;
@@ -11,9 +11,9 @@ export type OptimizationRun = {
   created_at: string;
 };
 
-export type OptimizationRunsResponse = {
+export type StrategyRunsResponse = {
   year: number;
-  runs: OptimizationRun[];
+  runs: StrategyRun[];
 };
 
 export type EntryRanking = {
@@ -138,8 +138,8 @@ export type CalcuttaPredictedInvestmentResponse = {
 };
 
 export const mlAnalyticsService = {
-  async getOptimizationRuns(year: number): Promise<OptimizationRunsResponse> {
-    return apiClient.get<OptimizationRunsResponse>(`/v1/analytics/tournaments/${year}/runs`);
+  async getStrategyRuns(year: number): Promise<StrategyRunsResponse> {
+    return apiClient.get<StrategyRunsResponse>(`/v1/analytics/tournaments/${year}/runs`);
   },
 
   async getEntryRankings(year: number, runId: string, limit = 100, offset = 0): Promise<EntryRankingsResponse> {

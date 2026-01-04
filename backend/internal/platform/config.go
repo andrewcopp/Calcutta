@@ -94,7 +94,7 @@ func LoadConfigFromEnv() (Config, error) {
 		allowedOriginsEnv = strings.TrimSpace(os.Getenv("ALLOWED_ORIGIN"))
 	}
 	if allowedOriginsEnv == "" && env == "development" {
-		allowedOriginsEnv = "http://localhost:3000"
+		allowedOriginsEnv = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 	}
 	allowedOrigins := make([]string, 0)
 	for _, o := range strings.Split(allowedOriginsEnv, ",") {
