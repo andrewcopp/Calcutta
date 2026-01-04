@@ -54,6 +54,7 @@ Tasks:
 - [x] Add thin wrapper packages under `backend/internal/features/*` for existing services.
 - [x] Update app wiring + CLI entrypoints to import from `backend/internal/features/*`.
 - [x] Verify backend build/test remains green.
+- [x] Document `internal/app` as wiring/composition only (`backend/internal/app/README.md`).
 
 ### 4) Backend: Reorganize ops scripts
 
@@ -63,9 +64,9 @@ Outcome: Operational SQL scripts are easier to find and run safely.
 
 Tasks:
 
-- [x] Reorganize `backend/ops/*.sql` into `backend/ops/db/{admin,audits,maintenance}/*.sql`.
-- [x] Update references in `Makefile` and docs.
-- [x] Add `backend/ops/README.md` describing script intent + how to run.
+- [ ] Reorganize `backend/ops/*.sql` into `backend/ops/db/{admin,audits,maintenance}/*.sql`.
+- [ ] Update references in `Makefile` and docs.
+- [ ] Add `backend/ops/README.md` describing script intent + how to run.
 
 ### 5) Backend: Reduce handler boilerplate for analytics
 
@@ -106,12 +107,27 @@ Tasks:
 - [ ] Consolidate analytics-related API calls into `frontend/src/services/analyticsService.ts`.
 - [ ] Keep routes and query keys stable.
 
+### 8) Frontend: Read-only runs viewer (ML analytics)
+
+Targets:
+
+- `frontend/src/pages/*`
+- `frontend/src/services/*`
+
+Outcome: Read-only UI for recent pipeline runs (Runs → Rankings → Entry drill-down), backed by `/api/v1/analytics/*`.
+
+Tasks:
+
+- [x] Add runs list page (by year): `/runs/:year`.
+- [x] Add run rankings page: `/runs/:year/:runId`.
+- [x] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`.
+
 ## Execution Order
 
 - [x] Start with (1) `analytics.sql` split (low risk, high readability win).
 - [x] Then (2) `simulated_calcutta` decomposition.
 - [x] Then (3) `internal/features` wrapper migration.
-- [x] Then (4) ops script re-org.
+- [ ] Then (4) ops script re-org.
 - [ ] Then (5) handler mapping extraction.
 - [ ] Then (6) importer split.
 - [ ] Then (7) frontend cleanup.
