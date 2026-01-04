@@ -27,6 +27,8 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 	r.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+	r.HandleFunc("/healthz", s.healthHandler).Methods("GET")
+	r.HandleFunc("/readyz", s.readyHandler).Methods("GET")
 	r.HandleFunc("/health/live", s.healthHandler).Methods("GET")
 	r.HandleFunc("/health/ready", s.readyHandler).Methods("GET")
 	if s.cfg.MetricsEnabled {
