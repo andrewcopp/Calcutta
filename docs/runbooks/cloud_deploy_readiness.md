@@ -223,11 +223,23 @@ GitHub Actions:
 - [ ] Configure AWS OIDC provider + IAM roles per environment (`staging`, `prod`)
 - [ ] Staging deploy: automatic on merge to `main`
 - [ ] Prod deploy: manual approval / protected environment
+- [ ] Populate GitHub repo / environment secrets required for deploy:
+  - [ ] `AWS_REGION`
+  - [ ] `ECR_REPOSITORY`
+  - [ ] `AWS_ROLE_ARN_STAGING`
+  - [ ] `ECS_CLUSTER_STAGING`
+  - [ ] `ECS_SERVICE_STAGING`
+  - [ ] `ECS_TASK_DEFINITION_STAGING`
+  - [ ] `AWS_ROLE_ARN_PROD`
+  - [ ] `ECS_CLUSTER_PROD`
+  - [ ] `ECS_SERVICE_PROD`
+  - [ ] `ECS_TASK_DEFINITION_PROD`
 
 ## Infrastructure as Code
 - [ ] Add Terraform configuration for `staging` and `prod`
 - [ ] Use separate state per environment (separate backend/state key)
 - [ ] Ensure Terraform can create infra from scratch in a new AWS account
+- [ ] Install Terraform locally so `terraform fmt` / `terraform validate` can run outside CI
 
 ---
 
