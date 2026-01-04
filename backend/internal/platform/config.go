@@ -11,8 +11,11 @@ import (
 
 type Config struct {
 	DatabaseURL                     string
+	AllowedOrigins                  []string
 	AllowedOrigin                   string
 	Port                            string
+	MetricsEnabled                  bool
+	MetricsAuthToken                string
 	HTTPReadTimeoutSeconds          int
 	HTTPWriteTimeoutSeconds         int
 	HTTPIdleTimeoutSeconds          int
@@ -86,6 +89,21 @@ func LoadConfigFromEnv() (Config, error) {
 		env = "development"
 	}
 
+	allowedOriginsEnv := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS"))
+	if allowedOriginsEnv == "" {
+		allowedOriginsEnv = strings.TrimSpace(os.Getenv("ALLOWED_ORIGIN"))
+	}
+	if allowedOriginsEnv == "" && env == "development" {
+		allowedOriginsEnv = "http://localhost:3000"
+	}
+	allowedOrigins := make([]string, 0)
+	for _, o := range strings.Split(allowedOriginsEnv, ",") {
+		trimmed := strings.TrimSpace(o)
+		if trimmed != "" {
+			allowedOrigins = append(allowedOrigins, trimmed)
+		}
+	}
+
 	authMode := strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_MODE")))
 	if authMode == "" {
 		authMode = "legacy"
@@ -114,6 +132,8 @@ func LoadConfigFromEnv() (Config, error) {
 	httpReadHeaderTimeoutSeconds := envInt("HTTP_READ_HEADER_TIMEOUT_SECONDS", 5, 1)
 	httpMaxBodyBytes := envInt64("HTTP_MAX_BODY_BYTES", 2*1024*1024, 1)
 	rateLimitRPM := envInt("RATE_LIMIT_RPM", 300, 0)
+	metricsEnabled := envBool("METRICS_ENABLED", false)
+	metricsAuthToken := strings.TrimSpace(os.Getenv("METRICS_AUTH_TOKEN"))
 
 	pgxPoolMaxConns := envInt("PGX_POOL_MAX_CONNS", 10, 1)
 	pgxPoolMinConns := envInt("PGX_POOL_MIN_CONNS", 0, 0)
@@ -152,8 +172,11 @@ func LoadConfigFromEnv() (Config, error) {
 
 	cfg := Config{
 		DatabaseURL:                     databaseURL,
+		AllowedOrigins:                  allowedOrigins,
 		AllowedOrigin:                   os.Getenv("ALLOWED_ORIGIN"),
 		Port:                            os.Getenv("PORT"),
+		MetricsEnabled:                  metricsEnabled,
+		MetricsAuthToken:                metricsAuthToken,
 		HTTPReadTimeoutSeconds:          httpReadTimeoutSeconds,
 		HTTPWriteTimeoutSeconds:         httpWriteTimeoutSeconds,
 		HTTPIdleTimeoutSeconds:          httpIdleTimeoutSeconds,
@@ -175,22 +198,25 @@ func LoadConfigFromEnv() (Config, error) {
 		CognitoAutoProvision:            envBool("COGNITO_AUTO_PROVISION", false),
 		CognitoAllowUnprovisioned:       envBool("COGNITO_ALLOW_UNPROVISIONED", false),
 	}
+	if len(cfg.AllowedOrigins) > 0 {
+		cfg.AllowedOrigin = cfg.AllowedOrigins[0]
+	}
 
 	if env == "development" && cfg.AuthMode != "cognito" && cfg.JWTSecret == "" {
 		cfg.JWTSecret = "dev-jwt-secret"
 	}
 
-	if env == "development" {
-		if strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")) == "" && strings.TrimSpace(cfg.AllowedOrigin) == "" {
-			cfg.AllowedOrigin = "http://localhost:3000"
-		}
-	} else {
-		if strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")) == "" && strings.TrimSpace(cfg.AllowedOrigin) == "" {
+	if env != "development" {
+		if len(cfg.AllowedOrigins) == 0 {
 			return Config{}, fmt.Errorf("ALLOWED_ORIGINS or ALLOWED_ORIGIN must be set")
 		}
 	}
 	if cfg.Port == "" {
 		cfg.Port = "8080"
+	}
+
+	if cfg.MetricsEnabled && env != "development" && strings.TrimSpace(cfg.MetricsAuthToken) == "" {
+		return Config{}, fmt.Errorf("METRICS_AUTH_TOKEN must be set when METRICS_ENABLED=true outside development")
 	}
 
 	if cfg.PGXPoolMinConns > cfg.PGXPoolMaxConns {

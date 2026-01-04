@@ -28,6 +28,9 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 	})
 	r.HandleFunc("/health/live", s.healthHandler).Methods("GET")
 	r.HandleFunc("/health/ready", s.readyHandler).Methods("GET")
+	if s.cfg.MetricsEnabled {
+		r.HandleFunc("/metrics", s.metricsHandler).Methods("GET")
+	}
 	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
 	r.HandleFunc("/api/ready", s.readyHandler).Methods("GET")
 

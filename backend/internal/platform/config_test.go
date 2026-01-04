@@ -174,6 +174,46 @@ func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
 	}
 }
 
+func TestThatLoadConfigFromEnvAllowsMetricsWithoutTokenInDevelopment(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "development")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("METRICS_ENABLED", "true")
+	t.Setenv("METRICS_AUTH_TOKEN", "")
+
+	// WHEN
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !cfg.MetricsEnabled {
+		t.Fatalf("expected MetricsEnabled true")
+	}
+}
+
+func TestThatLoadConfigFromEnvReturnsErrorWhenMetricsEnabledInProductionWithoutToken(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
+	t.Setenv("METRICS_ENABLED", "true")
+	t.Setenv("METRICS_AUTH_TOKEN", "")
+
+	// WHEN
+	_, err := LoadConfigFromEnv()
+
+	// THEN
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
@@ -329,6 +369,7 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 	// GIVEN
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "")
+	t.Setenv("ALLOWED_ORIGINS", "")
 	t.Setenv("PORT", "")
 	t.Setenv("NODE_ENV", "development")
 	t.Setenv("AUTH_MODE", "legacy")

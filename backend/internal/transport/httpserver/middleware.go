@@ -2,10 +2,10 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -42,14 +42,30 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		requestID := getRequestID(r.Context())
 
-		log.Printf("[%s] Started %s %s", requestID, r.Method, r.URL.Path)
-
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(wrapped, r)
 
 		duration := time.Since(start)
-		log.Printf("[%s] Completed %s %s - %d in %v",
-			requestID, r.Method, r.URL.Path, wrapped.statusCode, duration)
+		httpMetrics.Observe(r.Method, wrapped.statusCode, duration)
+
+		payload := map[string]any{
+			"ts":          time.Now().UTC().Format(time.RFC3339Nano),
+			"level":       "info",
+			"event":       "http_request",
+			"request_id":  requestID,
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"status":      wrapped.statusCode,
+			"duration_ms": duration.Milliseconds(),
+			"client_ip":   clientIP(r),
+			"user_id":     authUserID(r.Context()),
+		}
+		b, err := json.Marshal(payload)
+		if err != nil {
+			log.Printf("[%s] Completed %s %s - %d in %v", requestID, r.Method, r.URL.Path, wrapped.statusCode, duration)
+			return
+		}
+		log.Print(string(b))
 	})
 }
 
@@ -63,52 +79,35 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
-		if allowedOriginsEnv == "" {
-			allowedOriginsEnv = os.Getenv("ALLOWED_ORIGIN")
-		}
-		if allowedOriginsEnv == "" && os.Getenv("NODE_ENV") == "development" {
-			allowedOriginsEnv = "http://localhost:3000"
-		}
-
-		allowedOrigins := make([]string, 0)
-		for _, o := range strings.Split(allowedOriginsEnv, ",") {
-			trimmed := strings.TrimSpace(o)
-			if trimmed != "" {
-				allowedOrigins = append(allowedOrigins, trimmed)
-			}
-		}
-		if len(allowedOrigins) == 0 && os.Getenv("NODE_ENV") == "development" {
-			allowedOrigins = []string{"http://localhost:3000"}
-		}
-
-		origin := r.Header.Get("Origin")
-		if origin != "" {
-			for _, ao := range allowedOrigins {
-				if ao == origin {
-					w.Header().Set("Access-Control-Allow-Origin", origin)
-					w.Header().Add("Vary", "Origin")
-					break
+func corsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			if origin != "" {
+				for _, ao := range allowedOrigins {
+					if ao == origin {
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+						w.Header().Add("Vary", "Origin")
+						break
+					}
 				}
+			} else if len(allowedOrigins) == 1 {
+				w.Header().Set("Access-Control-Allow-Origin", allowedOrigins[0])
 			}
-		} else if len(allowedOrigins) == 1 {
-			w.Header().Set("Access-Control-Allow-Origin", allowedOrigins[0])
-		}
 
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, X-Requested-With, X-Request-ID")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Max-Age", "3600")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, X-Requested-With, X-Request-ID")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "3600")
 
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 
-		next.ServeHTTP(w, r)
-	})
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func maxBodyBytesMiddleware(maxBytes int64) func(http.Handler) http.Handler {

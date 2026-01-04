@@ -162,11 +162,11 @@ Operational guidance:
 - [ ] Define RPO/RTO targets (even if modest)
 
 ## Observability baseline
-- [ ] Structured logs (JSON) including request IDs
+- [x] Structured logs (JSON) including request IDs
 - [ ] Error logging at boundaries (handlers/CLIs), not deep in services
 - [ ] Metrics for:
-  - [ ] request count / latency (p50/p95)
-  - [ ] 4xx/5xx rate
+  - [x] request count / latency (p50/p95)
+  - [x] 4xx/5xx rate
   - [ ] DB query latency + pool saturation
 - [ ] Alerts for:
   - [ ] high 5xx rate
