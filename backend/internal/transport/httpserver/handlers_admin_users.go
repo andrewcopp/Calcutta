@@ -3,9 +3,15 @@ package httpserver
 import (
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
+	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5"
 )
 
 type adminUserListItem struct {
@@ -25,6 +31,93 @@ type adminUsersListResponse struct {
 
 func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users", s.requirePermission("admin.users.read", s.adminUsersListHandler)).Methods("GET")
+	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
+}
+
+func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request) {
+	if s.pool == nil {
+		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		return
+	}
+
+	userID := strings.TrimSpace(mux.Vars(r)["id"])
+	if userID == "" {
+		writeErrorFromErr(w, r, dtos.ErrFieldRequired("id"))
+		return
+	}
+	if _, err := uuid.Parse(userID); err != nil {
+		writeErrorFromErr(w, r, dtos.ErrFieldInvalid("id", "invalid uuid"))
+		return
+	}
+
+	now := time.Now().UTC()
+	expiresAt := now.Add(7 * 24 * time.Hour)
+
+	var email string
+	var passwordHash *string
+	err := s.pool.QueryRow(r.Context(), `
+		SELECT email, status, password_hash
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID).Scan(&email, new(string), &passwordHash)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "user", ID: userID})
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if passwordHash != nil && strings.TrimSpace(*passwordHash) != "" {
+		writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "id", Message: "user already has a password set"})
+		return
+	}
+
+	var inviteToken string
+	var inviteHash string
+	for i := 0; i < 3; i++ {
+		created, err := coreauth.NewInviteToken()
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		createdHash := coreauth.HashInviteToken(created)
+
+		ct, err := s.pool.Exec(r.Context(), `
+			UPDATE users
+			SET
+			  status = 'requires_password_setup',
+			  invite_token_hash = $2,
+			  invite_expires_at = $3,
+			  invite_consumed_at = NULL,
+			  invited_at = COALESCE(invited_at, $4),
+			  last_invite_sent_at = $4,
+			  updated_at = $4
+			WHERE id = $1 AND deleted_at IS NULL
+		`, userID, createdHash, expiresAt, now)
+		if err != nil {
+			continue
+		}
+		if ct.RowsAffected() == 0 {
+			writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "user", ID: userID})
+			return
+		}
+		inviteToken = created
+		inviteHash = createdHash
+		break
+	}
+	if inviteToken == "" || inviteHash == "" {
+		writeError(w, r, http.StatusInternalServerError, "internal_error", "failed to generate invite token", "")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, dtos.AdminInviteUserResponse{
+		UserID:        userID,
+		Email:         email,
+		InviteToken:   inviteToken,
+		InviteExpires: expiresAt.Format(time.RFC3339),
+		Status:        "requires_password_setup",
+	})
 }
 
 func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {

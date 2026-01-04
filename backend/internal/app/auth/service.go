@@ -110,10 +110,6 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 		return nil, err
 	}
 
-	if s.authzRepo != nil {
-		_ = s.authzRepo.EnsureBootstrapAdmin(ctx, user.ID)
-	}
-
 	refreshToken, err := coreauth.NewRefreshToken()
 	if err != nil {
 		return nil, err

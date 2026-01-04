@@ -33,7 +33,15 @@ func Run() {
 		os.Exit(1)
 	}
 
-	server := NewServer(pool, cfg)
+	server, err := NewServer(pool, cfg)
+	if err != nil {
+		slog.Error("server_init_failed", "error", err)
+		os.Exit(1)
+	}
+	if err := server.bootstrapAdmin(context.Background()); err != nil {
+		slog.Error("bootstrap_admin_failed", "error", err)
+		os.Exit(1)
+	}
 
 	// Router
 	r := mux.NewRouter()

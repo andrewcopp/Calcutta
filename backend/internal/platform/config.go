@@ -1,10 +1,12 @@
 package platform
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -14,6 +16,8 @@ type Config struct {
 	AllowedOrigins                  []string
 	AllowedOrigin                   string
 	Port                            string
+	BootstrapAdminEmail             string
+	BootstrapAdminPassword          string
 	MetricsEnabled                  bool
 	MetricsAuthToken                string
 	HTTPReadTimeoutSeconds          int
@@ -83,7 +87,95 @@ func envInt64(key string, defaultValue int64, minValue int64) int64 {
 	return parsed
 }
 
+func loadDotEnvFiles() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	var foundDir string
+	dir := cwd
+	for i := 0; i < 10; i++ {
+		if _, err := os.Stat(filepath.Join(dir, ".env")); err == nil {
+			foundDir = dir
+			break
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".env.local")); err == nil {
+			foundDir = dir
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	if foundDir == "" {
+		return
+	}
+
+	_ = loadDotEnvFile(filepath.Join(foundDir, ".env"))
+	_ = loadDotEnvFile(filepath.Join(foundDir, ".env.local"))
+}
+
+func loadDotEnvFile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "export ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		}
+		i := strings.Index(line, "=")
+		if i <= 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:i])
+		val := strings.TrimSpace(line[i+1:])
+		if key == "" {
+			continue
+		}
+		if len(val) >= 2 {
+			if (val[0] == '"' && val[len(val)-1] == '"') || (val[0] == '\'' && val[len(val)-1] == '\'') {
+				val = val[1 : len(val)-1]
+			}
+		}
+		if _, ok := os.LookupEnv(key); ok {
+			continue
+		}
+		_ = os.Setenv(key, val)
+	}
+	return scanner.Err()
+}
+
+func isGoTestProcess() bool {
+	if strings.HasSuffix(os.Args[0], ".test") {
+		return true
+	}
+	for _, a := range os.Args {
+		if strings.HasPrefix(a, "-test.") {
+			return true
+		}
+	}
+	return false
+}
+
 func LoadConfigFromEnv() (Config, error) {
+	if !isGoTestProcess() {
+		loadDotEnvFiles()
+	}
+
 	env := os.Getenv("NODE_ENV")
 	if env == "" {
 		env = "development"
@@ -175,6 +267,8 @@ func LoadConfigFromEnv() (Config, error) {
 		AllowedOrigins:                  allowedOrigins,
 		AllowedOrigin:                   os.Getenv("ALLOWED_ORIGIN"),
 		Port:                            os.Getenv("PORT"),
+		BootstrapAdminEmail:             strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")),
+		BootstrapAdminPassword:          os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
 		MetricsEnabled:                  metricsEnabled,
 		MetricsAuthToken:                metricsAuthToken,
 		HTTPReadTimeoutSeconds:          httpReadTimeoutSeconds,
@@ -237,6 +331,9 @@ func LoadConfigFromEnv() (Config, error) {
 		if strings.TrimSpace(cfg.CognitoAppClientID) == "" {
 			return Config{}, fmt.Errorf("COGNITO_APP_CLIENT_ID environment variable is not set")
 		}
+	}
+	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.BootstrapAdminEmail) != "" && strings.TrimSpace(cfg.BootstrapAdminPassword) == "" {
+		return Config{}, fmt.Errorf("BOOTSTRAP_ADMIN_PASSWORD must be set when BOOTSTRAP_ADMIN_EMAIL is set in legacy/dev auth modes")
 	}
 	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.JWTSecret) == "" {
 		return Config{}, fmt.Errorf("JWT_SECRET environment variable is not set")
