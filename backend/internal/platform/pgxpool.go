@@ -28,6 +28,10 @@ func OpenPGXPool(ctx context.Context, cfg Config, opts *PGXPoolOptions) (*pgxpoo
 		return nil, err
 	}
 
+	if cfg.MetricsEnabled {
+		pcfg.ConnConfig.Tracer = newDBQueryTracer()
+	}
+
 	if opts != nil {
 		if opts.MaxConns > 0 {
 			pcfg.MaxConns = opts.MaxConns

@@ -214,7 +214,7 @@ Post-drill:
 - [ ] Metrics for:
   - [x] request count / latency (p50/p95)
   - [x] 4xx/5xx rate
-  - [ ] DB query latency + pool saturation (pool saturation done)
+  - [x] DB query latency + pool saturation
 - [ ] Alerts for:
   - [ ] high 5xx rate
   - [ ] high p95 latency

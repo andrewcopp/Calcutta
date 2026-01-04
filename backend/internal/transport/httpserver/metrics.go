@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -260,4 +261,5 @@ func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	httpMetrics.WritePrometheus(w)
 	writePGXPoolPrometheus(w, s.pool)
+	platform.WriteDBQueryMetricsPrometheus(w)
 }
