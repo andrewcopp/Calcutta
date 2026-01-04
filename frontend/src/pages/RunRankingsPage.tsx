@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
+import { RunViewerHeader } from '../components/RunViewerHeader';
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
@@ -26,42 +27,15 @@ export function RunRankingsPage() {
     retry: false,
   });
 
-  const title = decodedRunId;
+  const encodedRunId = useMemo(() => encodeURIComponent(decodedRunId), [decodedRunId]);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <Link to={`/runs/${parsedYear}`} className="text-blue-600 hover:text-blue-800">
-            ← Back to Runs
-          </Link>
-
-          <div className="flex gap-2">
-            <Link
-              to={`/runs/${parsedYear}/${encodeURIComponent(runId)}/returns`}
-              className="px-3 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Returns
-            </Link>
-            <Link
-              to={`/runs/${parsedYear}/${encodeURIComponent(runId)}/investments`}
-              className="px-3 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Investments
-            </Link>
-          </div>
-        </div>
-      </div>
+      <RunViewerHeader year={parsedYear} runId={decodedRunId} runName={ourEntryQuery.data?.run.name} activeTab="rankings" />
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Run Rankings</h1>
-        <div className="text-gray-600">
-          <div>Year: {parsedYear}</div>
-          <div>Run: {title}</div>
-        </div>
-
         {ourEntryQuery.data && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="text-sm text-gray-500">Run Summary</div>
               <div className="mt-1 text-sm text-gray-700">
@@ -78,10 +52,7 @@ export function RunRankingsPage() {
                   <div className="text-sm text-amber-700">Our Strategy</div>
                   <div className="text-xs text-amber-700/80">Aggregated performance</div>
                 </div>
-                <Link
-                  to={`/runs/${parsedYear}/${encodeURIComponent(runId)}/entries/${encodeURIComponent('our_strategy')}`}
-                  className="text-sm text-blue-700 hover:underline"
-                >
+                <Link to={`/runs/${parsedYear}/${encodedRunId}/entries/${encodeURIComponent('our_strategy')}`} className="text-sm text-blue-700 hover:underline">
                   View portfolio
                 </Link>
               </div>
@@ -132,7 +103,7 @@ export function RunRankingsPage() {
                     <td className="px-4 py-3 text-sm text-gray-700">{e.rank}</td>
                     <td className="px-4 py-3 text-sm font-medium text-blue-700">
                       <Link
-                        to={`/runs/${parsedYear}/${encodeURIComponent(runId)}/entries/${encodeURIComponent(e.entry_key)}`}
+                        to={`/runs/${parsedYear}/${encodedRunId}/entries/${encodeURIComponent(e.entry_key)}`}
                         className="hover:underline"
                       >
                         {e.entry_key}

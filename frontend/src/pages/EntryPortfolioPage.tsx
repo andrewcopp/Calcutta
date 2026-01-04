@@ -13,6 +13,7 @@ export function EntryPortfolioPage() {
 
   const decodedRunId = useMemo(() => decodeURIComponent(runId), [runId]);
   const decodedEntryKey = useMemo(() => decodeURIComponent(entryKey), [entryKey]);
+  const encodedRunId = useMemo(() => encodeURIComponent(decodedRunId), [decodedRunId]);
 
   const portfolioQuery = useQuery({
     queryKey: ['mlAnalytics', 'entryPortfolio', parsedYear, decodedRunId, decodedEntryKey],
@@ -22,7 +23,7 @@ export function EntryPortfolioPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <Link to={`/runs/${parsedYear}/${encodeURIComponent(runId)}`} className="text-blue-600 hover:text-blue-800">
+        <Link to={`/runs/${parsedYear}/${encodedRunId}`} className="text-blue-600 hover:text-blue-800">
           ← Back to Run Rankings
         </Link>
       </div>
