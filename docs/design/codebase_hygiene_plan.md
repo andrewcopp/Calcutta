@@ -23,6 +23,22 @@ Tasks:
 - [x] Ensure sqlc generation still works and query names remain stable (or update call sites if names must change).
 - [ ] (Optional) Identify repeated `entry_bids` / `team_agg` patterns that should become DB functions/views later.
 
+### 1b) Backend: SQLC query hygiene (teams + ML analytics)
+
+Targets:
+
+- `backend/internal/adapters/db/sqlc/queries/tournament_teams.sql`
+- `backend/internal/adapters/db/sqlc/queries/ml_analytics.sql`
+
+Outcome: SQLC query names align with DB models (`teams`), and the ML analytics query set is split into smaller, focused files.
+
+Tasks:
+
+- [x] Rename SQLC query names in `tournament_teams.sql` to align with the `core.teams` table naming.
+- [x] Update Go call sites to use renamed SQLC methods/types.
+- [x] Split `ml_analytics.sql` into multiple focused query files (keeping query names stable).
+- [ ] Defer: split SQLC generation by schema/package (e.g., `core` vs `derived`) to reduce the size of `models.go` + the `Queries` surface.
+
 ### 2) Backend: Decompose simulated calcutta service
 
 Target: `backend/internal/app/simulated_calcutta/service.go`

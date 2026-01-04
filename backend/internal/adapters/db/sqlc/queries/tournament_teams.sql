@@ -1,4 +1,4 @@
--- name: GetTournamentTeamsByTournamentID :many
+-- name: ListTeamsByTournamentID :many
 SELECT
   tt.id,
   tt.tournament_id,
@@ -21,7 +21,7 @@ LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 ORDER BY tt.seed ASC;
 
--- name: GetTournamentTeamByID :one
+-- name: GetTeamByID :one
 SELECT
   tt.id,
   tt.tournament_id,
@@ -43,7 +43,7 @@ LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at I
 LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE tt.id = $1 AND tt.deleted_at IS NULL;
 
--- name: UpdateTournamentTeam :exec
+-- name: UpdateTeam :exec
 UPDATE core.teams
 SET wins = $1,
     byes = $2,
@@ -51,7 +51,7 @@ SET wins = $1,
     updated_at = NOW()
 WHERE id = $4 AND deleted_at IS NULL;
 
--- name: CreateTournamentTeam :exec
+-- name: CreateTeam :exec
 INSERT INTO core.teams (
   id,
   tournament_id,
@@ -66,7 +66,7 @@ INSERT INTO core.teams (
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
--- name: GetTournamentWinningTeam :one
+-- name: GetWinningTeam :one
 SELECT
   tt.id,
   tt.tournament_id,

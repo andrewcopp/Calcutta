@@ -154,7 +154,7 @@ func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentI
 }
 
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
-	rows, err := r.q.GetTournamentTeamsByTournamentID(ctx, tournamentID)
+	rows, err := r.q.ListTeamsByTournamentID(ctx, tournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 }
 
 func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
-	row, err := r.q.GetTournamentTeamByID(ctx, id)
+	row, err := r.q.GetTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -221,13 +221,13 @@ func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *m
 	}()
 
 	qtx := r.q.WithTx(tx)
-	params := sqlc.UpdateTournamentTeamParams{
+	params := sqlc.UpdateTeamParams{
 		Wins:       int32(team.Wins),
 		Byes:       int32(team.Byes),
 		Eliminated: team.Eliminated,
 		ID:         team.ID,
 	}
-	if err = qtx.UpdateTournamentTeam(ctx, params); err != nil {
+	if err = qtx.UpdateTeam(ctx, params); err != nil {
 		return err
 	}
 
@@ -253,7 +253,7 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 	}()
 
 	qtx := r.q.WithTx(tx)
-	params := sqlc.CreateTournamentTeamParams{
+	params := sqlc.CreateTeamParams{
 		ID:           team.ID,
 		TournamentID: team.TournamentID,
 		SchoolID:     team.SchoolID,
@@ -265,7 +265,7 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		CreatedAt:    pgtype.Timestamptz{Time: team.Created, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: team.Updated, Valid: true},
 	}
-	if err = qtx.CreateTournamentTeam(ctx, params); err != nil {
+	if err = qtx.CreateTeam(ctx, params); err != nil {
 		return err
 	}
 
@@ -276,7 +276,7 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 }
 
 func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID string) (*models.TournamentTeam, error) {
-	row, err := r.q.GetTournamentWinningTeam(ctx, tournamentID)
+	row, err := r.q.GetWinningTeam(ctx, tournamentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

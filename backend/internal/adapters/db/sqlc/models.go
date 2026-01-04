@@ -366,6 +366,26 @@ type DerivedEntryBid struct {
 	DeletedAt  pgtype.Timestamptz
 }
 
+type DerivedEntryEvaluationRequest struct {
+	ID                string
+	CalcuttaID        string
+	EntryCandidateID  string
+	ExcludedEntryName *string
+	StartingStateKey  string
+	NSims             int32
+	Seed              int32
+	ExperimentKey     *string
+	RequestSource     *string
+	Status            string
+	ClaimedAt         pgtype.Timestamptz
+	ClaimedBy         *string
+	EvaluationRunID   pgtype.UUID
+	ErrorMessage      *string
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+	DeletedAt         pgtype.Timestamptz
+}
+
 type DerivedEntryPerformance struct {
 	ID                      string
 	RunID                   string
@@ -645,6 +665,44 @@ type LabelPermission struct {
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
+}
+
+type ModelsEntryCandidate struct {
+	ID           string
+	RunID        string
+	CalcuttaID   pgtype.UUID
+	BudgetPoints int32
+	MinTeams     int32
+	MaxTeams     int32
+	MinBidPoints int32
+	MaxBidPoints int32
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type ModelsEntryCandidateBid struct {
+	ID               string
+	EntryCandidateID string
+	TeamID           string
+	BidPoints        int32
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
+}
+
+type ModelsRun struct {
+	ID                 string
+	Name               *string
+	SeasonYear         *int32
+	ExperimentKey      *string
+	ReturnsModelKey    string
+	InvestmentModelKey string
+	AllocatorKey       string
+	ParamsJson         []byte
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
 }
 
 type Permission struct {

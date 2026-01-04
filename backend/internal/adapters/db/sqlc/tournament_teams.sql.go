@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createTournamentTeam = `-- name: CreateTournamentTeam :exec
+const createTeam = `-- name: CreateTeam :exec
 INSERT INTO core.teams (
   id,
   tournament_id,
@@ -27,7 +27,7 @@ INSERT INTO core.teams (
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
-type CreateTournamentTeamParams struct {
+type CreateTeamParams struct {
 	ID           string
 	TournamentID string
 	SchoolID     string
@@ -40,8 +40,8 @@ type CreateTournamentTeamParams struct {
 	UpdatedAt    pgtype.Timestamptz
 }
 
-func (q *Queries) CreateTournamentTeam(ctx context.Context, arg CreateTournamentTeamParams) error {
-	_, err := q.db.Exec(ctx, createTournamentTeam,
+func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) error {
+	_, err := q.db.Exec(ctx, createTeam,
 		arg.ID,
 		arg.TournamentID,
 		arg.SchoolID,
@@ -56,7 +56,7 @@ func (q *Queries) CreateTournamentTeam(ctx context.Context, arg CreateTournament
 	return err
 }
 
-const getTournamentTeamByID = `-- name: GetTournamentTeamByID :one
+const getTeamByID = `-- name: GetTeamByID :one
 SELECT
   tt.id,
   tt.tournament_id,
@@ -79,7 +79,7 @@ LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE tt.id = $1 AND tt.deleted_at IS NULL
 `
 
-type GetTournamentTeamByIDRow struct {
+type GetTeamByIDRow struct {
 	ID           string
 	TournamentID string
 	SchoolID     string
@@ -97,9 +97,9 @@ type GetTournamentTeamByIDRow struct {
 	SchoolName   *string
 }
 
-func (q *Queries) GetTournamentTeamByID(ctx context.Context, id string) (GetTournamentTeamByIDRow, error) {
-	row := q.db.QueryRow(ctx, getTournamentTeamByID, id)
-	var i GetTournamentTeamByIDRow
+func (q *Queries) GetTeamByID(ctx context.Context, id string) (GetTeamByIDRow, error) {
+	row := q.db.QueryRow(ctx, getTeamByID, id)
+	var i GetTeamByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.TournamentID,
@@ -120,7 +120,69 @@ func (q *Queries) GetTournamentTeamByID(ctx context.Context, id string) (GetTour
 	return i, err
 }
 
-const getTournamentTeamsByTournamentID = `-- name: GetTournamentTeamsByTournamentID :many
+const getWinningTeam = `-- name: GetWinningTeam :one
+SELECT
+  tt.id,
+  tt.tournament_id,
+  tt.school_id,
+  tt.seed,
+  tt.region,
+  tt.byes,
+  tt.wins,
+  tt.eliminated,
+  tt.created_at,
+  tt.updated_at,
+  kps.net_rtg,
+  kps.o_rtg,
+  kps.d_rtg,
+  kps.adj_t
+FROM core.teams tt
+LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
+WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
+ORDER BY tt.wins DESC
+LIMIT 1
+`
+
+type GetWinningTeamRow struct {
+	ID           string
+	TournamentID string
+	SchoolID     string
+	Seed         int32
+	Region       string
+	Byes         int32
+	Wins         int32
+	Eliminated   bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	NetRtg       *float64
+	ORtg         *float64
+	DRtg         *float64
+	AdjT         *float64
+}
+
+func (q *Queries) GetWinningTeam(ctx context.Context, tournamentID string) (GetWinningTeamRow, error) {
+	row := q.db.QueryRow(ctx, getWinningTeam, tournamentID)
+	var i GetWinningTeamRow
+	err := row.Scan(
+		&i.ID,
+		&i.TournamentID,
+		&i.SchoolID,
+		&i.Seed,
+		&i.Region,
+		&i.Byes,
+		&i.Wins,
+		&i.Eliminated,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.NetRtg,
+		&i.ORtg,
+		&i.DRtg,
+		&i.AdjT,
+	)
+	return i, err
+}
+
+const listTeamsByTournamentID = `-- name: ListTeamsByTournamentID :many
 SELECT
   tt.id,
   tt.tournament_id,
@@ -144,7 +206,7 @@ WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 ORDER BY tt.seed ASC
 `
 
-type GetTournamentTeamsByTournamentIDRow struct {
+type ListTeamsByTournamentIDRow struct {
 	ID           string
 	TournamentID string
 	SchoolID     string
@@ -162,15 +224,15 @@ type GetTournamentTeamsByTournamentIDRow struct {
 	SchoolName   *string
 }
 
-func (q *Queries) GetTournamentTeamsByTournamentID(ctx context.Context, tournamentID string) ([]GetTournamentTeamsByTournamentIDRow, error) {
-	rows, err := q.db.Query(ctx, getTournamentTeamsByTournamentID, tournamentID)
+func (q *Queries) ListTeamsByTournamentID(ctx context.Context, tournamentID string) ([]ListTeamsByTournamentIDRow, error) {
+	rows, err := q.db.Query(ctx, listTeamsByTournamentID, tournamentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTournamentTeamsByTournamentIDRow
+	var items []ListTeamsByTournamentIDRow
 	for rows.Next() {
-		var i GetTournamentTeamsByTournamentIDRow
+		var i ListTeamsByTournamentIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TournamentID,
@@ -198,69 +260,7 @@ func (q *Queries) GetTournamentTeamsByTournamentID(ctx context.Context, tourname
 	return items, nil
 }
 
-const getTournamentWinningTeam = `-- name: GetTournamentWinningTeam :one
-SELECT
-  tt.id,
-  tt.tournament_id,
-  tt.school_id,
-  tt.seed,
-  tt.region,
-  tt.byes,
-  tt.wins,
-  tt.eliminated,
-  tt.created_at,
-  tt.updated_at,
-  kps.net_rtg,
-  kps.o_rtg,
-  kps.d_rtg,
-  kps.adj_t
-FROM core.teams tt
-LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
-WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
-ORDER BY tt.wins DESC
-LIMIT 1
-`
-
-type GetTournamentWinningTeamRow struct {
-	ID           string
-	TournamentID string
-	SchoolID     string
-	Seed         int32
-	Region       string
-	Byes         int32
-	Wins         int32
-	Eliminated   bool
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	NetRtg       *float64
-	ORtg         *float64
-	DRtg         *float64
-	AdjT         *float64
-}
-
-func (q *Queries) GetTournamentWinningTeam(ctx context.Context, tournamentID string) (GetTournamentWinningTeamRow, error) {
-	row := q.db.QueryRow(ctx, getTournamentWinningTeam, tournamentID)
-	var i GetTournamentWinningTeamRow
-	err := row.Scan(
-		&i.ID,
-		&i.TournamentID,
-		&i.SchoolID,
-		&i.Seed,
-		&i.Region,
-		&i.Byes,
-		&i.Wins,
-		&i.Eliminated,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.NetRtg,
-		&i.ORtg,
-		&i.DRtg,
-		&i.AdjT,
-	)
-	return i, err
-}
-
-const updateTournamentTeam = `-- name: UpdateTournamentTeam :exec
+const updateTeam = `-- name: UpdateTeam :exec
 UPDATE core.teams
 SET wins = $1,
     byes = $2,
@@ -269,15 +269,15 @@ SET wins = $1,
 WHERE id = $4 AND deleted_at IS NULL
 `
 
-type UpdateTournamentTeamParams struct {
+type UpdateTeamParams struct {
 	Wins       int32
 	Byes       int32
 	Eliminated bool
 	ID         string
 }
 
-func (q *Queries) UpdateTournamentTeam(ctx context.Context, arg UpdateTournamentTeamParams) error {
-	_, err := q.db.Exec(ctx, updateTournamentTeam,
+func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
+	_, err := q.db.Exec(ctx, updateTeam,
 		arg.Wins,
 		arg.Byes,
 		arg.Eliminated,

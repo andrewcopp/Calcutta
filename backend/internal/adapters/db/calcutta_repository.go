@@ -513,7 +513,7 @@ func (r *CalcuttaRepository) GetPortfolios(ctx context.Context, entryID string) 
 }
 
 func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
-	row, err := r.q.GetTournamentTeamByID(ctx, id)
+	row, err := r.q.GetTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "tournament team", ID: id}
