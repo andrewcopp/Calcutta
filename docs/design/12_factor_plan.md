@@ -23,14 +23,14 @@
 - [x] Ensure config is loaded once at startup and passed down (no per-request `os.Getenv`)
 - [x] Make CORS configuration fully config-driven (prefer `ALLOWED_ORIGINS`)
 - [ ] Standardize on `DATABASE_URL` (keep DB_* only as a dev convenience if needed)
-- [ ] Add `GET /healthz` and `GET /readyz` aliases (keep existing routes for compatibility)
+- [x] Add `GET /healthz` and `GET /readyz` aliases (keep existing routes for compatibility)
 - [ ] Ensure graceful shutdown covers:
   - [ ] HTTP server shutdown with timeout
   - [ ] DB pool close
 - [ ] Add request/trace correlation:
-  - [ ] Preserve inbound `X-Request-ID` and always respond with it
-  - [ ] Ensure it’s included in all request logs
-- [ ] Standardize structured logging format (JSON or consistent key/value)
+  - [x] Preserve inbound `X-Request-ID` and always respond with it
+  - [x] Ensure it’s included in all request logs
+- [x] Standardize structured logging format (JSON or consistent key/value)
 - [ ] Confirm background worker command(s) share the same config contract
 
 ### Frontend (Vite/React)
