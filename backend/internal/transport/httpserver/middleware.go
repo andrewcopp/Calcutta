@@ -2,8 +2,7 @@ package httpserver
 
 import (
 	"context"
-	"encoding/json"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -17,6 +16,8 @@ type contextKey string
 
 const requestIDKey contextKey = "requestID"
 
+const requestLoggerKey contextKey = "requestLogger"
+
 func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-ID")
@@ -26,6 +27,7 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 
 		w.Header().Set("X-Request-ID", requestID)
 		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
+		ctx = context.WithValue(ctx, requestLoggerKey, slog.Default().With("request_id", requestID))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -37,10 +39,20 @@ func getRequestID(ctx context.Context) string {
 	return "unknown"
 }
 
+func requestLogger(ctx context.Context) *slog.Logger {
+	if l, ok := ctx.Value(requestLoggerKey).(*slog.Logger); ok && l != nil {
+		return l
+	}
+	requestID := getRequestID(ctx)
+	if requestID != "" && requestID != "unknown" {
+		return slog.Default().With("request_id", requestID)
+	}
+	return slog.Default()
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		requestID := getRequestID(r.Context())
 
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(wrapped, r)
@@ -48,24 +60,17 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		httpMetrics.Observe(r.Method, wrapped.statusCode, duration)
 
-		payload := map[string]any{
-			"ts":          time.Now().UTC().Format(time.RFC3339Nano),
-			"level":       "info",
-			"event":       "http_request",
-			"request_id":  requestID,
-			"method":      r.Method,
-			"path":        r.URL.Path,
-			"status":      wrapped.statusCode,
-			"duration_ms": duration.Milliseconds(),
-			"client_ip":   clientIP(r),
-			"user_id":     authUserID(r.Context()),
-		}
-		b, err := json.Marshal(payload)
-		if err != nil {
-			log.Printf("[%s] Completed %s %s - %d in %v", requestID, r.Method, r.URL.Path, wrapped.statusCode, duration)
-			return
-		}
-		log.Print(string(b))
+		requestLogger(r.Context()).InfoContext(
+			r.Context(),
+			"http_request",
+			"event", "http_request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", wrapped.statusCode,
+			"duration_ms", duration.Milliseconds(),
+			"client_ip", clientIP(r),
+			"user_id", authUserID(r.Context()),
+		)
 	})
 }
 

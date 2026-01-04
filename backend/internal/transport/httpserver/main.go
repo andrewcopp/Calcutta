@@ -2,7 +2,7 @@ package httpserver
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,11 +14,12 @@ import (
 )
 
 func Run() {
-	log.Printf("Starting server initialization...")
+	slog.Info("server_initializing")
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("config_load_failed", "error", err)
+		os.Exit(1)
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, &platform.PGXPoolOptions{
@@ -28,7 +29,8 @@ func Run() {
 		HealthCheckPeriod: time.Duration(cfg.PGXPoolHealthCheckPeriodSeconds) * time.Second,
 	})
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		slog.Error("db_connect_failed", "error", err)
+		os.Exit(1)
 	}
 
 	server := NewServer(pool, cfg)
@@ -47,7 +49,13 @@ func Run() {
 
 	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[%s] No route matched: %s %s", getRequestID(r.Context()), r.Method, r.URL.Path)
+		requestLogger(r.Context()).WarnContext(
+			r.Context(),
+			"http_not_found",
+			"event", "http_not_found",
+			"method", r.Method,
+			"path", r.URL.Path,
+		)
 		writeError(w, r, http.StatusNotFound, "not_found", "Not Found", "")
 	})
 
@@ -65,9 +73,10 @@ func Run() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Server starting on port %s", port)
+		slog.Info("server_listening", "port", port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed: %v", err)
+			slog.Error("server_failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -76,16 +85,16 @@ func Run() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("server_shutting_down")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
 	defer cancel()
 
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown: %v", err)
+		slog.Error("server_shutdown_failed", "error", err)
 	}
 
 	pool.Close()
 
-	log.Println("Server stopped gracefully")
+	slog.Info("server_stopped")
 }

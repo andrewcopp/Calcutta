@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,11 +12,13 @@ import (
 )
 
 func main() {
-	log.Printf("starting workers")
+	platform.InitLogger()
+	slog.Info("workers_starting")
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("config_load_failed", "error", err)
+		os.Exit(1)
 	}
 
 	env := os.Getenv("NODE_ENV")
@@ -24,12 +26,14 @@ func main() {
 		env = "development"
 	}
 	if env != "development" && cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET environment variable is not set")
+		slog.Error("jwt_secret_missing")
+		os.Exit(1)
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		slog.Error("db_connect_failed", "error", err)
+		os.Exit(1)
 	}
 	defer pool.Close()
 
@@ -41,5 +45,5 @@ func main() {
 	s.RunBundleImportWorker(ctx)
 	s.RunEntryEvaluationWorker(ctx)
 
-	log.Printf("stopping workers")
+	slog.Info("workers_stopping")
 }

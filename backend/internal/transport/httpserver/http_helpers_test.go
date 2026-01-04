@@ -1,10 +1,11 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -76,14 +77,11 @@ func TestThatWriteErrorFromErrIncludesRequestIDInResponse(t *testing.T) {
 }
 
 func TestThatWriteErrorFromErrLogsStructuredJSONForUnknownError(t *testing.T) {
-	var buf strings.Builder
-	old := log.Writer()
-	oldFlags := log.Flags()
-	log.SetOutput(&buf)
-	log.SetFlags(0)
+	var buf bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{})))
 	t.Cleanup(func() {
-		log.SetOutput(old)
-		log.SetFlags(oldFlags)
+		slog.SetDefault(old)
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/boom", nil)
