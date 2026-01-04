@@ -8,27 +8,24 @@ From the repo root:
 
 ```bash
 # Usage:
-#   calculate-simulated-calcuttas <tournament_id> [run_id] [excluded_entry_name]
+#   calculate-simulated-calcuttas --calcutta-id <calcutta_id> [--run-id <run_id>] [--excluded-entry-name <name>]
 
-go run ./backend/cmd/calculate-simulated-calcuttas <tournament_id>
+go run ./backend/cmd/calculate-simulated-calcuttas --calcutta-id <calcutta_id>
 ```
 
 ## Arguments
 
-- `tournament_id` (required) Derived tournament id.
-- `run_id` (optional) Strategy generation run key. If omitted, the latest `derived.strategy_generation_runs.run_key` is selected.
-- `excluded_entry_name` (optional) Entry name to exclude. Can also be provided via `EXCLUDED_ENTRY_NAME`.
+- `--calcutta-id` (required) Calcutta id.
+- `--run-id` (optional) Strategy generation run key. If omitted, the latest `derived.strategy_generation_runs.run_key` is selected.
+- `--excluded-entry-name` (optional) Entry name to exclude. Can also be provided via `EXCLUDED_ENTRY_NAME`.
 
 ## Configuration
 
-This binary currently builds its own DB URL from DB parts:
+This binary uses the shared config loader in `platform.LoadConfigFromEnv()`:
 
-- `DB_USER`
-- `DB_PASSWORD`
-- `DB_HOST`
-- `DB_PORT`
-- `DB_NAME`
+- Prefer `DATABASE_URL`
+- Or set DB parts (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, optional `DB_SSLMODE`)
 
 ## Notes
 
-- The `excluded_entry_name` value is currently only logged by this binary; it is not applied to the calculation.
+- The `excluded_entry_name` value is applied when building the simulated calcutta snapshot.

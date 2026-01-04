@@ -67,6 +67,9 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 ### Immediate unblock / correctness
 - [ ] Commit predicted-investment fallback fix (analytics_calcutta_predictions.sql + sqlc output)
+- [ ] Implement pure `predicted_game_outcomes` -> predicted returns / expected value (no Monte Carlo)
+  - [ ] Use bracket DP over matchup probabilities to compute per-team round advancement + expected points
+  - [ ] Use this as the baseline for naive `predicted_market_share` (until market model is wired)
 - [ ] Verify frontend smoke run UX end-to-end
   - [ ] /runs/2025 lists run
   - [ ] Returns page loads and is non-empty

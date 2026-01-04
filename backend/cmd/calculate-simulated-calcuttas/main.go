@@ -2,49 +2,53 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"flag"
 	"log"
 	"os"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-
-	// Get tournament ID from command line args
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: calculate-simulated-calcuttas <calcutta_id> [run_id] [excluded_entry_id]")
-	}
-
-	calcuttaID := os.Args[1]
-
-	// Optional: run_id can be provided, otherwise we'll find the latest
+	var calcuttaID string
 	var runID string
-	if len(os.Args) >= 3 {
-		runID = os.Args[2]
+	var excludedEntryName string
+
+	flag.StringVar(&calcuttaID, "calcutta-id", "", "Calcutta ID (uuid)")
+	flag.StringVar(&runID, "run-id", "", "Strategy generation run key (optional; defaults to latest)")
+	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Entry name to exclude (optional; defaults to EXCLUDED_ENTRY_NAME env var)")
+	flag.Parse()
+
+	// Backward-compatible positional args:
+	//   calculate-simulated-calcuttas <calcutta_id> [run_id] [excluded_entry_name]
+	if calcuttaID == "" && flag.NArg() >= 1 {
+		calcuttaID = flag.Arg(0)
+	}
+	if runID == "" && flag.NArg() >= 2 {
+		runID = flag.Arg(1)
+	}
+	if excludedEntryName == "" {
+		if flag.NArg() >= 3 {
+			excludedEntryName = flag.Arg(2)
+		} else {
+			excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
+		}
 	}
 
-	// Optional: excluded_entry_name can be provided via command line or env var
-	excludedEntryName := ""
-	if len(os.Args) >= 4 {
-		excludedEntryName = os.Args[3]
-	} else {
-		excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
+	if calcuttaID == "" {
+		log.Fatal("--calcutta-id is required")
 	}
 
-	// Connect to database
-	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
-
-	pool, err := pgxpool.New(context.Background(), dbURL)
+	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
+		log.Fatal(err)
+	}
+
+	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
+	if err != nil {
+		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
 	}
 	defer pool.Close()
 
@@ -66,8 +70,7 @@ func main() {
 	service := simulated_calcutta.New(pool)
 
 	log.Printf("Starting simulated calcutta calculation for calcutta %s, run %s", calcuttaID, runID)
-
-	if err := service.CalculateSimulatedCalcutta(context.Background(), calcuttaID, runID); err != nil {
+	if err := service.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, nil); err != nil {
 		log.Fatalf("Failed to calculate simulated calcutta: %v", err)
 	}
 
