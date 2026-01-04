@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
+	analytics "github.com/andrewcopp/Calcutta/backend/internal/features/analytics"
 )
 
 func TestThatToAnalyticsResponseReturnsZeroValueForNilInput(t *testing.T) {
 	// GIVEN
-	var in *appanalytics.AnalyticsResult
+	var in *analytics.AnalyticsResult
 
 	// WHEN
 	out := ToAnalyticsResponse(in)
@@ -22,11 +22,11 @@ func TestThatToAnalyticsResponseReturnsZeroValueForNilInput(t *testing.T) {
 
 func TestThatToAnalyticsResponseMapsAllFields(t *testing.T) {
 	// GIVEN
-	in := &appanalytics.AnalyticsResult{
+	in := &analytics.AnalyticsResult{
 		TotalPoints:     123.4,
 		TotalInvestment: 56.7,
 		BaselineROI:     2.176,
-		SeedAnalytics: []appanalytics.SeedAnalyticsResult{{
+		SeedAnalytics: []analytics.SeedAnalyticsResult{{
 			Seed:                 1,
 			TotalPoints:          10,
 			TotalInvestment:      5,
@@ -37,7 +37,7 @@ func TestThatToAnalyticsResponseMapsAllFields(t *testing.T) {
 			AverageInvestment:    1.67,
 			ROI:                  2.0,
 		}},
-		RegionAnalytics: []appanalytics.RegionAnalyticsResult{{
+		RegionAnalytics: []analytics.RegionAnalyticsResult{{
 			Region:               "East",
 			TotalPoints:          20,
 			TotalInvestment:      8,
@@ -48,7 +48,7 @@ func TestThatToAnalyticsResponseMapsAllFields(t *testing.T) {
 			AverageInvestment:    2,
 			ROI:                  2.5,
 		}},
-		TeamAnalytics: []appanalytics.TeamAnalyticsResult{{
+		TeamAnalytics: []analytics.TeamAnalyticsResult{{
 			SchoolID:          "s1",
 			SchoolName:        "School 1",
 			TotalPoints:       7,
@@ -59,7 +59,7 @@ func TestThatToAnalyticsResponseMapsAllFields(t *testing.T) {
 			AverageSeed:       4.0,
 			ROI:               2.333,
 		}},
-		SeedVarianceAnalytics: []appanalytics.SeedVarianceResult{{
+		SeedVarianceAnalytics: []analytics.SeedVarianceResult{{
 			Seed:             2,
 			InvestmentStdDev: 10,
 			PointsStdDev:     5,

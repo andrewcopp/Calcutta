@@ -1,8 +1,8 @@
 package dtos
 
-import appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
+import analytics "github.com/andrewcopp/Calcutta/backend/internal/features/analytics"
 
-func ToAnalyticsResponse(result *appanalytics.AnalyticsResult) AnalyticsResponse {
+func ToAnalyticsResponse(result *analytics.AnalyticsResult) AnalyticsResponse {
 	if result == nil {
 		return AnalyticsResponse{}
 	}
@@ -76,7 +76,7 @@ func ToAnalyticsResponse(result *appanalytics.AnalyticsResult) AnalyticsResponse
 	return out
 }
 
-func ToSeedInvestmentDistributionResponse(result *appanalytics.SeedInvestmentDistributionResult) SeedInvestmentDistributionResponse {
+func ToSeedInvestmentDistributionResponse(result *analytics.SeedInvestmentDistributionResult) SeedInvestmentDistributionResponse {
 	if result == nil {
 		return SeedInvestmentDistributionResponse{}
 	}
@@ -116,7 +116,7 @@ func ToSeedInvestmentDistributionResponse(result *appanalytics.SeedInvestmentDis
 	return out
 }
 
-func ToBestTeamsResponse(results []appanalytics.BestInvestmentResult) BestTeamsResponse {
+func ToBestTeamsResponse(results []analytics.BestInvestmentResult) BestTeamsResponse {
 	out := BestTeamsResponse{Teams: make([]BestTeam, 0, len(results))}
 	for _, bi := range results {
 		out.Teams = append(out.Teams, BestTeam{
@@ -140,7 +140,7 @@ func ToBestTeamsResponse(results []appanalytics.BestInvestmentResult) BestTeamsR
 	return out
 }
 
-func ToBestInvestmentsResponse(results []appanalytics.BestInvestmentResult) BestInvestmentsResponse {
+func ToBestInvestmentsResponse(results []analytics.BestInvestmentResult) BestInvestmentsResponse {
 	out := BestInvestmentsResponse{Investments: make([]BestInvestment, 0, len(results))}
 	for _, bi := range results {
 		out.Investments = append(out.Investments, BestInvestment{
@@ -164,7 +164,7 @@ func ToBestInvestmentsResponse(results []appanalytics.BestInvestmentResult) Best
 	return out
 }
 
-func ToInvestmentLeaderboardResponse(results []appanalytics.InvestmentLeaderboardResult) InvestmentLeaderboardResponse {
+func ToInvestmentLeaderboardResponse(results []analytics.InvestmentLeaderboardResult) InvestmentLeaderboardResponse {
 	out := InvestmentLeaderboardResponse{Investments: make([]InvestmentLeaderboardRow, 0, len(results))}
 	for _, inv := range results {
 		out.Investments = append(out.Investments, InvestmentLeaderboardRow{
@@ -185,7 +185,7 @@ func ToInvestmentLeaderboardResponse(results []appanalytics.InvestmentLeaderboar
 	return out
 }
 
-func ToEntryLeaderboardResponse(results []appanalytics.EntryLeaderboardResult) EntryLeaderboardResponse {
+func ToEntryLeaderboardResponse(results []analytics.EntryLeaderboardResult) EntryLeaderboardResponse {
 	out := EntryLeaderboardResponse{Entries: make([]EntryLeaderboardRow, 0, len(results))}
 	for _, e := range results {
 		out.Entries = append(out.Entries, EntryLeaderboardRow{
@@ -203,7 +203,7 @@ func ToEntryLeaderboardResponse(results []appanalytics.EntryLeaderboardResult) E
 	return out
 }
 
-func ToCareerLeaderboardResponse(results []appanalytics.CareerLeaderboardResult) CareerLeaderboardResponse {
+func ToCareerLeaderboardResponse(results []analytics.CareerLeaderboardResult) CareerLeaderboardResponse {
 	out := CareerLeaderboardResponse{Careers: make([]CareerLeaderboardRow, 0, len(results))}
 	for _, c := range results {
 		out.Careers = append(out.Careers, CareerLeaderboardRow{

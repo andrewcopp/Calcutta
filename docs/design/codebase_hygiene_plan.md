@@ -35,6 +35,8 @@ Tasks:
 - [x] Extract outcome calculation logic into `engine.go` (same package, pure helpers where possible).
 - [x] Extract DB writes into `writer.go`.
 - [x] Keep the exported `Service` API stable.
+- [x] Make detailed per-simulation outcomes ephemeral by default; persist aggregates + snapshots; allow opt-in persistence via `CALCUTTA_PERSIST_SIMULATION_DETAILS=true`.
+- [x] Update ML analytics queries/sqlc so `total_simulations` does not require persisted per-simulation entry outcomes.
 
 ### 3) Backend: Introduce internal/features wrappers (hybrid architecture)
 
@@ -63,7 +65,7 @@ Tasks:
 
 - [x] Reorganize `backend/ops/*.sql` into `backend/ops/db/{admin,audits,maintenance}/*.sql`.
 - [x] Update references in `Makefile` and docs.
-- [ ] Add `backend/ops/README.md` describing script intent + how to run.
+- [x] Add `backend/ops/README.md` describing script intent + how to run.
 
 ### 5) Backend: Reduce handler boilerplate for analytics
 
