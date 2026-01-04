@@ -23,7 +23,7 @@ func main() {
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Core calcutta UUID")
 	flag.StringVar(&runKey, "run-key", "", "Optional run_key (defaults to random UUID)")
 	flag.StringVar(&name, "name", "", "Optional human-readable run name")
-	flag.StringVar(&optimizerKey, "optimizer", "marginal_gain_v1", "Optimizer key")
+	flag.StringVar(&optimizerKey, "optimizer", "minlp_v1", "Optimizer key")
 	flag.IntVar(&budgetPoints, "budget", 0, "Budget points (default: calcutta budget_points)")
 	flag.IntVar(&minTeams, "min-teams", 0, "Min teams (default: calcutta min_teams)")
 	flag.IntVar(&maxTeams, "max-teams", 0, "Max teams (default: calcutta max_teams)")

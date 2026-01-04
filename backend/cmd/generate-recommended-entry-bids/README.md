@@ -15,7 +15,7 @@ go run ./backend/cmd/generate-recommended-entry-bids --calcutta-id <uuid>
 - `--calcutta-id` (required) Core calcutta UUID
 - `--run-key` (optional) Run key (defaults to random UUID)
 - `--name` (optional) Human-readable run name
-- `--optimizer` (default: `marginal_gain_v1`) Optimizer key
+- `--optimizer` (default: `minlp_v1`) Optimizer key
 - `--budget` (optional) Budget points (default: calcutta `budget_points`)
 - `--min-teams` (optional) Default: calcutta `min_teams`
 - `--max-teams` (optional) Default: calcutta `max_teams`

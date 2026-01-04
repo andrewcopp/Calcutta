@@ -136,7 +136,10 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 
 	optimizerKey := p.OptimizerKey
 	if optimizerKey == "" {
-		optimizerKey = "marginal_gain_v1"
+		optimizerKey = "minlp_v1"
+	}
+	if optimizerKey != "minlp_v1" {
+		return nil, fmt.Errorf("unsupported optimizer %q (supported: minlp_v1)", optimizerKey)
 	}
 
 	alloc, err := AllocateBids(teams, AllocationParams{

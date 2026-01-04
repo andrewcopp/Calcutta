@@ -1,6 +1,9 @@
 package recommended_entry_bids
 
-import "sort"
+import (
+	"math"
+	"sort"
+)
 
 type Team struct {
 	ID             string
@@ -21,6 +24,10 @@ type AllocationResult struct {
 }
 
 func AllocateBids(teams []Team, params AllocationParams) (AllocationResult, error) {
+	sort.Slice(teams, func(i, j int) bool {
+		return teams[i].ID < teams[j].ID
+	})
+
 	if params.BudgetPoints <= 0 {
 		return AllocationResult{Bids: map[string]int{}}, nil
 	}
@@ -42,90 +49,154 @@ func AllocateBids(teams []Team, params AllocationParams) (AllocationResult, erro
 		return AllocationResult{Bids: map[string]int{}}, nil
 	}
 
-	sorted := make([]Team, 0, len(teams))
-	for _, t := range teams {
-		sorted = append(sorted, t)
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		ai := objective(sorted[i], params.MinBidPoints)
-		aj := objective(sorted[j], params.MinBidPoints)
-		if ai != aj {
-			return ai > aj
+	nTeams := len(teams)
+	maxBudget := params.BudgetPoints
+	maxTeams := params.MaxTeams
+
+	negInf := math.Inf(-1)
+
+	dpPrev := make([][]float64, maxBudget+1)
+	dpCur := make([][]float64, maxBudget+1)
+	for b := 0; b <= maxBudget; b++ {
+		dpPrev[b] = make([]float64, maxTeams+1)
+		dpCur[b] = make([]float64, maxTeams+1)
+		for k := 0; k <= maxTeams; k++ {
+			dpPrev[b][k] = negInf
+			dpCur[b][k] = negInf
 		}
-		return sorted[i].ID < sorted[j].ID
-	})
+	}
+	dpPrev[0][0] = 0.0
 
-	selected := make(map[string]int)
-	remaining := params.BudgetPoints
-	for i := 0; i < len(sorted) && len(selected) < params.MinTeams; i++ {
-		selected[sorted[i].ID] = params.MinBidPoints
-		remaining -= params.MinBidPoints
+	prevBudget := make([][][]int, nTeams+1)
+	prevCount := make([][][]int, nTeams+1)
+	chosenBid := make([][][]int, nTeams+1)
+	for i := 0; i <= nTeams; i++ {
+		prevBudget[i] = make([][]int, maxBudget+1)
+		prevCount[i] = make([][]int, maxBudget+1)
+		chosenBid[i] = make([][]int, maxBudget+1)
+		for b := 0; b <= maxBudget; b++ {
+			prevBudget[i][b] = make([]int, maxTeams+1)
+			prevCount[i][b] = make([]int, maxTeams+1)
+			chosenBid[i][b] = make([]int, maxTeams+1)
+			for k := 0; k <= maxTeams; k++ {
+				prevBudget[i][b][k] = -1
+				prevCount[i][b][k] = -1
+				chosenBid[i][b][k] = -1
+			}
+		}
 	}
 
-	if remaining < 0 {
+	for i := 0; i < nTeams; i++ {
+		for b := 0; b <= maxBudget; b++ {
+			for k := 0; k <= maxTeams; k++ {
+				dpCur[b][k] = negInf
+			}
+		}
+
+		t := teams[i]
+
+		options := make([]int, 0, (params.MaxBidPoints-params.MinBidPoints+1)+1)
+		options = append(options, 0)
+		for bid := params.MinBidPoints; bid <= params.MaxBidPoints; bid++ {
+			options = append(options, bid)
+		}
+
+		for b := 0; b <= maxBudget; b++ {
+			for k := 0; k <= maxTeams; k++ {
+				base := dpPrev[b][k]
+				if math.IsInf(base, -1) {
+					continue
+				}
+				for _, bid := range options {
+					cost := bid
+					if b+cost > maxBudget {
+						continue
+					}
+					k2 := k
+					if bid > 0 {
+						k2 = k + 1
+					}
+					if k2 > maxTeams {
+						continue
+					}
+
+					v := base + objective(t, bid)
+					cur := dpCur[b+cost][k2]
+					if v > cur {
+						dpCur[b+cost][k2] = v
+						prevBudget[i+1][b+cost][k2] = b
+						prevCount[i+1][b+cost][k2] = k
+						chosenBid[i+1][b+cost][k2] = bid
+						continue
+					}
+					if v == cur {
+						prevBid := chosenBid[i+1][b+cost][k2]
+						if prevBid < 0 || bid < prevBid {
+							prevBudget[i+1][b+cost][k2] = b
+							prevCount[i+1][b+cost][k2] = k
+							chosenBid[i+1][b+cost][k2] = bid
+						}
+					}
+				}
+			}
+		}
+
+		dpPrev, dpCur = dpCur, dpPrev
+	}
+
+	bestV := negInf
+	bestBudget := -1
+	bestTeams := -1
+	for b := 0; b <= maxBudget; b++ {
+		for k := params.MinTeams; k <= maxTeams; k++ {
+			v := dpPrev[b][k]
+			if math.IsInf(v, -1) {
+				continue
+			}
+			if v > bestV {
+				bestV = v
+				bestBudget = b
+				bestTeams = k
+				continue
+			}
+			if v == bestV {
+				if b > bestBudget {
+					bestBudget = b
+					bestTeams = k
+					continue
+				}
+				if b == bestBudget && k < bestTeams {
+					bestTeams = k
+				}
+			}
+		}
+	}
+	if bestBudget < 0 || bestTeams < 0 || math.IsInf(bestV, -1) {
 		return AllocationResult{Bids: map[string]int{}}, nil
 	}
 
-	byID := make(map[string]Team, len(sorted))
-	for _, t := range sorted {
-		byID[t.ID] = t
-	}
-
-	for remaining > 0 {
-		selectedIDs := make([]string, 0, len(selected))
-		for teamID := range selected {
-			selectedIDs = append(selectedIDs, teamID)
-		}
-		sort.Strings(selectedIDs)
-
-		bestGainPerPoint := -1.0
-		bestTeamID := ""
-		bestIsNew := false
-		bestCost := 0
-
-		for _, teamID := range selectedIDs {
-			bid := selected[teamID]
-			if bid >= params.MaxBidPoints {
-				continue
-			}
-			gain := marginalGain(byID[teamID], bid)
-			if gain > bestGainPerPoint || (gain == bestGainPerPoint && teamID < bestTeamID) {
-				bestGainPerPoint = gain
-				bestTeamID = teamID
-				bestIsNew = false
-				bestCost = 1
-			}
-		}
-
-		if len(selected) < params.MaxTeams && remaining >= params.MinBidPoints {
-			for _, t := range sorted {
-				if _, ok := selected[t.ID]; ok {
-					continue
-				}
-				gain := objective(t, params.MinBidPoints)
-				gainPerPoint := gain / float64(params.MinBidPoints)
-				if gainPerPoint > bestGainPerPoint || (gainPerPoint == bestGainPerPoint && t.ID < bestTeamID) {
-					bestGainPerPoint = gainPerPoint
-					bestTeamID = t.ID
-					bestIsNew = true
-					bestCost = params.MinBidPoints
-				}
-			}
-		}
-
-		if bestTeamID == "" {
+	bids := make(map[string]int)
+	b := bestBudget
+	k := bestTeams
+	for i := nTeams; i >= 1; i-- {
+		bid := chosenBid[i][b][k]
+		if bid < 0 {
 			break
 		}
-		if bestIsNew {
-			selected[bestTeamID] = params.MinBidPoints
-			remaining -= bestCost
-			continue
+		if bid > 0 {
+			teamID := teams[i-1].ID
+			bids[teamID] = bid
 		}
-		selected[bestTeamID]++
-		remaining -= bestCost
+		pb := prevBudget[i][b][k]
+		pk := prevCount[i][b][k]
+		if pb < 0 || pk < 0 {
+			break
+		}
+		b = pb
+		k = pk
 	}
 
-	return AllocationResult{Bids: selected}, nil
+	return AllocationResult{Bids: bids}, nil
 }
 
 func objective(t Team, bid int) float64 {
@@ -137,8 +208,4 @@ func objective(t Team, bid int) float64 {
 		return 0
 	}
 	return t.ExpectedPoints * float64(bid) / den
-}
-
-func marginalGain(t Team, bid int) float64 {
-	return objective(t, bid+1) - objective(t, bid)
 }
