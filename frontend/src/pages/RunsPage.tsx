@@ -66,8 +66,11 @@ export function RunsPage() {
                   <tr key={run.run_id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-blue-700">
                       <Link to={`/runs/${parsedYear}/${encodeURIComponent(run.run_id)}`} className="hover:underline">
-                        {run.run_id}
+                        {run.name || run.run_id}
                       </Link>
+                      {run.name && (
+                        <div className="text-xs text-gray-500 font-normal mt-0.5">{run.run_id}</div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">{run.strategy}</td>
                     <td className="px-4 py-3 text-sm text-right text-gray-700">{run.n_sims.toLocaleString()}</td>

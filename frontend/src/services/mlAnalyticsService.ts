@@ -2,6 +2,7 @@ import { apiClient } from '../api/apiClient';
 
 export type OptimizationRun = {
   run_id: string;
+  name: string;
   calcutta_id: string | null;
   strategy: string;
   n_sims: number;
@@ -53,6 +54,7 @@ export type EntryPortfolioResponse = {
 export type OurEntryDetailsResponse = {
   run: {
     run_id: string;
+    name: string;
     calcutta_id: string | null;
     strategy: string;
     n_sims: number;

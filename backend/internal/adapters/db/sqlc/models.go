@@ -600,6 +600,7 @@ type LabGoldStrategyGenerationRun struct {
 	UpdatedAt             pgtype.Timestamptz
 	DeletedAt             pgtype.Timestamptz
 	RunKey                *string
+	Name                  *string
 }
 
 type LabSilverPredictedGameOutcome struct {

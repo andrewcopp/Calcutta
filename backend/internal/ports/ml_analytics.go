@@ -53,6 +53,7 @@ type TeamPrediction struct {
 // OptimizationRun represents a strategy execution
 type OptimizationRun struct {
 	RunID        string
+	Name         string
 	CalcuttaID   *string
 	Strategy     string
 	NSims        int

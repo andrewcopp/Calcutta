@@ -38,6 +38,7 @@ def write_optimization_run(
                 """
                 INSERT INTO lab_gold.strategy_generation_runs (
                     run_key,
+                    name,
                     tournament_simulation_batch_id,
                     calcutta_id,
                     purpose,
@@ -47,15 +48,17 @@ def write_optimization_run(
                     params_json,
                     git_sha
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, '{}'::jsonb, NULL)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, '{}'::jsonb, NULL)
                 ON CONFLICT (run_key) DO UPDATE SET
                     tournament_simulation_batch_id = EXCLUDED.tournament_simulation_batch_id,
                     calcutta_id = EXCLUDED.calcutta_id,
                     optimizer_key = EXCLUDED.optimizer_key,
+                    name = EXCLUDED.name,
                     updated_at = NOW()
                 """,
                 (
                     run_id,
+                    strategy,
                     tournament_simulation_batch_id,
                     calcutta_id,
                     'moneyball_pipeline',

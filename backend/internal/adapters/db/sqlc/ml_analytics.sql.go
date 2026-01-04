@@ -670,6 +670,7 @@ func (q *Queries) GetLatestStrategyGenerationRunKeyByCoreCalcuttaID(ctx context.
 const getOptimizationRunsByYear = `-- name: GetOptimizationRunsByYear :many
 SELECT
 	COALESCE(sgr.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
 	sgr.calcutta_id,
 	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
@@ -691,6 +692,7 @@ ORDER BY sgr.created_at DESC
 
 type GetOptimizationRunsByYearRow struct {
 	RunID        *string
+	Name         interface{}
 	CalcuttaID   pgtype.UUID
 	Strategy     interface{}
 	NSims        int32
@@ -710,6 +712,7 @@ func (q *Queries) GetOptimizationRunsByYear(ctx context.Context, dollar_1 int32)
 		var i GetOptimizationRunsByYearRow
 		if err := rows.Scan(
 			&i.RunID,
+			&i.Name,
 			&i.CalcuttaID,
 			&i.Strategy,
 			&i.NSims,
@@ -831,6 +834,7 @@ const getStrategyGenerationRunByRunKey = `-- name: GetStrategyGenerationRunByRun
 SELECT
 	sgr.id,
 	COALESCE(sgr.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
 	sgr.calcutta_id,
 	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
@@ -852,6 +856,7 @@ LIMIT 1
 type GetStrategyGenerationRunByRunKeyRow struct {
 	ID           string
 	RunID        *string
+	Name         interface{}
 	CalcuttaID   pgtype.UUID
 	Strategy     interface{}
 	NSims        int32
@@ -866,6 +871,7 @@ func (q *Queries) GetStrategyGenerationRunByRunKey(ctx context.Context, dollar_1
 	err := row.Scan(
 		&i.ID,
 		&i.RunID,
+		&i.Name,
 		&i.CalcuttaID,
 		&i.Strategy,
 		&i.NSims,

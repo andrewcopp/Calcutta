@@ -38,6 +38,19 @@ func derefStringML(v *string) string {
 	return *v
 }
 
+func stringFromInterfaceML(v interface{}) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case []byte:
+		return string(x)
+	case nil:
+		return ""
+	default:
+		return fmt.Sprint(x)
+	}
+}
+
 func uuidToStringPtr(v pgtype.UUID) *string {
 	if !v.Valid {
 		return nil
@@ -341,6 +354,7 @@ func (r *MLAnalyticsRepository) GetOurEntryDetails(ctx context.Context, year int
 
 		run := ports.OptimizationRun{
 			RunID:        derefStringML(strategyRun.RunID),
+			Name:         stringFromInterfaceML(strategyRun.Name),
 			CalcuttaID:   uuidToStringPtr(strategyRun.CalcuttaID),
 			Strategy:     strategy,
 			NSims:        int(strategyRun.NSims),
@@ -581,6 +595,7 @@ func (r *MLAnalyticsRepository) GetOptimizationRuns(ctx context.Context, year in
 
 		out = append(out, ports.OptimizationRun{
 			RunID:        derefStringML(row.RunID),
+			Name:         stringFromInterfaceML(row.Name),
 			CalcuttaID:   uuidToStringPtr(row.CalcuttaID),
 			Strategy:     strategy,
 			NSims:        int(row.NSims),

@@ -198,6 +198,7 @@ func (s *Server) handleGetOurEntryDetails(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"run": map[string]interface{}{
 			"run_id":        details.Run.RunID,
+			"name":          details.Run.Name,
 			"calcutta_id":   details.Run.CalcuttaID,
 			"strategy":      details.Run.Strategy,
 			"n_sims":        details.Run.NSims,
@@ -399,6 +400,7 @@ func (s *Server) handleGetOptimizationRuns(w http.ResponseWriter, r *http.Reques
 	for i, run := range runs {
 		runsData[i] = map[string]interface{}{
 			"run_id":        run.RunID,
+			"name":          run.Name,
 			"calcutta_id":   run.CalcuttaID,
 			"strategy":      run.Strategy,
 			"n_sims":        run.NSims,

@@ -185,6 +185,7 @@ ORDER BY t.seed;
 SELECT
 	sgr.id,
 	COALESCE(sgr.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
 	sgr.calcutta_id,
 	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
@@ -283,6 +284,7 @@ ORDER BY eb.bid_points DESC;
 -- name: GetOptimizationRunsByYear :many
 SELECT
 	COALESCE(sgr.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
 	sgr.calcutta_id,
 	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
