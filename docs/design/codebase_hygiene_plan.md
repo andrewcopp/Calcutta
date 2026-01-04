@@ -103,9 +103,9 @@ Outcome: Pages become composition roots; logic and views are reusable.
 
 Tasks:
 
-- [ ] Extract major sections into `frontend/src/components/analytics/*`.
-- [ ] Consolidate analytics-related API calls into `frontend/src/services/analyticsService.ts`.
-- [ ] Keep routes and query keys stable.
+- [x] Extract major sections into `frontend/src/components/analytics/*`.
+- [x] Consolidate analytics-related API calls into `frontend/src/services/analyticsService.ts`.
+- [x] Keep routes and query keys stable.
 
 ## Execution Order
 
@@ -115,4 +115,4 @@ Tasks:
 - [x] Then (4) ops script re-org.
 - [x] Then (5) handler mapping extraction.
 - [x] Then (6) importer split.
-- [ ] Then (7) frontend cleanup.
+- [x] Then (7) frontend cleanup.
