@@ -22,9 +22,13 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	dbSchoolRepo := dbadapters.NewSchoolRepository(pool)
 	dbTournamentRepo := dbadapters.NewTournamentRepository(pool)
 
-	tm, err := coreauth.NewTokenManager(cfg.JWTSecret, time.Duration(cfg.AccessTokenTTLSeconds)*time.Second)
-	if err != nil {
-		return nil, nil, err
+	var tm *coreauth.TokenManager
+	if cfg.AuthMode != "cognito" {
+		created, err := coreauth.NewTokenManager(cfg.JWTSecret, time.Duration(cfg.AccessTokenTTLSeconds)*time.Second)
+		if err != nil {
+			return nil, nil, err
+		}
+		tm = created
 	}
 
 	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)

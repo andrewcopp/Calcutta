@@ -7,6 +7,7 @@ import (
 func TestThatLoadConfigFromEnvDefaultsJWTSecretInDevelopment(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "development")
+	t.Setenv("AUTH_MODE", "legacy")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 
@@ -25,7 +26,8 @@ func TestThatLoadConfigFromEnvDefaultsJWTSecretInDevelopment(t *testing.T) {
 func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("JWT_SECRET", "")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 
 	// WHEN
@@ -35,8 +37,65 @@ func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testi
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if cfg.JWTSecret != "" {
-		t.Fatalf("expected JWTSecret to remain empty, got %q", cfg.JWTSecret)
+	if cfg.JWTSecret != "prod-jwt-secret" {
+		t.Fatalf("expected JWTSecret to remain prod-jwt-secret, got %q", cfg.JWTSecret)
+	}
+}
+
+func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInLegacyOutsideDevelopment(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+
+	// WHEN
+	_, err := LoadConfigFromEnv()
+
+	// THEN
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "cognito")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("COGNITO_REGION", "us-east-1")
+	t.Setenv("COGNITO_USER_POOL_ID", "us-east-1_abc123")
+	t.Setenv("COGNITO_APP_CLIENT_ID", "client123")
+
+	// WHEN
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.AuthMode != "cognito" {
+		t.Fatalf("expected AuthMode cognito, got %q", cfg.AuthMode)
+	}
+}
+
+func TestThatLoadConfigFromEnvRequiresCognitoEnvVarsInCognitoMode(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "cognito")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("COGNITO_REGION", "")
+	t.Setenv("COGNITO_USER_POOL_ID", "")
+	t.Setenv("COGNITO_APP_CLIENT_ID", "")
+
+	// WHEN
+	_, err := LoadConfigFromEnv()
+
+	// THEN
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
 

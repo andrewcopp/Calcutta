@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/google/uuid"
 )
 
 type authContextKey string
@@ -18,6 +21,14 @@ const (
 
 func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.AuthMode == "dev" {
+			if userID := strings.TrimSpace(r.Header.Get("X-Dev-User")); userID != "" {
+				ctx := context.WithValue(r.Context(), authUserIDKey, userID)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+		}
+
 		h := r.Header.Get("Authorization")
 		if h == "" {
 			next.ServeHTTP(w, r)
@@ -32,6 +43,46 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 		if tok == "" {
 			next.ServeHTTP(w, r)
 			return
+		}
+
+		if s.cfg.AuthMode == "cognito" && s.cognitoJWT != nil {
+			claims, err := s.cognitoJWT.Verify(tok, time.Now())
+			if err == nil {
+				email := strings.TrimSpace(claims.Email)
+				if email != "" && s.userRepo != nil {
+					user, err := s.userRepo.GetByEmail(r.Context(), email)
+					if err == nil && user == nil && s.cfg.CognitoAutoProvision {
+						id := strings.TrimSpace(claims.Sub)
+						if _, err := uuid.Parse(id); err != nil {
+							id = uuid.NewString()
+						}
+
+						first := strings.TrimSpace(claims.GivenName)
+						last := strings.TrimSpace(claims.FamilyName)
+						if first == "" {
+							first = "User"
+						}
+						if last == "" {
+							last = "User"
+						}
+
+						created := &models.User{ID: id, Email: email, FirstName: first, LastName: last}
+						_ = s.userRepo.Create(r.Context(), created)
+						user, _ = s.userRepo.GetByEmail(r.Context(), email)
+					}
+					if err == nil && user != nil {
+						ctx := context.WithValue(r.Context(), authUserIDKey, user.ID)
+						next.ServeHTTP(w, r.WithContext(ctx))
+						return
+					}
+				}
+
+				if s.cfg.CognitoAllowUnprovisioned {
+					ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
 		}
 
 		if s.tokenManager != nil {

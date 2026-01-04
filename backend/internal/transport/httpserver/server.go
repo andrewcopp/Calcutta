@@ -14,8 +14,10 @@ type Server struct {
 	app          *app.App
 	authRepo     *AuthRepository
 	authzRepo    *AuthorizationRepository
+	userRepo     *UserRepository
 	apiKeysRepo  *APIKeysRepository
 	tokenManager *auth.TokenManager
+	cognitoJWT   *cognitoJWTVerifier
 	pool         *pgxpool.Pool
 	cfg          platform.Config
 }
@@ -23,6 +25,7 @@ type Server struct {
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) *Server {
 	authRepo := NewAuthRepository(pool)
 	authzRepo := NewAuthorizationRepository(pool)
+	userRepo := NewUserRepository(pool)
 	apiKeysRepo := NewAPIKeysRepository(pool)
 
 	a, tm, err := appbootstrap.NewApp(pool, cfg, authRepo, authzRepo)
@@ -30,12 +33,23 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) *Server {
 		log.Fatalf("failed to initialize app: %v", err)
 	}
 
+	var cognitoJWT *cognitoJWTVerifier
+	if cfg.AuthMode == "cognito" {
+		created, err := newCognitoJWTVerifier(cfg)
+		if err != nil {
+			log.Fatalf("failed to initialize cognito jwt verifier: %v", err)
+		}
+		cognitoJWT = created
+	}
+
 	return &Server{
 		app:          a,
 		authRepo:     authRepo,
 		authzRepo:    authzRepo,
+		userRepo:     userRepo,
 		apiKeysRepo:  apiKeysRepo,
 		tokenManager: tm,
+		cognitoJWT:   cognitoJWT,
 		pool:         pool,
 		cfg:          cfg,
 	}

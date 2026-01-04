@@ -9,7 +9,9 @@ import (
 // RegisterRoutes centralizes HTTP route registration
 func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerBasicRoutes(r)
-	s.registerAuthRoutes(r)
+	if s.cfg.AuthMode != "cognito" {
+		s.registerAuthRoutes(r)
+	}
 
 	protected := r.NewRoute().Subrouter()
 	protected.Use(s.requireAuthMiddleware)
@@ -24,6 +26,8 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 	r.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+	r.HandleFunc("/health/live", s.healthHandler).Methods("GET")
+	r.HandleFunc("/health/ready", s.readyHandler).Methods("GET")
 	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
 	r.HandleFunc("/api/ready", s.readyHandler).Methods("GET")
 

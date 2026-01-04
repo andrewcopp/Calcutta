@@ -21,14 +21,6 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	env := os.Getenv("NODE_ENV")
-	if env == "" {
-		env = "development"
-	}
-	if env != "development" && cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET environment variable is not set")
-	}
-
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
 		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
