@@ -64,9 +64,9 @@ Outcome: Operational SQL scripts are easier to find and run safely.
 
 Tasks:
 
-- [ ] Reorganize `backend/ops/*.sql` into `backend/ops/db/{admin,audits,maintenance}/*.sql`.
-- [ ] Update references in `Makefile` and docs.
-- [ ] Add `backend/ops/README.md` describing script intent + how to run.
+- [x] Reorganize `backend/ops/*.sql` into `backend/ops/db/{admin,audits,maintenance}/*.sql`.
+- [x] Update references in `Makefile` and docs.
+- [x] Add `backend/ops/README.md` describing script intent + how to run.
 
 ### 5) Backend: Reduce handler boilerplate for analytics
 
@@ -76,8 +76,8 @@ Outcome: Handlers read as orchestration only; DTO mapping is centralized.
 
 Tasks:
 
-- [ ] Extract analytics DTO mapping helpers to `backend/internal/transport/httpserver/dtos/mappers_analytics.go`.
-- [ ] Extract common query param parsing helpers (e.g., `limit`) into a shared `params.go`.
+- [x] Extract analytics DTO mapping helpers to `backend/internal/transport/httpserver/dtos/mappers_analytics.go`.
+- [x] Extract common query param parsing helpers (e.g., `limit`) into a shared `params.go`.
 
 ### 6) Backend: Split importer by bundle type
 
@@ -87,12 +87,27 @@ Outcome: Bundle import logic is discoverable; each bundle type is isolated.
 
 Tasks:
 
-- [ ] Move `importSchools` to `import_schools.go`.
-- [ ] Move `importTournaments` (+ helpers) to `import_tournaments.go`.
-- [ ] Move `importCalcuttas` (+ helpers) to `import_calcuttas.go`.
-- [ ] Keep `ImportFromDir` and transaction boundaries in `importer.go`.
+- [x] Move `importSchools` to `import_schools.go`.
+- [x] Move `importTournaments` (+ helpers) to `import_tournaments.go`.
+- [x] Move `importCalcuttas` (+ helpers) to `import_calcuttas.go`.
+- [x] Keep `ImportFromDir` and transaction boundaries in `importer.go`.
 
-### 7) Frontend: Split large analytics pages into components
+### 7) Frontend: Read-only runs viewer (ML analytics)
+
+Targets:
+
+- `frontend/src/pages/*`
+- `frontend/src/services/*`
+
+Outcome: Read-only UI for recent pipeline runs (Runs → Rankings → Entry drill-down), backed by `/api/v1/analytics/*`.
+
+Tasks:
+
+- [ ] Add runs list page (by year): `/runs/:year`.
+- [ ] Add run rankings page: `/runs/:year/:runId`.
+- [ ] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`.
+
+### 8) Frontend: Split large analytics pages into components
 
 Targets:
 
@@ -107,27 +122,13 @@ Tasks:
 - [ ] Consolidate analytics-related API calls into `frontend/src/services/analyticsService.ts`.
 - [ ] Keep routes and query keys stable.
 
-### 8) Frontend: Read-only runs viewer (ML analytics)
-
-Targets:
-
-- `frontend/src/pages/*`
-- `frontend/src/services/*`
-
-Outcome: Read-only UI for recent pipeline runs (Runs → Rankings → Entry drill-down), backed by `/api/v1/analytics/*`.
-
-Tasks:
-
-- [x] Add runs list page (by year): `/runs/:year`.
-- [x] Add run rankings page: `/runs/:year/:runId`.
-- [x] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`.
-
 ## Execution Order
 
 - [x] Start with (1) `analytics.sql` split (low risk, high readability win).
 - [x] Then (2) `simulated_calcutta` decomposition.
 - [x] Then (3) `internal/features` wrapper migration.
-- [ ] Then (4) ops script re-org.
-- [ ] Then (5) handler mapping extraction.
-- [ ] Then (6) importer split.
-- [ ] Then (7) frontend cleanup.
+- [x] Then (4) ops script re-org.
+- [x] Then (5) handler mapping extraction.
+- [x] Then (6) importer split.
+- [ ] Then (7) frontend runs viewer.
+- [ ] Then (8) frontend cleanup.
