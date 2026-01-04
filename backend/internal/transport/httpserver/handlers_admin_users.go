@@ -12,17 +12,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type adminUserListItem struct {
-	ID          string    `json:"id"`
-	Email       string    `json:"email"`
-	FirstName   string    `json:"first_name"`
-	LastName    string    `json:"last_name"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Labels      []string  `json:"labels"`
-	Permissions []string  `json:"permissions"`
+	ID               string     `json:"id"`
+	Email            string     `json:"email"`
+	FirstName        string     `json:"first_name"`
+	LastName         string     `json:"last_name"`
+	Status           string     `json:"status"`
+	InvitedAt        *time.Time `json:"invited_at"`
+	LastInviteSentAt *time.Time `json:"last_invite_sent_at"`
+	InviteExpiresAt  *time.Time `json:"invite_expires_at"`
+	InviteConsumedAt *time.Time `json:"invite_consumed_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	Labels           []string   `json:"labels"`
+	Permissions      []string   `json:"permissions"`
 }
 
 type adminUsersListResponse struct {
@@ -32,6 +38,7 @@ type adminUsersListResponse struct {
 func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users", s.requirePermission("admin.users.read", s.adminUsersListHandler)).Methods("GET")
 	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
+	r.HandleFunc("/api/admin/users/{id}/invite/resend", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
 }
 
 func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +133,16 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
+	if statusFilter != "" {
+		switch statusFilter {
+		case "active", "invited", "requires_password_setup":
+		default:
+			writeErrorFromErr(w, r, dtos.ErrFieldInvalid("status", "invalid status"))
+			return
+		}
+	}
+
 	rows, err := s.pool.Query(r.Context(), `
 		WITH active_grants AS (
 			SELECT *
@@ -157,6 +174,11 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 			u.email,
 			u.first_name,
 			u.last_name,
+			u.status,
+			u.invited_at,
+			u.last_invite_sent_at,
+			u.invite_expires_at,
+			u.invite_consumed_at,
 			u.created_at,
 			u.updated_at,
 			COALESCE(array_agg(DISTINCT ul.key) FILTER (WHERE ul.key IS NOT NULL), ARRAY[]::text[]) AS labels,
@@ -165,9 +187,10 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN user_labels ul ON ul.user_id = u.id
 		LEFT JOIN user_permissions up ON up.user_id = u.id
 		WHERE u.deleted_at IS NULL
-		GROUP BY u.id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at
+		  AND ($1 = '' OR u.status = $1)
+		GROUP BY u.id, u.email, u.first_name, u.last_name, u.status, u.invited_at, u.last_invite_sent_at, u.invite_expires_at, u.invite_consumed_at, u.created_at, u.updated_at
 		ORDER BY u.created_at DESC
-	`)
+	`, statusFilter)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -179,10 +202,35 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 		var it adminUserListItem
 		var labels []string
 		var perms []string
-		if err := rows.Scan(&it.ID, &it.Email, &it.FirstName, &it.LastName, &it.CreatedAt, &it.UpdatedAt, &labels, &perms); err != nil {
+
+		var invitedAt pgtype.Timestamptz
+		var lastInviteSentAt pgtype.Timestamptz
+		var inviteExpiresAt pgtype.Timestamptz
+		var inviteConsumedAt pgtype.Timestamptz
+
+		if err := rows.Scan(
+			&it.ID,
+			&it.Email,
+			&it.FirstName,
+			&it.LastName,
+			&it.Status,
+			&invitedAt,
+			&lastInviteSentAt,
+			&inviteExpiresAt,
+			&inviteConsumedAt,
+			&it.CreatedAt,
+			&it.UpdatedAt,
+			&labels,
+			&perms,
+		); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
+
+		it.InvitedAt = timestamptzPtr(invitedAt)
+		it.LastInviteSentAt = timestamptzPtr(lastInviteSentAt)
+		it.InviteExpiresAt = timestamptzPtr(inviteExpiresAt)
+		it.InviteConsumedAt = timestamptzPtr(inviteConsumedAt)
 
 		sort.Strings(labels)
 		sort.Strings(perms)
@@ -197,4 +245,16 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, adminUsersListResponse{Items: items})
+}
+
+func timestamptzPtr(v pgtype.Timestamptz) *time.Time {
+	if !v.Valid {
+		return nil
+	}
+	t := v.Time
+	if t.IsZero() {
+		return nil
+	}
+	ut := t.UTC()
+	return &ut
 }

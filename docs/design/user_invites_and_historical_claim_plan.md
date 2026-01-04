@@ -34,14 +34,14 @@
 
 ### A. Users
 
-- [ ] Ensure the `users` table supports an “invited but not yet claimed” state
-- [ ] Add fields to support invite/claim tokens:
-  - [ ] `invite_token_hash` (store hash only)
-  - [ ] `invite_expires_at`
-  - [ ] `invite_consumed_at` (or `invite_claimed_at`)
-  - [ ] `invited_at`
-  - [ ] `last_invite_sent_at`
-  - [ ] `status` (or equivalent) supports `invited`, `requires_password_setup`, and `active`
+- [x] Ensure the `users` table supports an “invited but not yet claimed” state
+- [x] Add fields to support invite/claim tokens:
+  - [x] `invite_token_hash` (store hash only)
+  - [x] `invite_expires_at`
+  - [x] `invite_consumed_at` (or `invite_claimed_at`)
+  - [x] `invited_at`
+  - [x] `last_invite_sent_at`
+  - [x] `status` (or equivalent) supports `invited`, `requires_password_setup`, and `active`
 
 ### B. Preserve historical traceability on entries
 
@@ -56,12 +56,12 @@
 
 ## Migrations
 
-- [ ] Add migration(s) for invite/claim columns
+- [x] Add migration(s) for invite/claim columns
 - [ ] Add migration(s) for `legacy_entry_name` if not already present
 - [ ] Add indexes:
   - [ ] `users(email)` unique
-  - [ ] `users(invite_expires_at)` (optional)
-  - [ ] `users(status)` (optional)
+  - [x] `users(invite_expires_at)` (optional)
+  - [x] `users(status)` (optional)
 - [ ] Add constraints:
   - [ ] Ensure `invite_token_hash` cannot be reused after `invite_consumed_at` is set
 
@@ -82,35 +82,35 @@
 
 ### Token design
 
-- [ ] Use a cryptographically secure random token (at least 128 bits; 256 bits is fine)
-- [ ] Store only a hash in the DB (e.g. SHA-256(token))
-- [ ] Enforce:
-  - [ ] Expiration check
-  - [ ] Single-use (`invite_consumed_at IS NULL`)
-  - [ ] Invalidate previous invites on resend
+- [x] Use a cryptographically secure random token (at least 128 bits; 256 bits is fine)
+- [x] Store only a hash in the DB (e.g. SHA-256(token))
+- [x] Enforce:
+  - [x] Expiration check
+  - [x] Single-use (`invite_consumed_at IS NULL`)
+  - [x] Invalidate previous invites on resend
 
 ### Flows
 
 - [ ] **Admin send invite**
-  - [ ] Generates token + saves hash/expiry
+  - [x] Generates token + saves hash/expiry
   - [ ] Sends email with claim URL
 - [ ] **Accept invite**
-  - [ ] Validates token
-  - [ ] Marks token consumed
-  - [ ] Transitions user to “claim in progress” or directly to “active” depending on UX
+  - [x] Validates token
+  - [x] Marks token consumed
+  - [x] Transitions user to “claim in progress” or directly to “active” depending on UX
 - [ ] **Set password** (if using “invite -> set password”)
-  - [ ] User sets password after accepting invite
-  - [ ] Transition user to `active`
+  - [x] User sets password after accepting invite
+  - [x] Transition user to `active`
 
 ## API endpoints
 
 - [ ] Admin-only:
-  - [ ] `POST /admin/users/{id}/invite` (create + send invite)
-  - [ ] `POST /admin/users/{id}/invite/resend`
+  - [x] `POST /admin/users/{id}/invite` (create + send invite)
+  - [x] `POST /admin/users/{id}/invite/resend`
   - [ ] `POST /admin/entries/{id}/reassign` (manual fix)
-  - [ ] `GET /admin/users?status=invited` (list)
+  - [x] `GET /admin/users?status=invited` (list)
 - [ ] Public:
-  - [ ] `POST /auth/invite/accept` (token -> session or next step)
+  - [x] `POST /auth/invite/accept` (token -> session or next step)
   - [ ] `POST /auth/password/set` (token/session -> password)
 
 ## Email delivery
@@ -130,10 +130,10 @@
 - [ ] Ensure invited users cannot access protected resources until claimed/active (or decide what they can see pre-claim)
 - [ ] Ensure historical entries access is by `user_id` linkage only (no name fallback for auth)
 - [ ] Admin bootstrap
-  - [ ] Add `BOOTSTRAP_ADMIN_EMAIL` support
-  - [ ] On startup, ensure there is a global admin grant for that email
+  - [x] Add `BOOTSTRAP_ADMIN_EMAIL` support
+  - [x] On startup, ensure there is a global admin grant for that email
   - [ ] If the user does not exist, create them in `requires_password_setup` and send an invite
-  - [ ] Remove or guard any “first signup becomes admin” behavior so prod bootstrap is explicit
+  - [x] Remove or guard any “first signup becomes admin” behavior so prod bootstrap is explicit
 
 ## Admin UI (minimal)
 
