@@ -273,7 +273,7 @@ func (s *Service) applyCurrentResults(ctx context.Context, bracket *models.Brack
 				continue
 			}
 
-			minRequired := s.getMinProgressForRound(round)
+			minRequired := round.MinProgressRequired()
 			team1Progress := team1.Wins + team1.Byes
 			team2Progress := team2.Wins + team2.Byes
 
@@ -317,25 +317,4 @@ func (s *Service) applyCurrentResults(ctx context.Context, bracket *models.Brack
 	}
 
 	return nil
-}
-
-func (s *Service) getMinProgressForRound(round models.BracketRound) int {
-	switch round {
-	case models.RoundFirstFour:
-		return 0
-	case models.RoundOf64:
-		return 1
-	case models.RoundOf32:
-		return 2
-	case models.RoundSweet16:
-		return 3
-	case models.RoundElite8:
-		return 4
-	case models.RoundFinalFour:
-		return 5
-	case models.RoundChampionship:
-		return 6
-	default:
-		return 0
-	}
 }

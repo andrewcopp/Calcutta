@@ -18,6 +18,43 @@ const (
 	RoundChampionship BracketRound = "championship"
 )
 
+type bracketRoundMeta struct {
+	order       int
+	minProgress int
+	storageInt  int
+}
+
+var bracketRoundMetaByRound = map[BracketRound]bracketRoundMeta{
+	RoundFirstFour:    {order: 1, minProgress: 0, storageInt: 6},
+	RoundOf64:         {order: 2, minProgress: 1, storageInt: 5},
+	RoundOf32:         {order: 3, minProgress: 2, storageInt: 4},
+	RoundSweet16:      {order: 4, minProgress: 3, storageInt: 3},
+	RoundElite8:       {order: 5, minProgress: 4, storageInt: 2},
+	RoundFinalFour:    {order: 6, minProgress: 5, storageInt: 1},
+	RoundChampionship: {order: 7, minProgress: 6, storageInt: 0},
+}
+
+func (r BracketRound) Order() int {
+	if m, ok := bracketRoundMetaByRound[r]; ok {
+		return m.order
+	}
+	return 999
+}
+
+func (r BracketRound) MinProgressRequired() int {
+	if m, ok := bracketRoundMetaByRound[r]; ok {
+		return m.minProgress
+	}
+	return 0
+}
+
+func (r BracketRound) StorageInt() int {
+	if m, ok := bracketRoundMetaByRound[r]; ok {
+		return m.storageInt
+	}
+	return 999
+}
+
 // BracketGame represents a single game in the bracket with its participants
 type BracketGame struct {
 	GameID       string       `json:"gameId"`

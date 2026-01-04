@@ -168,7 +168,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 		w1 := team1WinCounts[k]
 		pTeam1 := float64(w1) / float64(c)
 
-		roundInt := roundIntFromRound(meta.round)
+		roundInt := meta.round.StorageInt()
 		mv := (*string)(nil)
 		if p.ModelVersion != "" {
 			mv = &p.ModelVersion
@@ -419,48 +419,6 @@ func sigmoid(x float64) float64 {
 	return z / (1.0 + z)
 }
 
-func roundIntFromRound(r models.BracketRound) int {
-	switch r {
-	case models.RoundChampionship:
-		return 0
-	case models.RoundFinalFour:
-		return 1
-	case models.RoundElite8:
-		return 2
-	case models.RoundSweet16:
-		return 3
-	case models.RoundOf32:
-		return 4
-	case models.RoundOf64:
-		return 5
-	case models.RoundFirstFour:
-		return 6
-	default:
-		return 999
-	}
-}
-
-func roundOrder(r models.BracketRound) int {
-	switch r {
-	case models.RoundFirstFour:
-		return 1
-	case models.RoundOf64:
-		return 2
-	case models.RoundOf32:
-		return 3
-	case models.RoundSweet16:
-		return 4
-	case models.RoundElite8:
-		return 5
-	case models.RoundFinalFour:
-		return 6
-	case models.RoundChampionship:
-		return 7
-	default:
-		return 999
-	}
-}
-
 func prepareGames(bracket *models.BracketStructure) ([]*models.BracketGame, map[string]map[int]string, map[string]gameMeta) {
 	games := make([]*models.BracketGame, 0, len(bracket.Games))
 	prevByNext := make(map[string]map[int]string)
@@ -474,7 +432,7 @@ func prepareGames(bracket *models.BracketStructure) ([]*models.BracketGame, map[
 		metaByGame[g.GameID] = gameMeta{
 			gameID: g.GameID,
 			round:  g.Round,
-			order:  roundOrder(g.Round),
+			order:  g.Round.Order(),
 			sort:   g.SortOrder,
 		}
 		if g.NextGameID != "" && (g.NextGameSlot == 1 || g.NextGameSlot == 2) {
@@ -491,8 +449,8 @@ func prepareGames(bracket *models.BracketStructure) ([]*models.BracketGame, map[
 		gi := games[i]
 		gj := games[j]
 
-		ri := roundOrder(gi.Round)
-		rj := roundOrder(gj.Round)
+		ri := gi.Round.Order()
+		rj := gj.Round.Order()
 		if ri != rj {
 			return ri < rj
 		}

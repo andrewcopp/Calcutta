@@ -58,29 +58,20 @@ export const TournamentViewPage: React.FC = () => {
     const teams = teamsQuery.data || [];
     return [...teams].sort((a, b) => {
       let comparison = 0;
-      
-      switch (sortField) {
-        case 'seed':
-          comparison = a.seed - b.seed;
-          break;
-        case 'school':
-          const schoolA = schools[a.schoolId]?.name || '';
-          const schoolB = schools[b.schoolId]?.name || '';
-          comparison = schoolA.localeCompare(schoolB);
-          break;
-        case 'byes':
-          comparison = a.byes - b.byes;
-          break;
-        case 'wins':
-          comparison = a.wins - b.wins;
-          break;
-        case 'status':
-          // Sort eliminated teams to the bottom
-          comparison = (a.eliminated ? 1 : 0) - (b.eliminated ? 1 : 0);
-          break;
-        default:
-          comparison = 0;
-      }
+
+      const schoolA = schools[a.schoolId]?.name || '';
+      const schoolB = schools[b.schoolId]?.name || '';
+
+      const comparisons: Record<SortField, number> = {
+        seed: a.seed - b.seed,
+        school: schoolA.localeCompare(schoolB),
+        byes: a.byes - b.byes,
+        wins: a.wins - b.wins,
+        // Sort eliminated teams to the bottom
+        status: (a.eliminated ? 1 : 0) - (b.eliminated ? 1 : 0),
+      };
+
+      comparison = comparisons[sortField] ?? 0;
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });

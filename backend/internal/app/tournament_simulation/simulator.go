@@ -121,8 +121,8 @@ func prepareGames(bracket *models.BracketStructure) ([]*models.BracketGame, map[
 		gi := games[i]
 		gj := games[j]
 
-		ri := roundOrder(gi.Round)
-		rj := roundOrder(gj.Round)
+		ri := gi.Round.Order()
+		rj := gj.Round.Order()
 		if ri != rj {
 			return ri < rj
 		}
@@ -143,7 +143,7 @@ func collectTeams(bracket *models.BracketStructure, games []*models.BracketGame)
 		if g == nil {
 			continue
 		}
-		ro := roundOrder(g.Round)
+		ro := g.Round.Order()
 		if g.Team1 != nil && g.Team1.TeamID != "" {
 			seen[g.Team1.TeamID] = struct{}{}
 			if prev, ok := minRound[g.Team1.TeamID]; !ok || ro < prev {
@@ -165,7 +165,7 @@ func collectTeams(bracket *models.BracketStructure, games []*models.BracketGame)
 	sort.Strings(teams)
 
 	baseByes := make(map[string]int, len(teams))
-	firstFourOrder := roundOrder(models.RoundFirstFour)
+	firstFourOrder := models.RoundFirstFour.Order()
 	for _, tid := range teams {
 		ro := minRound[tid]
 		if ro != firstFourOrder {
@@ -265,25 +265,4 @@ func runOneSimulation(
 	}
 
 	return nil
-}
-
-func roundOrder(r models.BracketRound) int {
-	switch r {
-	case models.RoundFirstFour:
-		return 1
-	case models.RoundOf64:
-		return 2
-	case models.RoundOf32:
-		return 3
-	case models.RoundSweet16:
-		return 4
-	case models.RoundElite8:
-		return 5
-	case models.RoundFinalFour:
-		return 6
-	case models.RoundChampionship:
-		return 7
-	default:
-		return 999
-	}
 }

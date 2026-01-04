@@ -62,6 +62,6 @@ func BenchmarkRoundOrder(b *testing.B) {
 
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = roundOrder(rounds[i%len(rounds)])
+		_ = rounds[i%len(rounds)].Order()
 	}
 }
