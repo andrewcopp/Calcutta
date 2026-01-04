@@ -38,10 +38,18 @@ SELECT
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision as rational,
-  (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as predicted,
+  (COALESCE(
+    spms_t.predicted_share,
+    (COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)),
+    0.0::double precision
+  ) * (SELECT pool_size FROM total_pool))::double precision as predicted,
   CASE
     WHEN (COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) > 0
-    THEN ((COALESCE(spms_t.predicted_share, 0.0) * (SELECT pool_size FROM total_pool)) -
+    THEN ((COALESCE(
+      spms_t.predicted_share,
+      (COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)),
+      0.0::double precision
+    ) * (SELECT pool_size FROM total_pool)) -
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool))) /
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
@@ -107,10 +115,18 @@ SELECT
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision as rational,
-  (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as predicted,
+  (COALESCE(
+    spms_t.predicted_share,
+    (COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)),
+    0.0::double precision
+  ) * (SELECT pool_size FROM total_pool))::double precision as predicted,
   CASE
     WHEN (COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool) > 0
-    THEN ((COALESCE(spms_t.predicted_share, 0.0) * (SELECT pool_size FROM total_pool)) -
+    THEN ((COALESCE(
+      spms_t.predicted_share,
+      (COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)),
+      0.0::double precision
+    ) * (SELECT pool_size FROM total_pool)) -
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool))) /
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
@@ -303,6 +319,10 @@ team_expected_points AS (
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM latest_strategy_generation)
   GROUP BY st.team_id
+),
+total_expected_points AS (
+  SELECT SUM(expected_points) AS total_ev
+  FROM team_expected_points
 )
 SELECT
   t.id as team_id,
@@ -310,7 +330,11 @@ SELECT
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
-  (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
+  (COALESCE(
+    spms_t.predicted_share,
+    (COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)),
+    0.0::double precision
+  ) * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.bid_points, 0.0)::double precision as our_bid
 FROM core.teams t
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
@@ -374,6 +398,10 @@ team_expected_points AS (
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id
+),
+total_expected_points AS (
+  SELECT SUM(expected_points) AS total_ev
+  FROM team_expected_points
 )
 SELECT
   t.id as team_id,
@@ -381,7 +409,11 @@ SELECT
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
-  (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
+  (COALESCE(
+    spms_t.predicted_share,
+    (COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)),
+    0.0::double precision
+  ) * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.bid_points, 0.0)::double precision as our_bid
 FROM core.teams t
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL

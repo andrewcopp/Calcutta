@@ -317,16 +317,18 @@ type CoreTournament struct {
 }
 
 type DerivedCalcutta struct {
-	ID             string
-	TournamentID   string
-	Name           string
-	MinTeams       int32
-	MaxTeams       int32
-	MaxBidPoints   int32
-	CreatedAt      pgtype.Timestamptz
-	CoreCalcuttaID pgtype.UUID
-	UpdatedAt      pgtype.Timestamptz
-	DeletedAt      pgtype.Timestamptz
+	ID               string
+	CoreCalcuttaID   string
+	TournamentID     string
+	CoreTournamentID string
+	OwnerID          string
+	Name             string
+	MinTeams         int32
+	MaxTeams         int32
+	MaxBid           int32
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
 }
 
 type DerivedCalcuttaEvaluationRun struct {
@@ -542,29 +544,34 @@ type DerivedStrategyGenerationRun struct {
 }
 
 type DerivedTeam struct {
-	ID           string
-	TournamentID string
-	SchoolSlug   string
-	SchoolName   string
-	Seed         *int32
-	Region       *string
-	KenpomNet    *float64
-	KenpomAdjEm  *float64
-	KenpomAdjO   *float64
-	KenpomAdjD   *float64
-	KenpomAdjT   *float64
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
+	ID               string
+	CoreTeamID       string
+	TournamentID     string
+	CoreTournamentID string
+	SchoolName       *string
+	Seed             int32
+	Region           string
+	KenpomNet        *float64
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
 }
 
 type DerivedTournament struct {
-	ID               string
-	Season           int32
-	CreatedAt        pgtype.Timestamptz
-	CoreTournamentID pgtype.UUID
-	UpdatedAt        pgtype.Timestamptz
-	DeletedAt        pgtype.Timestamptz
+	ID                   string
+	CoreTournamentID     string
+	Season               *int32
+	Name                 string
+	ImportKey            string
+	Rounds               int32
+	StartingAt           pgtype.Timestamptz
+	FinalFourTopLeft     *string
+	FinalFourBottomLeft  *string
+	FinalFourTopRight    *string
+	FinalFourBottomRight *string
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
 }
 
 type GoldDetailedInvestmentReport struct {
