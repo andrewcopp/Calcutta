@@ -176,6 +176,10 @@ func (s *Service) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*
 	return s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entryID)
 }
 
+func (s *Service) GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error) {
+	return s.ports.PortfolioReader.GetPortfolio(ctx, id)
+}
+
 func (s *Service) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
 	return s.ports.TeamReader.GetTournamentTeam(ctx, id)
 }

@@ -79,6 +79,26 @@ func (r *AuthRepository) RevokeSession(ctx context.Context, sessionID string) er
 	return r.q.RevokeAuthSession(ctx, sessionID)
 }
 
+func (r *AuthRepository) IsUserActive(ctx context.Context, userID string) (bool, error) {
+	if userID == "" {
+		return false, nil
+	}
+
+	var status string
+	err := r.pool.QueryRow(ctx, `
+		SELECT status
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID).Scan(&status)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return status == "active", nil
+}
+
 func authSessionFromRow(id, userID, refreshTokenHash string, expiresAt, revokedAt pgtype.Timestamptz) *AuthSession {
 	var revoked *time.Time
 	if revokedAt.Valid {

@@ -23,10 +23,18 @@ type Result struct {
 
 type Service struct {
 	userRepo   ports.UserRepository
-	authRepo   *dbadapters.AuthRepository
+	authRepo   authRepository
 	authzRepo  *dbadapters.AuthorizationRepository
 	tokenMgr   *coreauth.TokenManager
 	refreshTTL time.Duration
+}
+
+type authRepository interface {
+	CreateSession(ctx context.Context, userID, refreshTokenHash, userAgent, ipAddress string, expiresAt time.Time) (string, error)
+	GetSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (*dbadapters.AuthSession, error)
+	RotateRefreshToken(ctx context.Context, sessionID, newRefreshTokenHash string, newExpiresAt time.Time) error
+	RevokeSession(ctx context.Context, sessionID string) error
+	IsUserActive(ctx context.Context, userID string) (bool, error)
 }
 
 func New(userRepo ports.UserRepository, authRepo *dbadapters.AuthRepository, authzRepo *dbadapters.AuthorizationRepository, tokenMgr *coreauth.TokenManager, refreshTTL time.Duration) *Service {
@@ -46,6 +54,13 @@ func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddre
 		return nil, err
 	}
 	if user == nil {
+		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
+	}
+	ok, err := s.authRepo.IsUserActive(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
 	}
 	if user.PasswordHash == nil || *user.PasswordHash == "" {
@@ -150,6 +165,21 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
 	}
 
+	user, err := s.userRepo.GetByID(ctx, sess.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
+	}
+	ok, err := s.authRepo.IsUserActive(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
+	}
+
 	newToken, err := coreauth.NewRefreshToken()
 	if err != nil {
 		return nil, err
@@ -163,14 +193,6 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 	accessToken, _, err := s.tokenMgr.IssueAccessToken(sess.UserID, sess.ID, now)
 	if err != nil {
 		return nil, err
-	}
-
-	user, err := s.userRepo.GetByID(ctx, sess.UserID)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
 	}
 
 	return &Result{User: user, AccessToken: accessToken, RefreshToken: newToken, RefreshExpiresAt: newExpiresAt}, nil

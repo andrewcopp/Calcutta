@@ -10,6 +10,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type authContextKey string
@@ -23,9 +24,17 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.AuthMode == "dev" {
 			if userID := strings.TrimSpace(r.Header.Get("X-Dev-User")); userID != "" {
-				ctx := context.WithValue(r.Context(), authUserIDKey, userID)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
+				if s.pool == nil {
+					ctx := context.WithValue(r.Context(), authUserIDKey, userID)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+				active, err := s.isUserActive(r.Context(), userID)
+				if err == nil && active {
+					ctx := context.WithValue(r.Context(), authUserIDKey, userID)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 			}
 		}
 
@@ -71,15 +80,22 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 						user, _ = s.userRepo.GetByEmail(r.Context(), email)
 					}
 					if err == nil && user != nil {
-						ctx := context.WithValue(r.Context(), authUserIDKey, user.ID)
-						next.ServeHTTP(w, r.WithContext(ctx))
-						return
+						active, err := s.isUserActive(r.Context(), user.ID)
+						if err == nil && active {
+							ctx := context.WithValue(r.Context(), authUserIDKey, user.ID)
+							next.ServeHTTP(w, r.WithContext(ctx))
+							return
+						}
 					}
 				}
 
 				if s.cfg.CognitoAllowUnprovisioned {
-					ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
-					next.ServeHTTP(w, r.WithContext(ctx))
+					active, err := s.isUserActive(r.Context(), claims.Sub)
+					if err == nil && active {
+						ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
+						next.ServeHTTP(w, r.WithContext(ctx))
+						return
+					}
 					return
 				}
 			}
@@ -90,10 +106,13 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 			if err == nil {
 				sess, err := s.authRepo.GetSessionByID(r.Context(), claims.Sid)
 				if err == nil && sess != nil && sess.RevokedAt == nil && !time.Now().After(sess.ExpiresAt) && sess.UserID == claims.Sub {
-					ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
-					ctx = context.WithValue(ctx, authSessionIDKey, claims.Sid)
-					next.ServeHTTP(w, r.WithContext(ctx))
-					return
+					active, err := s.isUserActive(r.Context(), claims.Sub)
+					if err == nil && active {
+						ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
+						ctx = context.WithValue(ctx, authSessionIDKey, claims.Sid)
+						next.ServeHTTP(w, r.WithContext(ctx))
+						return
+					}
 				}
 			}
 		}
@@ -103,9 +122,12 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 			h := hex.EncodeToString(sum[:])
 			k, err := s.apiKeysRepo.GetActiveByHash(r.Context(), h, time.Now().UTC())
 			if err == nil && k != nil {
-				ctx := context.WithValue(r.Context(), authUserIDKey, k.UserID)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
+				active, err := s.isUserActive(r.Context(), k.UserID)
+				if err == nil && active {
+					ctx := context.WithValue(r.Context(), authUserIDKey, k.UserID)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 			}
 		}
 
@@ -118,6 +140,25 @@ func authUserID(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+func (s *Server) isUserActive(ctx context.Context, userID string) (bool, error) {
+	if s.pool == nil || strings.TrimSpace(userID) == "" {
+		return false, nil
+	}
+	var status string
+	err := s.pool.QueryRow(ctx, `
+		SELECT status
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID).Scan(&status)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return status == "active", nil
 }
 
 func (s *Server) requireAuthMiddleware(next http.Handler) http.Handler {

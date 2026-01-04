@@ -81,3 +81,48 @@ func CanEditEntryBids(
 
 	return Decision{Allowed: true, IsAdmin: isAdmin}, nil
 }
+
+func CanViewEntryData(
+	ctx context.Context,
+	authz AuthorizationChecker,
+	userID string,
+	entry *models.CalcuttaEntry,
+	calcutta *models.Calcutta,
+) (Decision, error) {
+	if userID == "" {
+		return Decision{Allowed: false, Status: http.StatusUnauthorized, Code: "unauthorized", Message: "Authentication required"}, nil
+	}
+	if entry == nil {
+		return Decision{Allowed: false, Status: http.StatusBadRequest, Code: "entry_missing", Message: "Entry not found"}, nil
+	}
+	if calcutta == nil {
+		return Decision{Allowed: false, Status: http.StatusBadRequest, Code: "calcutta_missing", Message: "Calcutta not found"}, nil
+	}
+
+	isAdmin := false
+	if authz != nil {
+		ok, err := authz.HasPermission(ctx, userID, "global", "", permissionAdminOverride)
+		if err != nil {
+			return Decision{}, err
+		}
+		if ok {
+			isAdmin = true
+		}
+	}
+
+	authorized := false
+	if entry.UserID != nil && *entry.UserID == userID {
+		authorized = true
+	}
+	if calcutta.OwnerID == userID {
+		authorized = true
+	}
+	if isAdmin {
+		authorized = true
+	}
+	if !authorized {
+		return Decision{Allowed: false, IsAdmin: isAdmin, Status: http.StatusForbidden, Code: "forbidden", Message: "Insufficient permissions"}, nil
+	}
+
+	return Decision{Allowed: true, IsAdmin: isAdmin}, nil
+}

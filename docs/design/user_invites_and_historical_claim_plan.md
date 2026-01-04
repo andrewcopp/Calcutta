@@ -127,8 +127,8 @@
 
 ## Auth / authorization
 
-- [ ] Ensure invited users cannot access protected resources until claimed/active (or decide what they can see pre-claim)
-- [ ] Ensure historical entries access is by `user_id` linkage only (no name fallback for auth)
+- [x] Ensure invited users cannot access protected resources until claimed/active (or decide what they can see pre-claim)
+- [x] Ensure historical entries access is by `user_id` linkage only (no name fallback for auth)
 - [ ] Admin bootstrap
   - [x] Add `BOOTSTRAP_ADMIN_EMAIL` support
   - [x] On startup, ensure there is a global admin grant for that email
