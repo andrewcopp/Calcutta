@@ -18,6 +18,7 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerAdminBundleRoutes(protected)
 	s.registerAdminAPIKeyRoutes(protected)
 	s.registerAdminAnalyticsRoutes(protected)
+	s.registerAdminUsersRoutes(protected)
 	s.registerProtectedRoutes(protected)
 }
 
