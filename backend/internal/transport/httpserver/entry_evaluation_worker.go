@@ -9,6 +9,7 @@ import (
 
 	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/features/simulate_tournaments"
 	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -26,6 +27,8 @@ type entryEvaluationRequestRow struct {
 	StartingStateKey string
 	NSims            int
 	Seed             int
+	ExperimentKey    string
+	RequestSource    string
 }
 
 func (s *Server) RunEntryEvaluationWorker(ctx context.Context) {
@@ -53,6 +56,18 @@ func (s *Server) RunEntryEvaluationWorkerWithOptions(ctx context.Context, pollIn
 		workerID = "entry-eval-worker"
 	}
 
+	claimedCount := int64(0)
+	succeededCount := int64(0)
+	failedCount := int64(0)
+	lastStatsAt := time.Now().UTC()
+	lastStatsClaimed := int64(0)
+	lastStatsSucceeded := int64(0)
+	lastStatsFailed := int64(0)
+
+	var totalJobDuration time.Duration
+	var totalSimDuration time.Duration
+	var totalEvalDuration time.Duration
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -64,9 +79,52 @@ func (s *Server) RunEntryEvaluationWorkerWithOptions(ctx context.Context, pollIn
 				continue
 			}
 			if !ok {
+				if time.Since(lastStatsAt) >= 60*time.Second {
+					deltaClaimed := claimedCount - lastStatsClaimed
+					deltaSucceeded := succeededCount - lastStatsSucceeded
+					deltaFailed := failedCount - lastStatsFailed
+
+					avgJobMs := int64(0)
+					avgSimMs := int64(0)
+					avgEvalMs := int64(0)
+					if claimedCount > 0 {
+						avgJobMs = int64(totalJobDuration.Milliseconds()) / claimedCount
+						avgSimMs = int64(totalSimDuration.Milliseconds()) / claimedCount
+						avgEvalMs = int64(totalEvalDuration.Milliseconds()) / claimedCount
+					}
+
+					log.Printf("entry_eval_worker stats worker_id=%s claimed_total=%d succeeded_total=%d failed_total=%d claimed_1m=%d succeeded_1m=%d failed_1m=%d avg_job_ms=%d avg_sim_ms=%d avg_eval_ms=%d",
+						workerID,
+						claimedCount,
+						succeededCount,
+						failedCount,
+						deltaClaimed,
+						deltaSucceeded,
+						deltaFailed,
+						avgJobMs,
+						avgSimMs,
+						avgEvalMs,
+					)
+
+					lastStatsAt = time.Now().UTC()
+					lastStatsClaimed = claimedCount
+					lastStatsSucceeded = succeededCount
+					lastStatsFailed = failedCount
+				}
 				continue
 			}
-			s.processEntryEvaluationRequest(ctx, workerID, req)
+
+			claimedCount++
+			jobStart := time.Now()
+			simDur, evalDur, ok := s.processEntryEvaluationRequest(ctx, workerID, req)
+			totalJobDuration += time.Since(jobStart)
+			totalSimDuration += simDur
+			totalEvalDuration += evalDur
+			if ok {
+				succeededCount++
+			} else {
+				failedCount++
+			}
 		}
 	}
 }
@@ -123,7 +181,9 @@ func (s *Server) claimNextEntryEvaluationRequest(ctx context.Context, workerID s
 			r.excluded_entry_name,
 			r.starting_state_key,
 			r.n_sims,
-			r.seed
+			r.seed,
+			r.experiment_key,
+			r.request_source
 	`
 
 	var excluded *string
@@ -135,6 +195,8 @@ func (s *Server) claimNextEntryEvaluationRequest(ctx context.Context, workerID s
 		&row.StartingStateKey,
 		&row.NSims,
 		&row.Seed,
+		&row.ExperimentKey,
+		&row.RequestSource,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, nil
@@ -151,23 +213,41 @@ func (s *Server) claimNextEntryEvaluationRequest(ctx context.Context, workerID s
 	return row, true, nil
 }
 
-func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID string, req *entryEvaluationRequestRow) {
+func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID string, req *entryEvaluationRequestRow) (time.Duration, time.Duration, bool) {
 	if req == nil {
-		return
+		return 0, 0, false
 	}
+
+	runID := uuid.NewString()
 
 	excluded := ""
 	if req.ExcludedEntry != nil {
 		excluded = *req.ExcludedEntry
 	}
 
+	log.Printf("entry_eval_worker start worker_id=%s request_id=%s run_id=%s calcutta_id=%s entry_candidate_id=%s experiment_key=%s request_source=%s starting_state_key=%s n_sims=%d seed=%d excluded_entry_name=%q",
+		workerID,
+		req.ID,
+		runID,
+		req.CalcuttaID,
+		req.EntryCandidateID,
+		req.ExperimentKey,
+		req.RequestSource,
+		req.StartingStateKey,
+		req.NSims,
+		req.Seed,
+		excluded,
+	)
+
 	year, err := s.resolveSeasonYearByCalcuttaID(ctx, req.CalcuttaID)
 	if err != nil {
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
-		return
+		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_id=%s err=%v", workerID, req.ID, runID, err)
+		return 0, 0, false
 	}
 
 	simSvc := appsimulatetournaments.New(s.pool)
+	simStart := time.Now()
 	simRes, err := simSvc.Run(ctx, appsimulatetournaments.RunParams{
 		Season:               year,
 		NSims:                req.NSims,
@@ -177,23 +257,28 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 		ProbabilitySourceKey: "entry_eval_worker",
 		StartingStateKey:     req.StartingStateKey,
 	})
+	simDur := time.Since(simStart)
 	if err != nil {
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
-		return
+		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_id=%s phase=simulate err=%v", workerID, req.ID, runID, err)
+		return simDur, 0, false
 	}
 
 	evalSvc := appsimulatedcalcutta.New(s.pool)
+	evalStart := time.Now()
 	evalRunID, err := evalSvc.CalculateSimulatedCalcuttaForEntryCandidate(
 		ctx,
 		simRes.LabTournamentID,
-		req.ID,
+		runID,
 		excluded,
 		&simRes.TournamentSimulationBatchID,
 		req.EntryCandidateID,
 	)
+	evalDur := time.Since(evalStart)
 	if err != nil {
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
-		return
+		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_id=%s phase=evaluate err=%v", workerID, req.ID, runID, err)
+		return simDur, evalDur, false
 	}
 
 	_, err = s.pool.Exec(ctx, `
@@ -206,8 +291,18 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	`, req.ID, evalRunID)
 	if err != nil {
 		log.Printf("Error updating entry evaluation request %s to succeeded: %v", req.ID, err)
-		return
+		return simDur, evalDur, false
 	}
+
+	log.Printf("entry_eval_worker success worker_id=%s request_id=%s run_id=%s evaluation_run_id=%s sim_ms=%d eval_ms=%d",
+		workerID,
+		req.ID,
+		runID,
+		evalRunID,
+		simDur.Milliseconds(),
+		evalDur.Milliseconds(),
+	)
+	return simDur, evalDur, true
 }
 
 func (s *Server) failEntryEvaluationRequest(ctx context.Context, requestID string, err error) {
