@@ -165,6 +165,13 @@ def stage_predicted_game_outcomes(
     Returns:
         Dictionary with stage results
     """
+    if os.getenv("CALCUTTA_ALLOW_PYTHON_SILVER_WRITES", "false").lower() != "true":
+        raise RuntimeError(
+            "This stage writes lab_silver.predicted_game_outcomes from Python, "
+            "which is disabled. Use the Go-first pipeline, or set "
+            "CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true to override."
+        )
+
     print(f"⚙ Generating predicted_game_outcomes for {year}...")
     
     # Ensure tournament exists
@@ -234,6 +241,13 @@ def stage_simulate_tournaments(
     Returns:
         Dictionary with stage results including run_id
     """
+    if os.getenv("CALCUTTA_ALLOW_PYTHON_SILVER_WRITES", "false").lower() != "true":
+        raise RuntimeError(
+            "This stage writes simulation artifacts from Python, which is disabled. "
+            "Use the Go-first pipeline, or set CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true "
+            "to override."
+        )
+
     print(f"⚙ Simulating tournaments for {year} (n_sims={n_sims})...")
     
     # Ensure tournament exists
@@ -351,6 +365,13 @@ def stage_recommended_entry_bids(
     Returns:
         Dictionary with results
     """
+    if os.getenv("CALCUTTA_ALLOW_PYTHON_GOLD_WRITES", "false").lower() != "true":
+        raise RuntimeError(
+            "This stage writes lab_gold strategy outputs from Python, which is disabled. "
+            "Use the Go-first optimizer path, or set CALCUTTA_ALLOW_PYTHON_GOLD_WRITES=true "
+            "to override."
+        )
+
     print(f"⚙ Generating recommended entry bids for {year}...")
 
     if run_id is None:

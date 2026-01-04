@@ -253,15 +253,15 @@ def write_predicted_market_share(
         calcutta_id: Calcutta ID (optional, for production use)
         tournament_id: Tournament ID (optional, for migration period)
         model_version: Optional model version
-    
+
     Note: Must provide either calcutta_id or tournament_id
-    
+
     Returns:
         Number of rows inserted
     """
     if not calcutta_id and not tournament_id:
         raise ValueError("Must provide either calcutta_id or tournament_id")
-    
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             # Clear existing predictions
@@ -275,16 +275,16 @@ def write_predicted_market_share(
                     DELETE FROM lab_silver.predicted_market_share
                     WHERE tournament_id = %s
                 """, (tournament_id,))
-            
+
             # Map team_key to team_id
             df = predictions_df.copy()
             df['team_id'] = df['team_key'].map(team_id_map)
-            
+
             # Check for unmapped teams
             if df['team_id'].isna().any():
                 unmapped = df[df['team_id'].isna()]['team_key'].unique()
                 raise ValueError(f"Unmapped teams: {list(unmapped)}")
-            
+
             # Prepare values
             values = [
                 (
@@ -296,7 +296,7 @@ def write_predicted_market_share(
                 )
                 for _, row in df.iterrows()
             ]
-            
+
             # Batch insert
             psycopg2.extras.execute_batch(cur, """
                 INSERT INTO lab_silver.predicted_market_share
@@ -304,7 +304,7 @@ def write_predicted_market_share(
                  predicted_points)
                 VALUES (%s, %s, %s, %s, %s)
             """, values)
-            
+
             conn.commit()
             ref = calcutta_id or tournament_id
             logger.info(f"Wrote {len(values)} market shares for {ref}")
