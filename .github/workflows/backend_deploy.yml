@@ -1,0 +1,147 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend_deploy.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        options:
+          - staging
+          - prod
+      image_tag:
+        description: "ECR image tag to deploy (defaults to this workflow's SHA for push-to-main)"
+        type: string
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: backend-deploy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (staging)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
+
+      - name: Update ECS service to new task definition
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_STAGING }}
+          ECS_SERVICE: ${{ secrets.ECS_SERVICE_STAGING }}
+          ECS_TASK_DEFINITION: ${{ secrets.ECS_TASK_DEFINITION_STAGING }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_TASK_DEFINITION}" \
+            --query 'taskDefinition' \
+            --output json \
+            > taskdef.json
+
+          jq 'del(.taskDefinitionArn,.requiresAttributes,.compatibilities,.revision,.status,.registeredAt,.registeredBy) \
+            | .containerDefinitions[0].image = env.IMAGE_URI' taskdef.json > taskdef.updated.json
+
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.updated.json --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          aws ecs update-service \
+            --cluster "${ECS_CLUSTER}" \
+            --service "${ECS_SERVICE}" \
+            --task-definition "${NEW_TASK_DEF_ARN}" \
+            --force-new-deployment
+
+          aws ecs wait services-stable --cluster "${ECS_CLUSTER}" --services "${ECS_SERVICE}"
+
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (prod)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update ECS service to existing image tag
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_PROD }}
+          ECS_SERVICE: ${{ secrets.ECS_SERVICE_PROD }}
+          ECS_TASK_DEFINITION: ${{ secrets.ECS_TASK_DEFINITION_PROD }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${IMAGE_TAG}" ]; then
+            echo "image_tag is required for prod deploy"
+            exit 1
+          fi
+
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_TASK_DEFINITION}" \
+            --query 'taskDefinition' \
+            --output json \
+            > taskdef.json
+
+          jq 'del(.taskDefinitionArn,.requiresAttributes,.compatibilities,.revision,.status,.registeredAt,.registeredBy) \
+            | .containerDefinitions[0].image = env.IMAGE_URI' taskdef.json > taskdef.updated.json
+
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.updated.json --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          aws ecs update-service \
+            --cluster "${ECS_CLUSTER}" \
+            --service "${ECS_SERVICE}" \
+            --task-definition "${NEW_TASK_DEF_ARN}" \
+            --force-new-deployment
+
+          aws ecs wait services-stable --cluster "${ECS_CLUSTER}" --services "${ECS_SERVICE}"

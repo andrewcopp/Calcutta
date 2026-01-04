@@ -125,8 +125,8 @@ Operational guidance:
 # Non-negotiables (must be done before first real cloud deploy)
 
 ## Config + secrets contract
-- [ ] Backend: all configuration is driven by environment variables (no implicit localhost assumptions)
-- [ ] Backend: required env vars are validated on startup (fail fast with clear error)
+- [x] Backend: all configuration is driven by environment variables (no implicit localhost assumptions)
+- [x] Backend: required env vars are validated on startup (fail fast with clear error)
 - [ ] No secrets committed to git (repo + CI)
 - [ ] Use AWS SSM Parameter Store or Secrets Manager for prod/staging secrets
 - [ ] Rotate any secrets that have ever lived in local `.env` files once cloud deploy starts
@@ -147,7 +147,7 @@ Operational guidance:
 ## Authentication + authorization for admin/write paths
 - [ ] Define user roles: `admin`, `owner`, `viewer`
 - [ ] Protect all write endpoints (admin/game state updates; owner entry edits)
-- [ ] Choose auth: Cognito User Pool for `staging`/`prod`
+- [x] Choose auth: Cognito User Pool for `staging`/`prod`
 - [x] Implement backend auth behind an interface (Cognito verifier + local dev verifier)
 - [ ] Decide how roles are represented in JWT claims (Cognito Groups vs custom claims)
 - [ ] Explicit CORS allowlist for the CloudFront frontend domain
