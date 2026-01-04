@@ -140,8 +140,8 @@ Operational guidance:
 ## Health, timeouts, and safe shutdown
 - [x] Add/confirm `GET /health/live` endpoint (process is alive)
 - [x] Add/confirm `GET /health/ready` endpoint (DB reachable, migrations compatible)
-- [ ] HTTP server timeouts are configured (read/write/idle)
-- [ ] DB connection pool has explicit limits
+- [x] HTTP server timeouts are configured (read/write/idle)
+- [x] DB connection pool has explicit limits
 - [ ] Service exits cleanly on SIGTERM (ECS rolling deploys rely on this)
 
 ## Authentication + authorization for admin/write paths
@@ -152,7 +152,8 @@ Operational guidance:
 - [ ] Decide how roles are represented in JWT claims (Cognito Groups vs custom claims)
 - [ ] Explicit CORS allowlist for the CloudFront frontend domain
 - [ ] Enforce TLS everywhere (CloudFront + ALB)
-- [ ] Add basic rate limiting / request size limits to reduce abuse surface
+- [x] Add basic request size limits to reduce abuse surface
+- [x] Add basic rate limiting to reduce abuse surface
 
 ## Backups + restore drill
 - [ ] Enable automated RDS backups (with defined retention)

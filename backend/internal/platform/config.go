@@ -18,6 +18,7 @@ type Config struct {
 	HTTPIdleTimeoutSeconds          int
 	HTTPReadHeaderTimeoutSeconds    int
 	HTTPMaxBodyBytes                int64
+	RateLimitRPM                    int
 	PGXPoolMaxConns                 int32
 	PGXPoolMinConns                 int32
 	PGXPoolMaxConnLifetimeSeconds   int
@@ -112,6 +113,7 @@ func LoadConfigFromEnv() (Config, error) {
 	httpIdleTimeoutSeconds := envInt("HTTP_IDLE_TIMEOUT_SECONDS", 60, 1)
 	httpReadHeaderTimeoutSeconds := envInt("HTTP_READ_HEADER_TIMEOUT_SECONDS", 5, 1)
 	httpMaxBodyBytes := envInt64("HTTP_MAX_BODY_BYTES", 2*1024*1024, 1)
+	rateLimitRPM := envInt("RATE_LIMIT_RPM", 300, 0)
 
 	pgxPoolMaxConns := envInt("PGX_POOL_MAX_CONNS", 10, 1)
 	pgxPoolMinConns := envInt("PGX_POOL_MIN_CONNS", 0, 0)
@@ -157,6 +159,7 @@ func LoadConfigFromEnv() (Config, error) {
 		HTTPIdleTimeoutSeconds:          httpIdleTimeoutSeconds,
 		HTTPReadHeaderTimeoutSeconds:    httpReadHeaderTimeoutSeconds,
 		HTTPMaxBodyBytes:                httpMaxBodyBytes,
+		RateLimitRPM:                    rateLimitRPM,
 		PGXPoolMaxConns:                 int32(pgxPoolMaxConns),
 		PGXPoolMinConns:                 int32(pgxPoolMinConns),
 		PGXPoolMaxConnLifetimeSeconds:   pgxPoolMaxConnLifetimeSeconds,

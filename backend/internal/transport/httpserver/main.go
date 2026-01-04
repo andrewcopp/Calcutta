@@ -38,6 +38,7 @@ func Run() {
 	r.Use(requestIDMiddleware)
 	r.Use(loggingMiddleware)
 	r.Use(corsMiddleware)
+	r.Use(rateLimitMiddleware(cfg.RateLimitRPM))
 	r.Use(maxBodyBytesMiddleware(cfg.HTTPMaxBodyBytes))
 	r.Use(server.authenticateMiddleware)
 

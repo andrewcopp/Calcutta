@@ -147,6 +147,26 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T)
 	}
 }
 
+func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
+	// GIVEN
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("JWT_SECRET", "prod-jwt-secret")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	t.Setenv("RATE_LIMIT_RPM", "123")
+
+	// WHEN
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.RateLimitRPM != 123 {
+		t.Fatalf("expected RateLimitRPM 123, got %d", cfg.RateLimitRPM)
+	}
+}
+
 func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")

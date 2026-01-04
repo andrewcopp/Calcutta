@@ -3,9 +3,11 @@ package httpserver
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -118,4 +120,98 @@ func maxBodyBytesMiddleware(maxBytes int64) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+type rateLimitEntry struct {
+	windowStart time.Time
+	count       int
+	lastSeen    time.Time
+}
+
+type rateLimiter struct {
+	rpm         int
+	mu          sync.Mutex
+	byKey       map[string]*rateLimitEntry
+	lastCleanup time.Time
+}
+
+func rateLimitMiddleware(rpm int) func(http.Handler) http.Handler {
+	lim := &rateLimiter{rpm: rpm, byKey: map[string]*rateLimitEntry{}}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if lim.rpm <= 0 || r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			key := clientIP(r)
+			now := time.Now()
+
+			allowed := lim.allow(key, now)
+			if !allowed {
+				w.Header().Set("Retry-After", "60")
+				writeError(w, r, http.StatusTooManyRequests, "rate_limited", "Too Many Requests", "")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func (l *rateLimiter) allow(key string, now time.Time) bool {
+	windowStart := now.Truncate(time.Minute)
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.lastCleanup.IsZero() {
+		l.lastCleanup = now
+	}
+	if now.Sub(l.lastCleanup) > 10*time.Minute {
+		for k, v := range l.byKey {
+			if now.Sub(v.lastSeen) > 15*time.Minute {
+				delete(l.byKey, k)
+			}
+		}
+		l.lastCleanup = now
+	}
+
+	e := l.byKey[key]
+	if e == nil {
+		e = &rateLimitEntry{windowStart: windowStart, count: 0, lastSeen: now}
+		l.byKey[key] = e
+	}
+
+	if !e.windowStart.Equal(windowStart) {
+		e.windowStart = windowStart
+		e.count = 0
+	}
+
+	e.lastSeen = now
+	e.count++
+	return e.count <= l.rpm
+}
+
+func clientIP(r *http.Request) string {
+	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
+		parts := strings.Split(xff, ",")
+		if len(parts) > 0 {
+			ip := strings.TrimSpace(parts[0])
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+
+	host := strings.TrimSpace(r.Header.Get("X-Real-IP"))
+	if host != "" {
+		return host
+	}
+
+	h, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil && h != "" {
+		return h
+	}
+	return r.RemoteAddr
 }
