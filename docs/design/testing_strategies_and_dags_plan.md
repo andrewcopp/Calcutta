@@ -36,18 +36,27 @@ Frontend should:
 - trigger and inspect evaluation runs
 
 ## Scoping decisions (v1)
-- `predicted_market_share` is tournament-scoped for now.
-  - Future: scope by “investment pool / calcutta group” (not implemented yet).
-- Predicted returns are team-scoped and stored as round probabilities only.
-  - Calcutta-scoring agnostic; scoring can be applied later.
+- Predicted game outcomes are the primitive (matchup-level).
+  - Stored as discrete matchup probabilities so we can compose them into simulations and support forecasting from any tournament state.
+- Predicted market share is scoped to a calcutta.
+  - The calcutta implies the tournament (which teams to predict).
+  - Training scope is the calcutta group (nullable). If null, train on all calcuttas.
+- Calcutta scoring is applied later.
+  - We can infer predicted points/returns by combining predicted game outcomes with the calcutta scoring rules.
 
 ## Evaluation modes
 
 ### A) Evaluate a Calcutta as-is
-Goal: evaluate the actual recorded entries for a single calcutta using in-app predictions.
+Goal: forecast final standings for a single calcutta from the current tournament state.
+
+Notes:
+- Realized outcomes can be computed directly from results without evaluation.
+- Evaluations are used to compare “what we thought would happen” vs “what did happen” (who got lucky).
 
 ### B) Evaluate a single Calcutta entry for a single year
-Goal: ad hoc experimentation by creating (or importing) a single entry, then evaluating it for a single tournament year.
+Goal: atomic capability for evaluation (a single entry in a single calcutta).
+
+Note: this may not be exposed as a first-class UI workflow initially, but it is the foundational unit for benchmarking suites.
 
 ### C) Benchmark a group of entries across years
 Goal: create a group of entries across multiple years using the same selected algorithms and compare performance across all years.
@@ -66,8 +75,8 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 ### Testing Strategies DAG (registry + artifacts)
 - [ ] Design schema v1
-  - [ ] Tournament-scoped market share
-  - [ ] Tournament-scoped team predicted returns (per-round probabilities)
+  - [ ] Calcutta-scoped market share
+  - [ ] Tournament-scoped predicted game outcomes (matchup-level)
   - [ ] Minimal run metadata tables with `params_json` to avoid schema lock-in
   - [ ] Algorithm metadata + per-tournament runs
     - [ ] High-level algorithm tables describe the algorithm itself (stable identity)
@@ -75,29 +84,47 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Add algorithm registry + run metadata tables (derived.*)
   - [ ] `derived.algorithms` (generic registry by kind)
-  - [ ] Predicted returns: algorithm metadata + per-tournament runs + team probability artifacts
-  - [ ] Predicted market share: algorithm metadata + per-tournament runs + market share artifacts
+  - [ ] Predicted game outcomes: algorithm metadata + per-tournament runs + matchup artifact table
+  - [ ] Predicted market share: algorithm metadata + per-calcutta runs + market share artifact table
 
 - [ ] Update writers/readers
   - [ ] Python writers: write run metadata first, then artifacts linked to run
-  - [ ] Go readers/services: accept explicit run_id selection, default to latest
+  - [ ] Go readers/services:
+    - [ ] Accept explicit run_id selection
+    - [ ] Game outcomes: default to latest for the tournament
+    - [ ] Market share: default to latest for the calcutta if it exists; otherwise error (no naive fallback)
 
 - [ ] Discovery endpoints
   - [ ] list algorithms by kind
-  - [ ] list runs for (algorithm, tournament)
+  - [ ] list runs for (algorithm, tournament) and (algorithm, calcutta)
 
 - [ ] Strategy generation workflow
-  - [ ] Select returns run + market share run + optimizer params
-  - [ ] Generate and save entry (persist provenance)
+  - [ ] Select game-outcomes run + market share run + optimizer key
+  - [ ] Generate and save optimized entry (persist provenance)
+  - [ ] Record per-team diagnostics (original ROI vs adjusted ROI)
 
 - [ ] Evaluation workflow
   - [ ] Configure evaluation (exclude/include calcuttas, n_sims, seed)
   - [ ] Trigger evaluation run and browse results
+  - [ ] Headline metrics
+    - [ ] Mean normalized payout (primary)
+    - [ ] P(Top 1)
+    - [ ] P(In Money)
+    - [ ] Expected points vs actual points
+    - [ ] Actual finish position
 
 - [ ] Evaluation modes
   - [ ] A) Evaluate a Calcutta as-is (in-app predicted finishes)
-  - [ ] B) Evaluate a single entry for a single year (ad hoc)
+  - [ ] B) Evaluate a single entry for a single year (atomic; UI may be deferred)
   - [ ] C) Benchmark a group of entries across years (same algorithms across years)
+
+### Naming glossary
+- Algorithm: stable definition (e.g. KenPom v1, Ridge Regression v2)
+- Run: execution/application of an algorithm that produces artifacts
+- Artifact: row-level outputs (matchup probabilities, per-team market share, etc.)
+- Suite: cross-year recipe (algorithm choices + optimizer key + evaluation settings)
+- SuiteCalcuttaEvaluation: one execution of a suite for a specific calcutta (which implies tournament/year)
+- StrategyGenerationRun: persisted optimized entry (existing)
 
 ### In-Game Predictions DAG
 - [ ] Schema v1 for `predicted_game_outcomes`
