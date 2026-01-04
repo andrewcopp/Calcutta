@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
@@ -11,9 +11,12 @@ export function EntryPortfolioPage() {
     return <Navigate to="/runs" replace />;
   }
 
+  const decodedRunId = useMemo(() => decodeURIComponent(runId), [runId]);
+  const decodedEntryKey = useMemo(() => decodeURIComponent(entryKey), [entryKey]);
+
   const portfolioQuery = useQuery({
-    queryKey: ['mlAnalytics', 'entryPortfolio', parsedYear, runId, entryKey],
-    queryFn: () => mlAnalyticsService.getEntryPortfolio(parsedYear, runId, entryKey),
+    queryKey: ['mlAnalytics', 'entryPortfolio', parsedYear, decodedRunId, decodedEntryKey],
+    queryFn: () => mlAnalyticsService.getEntryPortfolio(parsedYear, decodedRunId, decodedEntryKey),
   });
 
   return (
@@ -28,8 +31,8 @@ export function EntryPortfolioPage() {
         <h1 className="text-3xl font-bold mb-2">Entry Portfolio</h1>
         <div className="text-gray-600">
           <div>Year: {parsedYear}</div>
-          <div>Run: {decodeURIComponent(runId)}</div>
-          <div>Entry: {decodeURIComponent(entryKey)}</div>
+          <div>Run: {decodedRunId}</div>
+          <div>Entry: {decodedEntryKey}</div>
         </div>
       </div>
 

@@ -50,6 +50,32 @@ export type EntryPortfolioResponse = {
   n_teams: number;
 };
 
+export type OurEntryDetailsResponse = {
+  run: {
+    run_id: string;
+    calcutta_id: string | null;
+    strategy: string;
+    n_sims: number;
+    seed: number;
+    budget_points: number;
+    created_at: string;
+  };
+  portfolio: Array<{
+    team_id: string;
+    school_name: string;
+    seed: number;
+    region: string;
+    recommended_bid_points: number;
+    expected_roi: number;
+  }>;
+  summary: {
+    mean_normalized_payout: number;
+    p_top1: number;
+    p_in_money: number;
+    percentile_rank: number;
+  };
+};
+
 export const mlAnalyticsService = {
   async getOptimizationRuns(year: number): Promise<OptimizationRunsResponse> {
     return apiClient.get<OptimizationRunsResponse>(`/v1/analytics/tournaments/${year}/runs`);
@@ -67,6 +93,12 @@ export const mlAnalyticsService = {
   async getEntryPortfolio(year: number, runId: string, entryKey: string): Promise<EntryPortfolioResponse> {
     return apiClient.get<EntryPortfolioResponse>(
       `/v1/analytics/tournaments/${year}/runs/${encodeURIComponent(runId)}/entries/${encodeURIComponent(entryKey)}/portfolio`
+    );
+  },
+
+  async getOurEntryDetails(year: number, runId: string): Promise<OurEntryDetailsResponse> {
+    return apiClient.get<OurEntryDetailsResponse>(
+      `/v1/analytics/tournaments/${year}/runs/${encodeURIComponent(runId)}/our-entry`
     );
   },
 };
