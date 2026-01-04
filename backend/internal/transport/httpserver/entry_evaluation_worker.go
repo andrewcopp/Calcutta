@@ -268,7 +268,7 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	evalStart := time.Now()
 	evalRunID, err := evalSvc.CalculateSimulatedCalcuttaForEntryCandidate(
 		ctx,
-		simRes.LabTournamentID,
+		req.CalcuttaID,
 		runID,
 		excluded,
 		&simRes.TournamentSimulationBatchID,

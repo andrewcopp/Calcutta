@@ -65,23 +65,23 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 		return "", 0, errors.New("KenPomScale must be positive")
 	}
 
-	labTournamentID, err := s.resolveLabTournamentID(ctx, p.Season)
+	coreTournamentID, err := s.resolveCoreTournamentID(ctx, p.Season)
 	if err != nil {
 		return "", 0, err
 	}
 
-	ff, err := s.loadFinalFourConfig(ctx, labTournamentID)
+	ff, err := s.loadFinalFourConfig(ctx, coreTournamentID)
 	if err != nil {
 		return "", 0, err
 	}
 
-	teams, netByTeamID, err := s.loadTeams(ctx, labTournamentID)
+	teams, netByTeamID, err := s.loadTeams(ctx, coreTournamentID)
 	if err != nil {
 		return "", 0, err
 	}
 
 	builder := appbracket.NewBracketBuilder()
-	br, err := builder.BuildBracket(labTournamentID, teams, ff)
+	br, err := builder.BuildBracket(coreTournamentID, teams, ff)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to build bracket: %w", err)
 	}
@@ -175,7 +175,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 		}
 
 		rows = append(rows, predictionRow{
-			tournamentID: labTournamentID,
+			tournamentID: coreTournamentID,
 			gameID:       meta.gameID,
 			roundInt:     roundInt,
 			team1ID:      k.team1ID,
@@ -209,21 +209,24 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 		return a.team2ID < b.team2ID
 	})
 
-	if err := s.writePredictedGameOutcomes(ctx, labTournamentID, rows); err != nil {
+	if err := s.writePredictedGameOutcomes(ctx, coreTournamentID, rows); err != nil {
 		return "", 0, err
 	}
 
-	return labTournamentID, len(rows), nil
+	return coreTournamentID, len(rows), nil
 }
 
-func (s *Service) resolveLabTournamentID(ctx context.Context, season int) (string, error) {
+func (s *Service) resolveCoreTournamentID(ctx context.Context, season int) (string, error) {
 	var id string
 	if err := s.pool.QueryRow(ctx, `
-		SELECT id
-		FROM derived.tournaments
-		WHERE season = $1::int
-		  AND deleted_at IS NULL
-		ORDER BY created_at DESC
+		SELECT t.id
+		FROM core.tournaments t
+		JOIN core.seasons s
+			ON s.id = t.season_id
+			AND s.deleted_at IS NULL
+		WHERE s.year = $1::int
+			AND t.deleted_at IS NULL
+		ORDER BY t.created_at DESC
 		LIMIT 1
 	`, season).Scan(&id); err != nil {
 		return "", err
@@ -233,15 +236,26 @@ func (s *Service) resolveLabTournamentID(ctx context.Context, season int) (strin
 
 func (s *Service) loadTeams(
 	ctx context.Context,
-	labTournamentID string,
+	coreTournamentID string,
 ) ([]*models.TournamentTeam, map[string]float64, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, seed, region, school_name, kenpom_net
-		FROM derived.teams
-		WHERE tournament_id = $1
-		  AND deleted_at IS NULL
-		ORDER BY seed ASC
-	`, labTournamentID)
+		SELECT
+			t.id,
+			t.seed,
+			t.region,
+			s.name,
+			ks.net_rtg
+		FROM core.teams t
+		JOIN core.schools s
+			ON s.id = t.school_id
+			AND s.deleted_at IS NULL
+		LEFT JOIN core.team_kenpom_stats ks
+			ON ks.team_id = t.id
+			AND ks.deleted_at IS NULL
+		WHERE t.tournament_id = $1::uuid
+			AND t.deleted_at IS NULL
+		ORDER BY t.seed ASC, s.name ASC
+	`, coreTournamentID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -290,21 +304,19 @@ func (s *Service) loadTeams(
 	return teams, netByID, nil
 }
 
-func (s *Service) loadFinalFourConfig(ctx context.Context, labTournamentID string) (*models.FinalFourConfig, error) {
+func (s *Service) loadFinalFourConfig(ctx context.Context, coreTournamentID string) (*models.FinalFourConfig, error) {
 	var tl, bl, tr, br *string
 	err := s.pool.QueryRow(ctx, `
-		SELECT ct.final_four_top_left,
-		       ct.final_four_bottom_left,
-		       ct.final_four_top_right,
-		       ct.final_four_bottom_right
-		FROM derived.tournaments bt
-		LEFT JOIN core.tournaments ct
-		  ON ct.id = bt.core_tournament_id
-		 AND ct.deleted_at IS NULL
-		WHERE bt.id = $1
-		  AND bt.deleted_at IS NULL
+		SELECT
+			final_four_top_left,
+			final_four_bottom_left,
+			final_four_top_right,
+			final_four_bottom_right
+		FROM core.tournaments
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
 		LIMIT 1
-	`, labTournamentID).Scan(&tl, &bl, &tr, &br)
+	`, coreTournamentID).Scan(&tl, &bl, &tr, &br)
 	if err != nil {
 		return nil, err
 	}

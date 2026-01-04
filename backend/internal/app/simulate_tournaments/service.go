@@ -34,7 +34,6 @@ type RunParams struct {
 }
 
 type RunResult struct {
-	LabTournamentID             string
 	CoreTournamentID            string
 	TournamentStateSnapshotID   string
 	TournamentSimulationBatchID string
@@ -74,37 +73,37 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	overallStart := time.Now()
 
 	loadStart := time.Now()
-	labTournamentID, coreTournamentID, err := s.resolveTournamentIDs(ctx, p.Season)
+	coreTournamentID, err := s.resolveCoreTournamentID(ctx, p.Season)
 	if err != nil {
 		return nil, err
 	}
 
-	ff, err := s.loadFinalFourConfig(ctx, labTournamentID)
+	ff, err := s.loadFinalFourConfig(ctx, coreTournamentID)
 	if err != nil {
 		return nil, err
 	}
 
-	teams, err := s.loadLabTeams(ctx, labTournamentID)
+	teams, err := s.loadTeams(ctx, coreTournamentID)
 	if err != nil {
 		return nil, err
 	}
 
 	builder := appbracket.NewBracketBuilder()
-	br, err := builder.BuildBracket(labTournamentID, teams, ff)
+	br, err := builder.BuildBracket(coreTournamentID, teams, ff)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}
 
-	probs, nPredRows, err := s.loadPredictedGameOutcomes(ctx, labTournamentID)
+	probs, nPredRows, err := s.loadPredictedGameOutcomes(ctx, coreTournamentID)
 	if err != nil {
 		return nil, err
 	}
 	if nPredRows == 0 {
-		return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", labTournamentID)
+		return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
 	}
 
 	if p.StartingStateKey == "post_first_four" {
-		if err := s.lockInFirstFourResults(ctx, labTournamentID, coreTournamentID, br, probs); err != nil {
+		if err := s.lockInFirstFourResults(ctx, br, probs); err != nil {
 			return nil, err
 		}
 	}
@@ -113,7 +112,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 
 	snapshotID := ""
 	if p.StartingStateKey == "post_first_four" {
-		created, err := s.createTournamentStateSnapshotFromBracket(ctx, labTournamentID, coreTournamentID, br)
+		created, err := s.createTournamentStateSnapshotFromBracket(ctx, coreTournamentID, br, teams)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +144,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 			return nil, err
 		}
 
-		inserted, err := s.copyInsertSimulatedTournaments(ctx, batchID, labTournamentID, offset, results)
+		inserted, err := s.copyInsertSimulatedTournaments(ctx, batchID, coreTournamentID, offset, results)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +155,6 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	overallDur := time.Since(overallStart)
 
 	return &RunResult{
-		LabTournamentID:             labTournamentID,
 		CoreTournamentID:            coreTournamentID,
 		TournamentStateSnapshotID:   snapshotID,
 		TournamentSimulationBatchID: batchID,
@@ -170,8 +168,6 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 
 func (s *Service) lockInFirstFourResults(
 	ctx context.Context,
-	labTournamentID string,
-	coreTournamentID string,
 	br *models.BracketStructure,
 	probs map[tsim.MatchupKey]float64,
 ) error {
@@ -180,11 +176,6 @@ func (s *Service) lockInFirstFourResults(
 	}
 	if probs == nil {
 		return errors.New("probs must not be nil")
-	}
-
-	coreByLab, err := s.mapLabTeamIDToCoreTeamID(ctx, labTournamentID, coreTournamentID)
-	if err != nil {
-		return err
 	}
 
 	for _, g := range br.Games {
@@ -203,17 +194,11 @@ func (s *Service) lockInFirstFourResults(
 			continue
 		}
 
-		core1, ok1 := coreByLab[team1]
-		core2, ok2 := coreByLab[team2]
-		if !ok1 || !ok2 {
-			return fmt.Errorf("failed to map first four teams to core: team1=%s ok=%v team2=%s ok=%v", team1, ok1, team2, ok2)
-		}
-
-		wins1, elim1, err := s.loadCoreTeamWinsEliminated(ctx, core1)
+		wins1, elim1, err := s.loadCoreTeamWinsEliminated(ctx, team1)
 		if err != nil {
 			return err
 		}
-		wins2, elim2, err := s.loadCoreTeamWinsEliminated(ctx, core2)
+		wins2, elim2, err := s.loadCoreTeamWinsEliminated(ctx, team2)
 		if err != nil {
 			return err
 		}
@@ -247,40 +232,6 @@ func (s *Service) lockInFirstFourResults(
 	return nil
 }
 
-func (s *Service) mapLabTeamIDToCoreTeamID(ctx context.Context, labTournamentID string, coreTournamentID string) (map[string]string, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT bt.id, tt.id
-		FROM derived.teams bt
-		JOIN core.schools s
-			ON s.name = bt.school_name
-			AND s.deleted_at IS NULL
-		JOIN core.teams tt
-			ON tt.school_id = s.id
-			AND tt.tournament_id = $2
-			AND tt.deleted_at IS NULL
-		WHERE bt.tournament_id = $1
-			AND bt.deleted_at IS NULL
-	`, labTournamentID, coreTournamentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	out := make(map[string]string)
-	for rows.Next() {
-		var labID string
-		var coreID string
-		if err := rows.Scan(&labID, &coreID); err != nil {
-			return nil, err
-		}
-		out[labID] = coreID
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (s *Service) loadCoreTeamWinsEliminated(ctx context.Context, coreTeamID string) (int, bool, error) {
 	var wins int
 	var eliminated bool
@@ -299,17 +250,12 @@ func (s *Service) loadCoreTeamWinsEliminated(ctx context.Context, coreTeamID str
 
 func (s *Service) createTournamentStateSnapshotFromBracket(
 	ctx context.Context,
-	labTournamentID string,
 	coreTournamentID string,
 	br *models.BracketStructure,
+	teams []*models.TournamentTeam,
 ) (string, error) {
 	if br == nil {
 		return "", errors.New("bracket must not be nil")
-	}
-
-	coreByLab, err := s.mapLabTeamIDToCoreTeamID(ctx, labTournamentID, coreTournamentID)
-	if err != nil {
-		return "", err
 	}
 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -327,8 +273,12 @@ func (s *Service) createTournamentStateSnapshotFromBracket(
 		return "", err
 	}
 
-	for labTeamID, coreTeamID := range coreByLab {
-		wins, byes, eliminated := models.CalculateWinsAndByes(labTeamID, br)
+	for _, t := range teams {
+		if t == nil || t.ID == "" {
+			continue
+		}
+		coreTeamID := t.ID
+		wins, byes, eliminated := models.CalculateWinsAndByes(coreTeamID, br)
 		_, err := tx.Exec(ctx, `
 			INSERT INTO derived.simulation_state_teams (
 				simulation_state_id,
@@ -352,40 +302,33 @@ func (s *Service) createTournamentStateSnapshotFromBracket(
 	return snapshotID, nil
 }
 
-func (s *Service) resolveTournamentIDs(ctx context.Context, season int) (string, string, error) {
-	var labID string
-	var coreID *string
+func (s *Service) resolveCoreTournamentID(ctx context.Context, season int) (string, error) {
+	var id string
 	if err := s.pool.QueryRow(ctx, `
-		SELECT id, core_tournament_id
-		FROM derived.tournaments
-		WHERE season = $1::int
-		  AND deleted_at IS NULL
-		ORDER BY created_at DESC
+		SELECT t.id
+		FROM core.tournaments t
+		JOIN core.seasons s
+			ON s.id = t.season_id
+			AND s.deleted_at IS NULL
+		WHERE s.year = $1::int
+			AND t.deleted_at IS NULL
+		ORDER BY t.created_at DESC
 		LIMIT 1
-	`, season).Scan(&labID, &coreID); err != nil {
-		return "", "", err
+	`, season).Scan(&id); err != nil {
+		return "", err
 	}
-	if coreID == nil || *coreID == "" {
-		return "", "", fmt.Errorf("core_tournament_id is NULL for season=%d", season)
-	}
-	return labID, *coreID, nil
+	return id, nil
 }
 
-func (s *Service) loadFinalFourConfig(ctx context.Context, labTournamentID string) (*models.FinalFourConfig, error) {
+func (s *Service) loadFinalFourConfig(ctx context.Context, coreTournamentID string) (*models.FinalFourConfig, error) {
 	var tl, bl, tr, br *string
 	err := s.pool.QueryRow(ctx, `
-		SELECT ct.final_four_top_left,
-		       ct.final_four_bottom_left,
-		       ct.final_four_top_right,
-		       ct.final_four_bottom_right
-		FROM derived.tournaments bt
-		LEFT JOIN core.tournaments ct
-		  ON ct.id = bt.core_tournament_id
-		 AND ct.deleted_at IS NULL
-		WHERE bt.id = $1
-		  AND bt.deleted_at IS NULL
+		SELECT final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right
+		FROM core.tournaments
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
 		LIMIT 1
-	`, labTournamentID).Scan(&tl, &bl, &tr, &br)
+	`, coreTournamentID).Scan(&tl, &bl, &tr, &br)
 	if err != nil {
 		return nil, err
 	}
@@ -420,14 +363,21 @@ func (s *Service) loadFinalFourConfig(ctx context.Context, labTournamentID strin
 	return cfg, nil
 }
 
-func (s *Service) loadLabTeams(ctx context.Context, labTournamentID string) ([]*models.TournamentTeam, error) {
+func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*models.TournamentTeam, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, seed, region, school_name
-		FROM derived.teams
-		WHERE tournament_id = $1
-		  AND deleted_at IS NULL
-		ORDER BY seed ASC
-	`, labTournamentID)
+		SELECT
+			t.id,
+			t.seed,
+			t.region,
+			s.name
+		FROM core.teams t
+		JOIN core.schools s
+			ON s.id = t.school_id
+			AND s.deleted_at IS NULL
+		WHERE t.tournament_id = $1::uuid
+			AND t.deleted_at IS NULL
+		ORDER BY t.seed ASC, s.name ASC
+	`, coreTournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -468,13 +418,13 @@ func (s *Service) loadLabTeams(ctx context.Context, labTournamentID string) ([]*
 	return out, nil
 }
 
-func (s *Service) loadPredictedGameOutcomes(ctx context.Context, labTournamentID string) (map[tsim.MatchupKey]float64, int, error) {
+func (s *Service) loadPredictedGameOutcomes(ctx context.Context, tournamentID string) (map[tsim.MatchupKey]float64, int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT game_id, team1_id, team2_id, p_team1_wins
 		FROM derived.predicted_game_outcomes
 		WHERE tournament_id = $1
 		  AND deleted_at IS NULL
-	`, labTournamentID)
+	`, tournamentID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -602,7 +552,7 @@ func (s *simResultsSource) Err() error { return nil }
 func (s *Service) copyInsertSimulatedTournaments(
 	ctx context.Context,
 	batchID string,
-	labTournamentID string,
+	tournamentID string,
 	simOffset int,
 	results []tsim.TeamSimulationResult,
 ) (int64, error) {
@@ -614,7 +564,7 @@ func (s *Service) copyInsertSimulatedTournaments(
 
 	src := &simResultsSource{
 		batchID:      batchID,
-		tournamentID: labTournamentID,
+		tournamentID: tournamentID,
 		simOffset:    simOffset,
 		results:      results,
 		idx:          0,

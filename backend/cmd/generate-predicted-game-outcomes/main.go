@@ -54,7 +54,7 @@ func main() {
 	)
 
 	svc := pgo.New(pool)
-	labTournamentID, nRows, err := svc.GenerateAndWrite(
+	coreTournamentID, nRows, err := svc.GenerateAndWrite(
 		context.Background(),
 		pgo.GenerateParams{
 			Season:       season,
@@ -68,5 +68,5 @@ func main() {
 		log.Fatalf("GenerateAndWrite failed: %v", err)
 	}
 
-	log.Printf("Wrote %d predicted_game_outcomes rows for lab_tournament_id=%s", nRows, labTournamentID)
+	log.Printf("Wrote %d predicted_game_outcomes rows for core_tournament_id=%s", nRows, coreTournamentID)
 }

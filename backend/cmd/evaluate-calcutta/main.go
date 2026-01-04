@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -46,45 +43,17 @@ func main() {
 	}
 	defer pool.Close()
 
-	bronzeTournamentID, err := resolveBronzeTournamentID(ctx(), pool, calcuttaID)
-	if err != nil {
-		log.Fatalf("failed to resolve lab tournament: %v", err)
-	}
-
 	var override *string
 	if tournamentSimulationBatchID != "" {
 		override = &tournamentSimulationBatchID
 	}
 
 	svc := simulated_calcutta.New(pool)
-	if err := svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), bronzeTournamentID, runID, excludedEntryName, override); err != nil {
+	if err := svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, override); err != nil {
 		log.Fatalf("evaluation failed: %v", err)
 	}
 
-	log.Printf("Calcutta evaluation complete for calcutta_id=%s lab_tournament_id=%s", calcuttaID, bronzeTournamentID)
+	log.Printf("Calcutta evaluation complete for calcutta_id=%s", calcuttaID)
 }
 
 func ctx() context.Context { return context.Background() }
-
-func resolveBronzeTournamentID(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (string, error) {
-	// Resolve the lab_bronze tournament for the core tournament backing this calcutta.
-	var bronzeTournamentID string
-	err := pool.QueryRow(ctx, `
-		SELECT bt.id
-		FROM core.calcuttas c
-		JOIN derived.tournaments bt
-		  ON bt.core_tournament_id = c.tournament_id
-		 AND bt.deleted_at IS NULL
-		WHERE c.id = $1::uuid
-		  AND c.deleted_at IS NULL
-		ORDER BY bt.created_at DESC
-		LIMIT 1
-	`, calcuttaID).Scan(&bronzeTournamentID)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return "", fmt.Errorf("no derived tournament found for calcutta_id=%s", calcuttaID)
-		}
-		return "", err
-	}
-	return bronzeTournamentID, nil
-}

@@ -14,10 +14,10 @@ func main() {
 
 	// Get tournament ID from command line args
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: calculate-simulated-calcuttas <tournament_id> [run_id] [excluded_entry_id]")
+		log.Fatal("Usage: calculate-simulated-calcuttas <calcutta_id> [run_id] [excluded_entry_id]")
 	}
 
-	tournamentID := os.Args[1]
+	calcuttaID := os.Args[1]
 
 	// Optional: run_id can be provided, otherwise we'll find the latest
 	var runID string
@@ -50,7 +50,7 @@ func main() {
 
 	// Get run_id if not provided
 	if runID == "" {
-		runID, err = getLatestRunID(pool, tournamentID)
+		runID, err = getLatestRunID(pool, calcuttaID)
 		if err != nil {
 			log.Fatalf("Failed to get latest run ID: %v", err)
 		}
@@ -65,37 +65,28 @@ func main() {
 	// Create service and run calculation
 	service := simulated_calcutta.New(pool)
 
-	log.Printf("Starting simulated calcutta calculation for tournament %s, run %s", tournamentID, runID)
+	log.Printf("Starting simulated calcutta calculation for calcutta %s, run %s", calcuttaID, runID)
 
-	if err := service.CalculateSimulatedCalcutta(context.Background(), tournamentID, runID); err != nil {
+	if err := service.CalculateSimulatedCalcutta(context.Background(), calcuttaID, runID); err != nil {
 		log.Fatalf("Failed to calculate simulated calcutta: %v", err)
 	}
 
 	log.Printf("Successfully completed simulated calcutta calculation!")
 }
 
-func getLatestRunID(pool *pgxpool.Pool, tournamentID string) (string, error) {
+func getLatestRunID(pool *pgxpool.Pool, calcuttaID string) (string, error) {
 	query := `
 		SELECT sgr.run_key
-		FROM derived.tournaments bt
-		JOIN core.tournaments t
-			ON t.id = bt.core_tournament_id
-			AND t.deleted_at IS NULL
-		JOIN core.calcuttas c
-			ON c.tournament_id = t.id
-			AND c.deleted_at IS NULL
-		JOIN derived.strategy_generation_runs sgr
-			ON sgr.calcutta_id = c.id
+		FROM derived.strategy_generation_runs sgr
+		WHERE sgr.calcutta_id = $1::uuid
 			AND sgr.deleted_at IS NULL
 			AND sgr.run_key IS NOT NULL
-		WHERE bt.id = $1
-			AND bt.deleted_at IS NULL
 		ORDER BY sgr.created_at DESC
 		LIMIT 1
 	`
 
 	var runID string
-	err := pool.QueryRow(context.Background(), query, tournamentID).Scan(&runID)
+	err := pool.QueryRow(context.Background(), query, calcuttaID).Scan(&runID)
 	if err != nil {
 		return "", err
 	}

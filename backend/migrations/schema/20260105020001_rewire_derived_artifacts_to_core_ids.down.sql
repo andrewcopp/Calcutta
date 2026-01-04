@@ -1,0 +1,6 @@
+BEGIN;
+DO $$
+BEGIN
+	RAISE EXCEPTION 'irreversible';
+END $$;
+COMMIT;

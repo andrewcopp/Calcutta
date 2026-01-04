@@ -12,12 +12,12 @@ type calcuttaContext struct {
 	TournamentID string
 }
 
-func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, bronzeTournamentID string, coreTournamentID string) (string, bool, error) {
+func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, coreTournamentID string) (string, bool, error) {
 	var batchID string
 	err := s.pool.QueryRow(ctx, `
 		SELECT b.id
 		FROM derived.simulated_tournaments b
-		WHERE b.tournament_id = $2
+		WHERE b.tournament_id = $1
 			AND b.deleted_at IS NULL
 			AND EXISTS (
 				SELECT 1
@@ -28,7 +28,7 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, bron
 			)
 		ORDER BY b.created_at DESC
 		LIMIT 1
-	`, bronzeTournamentID, coreTournamentID).Scan(&batchID)
+	`, coreTournamentID).Scan(&batchID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", false, nil
@@ -38,24 +38,22 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, bron
 	return batchID, true, nil
 }
 
-func (s *Service) getCalcuttaContext(ctx context.Context, bronzeTournamentID string) (*calcuttaContext, error) {
+func (s *Service) getCalcuttaContext(ctx context.Context, calcuttaID string) (*calcuttaContext, error) {
 	// Resolve a single calcutta_id (and its tournament_id) for a given bronze tournament.
 	// This intentionally isolates the season/name join in one place.
 	query := `
 		SELECT c.id, c.tournament_id
-		FROM derived.tournaments bt
-		JOIN core.tournaments t ON t.id = bt.core_tournament_id AND t.deleted_at IS NULL
-		JOIN core.calcuttas c ON c.tournament_id = t.id AND c.deleted_at IS NULL
-		WHERE bt.id = $1
-		ORDER BY c.created_at DESC
+		FROM core.calcuttas c
+		WHERE c.id = $1::uuid
+			AND c.deleted_at IS NULL
 		LIMIT 1
 	`
 
-	var calcuttaID, tournamentID string
-	if err := s.pool.QueryRow(ctx, query, bronzeTournamentID).Scan(&calcuttaID, &tournamentID); err != nil {
+	var resolvedCalcuttaID, tournamentID string
+	if err := s.pool.QueryRow(ctx, query, calcuttaID).Scan(&resolvedCalcuttaID, &tournamentID); err != nil {
 		return nil, err
 	}
-	return &calcuttaContext{CalcuttaID: calcuttaID, TournamentID: tournamentID}, nil
+	return &calcuttaContext{CalcuttaID: resolvedCalcuttaID, TournamentID: tournamentID}, nil
 }
 
 func (s *Service) createTournamentStateSnapshot(ctx context.Context, coreTournamentID string) (string, error) {
@@ -105,14 +103,14 @@ func (s *Service) createTournamentStateSnapshot(ctx context.Context, coreTournam
 	return snapshotID, nil
 }
 
-func (s *Service) createTournamentSimulationBatch(ctx context.Context, bronzeTournamentID string, coreTournamentID string, tournamentStateSnapshotID string) (string, error) {
+func (s *Service) createTournamentSimulationBatch(ctx context.Context, coreTournamentID string, tournamentStateSnapshotID string) (string, error) {
 	var nSims int
 	if err := s.pool.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT sim_id)::int
 		FROM derived.simulated_teams
 		WHERE tournament_id = $1
 			AND simulated_tournament_id IS NULL
-	`, bronzeTournamentID).Scan(&nSims); err != nil {
+	`, coreTournamentID).Scan(&nSims); err != nil {
 		return "", err
 	}
 
@@ -134,17 +132,17 @@ func (s *Service) createTournamentSimulationBatch(ctx context.Context, bronzeTou
 	return batchID, nil
 }
 
-func (s *Service) attachSimulationBatchToSimulatedTournaments(ctx context.Context, bronzeTournamentID string, tournamentSimulationBatchID string) error {
+func (s *Service) attachSimulationBatchToSimulatedTournaments(ctx context.Context, coreTournamentID string, tournamentSimulationBatchID string) error {
 	_, err := s.pool.Exec(ctx, `
 		UPDATE derived.simulated_teams
 		SET simulated_tournament_id = $2
 		WHERE tournament_id = $1
 			AND simulated_tournament_id IS NULL
-	`, bronzeTournamentID, tournamentSimulationBatchID)
+	`, coreTournamentID, tournamentSimulationBatchID)
 	return err
 }
 
-func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, bronzeTournamentID string, runID string, excludedEntryName string, entryCandidateID *string) (string, error) {
+func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string, entryCandidateID *string) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -252,18 +250,11 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 
 		_, err := tx.Exec(ctx, `
 			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-			SELECT
-				$1,
-				tt.id,
-				greb.bid_points
+			SELECT $1, greb.team_id, greb.bid_points
 			FROM derived.recommended_entry_bids greb
-			JOIN derived.teams bt ON greb.team_id = bt.id
-			JOIN core.schools s ON bt.school_name = s.name
-			JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $4
 			WHERE greb.run_id = $2
-				AND bt.tournament_id = $3
 				AND greb.deleted_at IS NULL
-		`, snapshotEntryID, runID, bronzeTournamentID, coreTournamentID)
+		`, snapshotEntryID, runID)
 		if err != nil {
 			return "", err
 		}
@@ -309,7 +300,7 @@ func (s *Service) createCalcuttaEvaluationRun(ctx context.Context, tournamentSim
 	return evalID, nil
 }
 
-func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext, runID string, excludedEntry string, entryCandidateID *string) (map[string]*Entry, error) {
+func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID string, excludedEntry string, entryCandidateID *string) (map[string]*Entry, error) {
 	// Use canonical core tables for entries/bids.
 	query := `
 		SELECT
@@ -350,18 +341,13 @@ func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc 
 	// Add our simulated entry from gold_recommended_entry_bids
 	// Map bronze_teams IDs to core.teams IDs in this tournament.
 	ourQuery := `
-		SELECT 
-			tt.id as tournament_team_id,
-			greb.bid_points
+		SELECT team_id, bid_points
 		FROM derived.recommended_entry_bids greb
-		JOIN derived.teams bt ON greb.team_id = bt.id
-		JOIN core.schools s ON bt.school_name = s.name
-		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $3
 		WHERE greb.run_id = $1
-		  AND bt.tournament_id = $2
+			AND greb.deleted_at IS NULL
 	`
 
-	ourRows, err := s.pool.Query(ctx, ourQuery, runID, bronzeTournamentID, cc.TournamentID)
+	ourRows, err := s.pool.Query(ctx, ourQuery, runID)
 	if err != nil {
 		return nil, err
 	}
@@ -414,24 +400,22 @@ func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc 
 	return entries, nil
 }
 
-func (s *Service) getSimulations(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext, tournamentSimulationBatchID string) (map[int][]TeamSimResult, error) {
+func (s *Service) getSimulations(ctx context.Context, cc *calcuttaContext, tournamentSimulationBatchID string) (map[int][]TeamSimResult, error) {
 	// Simulations are keyed by bronze tournaments; map bronze teams to core teams in the resolved tournament.
 	// Compute points using canonical scoring rules.
 	query := `
 		SELECT
 			sst.sim_id,
-			tt.id as tournament_team_id,
+			sst.team_id,
 			core.calcutta_points_for_progress($3, sst.wins, sst.byes) as points
 		FROM derived.simulated_teams sst
-		JOIN derived.teams bt ON sst.team_id = bt.id
-		JOIN core.schools s ON bt.school_name = s.name
-		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $2
 		WHERE sst.tournament_id = $1
-			AND sst.simulated_tournament_id = $4
-		ORDER BY sst.sim_id, tt.id
+			AND sst.simulated_tournament_id = $2
+			AND sst.deleted_at IS NULL
+		ORDER BY sst.sim_id, sst.team_id
 	`
 
-	rows, err := s.pool.Query(ctx, query, bronzeTournamentID, cc.TournamentID, cc.CalcuttaID, tournamentSimulationBatchID)
+	rows, err := s.pool.Query(ctx, query, cc.TournamentID, tournamentSimulationBatchID, cc.CalcuttaID)
 	if err != nil {
 		return nil, err
 	}

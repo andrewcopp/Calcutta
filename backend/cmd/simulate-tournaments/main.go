@@ -64,9 +64,9 @@ func main() {
 	}
 
 	log.Printf(
-		"Simulated tournaments: season=%d lab_tournament_id=%s batch_id=%s n_sims=%d rows=%d",
+		"Simulated tournaments: season=%d core_tournament_id=%s batch_id=%s n_sims=%d rows=%d",
 		season,
-		res.LabTournamentID,
+		res.CoreTournamentID,
 		res.TournamentSimulationBatchID,
 		res.NSims,
 		res.RowsWritten,
