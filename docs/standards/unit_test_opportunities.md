@@ -9,7 +9,7 @@
 - [x] Add unit tests for DTO mappers (pure mapping) in `backend/internal/transport/httpserver/dtos/mappers_analytics.go` (e.g. `ToAnalyticsResponse` handles nil input and maps fields correctly)
 
 - [x] Add unit tests for `backend/internal/transport/httpserver/http_helpers.go` (`writeError` status/code mapping)
-- [ ] Add unit tests for `backend/internal/app/bracket/builder.go` pure helper methods (e.g. matching/ordering, First Four identification)
-- [ ] Add unit tests for calcutta payout calculation logic in `backend/internal/app/calcutta/calcutta_service_accessors.go`
+- [x] Add unit tests for `backend/internal/app/bracket/builder.go` pure helper methods (e.g. matching/ordering, First Four identification)
+- [x] Add unit tests for calcutta payout calculation logic in `backend/internal/app/calcutta/calcutta_service_accessors.go`
 
 
