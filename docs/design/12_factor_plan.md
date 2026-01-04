@@ -20,8 +20,8 @@
 ### Backend (Go)
 
 - [ ] Define and document the canonical backend env var contract (required vs optional)
-- [ ] Ensure config is loaded once at startup and passed down (no per-request `os.Getenv`)
-- [ ] Make CORS configuration fully config-driven (prefer `ALLOWED_ORIGINS`)
+- [x] Ensure config is loaded once at startup and passed down (no per-request `os.Getenv`)
+- [x] Make CORS configuration fully config-driven (prefer `ALLOWED_ORIGINS`)
 - [ ] Standardize on `DATABASE_URL` (keep DB_* only as a dev convenience if needed)
 - [ ] Add `GET /healthz` and `GET /readyz` aliases (keep existing routes for compatibility)
 - [ ] Ensure graceful shutdown covers:
@@ -35,13 +35,18 @@
 
 ### Frontend (Vite/React)
 
-- [ ] Confirm the canonical frontend env var contract (`VITE_API_URL` preferred)
-- [ ] Remove implicit fallback to `http://localhost:8080` in non-dev builds (fail fast or require explicit env)
+- [x] Confirm the canonical frontend env var contract (`VITE_API_URL` preferred)
+- [x] Remove implicit fallback to `http://localhost:8080` in non-dev builds (fail fast or require explicit env)
 - [ ] Document how frontend discovers backend in:
   - [ ] local dev
   - [ ] docker-compose
   - [ ] deployed environment
 - [ ] Decide whether frontend needs runtime config injection (separate from build-time Vite env)
+
+### Deployment model (frontend)
+
+- [x] Decide frontend deployment model: S3 + CloudFront (static SPA)
+- [ ] CloudFront behaviors: route `/api/*` to backend (ALB/ECS) and `/*` to S3
 
 ### Docker Compose / Local Dev Parity
 
@@ -49,6 +54,7 @@
 - [ ] Avoid “install deps on container start” patterns for non-dev images (keep only for dev)
 - [ ] Add/confirm container health checks (backend `ready` endpoint already exists)
 - [ ] Verify `migrate` is a true one-off process (no coupling to web boot)
+- [x] Add a local prod-like compose path (built artifacts) via `docker-compose.local-prod.yml`
 
 ### CI / Deploy / Ops
 
@@ -65,7 +71,7 @@
 
 ## Execution Order (recommended)
 
-- [ ] Backend: config-loaded-once enforcement (CORS first)
+- [x] Backend: config-loaded-once enforcement (CORS first)
 - [ ] Backend: health/ready endpoint polish and logging consistency
-- [ ] Frontend: API URL contract tightening
+- [x] Frontend: API URL contract tightening
 - [ ] Compose/CI: align env contracts and one-off processes
