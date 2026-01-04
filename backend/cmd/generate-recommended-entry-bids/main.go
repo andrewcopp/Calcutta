@@ -62,12 +62,11 @@ func main() {
 		log.Fatalf("GenerateAndWrite failed: %v", err)
 	}
 
-	log.Printf("Generated strategy_generation_run_id=%s run_key=%s n_teams=%d total_bid=%d simulated_tournament_id=%s bronze_tournament_id=%s",
+	log.Printf("Generated strategy_generation_run_id=%s run_key=%s n_teams=%d total_bid=%d simulated_tournament_id=%s",
 		res.StrategyGenerationRunID,
 		res.RunKey,
 		res.NTeams,
 		res.TotalBidPoints,
 		res.SimulatedTournamentID,
-		res.BronzeTournamentID,
 	)
 }

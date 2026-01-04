@@ -10,39 +10,44 @@ import (
 )
 
 const getActualEntryPortfolio = `-- name: GetActualEntryPortfolio :many
+WITH strategy_run AS (
+	SELECT sgr.calcutta_id
+	FROM derived.strategy_generation_runs sgr
+	WHERE sgr.run_key = $2::text
+		AND sgr.deleted_at IS NULL
+	LIMIT 1
+)
 SELECT 
     t.id as team_id,
-    t.school_name,
+    s.name as school_name,
     t.seed,
     t.region,
     eb.bid_points
 FROM derived.entry_bids eb
-JOIN derived.teams t ON eb.team_id = t.id
-JOIN derived.calcuttas bc ON bc.id = eb.calcutta_id
-JOIN derived.strategy_generation_runs sgr
-	ON sgr.calcutta_id = bc.core_calcutta_id
-	AND sgr.run_key = $1
-	AND sgr.deleted_at IS NULL
-WHERE eb.entry_name = $2
+JOIN strategy_run sr ON sr.calcutta_id = eb.calcutta_id
+JOIN core.teams t ON eb.team_id = t.id AND t.deleted_at IS NULL
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+WHERE eb.entry_name = $1
+    AND eb.deleted_at IS NULL
 ORDER BY eb.bid_points DESC
 `
 
 type GetActualEntryPortfolioParams struct {
-	RunID     *string
 	EntryName string
+	RunID     string
 }
 
 type GetActualEntryPortfolioRow struct {
 	TeamID     string
 	SchoolName string
-	Seed       *int32
-	Region     *string
+	Seed       int32
+	Region     string
 	BidPoints  int32
 }
 
 // For actual entries from the auction
 func (q *Queries) GetActualEntryPortfolio(ctx context.Context, arg GetActualEntryPortfolioParams) ([]GetActualEntryPortfolioRow, error) {
-	rows, err := q.db.Query(ctx, getActualEntryPortfolio, arg.RunID, arg.EntryName)
+	rows, err := q.db.Query(ctx, getActualEntryPortfolio, arg.EntryName, arg.RunID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,21 +75,23 @@ func (q *Queries) GetActualEntryPortfolio(ctx context.Context, arg GetActualEntr
 const getEntryPortfolio = `-- name: GetEntryPortfolio :many
 SELECT 
     t.id as team_id,
-    t.school_name,
+    s.name as school_name,
     t.seed,
     t.region,
     reb.bid_points as bid_points
 FROM derived.recommended_entry_bids reb
-JOIN derived.teams t ON reb.team_id = t.id
+JOIN core.teams t ON reb.team_id = t.id AND t.deleted_at IS NULL
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.run_id = $1
+    AND reb.deleted_at IS NULL
 ORDER BY reb.bid_points DESC
 `
 
 type GetEntryPortfolioRow struct {
 	TeamID     string
 	SchoolName string
-	Seed       *int32
-	Region     *string
+	Seed       int32
+	Region     string
 	BidPoints  int32
 }
 
@@ -118,21 +125,23 @@ func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEnt
 const getEntryPortfolioByStrategyGenerationRunID = `-- name: GetEntryPortfolioByStrategyGenerationRunID :many
 SELECT
 	t.id as team_id,
-	t.school_name,
+	s.name as school_name,
 	t.seed,
 	t.region,
 	reb.bid_points as bid_points
 FROM derived.recommended_entry_bids reb
-JOIN derived.teams t ON reb.team_id = t.id
+JOIN core.teams t ON reb.team_id = t.id AND t.deleted_at IS NULL
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.strategy_generation_run_id = $1::uuid
+    AND reb.deleted_at IS NULL
 ORDER BY reb.bid_points DESC
 `
 
 type GetEntryPortfolioByStrategyGenerationRunIDRow struct {
 	TeamID     string
 	SchoolName string
-	Seed       *int32
-	Region     *string
+	Seed       int32
+	Region     string
 	BidPoints  int32
 }
 
@@ -166,22 +175,24 @@ func (q *Queries) GetEntryPortfolioByStrategyGenerationRunID(ctx context.Context
 const getOurEntryBidsByRunID = `-- name: GetOurEntryBidsByRunID :many
 SELECT 
     t.id as team_id,
-    t.school_name,
+    s.name as school_name,
     t.seed,
     t.region,
     reb.bid_points,
     reb.expected_roi
 FROM derived.recommended_entry_bids reb
-JOIN derived.teams t ON t.id = reb.team_id
+JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.run_id = $1::text
+    AND reb.deleted_at IS NULL
 ORDER BY reb.bid_points DESC
 `
 
 type GetOurEntryBidsByRunIDRow struct {
 	TeamID      string
 	SchoolName  string
-	Seed        *int32
-	Region      *string
+	Seed        int32
+	Region      string
 	BidPoints   int32
 	ExpectedRoi float64
 }
@@ -216,22 +227,24 @@ func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) (
 const getOurEntryBidsByStrategyGenerationRunID = `-- name: GetOurEntryBidsByStrategyGenerationRunID :many
 SELECT
 	t.id as team_id,
-	t.school_name,
+	s.name as school_name,
 	t.seed,
 	t.region,
 	reb.bid_points,
 	reb.expected_roi
 FROM derived.recommended_entry_bids reb
-JOIN derived.teams t ON t.id = reb.team_id
+JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.strategy_generation_run_id = $1::uuid
+    AND reb.deleted_at IS NULL
 ORDER BY reb.bid_points DESC
 `
 
 type GetOurEntryBidsByStrategyGenerationRunIDRow struct {
 	TeamID      string
 	SchoolName  string
-	Seed        *int32
-	Region      *string
+	Seed        int32
+	Region      string
 	BidPoints   int32
 	ExpectedRoi float64
 }

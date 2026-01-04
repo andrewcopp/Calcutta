@@ -24,18 +24,36 @@ func NewMLAnalyticsRepository(pool *pgxpool.Pool) *MLAnalyticsRepository {
 }
 
 // Helper functions for nullable types
-func derefInt32ML(v *int32) int32 {
-	if v == nil {
+func derefInt32ML(v any) int32 {
+	switch x := v.(type) {
+	case int32:
+		return x
+	case *int32:
+		if x == nil {
+			return 0
+		}
+		return *x
+	case nil:
+		return 0
+	default:
 		return 0
 	}
-	return *v
 }
 
-func derefStringML(v *string) string {
-	if v == nil {
+func derefStringML(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case *string:
+		if x == nil {
+			return ""
+		}
+		return *x
+	case nil:
+		return ""
+	default:
 		return ""
 	}
-	return *v
 }
 
 func stringFromInterfaceML(v interface{}) string {
@@ -554,9 +572,8 @@ func (r *MLAnalyticsRepository) GetEntryPortfolio(ctx context.Context, year int,
 			totalBid += int(row.BidPoints)
 		}
 	} else {
-		runIDPtr := runID
 		rows, err := r.q.GetActualEntryPortfolio(ctx, sqlc.GetActualEntryPortfolioParams{
-			RunID:     &runIDPtr,
+			RunID:     runID,
 			EntryName: entryKey,
 		})
 		if err != nil {

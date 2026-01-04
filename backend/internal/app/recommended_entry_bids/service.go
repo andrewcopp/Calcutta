@@ -39,13 +39,11 @@ type GenerateResult struct {
 	NTeams                  int
 	TotalBidPoints          int
 	SimulatedTournamentID   string
-	BronzeTournamentID      string
 }
 
 type calcuttaContext struct {
 	CalcuttaID            string
 	CoreTournamentID      string
-	BronzeTournamentID    string
 	BudgetPoints          int
 	MinTeams              int
 	MaxTeams              int
@@ -74,7 +72,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		return nil, err
 	}
 
-	simID, ok, err := s.getLatestSimulatedTournamentID(ctx, cc.BronzeTournamentID, cc.CoreTournamentID)
+	simID, ok, err := s.getLatestSimulatedTournamentID(ctx, cc.CoreTournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +216,6 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		NTeams:                  len(alloc.Bids),
 		TotalBidPoints:          totalBid,
 		SimulatedTournamentID:   cc.SimulatedTournamentID,
-		BronzeTournamentID:      cc.BronzeTournamentID,
 	}, nil
 }
 
@@ -227,7 +224,6 @@ func (s *Service) loadCalcuttaContext(ctx context.Context, calcuttaID string) (*
 		SELECT
 			c.id,
 			c.tournament_id,
-			bt.id,
 			c.budget_points,
 			c.min_teams,
 			c.max_teams,
@@ -240,10 +236,8 @@ func (s *Service) loadCalcuttaContext(ctx context.Context, calcuttaID string) (*
 			)
 		FROM core.calcuttas c
 		JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-		JOIN derived.tournaments bt ON bt.core_tournament_id = t.id AND bt.deleted_at IS NULL
 		WHERE c.id = $1::uuid
 			AND c.deleted_at IS NULL
-		ORDER BY bt.created_at DESC
 		LIMIT 1
 	`
 
@@ -251,7 +245,6 @@ func (s *Service) loadCalcuttaContext(ctx context.Context, calcuttaID string) (*
 	if err := s.pool.QueryRow(ctx, query, calcuttaID).Scan(
 		&cc.CalcuttaID,
 		&cc.CoreTournamentID,
-		&cc.BronzeTournamentID,
 		&cc.BudgetPoints,
 		&cc.MinTeams,
 		&cc.MaxTeams,
@@ -269,12 +262,12 @@ func (s *Service) loadCalcuttaContext(ctx context.Context, calcuttaID string) (*
 	return cc, nil
 }
 
-func (s *Service) getLatestSimulatedTournamentID(ctx context.Context, bronzeTournamentID string, coreTournamentID string) (string, bool, error) {
+func (s *Service) getLatestSimulatedTournamentID(ctx context.Context, coreTournamentID string) (string, bool, error) {
 	var batchID string
 	q := `
 		SELECT b.id
 		FROM derived.simulated_tournaments b
-		WHERE b.tournament_id = $2
+		WHERE b.tournament_id = $1
 			AND b.deleted_at IS NULL
 			AND EXISTS (
 				SELECT 1
@@ -286,7 +279,7 @@ func (s *Service) getLatestSimulatedTournamentID(ctx context.Context, bronzeTour
 		ORDER BY b.created_at DESC
 		LIMIT 1
 	`
-	err := s.pool.QueryRow(ctx, q, bronzeTournamentID, coreTournamentID).Scan(&batchID)
+	err := s.pool.QueryRow(ctx, q, coreTournamentID).Scan(&batchID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false, nil
@@ -308,7 +301,7 @@ func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaCont
 		GROUP BY st.team_id
 	`
 
-	rows, err := s.pool.Query(ctx, q, cc.BronzeTournamentID, cc.SimulatedTournamentID, cc.CalcuttaID)
+	rows, err := s.pool.Query(ctx, q, cc.CoreTournamentID, cc.SimulatedTournamentID, cc.CalcuttaID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -339,7 +332,7 @@ func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaCon
 			AND calcutta_id IS NULL
 			AND deleted_at IS NULL
 	`
-	rows, err := s.pool.Query(ctx, q, cc.BronzeTournamentID)
+	rows, err := s.pool.Query(ctx, q, cc.CoreTournamentID)
 	if err != nil {
 		return nil, err
 	}

@@ -11,10 +11,10 @@ import (
 
 const getTeamPerformanceByID = `-- name: GetTeamPerformanceByID :one
 WITH season_ctx AS (
-    SELECT bt.core_tournament_id
-    FROM derived.teams t
-    JOIN derived.tournaments bt ON bt.id = t.tournament_id
+    SELECT t.tournament_id AS core_tournament_id
+    FROM core.teams t
     WHERE t.id = $1::uuid
+        AND t.deleted_at IS NULL
     LIMIT 1
 ),
 main_tournament AS (
@@ -49,16 +49,16 @@ round_distribution AS (
         END as round_name,
         COUNT(*)::int as count
     FROM derived.simulated_teams st
-    JOIN derived.teams t ON t.id = st.team_id
     WHERE st.team_id = $1::uuid
+        AND st.deleted_at IS NULL
     GROUP BY st.team_id, round_name
 )
 SELECT 
     t.id as team_id,
-    t.school_name,
+    s.name as school_name,
     t.seed,
     t.region,
-    t.kenpom_net,
+    ks.net_rtg as kenpom_net,
     COUNT(DISTINCT st.sim_id)::int as total_sims,
     AVG(st.wins)::float as avg_wins,
     AVG(
@@ -68,18 +68,24 @@ SELECT
         END
     )::float as avg_points,
     jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-FROM derived.teams t
-JOIN derived.simulated_teams st ON st.team_id = t.id
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+LEFT JOIN core.team_kenpom_stats ks ON ks.team_id = t.id AND ks.deleted_at IS NULL
+JOIN derived.simulated_teams st
+    ON st.team_id = t.id
+    AND st.tournament_id = t.tournament_id
+    AND st.deleted_at IS NULL
 LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = $1::uuid
-GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net
+    AND t.deleted_at IS NULL
+GROUP BY t.id, s.name, t.seed, t.region, ks.net_rtg
 `
 
 type GetTeamPerformanceByIDRow struct {
 	TeamID            string
 	SchoolName        string
-	Seed              *int32
-	Region            *string
+	Seed              int32
+	Region            string
 	KenpomNet         *float64
 	TotalSims         int32
 	AvgWins           float64
@@ -107,21 +113,25 @@ func (q *Queries) GetTeamPerformanceByID(ctx context.Context, dollar_1 string) (
 const getTeamPredictionsByYear = `-- name: GetTeamPredictionsByYear :many
 SELECT 
     t.id as team_id,
-    t.school_name,
+    s.name as school_name,
     t.seed,
     t.region,
-    t.kenpom_net
-FROM derived.teams t
-JOIN derived.tournaments bt ON bt.id = t.tournament_id
-WHERE bt.season = $1::int
+    ks.net_rtg as kenpom_net
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+LEFT JOIN core.team_kenpom_stats ks ON ks.team_id = t.id AND ks.deleted_at IS NULL
+JOIN core.tournaments tr ON tr.id = t.tournament_id AND tr.deleted_at IS NULL
+JOIN core.seasons seas ON seas.id = tr.season_id AND seas.deleted_at IS NULL
+WHERE seas.year = $1::int
+    AND t.deleted_at IS NULL
 ORDER BY t.seed
 `
 
 type GetTeamPredictionsByYearRow struct {
 	TeamID     string
 	SchoolName string
-	Seed       *int32
-	Region     *string
+	Seed       int32
+	Region     string
 	KenpomNet  *float64
 }
 

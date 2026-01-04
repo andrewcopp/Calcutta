@@ -110,12 +110,6 @@ WITH strategy_run AS (
 		AND sgr.deleted_at IS NULL
 	LIMIT 1
 ),
-lab_calcutta AS (
-	SELECT bc.id AS lab_calcutta_id
-	FROM derived.calcuttas bc
-	JOIN strategy_run sr ON sr.core_calcutta_id = bc.core_calcutta_id
-	LIMIT 1
-),
 base AS (
 	SELECT
 		gep.entry_name,
@@ -179,7 +173,7 @@ with_bids AS (
 			COUNT(*)::int AS n_teams,
 			COALESCE(SUM(eb.bid_points), 0)::int AS total_bid_points
 		FROM derived.entry_bids eb
-		JOIN lab_calcutta lc ON lc.lab_calcutta_id = eb.calcutta_id
+		JOIN strategy_run sr ON sr.core_calcutta_id = eb.calcutta_id
 		WHERE eb.deleted_at IS NULL
 		GROUP BY eb.entry_name
 	) ab ON (NOT wp.is_our_strategy AND ab.entry_name = wp.entry_name)
@@ -341,10 +335,10 @@ WITH calcutta AS (
 team_ctx AS (
 	SELECT
 		t.id AS team_id,
-		bt.core_tournament_id
-	FROM derived.teams t
-	JOIN derived.tournaments bt ON bt.id = t.tournament_id
+		t.tournament_id AS core_tournament_id
+	FROM core.teams t
 	WHERE t.id = sqlc.arg(team_id)::uuid
+		AND t.deleted_at IS NULL
 	LIMIT 1
 ),
 valid AS (
@@ -370,22 +364,31 @@ round_distribution AS (
 		COUNT(*)::int as count
 	FROM derived.simulated_teams st
 	WHERE st.team_id = sqlc.arg(team_id)::uuid
+		AND st.tournament_id = (SELECT core_tournament_id FROM team_ctx)
+		AND st.deleted_at IS NULL
 	GROUP BY st.team_id, round_name
 )
 SELECT
 	t.id as team_id,
-	t.school_name,
+	s.name as school_name,
 	t.seed,
 	t.region,
-	t.kenpom_net,
+	ks.net_rtg as kenpom_net,
 	COUNT(DISTINCT st.sim_id)::int as total_sims,
 	AVG(st.wins)::float as avg_wins,
 	AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float as avg_points,
 	jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+LEFT JOIN core.team_kenpom_stats ks ON ks.team_id = t.id AND ks.deleted_at IS NULL
 JOIN valid v ON true
 
-JOIN derived.simulated_teams st ON st.team_id = t.id
+
+JOIN derived.simulated_teams st
+	ON st.team_id = t.id
+	AND st.tournament_id = t.tournament_id
+	AND st.deleted_at IS NULL
 	LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = sqlc.arg(team_id)::uuid
-GROUP BY t.id, t.school_name, t.seed, t.region, t.kenpom_net;
+	AND t.deleted_at IS NULL
+GROUP BY t.id, s.name, t.seed, t.region, ks.net_rtg;

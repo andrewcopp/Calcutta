@@ -11,12 +11,6 @@ WITH calcutta_ctx AS (
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
-lab_tournament AS (
-  SELECT bt.id AS tournament_id
-  FROM derived.tournaments bt
-  JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
-  LIMIT 1
-),
 entry_count AS (
   SELECT COUNT(*)::int AS num_entries
   FROM core.entries ce
@@ -31,7 +25,7 @@ team_expected_points AS (
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id
 ),
 total_expected_points AS (
@@ -40,7 +34,7 @@ total_expected_points AS (
 )
 SELECT
   t.id as team_id,
-  t.school_name,
+  s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision as rational,
@@ -52,13 +46,16 @@ SELECT
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
   END::double precision as delta
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 LEFT JOIN derived.predicted_market_share spms_t
-  ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  ON spms_t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
-WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  AND spms_t.deleted_at IS NULL
+WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+  AND t.deleted_at IS NULL
 ORDER BY predicted DESC, seed ASC;
 
 -- name: GetCalcuttaPredictedInvestmentByStrategyGenerationRunID :many
@@ -82,12 +79,6 @@ calcutta_ctx AS (
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
-lab_tournament AS (
-  SELECT bt.id AS tournament_id
-  FROM derived.tournaments bt
-  JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
-  LIMIT 1
-),
 entry_count AS (
   SELECT COUNT(*)::int AS num_entries
   FROM core.entries ce
@@ -102,7 +93,7 @@ team_expected_points AS (
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id
 ),
@@ -112,7 +103,7 @@ total_expected_points AS (
 )
 SELECT
   t.id as team_id,
-  t.school_name,
+  s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision as rational,
@@ -124,13 +115,16 @@ SELECT
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
   END::double precision as delta
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 LEFT JOIN derived.predicted_market_share spms_t
-  ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  ON spms_t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
-WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  AND spms_t.deleted_at IS NULL
+WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+  AND t.deleted_at IS NULL
 ORDER BY predicted DESC, seed ASC;
 
 -- name: GetCalcuttaPredictedReturns :many
@@ -144,19 +138,13 @@ WITH calcutta_ctx AS (
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
-lab_tournament AS (
-  SELECT bt.id AS tournament_id
-  FROM derived.tournaments bt
-  JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
-  LIMIT 1
-),
 team_win_counts AS (
   SELECT
     st.team_id,
     (st.wins + st.byes + 1)::int AS progress,
     COUNT(*) as sim_count
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id, progress
 ),
 team_probabilities AS (
@@ -177,12 +165,12 @@ team_expected_value AS (
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id
 )
 SELECT
   t.id as team_id,
-  t.school_name,
+  s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   0.0::double precision as prob_pi,
@@ -193,10 +181,12 @@ SELECT
   COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_ff,
   COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_champ,
   COALESCE(tev.expected_value, 0.0)::double precision as expected_value
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 LEFT JOIN team_expected_value tev ON t.id = tev.team_id
-WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+  AND t.deleted_at IS NULL
 ORDER BY expected_value DESC, seed ASC;
 
 -- name: GetCalcuttaPredictedReturnsByStrategyGenerationRunID :many
@@ -218,19 +208,13 @@ calcutta_ctx AS (
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
-lab_tournament AS (
-  SELECT bt.id AS tournament_id
-  FROM derived.tournaments bt
-  JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
-  LIMIT 1
-),
 team_win_counts AS (
   SELECT
     st.team_id,
     (st.wins + st.byes + 1)::int AS progress,
     COUNT(*) as sim_count
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id, progress
 ),
@@ -252,13 +236,13 @@ team_expected_value AS (
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id
 )
 SELECT
   t.id as team_id,
-  t.school_name,
+  s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   0.0::double precision as prob_pi,
@@ -269,10 +253,12 @@ SELECT
   COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_ff,
   COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_champ,
   COALESCE(tev.expected_value, 0.0)::double precision as expected_value
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 LEFT JOIN team_expected_value tev ON t.id = tev.team_id
-WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+  AND t.deleted_at IS NULL
 ORDER BY expected_value DESC, seed ASC;
 
 -- name: GetCalcuttaSimulatedEntry :many
@@ -289,12 +275,6 @@ WITH calcutta_ctx AS (
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
-lab_tournament AS (
-  SELECT bt.id AS tournament_id
-  FROM derived.tournaments bt
-  JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
-  LIMIT 1
-),
 entry_count AS (
   SELECT COUNT(*)::int AS num_entries
   FROM core.entries ce
@@ -305,43 +285,48 @@ total_pool AS (
   SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47)
     * COALESCE((SELECT budget_points FROM calcutta_ctx), 100)::double precision AS pool_size
 ),
-team_expected_points AS (
-  SELECT
-    st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
-  FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
-  GROUP BY st.team_id
-),
 latest_strategy_generation AS (
-  SELECT sgr.id AS strategy_generation_run_id
+  SELECT sgr.id AS strategy_generation_run_id,
+    sgr.simulated_tournament_id
   FROM derived.strategy_generation_runs sgr
   JOIN calcutta_ctx cc ON TRUE
   WHERE sgr.deleted_at IS NULL
     AND sgr.calcutta_id = cc.calcutta_id
   ORDER BY sgr.created_at DESC
   LIMIT 1
+),
+team_expected_points AS (
+  SELECT
+    st.team_id,
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+  FROM derived.simulated_teams st
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM latest_strategy_generation)
+  GROUP BY st.team_id
 )
 SELECT
   t.id as team_id,
-  t.school_name,
+  s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.bid_points, 0.0)::double precision as our_bid
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 LEFT JOIN derived.predicted_market_share spms_t
-  ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  ON spms_t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
+  AND spms_t.deleted_at IS NULL
 LEFT JOIN latest_strategy_generation lsg ON true
 LEFT JOIN derived.recommended_entry_bids reb
   ON reb.strategy_generation_run_id = lsg.strategy_generation_run_id
   AND reb.team_id = t.id
-WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
-ORDER BY seed ASC, t.school_name ASC;
+WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+  AND t.deleted_at IS NULL
+ORDER BY seed ASC, s.name ASC;
 
 -- name: GetLatestStrategyGenerationRunIDByCoreCalcuttaID :one
 SELECT
@@ -364,12 +349,6 @@ WITH calcutta_ctx AS (
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
-lab_tournament AS (
-  SELECT bt.id AS tournament_id
-  FROM derived.tournaments bt
-  JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
-  LIMIT 1
-),
 entry_count AS (
   SELECT COUNT(*)::int AS num_entries
   FROM core.entries ce
@@ -380,30 +359,41 @@ total_pool AS (
   SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47)
     * COALESCE((SELECT budget_points FROM calcutta_ctx), 100)::double precision AS pool_size
 ),
+strategy_run AS (
+  SELECT sgr.simulated_tournament_id
+  FROM derived.strategy_generation_runs sgr
+  WHERE sgr.id = sqlc.arg(strategy_generation_run_id)::uuid
+    AND sgr.deleted_at IS NULL
+  LIMIT 1
+),
 team_expected_points AS (
   SELECT
     st.team_id,
     AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
-  WHERE st.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
   GROUP BY st.team_id
 )
 SELECT
   t.id as team_id,
-  t.school_name,
+  s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.bid_points, 0.0)::double precision as our_bid
-FROM derived.teams t
+FROM core.teams t
+JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
 LEFT JOIN derived.predicted_market_share spms_t
-  ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
+  ON spms_t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
+  AND spms_t.deleted_at IS NULL
 LEFT JOIN derived.recommended_entry_bids reb
   ON reb.strategy_generation_run_id = sqlc.arg(strategy_generation_run_id)::uuid
   AND reb.team_id = t.id
-WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
-ORDER BY seed ASC, t.school_name ASC;
+WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
+  AND t.deleted_at IS NULL
+ORDER BY seed ASC, s.name ASC;

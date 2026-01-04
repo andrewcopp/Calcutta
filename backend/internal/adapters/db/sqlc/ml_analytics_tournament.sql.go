@@ -13,13 +13,15 @@ import (
 
 const getTournamentSimStatsByCoreTournamentID = `-- name: GetTournamentSimStatsByCoreTournamentID :one
 WITH tournament_info AS (
- 	SELECT
- 		bt.id as tournament_id,
- 		bt.season
- 	FROM derived.tournaments bt
- 	WHERE bt.core_tournament_id = $1::uuid
- 	LIMIT 1
- ),
+	SELECT
+		t.id as tournament_id,
+		seas.year as season
+	FROM core.tournaments t
+	JOIN core.seasons seas ON seas.id = t.season_id AND seas.deleted_at IS NULL
+	WHERE t.id = $1::uuid
+		AND t.deleted_at IS NULL
+	LIMIT 1
+),
 sim_stats AS (
 	SELECT
 		COUNT(DISTINCT sim_id)::int as total_simulations,
@@ -83,17 +85,26 @@ func (q *Queries) GetTournamentSimStatsByCoreTournamentID(ctx context.Context, c
 }
 
 const getTournamentSimStatsByYear = `-- name: GetTournamentSimStatsByYear :one
-SELECT 
-    t.id as tournament_id,
-    t.season,
-    COUNT(DISTINCT st.sim_id)::int as n_sims,
-    COUNT(DISTINCT st.team_id)::int as n_teams,
-    AVG(st.wins + st.byes)::float as avg_progress,
-    MAX(st.wins + st.byes)::int as max_progress
-FROM derived.tournaments t
-JOIN derived.simulated_teams st ON t.id = st.tournament_id
-WHERE t.season = $1::int
-GROUP BY t.id, t.season
+WITH tournament AS (
+	SELECT t.id AS tournament_id,
+		seas.year AS season
+	FROM core.tournaments t
+	JOIN core.seasons seas ON seas.id = t.season_id AND seas.deleted_at IS NULL
+	WHERE seas.year = $1::int
+		AND t.deleted_at IS NULL
+	ORDER BY t.created_at DESC
+	LIMIT 1
+)
+SELECT
+	t.tournament_id,
+	t.season,
+	COUNT(DISTINCT st.sim_id)::int as n_sims,
+	COUNT(DISTINCT st.team_id)::int as n_teams,
+	AVG(st.wins + st.byes)::float as avg_progress,
+	MAX(st.wins + st.byes)::int as max_progress
+FROM tournament t
+JOIN derived.simulated_teams st ON st.tournament_id = t.tournament_id
+GROUP BY t.tournament_id, t.season
 `
 
 type GetTournamentSimStatsByYearRow struct {
