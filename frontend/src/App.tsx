@@ -24,6 +24,8 @@ import { EvaluationsPage } from './pages/EvaluationsPage';
 import { EvaluationDetailPage } from './pages/EvaluationDetailPage';
 import { RunsPage } from './pages/RunsPage';
 import { RunRankingsPage } from './pages/RunRankingsPage';
+import { RunReturnsPage } from './pages/RunReturnsPage';
+import { RunInvestmentsPage } from './pages/RunInvestmentsPage';
 import { EntryPortfolioPage } from './pages/EntryPortfolioPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
@@ -54,6 +56,8 @@ const AppLayout: React.FC = () => {
         <Route path="/runs" element={<RunsRedirect />} />
         <Route path="/runs/:year" element={<RunsPage />} />
         <Route path="/runs/:year/:runId" element={<RunRankingsPage />} />
+        <Route path="/runs/:year/:runId/returns" element={<RunReturnsPage />} />
+        <Route path="/runs/:year/:runId/investments" element={<RunInvestmentsPage />} />
         <Route path="/runs/:year/:runId/entries/:entryKey" element={<EntryPortfolioPage />} />
         <Route path="/analytics" element={<Navigate to="/predictions" replace />} />
         <Route path="/admin" element={<AdminPage />} />

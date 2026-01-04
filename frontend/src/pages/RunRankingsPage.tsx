@@ -31,9 +31,26 @@ export function RunRankingsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <Link to={`/runs/${parsedYear}`} className="text-blue-600 hover:text-blue-800">
-          ← Back to Runs
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to={`/runs/${parsedYear}`} className="text-blue-600 hover:text-blue-800">
+            ← Back to Runs
+          </Link>
+
+          <div className="flex gap-2">
+            <Link
+              to={`/runs/${parsedYear}/${encodeURIComponent(runId)}/returns`}
+              className="px-3 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Returns
+            </Link>
+            <Link
+              to={`/runs/${parsedYear}/${encodeURIComponent(runId)}/investments`}
+              className="px-3 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Investments
+            </Link>
+          </div>
+        </div>
       </div>
 
       <div className="mb-8">
