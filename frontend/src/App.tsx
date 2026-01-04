@@ -22,9 +22,17 @@ import { SimulationsPage } from './pages/SimulationsPage';
 import { PredictionsPage } from './pages/PredictionsPage';
 import { EvaluationsPage } from './pages/EvaluationsPage';
 import { EvaluationDetailPage } from './pages/EvaluationDetailPage';
+import { RunsPage } from './pages/RunsPage';
+import { RunRankingsPage } from './pages/RunRankingsPage';
+import { EntryPortfolioPage } from './pages/EntryPortfolioPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 import './App.css';
+
+const RunsRedirect: React.FC = () => {
+  const year = new Date().getFullYear();
+  return <Navigate to={`/runs/${year}`} replace />;
+};
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
@@ -43,6 +51,10 @@ const AppLayout: React.FC = () => {
         <Route path="/predictions" element={<PredictionsPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
         <Route path="/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
+        <Route path="/runs" element={<RunsRedirect />} />
+        <Route path="/runs/:year" element={<RunsPage />} />
+        <Route path="/runs/:year/:runId" element={<RunRankingsPage />} />
+        <Route path="/runs/:year/:runId/entries/:entryKey" element={<EntryPortfolioPage />} />
         <Route path="/analytics" element={<Navigate to="/predictions" replace />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/api-keys" element={<AdminApiKeysPage />} />
