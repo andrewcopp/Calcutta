@@ -35,6 +35,191 @@ func TestThatWriteErrorFromErrReturns500ForNilError(t *testing.T) {
 	}
 }
 
+func TestThatWriteErrorFromErrReturnsInternalErrorCodeForUnknownError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, errors.New("boom"))
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Code
+	want := "internal_error"
+	if got != want {
+		t.Errorf("expected code %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrIncludesRequestIDInResponse(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, errors.New("boom"))
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.RequestID
+	want := "req-1"
+	if got != want {
+		t.Errorf("expected requestId %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsUnauthorizedCodeForUnauthorizedError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.UnauthorizedError{})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Code
+	want := "unauthorized"
+	if got != want {
+		t.Errorf("expected code %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsNotFoundCodeForNotFoundError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Code
+	want := "not_found"
+	if got != want {
+		t.Errorf("expected code %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturns409ForAlreadyExistsError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
+
+	got := w.Result().StatusCode
+	want := http.StatusConflict
+	if got != want {
+		t.Errorf("expected status %d, got %d", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsConflictCodeForAlreadyExistsError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Code
+	want := "conflict"
+	if got != want {
+		t.Errorf("expected code %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsConflictFieldForAlreadyExistsError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Field
+	want := "name"
+	if got != want {
+		t.Errorf("expected field %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsValidationErrorCodeForValidationError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Code
+	want := "validation_error"
+	if got != want {
+		t.Errorf("expected code %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsValidationErrorMessageForValidationError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Message
+	want := "bad"
+	if got != want {
+		t.Errorf("expected message %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsValidationErrorFieldForValidationError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Field
+	want := "name"
+	if got != want {
+		t.Errorf("expected field %q, got %q", want, got)
+	}
+}
+
 func TestThatWriteErrorFromErrReturns400ForValidationError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
@@ -65,6 +250,39 @@ func TestThatWriteErrorFromErrReturnsInvalidArgumentCodeForInvalidArgumentError(
 	want := "invalid_argument"
 	if got != want {
 		t.Errorf("expected code %q, got %q", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturns400ForInvalidArgumentError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
+
+	got := w.Result().StatusCode
+	want := http.StatusBadRequest
+	if got != want {
+		t.Errorf("expected status %d, got %d", want, got)
+	}
+}
+
+func TestThatWriteErrorFromErrReturnsInvalidArgumentFieldForInvalidArgumentError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	w := httptest.NewRecorder()
+
+	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
+
+	var env apiErrorEnvelopeForTest
+	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	got := env.Error.Field
+	want := "seed"
+	if got != want {
+		t.Errorf("expected field %q, got %q", want, got)
 	}
 }
 
