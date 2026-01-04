@@ -39,24 +39,84 @@ func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.
 		return nil, err
 	}
 
+	sorted, results := ComputeEntryPlacementsAndPayouts(entries, payouts)
+	if len(sorted) == len(entries) {
+		copy(entries, sorted)
+		sorted = entries
+	}
+	for _, e := range sorted {
+		if e == nil {
+			continue
+		}
+		res, ok := results[e.ID]
+		if !ok {
+			continue
+		}
+		e.FinishPosition = res.FinishPosition
+		e.IsTied = res.IsTied
+		e.PayoutCents = res.PayoutCents
+		e.InTheMoney = res.InTheMoney
+	}
+	return sorted, nil
+}
+
+type EntryPayoutResult struct {
+	FinishPosition int
+	IsTied         bool
+	PayoutCents    int
+	InTheMoney     bool
+}
+
+func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts []*models.CalcuttaPayout) ([]*models.CalcuttaEntry, map[string]EntryPayoutResult) {
+	if entries == nil {
+		return nil, nil
+	}
+
+	out := make([]*models.CalcuttaEntry, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, e)
+	}
+
+	results := make(map[string]EntryPayoutResult, len(entries))
+
 	payoutByPosition := map[int]int{}
 	for _, p := range payouts {
+		if p == nil {
+			continue
+		}
 		payoutByPosition[p.Position] = p.AmountCents
 	}
 
-	sort.SliceStable(entries, func(i, j int) bool {
-		if entries[i].TotalPoints == entries[j].TotalPoints {
-			return entries[i].Created.After(entries[j].Created)
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i] == nil {
+			return false
 		}
-		return entries[i].TotalPoints > entries[j].TotalPoints
+		if out[j] == nil {
+			return true
+		}
+		if out[i].TotalPoints == out[j].TotalPoints {
+			return out[i].Created.After(out[j].Created)
+		}
+		return out[i].TotalPoints > out[j].TotalPoints
 	})
 
 	const epsilon = 0.0001
 
 	position := 1
-	for i := 0; i < len(entries); {
+	for i := 0; i < len(out); {
+		if out[i] == nil {
+			i++
+			continue
+		}
+
 		j := i + 1
-		for j < len(entries) && math.Abs(entries[j].TotalPoints-entries[i].TotalPoints) < epsilon {
+		for j < len(out) {
+			if out[j] == nil {
+				break
+			}
+			if math.Abs(out[j].TotalPoints-out[i].TotalPoints) >= epsilon {
+				break
+			}
 			j++
 		}
 
@@ -76,22 +136,28 @@ func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.
 		}
 
 		for k := 0; k < groupSize; k++ {
-			e := entries[i+k]
-			e.FinishPosition = position
-			e.IsTied = isTied
-			e.PayoutCents = base
+			e := out[i+k]
+			if e == nil {
+				continue
+			}
+			payoutCents := base
 			if remainder > 0 {
-				e.PayoutCents++
+				payoutCents++
 				remainder--
 			}
-			e.InTheMoney = e.PayoutCents > 0
+			results[e.ID] = EntryPayoutResult{
+				FinishPosition: position,
+				IsTied:         isTied,
+				PayoutCents:    payoutCents,
+				InTheMoney:     payoutCents > 0,
+			}
 		}
 
 		position += groupSize
 		i = j
 	}
 
-	return entries, nil
+	return out, results
 }
 
 func (s *Service) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {
