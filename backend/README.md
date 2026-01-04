@@ -8,6 +8,8 @@ Go server for March Madness Investment Pool
 - `cmd/tools/*`: one-off operational tools
 - `cmd/workers`: background workers (placeholder)
 
+See `cmd/README.md` for the full list of binaries and per-command docs.
+
 Core code lives under `internal/`.
 
 ## Running

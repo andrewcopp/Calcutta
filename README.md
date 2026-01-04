@@ -5,10 +5,12 @@ A platform for running March Madness investment pools (Calcutta-style tournament
 ## Overview
 
 This application manages March Madness investment pools where players:
-- Receive virtual currency ($100) to invest in teams
+- Receive a fixed budget of in-game points (e.g. 100 points) to invest in teams
 - Participate in blind auctions for team ownership
 - Earn points based on their teams' tournament performance
 - Compete for the highest total points
+
+Points are the in-game currency used for bidding and scoring. Real-world dollars/cents (entry fees and payouts) are tracked separately.
 
 ## Technical Stack
 

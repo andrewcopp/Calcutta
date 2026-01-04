@@ -21,21 +21,25 @@ The timestamp ensures that migrations are applied in the correct order, even whe
 
 ## Running Migrations
 
-To run migrations, use the `migrate` command-line tool:
+To run migrations, use the backend migration runner:
 
 ```bash
-# Run migrations up
-go run cmd/migrate/main.go -up
+# Preferred (from repo root)
+make ops-migrate
+
+# Or run the binary directly (from repo root)
+go run ./backend/cmd/migrate -up
 
 # Roll back the last migration
-go run cmd/migrate/main.go -down
+go run ./backend/cmd/migrate -down
 ```
 
 ## Environment Variables
 
-The migration tool requires the following environment variables:
+The migration runner loads config via `backend/internal/platform.LoadConfigFromEnv()`:
 
-- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://username:password@localhost:5432/calcutta?sslmode=disable`)
+- `DATABASE_URL` (preferred)
+- Or: `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_HOST`, `DB_PORT`, `DB_SSLMODE`
 
 ## Creating New Migrations
 

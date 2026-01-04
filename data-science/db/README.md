@@ -1,49 +1,32 @@
 # Calcutta Analytics Database
 
-Postgres database with medallion architecture for Calcutta tournament analytics.
+Postgres database backing the Calcutta app and analytics workflows.
 
 ## Architecture
 
-**Medallion Layers:**
-- **Bronze**: Raw data (tournaments, teams, simulations, entry bids)
-- **Silver**: Cleaned/enriched data (ML predictions, market forecasts)
-- **Gold**: Business metrics (entry performance, rankings, optimization runs)
+This repo is converging on a schema-qualified layout:
 
-**Design Principles:**
-- Airflow-ready: Each pipeline stage is a discrete task
-- Polyglot services: Go for compute-heavy tasks, Python for ML
-- Direct database writes: No parquet intermediaries
-- Single source of truth: Postgres is the canonical data store
+- `core.*` for canonical entities and invariants.
+- `derived.*` for computed/derived artifacts.
+
+Some legacy/compat schemas may exist (e.g. `lab_*`) to support incremental migration.
+
+Data science workflows in `data-science/` commonly produce Parquet artifacts on disk. Some stages also write to Postgres when enabled.
 
 ## Table Write Responsibilities
 
-**IMPORTANT**: Each service has exclusive write access to specific tables. This prevents conflicts and ensures clear ownership.
+**IMPORTANT**: Prefer clear ownership by layer.
 
-### Go Service Writes
+### Python writes (ML outputs)
 
-**Bronze Layer:**
-- `bronze_tournaments` - Tournament metadata
-- `bronze_teams` - Team information with KenPom ratings
-- `bronze_simulated_tournaments` - Simulation results (compute-intensive, parallel)
-- `bronze_calcuttas` - Calcutta auction metadata
-- `bronze_entry_bids` - Actual auction bids
-- `bronze_payouts` - Prize structure
+- `lab_silver.predicted_game_outcomes`
+- `lab_silver.predicted_market_share`
 
-**Gold Layer:**
-- `gold_entry_simulation_outcomes` - Per-simulation entry results (compute-intensive)
+Python should stay focused on training/inference and writing the prediction artifacts.
 
-### Python Service Writes
+### Go writes (simulation/evaluation/optimization)
 
-**Silver Layer:**
-- `silver_predicted_game_outcomes` - ML model predictions (sklearn)
-- `silver_predicted_market_share` - Market prediction models (sklearn)
-- `silver_team_tournament_value` - Expected points calculations
-
-**Gold Layer:**
-- `gold_optimization_runs` - Optimizer execution metadata
-- `gold_recommended_entry_bids` - Portfolio optimizer outputs
-- `gold_entry_performance` - Aggregated entry metrics
-- `gold_detailed_investment_report` - Team-level ROI analysis
+Go binaries under `backend/cmd/*` are the preferred path for simulation/evaluation/optimization and writing derived artifacts.
 
 ### Database Migrations
 
@@ -54,58 +37,36 @@ Postgres database with medallion architecture for Calcutta tournament analytics.
 ### 1. Start Postgres
 
 ```bash
-docker-compose up -d
+make up
 ```
 
 ### 2. Initialize Schema
 
-Schema is managed by Go migrations. Run migrations from the Go service:
+Schema is managed by Go migrations.
 
 ```bash
-# From the Go service directory
-make migrate-up
+make ops-migrate
 ```
 
 ### 3. Load Data
 
-Data is written directly to Postgres by the respective services:
-- Go simulator writes tournament simulations
-- Python ML service writes predictions
-- Python optimizer writes portfolio recommendations
-
-See the Airflow DAG section below for the full pipeline orchestration.
+See `data-science/README.md` for running snapshot-based pipelines.
 
 ## Environment Variables
 
 ```bash
-export CALCUTTA_ANALYTICS_DB_HOST=localhost
-export CALCUTTA_ANALYTICS_DB_PORT=5432
-export CALCUTTA_ANALYTICS_DB_NAME=calcutta_analytics
-export CALCUTTA_ANALYTICS_DB_USER=postgres
-export CALCUTTA_ANALYTICS_DB_PASSWORD=postgres
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=calcutta
+export DB_USER=calcutta
+export DB_PASSWORD=calcutta
 ```
 
 ## Schema Overview
 
-### Bronze Layer (Raw Data)
-- `bronze_tournaments`: Tournament metadata
-- `bronze_teams`: Team information with KenPom ratings
-- `bronze_simulated_tournaments`: 5000+ simulations per tournament (compute-heavy, Go candidate)
-- `bronze_entry_bids`: Actual auction bids from real entries
-- `bronze_calcuttas`: Calcutta auction metadata
-- `bronze_payouts`: Prize structure
+The canonical schemas are `core.*` and `derived.*`.
 
-### Silver Layer (ML Outputs)
-- `silver_predicted_game_outcomes`: Game-by-game win probabilities (Python/sklearn)
-- `silver_predicted_market_share`: Market prediction model outputs (Python/sklearn)
-- `silver_team_tournament_value`: Expected points per team
-
-### Gold Layer (Business Metrics)
-- `gold_optimization_runs`: Tracks each strategy execution
-- `gold_recommended_entry_bids`: Optimizer outputs (MINLP, greedy, etc.)
-- `gold_entry_simulation_outcomes`: Per-simulation results for drill-down
-- `gold_entry_performance`: Aggregated metrics (normalized payout, percentiles)
-- `gold_detailed_investment_report`: Team-level ROI analysis
+ML prediction artifacts are written under `lab_silver.*`.
 
 ## Airflow DAG Structure
 
@@ -119,13 +80,13 @@ The analytics pipeline is orchestrated by Airflow using DockerOperators. Each st
 
 See `airflow/dags/calcutta_analytics_pipeline.py` for the full DAG implementation.
 
-**Pipeline Flow:**
+**Pipeline Flow (high-level):**
 ```
 [Go: Simulate Tournaments]
     ↓
 [Python: Predict Games] → [Python: Predict Market]
     ↓                           ↓
-    └─────────→ [Python: Optimize Portfolio]
+    └─────────→ [Go: Optimize Portfolio]
                         ↓
                 [Go: Evaluate All Entries]
 ```
