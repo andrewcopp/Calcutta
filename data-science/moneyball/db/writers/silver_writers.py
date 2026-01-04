@@ -267,12 +267,12 @@ def write_predicted_market_share(
             # Clear existing predictions
             if calcutta_id:
                 cur.execute("""
-                    DELETE FROM lab_silver.predicted_market_share
+                    DELETE FROM derived.predicted_market_share
                     WHERE calcutta_id = %s
                 """, (calcutta_id,))
             else:
                 cur.execute("""
-                    DELETE FROM lab_silver.predicted_market_share
+                    DELETE FROM derived.predicted_market_share
                     WHERE tournament_id = %s
                 """, (tournament_id,))
 
@@ -299,7 +299,7 @@ def write_predicted_market_share(
 
             # Batch insert
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO lab_silver.predicted_market_share
+                INSERT INTO derived.predicted_market_share
                 (calcutta_id, tournament_id, team_id, predicted_share,
                  predicted_points)
                 VALUES (%s, %s, %s, %s, %s)
