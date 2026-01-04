@@ -55,6 +55,7 @@
 - [ ] Add/confirm container health checks (backend `ready` endpoint already exists)
 - [ ] Verify `migrate` is a true one-off process (no coupling to web boot)
 - [x] Add a local prod-like compose path (built artifacts) via `docker-compose.local-prod.yml`
+- [x] Backend Dockerfile supports separate `dev` and `prod` targets
 
 ### CI / Deploy / Ops
 

@@ -11,7 +11,9 @@ services:
       - backend
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: prod
     ports:
       - "8080:8080"
     environment:
@@ -22,7 +24,9 @@ services:
         condition: service_healthy
 
   worker:
-    build: ./backend
+    build:
+      context: ./backend
+      target: prod
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
       - NODE_ENV=${NODE_ENV}
@@ -48,7 +52,9 @@ services:
       retries: 5
 
   migrate:
-    build: ./backend
+    build:
+      context: ./backend
+      target: prod
     profiles:
       - ops
     environment:
