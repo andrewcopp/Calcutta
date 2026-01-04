@@ -1,5 +1,8 @@
 # Core vs Lab Architecture
 
+## Update
+- Completed: consolidated runtime schemas to `core` + `derived` via migration `20260104211500_collapse_lab_schemas_into_derived`.
+
 ## Goals
 - Separate **product concerns** (Core) from **experimentation / ML / sandbox** (Lab).
 - Keep a clean path to the long-term vision: **two separate databases**.

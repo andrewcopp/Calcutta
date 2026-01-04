@@ -15,6 +15,9 @@ Frontend is **read-only**: browse runs created by CLI/Airflow.
 - No multi-schema sprawl beyond `core` and `derived`.
 - No duplicate evaluation implementations in Python and Go.
 
+## Status
+- Completed: consolidated runtime schemas to `core` + `derived` via migration `20260104211500_collapse_lab_schemas_into_derived`.
+
 ## Decisions (locked)
 -[x] **Schemas**: use `core` for source-of-truth entities and `derived` for rebuildable artifacts.
 -[x] **Run identity**: `id UUID` as primary identifier for run-like tables.

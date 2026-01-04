@@ -18,10 +18,10 @@ SELECT
     t.seed,
     t.region,
     eb.bid_points
-FROM lab_bronze.entry_bids eb
-JOIN lab_bronze.teams t ON eb.team_id = t.id
-JOIN lab_bronze.calcuttas bc ON bc.id = eb.calcutta_id
-JOIN lab_gold.strategy_generation_runs sgr
+FROM derived.entry_bids eb
+JOIN derived.teams t ON eb.team_id = t.id
+JOIN derived.calcuttas bc ON bc.id = eb.calcutta_id
+JOIN derived.strategy_generation_runs sgr
 	ON sgr.calcutta_id = bc.core_calcutta_id
 	AND sgr.run_key = $1
 	AND sgr.deleted_at IS NULL
@@ -193,18 +193,14 @@ func (q *Queries) GetEntryPerformanceByRunID(ctx context.Context, dollar_1 strin
 }
 
 const getEntryPortfolio = `-- name: GetEntryPortfolio :many
-
-
-
-
 SELECT 
     t.id as team_id,
     t.school_name,
     t.seed,
     t.region,
     reb.bid_points as bid_points
-FROM lab_gold.recommended_entry_bids reb
-JOIN lab_bronze.teams t ON reb.team_id = t.id
+FROM derived.recommended_entry_bids reb
+JOIN derived.teams t ON reb.team_id = t.id
 WHERE reb.run_id = $1
 ORDER BY reb.bid_points DESC
 `
@@ -217,10 +213,6 @@ type GetEntryPortfolioRow struct {
 	BidPoints  int32
 }
 
-// Removed - table doesn't exist in new schema
-// Removed - view doesn't exist in new schema
-// Removed - table schema changed
-// Removed - table schema changed
 // For our strategy entry
 func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEntryPortfolioRow, error) {
 	rows, err := q.db.Query(ctx, getEntryPortfolio, runID)
@@ -255,8 +247,8 @@ SELECT
 	t.seed,
 	t.region,
 	reb.bid_points as bid_points
-FROM lab_gold.recommended_entry_bids reb
-JOIN lab_bronze.teams t ON reb.team_id = t.id
+FROM derived.recommended_entry_bids reb
+JOIN derived.teams t ON reb.team_id = t.id
 WHERE reb.strategy_generation_run_id = $1::uuid
 ORDER BY reb.bid_points DESC
 `
@@ -301,14 +293,14 @@ WITH strategy_run AS (
 	SELECT
 		sgr.id AS strategy_generation_run_id,
 		sgr.calcutta_id AS core_calcutta_id
-	FROM lab_gold.strategy_generation_runs sgr
+	FROM derived.strategy_generation_runs sgr
 	WHERE sgr.run_key = $3::text
 		AND sgr.deleted_at IS NULL
 	LIMIT 1
 ),
 lab_calcutta AS (
 	SELECT bc.id AS lab_calcutta_id
-	FROM lab_bronze.calcuttas bc
+	FROM derived.calcuttas bc
 	JOIN strategy_run sr ON sr.core_calcutta_id = bc.core_calcutta_id
 	LIMIT 1
 ),
@@ -365,7 +357,7 @@ with_bids AS (
 		SELECT
 			COUNT(*)::int AS n_teams,
 			COALESCE(SUM(bid_points), 0)::int AS total_bid_points
-		FROM lab_gold.recommended_entry_bids reb
+		FROM derived.recommended_entry_bids reb
 		JOIN strategy_run sr ON sr.strategy_generation_run_id = reb.strategy_generation_run_id
 		WHERE reb.deleted_at IS NULL
 	) os ON wp.is_our_strategy
@@ -374,7 +366,7 @@ with_bids AS (
 			eb.entry_name,
 			COUNT(*)::int AS n_teams,
 			COALESCE(SUM(eb.bid_points), 0)::int AS total_bid_points
-		FROM lab_bronze.entry_bids eb
+		FROM derived.entry_bids eb
 		JOIN lab_calcutta lc ON lc.lab_calcutta_id = eb.calcutta_id
 		WHERE eb.deleted_at IS NULL
 		GROUP BY eb.entry_name
@@ -640,7 +632,7 @@ const getLatestStrategyGenerationRunKeyByCoreCalcuttaID = `-- name: GetLatestStr
 WITH srg AS (
 	SELECT
 		sgr.run_key
-	FROM lab_gold.strategy_generation_runs sgr
+	FROM derived.strategy_generation_runs sgr
 	WHERE sgr.calcutta_id = $1::uuid
 		AND sgr.run_key IS NOT NULL
 		AND sgr.deleted_at IS NULL
@@ -677,7 +669,7 @@ SELECT
 	COALESCE(tsb.seed, 0)::int AS seed,
 	COALESCE(c.budget_points, 100)::int AS budget_points,
 	sgr.created_at
-FROM lab_gold.strategy_generation_runs sgr
+FROM derived.strategy_generation_runs sgr
 JOIN core.calcuttas c ON c.id = sgr.calcutta_id AND c.deleted_at IS NULL
 JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 JOIN core.seasons seas ON seas.id = t.season_id
@@ -738,8 +730,8 @@ SELECT
     t.region,
     reb.bid_points,
     reb.expected_roi
-FROM lab_gold.recommended_entry_bids reb
-JOIN lab_bronze.teams t ON t.id = reb.team_id
+FROM derived.recommended_entry_bids reb
+JOIN derived.teams t ON t.id = reb.team_id
 WHERE reb.run_id = $1::text
 ORDER BY reb.bid_points DESC
 `
@@ -788,8 +780,8 @@ SELECT
 	t.region,
 	reb.bid_points,
 	reb.expected_roi
-FROM lab_gold.recommended_entry_bids reb
-JOIN lab_bronze.teams t ON t.id = reb.team_id
+FROM derived.recommended_entry_bids reb
+JOIN derived.teams t ON t.id = reb.team_id
 WHERE reb.strategy_generation_run_id = $1::uuid
 ORDER BY reb.bid_points DESC
 `
@@ -902,7 +894,7 @@ SELECT
 	COALESCE(tsb.seed, 0)::int AS seed,
 	COALESCE(c.budget_points, 100)::int AS budget_points,
 	sgr.created_at
-FROM lab_gold.strategy_generation_runs sgr
+FROM derived.strategy_generation_runs sgr
 LEFT JOIN core.calcuttas c
 	ON c.id = sgr.calcutta_id
 	AND c.deleted_at IS NULL
@@ -957,8 +949,8 @@ team_ctx AS (
 	SELECT
 		t.id AS team_id,
 		bt.core_tournament_id
-	FROM lab_bronze.teams t
-	JOIN lab_bronze.tournaments bt ON bt.id = t.tournament_id
+	FROM derived.teams t
+	JOIN derived.tournaments bt ON bt.id = t.tournament_id
 	WHERE t.id = $1::uuid
 	LIMIT 1
 ),
@@ -997,7 +989,7 @@ SELECT
 	AVG(st.wins)::float as avg_wins,
 	AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta), st.wins, st.byes))::float as avg_points,
 	jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-FROM lab_bronze.teams t
+FROM derived.teams t
 JOIN valid v ON true
 
 JOIN derived.simulated_teams st ON st.team_id = t.id
@@ -1043,8 +1035,8 @@ func (q *Queries) GetTeamPerformanceByCalcutta(ctx context.Context, arg GetTeamP
 const getTeamPerformanceByID = `-- name: GetTeamPerformanceByID :one
 WITH season_ctx AS (
     SELECT bt.core_tournament_id
-    FROM lab_bronze.teams t
-    JOIN lab_bronze.tournaments bt ON bt.id = t.tournament_id
+    FROM derived.teams t
+    JOIN derived.tournaments bt ON bt.id = t.tournament_id
     WHERE t.id = $1::uuid
     LIMIT 1
 ),
@@ -1080,7 +1072,7 @@ round_distribution AS (
         END as round_name,
         COUNT(*)::int as count
     FROM derived.simulated_teams st
-    JOIN lab_bronze.teams t ON t.id = st.team_id
+    JOIN derived.teams t ON t.id = st.team_id
     WHERE st.team_id = $1::uuid
     GROUP BY st.team_id, round_name
 )
@@ -1099,7 +1091,7 @@ SELECT
         END
     )::float as avg_points,
     jsonb_object_agg(rd.round_name, rd.count) as round_distribution
-FROM lab_bronze.teams t
+FROM derived.teams t
 JOIN derived.simulated_teams st ON st.team_id = t.id
 LEFT JOIN round_distribution rd ON rd.team_id = t.id
 WHERE t.id = $1::uuid
@@ -1142,8 +1134,8 @@ SELECT
     t.seed,
     t.region,
     t.kenpom_net
-FROM lab_bronze.teams t
-JOIN lab_bronze.tournaments bt ON bt.id = t.tournament_id
+FROM derived.teams t
+JOIN derived.tournaments bt ON bt.id = t.tournament_id
 WHERE bt.season = $1::int
 ORDER BY t.seed
 `
@@ -1184,13 +1176,13 @@ func (q *Queries) GetTeamPredictionsByYear(ctx context.Context, dollar_1 int32) 
 
 const getTournamentSimStatsByCoreTournamentID = `-- name: GetTournamentSimStatsByCoreTournamentID :one
 WITH tournament_info AS (
-	SELECT
-		bt.id as tournament_id,
-		bt.season
-	FROM lab_bronze.tournaments bt
-	WHERE bt.core_tournament_id = $1::uuid
-	LIMIT 1
-),
+ 	SELECT
+ 		bt.id as tournament_id,
+ 		bt.season
+ 	FROM derived.tournaments bt
+ 	WHERE bt.core_tournament_id = $1::uuid
+ 	LIMIT 1
+ ),
 sim_stats AS (
 	SELECT
 		COUNT(DISTINCT sim_id)::int as total_simulations,
@@ -1199,10 +1191,10 @@ sim_stats AS (
 	JOIN tournament_info ti ON st.tournament_id = ti.tournament_id
 ),
 prediction_stats AS (
-	SELECT COUNT(*)::int as total_predictions
-	FROM lab_silver.predicted_game_outcomes pgo
-	JOIN tournament_info ti ON pgo.tournament_id = ti.tournament_id
-),
+ 	SELECT COUNT(*)::int as total_predictions
+ 	FROM derived.predicted_game_outcomes pgo
+ 	JOIN tournament_info ti ON pgo.tournament_id = ti.tournament_id
+ ),
 win_stats AS (
 	SELECT
 		AVG(wins)::double precision as mean_wins,
@@ -1262,7 +1254,7 @@ SELECT
     COUNT(DISTINCT st.team_id)::int as n_teams,
     AVG(st.wins + st.byes)::float as avg_progress,
     MAX(st.wins + st.byes)::int as max_progress
-FROM lab_bronze.tournaments t
+FROM derived.tournaments t
 JOIN derived.simulated_teams st ON t.id = st.tournament_id
 WHERE t.season = $1::int
 GROUP BY t.id, t.season
@@ -1356,7 +1348,7 @@ SELECT
 	sgr.params_json,
 	sgr.git_sha,
 	sgr.created_at
-FROM lab_gold.strategy_generation_runs sgr
+FROM derived.strategy_generation_runs sgr
 WHERE sgr.calcutta_id = $1::uuid
 	AND sgr.deleted_at IS NULL
 ORDER BY sgr.created_at DESC

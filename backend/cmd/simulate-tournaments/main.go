@@ -23,7 +23,7 @@ func main() {
 	flag.IntVar(&seed, "seed", 42, "Base RNG seed")
 	flag.IntVar(&workers, "workers", runtime.GOMAXPROCS(0), "Number of simulation workers")
 	flag.IntVar(&batchSize, "batch-size", 1000, "Number of simulations per DB COPY batch")
-	flag.StringVar(&probabilitySourceKey, "probability-source-key", "kenpom-v1-go", "Stored in analytics.tournament_simulation_batches.probability_source_key")
+	flag.StringVar(&probabilitySourceKey, "probability-source-key", "kenpom-v1-go", "Stored in derived.simulated_tournaments.probability_source_key")
 	flag.Parse()
 
 	if season <= 0 {

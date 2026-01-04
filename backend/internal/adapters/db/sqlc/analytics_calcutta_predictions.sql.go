@@ -24,7 +24,7 @@ WITH calcutta_ctx AS (
 ),
 lab_tournament AS (
   SELECT bt.id AS tournament_id
-  FROM lab_bronze.tournaments bt
+  FROM derived.tournaments bt
   JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
   LIMIT 1
 ),
@@ -63,9 +63,9 @@ SELECT
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
   END::double precision as delta
-FROM lab_bronze.teams t
+FROM derived.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-LEFT JOIN lab_silver.predicted_market_share spms_t
+LEFT JOIN derived.predicted_market_share spms_t
   ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
@@ -115,7 +115,7 @@ const getCalcuttaPredictedInvestmentByStrategyGenerationRunID = `-- name: GetCal
 WITH strategy_run AS (
   SELECT
     sgr.simulated_tournament_id
-  FROM lab_gold.strategy_generation_runs sgr
+  FROM derived.strategy_generation_runs sgr
   WHERE sgr.id = $1::uuid
     AND sgr.deleted_at IS NULL
   LIMIT 1
@@ -134,7 +134,7 @@ calcutta_ctx AS (
 ),
 lab_tournament AS (
   SELECT bt.id AS tournament_id
-  FROM lab_bronze.tournaments bt
+  FROM derived.tournaments bt
   JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
   LIMIT 1
 ),
@@ -174,9 +174,9 @@ SELECT
       ((COALESCE(tep.expected_points, 0.0) / NULLIF((SELECT total_ev FROM total_expected_points), 0)) * (SELECT pool_size FROM total_pool)) * 100
     ELSE 0
   END::double precision as delta
-FROM lab_bronze.teams t
+FROM derived.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-LEFT JOIN lab_silver.predicted_market_share spms_t
+LEFT JOIN derived.predicted_market_share spms_t
   ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
@@ -240,7 +240,7 @@ WITH calcutta_ctx AS (
 ),
 lab_tournament AS (
   SELECT bt.id AS tournament_id
-  FROM lab_bronze.tournaments bt
+  FROM derived.tournaments bt
   JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
   LIMIT 1
 ),
@@ -287,7 +287,7 @@ SELECT
   COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_ff,
   COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_champ,
   COALESCE(tev.expected_value, 0.0)::double precision as expected_value
-FROM lab_bronze.teams t
+FROM derived.teams t
 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 LEFT JOIN team_expected_value tev ON t.id = tev.team_id
 WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
@@ -346,7 +346,7 @@ const getCalcuttaPredictedReturnsByStrategyGenerationRunID = `-- name: GetCalcut
 WITH strategy_run AS (
   SELECT
     sgr.simulated_tournament_id
-  FROM lab_gold.strategy_generation_runs sgr
+  FROM derived.strategy_generation_runs sgr
   WHERE sgr.id = $1::uuid
     AND sgr.deleted_at IS NULL
   LIMIT 1
@@ -363,7 +363,7 @@ calcutta_ctx AS (
 ),
 lab_tournament AS (
   SELECT bt.id AS tournament_id
-  FROM lab_bronze.tournaments bt
+  FROM derived.tournaments bt
   JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
   LIMIT 1
 ),
@@ -412,7 +412,7 @@ SELECT
   COALESCE(tp.win_ff / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_ff,
   COALESCE(tp.win_champ / NULLIF(tp.total_sims, 0.0::double precision), 0.0::double precision)::double precision as prob_champ,
   COALESCE(tev.expected_value, 0.0)::double precision as expected_value
-FROM lab_bronze.teams t
+FROM derived.teams t
 LEFT JOIN team_probabilities tp ON t.id = tp.team_id
 LEFT JOIN team_expected_value tev ON t.id = tev.team_id
 WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
@@ -488,7 +488,7 @@ WITH calcutta_ctx AS (
 ),
 lab_tournament AS (
   SELECT bt.id AS tournament_id
-  FROM lab_bronze.tournaments bt
+  FROM derived.tournaments bt
   JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
   LIMIT 1
 ),
@@ -512,7 +512,7 @@ team_expected_points AS (
 ),
 latest_strategy_generation AS (
   SELECT sgr.id AS strategy_generation_run_id
-  FROM lab_gold.strategy_generation_runs sgr
+  FROM derived.strategy_generation_runs sgr
   JOIN calcutta_ctx cc ON TRUE
   WHERE sgr.deleted_at IS NULL
     AND sgr.calcutta_id = cc.calcutta_id
@@ -527,14 +527,14 @@ SELECT
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.bid_points, 0.0)::double precision as our_bid
-FROM lab_bronze.teams t
+FROM derived.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-LEFT JOIN lab_silver.predicted_market_share spms_t
+LEFT JOIN derived.predicted_market_share spms_t
   ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
 LEFT JOIN latest_strategy_generation lsg ON true
-LEFT JOIN lab_gold.recommended_entry_bids reb
+LEFT JOIN derived.recommended_entry_bids reb
   ON reb.strategy_generation_run_id = lsg.strategy_generation_run_id
   AND reb.team_id = t.id
 WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
@@ -593,7 +593,7 @@ WITH calcutta_ctx AS (
 ),
 lab_tournament AS (
   SELECT bt.id AS tournament_id
-  FROM lab_bronze.tournaments bt
+  FROM derived.tournaments bt
   JOIN calcutta_ctx cc ON cc.core_tournament_id = bt.core_tournament_id
   LIMIT 1
 ),
@@ -623,13 +623,13 @@ SELECT
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (COALESCE(spms_t.predicted_share, 0.0)::double precision * (SELECT pool_size FROM total_pool))::double precision as expected_market,
   COALESCE(reb.bid_points, 0.0)::double precision as our_bid
-FROM lab_bronze.teams t
+FROM derived.teams t
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
-LEFT JOIN lab_silver.predicted_market_share spms_t
+LEFT JOIN derived.predicted_market_share spms_t
   ON spms_t.tournament_id = (SELECT tournament_id FROM lab_tournament)
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
-LEFT JOIN lab_gold.recommended_entry_bids reb
+LEFT JOIN derived.recommended_entry_bids reb
   ON reb.strategy_generation_run_id = $1::uuid
   AND reb.team_id = t.id
 WHERE t.tournament_id = (SELECT tournament_id FROM lab_tournament)
@@ -682,7 +682,7 @@ func (q *Queries) GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx context
 const getLatestStrategyGenerationRunIDByCoreCalcuttaID = `-- name: GetLatestStrategyGenerationRunIDByCoreCalcuttaID :one
 SELECT
 	sgr.id
-FROM lab_gold.strategy_generation_runs sgr
+FROM derived.strategy_generation_runs sgr
 WHERE sgr.calcutta_id = $1::uuid
 	AND sgr.deleted_at IS NULL
 ORDER BY sgr.created_at DESC

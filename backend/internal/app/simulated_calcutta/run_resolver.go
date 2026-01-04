@@ -43,7 +43,7 @@ func (s *Service) getCalcuttaContext(ctx context.Context, bronzeTournamentID str
 	// This intentionally isolates the season/name join in one place.
 	query := `
 		SELECT c.id, c.tournament_id
-		FROM lab_bronze.tournaments bt
+		FROM derived.tournaments bt
 		JOIN core.tournaments t ON t.id = bt.core_tournament_id AND t.deleted_at IS NULL
 		JOIN core.calcuttas c ON c.tournament_id = t.id AND c.deleted_at IS NULL
 		WHERE bt.id = $1
@@ -244,7 +244,7 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 	var strategyGenerationRunID string
 	if err := tx.QueryRow(ctx, `
 		SELECT id
-		FROM lab_gold.strategy_generation_runs
+		FROM derived.strategy_generation_runs
 		WHERE run_key = $1::text
 			AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -265,8 +265,8 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 				$1,
 				tt.id,
 				reb.bid_points
-			FROM lab_gold.recommended_entry_bids reb
-			JOIN lab_bronze.teams bt ON reb.team_id = bt.id
+			FROM derived.recommended_entry_bids reb
+			JOIN derived.teams bt ON reb.team_id = bt.id
 			JOIN core.schools s ON bt.school_name = s.name
 			JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $4
 			WHERE reb.strategy_generation_run_id = $2::uuid
@@ -340,8 +340,8 @@ func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc 
 		SELECT 
 			tt.id as tournament_team_id,
 			greb.bid_points
-		FROM lab_gold.recommended_entry_bids greb
-		JOIN lab_bronze.teams bt ON greb.team_id = bt.id
+		FROM derived.recommended_entry_bids greb
+		JOIN derived.teams bt ON greb.team_id = bt.id
 		JOIN core.schools s ON bt.school_name = s.name
 		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $3
 		WHERE greb.run_id = $1
@@ -384,7 +384,7 @@ func (s *Service) getSimulations(ctx context.Context, bronzeTournamentID string,
 			tt.id as tournament_team_id,
 			core.calcutta_points_for_progress($3, sst.wins, sst.byes) as points
 		FROM derived.simulated_teams sst
-		JOIN lab_bronze.teams bt ON sst.team_id = bt.id
+		JOIN derived.teams bt ON sst.team_id = bt.id
 		JOIN core.schools s ON bt.school_name = s.name
 		JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $2
 		WHERE sst.tournament_id = $1

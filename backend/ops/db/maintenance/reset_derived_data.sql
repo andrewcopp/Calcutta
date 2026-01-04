@@ -6,10 +6,10 @@ TRUNCATE TABLE
     derived.simulated_tournaments,
     derived.simulation_state_teams,
     derived.simulation_states,
-    lab_gold.detailed_investment_report,
-    lab_gold.recommended_entry_bids,
-    lab_gold.optimization_runs,
-    lab_gold.strategy_generation_runs,
-    lab_silver.predicted_market_share,
-    lab_silver.predicted_game_outcomes
+    derived.detailed_investment_report,
+    derived.recommended_entry_bids,
+    derived.optimization_runs,
+    derived.strategy_generation_runs,
+    derived.predicted_market_share,
+    derived.predicted_game_outcomes
 CASCADE;

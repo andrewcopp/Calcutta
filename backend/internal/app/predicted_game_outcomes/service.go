@@ -220,7 +220,7 @@ func (s *Service) resolveLabTournamentID(ctx context.Context, season int) (strin
 	var id string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT id
-		FROM lab_bronze.tournaments
+		FROM derived.tournaments
 		WHERE season = $1::int
 		  AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -237,7 +237,7 @@ func (s *Service) loadTeams(
 ) ([]*models.TournamentTeam, map[string]float64, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, seed, region, school_name, kenpom_net
-		FROM lab_bronze.teams
+		FROM derived.teams
 		WHERE tournament_id = $1
 		  AND deleted_at IS NULL
 		ORDER BY seed ASC
@@ -297,7 +297,7 @@ func (s *Service) loadFinalFourConfig(ctx context.Context, labTournamentID strin
 		       ct.final_four_bottom_left,
 		       ct.final_four_top_right,
 		       ct.final_four_bottom_right
-		FROM lab_bronze.tournaments bt
+		FROM derived.tournaments bt
 		LEFT JOIN core.tournaments ct
 		  ON ct.id = bt.core_tournament_id
 		 AND ct.deleted_at IS NULL
@@ -353,7 +353,7 @@ func (s *Service) writePredictedGameOutcomes(
 	}()
 
 	_, err = tx.Exec(ctx, `
-		DELETE FROM lab_silver.predicted_game_outcomes
+		DELETE FROM derived.predicted_game_outcomes
 		WHERE tournament_id = $1
 	`, labTournamentID)
 	if err != nil {
@@ -363,7 +363,7 @@ func (s *Service) writePredictedGameOutcomes(
 	src := &predictionSource{rows: rows, idx: 0}
 	_, err = tx.CopyFrom(
 		ctx,
-		pgx.Identifier{"lab_silver", "predicted_game_outcomes"},
+		pgx.Identifier{"derived", "predicted_game_outcomes"},
 		[]string{"tournament_id", "game_id", "round", "team1_id", "team2_id", "p_team1_wins", "p_matchup", "model_version"},
 		src,
 	)

@@ -21,7 +21,7 @@ func main() {
 	flag.IntVar(&nSims, "n-sims", 5000, "Number of Monte Carlo simulations used to estimate matchup probabilities")
 	flag.IntVar(&seed, "seed", 42, "Base RNG seed")
 	flag.Float64Var(&kenpomScale, "kenpom-scale", 10.0, "KenPom scale parameter")
-	flag.StringVar(&modelVersion, "model-version", "kenpom-v1-go", "Model version stored on lab_silver.predicted_game_outcomes")
+	flag.StringVar(&modelVersion, "model-version", "kenpom-v1-go", "Model version stored on derived.predicted_game_outcomes")
 	flag.Parse()
 
 	if season <= 0 {

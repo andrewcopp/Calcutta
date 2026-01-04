@@ -8,6 +8,9 @@ This document is an executable checklist for migrating the database to:
 - Explicit tournament identity (`seasons`, `competitions`, `tournaments`) and removal of brittle string joins
 - Configurable, centralized scoring via `core.calcutta_scoring_rules` (incremental-per-win)
 
+## Update
+- Completed: consolidated runtime schemas to `core` + `derived` via migration `20260104211500_collapse_lab_schemas_into_derived`.
+
 This plan is designed to be safe with respect to historical cleaned data. When in doubt, preserve and backfill first, prune later.
 
 ---
@@ -57,24 +60,26 @@ This plan is designed to be safe with respect to historical cleaned data. When i
 
 #### Derived / recomputable (safe to rebuild; keep for performance)
 
-##### Core derived views
-- `core.derived_portfolios`
-- `core.derived_portfolio_teams`
-
-##### Lab schemas (medallion tiers)
-- `bronze.tournaments`
-- `bronze.teams`
-- `bronze.calcuttas`
-- `bronze.entry_bids`
-- `bronze.payouts`
-- `silver.predicted_game_outcomes`
-- `silver.simulated_tournaments`
-- `silver.predicted_market_share`
-- `gold.optimization_runs`
-- `gold.recommended_entry_bids`
-- `gold.entry_simulation_outcomes`
-- `gold.entry_performance`
-- `gold.detailed_investment_report`
+##### Derived schema (rebuildable artifacts)
+Update (2026-01-03): replaced the old `bronze/silver/gold` (and `lab_*`) inventory after consolidating runtime schemas to `core` + `derived`.
+- `derived.tournaments`
+- `derived.teams`
+- `derived.calcuttas`
+- `derived.entry_bids`
+- `derived.payouts`
+- `derived.predicted_game_outcomes`
+- `derived.predicted_market_share`
+- `derived.simulation_states`
+- `derived.simulation_state_teams`
+- `derived.simulated_tournaments`
+- `derived.simulated_teams`
+- `derived.calcutta_evaluation_runs`
+- `derived.entry_simulation_outcomes`
+- `derived.entry_performance`
+- `derived.strategy_generation_runs`
+- `derived.optimization_runs`
+- `derived.recommended_entry_bids`
+- `derived.detailed_investment_report`
 
 #### Deprecated / transitional (remove after verification window)
 
@@ -380,3 +385,5 @@ Add dated notes here as work is completed.
 - [2026-01-02] Dropped unused public legacy functions via migration: `20260102102200_drop_unused_public_functions`
 - [2026-01-02] Added audit columns + updated_at triggers for lab tiers and remaining public tables via migration: `20260102103000_add_audit_columns_to_lab_and_public_tables`
 - [2026-01-02] Standardized core updated_at triggers to `core.set_updated_at()` via migration: `20260102104500_standardize_core_updated_at_triggers`
+
+ - [2026-01-03] Consolidated runtime schemas to `core` + `derived` (dropped lab/medallion schemas) via migration: `20260104211500_collapse_lab_schemas_into_derived`

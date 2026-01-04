@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
@@ -29,6 +30,7 @@ type RunParams struct {
 	Workers              int
 	BatchSize            int
 	ProbabilitySourceKey string
+	StartingStateKey     string
 }
 
 type RunResult struct {
@@ -62,6 +64,12 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	if p.ProbabilitySourceKey == "" {
 		p.ProbabilitySourceKey = "go_worker"
 	}
+	if strings.TrimSpace(p.StartingStateKey) == "" {
+		p.StartingStateKey = "current"
+	}
+	if p.StartingStateKey != "current" && p.StartingStateKey != "post_first_four" {
+		return nil, errors.New("StartingStateKey must be 'current' or 'post_first_four'")
+	}
 
 	overallStart := time.Now()
 
@@ -93,6 +101,12 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	}
 	if nPredRows == 0 {
 		return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", labTournamentID)
+	}
+
+	if p.StartingStateKey == "post_first_four" {
+		if err := s.lockInFirstFourResults(ctx, labTournamentID, coreTournamentID, br, probs); err != nil {
+			return nil, err
+		}
 	}
 
 	loadDur := time.Since(loadStart)
@@ -149,7 +163,7 @@ func (s *Service) resolveTournamentIDs(ctx context.Context, season int) (string,
 	var coreID *string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT id, core_tournament_id
-		FROM lab_bronze.tournaments
+		FROM derived.tournaments
 		WHERE season = $1::int
 		  AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -170,7 +184,7 @@ func (s *Service) loadFinalFourConfig(ctx context.Context, labTournamentID strin
 		       ct.final_four_bottom_left,
 		       ct.final_four_top_right,
 		       ct.final_four_bottom_right
-		FROM lab_bronze.tournaments bt
+		FROM derived.tournaments bt
 		LEFT JOIN core.tournaments ct
 		  ON ct.id = bt.core_tournament_id
 		 AND ct.deleted_at IS NULL
@@ -215,7 +229,7 @@ func (s *Service) loadFinalFourConfig(ctx context.Context, labTournamentID strin
 func (s *Service) loadLabTeams(ctx context.Context, labTournamentID string) ([]*models.TournamentTeam, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, seed, region, school_name
-		FROM lab_bronze.teams
+		FROM derived.teams
 		WHERE tournament_id = $1
 		  AND deleted_at IS NULL
 		ORDER BY seed ASC
@@ -263,7 +277,7 @@ func (s *Service) loadLabTeams(ctx context.Context, labTournamentID string) ([]*
 func (s *Service) loadPredictedGameOutcomes(ctx context.Context, labTournamentID string) (map[tsim.MatchupKey]float64, int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT game_id, team1_id, team2_id, p_team1_wins
-		FROM lab_silver.predicted_game_outcomes
+		FROM derived.predicted_game_outcomes
 		WHERE tournament_id = $1
 		  AND deleted_at IS NULL
 	`, labTournamentID)

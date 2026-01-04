@@ -20,7 +20,7 @@ func main() {
 	var runID string
 
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Core calcutta UUID")
-	flag.StringVar(&tournamentSimulationBatchID, "tournament-simulation-batch-id", "", "Optional: analytics.tournament_simulation_batches.id")
+	flag.StringVar(&tournamentSimulationBatchID, "tournament-simulation-batch-id", "", "Optional: derived.simulated_tournaments.id")
 	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Optional: entry name to exclude")
 	flag.StringVar(&runID, "run-id", "", "Optional: run_id tag for legacy compatibility")
 	flag.Parse()
@@ -72,7 +72,7 @@ func resolveBronzeTournamentID(ctx context.Context, pool *pgxpool.Pool, calcutta
 	err := pool.QueryRow(ctx, `
 		SELECT bt.id
 		FROM core.calcuttas c
-		JOIN lab_bronze.tournaments bt
+		JOIN derived.tournaments bt
 		  ON bt.core_tournament_id = c.tournament_id
 		 AND bt.deleted_at IS NULL
 		WHERE c.id = $1::uuid
@@ -82,7 +82,7 @@ func resolveBronzeTournamentID(ctx context.Context, pool *pgxpool.Pool, calcutta
 	`, calcuttaID).Scan(&bronzeTournamentID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return "", fmt.Errorf("no lab_bronze tournament found for calcutta_id=%s", calcuttaID)
+			return "", fmt.Errorf("no derived tournament found for calcutta_id=%s", calcuttaID)
 		}
 		return "", err
 	}
