@@ -1,7 +1,5 @@
-import { apiClient } from '../api/apiClient';
+import { API_URL, apiClient } from '../api/apiClient';
 import { AnalyticsResponse, SeedInvestmentDistributionResponse } from '../types/analytics';
-
-const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export const analyticsService = {
   async getAnalytics(): Promise<AnalyticsResponse> {

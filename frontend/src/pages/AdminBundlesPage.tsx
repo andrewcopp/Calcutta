@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { apiClient } from '../api/apiClient';
+import React, { useEffect, useState } from 'react';
+import { API_URL, apiClient } from '../api/apiClient';
 
 type ImportStartResponse = {
   upload_id: string;
@@ -39,8 +39,6 @@ type ImportStatusResponse = {
 };
 
 export const AdminBundlesPage: React.FC = () => {
-  const API_URL = useMemo(() => import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080', []);
-
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
