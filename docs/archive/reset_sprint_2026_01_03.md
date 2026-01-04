@@ -102,7 +102,7 @@ The frontend is a browse UI:
 ## Retention policy (simulations)
 Default should be “derived but ephemeral”.
 
--[ ] Implement default retention: keep only aggregated evaluation summaries.
+-[x] Implement default retention: keep only aggregated evaluation summaries.
 -[ ] Implement debug retention: keep either sampled simulations or full simulations for the newest N runs.
 
 ## Migration plan (high-level)
@@ -134,26 +134,26 @@ Update all foreign keys that reference these tables.
 -[x] Record sprint decisions + target schema
 
 ### Core/Derived schema + migrations
--[ ] Create migration: move/rename simulation tables into `derived` and rename to `simulation_*` / `simulated_*`
--[ ] Create migration: rename payout columns `payout_points` -> `payout_cents`
+-[x] Create migration: move/rename simulation tables into `derived` and rename to `simulation_*` / `simulated_*`
+-[x] Create migration: rename payout columns `payout_points` -> `payout_cents`
 -[ ] Create migration: standardize bids to `bid_points`
 -[ ] Create migration: add `name` to run-like tables where needed
 
 ### Go (authoritative implementation)
--[ ] Update Go tournament simulation writer to write `derived.simulated_tournaments` + `derived.simulated_teams`
--[ ] Update Go simulated calcutta evaluator to read from `derived.simulated_*` tables
--[ ] Update Go evaluator to write payouts as `payout_cents`
--[ ] Update sqlc queries and regenerate code
+-[x] Update Go tournament simulation writer to write `derived.simulated_tournaments` + `derived.simulated_teams`
+-[x] Update Go simulated calcutta evaluator to read from `derived.simulated_*` tables
+-[x] Update Go evaluator to write payouts as `payout_cents`
+-[x] Update sqlc queries and regenerate code
 
 ### Python (deprecations)
--[ ] Remove/disable Python evaluation paths
+-[x] Remove/disable Python evaluation paths
 -[ ] Keep only training/inference + writing predictions needed for Investments
 
 ### Frontend
 -[ ] Replace/extend Simulations page to browse runs (Returns/Investments/Entries)
--[ ] Add runs list page (by year): `/runs/:year`
--[ ] Add run rankings page: `/runs/:year/:runId`
--[ ] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`
+-[x] Add runs list page (by year): `/runs/:year`
+-[x] Add run rankings page: `/runs/:year/:runId`
+-[x] Add entry drill-down (portfolio/sims as available): `/runs/:year/:runId/entries/:entryKey`
 
 ## Open questions
 -[ ] Confirm the final names for evaluation tables in `derived` (whether to keep `entry_simulation_outcomes`/`entry_performance` naming or rename to `derived.simulated_entry_outcomes`/`derived.entry_performance`)

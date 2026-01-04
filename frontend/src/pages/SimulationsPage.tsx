@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type SimulationBatch = {
   id: string;
@@ -68,6 +69,29 @@ export function SimulationsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Simulations</h1>
         <p className="text-gray-600">Generate and manage batches of simulated tournaments.</p>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div>
+            <div className="text-sm font-medium text-blue-900">New: Runs viewer</div>
+            <div className="text-sm text-blue-800">Browse recent pipeline runs (read-only): runs → rankings → entry portfolio.</div>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              to={`/runs/${season}`}
+              className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            >
+              Open runs for {season}
+            </Link>
+            <Link
+              to={`/runs/${new Date().getFullYear()}`}
+              className="px-3 py-2 border border-blue-300 text-blue-900 rounded text-sm hover:bg-blue-100"
+            >
+              Latest
+            </Link>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
