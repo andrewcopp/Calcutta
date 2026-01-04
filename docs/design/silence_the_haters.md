@@ -2,9 +2,9 @@
 
 ## Security / secrets
 
-- [ ] **Verify no secrets are tracked:** `git status --ignored`, `git ls-files | grep -E '\\.env(\\.|$)'`
+- [x] **Verify no secrets are tracked:** `git status --ignored`, `git ls-files | grep -E '\\.env(\\.|$)'`
 - [ ] **Rotate any dev tokens/keys** that were ever shared outside the local machine
-- [ ] **Scan git history for leaked secrets** (commands below)
+- [x] **Scan git history for leaked secrets** (commands below)
 - [ ] **Document rotations** in the “Findings / actions taken” section below
 
 ## Go backend: DX + correctness
@@ -21,16 +21,16 @@
 
 ## OSS polish
 
-- [ ] **Add a `CONTRIBUTING.md`** with “how to run locally” for backend, frontend, data-science
-- [ ] **Add a `SECURITY.md`** with reporting guidelines + note on secrets handling
+- [x] **Add a `CONTRIBUTING.md`** with “how to run locally” for backend, frontend, data-science
+- [x] **Add a `SECURITY.md`** with reporting guidelines + note on secrets handling
 - [ ] **Ensure generated artifacts are not committed** (`out/`, `.venv/`, build output)
 - [ ] **Add a one-command developer bootstrap** (Makefile targets or scripts)
 
 ## Git history secret-scan commands (read-only)
 
-- [ ] **Scan for common secret keys:** `git grep -n -I "JWT_SECRET" $(git rev-list --all)`
-- [ ] **Scan for generic key names:** `git grep -n -I "API_KEY" $(git rev-list --all)`
-- [ ] **Scan for suspicious filenames in history:** `git log --all --name-only --pretty=format: | sort | uniq | grep -E '\\.(env|pem|key)$'`
+- [x] **Scan for common secret keys:** `git grep -n -I "JWT_SECRET" $(git rev-list --all)`
+- [x] **Scan for generic key names:** `git grep -n -I "API_KEY" $(git rev-list --all)`
+- [x] **Scan for suspicious filenames in history:** `git log --all --name-only --pretty=format: | sort | uniq | grep -E '\\.(env|pem|key)$'`
 - [ ] **Optional: run a dedicated scanner** (gitleaks/trufflehog) and review findings
 
 ## Findings / actions taken
@@ -50,6 +50,7 @@
     - runtime code references (e.g. `TokenManager{secret: []byte(secret)}`)
     - default local DB password values in data-science scripts (not a leak, but a cleanup opportunity)
   - Suspicious-filenames scan (`\\.(env|pem|key)$`) did not report any tracked history hits in the pasted output.
+  - AWS key pattern scan (`AKIA[0-9A-Z]{16}`) returned no matches.
 - [ ] **Rotations performed:**
   - (Fill these out as you rotate; do not paste secret values into this repo.)
 

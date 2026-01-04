@@ -21,16 +21,15 @@ func New(pool *pgxpool.Pool) *Service {
 }
 
 type GenerateParams struct {
-	CalcuttaID     string
-	RunKey         string
-	Name           string
-	OptimizerKey   string
-	MinBidPoints   int
-	MaxBidPoints   int
-	MinTeams       int
-	MaxTeams       int
-	BudgetPoints   int
-	UseNaiveMarket bool
+	CalcuttaID   string
+	RunKey       string
+	Name         string
+	OptimizerKey string
+	MinBidPoints int
+	MaxBidPoints int
+	MinTeams     int
+	MaxTeams     int
+	BudgetPoints int
 }
 
 type GenerateResult struct {
@@ -81,7 +80,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 	}
 	cc.SimulatedTournamentID = simID
 
-	expected, totalExpected, err := s.loadExpectedPointsByTeam(ctx, cc)
+	expected, _, err := s.loadExpectedPointsByTeam(ctx, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -98,14 +97,10 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 	teams := make([]Team, 0, len(expected))
 	for _, t := range expected {
 		share, ok := marketByTeam[t.TeamID]
-		marketPoints := 0.0
-		if ok {
-			marketPoints = share * poolSize
-		} else if !p.UseNaiveMarket {
-			if totalExpected > 0 {
-				marketPoints = t.ExpectedPoints / totalExpected * poolSize
-			}
+		if !ok {
+			return nil, fmt.Errorf("missing predicted_market_share for team_id=%s (tournament_id=%s)", t.TeamID, cc.CoreTournamentID)
 		}
+		marketPoints := share * poolSize
 		teams = append(teams, Team{ID: t.TeamID, ExpectedPoints: t.ExpectedPoints, MarketPoints: marketPoints})
 	}
 

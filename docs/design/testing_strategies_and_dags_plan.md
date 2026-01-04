@@ -44,6 +44,67 @@ Frontend should:
 - Calcutta scoring is applied later.
   - We can infer predicted points/returns by combining predicted game outcomes with the calcutta scoring rules.
 
+## Forecasting vs evaluation (important)
+
+### Forecasting / predicted returns (no Monte Carlo)
+We want a deterministic, repeatable path from matchup-level probabilities to per-team expected points.
+
+Definition:
+- Input: bracket structure + `derived.predicted_game_outcomes` (matchup probabilities)
+- Output: per-team:
+  - P(reach each round)
+  - expected points in *Calcutta scoring units*
+
+Implementation strategy:
+- Use a bracket dynamic program (DP) over the tournament tree.
+- This is NOT the same thing as calcutta evaluation.
+
+Reasoning:
+- Forecasting should not depend on Monte Carlo samples.
+- We want predictable behavior and debuggable provenance (missing matchup probs should fail fast).
+- “Returns” is a property of the game-outcomes run + scoring rules, not of an evaluation run.
+
+### Evaluation / benchmarking (Monte Carlo)
+Monte Carlo is reserved for:
+- simulating full tournament outcome distributions (tail risk)
+- evaluating a specific entry (payout distribution)
+- benchmarking suites across years
+
+Evaluation is allowed to be stochastic and expensive; it produces distributions and confidence bands.
+
+## Expected-value semantics (wins + byes)
+Important subtlety: our scoring function is defined as:
+
+`core.calcutta_points_for_progress(calcutta_id, wins, byes)`
+
+and it awards points for `win_index <= (wins + byes)`.
+
+Implications:
+- For non-First-Four teams, `byes=1` (they are already “in Round of 64”), so they start with progress=1.
+- For First Four teams, `byes=0` and they must win the play-in to reach progress=1.
+- Championship win corresponds to progress=7.
+
+The DP evaluator must be aligned to these semantics; otherwise investments/returns can look “off” for play-in teams.
+
+## Run-selection invariants
+
+### Game outcomes (returns) selection
+- Game-outcomes are tournament-scoped.
+- Consumers should select a specific `derived.game_outcome_runs.id`.
+- Default behavior: “latest run for tournament” only for convenience; it should be explicit in suite executions.
+- Failure mode: missing/mismatched matchup probabilities should fail fast.
+
+### Market share (investment) selection
+- Market share is calcutta-scoped.
+- Consumers should select a specific `derived.market_share_runs.id`.
+- Default behavior: if missing, error loudly (avoid silent fallback).
+- If a developer wants local UX unblocked without running the market model, they must explicitly seed `derived.predicted_market_share` via a dev tool.
+
+### Legacy bridging
+During migration:
+- existing tables may still hold rows with `run_id IS NULL`.
+- we must define when “legacy rows are acceptable” vs when to require run IDs.
+
 ## Evaluation modes
 
 ### A) Evaluate a Calcutta as-is
@@ -69,12 +130,20 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 - [ ] Commit predicted-investment fallback fix (analytics_calcutta_predictions.sql + sqlc output)
 - [ ] Implement pure `predicted_game_outcomes` -> predicted returns / expected value (no Monte Carlo)
   - [ ] Use bracket DP over matchup probabilities to compute per-team round advancement + expected points
-  - [ ] Use this as the baseline for naive `predicted_market_share` (until market model is wired)
+  - [ ] Provide an explicit dev-only seeding tool for `derived.predicted_market_share` (no runtime fallback)
 - [ ] Verify frontend smoke run UX end-to-end
   - [ ] /runs/2025 lists run
   - [ ] Returns page loads and is non-empty
   - [ ] Investments page loads and is non-empty
   - [ ] “Our entry” behavior matches optimizer output
+
+### Practical smoke checklist (debug loop)
+- [ ] `derived.predicted_game_outcomes` has rows for the tournament
+- [ ] DP predicted returns are non-empty and stable (no Monte Carlo)
+- [ ] `derived.predicted_market_share` has rows for the tournament/calcutta (real model OR explicitly seeded baseline)
+- [ ] Investments endpoint returns non-zero values
+- [ ] Optimizer output matches “Our entry” behavior in UI
+- [ ] Only then: run Monte Carlo evaluation for distributions
 
 ### Testing Strategies DAG (registry + artifacts)
 - [ ] Design schema v1
@@ -137,6 +206,22 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [ ] run metadata table
   - [ ] artifact table linked to run
 - [ ] Ensure tournament simulation selects a specific game-outcomes run
+
+## Tooling notes (local)
+
+### Seed a naive market baseline from PGO expected value (no Monte Carlo)
+We added a local seeding tool that computes predicted expected value (DP over bracket) and writes a tournament-scoped, legacy-style baseline `derived.predicted_market_share`.
+
+This is for local UX unblock only; it is NOT the market model.
+
+This is not a runtime fallback: production workflows should fail if market data is missing.
+
+Command:
+- `go run ./backend/cmd/seed-naive-market-share-from-pgo --calcutta-id <uuid>`
+- `--dry-run` prints top teams and does not write
+
+### Calcutta evaluation
+Monte Carlo evaluation should be run only after the DP returns + market baseline exist.
 
 ### Cleanup
 - [ ] Identify and retire exploratory/legacy tables/endpoints/UI once registry model is wired
