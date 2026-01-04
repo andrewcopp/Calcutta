@@ -111,9 +111,19 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 
 	loadDur := time.Since(loadStart)
 
-	snapshotID, err := s.createTournamentStateSnapshot(ctx, coreTournamentID)
-	if err != nil {
-		return nil, err
+	snapshotID := ""
+	if p.StartingStateKey == "post_first_four" {
+		created, err := s.createTournamentStateSnapshotFromBracket(ctx, labTournamentID, coreTournamentID, br)
+		if err != nil {
+			return nil, err
+		}
+		snapshotID = created
+	} else {
+		created, err := s.createTournamentStateSnapshot(ctx, coreTournamentID)
+		if err != nil {
+			return nil, err
+		}
+		snapshotID = created
 	}
 	batchID, err := s.createTournamentSimulationBatch(ctx, coreTournamentID, snapshotID, p.NSims, p.Seed, p.ProbabilitySourceKey)
 	if err != nil {
@@ -156,6 +166,190 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		SimulateWriteDuration:       simDur,
 		OverallDuration:             overallDur,
 	}, nil
+}
+
+func (s *Service) lockInFirstFourResults(
+	ctx context.Context,
+	labTournamentID string,
+	coreTournamentID string,
+	br *models.BracketStructure,
+	probs map[tsim.MatchupKey]float64,
+) error {
+	if br == nil {
+		return errors.New("bracket must not be nil")
+	}
+	if probs == nil {
+		return errors.New("probs must not be nil")
+	}
+
+	coreByLab, err := s.mapLabTeamIDToCoreTeamID(ctx, labTournamentID, coreTournamentID)
+	if err != nil {
+		return err
+	}
+
+	for _, g := range br.Games {
+		if g == nil {
+			continue
+		}
+		if g.Round != models.RoundFirstFour {
+			continue
+		}
+		if g.Team1 == nil || g.Team2 == nil {
+			continue
+		}
+		team1 := g.Team1.TeamID
+		team2 := g.Team2.TeamID
+		if team1 == "" || team2 == "" {
+			continue
+		}
+
+		core1, ok1 := coreByLab[team1]
+		core2, ok2 := coreByLab[team2]
+		if !ok1 || !ok2 {
+			return fmt.Errorf("failed to map first four teams to core: team1=%s ok=%v team2=%s ok=%v", team1, ok1, team2, ok2)
+		}
+
+		wins1, elim1, err := s.loadCoreTeamWinsEliminated(ctx, core1)
+		if err != nil {
+			return err
+		}
+		wins2, elim2, err := s.loadCoreTeamWinsEliminated(ctx, core2)
+		if err != nil {
+			return err
+		}
+
+		winner := ""
+		if elim1 && !elim2 {
+			winner = team2
+		} else if elim2 && !elim1 {
+			winner = team1
+		} else if wins1 > wins2 {
+			winner = team1
+		} else if wins2 > wins1 {
+			winner = team2
+		} else {
+			return fmt.Errorf("post_first_four requested but first four game not resolved for game_id=%s", g.GameID)
+		}
+
+		p1 := 0.0
+		if winner == team1 {
+			p1 = 1.0
+			g.Winner = g.Team1
+		} else {
+			p1 = 0.0
+			g.Winner = g.Team2
+		}
+
+		probs[tsim.MatchupKey{GameID: g.GameID, Team1ID: team1, Team2ID: team2}] = p1
+		probs[tsim.MatchupKey{GameID: g.GameID, Team1ID: team2, Team2ID: team1}] = 1.0 - p1
+	}
+
+	return nil
+}
+
+func (s *Service) mapLabTeamIDToCoreTeamID(ctx context.Context, labTournamentID string, coreTournamentID string) (map[string]string, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT bt.id, tt.id
+		FROM derived.teams bt
+		JOIN core.schools s
+			ON s.name = bt.school_name
+			AND s.deleted_at IS NULL
+		JOIN core.teams tt
+			ON tt.school_id = s.id
+			AND tt.tournament_id = $2
+			AND tt.deleted_at IS NULL
+		WHERE bt.tournament_id = $1
+			AND bt.deleted_at IS NULL
+	`, labTournamentID, coreTournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[string]string)
+	for rows.Next() {
+		var labID string
+		var coreID string
+		if err := rows.Scan(&labID, &coreID); err != nil {
+			return nil, err
+		}
+		out[labID] = coreID
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *Service) loadCoreTeamWinsEliminated(ctx context.Context, coreTeamID string) (int, bool, error) {
+	var wins int
+	var eliminated bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT wins, eliminated
+		FROM core.teams
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, coreTeamID).Scan(&wins, &eliminated)
+	if err != nil {
+		return 0, false, err
+	}
+	return wins, eliminated, nil
+}
+
+func (s *Service) createTournamentStateSnapshotFromBracket(
+	ctx context.Context,
+	labTournamentID string,
+	coreTournamentID string,
+	br *models.BracketStructure,
+) (string, error) {
+	if br == nil {
+		return "", errors.New("bracket must not be nil")
+	}
+
+	coreByLab, err := s.mapLabTeamIDToCoreTeamID(ctx, labTournamentID, coreTournamentID)
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var snapshotID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.simulation_states (tournament_id, source, description)
+		VALUES ($1, 'go_simulate_tournaments', 'Snapshot from bracket state (post_first_four)')
+		RETURNING id
+	`, coreTournamentID).Scan(&snapshotID); err != nil {
+		return "", err
+	}
+
+	for labTeamID, coreTeamID := range coreByLab {
+		wins, byes, eliminated := models.CalculateWinsAndByes(labTeamID, br)
+		_, err := tx.Exec(ctx, `
+			INSERT INTO derived.simulation_state_teams (
+				simulation_state_id,
+				team_id,
+				wins,
+				byes,
+				eliminated
+			)
+			VALUES ($1, $2::uuid, $3, $4, $5)
+			ON CONFLICT (simulation_state_id, team_id) DO NOTHING
+		`, snapshotID, coreTeamID, wins, byes, eliminated)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", err
+	}
+
+	return snapshotID, nil
 }
 
 func (s *Service) resolveTournamentIDs(ctx context.Context, season int) (string, string, error) {

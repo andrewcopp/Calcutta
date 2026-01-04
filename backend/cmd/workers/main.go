@@ -39,6 +39,7 @@ func main() {
 	defer cancel()
 
 	s.RunBundleImportWorker(ctx)
+	s.RunEntryEvaluationWorker(ctx)
 
 	log.Printf("stopping workers")
 }

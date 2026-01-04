@@ -144,7 +144,7 @@ func (s *Service) attachSimulationBatchToSimulatedTournaments(ctx context.Contex
 	return err
 }
 
-func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, bronzeTournamentID string, runID string, excludedEntryName string) (string, error) {
+func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, bronzeTournamentID string, runID string, excludedEntryName string, entryCandidateID *string) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -240,16 +240,7 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 		}
 	}
 
-	// Snapshot our_strategy synthetic entry when a strategy_generation_run exists for this run_key.
-	var strategyGenerationRunID string
-	if err := tx.QueryRow(ctx, `
-		SELECT id
-		FROM derived.strategy_generation_runs
-		WHERE run_key = $1::text
-			AND deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT 1
-	`, runID).Scan(&strategyGenerationRunID); err == nil {
+	{
 		var snapshotEntryID string
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
@@ -264,15 +255,37 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 			SELECT
 				$1,
 				tt.id,
-				reb.bid_points
-			FROM derived.recommended_entry_bids reb
-			JOIN derived.teams bt ON reb.team_id = bt.id
+				greb.bid_points
+			FROM derived.recommended_entry_bids greb
+			JOIN derived.teams bt ON greb.team_id = bt.id
 			JOIN core.schools s ON bt.school_name = s.name
 			JOIN core.teams tt ON tt.school_id = s.id AND tt.tournament_id = $4
-			WHERE reb.strategy_generation_run_id = $2::uuid
+			WHERE greb.run_id = $2
 				AND bt.tournament_id = $3
-				AND reb.deleted_at IS NULL
-		`, snapshotEntryID, strategyGenerationRunID, bronzeTournamentID, coreTournamentID)
+				AND greb.deleted_at IS NULL
+		`, snapshotEntryID, runID, bronzeTournamentID, coreTournamentID)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if entryCandidateID != nil && *entryCandidateID != "" {
+		var snapshotEntryID string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
+			VALUES ($1, NULL, 'Entry Candidate', true)
+			RETURNING id
+		`, snapshotID).Scan(&snapshotEntryID); err != nil {
+			return "", err
+		}
+
+		_, err := tx.Exec(ctx, `
+			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
+			SELECT $1, ecb.team_id, ecb.bid_points
+			FROM models.entry_candidate_bids ecb
+			WHERE ecb.entry_candidate_id = $2::uuid
+				AND ecb.deleted_at IS NULL
+		`, snapshotEntryID, *entryCandidateID)
 		if err != nil {
 			return "", err
 		}
@@ -296,7 +309,7 @@ func (s *Service) createCalcuttaEvaluationRun(ctx context.Context, tournamentSim
 	return evalID, nil
 }
 
-func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext, runID string, excludedEntry string) (map[string]*Entry, error) {
+func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc *calcuttaContext, runID string, excludedEntry string, entryCandidateID *string) (map[string]*Entry, error) {
 	// Use canonical core tables for entries/bids.
 	query := `
 		SELECT
@@ -370,6 +383,32 @@ func (s *Service) getEntries(ctx context.Context, bronzeTournamentID string, cc 
 
 	if len(ourEntry.Teams) > 0 {
 		entries["Our Strategy"] = ourEntry
+	}
+
+	if entryCandidateID != nil && *entryCandidateID != "" {
+		candidateRows, err := s.pool.Query(ctx, `
+			SELECT team_id, bid_points
+			FROM models.entry_candidate_bids
+			WHERE entry_candidate_id = $1::uuid
+				AND deleted_at IS NULL
+		`, *entryCandidateID)
+		if err != nil {
+			return nil, err
+		}
+		defer candidateRows.Close()
+
+		candidate := &Entry{Name: "Entry Candidate", Teams: make(map[string]int)}
+		for candidateRows.Next() {
+			var teamID string
+			var bidPoints int
+			if err := candidateRows.Scan(&teamID, &bidPoints); err != nil {
+				return nil, err
+			}
+			candidate.Teams[teamID] = bidPoints
+		}
+		if len(candidate.Teams) > 0 {
+			entries[candidate.Name] = candidate
+		}
 	}
 
 	return entries, nil
