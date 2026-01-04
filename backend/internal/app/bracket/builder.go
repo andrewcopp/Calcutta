@@ -14,6 +14,12 @@ func NewBracketBuilder() *BracketBuilder {
 }
 
 func (b *BracketBuilder) BuildBracket(tournamentID string, teams []*models.TournamentTeam, finalFour *models.FinalFourConfig) (*models.BracketStructure, error) {
+	return BuildBracketStructure(tournamentID, teams, finalFour)
+}
+
+func BuildBracketStructure(tournamentID string, teams []*models.TournamentTeam, finalFour *models.FinalFourConfig) (*models.BracketStructure, error) {
+	b := &BracketBuilder{}
+
 	if len(teams) != 68 {
 		return nil, fmt.Errorf("expected 68 teams, got %d", len(teams))
 	}

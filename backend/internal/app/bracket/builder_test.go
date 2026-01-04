@@ -14,6 +14,48 @@ type bracketLink struct {
 	NextGameSlot int
 }
 
+func TestThatBuildBracketStructureReturnsErrorWhenNotSixtyEightTeams(t *testing.T) {
+	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
+
+	_, err := BuildBracketStructure("t", nil, ff)
+
+	if err == nil {
+		t.Errorf("expected error")
+	}
+}
+
+func TestThatBuildBracketStructureSetsTournamentID(t *testing.T) {
+	teams := createFullTournamentTeams("t")
+	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
+
+	bracket, err := BuildBracketStructure("t", teams, ff)
+	if err != nil {
+		t.Fatalf("failed to build bracket: %v", err)
+	}
+
+	got := ""
+	if bracket != nil {
+		got = bracket.TournamentID
+	}
+	if got != "t" {
+		t.Errorf("expected tournament id to be t")
+	}
+}
+
+func TestThatBuildBracketStructurePreservesFinalFourConfigPointer(t *testing.T) {
+	teams := createFullTournamentTeams("t")
+	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
+
+	bracket, err := BuildBracketStructure("t", teams, ff)
+	if err != nil {
+		t.Fatalf("failed to build bracket: %v", err)
+	}
+
+	if bracket.FinalFour != ff {
+		t.Errorf("expected final four config pointer to be preserved")
+	}
+}
+
 func TestThatRegionWithNoDuplicateSeedsCreatesZeroFirstFourGames(t *testing.T) {
 	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
