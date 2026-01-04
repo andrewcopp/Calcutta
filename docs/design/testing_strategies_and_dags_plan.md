@@ -89,6 +89,9 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Update writers/readers
   - [ ] Python writers: write run metadata first, then artifacts linked to run
+  - [ ] Migrate `run_ridge_regression.py` / market-share DB writer off `lab_bronze.*` and onto current `core/derived`
+    - [ ] Write a `derived.market_share_runs` row and link artifacts via `derived.predicted_market_share.run_id`
+    - [ ] Ensure it can write both calcutta-scoped and (legacy) tournament-scoped rows as needed
   - [ ] Go readers/services:
     - [ ] Accept explicit run_id selection
     - [ ] Game outcomes: default to latest for the tournament
