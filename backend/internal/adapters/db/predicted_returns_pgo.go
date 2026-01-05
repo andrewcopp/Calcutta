@@ -273,18 +273,15 @@ func loadPredictedGameOutcomesForTournament(ctx context.Context, pool *pgxpool.P
 		if err != nil {
 			return nil, nil, 0, err
 		}
-		if n > 0 {
-			return latestRunIDPtr, out, n, nil
+		if n == 0 {
+			return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", latestRunID)
 		}
+		return latestRunIDPtr, out, n, nil
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, 0, err
 	}
 
-	out, n, err := loadTournamentPredictedGameOutcomes(ctx, pool, tournamentID)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-	return nil, out, n, nil
+	return nil, nil, 0, fmt.Errorf("no game_outcome_runs found for tournament_id=%s", tournamentID)
 }
 
 func loadPredictedGameOutcomesByRunID(ctx context.Context, pool *pgxpool.Pool, runID string) (map[matchupKey]float64, int, error) {
@@ -294,37 +291,6 @@ func loadPredictedGameOutcomesByRunID(ctx context.Context, pool *pgxpool.Pool, r
 		WHERE run_id = $1::uuid
 			AND deleted_at IS NULL
 	`, runID)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
-
-	out := make(map[matchupKey]float64)
-	n := 0
-	for rows.Next() {
-		var gameID, t1, t2 string
-		var p float64
-		if err := rows.Scan(&gameID, &t1, &t2, &p); err != nil {
-			return nil, 0, err
-		}
-		n++
-		out[matchupKey{GameID: gameID, Team1ID: t1, Team2ID: t2}] = p
-		out[matchupKey{GameID: gameID, Team1ID: t2, Team2ID: t1}] = 1.0 - p
-	}
-	if rows.Err() != nil {
-		return nil, 0, rows.Err()
-	}
-	return out, n, nil
-}
-
-func loadTournamentPredictedGameOutcomes(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (map[matchupKey]float64, int, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT game_id, team1_id, team2_id, p_team1_wins
-		FROM derived.predicted_game_outcomes
-		WHERE tournament_id = $1::uuid
-			AND run_id IS NULL
-			AND deleted_at IS NULL
-	`, tournamentID)
 	if err != nil {
 		return nil, 0, err
 	}

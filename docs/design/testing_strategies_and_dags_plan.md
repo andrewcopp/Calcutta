@@ -91,8 +91,8 @@ The DP evaluator must be aligned to these semantics; otherwise investments/retur
 ### Game outcomes (returns) selection
 - Game-outcomes are tournament-scoped.
 - Consumers should select a specific `derived.game_outcome_runs.id`.
-- Default behavior: “latest run for tournament” only for convenience; it should be explicit in suite executions.
-- Failure mode: missing/mismatched matchup probabilities should fail fast.
+- Default behavior: select latest run for tournament only for convenience; it should be explicit in suite executions.
+- No legacy fallback: missing/mismatched matchup probabilities should fail fast.
 
 ### Market share (investment) selection
 - Market share is calcutta-scoped.
