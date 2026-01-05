@@ -280,6 +280,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Frontend: Lab + Sandbox UI
   - [x] Replace nav with Lab / Sandbox and remove legacy pages from navigation
+  - [ ] Coverage: use UI to identify missing runs (algorithms not yet run for a tournament / calcutta)
   - [ ] Lab: Advancements tab
     - [x] Algorithm list (kind = game outcomes)
     - [ ] Algorithm detail -> tournaments with runs
