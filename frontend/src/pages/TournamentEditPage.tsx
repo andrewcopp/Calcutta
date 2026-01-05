@@ -6,6 +6,10 @@ import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 export const TournamentEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -121,27 +125,25 @@ export const TournamentEditPage: React.FC = () => {
 
   if (!id) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading..." />
+      </PageContainer>
     );
   }
 
   if (tournamentQuery.isLoading || teamsQuery.isLoading || schoolsQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading tournament..." />
+      </PageContainer>
     );
   }
 
   if (tournamentQuery.isError || teamsQuery.isError || schoolsQuery.isError) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Failed to load tournament data
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">Failed to load tournament data</Alert>
+      </PageContainer>
     );
   }
 
@@ -150,45 +152,40 @@ export const TournamentEditPage: React.FC = () => {
 
   if (!tournament) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading tournament..." />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Edit Tournament: {tournament.name}</h1>
-          <p className="text-gray-600">
-            {tournament.rounds} rounds • Created {new Date(tournament.created).toLocaleDateString()}
-          </p>
-        </div>
-        <div className="flex gap-4">
-          <button
-            onClick={() => navigate(`/admin/tournaments/${id}`)}
-            className="px-4 py-2 border rounded hover:bg-gray-100"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSaveAll}
-            disabled={isSaving}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save All Changes'}
-          </button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title={`Edit Tournament: ${tournament.name}`}
+        subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
+        actions={
+          <>
+            <button onClick={() => navigate(`/admin/tournaments/${id}`)} className="px-4 py-2 border rounded hover:bg-gray-100">
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveAll}
+              disabled={isSaving}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save All Changes'}
+            </button>
+          </>
+        }
+      />
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert variant="error" className="mb-4">
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <Card className="p-0 overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -264,7 +261,7 @@ export const TournamentEditPage: React.FC = () => {
               ))}
           </tbody>
         </table>
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
-}; 
+};

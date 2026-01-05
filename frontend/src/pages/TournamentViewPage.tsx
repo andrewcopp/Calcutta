@@ -6,6 +6,10 @@ import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 type SortField = 'seed' | 'school' | 'byes' | 'wins' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -86,27 +90,25 @@ export const TournamentViewPage: React.FC = () => {
 
   if (!id) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-600">Tournament not found</div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">Tournament not found</Alert>
+      </PageContainer>
     );
   }
 
   if (tournamentQuery.isLoading || teamsQuery.isLoading || schoolsQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading tournament..." />
+      </PageContainer>
     );
   }
 
   if (tournamentQuery.isError || teamsQuery.isError || schoolsQuery.isError) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Failed to load tournament data
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">Failed to load tournament data</Alert>
+      </PageContainer>
     );
   }
 
@@ -115,52 +117,41 @@ export const TournamentViewPage: React.FC = () => {
 
   if (!tournament) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-600">Tournament not found</div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">Tournament not found</Alert>
+      </PageContainer>
     );
   }
 
   const sortedTeams = getSortedTeams();
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">{tournament.name}</h1>
-          <p className="text-gray-600">
-            {tournament.rounds} rounds • Created {new Date(tournament.created).toLocaleDateString()}
-          </p>
-        </div>
-        <div className="flex gap-4">
-          <Link
-            to={`/admin/tournaments/${id}/bracket`}
-            className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-          >
-            Manage Bracket
-          </Link>
-          <Link
-            to={`/admin/tournaments/${id}/edit`}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Edit Tournament
-          </Link>
-          <Link
-            to={`/admin/tournaments/${id}/teams/add`}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          >
-            Add Teams
-          </Link>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title={tournament.name}
+        subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
+        actions={
+          <>
+            <Link to={`/admin/tournaments/${id}/bracket`} className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+              Manage Bracket
+            </Link>
+            <Link to={`/admin/tournaments/${id}/edit`} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+              Edit Tournament
+            </Link>
+            <Link to={`/admin/tournaments/${id}/teams/add`} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+              Add Teams
+            </Link>
+          </>
+        }
+      />
 
       {teams.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow p-4">
+          <Card className="p-4">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Teams</h3>
             <p className="text-3xl font-bold text-blue-600">{teams.length}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          </Card>
+          <Card className="p-4">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Seed Distribution</h3>
             <div className="space-y-1">
               {Array.from({ length: 16 }, (_, i) => i + 1).map(seed => {
@@ -173,8 +164,8 @@ export const TournamentViewPage: React.FC = () => {
                 ) : null;
               })}
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          </Card>
+          <Card className="p-4">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Bye Distribution</h3>
             <div className="space-y-1">
               {Array.from({ length: Math.max(...teams.map(t => t.byes)) + 1 }, (_, i) => i).map(byes => {
@@ -187,8 +178,8 @@ export const TournamentViewPage: React.FC = () => {
                 ) : null;
               })}
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          </Card>
+          <Card className="p-4">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Win Distribution</h3>
             <div className="space-y-1">
               {Array.from({ length: Math.max(...teams.map(t => t.wins)) + 1 }, (_, i) => i).map(wins => {
@@ -207,12 +198,12 @@ export const TournamentViewPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {teams.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 text-center">
+        <Card className="text-center">
           <p className="text-gray-500 mb-4">No teams have been added to this tournament yet.</p>
           <Link
             to={`/admin/tournaments/${id}/teams/add`}
@@ -220,9 +211,9 @@ export const TournamentViewPage: React.FC = () => {
           >
             Add Teams
           </Link>
-        </div>
+        </Card>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <Card className="p-0 overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -298,8 +289,8 @@ export const TournamentViewPage: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
-    </div>
+    </PageContainer>
   );
-}; 
+};

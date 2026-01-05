@@ -5,6 +5,10 @@ import { School } from '../types/school';
 import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 interface TeamToAdd {
   schoolId: string;
@@ -102,31 +106,32 @@ export const TournamentCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Create New Tournament</h1>
-        <button
-          onClick={() => navigate('/admin/tournaments')}
-          className="px-4 py-2 border rounded hover:bg-gray-100"
-        >
-          Cancel
-        </button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Create New Tournament"
+        actions={
+          <button onClick={() => navigate('/admin/tournaments')} className="px-4 py-2 border rounded hover:bg-gray-100">
+            Cancel
+          </button>
+        }
+      />
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert variant="error" className="mb-4">
           {error}
-        </div>
+        </Alert>
       )}
 
       {schoolsQuery.isError && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert variant="error" className="mb-4">
           Failed to load schools
-        </div>
+        </Alert>
       )}
 
+      {schoolsQuery.isLoading && <LoadingState label="Loading schools..." layout="inline" />}
+
       <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="bg-white p-6 rounded-lg shadow">
+        <Card>
           <h2 className="text-xl font-semibold mb-4">Tournament Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -156,9 +161,9 @@ export const TournamentCreatePage: React.FC = () => {
               />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <Card>
           <h2 className="text-xl font-semibold mb-4">Add Teams</h2>
           <div className="flex gap-4 mb-4">
             <div className="flex-1">
@@ -227,7 +232,7 @@ export const TournamentCreatePage: React.FC = () => {
               );
             })}
           </div>
-        </div>
+        </Card>
 
         <div className="flex justify-end">
           <button
@@ -239,7 +244,7 @@ export const TournamentCreatePage: React.FC = () => {
           </button>
         </div>
       </form>
-    </div>
+    </PageContainer>
   );
 };
 
