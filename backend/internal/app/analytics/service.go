@@ -308,6 +308,22 @@ func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID stri
 	return selectedID, results, nil
 }
 
+func (s *Service) ListAlgorithms(ctx context.Context, kind *string) ([]ports.Algorithm, error) {
+	return s.repo.ListAlgorithms(ctx, kind)
+}
+
+func (s *Service) ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]ports.GameOutcomeRun, error) {
+	return s.repo.ListGameOutcomeRunsByTournamentID(ctx, tournamentID)
+}
+
+func (s *Service) ListMarketShareRunsByCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.MarketShareRun, error) {
+	return s.repo.ListMarketShareRunsByCalcuttaID(ctx, calcuttaID)
+}
+
+func (s *Service) GetLatestPredictionRunsForCalcutta(ctx context.Context, calcuttaID string) (*ports.LatestPredictionRuns, error) {
+	return s.repo.GetLatestPredictionRunsForCalcutta(ctx, calcuttaID)
+}
+
 func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardResult, error) {
 	if limit <= 0 {
 		limit = 100

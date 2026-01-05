@@ -71,6 +71,22 @@ func (s *stubAnalyticsRepo) GetCalcuttaSimulatedEntry(ctx context.Context, calcu
 	return nil, nil, nil
 }
 
+func (s *stubAnalyticsRepo) ListAlgorithms(ctx context.Context, kind *string) ([]ports.Algorithm, error) {
+	return nil, nil
+}
+
+func (s *stubAnalyticsRepo) ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]ports.GameOutcomeRun, error) {
+	return nil, nil
+}
+
+func (s *stubAnalyticsRepo) ListMarketShareRunsByCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.MarketShareRun, error) {
+	return nil, nil
+}
+
+func (s *stubAnalyticsRepo) GetLatestPredictionRunsForCalcutta(ctx context.Context, calcuttaID string) (*ports.LatestPredictionRuns, error) {
+	return nil, nil
+}
+
 func TestThatMeanFloat64ReturnsZeroForEmptySlice(t *testing.T) {
 	got := meanFloat64(nil)
 

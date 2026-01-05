@@ -172,11 +172,13 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [ ] Go readers/services:
     - [x] Accept explicit run_id selection
     - [x] Game outcomes: default to latest for the tournament
-    - [ ] Market share: default to latest for the calcutta if it exists; otherwise error (no naive fallback)
+    - [x] Market share: default to latest for the calcutta if it exists; otherwise error (no naive fallback)
 
-- [ ] Discovery endpoints
-  - [ ] list algorithms by kind
-  - [ ] list runs for (algorithm, tournament) and (algorithm, calcutta)
+- [x] Discovery endpoints
+  - [x] list algorithms by kind (`GET /api/analytics/algorithms?kind=...`)
+  - [x] list game-outcome runs (`GET /api/analytics/tournaments/{id}/game-outcome-runs`)
+  - [x] list market-share runs (`GET /api/analytics/calcuttas/{id}/market-share-runs`)
+  - [x] latest run IDs for calcutta (`GET /api/analytics/calcuttas/{id}/latest-prediction-runs`)
 
 - [ ] Strategy generation workflow
   - [ ] Select game-outcomes run + market share run + optimizer key

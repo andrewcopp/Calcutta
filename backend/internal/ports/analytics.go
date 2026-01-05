@@ -1,6 +1,9 @@
 package ports
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type SeedAnalyticsData struct {
 	Seed            int
@@ -138,6 +141,39 @@ type CalcuttaSimulatedEntryData struct {
 	OurBid         float64
 }
 
+type Algorithm struct {
+	ID          string
+	Kind        string
+	Name        string
+	Description *string
+	ParamsJSON  []byte
+	CreatedAt   time.Time
+}
+
+type GameOutcomeRun struct {
+	ID           string
+	AlgorithmID  string
+	TournamentID string
+	ParamsJSON   []byte
+	GitSHA       *string
+	CreatedAt    time.Time
+}
+
+type MarketShareRun struct {
+	ID          string
+	AlgorithmID string
+	CalcuttaID  string
+	ParamsJSON  []byte
+	GitSHA      *string
+	CreatedAt   time.Time
+}
+
+type LatestPredictionRuns struct {
+	TournamentID     string
+	GameOutcomeRunID *string
+	MarketShareRunID *string
+}
+
 type AnalyticsRepo interface {
 	GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error)
 	GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsData, float64, float64, error)
@@ -151,4 +187,8 @@ type AnalyticsRepo interface {
 	GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []CalcuttaPredictedInvestmentData, error)
 	GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedReturnsData, error)
 	GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryData, error)
+	ListAlgorithms(ctx context.Context, kind *string) ([]Algorithm, error)
+	ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]GameOutcomeRun, error)
+	ListMarketShareRunsByCalcuttaID(ctx context.Context, calcuttaID string) ([]MarketShareRun, error)
+	GetLatestPredictionRunsForCalcutta(ctx context.Context, calcuttaID string) (*LatestPredictionRuns, error)
 }

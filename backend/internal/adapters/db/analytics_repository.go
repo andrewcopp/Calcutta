@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
@@ -133,6 +134,169 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.Tea
 	}
 
 	return out, nil
+}
+
+func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) ([]ports.Algorithm, error) {
+	var rows pgx.Rows
+	var err error
+	if kind != nil && *kind != "" {
+		rows, err = r.pool.Query(ctx, `
+			SELECT id::text, kind, name, description, params_json::bytea, created_at
+			FROM derived.algorithms
+			WHERE kind = $1::text
+				AND deleted_at IS NULL
+			ORDER BY created_at DESC
+		`, *kind)
+	} else {
+		rows, err = r.pool.Query(ctx, `
+			SELECT id::text, kind, name, description, params_json::bytea, created_at
+			FROM derived.algorithms
+			WHERE deleted_at IS NULL
+			ORDER BY created_at DESC
+		`)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]ports.Algorithm, 0)
+	for rows.Next() {
+		var id, k, name string
+		var desc *string
+		var params []byte
+		var createdAt time.Time
+		if err := rows.Scan(&id, &k, &name, &desc, &params, &createdAt); err != nil {
+			return nil, err
+		}
+		out = append(out, ports.Algorithm{
+			ID:          id,
+			Kind:        k,
+			Name:        name,
+			Description: desc,
+			ParamsJSON:  params,
+			CreatedAt:   createdAt,
+		})
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return out, nil
+}
+
+func (r *AnalyticsRepository) ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]ports.GameOutcomeRun, error) {
+	if tournamentID == "" {
+		return nil, errors.New("tournamentID is required")
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, algorithm_id::text, tournament_id::text, params_json::bytea, git_sha, created_at
+		FROM derived.game_outcome_runs
+		WHERE tournament_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY created_at DESC
+	`, tournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]ports.GameOutcomeRun, 0)
+	for rows.Next() {
+		var run ports.GameOutcomeRun
+		if err := rows.Scan(&run.ID, &run.AlgorithmID, &run.TournamentID, &run.ParamsJSON, &run.GitSHA, &run.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, run)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return out, nil
+}
+
+func (r *AnalyticsRepository) ListMarketShareRunsByCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.MarketShareRun, error) {
+	if calcuttaID == "" {
+		return nil, errors.New("calcuttaID is required")
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, algorithm_id::text, calcutta_id::text, params_json::bytea, git_sha, created_at
+		FROM derived.market_share_runs
+		WHERE calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY created_at DESC
+	`, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]ports.MarketShareRun, 0)
+	for rows.Next() {
+		var run ports.MarketShareRun
+		if err := rows.Scan(&run.ID, &run.AlgorithmID, &run.CalcuttaID, &run.ParamsJSON, &run.GitSHA, &run.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, run)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return out, nil
+}
+
+func (r *AnalyticsRepository) GetLatestPredictionRunsForCalcutta(ctx context.Context, calcuttaID string) (*ports.LatestPredictionRuns, error) {
+	if calcuttaID == "" {
+		return nil, errors.New("calcuttaID is required")
+	}
+
+	var tournamentID string
+	var gameOutcomeRunID string
+	var marketShareRunID string
+	if err := r.pool.QueryRow(ctx, `
+		SELECT
+			c.tournament_id::text AS tournament_id,
+			COALESCE((
+				SELECT gor.id::text
+				FROM derived.game_outcome_runs gor
+				WHERE gor.tournament_id = c.tournament_id
+					AND gor.deleted_at IS NULL
+				ORDER BY gor.created_at DESC
+				LIMIT 1
+			), ''::text) AS game_outcome_run_id,
+			COALESCE((
+				SELECT msr.id::text
+				FROM derived.market_share_runs msr
+				WHERE msr.calcutta_id = c.id
+					AND msr.deleted_at IS NULL
+				ORDER BY msr.created_at DESC
+				LIMIT 1
+			), ''::text) AS market_share_run_id
+		FROM core.calcuttas c
+		WHERE c.id = $1::uuid
+			AND c.deleted_at IS NULL
+		LIMIT 1
+	`, calcuttaID).Scan(&tournamentID, &gameOutcomeRunID, &marketShareRunID); err != nil {
+		return nil, err
+	}
+
+	var goPtr *string
+	if gameOutcomeRunID != "" {
+		v := gameOutcomeRunID
+		goPtr = &v
+	}
+	var msPtr *string
+	if marketShareRunID != "" {
+		v := marketShareRunID
+		msPtr = &v
+	}
+
+	return &ports.LatestPredictionRuns{
+		TournamentID:     tournamentID,
+		GameOutcomeRunID: goPtr,
+		MarketShareRunID: msPtr,
+	}, nil
 }
 
 func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []ports.CalcuttaPredictedInvestmentData, error) {
