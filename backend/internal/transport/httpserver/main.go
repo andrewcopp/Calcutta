@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,13 +14,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func Run() {
+func Run() error {
 	slog.Info("server_initializing")
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		slog.Error("config_load_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("config_load_failed: %w", err)
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, &platform.PGXPoolOptions{
@@ -29,18 +29,16 @@ func Run() {
 		HealthCheckPeriod: time.Duration(cfg.PGXPoolHealthCheckPeriodSeconds) * time.Second,
 	})
 	if err != nil {
-		slog.Error("db_connect_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("db_connect_failed: %w", err)
 	}
+	defer pool.Close()
 
 	server, err := NewServer(pool, cfg)
 	if err != nil {
-		slog.Error("server_init_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("server_init_failed: %w", err)
 	}
 	if err := server.bootstrapAdmin(context.Background()); err != nil {
-		slog.Error("bootstrap_admin_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("bootstrap_admin_failed: %w", err)
 	}
 
 	// Router
@@ -79,30 +77,34 @@ func Run() {
 		ReadHeaderTimeout: time.Duration(cfg.HTTPReadHeaderTimeoutSeconds) * time.Second,
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+
 	// Start server in goroutine
 	go func() {
 		slog.Info("server_listening", "port", port)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("server_failed", "error", err)
-			os.Exit(1)
-		}
+		errCh <- httpServer.ListenAndServe()
 	}()
 
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	slog.Info("server_shutting_down")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
-	defer cancel()
-
-	if err := httpServer.Shutdown(ctx); err != nil {
-		slog.Error("server_shutdown_failed", "error", err)
+	select {
+	case <-ctx.Done():
+		slog.Info("server_shutting_down")
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("server_failed: %w", err)
+		}
+		slog.Info("server_shutting_down")
 	}
 
-	pool.Close()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server_shutdown_failed: %w", err)
+	}
 
 	slog.Info("server_stopped")
+	return nil
 }
