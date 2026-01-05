@@ -8,6 +8,7 @@ import (
 
 type CreateSuiteCalcuttaEvaluationRequest struct {
 	CalcuttaID        string  `json:"calcuttaId"`
+	SuiteExecutionID  *string `json:"suiteExecutionId"`
 	SuiteID           *string `json:"suiteId"`
 	SuiteName         *string `json:"suiteName"`
 	OptimizerKey      *string `json:"optimizerKey"`
@@ -25,6 +26,18 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 	}
 	if _, err := uuid.Parse(strings.TrimSpace(r.CalcuttaID)); err != nil {
 		return ErrFieldInvalid("calcuttaId", "must be a valid UUID")
+	}
+
+	if r.SuiteExecutionID != nil {
+		trimmed := strings.TrimSpace(*r.SuiteExecutionID)
+		if trimmed == "" {
+			r.SuiteExecutionID = nil
+		} else {
+			if _, err := uuid.Parse(trimmed); err != nil {
+				return ErrFieldInvalid("suiteExecutionId", "must be a valid UUID")
+			}
+			r.SuiteExecutionID = &trimmed
+		}
 	}
 
 	if r.SuiteID != nil {
@@ -81,11 +94,13 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 		}
 	}
 
-	if r.GameOutcomeRunID == nil {
-		return ErrFieldRequired("gameOutcomeRunId")
-	}
-	if r.MarketShareRunID == nil {
-		return ErrFieldRequired("marketShareRunId")
+	if r.SuiteExecutionID == nil {
+		if r.GameOutcomeRunID == nil {
+			return ErrFieldRequired("gameOutcomeRunId")
+		}
+		if r.MarketShareRunID == nil {
+			return ErrFieldRequired("marketShareRunId")
+		}
 	}
 
 	if strings.TrimSpace(r.StartingStateKey) == "" {
@@ -95,11 +110,13 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 		return ErrFieldInvalid("startingStateKey", "must be 'current' or 'post_first_four'")
 	}
 
-	if r.NSims <= 0 {
-		return ErrFieldInvalid("nSims", "must be positive")
-	}
-	if r.Seed == 0 {
-		r.Seed = 42
+	if r.SuiteExecutionID == nil {
+		if r.NSims <= 0 {
+			return ErrFieldInvalid("nSims", "must be positive")
+		}
+		if r.Seed == 0 {
+			r.Seed = 42
+		}
 	}
 
 	if r.ExcludedEntryName != nil {
@@ -111,7 +128,7 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 		}
 	}
 
-	if r.SuiteID == nil {
+	if r.SuiteID == nil && r.SuiteExecutionID == nil {
 		// If not specifying SuiteID, require enough info to resolve/create.
 		if r.SuiteName == nil {
 			return ErrFieldRequired("suiteName")

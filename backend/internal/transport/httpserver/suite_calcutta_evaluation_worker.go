@@ -7,9 +7,11 @@ import (
 	"os"
 	"time"
 
+	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
 	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/features/simulate_tournaments"
 	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
+	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -22,6 +24,7 @@ const (
 
 type suiteCalcuttaEvaluationRow struct {
 	ID               string
+	SuiteExecutionID *string
 	SuiteID          string
 	CalcuttaID       string
 	GameOutcomeRunID string
@@ -124,6 +127,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		WHERE r.id = candidate.id
 		RETURNING
 			r.id,
+			r.suite_execution_id,
 			r.suite_id,
 			r.calcutta_id,
 			r.game_outcome_run_id,
@@ -142,6 +146,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		workerID,
 	).Scan(
 		&row.ID,
+		&row.SuiteExecutionID,
 		&row.SuiteID,
 		&row.CalcuttaID,
 		&row.GameOutcomeRunID,
@@ -270,6 +275,11 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		ourPTop1                  *float64
 		ourPInMoney               *float64
 		totalSimulations          *int
+		realizedFinishPosition    *int
+		realizedIsTied            *bool
+		realizedInTheMoney        *bool
+		realizedPayoutCents       *int
+		realizedTotalPoints       *float64
 	)
 	if evalRunID != "" {
 		var (
@@ -331,6 +341,16 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		}
 	}
 
+	if realized, ok, err := s.computeRealizedFinishForStrategyGenerationRun(ctx, req.CalcuttaID, genRes.StrategyGenerationRunID); err != nil {
+		log.Printf("Error computing realized finish for eval_id=%s: %v", req.ID, err)
+	} else if ok {
+		realizedFinishPosition = &realized.FinishPosition
+		realizedIsTied = &realized.IsTied
+		realizedInTheMoney = &realized.InTheMoney
+		realizedPayoutCents = &realized.PayoutCents
+		realizedTotalPoints = &realized.TotalPoints
+	}
+
 	_, err = s.pool.Exec(ctx, `
 		UPDATE derived.suite_calcutta_evaluations
 		SET status = 'succeeded',
@@ -345,6 +365,11 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 			our_p_top1 = $10,
 			our_p_in_money = $11,
 			total_simulations = $12,
+			realized_finish_position = $13,
+			realized_is_tied = $14,
+			realized_in_the_money = $15,
+			realized_payout_cents = $16,
+			realized_total_points = $17,
 			error_message = NULL,
 			updated_at = NOW()
 		WHERE id = $1::uuid
@@ -361,6 +386,11 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		ourPTop1,
 		ourPInMoney,
 		totalSimulations,
+		realizedFinishPosition,
+		realizedIsTied,
+		realizedInTheMoney,
+		realizedPayoutCents,
+		realizedTotalPoints,
 	)
 	if err != nil {
 		log.Printf("Error updating suite calcutta evaluation %s to succeeded: %v", req.ID, err)
@@ -374,7 +404,240 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		genRes.StrategyGenerationRunID,
 		evalRunID,
 	)
+
+	if req.SuiteExecutionID != nil && *req.SuiteExecutionID != "" {
+		s.updateSuiteExecutionStatus(ctx, *req.SuiteExecutionID)
+	}
 	return true
+}
+
+type realizedFinishResult struct {
+	FinishPosition int
+	IsTied         bool
+	InTheMoney     bool
+	PayoutCents    int
+	TotalPoints    float64
+}
+
+func (s *Server) computeRealizedFinishForStrategyGenerationRun(ctx context.Context, calcuttaID string, strategyGenerationRunID string) (*realizedFinishResult, bool, error) {
+	if calcuttaID == "" || strategyGenerationRunID == "" {
+		return nil, false, nil
+	}
+
+	// Load payouts
+	payoutRows, err := s.pool.Query(ctx, `
+		SELECT position::int, amount_cents::int
+		FROM core.payouts
+		WHERE calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY position ASC
+	`, calcuttaID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer payoutRows.Close()
+
+	payouts := make([]*models.CalcuttaPayout, 0)
+	for payoutRows.Next() {
+		var pos int
+		var cents int
+		if err := payoutRows.Scan(&pos, &cents); err != nil {
+			return nil, false, err
+		}
+		payouts = append(payouts, &models.CalcuttaPayout{CalcuttaID: calcuttaID, Position: pos, AmountCents: cents})
+	}
+	if err := payoutRows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Load team points (actual wins/byes)
+	teamRows, err := s.pool.Query(ctx, `
+		WITH t AS (
+			SELECT tournament_id
+			FROM core.calcuttas
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		)
+		SELECT
+			team.id::text,
+			core.calcutta_points_for_progress($1::uuid, team.wins, team.byes)::float8
+		FROM core.teams team
+		JOIN t ON t.tournament_id = team.tournament_id
+		WHERE team.deleted_at IS NULL
+	`, calcuttaID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer teamRows.Close()
+
+	teamPoints := make(map[string]float64)
+	for teamRows.Next() {
+		var teamID string
+		var pts float64
+		if err := teamRows.Scan(&teamID, &pts); err != nil {
+			return nil, false, err
+		}
+		teamPoints[teamID] = pts
+	}
+	if err := teamRows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Load real entries and their bids
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			e.id::text,
+			e.name,
+			e.created_at,
+			et.team_id::text,
+			et.bid_points::int
+		FROM core.entries e
+		JOIN core.entry_teams et ON et.entry_id = e.id AND et.deleted_at IS NULL
+		WHERE e.calcutta_id = $1::uuid
+			AND e.deleted_at IS NULL
+		ORDER BY e.created_at ASC
+	`, calcuttaID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	entryByID := make(map[string]*models.CalcuttaEntry)
+	entryBids := make(map[string]map[string]float64)
+	existingTotalBid := make(map[string]float64)
+	for rows.Next() {
+		var entryID, name, teamID string
+		var createdAt time.Time
+		var bid int
+		if err := rows.Scan(&entryID, &name, &createdAt, &teamID, &bid); err != nil {
+			return nil, false, err
+		}
+		if _, ok := entryByID[entryID]; !ok {
+			entryByID[entryID] = &models.CalcuttaEntry{ID: entryID, Name: name, CalcuttaID: calcuttaID, Created: createdAt}
+			entryBids[entryID] = make(map[string]float64)
+		}
+		entryBids[entryID][teamID] += float64(bid)
+		existingTotalBid[teamID] += float64(bid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Load our strategy bids
+	ourBids := make(map[string]float64)
+	ourRows, err := s.pool.Query(ctx, `
+		SELECT team_id::text, bid_points::int
+		FROM derived.recommended_entry_bids
+		WHERE strategy_generation_run_id = $1::uuid
+			AND deleted_at IS NULL
+	`, strategyGenerationRunID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer ourRows.Close()
+	for ourRows.Next() {
+		var teamID string
+		var bid int
+		if err := ourRows.Scan(&teamID, &bid); err != nil {
+			return nil, false, err
+		}
+		ourBids[teamID] += float64(bid)
+	}
+	if err := ourRows.Err(); err != nil {
+		return nil, false, err
+	}
+	if len(ourBids) == 0 {
+		return nil, false, nil
+	}
+
+	// Compute points for each real entry under the new total bids (including ours)
+	entries := make([]*models.CalcuttaEntry, 0, len(entryByID)+1)
+	for entryID, e := range entryByID {
+		total := 0.0
+		for teamID, bid := range entryBids[entryID] {
+			pts, ok := teamPoints[teamID]
+			if !ok {
+				continue
+			}
+			den := existingTotalBid[teamID] + ourBids[teamID]
+			if den <= 0 {
+				continue
+			}
+			total += pts * (bid / den)
+		}
+		e.TotalPoints = total
+		entries = append(entries, e)
+	}
+
+	ourID := "our_strategy"
+	ourCreated := time.Now()
+	ourTotal := 0.0
+	for teamID, bid := range ourBids {
+		pts, ok := teamPoints[teamID]
+		if !ok {
+			continue
+		}
+		den := existingTotalBid[teamID] + bid
+		if den <= 0 {
+			continue
+		}
+		ourTotal += pts * (bid / den)
+	}
+	entries = append(entries, &models.CalcuttaEntry{ID: ourID, Name: "Our Strategy", CalcuttaID: calcuttaID, TotalPoints: ourTotal, Created: ourCreated})
+
+	_, results := appcalcutta.ComputeEntryPlacementsAndPayouts(entries, payouts)
+	res, ok := results[ourID]
+	if !ok {
+		return nil, false, nil
+	}
+
+	out := &realizedFinishResult{
+		FinishPosition: res.FinishPosition,
+		IsTied:         res.IsTied,
+		InTheMoney:     res.InTheMoney,
+		PayoutCents:    res.PayoutCents,
+		TotalPoints:    ourTotal,
+	}
+	return out, true, nil
+}
+
+func (s *Server) updateSuiteExecutionStatus(ctx context.Context, suiteExecutionID string) {
+	if suiteExecutionID == "" {
+		return
+	}
+	_, _ = s.pool.Exec(ctx, `
+		WITH agg AS (
+			SELECT
+				SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)::int AS failed,
+				SUM(CASE WHEN status IN ('queued', 'running') THEN 1 ELSE 0 END)::int AS pending
+			FROM derived.suite_calcutta_evaluations
+			WHERE suite_execution_id = $1::uuid
+				AND deleted_at IS NULL
+		)
+		UPDATE derived.suite_executions e
+		SET status = CASE
+			WHEN a.failed > 0 THEN 'failed'
+			WHEN a.pending > 0 THEN 'running'
+			ELSE 'succeeded'
+		END,
+			error_message = CASE
+			WHEN a.failed > 0 THEN COALESCE((
+				SELECT error_message
+				FROM derived.suite_calcutta_evaluations
+				WHERE suite_execution_id = $1::uuid
+					AND status = 'failed'
+					AND error_message IS NOT NULL
+					AND deleted_at IS NULL
+				LIMIT 1
+			), e.error_message)
+			ELSE NULL
+		END,
+			updated_at = NOW()
+		FROM agg a
+		WHERE e.id = $1::uuid
+			AND e.deleted_at IS NULL
+	`, suiteExecutionID)
 }
 
 func (s *Server) resolveSuiteNSims(ctx context.Context, suiteID string, fallback int) int {
@@ -433,14 +696,21 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 	if err != nil {
 		msg = err.Error()
 	}
-	_, e := s.pool.Exec(ctx, `
+	var suiteExecutionID *string
+	e := s.pool.QueryRow(ctx, `
 		UPDATE derived.suite_calcutta_evaluations
 		SET status = 'failed',
 			error_message = $2,
 			updated_at = NOW()
 		WHERE id = $1::uuid
-	`, evaluationID, msg)
+		RETURNING suite_execution_id
+	`, evaluationID, msg).Scan(&suiteExecutionID)
 	if e != nil {
 		log.Printf("Error marking suite calcutta evaluation %s failed: %v (original error: %v)", evaluationID, e, err)
+		return
+	}
+
+	if suiteExecutionID != nil && *suiteExecutionID != "" {
+		s.updateSuiteExecutionStatus(ctx, *suiteExecutionID)
 	}
 }

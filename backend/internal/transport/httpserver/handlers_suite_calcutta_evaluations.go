@@ -18,6 +18,7 @@ type createSuiteCalcuttaEvaluationResponse struct {
 
 type suiteCalcuttaEvaluationListItem struct {
 	ID                        string     `json:"id"`
+	SuiteExecutionID          *string    `json:"suite_execution_id,omitempty"`
 	SuiteID                   string     `json:"suite_id"`
 	SuiteName                 string     `json:"suite_name"`
 	OptimizerKey              string     `json:"optimizer_key"`
@@ -34,6 +35,11 @@ type suiteCalcuttaEvaluationListItem struct {
 	MarketShareRunID          *string    `json:"market_share_run_id,omitempty"`
 	StrategyGenerationRunID   *string    `json:"strategy_generation_run_id,omitempty"`
 	CalcuttaEvaluationRunID   *string    `json:"calcutta_evaluation_run_id,omitempty"`
+	RealizedFinishPosition    *int       `json:"realized_finish_position,omitempty"`
+	RealizedIsTied            *bool      `json:"realized_is_tied,omitempty"`
+	RealizedInTheMoney        *bool      `json:"realized_in_the_money,omitempty"`
+	RealizedPayoutCents       *int       `json:"realized_payout_cents,omitempty"`
+	RealizedTotalPoints       *float64   `json:"realized_total_points,omitempty"`
 	StartingStateKey          string     `json:"starting_state_key"`
 	ExcludedEntryName         *string    `json:"excluded_entry_name,omitempty"`
 	Status                    string     `json:"status"`
@@ -105,10 +111,145 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	suiteExecutionID := ""
+	if req.SuiteExecutionID != nil {
+		suiteExecutionID = *req.SuiteExecutionID
+	}
+
 	// Resolve (or create) suite_id.
 	suiteID := ""
 	evalOptimizerKey := ""
-	if req.SuiteID != nil {
+	if suiteExecutionID != "" {
+		// Inherit suite + config from suite execution.
+		var execSuiteID string
+		var execOptimizerKey *string
+		var execNSims *int
+		var execSeed *int
+		var execStartingStateKey string
+		var execExcludedEntryName *string
+		var goAlgID string
+		var msAlgID string
+		var suiteOptimizerKey string
+		var suiteNSims int
+		var suiteSeed int
+		if err := s.pool.QueryRow(ctx, `
+			SELECT
+				e.suite_id::text,
+				e.optimizer_key,
+				e.n_sims,
+				e.seed,
+				e.starting_state_key,
+				e.excluded_entry_name,
+				COALESCE(s.game_outcomes_algorithm_id::text, ''::text) AS game_outcomes_algorithm_id,
+				COALESCE(s.market_share_algorithm_id::text, ''::text) AS market_share_algorithm_id,
+				COALESCE(s.optimizer_key, ''::text) AS suite_optimizer_key,
+				COALESCE(s.n_sims, 0)::int AS suite_n_sims,
+				COALESCE(s.seed, 0)::int AS suite_seed
+			FROM derived.suite_executions e
+			JOIN derived.suites s ON s.id = e.suite_id AND s.deleted_at IS NULL
+			WHERE e.id = $1::uuid
+				AND e.deleted_at IS NULL
+			LIMIT 1
+		`, suiteExecutionID).Scan(
+			&execSuiteID,
+			&execOptimizerKey,
+			&execNSims,
+			&execSeed,
+			&execStartingStateKey,
+			&execExcludedEntryName,
+			&goAlgID,
+			&msAlgID,
+			&suiteOptimizerKey,
+			&suiteNSims,
+			&suiteSeed,
+		); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		suiteID = execSuiteID
+
+		// Determine effective optimizer/nSims/seed using request overrides then execution then suite defaults.
+		if req.OptimizerKey != nil {
+			evalOptimizerKey = *req.OptimizerKey
+		} else if execOptimizerKey != nil && *execOptimizerKey != "" {
+			evalOptimizerKey = *execOptimizerKey
+		} else {
+			evalOptimizerKey = suiteOptimizerKey
+		}
+
+		if execNSims != nil {
+			req.NSims = *execNSims
+		} else if suiteNSims > 0 {
+			req.NSims = suiteNSims
+		}
+		if execSeed != nil {
+			req.Seed = *execSeed
+		} else if suiteSeed != 0 {
+			req.Seed = suiteSeed
+		}
+		if execStartingStateKey != "" {
+			req.StartingStateKey = execStartingStateKey
+		}
+		if execExcludedEntryName != nil {
+			req.ExcludedEntryName = execExcludedEntryName
+		}
+
+		// Resolve run IDs from suite algorithms if not explicitly provided.
+		if req.GameOutcomeRunID == nil || req.MarketShareRunID == nil {
+			var tournamentID string
+			if err := s.pool.QueryRow(ctx, `
+				SELECT tournament_id::text
+				FROM core.calcuttas
+				WHERE id = $1::uuid
+					AND deleted_at IS NULL
+				LIMIT 1
+			`, req.CalcuttaID).Scan(&tournamentID); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+
+			if req.GameOutcomeRunID == nil {
+				var resolved string
+				_ = s.pool.QueryRow(ctx, `
+					SELECT COALESCE((
+						SELECT id::text
+						FROM derived.game_outcome_runs
+						WHERE tournament_id = $1::uuid
+							AND algorithm_id = $2::uuid
+							AND deleted_at IS NULL
+						ORDER BY created_at DESC
+						LIMIT 1
+					), ''::text) AS id
+				`, tournamentID, goAlgID).Scan(&resolved)
+				if resolved == "" {
+					writeError(w, r, http.StatusConflict, "missing_run", "Missing game-outcome run for suite execution", "gameOutcomeRunId")
+					return
+				}
+				req.GameOutcomeRunID = &resolved
+			}
+
+			if req.MarketShareRunID == nil {
+				var resolved string
+				_ = s.pool.QueryRow(ctx, `
+					SELECT COALESCE((
+						SELECT id::text
+						FROM derived.market_share_runs
+						WHERE calcutta_id = $1::uuid
+							AND algorithm_id = $2::uuid
+							AND deleted_at IS NULL
+						ORDER BY created_at DESC
+						LIMIT 1
+					), ''::text) AS id
+				`, req.CalcuttaID, msAlgID).Scan(&resolved)
+				if resolved == "" {
+					writeError(w, r, http.StatusConflict, "missing_run", "Missing market-share run for suite execution", "marketShareRunId")
+					return
+				}
+				req.MarketShareRunID = &resolved
+			}
+		}
+	} else if req.SuiteID != nil {
 		suiteID = *req.SuiteID
 		if req.OptimizerKey != nil {
 			evalOptimizerKey = *req.OptimizerKey
@@ -199,6 +340,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 
 	q := `
 		INSERT INTO derived.suite_calcutta_evaluations (
+			suite_execution_id,
 			suite_id,
 			calcutta_id,
 			game_outcome_run_id,
@@ -209,10 +351,28 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			starting_state_key,
 			excluded_entry_name
 		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6::int, $7::int, $8, $9::text)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text)
 		RETURNING id, status
 	`
-	if err := s.pool.QueryRow(ctx, q, suiteID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, req.NSims, req.Seed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	var execID any
+	if suiteExecutionID != "" {
+		execID = suiteExecutionID
+	} else {
+		execID = nil
+	}
+	var effNSims any
+	if req.NSims > 0 {
+		effNSims = req.NSims
+	} else {
+		effNSims = nil
+	}
+	var effSeed any
+	if req.Seed != 0 {
+		effSeed = req.Seed
+	} else {
+		effSeed = nil
+	}
+	if err := s.pool.QueryRow(ctx, q, execID, suiteID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, effNSims, effSeed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -223,6 +383,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *http.Request) {
 	calcuttaID := r.URL.Query().Get("calcutta_id")
 	suiteID := r.URL.Query().Get("suite_id")
+	suiteExecutionID := r.URL.Query().Get("suite_execution_id")
 	limit := getLimit(r, 50)
 	if limit <= 0 {
 		limit = 50
@@ -238,6 +399,7 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 	rows, err := s.pool.Query(r.Context(), `
 		SELECT
 			r.id,
+			r.suite_execution_id,
 			r.suite_id,
 			COALESCE(s.name, '') AS suite_name,
 			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
@@ -254,6 +416,11 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
 			r.calcutta_evaluation_run_id,
+			r.realized_finish_position,
+			r.realized_is_tied,
+			r.realized_in_the_money,
+			r.realized_payout_cents,
+			r.realized_total_points,
 			r.starting_state_key,
 			r.excluded_entry_name,
 			r.status,
@@ -269,10 +436,11 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 		WHERE r.deleted_at IS NULL
 			AND ($1::uuid IS NULL OR r.calcutta_id = $1::uuid)
 			AND ($2::uuid IS NULL OR r.suite_id = $2::uuid)
+			AND ($3::uuid IS NULL OR r.suite_execution_id = $3::uuid)
 		ORDER BY r.created_at DESC
-		LIMIT $3::int
-		OFFSET $4::int
-	`, nullUUIDParam(calcuttaID), nullUUIDParam(suiteID), limit, offset)
+		LIMIT $4::int
+		OFFSET $5::int
+	`, nullUUIDParam(calcuttaID), nullUUIDParam(suiteID), nullUUIDParam(suiteExecutionID), limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -284,6 +452,7 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 		var it suiteCalcuttaEvaluationListItem
 		if err := rows.Scan(
 			&it.ID,
+			&it.SuiteExecutionID,
 			&it.SuiteID,
 			&it.SuiteName,
 			&it.OptimizerKey,
@@ -300,6 +469,11 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 			&it.MarketShareRunID,
 			&it.StrategyGenerationRunID,
 			&it.CalcuttaEvaluationRunID,
+			&it.RealizedFinishPosition,
+			&it.RealizedIsTied,
+			&it.RealizedInTheMoney,
+			&it.RealizedPayoutCents,
+			&it.RealizedTotalPoints,
 			&it.StartingStateKey,
 			&it.ExcludedEntryName,
 			&it.Status,
@@ -334,6 +508,7 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 	err := s.pool.QueryRow(r.Context(), `
 		SELECT
 			r.id,
+			r.suite_execution_id,
 			r.suite_id,
 			COALESCE(s.name, '') AS suite_name,
 			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
@@ -350,6 +525,11 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
 			r.calcutta_evaluation_run_id,
+			r.realized_finish_position,
+			r.realized_is_tied,
+			r.realized_in_the_money,
+			r.realized_payout_cents,
+			r.realized_total_points,
 			r.starting_state_key,
 			r.excluded_entry_name,
 			r.status,
@@ -367,6 +547,7 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
+		&it.SuiteExecutionID,
 		&it.SuiteID,
 		&it.SuiteName,
 		&it.OptimizerKey,
@@ -383,6 +564,11 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 		&it.MarketShareRunID,
 		&it.StrategyGenerationRunID,
 		&it.CalcuttaEvaluationRunID,
+		&it.RealizedFinishPosition,
+		&it.RealizedIsTied,
+		&it.RealizedInTheMoney,
+		&it.RealizedPayoutCents,
+		&it.RealizedTotalPoints,
 		&it.StartingStateKey,
 		&it.ExcludedEntryName,
 		&it.Status,
@@ -414,6 +600,7 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 	err := s.pool.QueryRow(ctx, `
 		SELECT
 			r.id,
+			r.suite_execution_id,
 			r.suite_id,
 			COALESCE(s.name, '') AS suite_name,
 			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
@@ -430,6 +617,11 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
 			r.calcutta_evaluation_run_id,
+			r.realized_finish_position,
+			r.realized_is_tied,
+			r.realized_in_the_money,
+			r.realized_payout_cents,
+			r.realized_total_points,
 			r.starting_state_key,
 			r.excluded_entry_name,
 			r.status,
@@ -447,6 +639,7 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 		LIMIT 1
 	`, id).Scan(
 		&eval.ID,
+		&eval.SuiteExecutionID,
 		&eval.SuiteID,
 		&eval.SuiteName,
 		&eval.OptimizerKey,
@@ -463,6 +656,11 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 		&eval.MarketShareRunID,
 		&eval.StrategyGenerationRunID,
 		&eval.CalcuttaEvaluationRunID,
+		&eval.RealizedFinishPosition,
+		&eval.RealizedIsTied,
+		&eval.RealizedInTheMoney,
+		&eval.RealizedPayoutCents,
+		&eval.RealizedTotalPoints,
 		&eval.StartingStateKey,
 		&eval.ExcludedEntryName,
 		&eval.Status,
