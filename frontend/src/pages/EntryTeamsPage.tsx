@@ -4,6 +4,7 @@ import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -246,7 +247,7 @@ export function EntryTeamsPage() {
   }
 
   if (entryTeamsQuery.isLoading) {
-    return <div>Loading...</div>;
+    return <LoadingState label="Loading entry..." />;
   }
 
   if (entryTeamsQuery.isError) {

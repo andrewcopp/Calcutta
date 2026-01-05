@@ -4,6 +4,7 @@ import { CalcuttaEntryTeam, School, TournamentTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
 
 interface TeamStats {
   teamId: string;
@@ -83,7 +84,7 @@ export function CalcuttaTeamsPage() {
   }
 
   if (calcuttaTeamsQuery.isLoading) {
-    return <div>Loading...</div>;
+    return <LoadingState label="Loading teams..." />;
   }
 
   if (calcuttaTeamsQuery.isError) {

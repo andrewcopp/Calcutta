@@ -4,6 +4,7 @@ import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryT
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
@@ -199,7 +200,7 @@ export function CalcuttaEntriesPage() {
   }
 
   if (calcuttaEntriesQuery.isLoading) {
-    return <div>Loading...</div>;
+    return <LoadingState label="Loading entries..." />;
   }
 
   if (calcuttaEntriesQuery.isError) {

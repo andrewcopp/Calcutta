@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
 import { Calcutta } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useUser } from '../contexts/UserContext';
@@ -50,22 +52,22 @@ export function CalcuttaListPage() {
   });
 
   if (calcuttasQuery.isLoading) {
-    return <div>Loading...</div>;
+    return <LoadingState label="Loading calcuttas..." />;
   }
 
   if (calcuttasQuery.isError) {
     const message = calcuttasQuery.error instanceof Error ? calcuttasQuery.error.message : 'Failed to fetch calcuttas';
     return (
-      <div className="error p-4 bg-red-100 text-red-700 rounded">
+      <Alert variant="error">
         <h2 className="text-lg font-semibold mb-2">Error</h2>
         <p>{message}</p>
-        <button 
-          onClick={() => calcuttasQuery.refetch()} 
+        <button
+          onClick={() => calcuttasQuery.refetch()}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
         >
           Retry
         </button>
-      </div>
+      </Alert>
     );
   }
 

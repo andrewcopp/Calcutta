@@ -8,6 +8,7 @@ import { tournamentService } from '../services/tournamentService';
 import { BracketGameCard } from '../components/BracketGameCard';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
 
 export const TournamentBracketPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -105,10 +106,7 @@ export const TournamentBracketPage: React.FC = () => {
   if (tournamentQuery.isLoading || validationQuery.isLoading || (validationQuery.data?.valid === true && bracketQuery.isLoading)) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading bracket...</p>
-        </div>
+        <LoadingState label="Loading bracket..." size="lg" />
       </div>
     );
   }
