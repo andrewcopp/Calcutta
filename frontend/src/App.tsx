@@ -30,6 +30,8 @@ import { LabAdvancementTournamentDetailPage } from './pages/LabAdvancementTourna
 import { LabInvestmentAlgorithmDetailPage } from './pages/LabInvestmentAlgorithmDetailPage';
 import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDetailPage';
 import { SandboxPage } from './pages/SandboxPage';
+import { SandboxSuitesListPage } from './pages/SandboxSuitesListPage';
+import { SandboxSuiteDetailPage } from './pages/SandboxSuiteDetailPage';
 import { SuiteCalcuttaEvaluationDetailPage } from './pages/SuiteCalcuttaEvaluationDetailPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
@@ -63,7 +65,10 @@ const AppLayout: React.FC = () => {
           path="/lab/investments/algorithms/:algorithmId/calcuttas/:calcuttaId"
           element={<LabInvestmentCalcuttaDetailPage />}
         />
-        <Route path="/sandbox" element={<SandboxPage />} />
+        <Route path="/sandbox" element={<Navigate to="/sandbox/suites" replace />} />
+        <Route path="/sandbox/legacy" element={<SandboxPage />} />
+        <Route path="/sandbox/suites" element={<SandboxSuitesListPage />} />
+        <Route path="/sandbox/suites/:suiteId" element={<SandboxSuiteDetailPage />} />
         <Route path="/sandbox/evaluations/:id" element={<SuiteCalcuttaEvaluationDetailPage />} />
         <Route path="/runs" element={<RunsRedirect />} />
         <Route path="/runs/:year" element={<RunsPage />} />

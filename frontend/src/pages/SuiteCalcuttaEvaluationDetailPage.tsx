@@ -21,7 +21,10 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   const [searchParams] = useSearchParams();
 
   const suiteId = searchParams.get('suiteId') || '';
-  const backUrl = suiteId ? `/sandbox?suiteId=${encodeURIComponent(suiteId)}` : '/sandbox';
+  const executionId = searchParams.get('executionId') || '';
+  const backUrl = suiteId
+    ? `/sandbox/suites/${encodeURIComponent(suiteId)}${executionId ? `?executionId=${encodeURIComponent(executionId)}` : ''}`
+    : '/sandbox/suites';
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],

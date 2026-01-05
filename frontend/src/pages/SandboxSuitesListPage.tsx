@@ -1,0 +1,106 @@
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+
+import { ApiError } from '../api/apiClient';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { suitesService, type SuiteListItem } from '../services/suitesService';
+
+export function SandboxSuitesListPage() {
+  const listQuery = useQuery({
+    queryKey: ['suites', 'list'],
+    queryFn: () => suitesService.list({ limit: 200, offset: 0 }),
+  });
+
+  const showError = (err: unknown) => {
+    if (err instanceof ApiError) {
+      if (err.status === 403) {
+        return 'You do not have permission to view suites (403).';
+      }
+      return `Request failed (${err.status}): ${err.message}`;
+    }
+    return err instanceof Error ? err.message : 'Unknown error';
+  };
+
+  const formatDateTime = (v: string | null | undefined) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return v;
+    return d.toLocaleString();
+  };
+
+  const suites: SuiteListItem[] = listQuery.data?.items ?? [];
+
+  return (
+    <PageContainer>
+      <PageHeader title="Sandbox" subtitle="Suites (collections of scenarios)" />
+
+      <Card>
+        <h2 className="text-xl font-semibold mb-4">Suites</h2>
+
+        {listQuery.isLoading ? <LoadingState label="Loading suites..." layout="inline" /> : null}
+
+        {listQuery.isError ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to load suites</div>
+            <div className="mb-3">{showError(listQuery.error)}</div>
+            <Button size="sm" onClick={() => listQuery.refetch()}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
+
+        {!listQuery.isLoading && !listQuery.isError && suites.length === 0 ? (
+          <Alert variant="info" className="mt-3">
+            No suites found.
+          </Alert>
+        ) : null}
+
+        {!listQuery.isLoading && !listQuery.isError && suites.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latest execution</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {suites.map((s) => {
+                  const exec = s.latest_execution_id
+                    ? `${s.latest_execution_status ?? '—'} · ${s.latest_execution_id.slice(0, 8)}`
+                    : '—';
+
+                  return (
+                    <tr key={s.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        <div className="font-medium">
+                          <Link to={`/sandbox/suites/${encodeURIComponent(s.id)}`} className="text-blue-600 hover:text-blue-800">
+                            {s.name || s.id}
+                          </Link>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {s.optimizer_key} · n={s.n_sims} · seed={s.seed}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-700">
+                        <div>{exec}</div>
+                        <div className="text-xs text-gray-600">{formatDateTime(s.latest_execution_created_at ?? null)}</div>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(s.updated_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </Card>
+    </PageContainer>
+  );
+}

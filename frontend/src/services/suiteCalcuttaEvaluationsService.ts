@@ -84,12 +84,14 @@ export type CreateSuiteCalcuttaEvaluationResponse = {
 export const suiteCalcuttaEvaluationsService = {
   async list(params?: {
     suiteId?: string;
+    suiteExecutionId?: string;
     calcuttaId?: string;
     limit?: number;
     offset?: number;
   }): Promise<ListSuiteCalcuttaEvaluationsResponse> {
     const q = new URLSearchParams();
     if (params?.suiteId) q.set('suite_id', params.suiteId);
+    if (params?.suiteExecutionId) q.set('suite_execution_id', params.suiteExecutionId);
     if (params?.calcuttaId) q.set('calcutta_id', params.calcuttaId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
