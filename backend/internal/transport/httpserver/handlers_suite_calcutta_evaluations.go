@@ -190,27 +190,27 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 			COALESCE(s.optimizer_key, '') AS optimizer_key,
 			COALESCE(s.n_sims, 0) AS n_sims,
 			COALESCE(s.seed, 0) AS seed,
-			calcutta_id,
-			game_outcome_run_id,
-			market_share_run_id,
-			strategy_generation_run_id,
-			calcutta_evaluation_run_id,
-			starting_state_key,
-			excluded_entry_name,
-			status,
-			claimed_at,
-			claimed_by,
-			error_message,
-			created_at,
-			updated_at
+			r.calcutta_id,
+			r.game_outcome_run_id,
+			r.market_share_run_id,
+			r.strategy_generation_run_id,
+			r.calcutta_evaluation_run_id,
+			r.starting_state_key,
+			r.excluded_entry_name,
+			r.status,
+			r.claimed_at,
+			r.claimed_by,
+			r.error_message,
+			r.created_at,
+			r.updated_at
 		FROM derived.suite_calcutta_evaluations r
 		LEFT JOIN derived.suites s
 			ON s.id = r.suite_id
 			AND s.deleted_at IS NULL
 		WHERE r.deleted_at IS NULL
-			AND ($1::uuid IS NULL OR calcutta_id = $1::uuid)
-			AND ($2::uuid IS NULL OR suite_id = $2::uuid)
-		ORDER BY created_at DESC
+			AND ($1::uuid IS NULL OR r.calcutta_id = $1::uuid)
+			AND ($2::uuid IS NULL OR r.suite_id = $2::uuid)
+		ORDER BY r.created_at DESC
 		LIMIT $3::int
 		OFFSET $4::int
 	`, nullUUIDParam(calcuttaID), nullUUIDParam(suiteID), limit, offset)
@@ -274,19 +274,19 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 			COALESCE(s.optimizer_key, '') AS optimizer_key,
 			COALESCE(s.n_sims, 0) AS n_sims,
 			COALESCE(s.seed, 0) AS seed,
-			calcutta_id,
-			game_outcome_run_id,
-			market_share_run_id,
-			strategy_generation_run_id,
-			calcutta_evaluation_run_id,
-			starting_state_key,
-			excluded_entry_name,
-			status,
-			claimed_at,
-			claimed_by,
-			error_message,
-			created_at,
-			updated_at
+			r.calcutta_id,
+			r.game_outcome_run_id,
+			r.market_share_run_id,
+			r.strategy_generation_run_id,
+			r.calcutta_evaluation_run_id,
+			r.starting_state_key,
+			r.excluded_entry_name,
+			r.status,
+			r.claimed_at,
+			r.claimed_by,
+			r.error_message,
+			r.created_at,
+			r.updated_at
 		FROM derived.suite_calcutta_evaluations r
 		LEFT JOIN derived.suites s
 			ON s.id = r.suite_id
