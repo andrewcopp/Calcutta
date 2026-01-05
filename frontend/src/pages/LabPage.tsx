@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
 import { TabsNav } from '../components/TabsNav';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -64,13 +65,45 @@ type TeamPredictedMarketShare = {
 };
 
 export function LabPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('advancements');
-  const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>('');
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
-  const [selectedCalcuttaId, setSelectedCalcuttaId] = useState<string | null>(null);
-  const [selectedGameOutcomeRunId, setSelectedGameOutcomeRunId] = useState<string | null>(null);
-  const [selectedInvestmentsGameOutcomeRunId, setSelectedInvestmentsGameOutcomeRunId] = useState<string | null>(null);
-  const [selectedMarketShareRunId, setSelectedMarketShareRunId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const tab = searchParams.get('tab');
+    return tab === 'investments' ? 'investments' : 'advancements';
+  });
+  const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>(() => searchParams.get('algorithmId') || '');
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(() => searchParams.get('tournamentId') || null);
+  const [selectedCalcuttaId, setSelectedCalcuttaId] = useState<string | null>(() => searchParams.get('calcuttaId') || null);
+  const [selectedGameOutcomeRunId, setSelectedGameOutcomeRunId] = useState<string | null>(() => searchParams.get('gameOutcomeRunId') || null);
+  const [selectedInvestmentsGameOutcomeRunId, setSelectedInvestmentsGameOutcomeRunId] = useState<string | null>(
+    () => searchParams.get('investmentsGameOutcomeRunId') || null
+  );
+  const [selectedMarketShareRunId, setSelectedMarketShareRunId] = useState<string | null>(() => searchParams.get('marketShareRunId') || null);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    next.set('tab', activeTab);
+    if (selectedAlgorithmId) next.set('algorithmId', selectedAlgorithmId);
+    if (selectedTournamentId) next.set('tournamentId', selectedTournamentId);
+    if (selectedCalcuttaId) next.set('calcuttaId', selectedCalcuttaId);
+    if (selectedGameOutcomeRunId) next.set('gameOutcomeRunId', selectedGameOutcomeRunId);
+    if (selectedInvestmentsGameOutcomeRunId) next.set('investmentsGameOutcomeRunId', selectedInvestmentsGameOutcomeRunId);
+    if (selectedMarketShareRunId) next.set('marketShareRunId', selectedMarketShareRunId);
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [
+    activeTab,
+    selectedAlgorithmId,
+    selectedTournamentId,
+    selectedCalcuttaId,
+    selectedGameOutcomeRunId,
+    selectedInvestmentsGameOutcomeRunId,
+    selectedMarketShareRunId,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const tabs = useMemo(
     () =>
@@ -233,6 +266,20 @@ export function LabPage() {
           <div className="mt-4 text-sm text-gray-700">
             <div className="font-medium text-gray-900">{selectedAlgorithm.name}</div>
             {selectedAlgorithm.description ? <div className="text-gray-600">{selectedAlgorithm.description}</div> : null}
+            {selectedAlgorithmId ? (
+              <div className="mt-2">
+                <Link
+                  to={
+                    activeTab === 'advancements'
+                      ? `/lab/advancements/algorithms/${encodeURIComponent(selectedAlgorithmId)}`
+                      : `/lab/investments/algorithms/${encodeURIComponent(selectedAlgorithmId)}`
+                  }
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  View algorithm details
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </Card>
