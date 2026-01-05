@@ -66,7 +66,7 @@ Complete DAG with 7 tasks:
 
 ### 5. Documentation
 
-**Airflow Setup** (`data-science/docs/airflow_setup.md`):
+**Airflow Setup** (`data-science/docs/runbooks/airflow_setup.md`):
 - Local development with docker-compose
 - Production deployment options (AWS MWAA, K8s, self-hosted)
 - Best practices and troubleshooting
@@ -76,7 +76,7 @@ Complete DAG with 7 tasks:
 - Architecture overview
 - Query examples
 
-**Go Models** (`data-science/docs/go_models.md`):
+**Go Models** (`data-science/docs/reference/go_models.md`):
 - Complete struct definitions for all analytics tables
 - Query helper functions
 - Usage examples

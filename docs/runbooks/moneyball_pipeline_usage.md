@@ -367,5 +367,5 @@ Use `--no-cache` to force recomputation.
 ## Next Steps
 
 - See `docs/reference/moneyball_artifact_contracts.md` for artifact specifications
-- See `PLANS.md` for future enhancements
-- See `IDEAS.md` for research directions
+- See `data-science/docs/design/plans.md` for future enhancements
+- See `data-science/docs/design/ideas.md` for research directions

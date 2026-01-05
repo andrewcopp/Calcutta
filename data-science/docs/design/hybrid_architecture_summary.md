@@ -100,7 +100,7 @@
 - Separate Postgres for Airflow metadata and analytics data
 - Redis for Celery executor
 
-**Documentation**: `data-science/docs/airflow_setup.md`
+**Documentation**: `data-science/docs/runbooks/airflow_setup.md`
 - Local development setup
 - Production deployment options (AWS MWAA, K8s)
 - Best practices and troubleshooting

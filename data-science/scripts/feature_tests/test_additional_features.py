@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Test additional feature candidates from IDEAS.md backlog.
+Test additional feature candidates from
+data-science/docs/design/ideas.md backlog.
 """
 from __future__ import annotations
 
