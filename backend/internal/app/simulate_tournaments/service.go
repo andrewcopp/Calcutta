@@ -31,6 +31,7 @@ type RunParams struct {
 	BatchSize            int
 	ProbabilitySourceKey string
 	StartingStateKey     string
+	GameOutcomeRunID     *string
 }
 
 type RunResult struct {
@@ -94,11 +95,14 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}
 
-	probs, nPredRows, err := s.loadPredictedGameOutcomes(ctx, coreTournamentID)
+	selectedGameOutcomeRunID, probs, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
 	if err != nil {
 		return nil, err
 	}
 	if nPredRows == 0 {
+		if selectedGameOutcomeRunID != nil {
+			return nil, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *selectedGameOutcomeRunID)
+		}
 		return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
 	}
 
@@ -418,13 +422,51 @@ func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*mo
 	return out, nil
 }
 
-func (s *Service) loadPredictedGameOutcomes(ctx context.Context, tournamentID string) (map[tsim.MatchupKey]float64, int, error) {
+func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, map[tsim.MatchupKey]float64, int, error) {
+	if gameOutcomeRunID != nil && *gameOutcomeRunID != "" {
+		out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, *gameOutcomeRunID)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		if n == 0 {
+			return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *gameOutcomeRunID)
+		}
+		return gameOutcomeRunID, out, n, nil
+	}
+
+	var latestRunID string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT id
+		FROM derived.game_outcome_runs
+		WHERE tournament_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, tournamentID).Scan(&latestRunID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, 0, fmt.Errorf("no game_outcome_runs found for tournament_id=%s", tournamentID)
+		}
+		return nil, nil, 0, err
+	}
+
+	ptr := &latestRunID
+	out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, latestRunID)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	if n == 0 {
+		return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", latestRunID)
+	}
+	return ptr, out, n, nil
+}
+
+func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID string) (map[tsim.MatchupKey]float64, int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT game_id, team1_id, team2_id, p_team1_wins
 		FROM derived.predicted_game_outcomes
-		WHERE tournament_id = $1
-		  AND deleted_at IS NULL
-	`, tournamentID)
+		WHERE run_id = $1::uuid
+			AND deleted_at IS NULL
+	`, runID)
 	if err != nil {
 		return nil, 0, err
 	}

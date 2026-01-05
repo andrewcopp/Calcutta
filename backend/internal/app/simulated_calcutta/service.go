@@ -34,9 +34,8 @@ func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
 	runID string,
 	excludedEntryName string,
 	tournamentSimulationBatchID *string,
-) error {
-	_, err := s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil)
-	return err
+) (string, error) {
+	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil)
 }
 
 func (s *Service) CalculateSimulatedCalcuttaForEntryCandidate(

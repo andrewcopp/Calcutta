@@ -81,7 +81,8 @@ func run() error {
 	service := simulated_calcutta.New(pool)
 
 	log.Printf("Starting simulated calcutta calculation for calcutta %s, run %s", calcuttaID, runID)
-	if err := service.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, nil); err != nil {
+	_, err = service.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, nil)
+	if err != nil {
 		return fmt.Errorf("failed to calculate simulated calcutta: %w", err)
 	}
 

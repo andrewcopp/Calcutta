@@ -21,15 +21,17 @@ func New(pool *pgxpool.Pool) *Service {
 }
 
 type GenerateParams struct {
-	CalcuttaID   string
-	RunKey       string
-	Name         string
-	OptimizerKey string
-	MinBidPoints int
-	MaxBidPoints int
-	MinTeams     int
-	MaxTeams     int
-	BudgetPoints int
+	CalcuttaID            string
+	RunKey                string
+	Name                  string
+	OptimizerKey          string
+	MarketShareRunID      *string
+	SimulatedTournamentID *string
+	MinBidPoints          int
+	MaxBidPoints          int
+	MinTeams              int
+	MaxTeams              int
+	BudgetPoints          int
 }
 
 type GenerateResult struct {
@@ -71,14 +73,18 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		return nil, err
 	}
 
-	simID, ok, err := s.getLatestSimulatedTournamentID(ctx, cc.CoreTournamentID)
-	if err != nil {
-		return nil, err
+	if p.SimulatedTournamentID != nil && *p.SimulatedTournamentID != "" {
+		cc.SimulatedTournamentID = *p.SimulatedTournamentID
+	} else {
+		simID, ok, err := s.getLatestSimulatedTournamentID(ctx, cc.CoreTournamentID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, fmt.Errorf("no simulated_tournaments batch found for calcutta_id=%s", p.CalcuttaID)
+		}
+		cc.SimulatedTournamentID = simID
 	}
-	if !ok {
-		return nil, fmt.Errorf("no simulated_tournaments batch found for calcutta_id=%s", p.CalcuttaID)
-	}
-	cc.SimulatedTournamentID = simID
 
 	expected, _, err := s.loadExpectedPointsByTeam(ctx, cc)
 	if err != nil {
@@ -88,7 +94,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		return nil, errors.New("no expected points found")
 	}
 
-	marketByTeam, err := s.loadPredictedMarketShares(ctx, cc)
+	selectedMarketShareRunID, marketByTeam, err := s.loadPredictedMarketShares(ctx, cc, p.MarketShareRunID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +104,11 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 	for _, t := range expected {
 		share, ok := marketByTeam[t.TeamID]
 		if !ok {
-			return nil, fmt.Errorf("missing predicted_market_share for team_id=%s (tournament_id=%s)", t.TeamID, cc.CoreTournamentID)
+			rid := ""
+			if selectedMarketShareRunID != nil {
+				rid = *selectedMarketShareRunID
+			}
+			return nil, fmt.Errorf("missing predicted_market_share for team_id=%s (calcutta_id=%s market_share_run_id=%s)", t.TeamID, cc.CalcuttaID, rid)
 		}
 		marketPoints := share * poolSize
 		teams = append(teams, Team{ID: t.TeamID, ExpectedPoints: t.ExpectedPoints, MarketPoints: marketPoints})
@@ -319,17 +329,44 @@ func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaCont
 	return out, total, nil
 }
 
-func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaContext) (map[string]float64, error) {
+func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaContext, marketShareRunID *string) (*string, map[string]float64, error) {
+	if cc == nil {
+		return nil, nil, errors.New("calcutta context is required")
+	}
+	if cc.CalcuttaID == "" {
+		return nil, nil, errors.New("calcutta_id is required")
+	}
+
+	selected := (*string)(nil)
+	if marketShareRunID != nil && *marketShareRunID != "" {
+		selected = marketShareRunID
+	} else {
+		var latestRunID string
+		if err := s.pool.QueryRow(ctx, `
+			SELECT id::text
+			FROM derived.market_share_runs
+			WHERE calcutta_id = $1::uuid
+				AND deleted_at IS NULL
+			ORDER BY created_at DESC
+			LIMIT 1
+		`, cc.CalcuttaID).Scan(&latestRunID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, nil, fmt.Errorf("no market_share_runs found for calcutta_id=%s", cc.CalcuttaID)
+			}
+			return nil, nil, err
+		}
+		selected = &latestRunID
+	}
+
 	q := `
 		SELECT team_id, predicted_share
 		FROM derived.predicted_market_share
-		WHERE tournament_id = $1
-			AND calcutta_id IS NULL
+		WHERE run_id = $1::uuid
 			AND deleted_at IS NULL
 	`
-	rows, err := s.pool.Query(ctx, q, cc.CoreTournamentID)
+	rows, err := s.pool.Query(ctx, q, *selected)
 	if err != nil {
-		return nil, err
+		return selected, nil, err
 	}
 	defer rows.Close()
 
@@ -338,14 +375,14 @@ func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaCon
 		var teamID string
 		var share float64
 		if err := rows.Scan(&teamID, &share); err != nil {
-			return nil, err
+			return selected, nil, err
 		}
 		out[teamID] = share
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return selected, nil, err
 	}
-	return out, nil
+	return selected, out, nil
 }
 
 type upsertStrategyGenerationRunParams struct {

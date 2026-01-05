@@ -60,7 +60,8 @@ func run() error {
 	}
 
 	svc := simulated_calcutta.New(pool)
-	if err := svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, override); err != nil {
+	_, err = svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, override)
+	if err != nil {
 		return fmt.Errorf("evaluation failed: %w", err)
 	}
 
