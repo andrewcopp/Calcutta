@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -19,6 +20,8 @@ type suiteListItem struct {
 	OptimizerKey             string     `json:"optimizer_key"`
 	NSims                    int        `json:"n_sims"`
 	Seed                     int        `json:"seed"`
+	StartingStateKey         string     `json:"starting_state_key"`
+	ExcludedEntryName        *string    `json:"excluded_entry_name,omitempty"`
 	LatestExecutionID        *string    `json:"latest_execution_id,omitempty"`
 	LatestExecutionName      *string    `json:"latest_execution_name,omitempty"`
 	LatestExecutionStatus    *string    `json:"latest_execution_status,omitempty"`
@@ -35,12 +38,24 @@ type listSuitesResponse struct {
 func (s *Server) registerSuiteRoutes(r *mux.Router) {
 	r.HandleFunc(
 		"/api/suites",
-		s.requirePermission("analytics.suite_executions.read", s.listSuitesHandler),
+		s.requirePermission("analytics.suites.read", s.listSuitesHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
 		"/api/suites/{id}",
-		s.requirePermission("analytics.suite_executions.read", s.getSuiteHandler),
+		s.requirePermission("analytics.suites.read", s.getSuiteHandler),
 	).Methods("GET", "OPTIONS")
+	r.HandleFunc(
+		"/api/suites/{id}",
+		s.requirePermission("analytics.suites.write", s.updateSuiteHandler),
+	).Methods("PATCH", "OPTIONS")
+}
+
+type updateSuiteRequest struct {
+	OptimizerKey      *string `json:"optimizerKey"`
+	NSims             *int    `json:"nSims"`
+	Seed              *int    `json:"seed"`
+	StartingStateKey  *string `json:"startingStateKey"`
+	ExcludedEntryName *string `json:"excludedEntryName"`
 }
 
 func (s *Server) listSuitesHandler(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +81,8 @@ func (s *Server) listSuitesHandler(w http.ResponseWriter, r *http.Request) {
 			s.optimizer_key,
 			s.n_sims,
 			s.seed,
+			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			s.excluded_entry_name,
 			le.id,
 			le.name,
 			le.status,
@@ -110,6 +127,8 @@ func (s *Server) listSuitesHandler(w http.ResponseWriter, r *http.Request) {
 			&it.OptimizerKey,
 			&it.NSims,
 			&it.Seed,
+			&it.StartingStateKey,
+			&it.ExcludedEntryName,
 			&it.LatestExecutionID,
 			&it.LatestExecutionName,
 			&it.LatestExecutionStatus,
@@ -154,6 +173,8 @@ func (s *Server) getSuiteHandler(w http.ResponseWriter, r *http.Request) {
 			s.optimizer_key,
 			s.n_sims,
 			s.seed,
+			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			s.excluded_entry_name,
 			le.id,
 			le.name,
 			le.status,
@@ -187,6 +208,8 @@ func (s *Server) getSuiteHandler(w http.ResponseWriter, r *http.Request) {
 		&it.OptimizerKey,
 		&it.NSims,
 		&it.Seed,
+		&it.StartingStateKey,
+		&it.ExcludedEntryName,
 		&it.LatestExecutionID,
 		&it.LatestExecutionName,
 		&it.LatestExecutionStatus,
@@ -204,4 +227,107 @@ func (s *Server) getSuiteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, it)
+}
+
+func (s *Server) updateSuiteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := strings.TrimSpace(vars["id"])
+	if id == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+
+	var req updateSuiteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+
+	var optimizer any
+	if req.OptimizerKey != nil {
+		v := strings.TrimSpace(*req.OptimizerKey)
+		if v == "" {
+			optimizer = nil
+		} else {
+			optimizer = v
+		}
+	} else {
+		optimizer = nil
+	}
+
+	var nSims any
+	if req.NSims != nil {
+		if *req.NSims <= 0 {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "nSims must be positive", "nSims")
+			return
+		}
+		nSims = *req.NSims
+	} else {
+		nSims = nil
+	}
+
+	var seed any
+	if req.Seed != nil {
+		seed = *req.Seed
+	} else {
+		seed = nil
+	}
+
+	var starting any
+	if req.StartingStateKey != nil {
+		v := strings.TrimSpace(*req.StartingStateKey)
+		if v != "" && v != "post_first_four" && v != "current" {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "startingStateKey must be 'current' or 'post_first_four'", "startingStateKey")
+			return
+		}
+		if v == "" {
+			starting = nil
+		} else {
+			starting = v
+		}
+	} else {
+		starting = nil
+	}
+
+	var excluded any
+	if req.ExcludedEntryName != nil {
+		v := strings.TrimSpace(*req.ExcludedEntryName)
+		if v == "" {
+			excluded = nil
+		} else {
+			excluded = v
+		}
+	} else {
+		excluded = nil
+	}
+
+	ct, err := s.pool.Exec(r.Context(), `
+		UPDATE derived.suites
+		SET optimizer_key = COALESCE($2::text, optimizer_key),
+			n_sims = COALESCE($3::int, n_sims),
+			seed = COALESCE($4::int, seed),
+			starting_state_key = COALESCE($5::text, starting_state_key),
+			excluded_entry_name = CASE
+				WHEN $6::text IS NULL THEN excluded_entry_name
+				ELSE $6::text
+			END,
+			updated_at = NOW(),
+			deleted_at = NULL
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+	`, id, optimizer, nSims, seed, starting, excluded)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if ct.RowsAffected() == 0 {
+		writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "id")
+		return
+	}
+
+	s.getSuiteHandler(w, r)
 }

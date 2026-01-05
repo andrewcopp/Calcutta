@@ -777,10 +777,3 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 		OurStrategy: our,
 	})
 }
-
-func nullUUIDParam(v string) any {
-	if v == "" {
-		return nil
-	}
-	return v
-}

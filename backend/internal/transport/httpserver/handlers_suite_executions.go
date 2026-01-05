@@ -77,8 +77,70 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		writeError(w, r, http.StatusBadRequest, "validation_error", "suiteId must be a valid UUID", "suiteId")
 		return
 	}
+
+	ctx := r.Context()
+
+	var goAlgID string
+	var msAlgID string
+	var suiteOptimizerKey string
+	var suiteNSims int
+	var suiteSeed int
+	var suiteStartingStateKey string
+	var suiteExcludedEntryName *string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT
+			game_outcomes_algorithm_id::text,
+			market_share_algorithm_id::text,
+			COALESCE(optimizer_key, ''::text) AS optimizer_key,
+			COALESCE(n_sims, 0)::int AS n_sims,
+			COALESCE(seed, 0)::int AS seed,
+			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			excluded_entry_name
+		FROM derived.suites
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, req.SuiteID).Scan(&goAlgID, &msAlgID, &suiteOptimizerKey, &suiteNSims, &suiteSeed, &suiteStartingStateKey, &suiteExcludedEntryName); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "suiteId")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	// Resolve calcutta IDs if omitted.
 	if len(req.CalcuttaIDs) == 0 {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaIds is required", "calcuttaIds")
+		rows, err := s.pool.Query(ctx, `
+			SELECT calcutta_id::text
+			FROM derived.suite_scenarios
+			WHERE suite_id = $1::uuid
+				AND deleted_at IS NULL
+			ORDER BY created_at ASC
+		`, req.SuiteID)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		defer rows.Close()
+
+		ids := make([]string, 0)
+		for rows.Next() {
+			var cid string
+			if err := rows.Scan(&cid); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			ids = append(ids, cid)
+		}
+		if err := rows.Err(); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		req.CalcuttaIDs = ids
+	}
+	if len(req.CalcuttaIDs) == 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaIds is required (or define suite scenarios first)", "calcuttaIds")
 		return
 	}
 	for i := range req.CalcuttaIDs {
@@ -93,39 +155,15 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	startingStateKey := "post_first_four"
-	if req.StartingStateKey != nil && *req.StartingStateKey != "" {
-		startingStateKey = *req.StartingStateKey
+	startingStateKey := suiteStartingStateKey
+	if req.StartingStateKey != nil && strings.TrimSpace(*req.StartingStateKey) != "" {
+		startingStateKey = strings.TrimSpace(*req.StartingStateKey)
+	}
+	if startingStateKey == "" {
+		startingStateKey = "post_first_four"
 	}
 	if startingStateKey != "post_first_four" && startingStateKey != "current" {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "startingStateKey must be 'current' or 'post_first_four'", "startingStateKey")
-		return
-	}
-
-	ctx := r.Context()
-
-	var goAlgID string
-	var msAlgID string
-	var suiteOptimizerKey string
-	var suiteNSims int
-	var suiteSeed int
-	if err := s.pool.QueryRow(ctx, `
-		SELECT
-			game_outcomes_algorithm_id::text,
-			market_share_algorithm_id::text,
-			COALESCE(optimizer_key, ''::text) AS optimizer_key,
-			COALESCE(n_sims, 0)::int AS n_sims,
-			COALESCE(seed, 0)::int AS seed
-		FROM derived.suites
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, req.SuiteID).Scan(&goAlgID, &msAlgID, &suiteOptimizerKey, &suiteNSims, &suiteSeed); err != nil {
-		if err == pgx.ErrNoRows {
-			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "suiteId")
-			return
-		}
-		writeErrorFromErr(w, r, err)
 		return
 	}
 
@@ -151,7 +189,14 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 	}
 	var excluded any
 	if req.ExcludedEntryName != nil {
-		excluded = *req.ExcludedEntryName
+		v := strings.TrimSpace(*req.ExcludedEntryName)
+		if v != "" {
+			excluded = v
+		} else {
+			excluded = nil
+		}
+	} else if suiteExcludedEntryName != nil && strings.TrimSpace(*suiteExcludedEntryName) != "" {
+		excluded = strings.TrimSpace(*suiteExcludedEntryName)
 	} else {
 		excluded = nil
 	}
