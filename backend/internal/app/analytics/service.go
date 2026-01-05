@@ -181,6 +181,31 @@ type CalcuttaPredictedReturnsResult struct {
 	ExpectedValue float64
 }
 
+type TournamentPredictedAdvancementResult struct {
+	TeamID     string
+	SchoolName string
+	Seed       int
+	Region     string
+	ProbPI     float64
+	ReachR64   float64
+	ReachR32   float64
+	ReachS16   float64
+	ReachE8    float64
+	ReachFF    float64
+	ReachChamp float64
+	WinChamp   float64
+}
+
+type CalcuttaPredictedMarketShareResult struct {
+	TeamID         string
+	SchoolName     string
+	Seed           int
+	Region         string
+	RationalShare  float64
+	PredictedShare float64
+	DeltaPercent   float64
+}
+
 type CalcuttaSimulatedEntryResult struct {
 	TeamID         string
 	SchoolName     string
@@ -283,6 +308,57 @@ func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID st
 	}
 
 	return selectedID, gameOutcomeSelectedID, results, nil
+}
+
+func (s *Service) GetTournamentPredictedAdvancement(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, []TournamentPredictedAdvancementResult, error) {
+	selectedRunID, data, err := s.repo.GetTournamentPredictedAdvancement(ctx, tournamentID, gameOutcomeRunID)
+	if err != nil {
+		log.Printf("Error getting tournament predicted advancement: %v", err)
+		return nil, nil, err
+	}
+
+	results := make([]TournamentPredictedAdvancementResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, TournamentPredictedAdvancementResult{
+			TeamID:     d.TeamID,
+			SchoolName: d.SchoolName,
+			Seed:       d.Seed,
+			Region:     d.Region,
+			ProbPI:     d.ProbPI,
+			ReachR64:   d.ReachR64,
+			ReachR32:   d.ReachR32,
+			ReachS16:   d.ReachS16,
+			ReachE8:    d.ReachE8,
+			ReachFF:    d.ReachFF,
+			ReachChamp: d.ReachChamp,
+			WinChamp:   d.WinChamp,
+		})
+	}
+
+	return selectedRunID, results, nil
+}
+
+func (s *Service) GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaID string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedMarketShareResult, error) {
+	marketShareSelectedID, gameOutcomeSelectedID, data, err := s.repo.GetCalcuttaPredictedMarketShare(ctx, calcuttaID, marketShareRunID, gameOutcomeRunID)
+	if err != nil {
+		log.Printf("Error getting calcutta predicted market share: %v", err)
+		return nil, nil, nil, err
+	}
+
+	results := make([]CalcuttaPredictedMarketShareResult, 0, len(data))
+	for _, d := range data {
+		results = append(results, CalcuttaPredictedMarketShareResult{
+			TeamID:         d.TeamID,
+			SchoolName:     d.SchoolName,
+			Seed:           d.Seed,
+			Region:         d.Region,
+			RationalShare:  d.RationalShare,
+			PredictedShare: d.PredictedShare,
+			DeltaPercent:   d.DeltaPercent,
+		})
+	}
+
+	return marketShareSelectedID, gameOutcomeSelectedID, results, nil
 }
 
 func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryResult, error) {

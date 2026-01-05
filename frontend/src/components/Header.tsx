@@ -15,17 +15,11 @@ export const Header: React.FC = () => {
               <Link to="/calcuttas" className="text-gray-600 hover:text-gray-800">
                 Calcuttas
               </Link>
-              <Link to="/simulations" className="text-gray-600 hover:text-gray-800">
-                Simulations
+              <Link to="/lab" className="text-gray-600 hover:text-gray-800">
+                Lab
               </Link>
-              <Link to="/predictions" className="text-gray-600 hover:text-gray-800">
-                Predictions
-              </Link>
-              <Link to="/evaluations" className="text-gray-600 hover:text-gray-800">
-                Evaluations
-              </Link>
-              <Link to="/runs" className="text-gray-600 hover:text-gray-800">
-                Runs
+              <Link to="/sandbox" className="text-gray-600 hover:text-gray-800">
+                Sandbox
               </Link>
               <Link to="/rules" className="text-gray-600 hover:text-gray-800">
                 How It Works
@@ -42,4 +36,4 @@ export const Header: React.FC = () => {
   );
 };
 
-export default Header; 
+export default Header;

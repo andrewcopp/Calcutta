@@ -19,15 +19,13 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
-import { SimulationsPage } from './pages/SimulationsPage';
-import { PredictionsPage } from './pages/PredictionsPage';
-import { EvaluationsPage } from './pages/EvaluationsPage';
-import { EvaluationDetailPage } from './pages/EvaluationDetailPage';
 import { RunsPage } from './pages/RunsPage';
 import { RunRankingsPage } from './pages/RunRankingsPage';
 import { RunReturnsPage } from './pages/RunReturnsPage';
 import { RunInvestmentsPage } from './pages/RunInvestmentsPage';
 import { EntryPortfolioPage } from './pages/EntryPortfolioPage';
+import { LabPage } from './pages/LabPage';
+import { SandboxPage } from './pages/SandboxPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 import './App.css';
@@ -50,17 +48,15 @@ const AppLayout: React.FC = () => {
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
-        <Route path="/simulations" element={<SimulationsPage />} />
-        <Route path="/predictions" element={<PredictionsPage />} />
-        <Route path="/evaluations" element={<EvaluationsPage />} />
-        <Route path="/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
+        <Route path="/lab" element={<LabPage />} />
+        <Route path="/sandbox" element={<SandboxPage />} />
         <Route path="/runs" element={<RunsRedirect />} />
         <Route path="/runs/:year" element={<RunsPage />} />
         <Route path="/runs/:year/:runId" element={<RunRankingsPage />} />
         <Route path="/runs/:year/:runId/returns" element={<RunReturnsPage />} />
         <Route path="/runs/:year/:runId/investments" element={<RunInvestmentsPage />} />
         <Route path="/runs/:year/:runId/entries/:entryKey" element={<EntryPortfolioPage />} />
-        <Route path="/analytics" element={<Navigate to="/predictions" replace />} />
+        <Route path="/analytics" element={<Navigate to="/lab" replace />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/api-keys" element={<AdminApiKeysPage />} />
         <Route path="/admin/bundles" element={<AdminBundlesPage />} />

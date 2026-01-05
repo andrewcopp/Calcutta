@@ -131,6 +131,31 @@ type CalcuttaPredictedReturnsData struct {
 	ExpectedValue float64
 }
 
+type CalcuttaPredictedMarketShareData struct {
+	TeamID         string
+	SchoolName     string
+	Seed           int
+	Region         string
+	RationalShare  float64
+	PredictedShare float64
+	DeltaPercent   float64
+}
+
+type TournamentPredictedAdvancementData struct {
+	TeamID     string
+	SchoolName string
+	Seed       int
+	Region     string
+	ProbPI     float64
+	ReachR64   float64
+	ReachR32   float64
+	ReachS16   float64
+	ReachE8    float64
+	ReachFF    float64
+	ReachChamp float64
+	WinChamp   float64
+}
+
 type CalcuttaSimulatedEntryData struct {
 	TeamID         string
 	SchoolName     string
@@ -186,6 +211,8 @@ type AnalyticsRepo interface {
 	GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardData, error)
 	GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []CalcuttaPredictedInvestmentData, error)
 	GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedReturnsData, error)
+	GetTournamentPredictedAdvancement(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, []TournamentPredictedAdvancementData, error)
+	GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaID string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedMarketShareData, error)
 	GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryData, error)
 	ListAlgorithms(ctx context.Context, kind *string) ([]Algorithm, error)
 	ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]GameOutcomeRun, error)

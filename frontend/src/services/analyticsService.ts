@@ -6,6 +6,48 @@ export const analyticsService = {
     return apiClient.get<AnalyticsResponse>('/analytics');
   },
 
+  async listAlgorithms<T>(kind?: string): Promise<T> {
+    const query = new URLSearchParams();
+    if (kind) {
+      query.set('kind', kind);
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<T>(`/analytics/algorithms${suffix}`);
+  },
+
+  async listGameOutcomeRunsForTournament<T>(tournamentId: string): Promise<T> {
+    return apiClient.get<T>(`/analytics/tournaments/${encodeURIComponent(tournamentId)}/game-outcome-runs`);
+  },
+
+  async listMarketShareRunsForCalcutta<T>(calcuttaId: string): Promise<T> {
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/market-share-runs`);
+  },
+
+  async getTournamentPredictedAdvancement<T>(params: { tournamentId: string; gameOutcomeRunId?: string }): Promise<T> {
+    const query = new URLSearchParams();
+    if (params.gameOutcomeRunId) {
+      query.set('game_outcome_run_id', params.gameOutcomeRunId);
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<T>(`/analytics/tournaments/${encodeURIComponent(params.tournamentId)}/predicted-advancement${suffix}`);
+  },
+
+  async getCalcuttaPredictedMarketShare<T>(params: {
+    calcuttaId: string;
+    marketShareRunId?: string;
+    gameOutcomeRunId?: string;
+  }): Promise<T> {
+    const query = new URLSearchParams();
+    if (params.marketShareRunId) {
+      query.set('market_share_run_id', params.marketShareRunId);
+    }
+    if (params.gameOutcomeRunId) {
+      query.set('game_outcome_run_id', params.gameOutcomeRunId);
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(params.calcuttaId)}/predicted-market-share${suffix}`);
+  },
+
   async getSeedInvestmentDistribution(): Promise<SeedInvestmentDistributionResponse> {
     return apiClient.get<SeedInvestmentDistributionResponse>('/analytics/seed-investment-distribution');
   },

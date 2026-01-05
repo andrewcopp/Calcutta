@@ -35,6 +35,62 @@ Frontend should:
 - generate and save test entries
 - trigger and inspect evaluation runs
 
+## Frontend IA (v1): Lab + Sandbox
+
+### Navigation
+- Replace: Simulations / Predictions / Evaluations / Runs
+- With: Lab / Sandbox
+
+### Lab
+
+#### Tab: Advancements
+Source of truth:
+- `derived.game_outcome_runs`
+- `derived.predicted_game_outcomes`
+
+Behavior:
+- List registered advancement algorithms (game-outcomes algorithms)
+- Click algorithm -> show algorithm metadata + list of tournaments it has runs for
+- Click tournament -> show per-team advancement probabilities
+
+Per-team advancement table:
+- Show cumulative probability of reaching each round (no points / returns)
+- Default sort: highest championship probability
+- Sanity check expectation: totals should be ~100%, 200%, 400%, ... by round (tournament structure dependent)
+
+#### Tab: Investments
+Source of truth:
+- `derived.market_share_runs`
+- `derived.predicted_market_share`
+
+Behavior:
+- List registered investment algorithms (market-share algorithms)
+- Click algorithm -> show algorithm metadata (model + features used) + list of calcuttas it has runs for
+- Click calcutta -> show run metadata (training data used) + per-team predicted market share table
+
+Per-team investments table:
+- Show `predicted_market_share` as a percentage (expect very small values; allow 3-4 decimal places)
+- Show `rational_market_share` as the baseline implied by predicted returns (expected points under calcutta scoring) under a naive equal-ROI market assumption (not multiplied by total pool)
+- Show `delta_percent` as percent difference derived from the ratio between predicted and rational market share (handle `rational=0` explicitly)
+- Color semantics: negative = green (buying opportunity), positive = red (over-invested)
+
+### Sandbox
+Source of truth:
+- TestSuites and their executions against all calcuttas (Mode C)
+
+Behavior:
+- List TestSuites that have been run
+- Each suite name describes the advancement algorithm, investment algorithm, and entry optimizer
+- Click suite -> show suite metadata (algorithms used, simulations per test, excluded entry name) + list of per-calcutta results
+- Click a per-calcutta result -> show the entry that produced those stats
+
+Displayed per-calcutta headline stats:
+- Expected Position (Calcutta ranking)
+- Mean Normalized Payout
+- P(Top 1)
+- P(In Money)
+- Realized Finish (deterministic finish vs historical results)
+
 ## Scoping decisions (v1)
 - Predicted game outcomes are the primitive (matchup-level).
   - Stored as discrete matchup probabilities so we can compose them into simulations and support forecasting from any tournament state.
@@ -180,6 +236,23 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [x] list market-share runs (`GET /api/analytics/calcuttas/{id}/market-share-runs`)
   - [x] latest run IDs for calcutta (`GET /api/analytics/calcuttas/{id}/latest-prediction-runs`)
 
+- [ ] Additional endpoints for Lab + Sandbox browsing
+  - [x] Tournament advancement view (tournament-scoped; no points)
+    - [x] `GET /api/analytics/tournaments/{id}/predicted-advancement?game_outcome_run_id=...`
+  - [x] Calcutta market share view (share-based; not pool points)
+    - [x] `GET /api/analytics/calcuttas/{id}/predicted-market-share?market_share_run_id=...&game_outcome_run_id=...`
+  - [ ] Suite results browsing
+    - [ ] List suites
+    - [ ] Suite detail (metadata + per-calcutta results)
+    - [ ] Result detail (generated entry + provenance)
+  - [ ] Cleanup note: these Lab endpoints are additive; identify and retire legacy predicted returns/investment endpoints and pages once the new UI is wired
+
+- [ ] Sandbox persistence (inputs + outputs only; no simulation samples)
+  - [ ] Persist suite definition (advancement algorithm/run selector, investment algorithm/run selector, optimizer, evaluation settings)
+  - [ ] Persist suite execution metadata (created_at, seed, n_sims, excluded entry name)
+  - [ ] Persist per-calcutta headline results needed by UI (expected position, mean normalized payout, P(top 1), P(in money), realized finish)
+  - [ ] Persist a reference to the generated entry/provenance for drill-down
+
 - [ ] Strategy generation workflow
   - [ ] Select game-outcomes run + market share run + optimizer key
   - [ ] Generate and save optimized entry (persist provenance)
@@ -199,6 +272,21 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [ ] A) Evaluate a Calcutta as-is (in-app predicted finishes)
   - [ ] B) Evaluate a single entry for a single year (atomic; UI may be deferred)
   - [ ] C) Benchmark a group of entries across years (same algorithms across years)
+
+- [ ] Frontend: Lab + Sandbox UI
+  - [x] Replace nav with Lab / Sandbox and remove legacy pages from navigation
+  - [ ] Lab: Advancements tab
+    - [x] Algorithm list (kind = game outcomes)
+    - [ ] Algorithm detail -> tournaments with runs
+    - [x] Tournament detail -> per-team advancement probabilities (sortable; default by championship probability)
+  - [ ] Lab: Investments tab
+    - [x] Algorithm list (kind = market share)
+    - [ ] Algorithm detail -> calcuttas with runs
+    - [x] Calcutta detail -> per-team market share with rational + predicted + delta_percent
+  - [ ] Sandbox: Suites browser
+    - [ ] List suites
+    - [ ] Suite detail -> per-calcutta results list + suite metadata
+    - [ ] Result detail -> show generated entry and its provenance
 
 ### Naming glossary
 - Algorithm: stable definition (e.g. KenPom v1, Ridge Regression v2)
