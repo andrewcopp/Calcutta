@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '../../../services/analyticsService';
+import { Alert } from '../../ui/Alert';
+import { Button } from '../../ui/Button';
+import { LoadingState } from '../../ui/LoadingState';
 
 interface SimulationStats {
   tournament_id: string;
@@ -15,7 +18,7 @@ interface SimulationStats {
 
 // Simulations Tab Component
 export function SimulationsTab({ tournamentId }: { tournamentId: string }) {
-  const { data: simulationStats, isLoading: statsLoading } = useQuery<SimulationStats | null>({
+  const simulationStatsQuery = useQuery<SimulationStats | null>({
     queryKey: ['analytics', 'simulations', tournamentId],
     queryFn: async () => {
       if (!tournamentId) return null;
@@ -24,12 +27,22 @@ export function SimulationsTab({ tournamentId }: { tournamentId: string }) {
     enabled: !!tournamentId,
   });
 
+  const simulationStats = simulationStatsQuery.data;
+
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Simulation Statistics</h2>
 
-      {statsLoading ? (
-        <div className="text-gray-500">Loading statistics...</div>
+      {simulationStatsQuery.isLoading ? (
+        <LoadingState label="Loading statistics..." layout="inline" />
+      ) : simulationStatsQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load statistics</div>
+          <div className="mb-3">{simulationStatsQuery.error instanceof Error ? simulationStatsQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => simulationStatsQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
       ) : simulationStats ? (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -70,10 +83,10 @@ export function SimulationsTab({ tournamentId }: { tournamentId: string }) {
           </div>
         </div>
       ) : (
-        <div className="text-gray-500">
-          No simulation data available for this tournament.
+        <Alert variant="info">
+          <div>No simulation data available for this tournament.</div>
           <div className="mt-2 text-sm">Run simulations using the data science pipeline to generate analytics.</div>
-        </div>
+        </Alert>
       )}
     </div>
   );

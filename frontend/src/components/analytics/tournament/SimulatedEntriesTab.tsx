@@ -1,6 +1,9 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '../../../services/analyticsService';
+import { Alert } from '../../ui/Alert';
+import { Button } from '../../ui/Button';
+import { LoadingState } from '../../ui/LoadingState';
 
 interface TeamSimulatedEntry {
   team_id: string;
@@ -19,7 +22,7 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
   const [sortColumn, setSortColumn] = React.useState<keyof TeamSimulatedEntry>('seed');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
-  const { data: simulatedEntry, isLoading } = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
+  const simulatedEntryQuery = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
     queryKey: ['analytics', 'simulated-entry', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -28,11 +31,13 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
     enabled: !!calcuttaId,
   });
 
+  const simulatedEntry = simulatedEntryQuery.data;
+
   const formatPoints = (points: number) => points.toFixed(1);
   const formatROI = (roi: number) => roi.toFixed(2);
 
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view simulated entries.</div>;
+    return <Alert variant="info">Select a calcutta above to view simulated entries.</Alert>;
   }
 
   const handleSort = (column: keyof TeamSimulatedEntry) => {
@@ -77,9 +82,17 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
         Detailed investment report showing expected performance, market predictions, and ROI analysis for all teams.
       </p>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading simulated entry data...</div>
-      ) : simulatedEntry?.teams ? (
+      {simulatedEntryQuery.isLoading ? (
+        <LoadingState label="Loading simulated entry data..." layout="inline" />
+      ) : simulatedEntryQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load simulated entry</div>
+          <div className="mb-3">{simulatedEntryQuery.error instanceof Error ? simulatedEntryQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => simulatedEntryQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : simulatedEntry?.teams && simulatedEntry.teams.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -155,7 +168,7 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No simulated entry data available for this tournament.</div>
+        <Alert variant="info">No simulated entry data available for this tournament.</Alert>
       )}
 
       {simulatedEntry?.teams && (

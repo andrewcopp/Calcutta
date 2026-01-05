@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '../../../services/analyticsService';
+import { Alert } from '../../ui/Alert';
+import { Button } from '../../ui/Button';
+import { LoadingState } from '../../ui/LoadingState';
 
 interface EntryRanking {
   rank: number;
@@ -14,7 +17,7 @@ interface EntryRanking {
 
 // Simulated Calcuttas Tab Component
 export function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const { data: simulatedCalcuttas, isLoading } = useQuery<{ entries: EntryRanking[] } | null>({
+  const simulatedCalcuttasQuery = useQuery<{ entries: EntryRanking[] } | null>({
     queryKey: ['analytics', 'simulated-calcuttas', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -23,8 +26,10 @@ export function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | nul
     enabled: !!calcuttaId,
   });
 
+  const simulatedCalcuttas = simulatedCalcuttasQuery.data;
+
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view simulated calcuttas.</div>;
+    return <Alert variant="info">Select a calcutta above to view simulated calcuttas.</Alert>;
   }
 
   const formatPayout = (value: number) => value.toFixed(3);
@@ -38,9 +43,17 @@ export function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | nul
         payout.
       </p>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading simulated calcutta data...</div>
-      ) : simulatedCalcuttas?.entries ? (
+      {simulatedCalcuttasQuery.isLoading ? (
+        <LoadingState label="Loading simulated calcutta data..." layout="inline" />
+      ) : simulatedCalcuttasQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load simulated calcuttas</div>
+          <div className="mb-3">{simulatedCalcuttasQuery.error instanceof Error ? simulatedCalcuttasQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => simulatedCalcuttasQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : simulatedCalcuttas?.entries && simulatedCalcuttas.entries.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -80,7 +93,7 @@ export function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | nul
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No simulated calcutta data available for this tournament.</div>
+        <Alert variant="info">No simulated calcutta data available for this tournament.</Alert>
       )}
     </div>
   );

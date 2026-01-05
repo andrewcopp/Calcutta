@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '../../../services/analyticsService';
+import { Alert } from '../../ui/Alert';
+import { Button } from '../../ui/Button';
+import { LoadingState } from '../../ui/LoadingState';
 
 interface TeamPredictedInvestment {
   team_id: string;
@@ -13,7 +16,7 @@ interface TeamPredictedInvestment {
 
 // Predicted Investment Tab Component
 export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const { data: predictedInvestment, isLoading } = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
+  const predictedInvestmentQuery = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
     queryKey: ['analytics', 'predicted-investment', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -21,6 +24,8 @@ export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | nu
     },
     enabled: !!calcuttaId,
   });
+
+  const predictedInvestment = predictedInvestmentQuery.data;
 
   const formatPoints = (points: number) => points.toFixed(1);
   const formatPercent = (percent: number) => {
@@ -35,7 +40,7 @@ export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | nu
   };
 
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view points-based predicted investment.</div>;
+    return <Alert variant="info">Select a calcutta above to view points-based predicted investment.</Alert>;
   }
 
   return (
@@ -61,9 +66,17 @@ export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | nu
         </ul>
       </div>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading predicted investment data...</div>
-      ) : predictedInvestment?.teams ? (
+      {predictedInvestmentQuery.isLoading ? (
+        <LoadingState label="Loading predicted investment data..." layout="inline" />
+      ) : predictedInvestmentQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load predicted investment</div>
+          <div className="mb-3">{predictedInvestmentQuery.error instanceof Error ? predictedInvestmentQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => predictedInvestmentQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : predictedInvestment?.teams && predictedInvestment.teams.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -108,7 +121,7 @@ export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | nu
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No predicted investment data available for this calcutta.</div>
+        <Alert variant="info">No predicted investment data available for this calcutta.</Alert>
       )}
     </div>
   );

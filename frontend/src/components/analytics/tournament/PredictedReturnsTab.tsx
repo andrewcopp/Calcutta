@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '../../../services/analyticsService';
+import { Alert } from '../../ui/Alert';
+import { Button } from '../../ui/Button';
+import { LoadingState } from '../../ui/LoadingState';
 
 interface TeamPredictedReturns {
   team_id: string;
@@ -18,7 +21,7 @@ interface TeamPredictedReturns {
 
 // Predicted Returns Tab Component
 export function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const { data: predictedReturns, isLoading } = useQuery<{ teams: TeamPredictedReturns[] } | null>({
+  const predictedReturnsQuery = useQuery<{ teams: TeamPredictedReturns[] } | null>({
     queryKey: ['analytics', 'predicted-returns', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -27,11 +30,13 @@ export function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null 
     enabled: !!calcuttaId,
   });
 
+  const predictedReturns = predictedReturnsQuery.data;
+
   const formatPercent = (prob: number) => `${(prob * 100).toFixed(1)}%`;
   const formatPoints = (points: number) => points.toFixed(1);
 
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view points-based predicted returns.</div>;
+    return <Alert variant="info">Select a calcutta above to view points-based predicted returns.</Alert>;
   }
 
   return (
@@ -42,9 +47,17 @@ export function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null 
         simulations.
       </p>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading predicted returns...</div>
-      ) : predictedReturns?.teams ? (
+      {predictedReturnsQuery.isLoading ? (
+        <LoadingState label="Loading predicted returns..." layout="inline" />
+      ) : predictedReturnsQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load predicted returns</div>
+          <div className="mb-3">{predictedReturnsQuery.error instanceof Error ? predictedReturnsQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => predictedReturnsQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : predictedReturns?.teams && predictedReturns.teams.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -94,7 +107,7 @@ export function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null 
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No predicted returns data available for this calcutta.</div>
+        <Alert variant="info">No predicted returns data available for this calcutta.</Alert>
       )}
     </div>
   );
