@@ -20,6 +20,12 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     """Get or create the connection pool."""
     global _pool
     if _pool is None:
+        password = os.getenv("DB_PASSWORD", "").strip()
+        if not password:
+            raise RuntimeError(
+                "DB_PASSWORD must be set (or use DATABASE_URL where supported)"
+            )
+
         logger.info("Creating database connection pool")
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=int(os.getenv("DB_MIN_CONN", "1")),
@@ -28,7 +34,7 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
             port=int(os.getenv("DB_PORT", "5432")),
             database=os.getenv("DB_NAME", "calcutta"),
             user=os.getenv("DB_USER", "calcutta"),
-            password=os.getenv("DB_PASSWORD", "calcutta"),
+            password=password,
         )
     return _pool
 
@@ -47,7 +53,7 @@ def release_connection(conn):
 def get_db_connection():
     """
     Context manager for database connections.
-    
+
     Usage:
         with get_db_connection() as conn:
             with conn.cursor() as cur:

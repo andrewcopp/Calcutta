@@ -17,12 +17,18 @@ from moneyball.utils import points
 
 def get_db_connection():
     """Get a database connection using environment variables."""
+    password = os.environ.get("DB_PASSWORD", "").strip()
+    if not password:
+        raise RuntimeError(
+            "DB_PASSWORD must be set (or use DATABASE_URL where supported)"
+        )
+
     return psycopg2.connect(
         host=os.environ.get("DB_HOST", "localhost"),
         port=int(os.environ.get("DB_PORT", "5432")),
         dbname=os.environ.get("DB_NAME", "calcutta"),
         user=os.environ.get("DB_USER", "calcutta"),
-        password=os.environ.get("DB_PASSWORD", "calcutta"),
+        password=password,
     )
 
 
@@ -281,7 +287,8 @@ def read_simulated_tournaments(
     """
     conn = get_db_connection()
     try:
-        # Note: Schema doesn't have points column, we calculate it from wins+byes.
+        # Note: Schema doesn't have points column; we calculate it from
+        # wins+byes.
         # Also doesn't have run_id yet, so we ignore it for now.
 
         batch_id = tournament_simulation_batch_id

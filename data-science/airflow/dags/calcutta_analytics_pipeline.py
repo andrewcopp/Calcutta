@@ -44,7 +44,7 @@ DB_ENV = {
     'DB_PORT': '5432',
     'DB_NAME': 'calcutta_analytics',
     'DB_USER': 'postgres',
-    'DB_PASSWORD': 'postgres',
+    'DB_PASSWORD': '{{ dag_run.conf.get("db_password") }}',
 }
 
 # ============================================================================
@@ -127,7 +127,10 @@ calculate_team_value = DockerOperator(
 optimize_portfolio = DockerOperator(
     task_id='optimize_portfolio',
     image='calcutta-python-optimizer:latest',
-    command=f'python -m moneyball.optimize --year {YEAR} --strategy {STRATEGY} --n-sims {N_SIMS} --seed {SEED}',
+    command=(
+        f'python -m moneyball.optimize --year {YEAR} --strategy {STRATEGY} '
+        f'--n-sims {N_SIMS} --seed {SEED}'
+    ),
     environment={
         **DB_ENV,
         'PYTHONPATH': '/app',
@@ -159,10 +162,18 @@ evaluate_all_entries = DockerOperator(
 load_tournament_data >> simulate_tournaments
 
 # Silver layer (parallel after simulation)
-simulate_tournaments >> [predict_game_outcomes, predict_market_share, calculate_team_value]
+simulate_tournaments >> [
+    predict_game_outcomes,
+    predict_market_share,
+    calculate_team_value,
+]
 
 # Gold layer (optimizer needs all predictions)
-[predict_game_outcomes, predict_market_share, calculate_team_value] >> optimize_portfolio
+[
+    predict_game_outcomes,
+    predict_market_share,
+    calculate_team_value,
+] >> optimize_portfolio
 
 # Gold layer (evaluation needs optimizer output)
 optimize_portfolio >> evaluate_all_entries

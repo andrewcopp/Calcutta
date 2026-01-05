@@ -88,7 +88,9 @@ def stage_simulated_calcuttas(
     env['DB_HOST'] = env.get('DB_HOST', 'localhost')
     env['DB_PORT'] = env.get('DB_PORT', '5432')
     env['DB_USER'] = env.get('DB_USER', 'calcutta')
-    env['DB_PASSWORD'] = env.get('DB_PASSWORD', 'calcutta')
+    env['DB_PASSWORD'] = env.get('DB_PASSWORD', '')
+    if not env['DB_PASSWORD']:
+        raise RuntimeError('DB_PASSWORD must be set')
     env['DB_NAME'] = env.get('DB_NAME', 'calcutta')
     
     print(f"Calling Go service: {go_binary}")
@@ -165,11 +167,16 @@ def stage_predicted_game_outcomes(
     Returns:
         Dictionary with stage results
     """
-    if os.getenv("CALCUTTA_ALLOW_PYTHON_SILVER_WRITES", "false").lower() != "true":
+    if (
+        os.getenv("CALCUTTA_ALLOW_PYTHON_SILVER_WRITES", "false").lower()
+        != "true"
+    ):
         raise RuntimeError(
-            "This stage writes lab_silver.predicted_game_outcomes from Python, "
-            "which is disabled. Use the Go-first pipeline, or set "
-            "CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true to override."
+            (
+                "This stage writes lab_silver.predicted_game_outcomes from "
+                "Python, which is disabled. Use the Go-first pipeline, or "
+                "set CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true to override."
+            )
         )
 
     print(f"⚙ Generating predicted_game_outcomes for {year}...")
@@ -241,11 +248,16 @@ def stage_simulate_tournaments(
     Returns:
         Dictionary with stage results including run_id
     """
-    if os.getenv("CALCUTTA_ALLOW_PYTHON_SILVER_WRITES", "false").lower() != "true":
+    if (
+        os.getenv("CALCUTTA_ALLOW_PYTHON_SILVER_WRITES", "false").lower()
+        != "true"
+    ):
         raise RuntimeError(
-            "This stage writes simulation artifacts from Python, which is disabled. "
-            "Use the Go-first pipeline, or set CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true "
-            "to override."
+            (
+                "This stage writes simulation artifacts from Python, which "
+                "is disabled. Use the Go-first pipeline, or set "
+                "CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true to override."
+            )
         )
 
     print(f"⚙ Simulating tournaments for {year} (n_sims={n_sims})...")
@@ -365,11 +377,16 @@ def stage_recommended_entry_bids(
     Returns:
         Dictionary with results
     """
-    if os.getenv("CALCUTTA_ALLOW_PYTHON_GOLD_WRITES", "false").lower() != "true":
+    if (
+        os.getenv("CALCUTTA_ALLOW_PYTHON_GOLD_WRITES", "false").lower()
+        != "true"
+    ):
         raise RuntimeError(
-            "This stage writes lab_gold strategy outputs from Python, which is disabled. "
-            "Use the Go-first optimizer path, or set CALCUTTA_ALLOW_PYTHON_GOLD_WRITES=true "
-            "to override."
+            (
+                "This stage writes lab_gold strategy outputs from Python, "
+                "which is disabled. Use the Go-first optimizer path, or "
+                "set CALCUTTA_ALLOW_PYTHON_GOLD_WRITES=true to override."
+            )
         )
 
     print(f"⚙ Generating recommended entry bids for {year}...")
@@ -439,7 +456,10 @@ def stage_recommended_entry_bids(
 
     # Read simulations from database (scored using the resolved calcutta rules).
     from moneyball.db.readers import read_simulated_tournaments
-    simulations_df = read_simulated_tournaments(year, calcutta_id=db_calcutta_id)
+    simulations_df = read_simulated_tournaments(
+        year,
+        calcutta_id=db_calcutta_id,
+    )
 
     print(f"  Found {len(simulations_df)} simulation results")
     

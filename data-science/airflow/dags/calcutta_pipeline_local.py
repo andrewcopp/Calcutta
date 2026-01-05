@@ -40,7 +40,11 @@ export DB_HOST=db
 export DB_PORT=5432
 export DB_NAME=calcutta
 export DB_USER=calcutta
-export DB_PASSWORD=calcutta
+export DB_PASSWORD="$DB_PASSWORD"
+if [ -z "$DB_PASSWORD" ]; then
+  echo "DB_PASSWORD must be set" 1>&2
+  exit 1
+fi
 """
 
 # Run full pipeline using DB-first CLI

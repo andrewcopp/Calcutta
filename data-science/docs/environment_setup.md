@@ -10,7 +10,7 @@ DB_HOST=localhost          # or 'db' in Docker
 DB_PORT=5432
 DB_NAME=calcutta
 DB_USER=calcutta
-DB_PASSWORD=calcutta
+DB_PASSWORD=...            # required
 
 # Python Pipeline Control
 CALCUTTA_WRITE_TO_DB=true  # Enable database writes
@@ -28,7 +28,7 @@ Copy the example file once:
 ```bash
 cd data-science
 cp .env.example .env
-# Edit if needed (defaults work for local development)
+# Edit as needed (DB_PASSWORD is required)
 ```
 
 ## Architecture

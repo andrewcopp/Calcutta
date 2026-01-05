@@ -19,12 +19,18 @@ def _connect() -> psycopg2.extensions.connection:
     if database_url:
         return psycopg2.connect(database_url)
 
+    password = os.getenv("DB_PASSWORD", "").strip()
+    if not password:
+        raise RuntimeError(
+            "DB_PASSWORD must be set when DATABASE_URL is not provided"
+        )
+
     return psycopg2.connect(
         host=os.getenv("DB_HOST", "localhost"),
         port=int(os.getenv("DB_PORT", "5432")),
         dbname=os.getenv("DB_NAME", "calcutta"),
         user=os.getenv("DB_USER", "calcutta"),
-        password=os.getenv("DB_PASSWORD", "calcutta"),
+        password=password,
     )
 
 
@@ -288,7 +294,10 @@ def main() -> None:
                 f"Expected 68 teams, got {len(teams_df)}"
             )
 
-        snapshot_id = _create_tournament_state_snapshot(conn, core_tournament_id)
+        snapshot_id = _create_tournament_state_snapshot(
+            conn,
+            core_tournament_id,
+        )
         batch_id = _create_simulation_batch(
             conn,
             core_tournament_id,
@@ -365,7 +374,10 @@ def main() -> None:
         t1 = time.time()
 
         print(
-            f"DONE season={args.season} n_sims={args.n_sims} chunk_size={args.chunk_size} rows={total_inserted}"
+            (
+                f"DONE season={args.season} n_sims={args.n_sims} "
+                f"chunk_size={args.chunk_size} rows={total_inserted}"
+            )
         )
         print(
             (

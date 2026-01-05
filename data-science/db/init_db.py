@@ -8,22 +8,26 @@ from pathlib import Path
 
 def get_db_connection():
     """Get database connection from environment variables."""
+    password = os.getenv("CALCUTTA_ANALYTICS_DB_PASSWORD", "").strip()
+    if not password:
+        raise RuntimeError("CALCUTTA_ANALYTICS_DB_PASSWORD must be set")
+
     return psycopg2.connect(
         host=os.getenv("CALCUTTA_ANALYTICS_DB_HOST", "localhost"),
         port=os.getenv("CALCUTTA_ANALYTICS_DB_PORT", "5432"),
         database=os.getenv("CALCUTTA_ANALYTICS_DB_NAME", "calcutta_analytics"),
         user=os.getenv("CALCUTTA_ANALYTICS_DB_USER", "postgres"),
-        password=os.getenv("CALCUTTA_ANALYTICS_DB_PASSWORD", "postgres"),
+        password=password,
     )
 
 
 def init_database():
     """Initialize database schema."""
     schema_path = Path(__file__).parent / "schema.sql"
-    
+
     with open(schema_path, 'r') as f:
         schema_sql = f.read()
-    
+
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
@@ -45,45 +49,42 @@ def drop_all_tables():
     try:
         with conn.cursor() as cur:
             print("Dropping all tables...")
-            
             # Drop views first
             cur.execute("""
                 DROP VIEW IF EXISTS view_entry_rankings CASCADE;
                 DROP VIEW IF EXISTS view_latest_optimization_runs CASCADE;
                 DROP VIEW IF EXISTS view_tournament_sim_stats CASCADE;
             """)
-            
             # Drop functions
             cur.execute("""
                 DROP FUNCTION IF EXISTS get_entry_portfolio CASCADE;
             """)
-            
             # Drop gold tables
             cur.execute("""
-                DROP TABLE IF EXISTS lab_gold.detailed_investment_report CASCADE;
+                DROP TABLE IF EXISTS lab_gold.detailed_investment_report
+                CASCADE;
                 DROP TABLE IF EXISTS lab_gold.recommended_entry_bids CASCADE;
                 DROP TABLE IF EXISTS lab_gold.optimization_runs CASCADE;
                 DROP TABLE IF EXISTS analytics.entry_performance CASCADE;
-                DROP TABLE IF EXISTS analytics.entry_simulation_outcomes CASCADE;
+                DROP TABLE IF EXISTS analytics.entry_simulation_outcomes
+                CASCADE;
             """)
-            
             # Drop silver tables
             cur.execute("""
                 DROP TABLE IF EXISTS lab_silver.team_tournament_value CASCADE;
                 DROP TABLE IF EXISTS lab_silver.predicted_market_share CASCADE;
-                DROP TABLE IF EXISTS lab_silver.predicted_game_outcomes CASCADE;
+                DROP TABLE IF EXISTS lab_silver.predicted_game_outcomes
+                CASCADE;
                 DROP TABLE IF EXISTS analytics.simulated_tournaments CASCADE;
             """)
-            
             # Drop bronze tables
             cur.execute("""
-                DROP TABLE IF EXISTS lab_bronze.payouts CASCADE;
-                DROP TABLE IF EXISTS lab_bronze.entry_bids CASCADE;
-                DROP TABLE IF EXISTS lab_bronze.calcuttas CASCADE;
-                DROP TABLE IF EXISTS lab_bronze.teams CASCADE;
-                DROP TABLE IF EXISTS lab_bronze.tournaments CASCADE;
+            DROP TABLE IF EXISTS lab_bronze.payouts CASCADE;
+            DROP TABLE IF EXISTS lab_bronze.entry_bids CASCADE;
+            DROP TABLE IF EXISTS lab_bronze.calcuttas CASCADE;
+            DROP TABLE IF EXISTS lab_bronze.teams CASCADE;
+            DROP TABLE IF EXISTS lab_bronze.tournaments CASCADE;
             """)
-            
             conn.commit()
             print("✓ All tables dropped successfully")
     except Exception as e:
@@ -96,7 +97,6 @@ def drop_all_tables():
 
 if __name__ == "__main__":
     import argparse
-    
     parser = argparse.ArgumentParser(
         description="Initialize Calcutta Analytics database"
     )
@@ -106,8 +106,6 @@ if __name__ == "__main__":
         help="Drop all tables first",
     )
     args = parser.parse_args()
-    
     if args.drop:
         drop_all_tables()
-    
     init_database()

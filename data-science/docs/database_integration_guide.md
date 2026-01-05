@@ -29,7 +29,7 @@ export CALCUTTA_ANALYTICS_DB_HOST=localhost
 export CALCUTTA_ANALYTICS_DB_PORT=5432
 export CALCUTTA_ANALYTICS_DB_NAME=calcutta_analytics
 export CALCUTTA_ANALYTICS_DB_USER=postgres
-export CALCUTTA_ANALYTICS_DB_PASSWORD=postgres
+export CALCUTTA_ANALYTICS_DB_PASSWORD=...
 ```
 
 ## Integration Pattern

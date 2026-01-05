@@ -24,7 +24,7 @@ x-airflow-common:
     DB_PORT: 5432
     DB_NAME: calcutta
     DB_USER: calcutta
-    DB_PASSWORD: calcutta
+    DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
@@ -61,7 +61,7 @@ services:
     container_name: calcutta-analytics-db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${CALCUTTA_ANALYTICS_DB_PASSWORD:?set CALCUTTA_ANALYTICS_DB_PASSWORD}
       POSTGRES_DB: calcutta_analytics
     ports:
       - "5433:5432"
