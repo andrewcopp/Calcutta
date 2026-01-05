@@ -7,7 +7,12 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
-import { suiteCalcuttaEvaluationsService, type SuiteCalcuttaEvaluation } from '../services/suiteCalcuttaEvaluationsService';
+import {
+  suiteCalcuttaEvaluationsService,
+  type SuiteCalcuttaEvaluation,
+  type SuiteCalcuttaEvaluationPortfolioBid,
+  type SuiteCalcuttaEvaluationResult,
+} from '../services/suiteCalcuttaEvaluationsService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxPage() {
@@ -52,6 +57,12 @@ export function SandboxPage() {
     enabled: Boolean(selectedEvaluationId),
   });
 
+  const resultQuery = useQuery<SuiteCalcuttaEvaluationResult>({
+    queryKey: ['suite-calcutta-evaluations', 'result', selectedEvaluationId],
+    queryFn: () => suiteCalcuttaEvaluationsService.getResult(selectedEvaluationId),
+    enabled: Boolean(selectedEvaluationId) && detailQuery.data?.status === 'succeeded',
+  });
+
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
@@ -66,6 +77,43 @@ export function SandboxPage() {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return v;
     return d.toLocaleString();
+  };
+
+  const formatROI = (v: number) => {
+    if (Number.isNaN(v)) return '—';
+    return v.toFixed(3);
+  };
+
+  const renderPortfolioTable = (bids: SuiteCalcuttaEvaluationPortfolioBid[]) => {
+    if (bids.length === 0) {
+      return <div className="text-gray-700">No portfolio bids found.</div>;
+    }
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Bid</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Expected ROI</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {bids.map((b) => (
+              <tr key={b.team_id}>
+                <td className="px-3 py-2 text-sm text-gray-900">{b.school_name}</td>
+                <td className="px-3 py-2 text-sm text-gray-700">{b.seed}</td>
+                <td className="px-3 py-2 text-sm text-gray-700">{b.region}</td>
+                <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium">{b.bid_points}</td>
+                <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatROI(b.expected_roi)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
@@ -200,6 +248,37 @@ export function SandboxPage() {
                 <div>
                   <div className="text-gray-500">Error</div>
                   <div className="text-red-700 break-words">{detailQuery.data.error_message}</div>
+                </div>
+              ) : null}
+
+              {detailQuery.data.status === 'succeeded' ? (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="text-gray-500">Result</div>
+                  {resultQuery.isLoading ? <LoadingState label="Loading result..." layout="inline" /> : null}
+                  {resultQuery.isError ? <div className="text-red-700">{showError(resultQuery.error)}</div> : null}
+                  {resultQuery.data ? (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-gray-500">Our Strategy performance</div>
+                        {resultQuery.data.our_strategy ? (
+                          <div className="mt-1 text-gray-900">
+                            <div>
+                              rank={resultQuery.data.our_strategy.rank} · mean={resultQuery.data.our_strategy.mean_normalized_payout.toFixed(4)} ·
+                              pTop1={resultQuery.data.our_strategy.p_top1.toFixed(4)} · pInMoney={resultQuery.data.our_strategy.p_in_money.toFixed(4)}
+                            </div>
+                            <div className="text-xs text-gray-600">nSims={resultQuery.data.our_strategy.total_simulations}</div>
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-gray-700">No performance row found for Our Strategy.</div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="text-gray-500">Generated entry (portfolio)</div>
+                        <div className="mt-2">{renderPortfolioTable(resultQuery.data.portfolio)}</div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

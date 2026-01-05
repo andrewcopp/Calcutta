@@ -26,6 +26,31 @@ export type ListSuiteCalcuttaEvaluationsResponse = {
   items: SuiteCalcuttaEvaluation[];
 };
 
+export type SuiteCalcuttaEvaluationPortfolioBid = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  bid_points: number;
+  expected_roi: number;
+};
+
+export type SuiteCalcuttaEvaluationOurStrategyPerformance = {
+  rank: number;
+  entry_name: string;
+  mean_normalized_payout: number;
+  median_normalized_payout: number;
+  p_top1: number;
+  p_in_money: number;
+  total_simulations: number;
+};
+
+export type SuiteCalcuttaEvaluationResult = {
+  evaluation: SuiteCalcuttaEvaluation;
+  portfolio: SuiteCalcuttaEvaluationPortfolioBid[];
+  our_strategy?: SuiteCalcuttaEvaluationOurStrategyPerformance | null;
+};
+
 export const suiteCalcuttaEvaluationsService = {
   async list(params?: {
     suiteId?: string;
@@ -45,5 +70,9 @@ export const suiteCalcuttaEvaluationsService = {
 
   async get(id: string): Promise<SuiteCalcuttaEvaluation> {
     return apiClient.get<SuiteCalcuttaEvaluation>(`/suite-calcutta-evaluations/${encodeURIComponent(id)}`);
+  },
+
+  async getResult(id: string): Promise<SuiteCalcuttaEvaluationResult> {
+    return apiClient.get<SuiteCalcuttaEvaluationResult>(`/suite-calcutta-evaluations/${encodeURIComponent(id)}/result`);
   },
 };
