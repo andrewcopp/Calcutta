@@ -316,6 +316,17 @@ type CoreTournament struct {
 	DeletedAt            pgtype.Timestamptz
 }
 
+type DerivedAlgorithm struct {
+	ID          string
+	Kind        string
+	Name        string
+	Description *string
+	ParamsJson  []byte
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
 type DerivedCalcutta struct {
 	ID               string
 	CoreCalcuttaID   string
@@ -416,6 +427,29 @@ type DerivedEntrySimulationOutcome struct {
 	CalcuttaEvaluationRunID pgtype.UUID
 }
 
+type DerivedGameOutcomeRun struct {
+	ID           string
+	AlgorithmID  string
+	TournamentID string
+	ParamsJson   []byte
+	GitSha       *string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type DerivedMarketShareRun struct {
+	ID              string
+	AlgorithmID     string
+	CalcuttaID      string
+	CalcuttaGroupID pgtype.UUID
+	ParamsJson      []byte
+	GitSha          *string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
+}
+
 type DerivedOptimizationRun struct {
 	RunID                   string
 	CalcuttaID              pgtype.UUID
@@ -452,6 +486,7 @@ type DerivedPredictedGameOutcome struct {
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
+	RunID        pgtype.UUID
 }
 
 type DerivedPredictedMarketShare struct {
@@ -464,6 +499,7 @@ type DerivedPredictedMarketShare struct {
 	TournamentID    pgtype.UUID
 	UpdatedAt       pgtype.Timestamptz
 	DeletedAt       pgtype.Timestamptz
+	RunID           pgtype.UUID
 }
 
 type DerivedRecommendedEntryBid struct {
@@ -541,6 +577,36 @@ type DerivedStrategyGenerationRun struct {
 	DeletedAt             pgtype.Timestamptz
 	RunKey                *string
 	Name                  *string
+}
+
+type DerivedSuite struct {
+	ID                      string
+	Name                    string
+	Description             *string
+	GameOutcomesAlgorithmID string
+	MarketShareAlgorithmID  string
+	OptimizerKey            string
+	NSims                   int32
+	Seed                    int32
+	ParamsJson              []byte
+	CreatedAt               pgtype.Timestamptz
+	UpdatedAt               pgtype.Timestamptz
+	DeletedAt               pgtype.Timestamptz
+}
+
+type DerivedSuiteCalcuttaEvaluation struct {
+	ID                      string
+	SuiteID                 string
+	CalcuttaID              string
+	GameOutcomeRunID        pgtype.UUID
+	MarketShareRunID        pgtype.UUID
+	StrategyGenerationRunID pgtype.UUID
+	CalcuttaEvaluationRunID pgtype.UUID
+	Status                  string
+	ErrorMessage            *string
+	CreatedAt               pgtype.Timestamptz
+	UpdatedAt               pgtype.Timestamptz
+	DeletedAt               pgtype.Timestamptz
 }
 
 type DerivedTeam struct {
@@ -763,12 +829,18 @@ type SilverSimulatedTournament struct {
 }
 
 type User struct {
-	ID           string
-	Email        string
-	FirstName    string
-	LastName     string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	PasswordHash *string
+	ID               string
+	Email            string
+	FirstName        string
+	LastName         string
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
+	PasswordHash     *string
+	Status           string
+	InviteTokenHash  *string
+	InviteExpiresAt  pgtype.Timestamptz
+	InviteConsumedAt pgtype.Timestamptz
+	InvitedAt        pgtype.Timestamptz
+	LastInviteSentAt pgtype.Timestamptz
 }

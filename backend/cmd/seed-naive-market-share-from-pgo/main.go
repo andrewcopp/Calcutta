@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"math"
 	"os"
 	"sort"
 	"time"
@@ -50,9 +51,11 @@ func main() {
 func run() error {
 	var calcuttaID string
 	var dryRun bool
+	var kenpomScale float64
 
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Calcutta ID (uuid)")
 	flag.BoolVar(&dryRun, "dry-run", false, "If set, compute and print but do not write predicted_market_share")
+	flag.Float64Var(&kenpomScale, "kenpom-scale", 10.0, "KenPom scaling factor (used only as fallback if a matchup is missing in predicted_game_outcomes)")
 	flag.Parse()
 
 	if calcuttaID == "" {
@@ -91,7 +94,7 @@ func run() error {
 		return err
 	}
 
-	teams, err := loadTeams(ctx, pool, cc.CoreTournamentID)
+	teams, netByTeamID, err := loadTeams(ctx, pool, cc.CoreTournamentID)
 	if err != nil {
 		return err
 	}
@@ -110,7 +113,7 @@ func run() error {
 		return fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", cc.CoreTournamentID)
 	}
 
-	evByTeam, reachByTeam, err := computeExpectedValueFromPGO(br, probs, scoringRules)
+	evByTeam, reachByTeam, err := computeExpectedValueFromPGO(br, probs, scoringRules, netByTeamID, kenpomScale)
 	if err != nil {
 		return err
 	}
@@ -230,36 +233,42 @@ func loadFinalFourConfig(ctx context.Context, pool *pgxpool.Pool, coreTournament
 	return cfg, nil
 }
 
-func loadTeams(ctx context.Context, pool *pgxpool.Pool, coreTournamentID string) ([]*models.TournamentTeam, error) {
+func loadTeams(ctx context.Context, pool *pgxpool.Pool, coreTournamentID string) ([]*models.TournamentTeam, map[string]float64, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT
 			t.id,
 			t.seed,
 			t.region,
 			s.name,
-			s.id
+			s.id,
+			ks.net_rtg
 		FROM core.teams t
 		JOIN core.schools s
 			ON s.id = t.school_id
 			AND s.deleted_at IS NULL
+		LEFT JOIN core.team_kenpom_stats ks
+			ON ks.team_id = t.id
+			AND ks.deleted_at IS NULL
 		WHERE t.tournament_id = $1::uuid
 			AND t.deleted_at IS NULL
 		ORDER BY t.seed ASC, s.name ASC
 	`, coreTournamentID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
 	out := make([]*models.TournamentTeam, 0)
+	netByID := make(map[string]float64)
 	for rows.Next() {
 		var id string
 		var seed int
 		var region string
 		var schoolName string
 		var schoolID string
-		if err := rows.Scan(&id, &seed, &region, &schoolName, &schoolID); err != nil {
-			return nil, err
+		var kenpomNet *float64
+		if err := rows.Scan(&id, &seed, &region, &schoolName, &schoolID, &kenpomNet); err != nil {
+			return nil, nil, err
 		}
 		out = append(out, &models.TournamentTeam{
 			ID:     id,
@@ -267,14 +276,17 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, coreTournamentID string)
 			Region: region,
 			School: &models.School{ID: schoolID, Name: schoolName},
 		})
+		if kenpomNet != nil {
+			netByID[id] = *kenpomNet
+		}
 	}
 	if rows.Err() != nil {
-		return nil, rows.Err()
+		return nil, nil, rows.Err()
 	}
 	if len(out) != 68 {
-		return nil, fmt.Errorf("expected 68 teams, got %d", len(out))
+		return nil, nil, fmt.Errorf("expected 68 teams, got %d", len(out))
 	}
-	return out, nil
+	return out, netByID, nil
 }
 
 func loadPredictedGameOutcomes(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (map[tsim.MatchupKey]float64, int, error) {
@@ -311,6 +323,8 @@ func computeExpectedValueFromPGO(
 	br *models.BracketStructure,
 	probs map[tsim.MatchupKey]float64,
 	scoringRules []scoringRule,
+	netByTeamID map[string]float64,
+	kenpomScale float64,
 ) (map[string]float64, map[string]roundReach, error) {
 	if br == nil {
 		return nil, nil, errors.New("bracket must not be nil")
@@ -426,7 +440,13 @@ func computeExpectedValueFromPGO(
 				}
 				p1, ok := probs[tsim.MatchupKey{GameID: g.GameID, Team1ID: t1, Team2ID: t2}]
 				if !ok {
-					return nil, nil, fmt.Errorf("missing predicted_game_outcomes for game_id=%s team1_id=%s team2_id=%s", g.GameID, t1, t2)
+					n1, ok1 := netByTeamID[t1]
+					n2, ok2 := netByTeamID[t2]
+					if ok1 && ok2 {
+						p1 = winProb(n1, n2, kenpomScale)
+					} else {
+						p1 = 0.5
+					}
 				}
 				winners[t1] += pMatch * p1
 				winners[t2] += pMatch * (1.0 - p1)
@@ -576,4 +596,20 @@ func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, tou
 	}
 
 	return inserted, nil
+}
+
+func winProb(net1 float64, net2 float64, scale float64) float64 {
+	if scale <= 0 {
+		return 0.5
+	}
+	return sigmoid((net1 - net2) / scale)
+}
+
+func sigmoid(x float64) float64 {
+	if x >= 0 {
+		z := math.Exp(-x)
+		return 1.0 / (1.0 + z)
+	}
+	z := math.Exp(x)
+	return z / (1.0 + z)
 }

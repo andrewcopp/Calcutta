@@ -37,7 +37,7 @@ SELECT
   s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
-  ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision as rational,
+  COALESCE(((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision, 0.0::double precision) as rational,
   (spms_t.predicted_share * (SELECT pool_size FROM total_pool))::double precision as predicted,
   CASE
     WHEN ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool)) > 0
@@ -106,7 +106,7 @@ SELECT
   s.name as school_name,
   COALESCE(t.seed, 0)::int as seed,
   COALESCE(t.region, '')::text as region,
-  ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision as rational,
+  COALESCE(((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool))::double precision, 0.0::double precision) as rational,
   (spms_t.predicted_share * (SELECT pool_size FROM total_pool))::double precision as predicted,
   CASE
     WHEN ((COALESCE(tep.expected_points, 0.0)::double precision / NULLIF((SELECT total_ev FROM total_expected_points)::double precision, 0.0::double precision)) * (SELECT pool_size FROM total_pool)) > 0

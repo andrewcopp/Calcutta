@@ -3,12 +3,45 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func asFloat64(v any) (float64, error) {
+	switch t := v.(type) {
+	case nil:
+		return 0, nil
+	case float64:
+		return t, nil
+	case float32:
+		return float64(t), nil
+	case int:
+		return float64(t), nil
+	case int32:
+		return float64(t), nil
+	case int64:
+		return float64(t), nil
+	case uint:
+		return float64(t), nil
+	case uint32:
+		return float64(t), nil
+	case uint64:
+		return float64(t), nil
+	case string:
+		f, err := strconv.ParseFloat(t, 64)
+		if err != nil {
+			return 0, err
+		}
+		return f, nil
+	default:
+		return 0, fmt.Errorf("unexpected numeric type %T", v)
+	}
+}
 
 type AnalyticsRepository struct {
 	pool *pgxpool.Pool
@@ -103,52 +136,9 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.Tea
 }
 
 func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedInvestmentData, error) {
-	runIDPtr, err := r.resolveStrategyGenerationRunID(ctx, calcuttaID, strategyGenerationRunID)
+	out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, calcuttaID)
 	if err != nil {
 		return nil, nil, err
-	}
-	if runIDPtr != nil {
-		runID := *runIDPtr
-		rows, err := r.q.GetCalcuttaPredictedInvestmentByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDParams{
-			CalcuttaID:              calcuttaID,
-			StrategyGenerationRunID: runID,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		out := make([]ports.CalcuttaPredictedInvestmentData, 0, len(rows))
-		for _, row := range rows {
-			out = append(out, ports.CalcuttaPredictedInvestmentData{
-				TeamID:     row.TeamID,
-				SchoolName: row.SchoolName,
-				Seed:       int(row.Seed),
-				Region:     row.Region,
-				Rational:   row.Rational,
-				Predicted:  row.Predicted,
-				Delta:      row.Delta,
-			})
-		}
-
-		return runIDPtr, out, nil
-	}
-
-	rows, err := r.q.GetCalcuttaPredictedInvestment(ctx, calcuttaID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	out := make([]ports.CalcuttaPredictedInvestmentData, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, ports.CalcuttaPredictedInvestmentData{
-			TeamID:     row.TeamID,
-			SchoolName: row.SchoolName,
-			Seed:       int(row.Seed),
-			Region:     row.Region,
-			Rational:   row.Rational,
-			Predicted:  row.Predicted,
-			Delta:      row.Delta,
-		})
 	}
 
 	return nil, out, nil
@@ -159,61 +149,12 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, c
 	if err != nil {
 		return nil, nil, err
 	}
-	if runIDPtr != nil {
-		runID := *runIDPtr
-		rows, err := r.q.GetCalcuttaPredictedReturnsByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaPredictedReturnsByStrategyGenerationRunIDParams{
-			CalcuttaID:              calcuttaID,
-			StrategyGenerationRunID: runID,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		out := make([]ports.CalcuttaPredictedReturnsData, 0, len(rows))
-		for _, row := range rows {
-			out = append(out, ports.CalcuttaPredictedReturnsData{
-				TeamID:        row.TeamID,
-				SchoolName:    row.SchoolName,
-				Seed:          int(row.Seed),
-				Region:        row.Region,
-				ProbPI:        row.ProbPi,
-				ProbR64:       row.ProbR64,
-				ProbR32:       row.ProbR32,
-				ProbS16:       row.ProbS16,
-				ProbE8:        row.ProbE8,
-				ProbFF:        row.ProbFf,
-				ProbChamp:     row.ProbChamp,
-				ExpectedValue: row.ExpectedValue,
-			})
-		}
-
-		return runIDPtr, out, nil
-	}
-
-	rows, err := r.q.GetCalcuttaPredictedReturns(ctx, calcuttaID)
+	out, err := computeCalcuttaPredictedReturnsFromPGO(ctx, r.pool, calcuttaID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	out := make([]ports.CalcuttaPredictedReturnsData, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, ports.CalcuttaPredictedReturnsData{
-			TeamID:        row.TeamID,
-			SchoolName:    row.SchoolName,
-			Seed:          int(row.Seed),
-			Region:        row.Region,
-			ProbPI:        row.ProbPi,
-			ProbR64:       row.ProbR64,
-			ProbR32:       row.ProbR32,
-			ProbS16:       row.ProbS16,
-			ProbE8:        row.ProbE8,
-			ProbFF:        row.ProbFf,
-			ProbChamp:     row.ProbChamp,
-			ExpectedValue: row.ExpectedValue,
-		})
-	}
-
-	return nil, out, nil
+	return runIDPtr, out, nil
 }
 
 func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaSimulatedEntryData, error) {
