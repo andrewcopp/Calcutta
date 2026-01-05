@@ -2,6 +2,10 @@ import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 export function EntryPortfolioPage() {
   const { year, runId, entryKey } = useParams<{ year: string; runId: string; entryKey: string }>();
@@ -21,27 +25,29 @@ export function EntryPortfolioPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to={`/runs/${parsedYear}/${encodedRunId}`} className="text-blue-600 hover:text-blue-800">
-          ← Back to Run Rankings
-        </Link>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Entry Portfolio"
+        subtitle={
+          <div>
+            <div>Year: {parsedYear}</div>
+            <div>Run: {decodedRunId}</div>
+            <div>Entry: {decodedEntryKey}</div>
+          </div>
+        }
+        actions={
+          <Link to={`/runs/${parsedYear}/${encodedRunId}`} className="text-blue-600 hover:text-blue-800">
+            ← Back to Run Rankings
+          </Link>
+        }
+      />
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Entry Portfolio</h1>
-        <div className="text-gray-600">
-          <div>Year: {parsedYear}</div>
-          <div>Run: {decodedRunId}</div>
-          <div>Entry: {decodedEntryKey}</div>
-        </div>
-      </div>
+      <Card>
+        {portfolioQuery.isLoading ? <LoadingState label="Loading…" /> : null}
 
-      <div className="bg-white rounded-lg shadow p-6">
-        {portfolioQuery.isLoading && <div className="text-gray-600">Loading…</div>}
-        {portfolioQuery.isError && <div className="text-red-600">Failed to load portfolio.</div>}
+        {portfolioQuery.isError ? <Alert variant="error">Failed to load portfolio.</Alert> : null}
 
-        {portfolioQuery.data && (
+        {portfolioQuery.data ? (
           <div className="overflow-x-auto">
             <div className="mb-4 text-sm text-gray-700">
               <div>Total bid: {portfolioQuery.data.total_bid} points</div>
@@ -68,8 +74,8 @@ export function EntryPortfolioPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    </div>
+        ) : null}
+      </Card>
+    </PageContainer>
   );
-}
+ }

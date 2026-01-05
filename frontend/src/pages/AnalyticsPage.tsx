@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../queryKeys';
 import { analyticsService } from '../services/analyticsService';
+import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import { AnalyticsSnapshotExportCard } from '../components/analytics/AnalyticsSnapshotExportCard';
 import { AnalyticsSummaryCard } from '../components/analytics/AnalyticsSummaryCard';
 import { SeedAnalyticsTab } from '../components/analytics/SeedAnalyticsTab';
@@ -27,20 +30,18 @@ export const AnalyticsPage: React.FC = () => {
 
   if (analyticsQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading analytics...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading analytics..." />
+      </PageContainer>
     );
   }
 
   if (analyticsQuery.isError) {
     const message = analyticsQuery.error instanceof Error ? analyticsQuery.error.message : 'An error occurred';
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Error: {message}
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">Error: {message}</Alert>
+      </PageContainer>
     );
   }
 
@@ -48,25 +49,25 @@ export const AnalyticsPage: React.FC = () => {
 
   if (!analytics) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">No analytics data available</div>
-      </div>
+      <PageContainer>
+        <Alert variant="info">No analytics data available</Alert>
+      </PageContainer>
     );
   }
 
   const seedInvestmentDistribution = seedInvestmentDistributionQuery.data;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to="/admin" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-          ← Back to Admin Console
-        </Link>
-        <h1 className="text-3xl font-bold">Calcutta Analytics</h1>
-        <p className="text-gray-600 mt-2">
-          Historical analysis across all calcuttas to identify trends and patterns
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Calcutta Analytics"
+        subtitle="Historical analysis across all calcuttas to identify trends and patterns"
+        actions={
+          <Link to="/admin" className="text-blue-600 hover:text-blue-800">
+            ← Back to Admin Console
+          </Link>
+        }
+      />
 
       <AnalyticsSnapshotExportCard />
       <AnalyticsSummaryCard analytics={analytics} />
@@ -127,8 +128,7 @@ export const AnalyticsPage: React.FC = () => {
       {activeTab === 'variance' && (
         <VarianceAnalyticsTab analytics={analytics} seedInvestmentDistribution={seedInvestmentDistribution} />
       )}
-
-    </div>
+    </PageContainer>
   );
 };
 

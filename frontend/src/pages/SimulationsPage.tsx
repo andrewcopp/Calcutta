@@ -1,5 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 type SimulationBatch = {
   id: string;
@@ -9,6 +14,7 @@ type SimulationBatch = {
 };
 
 export function SimulationsPage() {
+  const navigate = useNavigate();
   const seasons = useMemo(() => {
     const currentYear = new Date().getFullYear();
     return [currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].filter((y, i, arr) =>
@@ -65,11 +71,11 @@ export function SimulationsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Simulations</h1>
-        <p className="text-gray-600">Generate and manage batches of simulated tournaments.</p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Simulations"
+        subtitle="Generate and manage batches of simulated tournaments."
+      />
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -78,74 +84,55 @@ export function SimulationsPage() {
             <div className="text-sm text-blue-800">Browse recent pipeline runs (read-only): runs → rankings → entry portfolio.</div>
           </div>
           <div className="flex gap-2">
-            <Link
-              to={`/runs/${season}`}
-              className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-            >
+            <Button size="sm" onClick={() => navigate(`/runs/${season}`)}>
               Open runs for {season}
-            </Link>
-            <Link
-              to={`/runs/${new Date().getFullYear()}`}
-              className="px-3 py-2 border border-blue-300 text-blue-900 rounded text-sm hover:bg-blue-100"
-            >
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate(`/runs/${new Date().getFullYear()}`)}>
               Latest
-            </Link>
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
             <label htmlFor="season" className="block text-sm font-medium text-gray-700 mb-1">
               Season
             </label>
-            <select
-              id="season"
-              value={season}
-              onChange={(e) => setSeason(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            >
+            <Select id="season" value={season} onChange={(e) => setSeason(Number(e.target.value))}>
               {seasons.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label htmlFor="numSimulations" className="block text-sm font-medium text-gray-700 mb-1">
               Number of simulations
             </label>
-            <input
+            <Input
               id="numSimulations"
               type="number"
               min={1}
               step={1}
               value={numSimulations}
               onChange={(e) => setNumSimulations(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
             />
           </div>
 
           <div className="md:col-span-2">
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={parsedNumSimulations == null}
-              className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
+            <Button type="button" onClick={handleGenerate} disabled={parsedNumSimulations == null}>
               Generate
-            </button>
-            <div className="mt-2 text-sm text-gray-600">
-              This is UI-only for now (no async workers wired up yet).
-            </div>
+            </Button>
+            <div className="mt-2 text-sm text-gray-600">This is UI-only for now (no async workers wired up yet).</div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card>
         <h2 className="text-xl font-semibold mb-4">Simulation Batches</h2>
 
         {batches.length === 0 ? (
@@ -165,16 +152,14 @@ export function SimulationsPage() {
                   <tr key={b.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{b.id}</td>
                     <td className="px-4 py-3 text-sm text-center text-gray-700">{b.totalSimulations.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-600">
-                      {new Date(b.createdAt).toLocaleString()}
-                    </td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600">{new Date(b.createdAt).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }

@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Card } from '../components/ui/Card';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 type EvaluationRowId = 'return-algorithm' | 'investment-algorithm' | 'entry-optimizer';
 
@@ -46,23 +48,24 @@ export function EvaluationDetailPage() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to="/evaluations" className="text-blue-600 hover:text-blue-800">
-          ← Back to Evaluations
-        </Link>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title={title}
+        subtitle={
+          <div>
+            <div>Return Algorithm: {returnAlgorithm}</div>
+            <div>Investment Algorithm: {investmentAlgorithm}</div>
+            <div>Entry Optimizer: {entryOptimizer}</div>
+          </div>
+        }
+        actions={
+          <Link to="/evaluations" className="text-blue-600 hover:text-blue-800">
+            ← Back to Evaluations
+          </Link>
+        }
+      />
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{title}</h1>
-        <div className="text-gray-600">
-          <div>Return Algorithm: {returnAlgorithm}</div>
-          <div>Investment Algorithm: {investmentAlgorithm}</div>
-          <div>Entry Optimizer: {entryOptimizer}</div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card>
         <h2 className="text-xl font-semibold mb-4">Performance by Season Simulation</h2>
         <p className="text-gray-600 mb-6">Metrics shown: Mean Payout, P(Top 1), and P(Payout).</p>
 
@@ -92,7 +95,7 @@ export function EvaluationDetailPage() {
         </div>
 
         <div className="mt-4 text-sm text-gray-600">This page is UI-only for now (evaluation runs are not wired up yet).</div>
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
-}
+ }

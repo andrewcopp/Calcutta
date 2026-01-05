@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Calcutta } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useUser } from '../contexts/UserContext';
@@ -15,6 +18,7 @@ interface CalcuttaRanking {
 }
 
 export function CalcuttaListPage() {
+  const navigate = useNavigate();
   const { user } = useUser();
 
   const calcuttasQuery = useQuery({
@@ -52,22 +56,25 @@ export function CalcuttaListPage() {
   });
 
   if (calcuttasQuery.isLoading) {
-    return <LoadingState label="Loading calcuttas..." />;
+    return (
+      <PageContainer>
+        <LoadingState label="Loading calcuttas..." />
+      </PageContainer>
+    );
   }
 
   if (calcuttasQuery.isError) {
     const message = calcuttasQuery.error instanceof Error ? calcuttasQuery.error.message : 'Failed to fetch calcuttas';
     return (
-      <Alert variant="error">
-        <h2 className="text-lg font-semibold mb-2">Error</h2>
-        <p>{message}</p>
-        <button
-          onClick={() => calcuttasQuery.refetch()}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Retry
-        </button>
-      </Alert>
+      <PageContainer>
+        <Alert variant="error">
+          <h2 className="text-lg font-semibold mb-2">Error</h2>
+          <p>{message}</p>
+          <div className="mt-4">
+            <Button onClick={() => calcuttasQuery.refetch()}>Retry</Button>
+          </div>
+        </Alert>
+      </PageContainer>
     );
   }
 
@@ -75,16 +82,13 @@ export function CalcuttaListPage() {
   const rankings = calcuttasQuery.data?.rankings || {};
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Calcuttas</h1>
-        <Link
-          to="/calcuttas/create"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Create New Calcutta
-        </Link>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Calcuttas"
+        actions={
+          <Button onClick={() => navigate('/calcuttas/create')}>Create New Calcutta</Button>
+        }
+      />
 
       <div className="grid gap-4">
         {calcuttas.map((calcutta) => {
@@ -93,40 +97,37 @@ export function CalcuttaListPage() {
             <Link
               key={calcutta.id}
               to={`/calcuttas/${calcutta.id}`}
-              className="block p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+              className="block"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-                  <p className="text-gray-600">Created: {new Date(calcutta.created).toLocaleDateString()}</p>
-                </div>
-                {ranking && (
-                  <div className="text-right">
-                    <div className="text-lg font-semibold text-blue-600">
-                      #{ranking.rank} of {ranking.totalEntries}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {ranking.points} points
-                    </div>
+              <Card className="hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">{calcutta.name}</h2>
+                    <p className="text-gray-600">Created: {new Date(calcutta.created).toLocaleDateString()}</p>
                   </div>
-                )}
-              </div>
+                  {ranking ? (
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-blue-600">
+                        #{ranking.rank} of {ranking.totalEntries}
+                      </div>
+                      <div className="text-sm text-gray-500">{ranking.points} points</div>
+                    </div>
+                  ) : null}
+                </div>
+              </Card>
             </Link>
           );
         })}
         
-        {calcuttas.length === 0 && (
-          <div className="text-center py-8 bg-white rounded-lg shadow">
+        {calcuttas.length === 0 ? (
+          <Card className="text-center py-8">
             <p className="text-gray-500 mb-4">No calcuttas found.</p>
-            <Link
-              to="/calcuttas/create"
-              className="text-blue-500 hover:text-blue-700"
-            >
+            <Link to="/calcuttas/create" className="text-blue-500 hover:text-blue-700">
               Create your first Calcutta
             </Link>
-          </div>
-        )}
+          </Card>
+        ) : null}
       </div>
-    </div>
+    </PageContainer>
   );
-} 
+}

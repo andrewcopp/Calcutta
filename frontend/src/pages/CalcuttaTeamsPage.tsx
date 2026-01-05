@@ -4,7 +4,10 @@ import { CalcuttaEntryTeam, School, TournamentTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 
 interface TeamStats {
   teamId: string;
@@ -80,62 +83,78 @@ export function CalcuttaTeamsPage() {
   });
 
   if (!calcuttaId) {
-    return <Alert variant="error">Missing required parameters</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">Missing required parameters</Alert>
+      </PageContainer>
+    );
   }
 
   if (calcuttaTeamsQuery.isLoading) {
-    return <LoadingState label="Loading teams..." />;
+    return (
+      <PageContainer>
+        <LoadingState label="Loading teams..." />
+      </PageContainer>
+    );
   }
 
   if (calcuttaTeamsQuery.isError) {
     const message = calcuttaTeamsQuery.error instanceof Error ? calcuttaTeamsQuery.error.message : 'Failed to fetch team data';
-    return <Alert variant="error">{message}</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">{message}</Alert>
+      </PageContainer>
+    );
   }
 
   const teams = calcuttaTeamsQuery.data?.teams || [];
   const calcuttaName = calcuttaTeamsQuery.data?.calcuttaName || '';
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">← Back to Calcutta</Link>
-      </div>
-      <h1 className="text-3xl font-bold mb-6">{calcuttaName} - Teams</h1>
-      
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+    <PageContainer>
+      <PageHeader
+        title={`${calcuttaName} - Teams`}
+        actions={
+          <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">
+            ← Back to Calcutta
+          </Link>
+        }
+      />
+
+      <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Investment</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">ROI</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Seed</TableHeaderCell>
+                <TableHeaderCell>Team</TableHeaderCell>
+                <TableHeaderCell>Region</TableHeaderCell>
+                <TableHeaderCell className="text-right">Investment</TableHeaderCell>
+                <TableHeaderCell className="text-right">Points</TableHeaderCell>
+                <TableHeaderCell className="text-right">ROI</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {teams.map((team) => (
-                <tr key={team.teamId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{team.seed}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{team.schoolName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{team.region}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                <TableRow key={team.teamId} className="hover:bg-gray-50">
+                  <TableCell className="font-medium text-gray-900">{team.seed}</TableCell>
+                  <TableCell className="text-gray-700">{team.schoolName}</TableCell>
+                  <TableCell className="text-gray-700">{team.region}</TableCell>
+                  <TableCell className="text-right text-gray-700">
                     ${team.totalInvestment.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{team.points}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                  </TableCell>
+                  <TableCell className="text-right text-gray-700">{team.points}</TableCell>
+                  <TableCell className="text-right">
                     <span className={`font-medium ${team.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {team.roi.toFixed(2)}%
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
-} 
+ } 
