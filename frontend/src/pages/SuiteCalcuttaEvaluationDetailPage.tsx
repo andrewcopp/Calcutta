@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -62,7 +64,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
 
   const renderPortfolioTable = (bids: SuiteCalcuttaEvaluationPortfolioBid[]) => {
     if (bids.length === 0) {
-      return <div className="text-gray-700">No portfolio bids found.</div>;
+      return <Alert variant="info">No portfolio bids found.</Alert>;
     }
     return (
       <div className="overflow-x-auto">
@@ -117,16 +119,18 @@ export function SuiteCalcuttaEvaluationDetailPage() {
       />
 
       {!id ? (
-        <Card>
-          <div className="text-gray-700">Missing evaluation ID.</div>
-        </Card>
+        <Alert variant="error">Missing evaluation ID.</Alert>
       ) : null}
 
       {id && detailQuery.isLoading ? <LoadingState label="Loading evaluation..." /> : null}
       {id && detailQuery.isError ? (
-        <Card>
-          <div className="text-red-700">{showError(detailQuery.error)}</div>
-        </Card>
+        <Alert variant="error">
+          <div className="font-semibold mb-1">Failed to load evaluation</div>
+          <div className="mb-3">{showError(detailQuery.error)}</div>
+          <Button size="sm" onClick={() => detailQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
       ) : null}
 
       {detailQuery.data ? (
@@ -181,7 +185,9 @@ export function SuiteCalcuttaEvaluationDetailPage() {
             {detailQuery.data.error_message ? (
               <div className="mt-4">
                 <div className="text-gray-500 text-sm">Error</div>
-                <div className="text-red-700 break-words">{detailQuery.data.error_message}</div>
+                <Alert variant="error" className="mt-2 break-words">
+                  {detailQuery.data.error_message}
+                </Alert>
               </div>
             ) : null}
           </Card>
@@ -203,15 +209,23 @@ export function SuiteCalcuttaEvaluationDetailPage() {
             ) : null}
 
             {detailQuery.data.status !== 'succeeded' ? (
-              <div className="text-gray-700">
+              <Alert variant="info">
                 Result is not available until the evaluation succeeds (current status: {detailQuery.data.status}).
-              </div>
+              </Alert>
             ) : null}
 
             {detailQuery.data.status === 'succeeded' ? (
               <div>
                 {resultQuery.isLoading ? <LoadingState label="Loading result..." layout="inline" /> : null}
-                {resultQuery.isError ? <div className="text-red-700">{showError(resultQuery.error)}</div> : null}
+                {resultQuery.isError ? (
+                  <Alert variant="error" className="mt-3">
+                    <div className="font-semibold mb-1">Failed to load result</div>
+                    <div className="mb-3">{showError(resultQuery.error)}</div>
+                    <Button size="sm" onClick={() => resultQuery.refetch()}>
+                      Retry
+                    </Button>
+                  </Alert>
+                ) : null}
 
                 {resultQuery.data ? (
                   <div className="space-y-6">

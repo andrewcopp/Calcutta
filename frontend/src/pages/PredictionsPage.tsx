@@ -6,7 +6,10 @@ import { calcuttaService } from '../services/calcuttaService';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
 import { TabsNav } from '../components/TabsNav';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
@@ -17,16 +20,20 @@ export function PredictionsPage() {
   const [selectedCalcuttaId, setSelectedCalcuttaId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('returns');
 
-  const { data: tournaments = [], isLoading: tournamentsLoading } = useQuery<Tournament[]>({
+  const tournamentsQuery = useQuery<Tournament[]>({
     queryKey: queryKeys.tournaments.all(),
     queryFn: tournamentService.getAllTournaments,
   });
 
-  const { data: calcuttas = [], isLoading: calcuttasLoading } = useQuery<Calcutta[]>({
+  const tournaments = tournamentsQuery.data ?? [];
+
+  const calcuttasQuery = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
     queryFn: calcuttaService.getAllCalcuttas,
     enabled: !!selectedTournamentId,
   });
+
+  const calcuttas = calcuttasQuery.data ?? [];
 
   const calcuttasForTournament = useMemo(
     () => calcuttas.filter((c) => c.tournamentId === selectedTournamentId),
@@ -53,10 +60,20 @@ export function PredictionsPage() {
             Select Tournament:
           </label>
 
-          {tournamentsLoading ? (
-            <div className="text-gray-500">Loading tournaments...</div>
+          {tournamentsQuery.isLoading ? (
+            <LoadingState label="Loading tournaments..." layout="inline" />
+          ) : tournamentsQuery.isError ? (
+            <Alert variant="error" className="flex-1">
+              <div className="font-semibold mb-1">Failed to load tournaments</div>
+              <div className="mb-3">{tournamentsQuery.error instanceof Error ? tournamentsQuery.error.message : 'An error occurred'}</div>
+              <Button size="sm" onClick={() => tournamentsQuery.refetch()}>
+                Retry
+              </Button>
+            </Alert>
           ) : tournaments.length === 0 ? (
-            <div className="text-gray-500">No tournaments found</div>
+            <Alert variant="info" className="flex-1">
+              No tournaments found.
+            </Alert>
           ) : (
             <Select
               id="tournament-select"
@@ -86,10 +103,20 @@ export function PredictionsPage() {
               Select Calcutta:
             </label>
 
-            {calcuttasLoading ? (
-              <div className="text-gray-500">Loading calcuttas...</div>
+            {calcuttasQuery.isLoading ? (
+              <LoadingState label="Loading calcuttas..." layout="inline" />
+            ) : calcuttasQuery.isError ? (
+              <Alert variant="error" className="flex-1">
+                <div className="font-semibold mb-1">Failed to load calcuttas</div>
+                <div className="mb-3">{calcuttasQuery.error instanceof Error ? calcuttasQuery.error.message : 'An error occurred'}</div>
+                <Button size="sm" onClick={() => calcuttasQuery.refetch()}>
+                  Retry
+                </Button>
+              </Alert>
             ) : calcuttasForTournament.length === 0 ? (
-              <div className="text-gray-500">No calcuttas found for this tournament</div>
+              <Alert variant="info" className="flex-1">
+                No calcuttas found for this tournament.
+              </Alert>
             ) : (
               <Select
                 id="calcutta-select"
@@ -143,7 +170,7 @@ interface TeamPredictedReturns {
 }
 
 function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const { data: predictedReturns, isLoading } = useQuery<{ teams: TeamPredictedReturns[] } | null>({
+  const predictedReturnsQuery = useQuery<{ teams: TeamPredictedReturns[] } | null>({
     queryKey: ['predictions', 'returns', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -156,7 +183,7 @@ function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
   const formatPoints = (points: number) => points.toFixed(1);
 
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view predicted returns.</div>;
+    return <Alert variant="info">Select a calcutta above to view predicted returns.</Alert>;
   }
 
   return (
@@ -164,9 +191,17 @@ function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
       <h2 className="text-xl font-semibold mb-4">Returns</h2>
       <p className="text-gray-600 mb-6">Probability of reaching each round and expected value for all teams.</p>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading predicted returns...</div>
-      ) : predictedReturns?.teams ? (
+      {predictedReturnsQuery.isLoading ? (
+        <LoadingState label="Loading predicted returns..." layout="inline" />
+      ) : predictedReturnsQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load predicted returns</div>
+          <div className="mb-3">{predictedReturnsQuery.error instanceof Error ? predictedReturnsQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => predictedReturnsQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : predictedReturnsQuery.data?.teams && predictedReturnsQuery.data.teams.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -184,7 +219,7 @@ function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {predictedReturns.teams.map((team) => (
+              {predictedReturnsQuery.data.teams.map((team) => (
                 <tr key={team.team_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">{team.school_name}</td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">{team.seed}</td>
@@ -203,14 +238,14 @@ function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
                 <td className="px-4 py-3 text-sm text-center" colSpan={2}></td>
                 <td className="px-4 py-3 text-sm text-center" colSpan={6}></td>
                 <td className="px-4 py-3 text-sm text-center text-blue-700 bg-blue-100">
-                  {formatPoints(predictedReturns.teams.reduce((sum, team) => sum + team.expected_value, 0))}
+                  {formatPoints(predictedReturnsQuery.data.teams.reduce((sum, team) => sum + team.expected_value, 0))}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No predicted returns data available for this calcutta.</div>
+        <Alert variant="info">No predicted returns data available for this calcutta.</Alert>
       )}
     </div>
   );
@@ -227,7 +262,7 @@ interface TeamPredictedInvestment {
 }
 
 function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const { data: predictedInvestment, isLoading } = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
+  const predictedInvestmentQuery = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
     queryKey: ['predictions', 'investments', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -249,7 +284,7 @@ function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
   };
 
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view predicted investment.</div>;
+    return <Alert variant="info">Select a calcutta above to view predicted investment.</Alert>;
   }
 
   return (
@@ -257,9 +292,17 @@ function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
       <h2 className="text-xl font-semibold mb-4">Investments</h2>
       <p className="text-gray-600 mb-6">Market inefficiency analysis comparing rational vs. predicted market behavior.</p>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading predicted investment data...</div>
-      ) : predictedInvestment?.teams ? (
+      {predictedInvestmentQuery.isLoading ? (
+        <LoadingState label="Loading predicted investment data..." layout="inline" />
+      ) : predictedInvestmentQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load predicted investments</div>
+          <div className="mb-3">{predictedInvestmentQuery.error instanceof Error ? predictedInvestmentQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => predictedInvestmentQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : predictedInvestmentQuery.data?.teams && predictedInvestmentQuery.data.teams.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -273,7 +316,7 @@ function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {predictedInvestment.teams.map((team) => (
+              {predictedInvestmentQuery.data.teams.map((team) => (
                 <tr key={team.team_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">{team.school_name}</td>
                   <td className="px-4 py-3 text-sm text-center text-gray-700">{team.seed}</td>
@@ -287,10 +330,10 @@ function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
                 <td className="px-4 py-3 text-sm text-gray-900 sticky left-0 bg-gray-100">TOTAL</td>
                 <td className="px-4 py-3 text-sm text-center" colSpan={2}></td>
                 <td className="px-4 py-3 text-sm text-center text-gray-900">
-                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.rational, 0))}
+                  {formatPoints(predictedInvestmentQuery.data.teams.reduce((sum, team) => sum + team.rational, 0))}
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-green-700 bg-green-100">
-                  {formatPoints(predictedInvestment.teams.reduce((sum, team) => sum + team.predicted, 0))}
+                  {formatPoints(predictedInvestmentQuery.data.teams.reduce((sum, team) => sum + team.predicted, 0))}
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-gray-500">-</td>
               </tr>
@@ -298,7 +341,7 @@ function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No predicted investment data available for this calcutta.</div>
+        <Alert variant="info">No predicted investment data available for this calcutta.</Alert>
       )}
     </div>
   );
@@ -316,7 +359,7 @@ interface EntryRanking {
 }
 
 function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const { data: simulatedCalcuttas, isLoading } = useQuery<{ entries: EntryRanking[] } | null>({
+  const simulatedCalcuttasQuery = useQuery<{ entries: EntryRanking[] } | null>({
     queryKey: ['predictions', 'simulated-calcuttas', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
@@ -326,7 +369,7 @@ function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
   });
 
   if (!calcuttaId) {
-    return <div className="text-gray-500">Select a calcutta above to view entries.</div>;
+    return <Alert variant="info">Select a calcutta above to view entries.</Alert>;
   }
 
   const formatPayout = (value: number) => value.toFixed(3);
@@ -337,9 +380,17 @@ function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
       <h2 className="text-xl font-semibold mb-4">Entries</h2>
       <p className="text-gray-600 mb-6">Entry rankings based on normalized payout across all simulations.</p>
 
-      {isLoading ? (
-        <div className="text-gray-500">Loading entries...</div>
-      ) : simulatedCalcuttas?.entries ? (
+      {simulatedCalcuttasQuery.isLoading ? (
+        <LoadingState label="Loading entries..." layout="inline" />
+      ) : simulatedCalcuttasQuery.isError ? (
+        <Alert variant="error" className="mt-3">
+          <div className="font-semibold mb-1">Failed to load entries</div>
+          <div className="mb-3">{simulatedCalcuttasQuery.error instanceof Error ? simulatedCalcuttasQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => simulatedCalcuttasQuery.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      ) : simulatedCalcuttasQuery.data?.entries && simulatedCalcuttasQuery.data.entries.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -354,7 +405,7 @@ function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {simulatedCalcuttas.entries.map((entry) => (
+              {simulatedCalcuttasQuery.data.entries.map((entry) => (
                 <tr
                   key={entry.entry_name}
                   className={entry.is_our_strategy ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}
@@ -377,7 +428,7 @@ function SimulatedCalcuttasTab({ calcuttaId }: { calcuttaId: string | null }) {
           </table>
         </div>
       ) : (
-        <div className="text-gray-500">No entries data available for this calcutta.</div>
+        <Alert variant="info">No entries data available for this calcutta.</Alert>
       )}
     </div>
   );

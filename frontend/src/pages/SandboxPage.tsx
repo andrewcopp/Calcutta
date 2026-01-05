@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -134,7 +136,9 @@ export function SandboxPage() {
                   </option>
                 ))}
             </Select>
-            {createCalcuttaId && latestRunsQuery.isLoading ? <div className="text-xs text-gray-500 mt-1">Loading latest runs...</div> : null}
+            {createCalcuttaId && latestRunsQuery.isLoading ? (
+              <LoadingState label="Loading latest runs..." layout="inline" className="mt-1" size="sm" />
+            ) : null}
             {createCalcuttaId && !latestRunsQuery.isLoading && latestRunsQuery.data ? (
               <div className="text-xs text-gray-600 mt-1">
                 latest: go={latestRunsQuery.data.game_outcome_run_id ? latestRunsQuery.data.game_outcome_run_id.slice(0, 8) : '—'} · ms=
@@ -257,8 +261,12 @@ export function SandboxPage() {
             Trigger
           </button>
 
-          {createMutation.isPending ? <div className="text-sm text-gray-600">Creating...</div> : null}
-          {createMutation.isError ? <div className="text-sm text-red-700">{showError(createMutation.error)}</div> : null}
+          {createMutation.isPending ? <LoadingState label="Creating..." layout="inline" size="sm" /> : null}
+          {createMutation.isError ? (
+            <Alert variant="error" className="ml-2">
+              {showError(createMutation.error)}
+            </Alert>
+          ) : null}
         </div>
 
         <div className="mt-3 text-sm text-gray-600">
@@ -297,10 +305,20 @@ export function SandboxPage() {
         <h2 className="text-xl font-semibold mb-4">Evaluations</h2>
 
         {listQuery.isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
-        {listQuery.isError ? <div className="text-red-700">{showError(listQuery.error)}</div> : null}
+        {listQuery.isError ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to load evaluations</div>
+            <div className="mb-3">{showError(listQuery.error)}</div>
+            <Button size="sm" onClick={() => listQuery.refetch()}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
 
         {!listQuery.isLoading && !listQuery.isError && items.length === 0 ? (
-          <div className="text-gray-700">No suite evaluations found.</div>
+          <Alert variant="info" className="mt-3">
+            No suite evaluations found.
+          </Alert>
         ) : null}
 
         {!listQuery.isLoading && !listQuery.isError && items.length > 0 ? (
