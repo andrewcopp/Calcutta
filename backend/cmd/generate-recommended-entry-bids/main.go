@@ -3,13 +3,24 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
+	"os"
 
 	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 
 func main() {
+	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var calcuttaID string
 	var runKey string
 	var name string
@@ -32,17 +43,18 @@ func main() {
 	flag.Parse()
 
 	if calcuttaID == "" {
-		log.Fatal("--calcutta-id is required")
+		flag.Usage()
+		return fmt.Errorf("--calcutta-id is required")
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		return fmt.Errorf("failed to connect to database (pgxpool): %w", err)
 	}
 	defer pool.Close()
 
@@ -59,7 +71,7 @@ func main() {
 		MaxBidPoints: maxBid,
 	})
 	if err != nil {
-		log.Fatalf("GenerateAndWrite failed: %v", err)
+		return fmt.Errorf("GenerateAndWrite failed: %w", err)
 	}
 
 	log.Printf("Generated strategy_generation_run_id=%s run_key=%s n_teams=%d total_bid=%d simulated_tournament_id=%s",
@@ -69,4 +81,5 @@ func main() {
 		res.TotalBidPoints,
 		res.SimulatedTournamentID,
 	)
+	return nil
 }

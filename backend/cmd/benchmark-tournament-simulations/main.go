@@ -5,12 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"runtime"
 	"time"
 
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
 	"github.com/andrewcopp/Calcutta/backend/internal/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/features/bracket"
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,6 +32,14 @@ type finalFourConfig struct {
 }
 
 func main() {
+	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var season int
 	var nSims int
 	var seed int
@@ -45,13 +56,16 @@ func main() {
 	flag.Parse()
 
 	if season <= 0 {
-		log.Fatal("--season is required")
+		flag.Usage()
+		return fmt.Errorf("--season is required")
 	}
 	if nSims <= 0 {
-		log.Fatal("--n-sims must be positive")
+		flag.Usage()
+		return fmt.Errorf("--n-sims must be positive")
 	}
 	if batchSize <= 0 {
-		log.Fatal("--batch-size must be positive")
+		flag.Usage()
+		return fmt.Errorf("--batch-size must be positive")
 	}
 	if workers <= 0 {
 		workers = 1
@@ -59,13 +73,13 @@ func main() {
 
 	ctx := context.Background()
 	if err := db.Initialize(ctx); err != nil {
-		log.Fatalf("failed to init db: %v", err)
+		return fmt.Errorf("failed to init db: %w", err)
 	}
 	defer db.Close()
 
 	pool := db.GetPool()
 	if pool == nil {
-		log.Fatal("db pool is nil")
+		return fmt.Errorf("db pool is nil")
 	}
 
 	overallStart := time.Now()
@@ -74,17 +88,17 @@ func main() {
 	loadStart := time.Now()
 	ids, err := resolveTournamentIDs(ctx, pool, season)
 	if err != nil {
-		log.Fatalf("failed to resolve tournament ids: %v", err)
+		return fmt.Errorf("failed to resolve tournament ids: %w", err)
 	}
 
 	ff, err := loadFinalFourConfig(ctx, pool, ids.coreTournamentID)
 	if err != nil {
-		log.Fatalf("failed to load final four config: %v", err)
+		return fmt.Errorf("failed to load final four config: %w", err)
 	}
 
 	teams, err := loadLabTeams(ctx, pool, ids.labTournamentID)
 	if err != nil {
-		log.Fatalf("failed to load teams: %v", err)
+		return fmt.Errorf("failed to load teams: %w", err)
 	}
 
 	builder := bracket.NewBracketBuilder()
@@ -95,12 +109,12 @@ func main() {
 		BottomRightRegion: ff.bottomRight,
 	})
 	if err != nil {
-		log.Fatalf("failed to build bracket: %v", err)
+		return fmt.Errorf("failed to build bracket: %w", err)
 	}
 
 	probs, err := loadPredictedGameOutcomes(ctx, pool, ids.labTournamentID)
 	if err != nil {
-		log.Fatalf("failed to load predicted game outcomes: %v", err)
+		return fmt.Errorf("failed to load predicted game outcomes: %w", err)
 	}
 
 	loadDur := time.Since(loadStart)
@@ -117,11 +131,11 @@ func main() {
 	batchStart := time.Now()
 	snapshotID, err := createTournamentStateSnapshot(ctx, pool, ids.coreTournamentID)
 	if err != nil {
-		log.Fatalf("failed to create tournament state snapshot: %v", err)
+		return fmt.Errorf("failed to create tournament state snapshot: %w", err)
 	}
 	batchID, err := createTournamentSimulationBatch(ctx, pool, ids.coreTournamentID, snapshotID, nSims, seed, probabilitySourceKey)
 	if err != nil {
-		log.Fatalf("failed to create tournament simulation batch: %v", err)
+		return fmt.Errorf("failed to create tournament simulation batch: %w", err)
 	}
 	log.Printf("Created snapshot_id=%s batch_id=%s in %s", snapshotID, batchID, time.Since(batchStart))
 
@@ -139,13 +153,13 @@ func main() {
 		batchSeed := int64(seed) + int64(offset)*1_000_003
 		results, err := tsim.Simulate(br, probs, n, batchSeed, tsim.Options{Workers: workers})
 		if err != nil {
-			log.Fatalf("simulation failed at offset=%d: %v", offset, err)
+			return fmt.Errorf("simulation failed at offset=%d: %w", offset, err)
 		}
 
 		startWrite := time.Now()
 		inserted, err := copyInsertSimulatedTournaments(ctx, pool, batchID, ids.labTournamentID, offset, results)
 		if err != nil {
-			log.Fatalf("failed writing results at offset=%d: %v", offset, err)
+			return fmt.Errorf("failed writing results at offset=%d: %w", offset, err)
 		}
 		rowsWritten += inserted
 		nBatches++
@@ -172,6 +186,7 @@ func main() {
 		rowsWritten,
 	)
 	log.Printf("Timing: load=%s simulate+write=%s overall=%s", loadDur, simDur, overallDur)
+	return nil
 }
 
 func resolveTournamentIDs(ctx context.Context, pool *pgxpool.Pool, season int) (*tournamentIDs, error) {

@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
@@ -11,6 +13,14 @@ import (
 )
 
 func main() {
+	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var calcuttaID string
 	var tournamentSimulationBatchID string
 	var excludedEntryName string
@@ -23,7 +33,8 @@ func main() {
 	flag.Parse()
 
 	if calcuttaID == "" {
-		log.Fatal("--calcutta-id is required")
+		flag.Usage()
+		return fmt.Errorf("--calcutta-id is required")
 	}
 	if excludedEntryName == "" {
 		excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
@@ -34,12 +45,12 @@ func main() {
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		return fmt.Errorf("failed to connect to database (pgxpool): %w", err)
 	}
 	defer pool.Close()
 
@@ -50,10 +61,11 @@ func main() {
 
 	svc := simulated_calcutta.New(pool)
 	if err := svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, override); err != nil {
-		log.Fatalf("evaluation failed: %v", err)
+		return fmt.Errorf("evaluation failed: %w", err)
 	}
 
 	log.Printf("Calcutta evaluation complete for calcutta_id=%s", calcuttaID)
+	return nil
 }
 
 func ctx() context.Context { return context.Background() }

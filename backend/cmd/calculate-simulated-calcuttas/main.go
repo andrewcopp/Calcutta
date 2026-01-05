@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
@@ -12,6 +14,14 @@ import (
 )
 
 func main() {
+	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var calcuttaID string
 	var runID string
 	var excludedEntryName string
@@ -38,17 +48,18 @@ func main() {
 	}
 
 	if calcuttaID == "" {
-		log.Fatal("--calcutta-id is required")
+		flag.Usage()
+		return fmt.Errorf("--calcutta-id is required")
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		return fmt.Errorf("failed to connect to database (pgxpool): %w", err)
 	}
 	defer pool.Close()
 
@@ -56,7 +67,7 @@ func main() {
 	if runID == "" {
 		runID, err = getLatestRunID(pool, calcuttaID)
 		if err != nil {
-			log.Fatalf("Failed to get latest run ID: %v", err)
+			return fmt.Errorf("failed to get latest run ID: %w", err)
 		}
 		log.Printf("Using latest run ID: %s", runID)
 	}
@@ -71,10 +82,11 @@ func main() {
 
 	log.Printf("Starting simulated calcutta calculation for calcutta %s, run %s", calcuttaID, runID)
 	if err := service.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, nil); err != nil {
-		log.Fatalf("Failed to calculate simulated calcutta: %v", err)
+		return fmt.Errorf("failed to calculate simulated calcutta: %w", err)
 	}
 
 	log.Printf("Successfully completed simulated calcutta calculation!")
+	return nil
 }
 
 func getLatestRunID(pool *pgxpool.Pool, calcuttaID string) (string, error) {

@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"sort"
 	"time"
 
@@ -38,6 +40,14 @@ type roundReach struct {
 }
 
 func main() {
+	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var calcuttaID string
 	var dryRun bool
 
@@ -46,17 +56,18 @@ func main() {
 	flag.Parse()
 
 	if calcuttaID == "" {
-		log.Fatal("--calcutta-id is required")
+		flag.Usage()
+		return fmt.Errorf("--calcutta-id is required")
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		return fmt.Errorf("failed to connect to database (pgxpool): %w", err)
 	}
 	defer pool.Close()
 
@@ -64,44 +75,44 @@ func main() {
 
 	cc, err := loadCalcuttaContext(ctx, pool, calcuttaID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	scoringRules, err := loadScoringRules(ctx, pool, cc.CalcuttaID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(scoringRules) == 0 {
-		log.Fatal("no calcutta scoring rules found")
+		return fmt.Errorf("no calcutta scoring rules found")
 	}
 
 	ff, err := loadFinalFourConfig(ctx, pool, cc.CoreTournamentID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	teams, err := loadTeams(ctx, pool, cc.CoreTournamentID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	builder := appbracket.NewBracketBuilder()
 	br, err := builder.BuildBracket(cc.CoreTournamentID, teams, ff)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	probs, nPred, err := loadPredictedGameOutcomes(ctx, pool, cc.CoreTournamentID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if nPred == 0 {
-		log.Fatalf("no predicted_game_outcomes found for tournament_id=%s", cc.CoreTournamentID)
+		return fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", cc.CoreTournamentID)
 	}
 
 	evByTeam, reachByTeam, err := computeExpectedValueFromPGO(br, probs, scoringRules)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Print top 10 by EV for sanity
@@ -124,14 +135,15 @@ func main() {
 
 	if dryRun {
 		log.Printf("dry-run: not writing derived.predicted_market_share")
-		return
+		return nil
 	}
 
 	inserted, err := writeNaivePredictedMarketShare(ctx, pool, cc.CoreTournamentID, evByTeam)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.Printf("seeded derived.predicted_market_share (tournament-scoped, run_id NULL): inserted=%d tournament_id=%s", inserted, cc.CoreTournamentID)
+	return nil
 }
 
 func loadCalcuttaContext(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (*calcuttaContext, error) {

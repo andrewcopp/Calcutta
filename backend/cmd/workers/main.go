@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -15,6 +16,13 @@ import (
 
 func main() {
 	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	slog.Info("workers_starting")
 
 	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
@@ -22,27 +30,24 @@ func main() {
 	flag.Parse()
 
 	if !*runBundleImportWorker && !*runEntryEvaluationWorker {
-		slog.Error("no_workers_selected")
-		os.Exit(1)
+		flag.Usage()
+		return fmt.Errorf("no workers selected")
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		slog.Error("config_load_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("config_load_failed: %w", err)
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		slog.Error("db_connect_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("db_connect_failed: %w", err)
 	}
 	defer pool.Close()
 
 	s, err := httpserver.NewServer(pool, cfg)
 	if err != nil {
-		slog.Error("server_init_failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("server_init_failed: %w", err)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -69,4 +74,5 @@ func main() {
 	wg.Wait()
 
 	slog.Info("workers_stopping")
+	return nil
 }

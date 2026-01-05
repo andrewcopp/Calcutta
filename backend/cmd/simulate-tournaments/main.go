@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"runtime"
 
 	sim "github.com/andrewcopp/Calcutta/backend/internal/features/simulate_tournaments"
@@ -11,6 +14,14 @@ import (
 )
 
 func main() {
+	platform.InitLogger()
+	if err := run(); err != nil {
+		slog.Error("cmd_failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var season int
 	var nSims int
 	var seed int
@@ -27,23 +38,26 @@ func main() {
 	flag.Parse()
 
 	if season <= 0 {
-		log.Fatal("--season is required")
+		flag.Usage()
+		return fmt.Errorf("--season is required")
 	}
 	if nSims <= 0 {
-		log.Fatal("--n-sims must be positive")
+		flag.Usage()
+		return fmt.Errorf("--n-sims must be positive")
 	}
 	if batchSize <= 0 {
-		log.Fatal("--batch-size must be positive")
+		flag.Usage()
+		return fmt.Errorf("--batch-size must be positive")
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {
-		log.Fatalf("Failed to connect to database (pgxpool): %v", err)
+		return fmt.Errorf("failed to connect to database (pgxpool): %w", err)
 	}
 	defer pool.Close()
 
@@ -60,7 +74,7 @@ func main() {
 		},
 	)
 	if err != nil {
-		log.Fatalf("simulate tournaments failed: %v", err)
+		return fmt.Errorf("simulate tournaments failed: %w", err)
 	}
 
 	log.Printf(
@@ -77,4 +91,6 @@ func main() {
 		res.SimulateWriteDuration,
 		res.OverallDuration,
 	)
+
+	return nil
 }
