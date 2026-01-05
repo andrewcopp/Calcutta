@@ -6,6 +6,9 @@ import { calcuttaService } from '../services/calcuttaService';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
 import { TabsNav } from '../components/TabsNav';
+import { Card } from '../components/ui/Card';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 type TabType = 'returns' | 'investments' | 'entries';
 
@@ -41,13 +44,10 @@ export function PredictionsPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Predictions</h1>
-        <p className="text-gray-600">Model outputs for returns, investments, and recommended entries.</p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Predictions" subtitle="Model outputs for returns, investments, and recommended entries." />
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <Card className="mb-6">
         <div className="flex items-center gap-4">
           <label htmlFor="tournament-select" className="text-lg font-semibold whitespace-nowrap">
             Select Tournament:
@@ -58,7 +58,7 @@ export function PredictionsPage() {
           ) : tournaments.length === 0 ? (
             <div className="text-gray-500">No tournaments found</div>
           ) : (
-            <select
+            <Select
               id="tournament-select"
               value={selectedTournamentId || ''}
               onChange={(e) => {
@@ -66,7 +66,7 @@ export function PredictionsPage() {
                 setSelectedTournamentId(nextTournamentId);
                 setSelectedCalcuttaId(null);
               }}
-              className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="flex-1 max-w-md"
             >
               <option value="">-- Select a tournament --</option>
               {tournaments.map((tournament) => (
@@ -74,13 +74,13 @@ export function PredictionsPage() {
                   {tournament.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </div>
-      </div>
+      </Card>
 
       {selectedTournamentId && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <Card className="mb-6">
           <div className="flex items-center gap-4">
             <label htmlFor="calcutta-select" className="text-lg font-semibold whitespace-nowrap">
               Select Calcutta:
@@ -91,11 +91,11 @@ export function PredictionsPage() {
             ) : calcuttasForTournament.length === 0 ? (
               <div className="text-gray-500">No calcuttas found for this tournament</div>
             ) : (
-              <select
+              <Select
                 id="calcutta-select"
                 value={selectedCalcuttaId || ''}
                 onChange={(e) => setSelectedCalcuttaId(e.target.value || null)}
-                className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="flex-1 max-w-md"
               >
                 <option value="">-- Select a calcutta --</option>
                 {calcuttasForTournament.map((calcutta) => (
@@ -103,25 +103,27 @@ export function PredictionsPage() {
                     {calcutta.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </div>
           <div className="mt-2 text-sm text-gray-600">Predictions are calcutta-scoped.</div>
-        </div>
+        </Card>
       )}
 
       {selectedTournamentId ? (
-        <div className="bg-white rounded-lg shadow p-6">
-          <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+        <Card className="p-0 overflow-hidden">
+          <div className="p-6">
+            <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-          {activeTab === 'returns' && <PredictedReturnsTab calcuttaId={selectedCalcuttaId} />}
-          {activeTab === 'investments' && <PredictedInvestmentTab calcuttaId={selectedCalcuttaId} />}
-          {activeTab === 'entries' && <SimulatedCalcuttasTab calcuttaId={selectedCalcuttaId} />}
-        </div>
+            {activeTab === 'returns' && <PredictedReturnsTab calcuttaId={selectedCalcuttaId} />}
+            {activeTab === 'investments' && <PredictedInvestmentTab calcuttaId={selectedCalcuttaId} />}
+            {activeTab === 'entries' && <SimulatedCalcuttasTab calcuttaId={selectedCalcuttaId} />}
+          </div>
+        </Card>
       ) : (
-        <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">Select a tournament above to view predictions</div>
+        <Card className="bg-muted p-8 text-center text-muted-foreground">Select a tournament above to view predictions</Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

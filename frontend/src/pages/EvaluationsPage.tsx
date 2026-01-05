@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Card } from '../components/ui/Card';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 type EvaluationRowId = 'return-algorithm' | 'investment-algorithm' | 'entry-optimizer';
 
@@ -52,57 +55,54 @@ export function EvaluationsPage() {
   }, [selectedReturnAlgorithm, selectedInvestmentAlgorithm, selectedEntryOptimizer]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Evaluations</h1>
-        <p className="text-gray-600">Compare modeling/optimization components across season simulations.</p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Evaluations" subtitle="Compare modeling/optimization components across season simulations." />
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Return Algorithm</label>
-            <select
+            <Select
               value={selectedReturnAlgorithm}
               onChange={(e) => setSelectedReturnAlgorithm(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full"
             >
               {returnAlgorithms.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Investment Algorithm</label>
-            <select
+            <Select
               value={selectedInvestmentAlgorithm}
               onChange={(e) => setSelectedInvestmentAlgorithm(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full"
             >
               {investmentAlgorithms.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Entry Optimizer</label>
-            <select
+            <Select
               value={selectedEntryOptimizer}
               onChange={(e) => setSelectedEntryOptimizer(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full"
             >
               {entryOptimizers.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
@@ -117,9 +117,9 @@ export function EvaluationsPage() {
             <div className="mt-2 text-sm text-gray-600">Not wired up yet.</div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card>
         <h2 className="text-xl font-semibold mb-4">Evaluation Types</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -143,7 +143,7 @@ export function EvaluationsPage() {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }

@@ -9,6 +9,9 @@ import { PredictedReturnsTab } from '../components/analytics/tournament/Predicte
 import { PredictedInvestmentTab } from '../components/analytics/tournament/PredictedInvestmentTab';
 import { SimulatedEntriesTab } from '../components/analytics/tournament/SimulatedEntriesTab';
 import { SimulatedCalcuttasTab } from '../components/analytics/tournament/SimulatedCalcuttasTab';
+import { Card } from '../components/ui/Card';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 type TabType = 'simulations' | 'predicted-returns' | 'predicted-investment' | 'simulated-entries' | 'simulated-calcuttas';
 
@@ -33,16 +36,11 @@ export function TournamentAnalyticsPage() {
   const calcuttasForTournament = calcuttas.filter((c) => c.tournamentId === selectedTournamentId);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Tournament Analytics</h1>
-        <p className="text-gray-600">
-          View simulation data and predictions for tournaments
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Tournament Analytics" subtitle="View simulation data and predictions for tournaments" />
 
       {/* Tournament Selector */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <Card className="mb-6">
         <div className="flex items-center gap-4">
           <label htmlFor="tournament-select" className="text-lg font-semibold whitespace-nowrap">
             Select Tournament:
@@ -53,7 +51,7 @@ export function TournamentAnalyticsPage() {
           ) : tournaments.length === 0 ? (
             <div className="text-gray-500">No tournaments found</div>
           ) : (
-            <select
+            <Select
               id="tournament-select"
               value={selectedTournamentId || ''}
               onChange={(e) => {
@@ -61,7 +59,7 @@ export function TournamentAnalyticsPage() {
                 setSelectedTournamentId(nextTournamentId);
                 setSelectedCalcuttaId(null);
               }}
-              className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="flex-1 max-w-md"
             >
               <option value="">-- Select a tournament --</option>
               {tournaments.map((tournament) => (
@@ -69,14 +67,14 @@ export function TournamentAnalyticsPage() {
                   {tournament.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Calcutta Selector */}
       {selectedTournamentId && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <Card className="mb-6">
           <div className="flex items-center gap-4">
             <label htmlFor="calcutta-select" className="text-lg font-semibold whitespace-nowrap">
               Select Calcutta:
@@ -87,11 +85,11 @@ export function TournamentAnalyticsPage() {
             ) : calcuttasForTournament.length === 0 ? (
               <div className="text-gray-500">No calcuttas found for this tournament</div>
             ) : (
-              <select
+              <Select
                 id="calcutta-select"
                 value={selectedCalcuttaId || ''}
                 onChange={(e) => setSelectedCalcuttaId(e.target.value || null)}
-                className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="flex-1 max-w-md"
               >
                 <option value="">-- Select a calcutta --</option>
                 {calcuttasForTournament.map((calcutta) => (
@@ -99,18 +97,18 @@ export function TournamentAnalyticsPage() {
                     {calcutta.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </div>
           <div className="mt-2 text-sm text-gray-600">
             Points-based analytics (returns, investment, simulated entries/calcuttas) are calcutta-scoped.
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Analytics Tabs */}
       {selectedTournamentId && (
-        <div className="bg-white rounded-lg shadow">
+        <Card className="p-0 overflow-hidden">
           {/* Tab Navigation */}
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
@@ -175,14 +173,12 @@ export function TournamentAnalyticsPage() {
             {activeTab === 'simulated-entries' && <SimulatedEntriesTab calcuttaId={selectedCalcuttaId} />}
             {activeTab === 'simulated-calcuttas' && <SimulatedCalcuttasTab calcuttaId={selectedCalcuttaId} />}
           </div>
-        </div>
+        </Card>
       )}
 
       {!selectedTournamentId && (
-        <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-          Select a tournament above to view analytics
-        </div>
+        <Card className="bg-muted p-8 text-center text-muted-foreground">Select a tournament above to view analytics</Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
