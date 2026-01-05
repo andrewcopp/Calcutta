@@ -5,6 +5,7 @@ import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
@@ -196,24 +197,40 @@ export function CalcuttaEntriesPage() {
   }, [tournamentTeams, schoolNameById, allEntryTeams, allCalcuttaPortfolioTeams]);
 
   if (!calcuttaId) {
-    return <Alert variant="error">Missing required parameters</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">Missing required parameters</Alert>
+      </PageContainer>
+    );
   }
 
   if (calcuttaEntriesQuery.isLoading) {
-    return <LoadingState label="Loading entries..." />;
+    return (
+      <PageContainer>
+        <LoadingState label="Loading entries..." />
+      </PageContainer>
+    );
   }
 
   if (calcuttaEntriesQuery.isError) {
     const message = calcuttaEntriesQuery.error instanceof Error ? calcuttaEntriesQuery.error.message : 'Failed to fetch data';
-    return <Alert variant="error">{message}</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">{message}</Alert>
+      </PageContainer>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to="/calcuttas" className="text-blue-600 hover:text-blue-800">← Back to Calcuttas</Link>
-      </div>
-      <h1 className="text-3xl font-bold mb-6">{calcuttaName}</h1>
+    <PageContainer>
+      <PageHeader
+        title={calcuttaName}
+        actions={
+          <Link to="/calcuttas" className="text-blue-600 hover:text-blue-800">
+            ← Back to Calcuttas
+          </Link>
+        }
+      />
 
       <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       
@@ -311,7 +328,7 @@ export function CalcuttaEntriesPage() {
           </div>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
  

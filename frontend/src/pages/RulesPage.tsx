@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Card } from '../components/ui/Card';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import {
   Bar,
   BarChart,
@@ -123,26 +125,27 @@ export function RulesPage() {
   }, [simulatedEntryWithScore]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to="/" className="text-blue-600 hover:text-blue-800">← Back to Home</Link>
-      </div>
-
+    <PageContainer>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">How Calcutta Works</h1>
-        <p className="text-gray-600 mb-8">
-          This is a friendly game. Calcutta helps your group track ownership and points — it does not facilitate gambling or real-money winnings.
-        </p>
+        <PageHeader
+          title={<span className="text-4xl font-bold text-gray-900">How Calcutta Works</span>}
+          subtitle="This is a friendly game. Calcutta helps your group track ownership and points — it does not facilitate gambling or real-money winnings."
+          actions={
+            <Link to="/" className="text-blue-600 hover:text-blue-800">
+              ← Back to Home
+            </Link>
+          }
+        />
 
         <div className="space-y-8">
-          <section className="bg-white rounded-lg shadow-lg p-6">
+          <Card className="shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">What is a Calcutta?</h2>
             <p className="text-gray-600">
               Instead of picking 63 games, you invest credits in a small portfolio of teams. You own a percentage of each team, and your score is based on how far those teams advance.
             </p>
-          </section>
+          </Card>
 
-          <section className="bg-white rounded-lg shadow-lg p-6">
+          <Card className="shadow-lg">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">Invest</h2>
@@ -168,9 +171,9 @@ export function RulesPage() {
             <div className="mt-4 text-sm text-gray-600">
               Typical constraints: invest in 3–10 teams, max 50 credits on any single team.
             </div>
-          </section>
+          </Card>
 
-          <section className="bg-white rounded-lg shadow-lg p-6">
+          <Card className="shadow-lg">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">Own</h2>
@@ -277,9 +280,9 @@ export function RulesPage() {
                 {scenarioIndex + 1} / {ownershipScenarios.length}
               </div>
             </div>
-          </section>
+          </Card>
 
-          <section className="bg-white rounded-lg shadow-lg p-6">
+          <Card className="shadow-lg">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">Earn</h2>
@@ -335,9 +338,9 @@ export function RulesPage() {
                 </ResponsiveContainer>
               </div>
             </div>
-          </section>
+          </Card>
 
-          <section className="bg-white rounded-lg shadow-lg p-6">
+          <Card className="shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Scoring System</h2>
             <div className="space-y-4">
               <p className="text-gray-600">
@@ -356,9 +359,9 @@ export function RulesPage() {
                 Your score is the sum of each team’s points multiplied by your ownership percentage.
               </p>
             </div>
-          </section>
+          </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

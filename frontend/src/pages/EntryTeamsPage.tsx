@@ -5,6 +5,7 @@ import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -243,16 +244,28 @@ export function EntryTeamsPage() {
   }, [activeTab, entryId, getPortfolioTeamData, ownershipShowAllTeams, schools, sortBy, teams, tournamentTeams]);
 
   if (!entryId || !calcuttaId) {
-    return <Alert variant="error">Missing required parameters</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">Missing required parameters</Alert>
+      </PageContainer>
+    );
   }
 
   if (entryTeamsQuery.isLoading) {
-    return <LoadingState label="Loading entry..." />;
+    return (
+      <PageContainer>
+        <LoadingState label="Loading entry..." />
+      </PageContainer>
+    );
   }
 
   if (entryTeamsQuery.isError) {
     const message = entryTeamsQuery.error instanceof Error ? entryTeamsQuery.error.message : 'Failed to fetch data';
-    return <Alert variant="error">{message}</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">{message}</Alert>
+      </PageContainer>
+    );
   }
 
   const ownershipLoading = entryTeamsQuery.isFetching;
@@ -317,11 +330,15 @@ export function EntryTeamsPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">← Back to Entries</Link>
-      </div>
-      <h1 className="text-3xl font-bold mb-6">{entryName || 'Entry'}</h1>
+    <PageContainer>
+      <PageHeader
+        title={entryName || 'Entry'}
+        actions={
+          <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">
+            ← Back to Entries
+          </Link>
+        }
+      />
 
       <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -374,7 +391,7 @@ export function EntryTeamsPage() {
       {activeTab === 'statistics' && (
         <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
       )}
-    </div>
+    </PageContainer>
   );
 }
  
