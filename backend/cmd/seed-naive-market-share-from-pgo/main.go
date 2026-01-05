@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -141,11 +142,11 @@ func run() error {
 		return nil
 	}
 
-	inserted, err := writeNaivePredictedMarketShare(ctx, pool, cc.CoreTournamentID, evByTeam)
+	marketShareRunID, inserted, err := writeNaivePredictedMarketShare(ctx, pool, cc.CalcuttaID, cc.CoreTournamentID, kenpomScale, evByTeam)
 	if err != nil {
 		return err
 	}
-	log.Printf("seeded derived.predicted_market_share (tournament-scoped, run_id NULL): inserted=%d tournament_id=%s", inserted, cc.CoreTournamentID)
+	log.Printf("seeded derived.predicted_market_share (calcutta-scoped, run_id set): inserted=%d calcutta_id=%s market_share_run_id=%s", inserted, cc.CalcuttaID, marketShareRunID)
 	return nil
 }
 
@@ -531,28 +532,60 @@ func applyReach(r *roundReach, round models.BracketRound, p float64) {
 	}
 }
 
-func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, tournamentID string, evByTeam map[string]float64) (int, error) {
+func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string, kenpomScale float64, evByTeam map[string]float64) (string, int, error) {
+	if calcuttaID == "" {
+		return "", 0, errors.New("calcuttaID is required")
+	}
 	if tournamentID == "" {
-		return 0, errors.New("tournamentID is required")
+		return "", 0, errors.New("tournamentID is required")
 	}
 	if len(evByTeam) == 0 {
-		return 0, errors.New("evByTeam is empty")
+		return "", 0, errors.New("evByTeam is empty")
 	}
 
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	params := map[string]any{
+		"source":       "naive_market_share_from_pgo",
+		"kenpom_scale": kenpomScale,
+	}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return "", 0, err
+	}
+
+	var algorithmID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.algorithms (kind, name, params_json)
+		VALUES ('market_share', 'naive-ev-baseline', $1::jsonb)
+		ON CONFLICT (kind, name) WHERE deleted_at IS NULL
+		DO UPDATE SET
+			params_json = EXCLUDED.params_json,
+			updated_at = NOW()
+		RETURNING id
+	`, string(paramsJSON)).Scan(&algorithmID); err != nil {
+		return "", 0, err
+	}
+
+	var runID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.market_share_runs (algorithm_id, calcutta_id, params_json)
+		VALUES ($1::uuid, $2::uuid, $3::jsonb)
+		RETURNING id
+	`, algorithmID, calcuttaID, string(paramsJSON)).Scan(&runID); err != nil {
+		return "", 0, err
+	}
+
 	_, err = tx.Exec(ctx, `
 		DELETE FROM derived.predicted_market_share
-		WHERE tournament_id = $1::uuid
-			AND calcutta_id IS NULL
-			AND run_id IS NULL
-	`, tournamentID)
+		WHERE run_id = $1::uuid
+	`, runID)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
 	total := 0.0
@@ -562,7 +595,7 @@ func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, tou
 		}
 	}
 	if total <= 0 {
-		return 0, errors.New("total expected value is non-positive")
+		return "", 0, errors.New("total expected value is non-positive")
 	}
 
 	now := time.Now().UTC()
@@ -581,21 +614,22 @@ func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, tou
 				predicted_share,
 				predicted_points,
 				created_at,
-				updated_at
+				updated_at,
+				run_id
 			)
-			VALUES (NULL, $1::uuid, $2::uuid, $3, $4, $5, $5)
-		`, tournamentID, teamID, share, predictedPoints, now)
+			VALUES ($1::uuid, NULL, $2::uuid, $3, $4, $5, $5, $6::uuid)
+		`, calcuttaID, teamID, share, predictedPoints, now, runID)
 		if err != nil {
-			return 0, err
+			return "", 0, err
 		}
 		inserted++
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
-	return inserted, nil
+	return runID, inserted, nil
 }
 
 func winProb(net1 float64, net2 float64, scale float64) float64 {

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -146,35 +147,6 @@ func loadCalcuttaPoolSizePoints(ctx context.Context, pool *pgxpool.Pool, calcutt
 	return entries * budgetPoints, nil
 }
 
-func loadTournamentPredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (map[string]float64, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT team_id, predicted_share
-		FROM derived.predicted_market_share
-		WHERE tournament_id = $1::uuid
-			AND calcutta_id IS NULL
-			AND run_id IS NULL
-			AND deleted_at IS NULL
-	`, tournamentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	out := make(map[string]float64)
-	for rows.Next() {
-		var teamID string
-		var share float64
-		if err := rows.Scan(&teamID, &share); err != nil {
-			return nil, err
-		}
-		out[teamID] = share
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	return out, nil
-}
-
 func loadPredictedMarketShareForCalcutta(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -204,23 +176,22 @@ func loadPredictedMarketShareForCalcutta(
 		ORDER BY created_at DESC
 		LIMIT 1
 	`, calcuttaID).Scan(&latestRunID)
-	if err == nil {
-		ptr := &latestRunID
-		out, err := loadPredictedMarketShareByRunID(ctx, pool, latestRunID)
-		if err != nil {
-			return ptr, nil, err
-		}
-		if len(out) > 0 {
-			return ptr, out, nil
-		}
-	}
-
-	// Legacy fallback (tournament-scoped, run_id IS NULL).
-	out, err := loadTournamentPredictedMarketShare(ctx, pool, tournamentID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, fmt.Errorf("no market_share_runs found for calcutta_id=%s", calcuttaID)
+		}
 		return nil, nil, err
 	}
-	return nil, out, nil
+
+	ptr := &latestRunID
+	out, err := loadPredictedMarketShareByRunID(ctx, pool, latestRunID)
+	if err != nil {
+		return ptr, nil, err
+	}
+	if len(out) == 0 {
+		return ptr, nil, fmt.Errorf("no predicted_market_share rows for run_id=%s", latestRunID)
+	}
+	return ptr, out, nil
 }
 
 func loadPredictedMarketShareByRunID(ctx context.Context, pool *pgxpool.Pool, runID string) (map[string]float64, error) {

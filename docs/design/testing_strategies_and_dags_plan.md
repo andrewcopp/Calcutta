@@ -103,7 +103,7 @@ The DP evaluator must be aligned to these semantics; otherwise investments/retur
 Status:
 - `GET /api/analytics/calcuttas/{id}/predicted-investment` now accepts `market_share_run_id`.
 - Default behavior is: select the latest `derived.market_share_runs` row for the calcutta and use `derived.predicted_market_share.run_id`.
-- Legacy fallback (temporary): if no run exists, use tournament-scoped `run_id IS NULL` rows.
+- No legacy fallback: if no run exists, the endpoint should fail loudly.
 
 ### Legacy bridging
 During migration:
@@ -221,14 +221,14 @@ Command:
 - `go -C backend run ./cmd/generate-predicted-game-outcomes --season 2025`
 
 ### Seed a naive market baseline from PGO expected value (no Monte Carlo)
-We added a local seeding tool that computes predicted expected value (DP over bracket) and writes a tournament-scoped, legacy-style baseline `derived.predicted_market_share`.
+We added a local seeding tool that computes predicted expected value (DP over bracket) and writes a calcutta-scoped, run-linked baseline `derived.predicted_market_share`.
 
 This is for local UX unblock only; it is NOT the market model.
 
 This is not a runtime fallback: production workflows should fail if market data is missing.
 
 Command:
-- `go run ./backend/cmd/seed-naive-market-share-from-pgo --calcutta-id <uuid>`
+- `go -C backend run ./cmd/seed-naive-market-share-from-pgo --calcutta-id <uuid>`
 - `--dry-run` prints top teams and does not write
 
 ### Seed ridge-predicted market share from DB (no `out/` snapshots)
