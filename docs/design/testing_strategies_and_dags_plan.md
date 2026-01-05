@@ -263,7 +263,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Evaluation workflow
   - [ ] Configure evaluation (exclude/include calcuttas, n_sims, seed)
-  - [ ] Trigger evaluation run and browse results
+  - [x] Trigger evaluation run and browse results
   - [ ] Headline metrics
     - [ ] Mean normalized payout (primary)
     - [ ] P(Top 1)
@@ -282,7 +282,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Frontend: Lab + Sandbox UI
   - [x] Replace nav with Lab / Sandbox and remove legacy pages from navigation
-  - [ ] Coverage: use UI to identify missing runs (algorithms not yet run for a tournament / calcutta)
+  - [x] Coverage: use UI to identify missing runs (algorithms not yet run for a tournament / calcutta)
   - [ ] Lab: Advancements tab
     - [x] Algorithm list (kind = game outcomes)
     - [x] Algorithm detail -> tournaments with runs
@@ -295,6 +295,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
     - [x] List suites
     - [x] Suite detail -> per-calcutta results list + suite metadata
     - [x] Result detail -> show generated entry and its provenance (dedicated detail route: `/sandbox/evaluations/:id`)
+    - [x] Trigger evaluation (create suite-calcutta evaluation request) from UI
 
 ### Naming glossary
 - Algorithm: stable definition (e.g. KenPom v1, Ridge Regression v2)

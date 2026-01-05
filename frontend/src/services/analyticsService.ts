@@ -15,12 +15,32 @@ export const analyticsService = {
     return apiClient.get<T>(`/analytics/algorithms${suffix}`);
   },
 
+  async getGameOutcomesAlgorithmCoverage<T>(): Promise<T> {
+    return apiClient.get<T>('/analytics/coverage/game-outcomes');
+  },
+
+  async getMarketShareAlgorithmCoverage<T>(): Promise<T> {
+    return apiClient.get<T>('/analytics/coverage/market-share');
+  },
+
+  async getGameOutcomesAlgorithmCoverageDetail<T>(algorithmId: string): Promise<T> {
+    return apiClient.get<T>(`/analytics/algorithms/${encodeURIComponent(algorithmId)}/coverage/game-outcomes`);
+  },
+
+  async getMarketShareAlgorithmCoverageDetail<T>(algorithmId: string): Promise<T> {
+    return apiClient.get<T>(`/analytics/algorithms/${encodeURIComponent(algorithmId)}/coverage/market-share`);
+  },
+
   async listGameOutcomeRunsForTournament<T>(tournamentId: string): Promise<T> {
     return apiClient.get<T>(`/analytics/tournaments/${encodeURIComponent(tournamentId)}/game-outcome-runs`);
   },
 
   async listMarketShareRunsForCalcutta<T>(calcuttaId: string): Promise<T> {
     return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/market-share-runs`);
+  },
+
+  async getLatestPredictionRunsForCalcutta<T>(calcuttaId: string): Promise<T> {
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/latest-prediction-runs`);
   },
 
   async getTournamentPredictedAdvancement<T>(params: { tournamentId: string; gameOutcomeRunId?: string }): Promise<T> {

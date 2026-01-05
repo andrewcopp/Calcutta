@@ -57,6 +57,24 @@ export type SuiteCalcuttaEvaluationResult = {
   our_strategy?: SuiteCalcuttaEvaluationOurStrategyPerformance | null;
 };
 
+export type CreateSuiteCalcuttaEvaluationRequest = {
+  calcuttaId: string;
+  suiteId?: string;
+  suiteName?: string;
+  optimizerKey?: string;
+  gameOutcomeRunId: string;
+  marketShareRunId: string;
+  nSims: number;
+  seed: number;
+  startingStateKey?: string;
+  excludedEntryName?: string;
+};
+
+export type CreateSuiteCalcuttaEvaluationResponse = {
+  id: string;
+  status: string;
+};
+
 export const suiteCalcuttaEvaluationsService = {
   async list(params?: {
     suiteId?: string;
@@ -80,5 +98,9 @@ export const suiteCalcuttaEvaluationsService = {
 
   async getResult(id: string): Promise<SuiteCalcuttaEvaluationResult> {
     return apiClient.get<SuiteCalcuttaEvaluationResult>(`/suite-calcutta-evaluations/${encodeURIComponent(id)}/result`);
+  },
+
+  async create(req: CreateSuiteCalcuttaEvaluationRequest): Promise<CreateSuiteCalcuttaEvaluationResponse> {
+    return apiClient.post<CreateSuiteCalcuttaEvaluationResponse>('/suite-calcutta-evaluations', req);
   },
 };

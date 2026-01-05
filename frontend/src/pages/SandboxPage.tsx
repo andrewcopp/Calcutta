@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
@@ -8,17 +8,45 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
-import { suiteCalcuttaEvaluationsService, type SuiteCalcuttaEvaluation } from '../services/suiteCalcuttaEvaluationsService';
+import { analyticsService } from '../services/analyticsService';
+import {
+  suiteCalcuttaEvaluationsService,
+  type CreateSuiteCalcuttaEvaluationRequest,
+  type SuiteCalcuttaEvaluation,
+} from '../services/suiteCalcuttaEvaluationsService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedSuiteId = searchParams.get('suiteId') || '';
+
+  const [createCalcuttaId, setCreateCalcuttaId] = useState<string>('');
+  const [createSuiteId, setCreateSuiteId] = useState<string>(() => selectedSuiteId);
+  const [createSuiteName, setCreateSuiteName] = useState<string>('');
+  const [createOptimizerKey, setCreateOptimizerKey] = useState<string>('');
+  const [createNSims, setCreateNSims] = useState<number>(25000);
+  const [createSeed, setCreateSeed] = useState<number>(42);
+  const [createStartingStateKey, setCreateStartingStateKey] = useState<string>('post_first_four');
+  const [createExcludedEntryName, setCreateExcludedEntryName] = useState<string>('');
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
     queryFn: calcuttaService.getAllCalcuttas,
+  });
+
+  const latestRunsQuery = useQuery<{ tournament_id: string; game_outcome_run_id?: string | null; market_share_run_id?: string | null } | null>({
+    queryKey: ['analytics', 'latest-prediction-runs', createCalcuttaId],
+    queryFn: async () => {
+      if (!createCalcuttaId) return null;
+      return analyticsService.getLatestPredictionRunsForCalcutta<{
+        tournament_id: string;
+        game_outcome_run_id?: string | null;
+        market_share_run_id?: string | null;
+      }>(createCalcuttaId);
+    },
+    enabled: Boolean(createCalcuttaId),
   });
 
   const calcuttaNameById = useMemo(() => {
@@ -52,6 +80,14 @@ export function SandboxPage() {
     return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [allEvaluationsQuery.data?.items]);
 
+  const createMutation = useMutation({
+    mutationFn: async (req: CreateSuiteCalcuttaEvaluationRequest) => suiteCalcuttaEvaluationsService.create(req),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['suite-calcutta-evaluations'] });
+      navigate(`/sandbox/evaluations/${encodeURIComponent(res.id)}${selectedSuiteId ? `?suiteId=${encodeURIComponent(selectedSuiteId)}` : ''}`);
+    },
+  });
+
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
@@ -76,6 +112,159 @@ export function SandboxPage() {
   return (
     <PageContainer>
       <PageHeader title="Sandbox" subtitle="Browse historical TestSuite runs and drill into results." />
+
+      <Card className="mb-6">
+        <h2 className="text-xl font-semibold mb-4">Trigger Evaluation</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Calcutta</div>
+            <Select
+              value={createCalcuttaId}
+              onChange={(e) => setCreateCalcuttaId(e.target.value)}
+              className="w-full"
+            >
+              <option value="">-- Select calcutta --</option>
+              {calcuttas
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </Select>
+            {createCalcuttaId && latestRunsQuery.isLoading ? <div className="text-xs text-gray-500 mt-1">Loading latest runs...</div> : null}
+            {createCalcuttaId && !latestRunsQuery.isLoading && latestRunsQuery.data ? (
+              <div className="text-xs text-gray-600 mt-1">
+                latest: go={latestRunsQuery.data.game_outcome_run_id ? latestRunsQuery.data.game_outcome_run_id.slice(0, 8) : '—'} · ms=
+                {latestRunsQuery.data.market_share_run_id ? latestRunsQuery.data.market_share_run_id.slice(0, 8) : '—'}
+              </div>
+            ) : null}
+          </div>
+
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Suite (optional)</div>
+            <Select
+              value={createSuiteId}
+              onChange={(e) => setCreateSuiteId(e.target.value)}
+              className="w-full"
+            >
+              <option value="">-- Create/resolve by name --</option>
+              {suites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </Select>
+            <div className="text-xs text-gray-600 mt-1">If empty, you must specify suite name + optimizer key.</div>
+          </div>
+
+          {!createSuiteId ? (
+            <>
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Suite name</div>
+                <input
+                  value={createSuiteName}
+                  onChange={(e) => setCreateSuiteName(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  placeholder="e.g. 2026-latest"
+                />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Optimizer key</div>
+                <input
+                  value={createOptimizerKey}
+                  onChange={(e) => setCreateOptimizerKey(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  placeholder="e.g. greedy_v1"
+                />
+              </div>
+            </>
+          ) : null}
+
+          <div>
+            <div className="text-sm text-gray-500 mb-1">nSims</div>
+            <input
+              type="number"
+              value={createNSims}
+              onChange={(e) => setCreateNSims(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              min={1}
+            />
+          </div>
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Seed</div>
+            <input
+              type="number"
+              value={createSeed}
+              onChange={(e) => setCreateSeed(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Starting state</div>
+            <Select
+              value={createStartingStateKey}
+              onChange={(e) => setCreateStartingStateKey(e.target.value)}
+              className="w-full"
+            >
+              <option value="post_first_four">post_first_four</option>
+              <option value="current">current</option>
+            </Select>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Excluded entry name (optional)</div>
+            <input
+              value={createExcludedEntryName}
+              onChange={(e) => setCreateExcludedEntryName(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              placeholder="e.g. Andrew"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            className="px-4 py-2 rounded bg-blue-600 text-white text-sm disabled:bg-gray-300"
+            disabled={
+              createMutation.isPending ||
+              !createCalcuttaId ||
+              !latestRunsQuery.data?.game_outcome_run_id ||
+              !latestRunsQuery.data?.market_share_run_id ||
+              (!createSuiteId && (!createSuiteName.trim() || !createOptimizerKey.trim()))
+            }
+            onClick={() => {
+              const latest = latestRunsQuery.data;
+              if (!latest?.game_outcome_run_id || !latest?.market_share_run_id) return;
+
+              const req: CreateSuiteCalcuttaEvaluationRequest = {
+                calcuttaId: createCalcuttaId,
+                suiteId: createSuiteId || undefined,
+                suiteName: !createSuiteId ? createSuiteName.trim() : undefined,
+                optimizerKey: !createSuiteId ? createOptimizerKey.trim() : undefined,
+                gameOutcomeRunId: latest.game_outcome_run_id,
+                marketShareRunId: latest.market_share_run_id,
+                nSims: createNSims,
+                seed: createSeed,
+                startingStateKey: createStartingStateKey,
+                excludedEntryName: createExcludedEntryName.trim() ? createExcludedEntryName.trim() : undefined,
+              };
+
+              createMutation.mutate(req);
+            }}
+          >
+            Trigger
+          </button>
+
+          {createMutation.isPending ? <div className="text-sm text-gray-600">Creating...</div> : null}
+          {createMutation.isError ? <div className="text-sm text-red-700">{showError(createMutation.error)}</div> : null}
+        </div>
+
+        <div className="mt-3 text-sm text-gray-600">
+          This action submits a new evaluation request (async) to <code className="text-gray-800">/api/suite-calcutta-evaluations</code>.
+        </div>
+      </Card>
 
       <Card className="mb-6">
         <div className="flex items-center gap-4">
