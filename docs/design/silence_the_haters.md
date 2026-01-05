@@ -12,7 +12,7 @@
 
 - [x] **Remove hard exits from non-`main` packages** (e.g. `log.Fatalf` inside constructors) (`6600a17`)
 - [x] **Make `cmd/*` CLIs consistent** (flags, help text, exit codes) (`76ea23e`)
-- [ ] **Centralize config for all Go commands** (one loader; support `.env` + `.env.local`)
+- [x] **Centralize config for all Go commands** (one loader; support `.env` + `.env.local`) (`56940c4`)
 - [x] **Fix `cmd/workers` to run multiple workers concurrently** (no longer blocks on first worker)
 
 ## Simulation / business logic
@@ -25,7 +25,7 @@
 - [x] **Add a `CONTRIBUTING.md`** with “how to run locally” for backend, frontend, data-science
 - [x] **Add a `SECURITY.md`** with reporting guidelines + note on secrets handling
 - [ ] **Ensure generated artifacts are not committed** (`out/`, `.venv/`, build output)
-- [ ] **Add a one-command developer bootstrap** (Makefile targets or scripts)
+- [x] **Add a one-command developer bootstrap** (Makefile targets or scripts) (`56940c4`)
 
 ## Git history secret-scan commands (read-only)
 
