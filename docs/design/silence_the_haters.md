@@ -12,12 +12,12 @@
 
 - [x] **Remove hard exits from non-`main` packages** (e.g. `log.Fatalf` inside constructors) (`6600a17`)
 - [x] **Make `cmd/*` CLIs consistent** (flags, help text, exit codes) (`76ea23e`)
-- [x] **Centralize config for all Go commands** (one loader; support `.env` + `.env.local`) (`56940c4`)
+- [x] **Centralize config for all Go commands** (one loader; support `.env` + `.env.local`) (`6309cdf`)
 - [x] **Fix `cmd/workers` to run multiple workers concurrently** (no longer blocks on first worker)
 
 ## Simulation / business logic
 
-- [ ] **Eliminate TODOs in business logic** (e.g. First Four / play-in handling)
+- [x] **Eliminate TODOs in business logic** (e.g. First Four / play-in handling) (`4fe745e`)
 - [ ] **Add/expand unit tests for key logic paths** (deterministic, one assertion per test)
 
 ## OSS polish
