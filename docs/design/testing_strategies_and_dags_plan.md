@@ -283,11 +283,11 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [ ] Coverage: use UI to identify missing runs (algorithms not yet run for a tournament / calcutta)
   - [ ] Lab: Advancements tab
     - [x] Algorithm list (kind = game outcomes)
-    - [ ] Algorithm detail -> tournaments with runs
+    - [x] Algorithm detail -> tournaments with runs
     - [x] Tournament detail -> per-team advancement probabilities (sortable; default by championship probability)
   - [ ] Lab: Investments tab
     - [x] Algorithm list (kind = market share)
-    - [ ] Algorithm detail -> calcuttas with runs
+    - [x] Algorithm detail -> calcuttas with runs
     - [x] Calcutta detail -> per-team market share with rational + predicted + delta_percent
   - [ ] Sandbox: Suites browser
     - [x] List suites
