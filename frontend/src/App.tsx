@@ -28,7 +28,6 @@ import { LabPage } from './pages/LabPage';
 import { SandboxPage } from './pages/SandboxPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
-import './App.css';
 
 const RunsRedirect: React.FC = () => {
   const year = new Date().getFullYear();
