@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -129,7 +130,13 @@ export const HallOfFamePage: React.FC = () => {
           {bestTeamsQuery.isLoading && <LoadingState label="Loading best teams..." layout="inline" />}
 
           {bestTeamsQuery.isError && (
-            <Alert variant="error">Error: {bestTeamsQuery.error instanceof Error ? bestTeamsQuery.error.message : 'An error occurred'}</Alert>
+            <Alert variant="error" className="mt-3">
+              <div className="font-semibold mb-1">Failed to load best teams</div>
+              <div className="mb-3">{bestTeamsQuery.error instanceof Error ? bestTeamsQuery.error.message : 'An error occurred'}</div>
+              <Button size="sm" onClick={() => bestTeamsQuery.refetch()}>
+                Retry
+              </Button>
+            </Alert>
           )}
 
           {bestTeamsQuery.data && (
@@ -183,7 +190,13 @@ export const HallOfFamePage: React.FC = () => {
           {bestInvestmentsQuery.isLoading && <LoadingState label="Loading best investments..." layout="inline" />}
 
           {bestInvestmentsQuery.isError && (
-            <Alert variant="error">Error: {bestInvestmentsQuery.error instanceof Error ? bestInvestmentsQuery.error.message : 'An error occurred'}</Alert>
+            <Alert variant="error" className="mt-3">
+              <div className="font-semibold mb-1">Failed to load best investments</div>
+              <div className="mb-3">{bestInvestmentsQuery.error instanceof Error ? bestInvestmentsQuery.error.message : 'An error occurred'}</div>
+              <Button size="sm" onClick={() => bestInvestmentsQuery.refetch()}>
+                Retry
+              </Button>
+            </Alert>
           )}
 
           {bestInvestmentsQuery.data && (
@@ -243,7 +256,13 @@ export const HallOfFamePage: React.FC = () => {
           {bestEntriesQuery.isLoading && <LoadingState label="Loading best entries..." layout="inline" />}
 
           {bestEntriesQuery.isError && (
-            <Alert variant="error">Error: {bestEntriesQuery.error instanceof Error ? bestEntriesQuery.error.message : 'An error occurred'}</Alert>
+            <Alert variant="error" className="mt-3">
+              <div className="font-semibold mb-1">Failed to load best entries</div>
+              <div className="mb-3">{bestEntriesQuery.error instanceof Error ? bestEntriesQuery.error.message : 'An error occurred'}</div>
+              <Button size="sm" onClick={() => bestEntriesQuery.refetch()}>
+                Retry
+              </Button>
+            </Alert>
           )}
 
           {bestEntriesQuery.data && (
@@ -308,7 +327,13 @@ export const HallOfFamePage: React.FC = () => {
           {bestCareersQuery.isLoading && <LoadingState label="Loading best careers..." layout="inline" />}
 
           {bestCareersQuery.isError && (
-            <Alert variant="error">Error: {bestCareersQuery.error instanceof Error ? bestCareersQuery.error.message : 'An error occurred'}</Alert>
+            <Alert variant="error" className="mt-3">
+              <div className="font-semibold mb-1">Failed to load best careers</div>
+              <div className="mb-3">{bestCareersQuery.error instanceof Error ? bestCareersQuery.error.message : 'An error occurred'}</div>
+              <Button size="sm" onClick={() => bestCareersQuery.refetch()}>
+                Retry
+              </Button>
+            </Alert>
           )}
 
           {bestCareersQuery.data && (

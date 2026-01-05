@@ -9,9 +9,9 @@ This document tracks follow-up UI/design improvements after the `PageContainer`/
 - [ ] Audit and remove remaining ad-hoc layout wrappers now that `PageContainer` is the default
 
 ## Tabs UX + Accessibility (`TabsNav`)
-- [ ] Add `role="tablist"` / `role="tab"` semantics and `aria-selected`/roving `tabIndex`
-- [ ] Add keyboard navigation (ArrowLeft/ArrowRight/Home/End) for tabs
-- [ ] Add `focus-visible` styles for tab buttons
+- [x] Add `role="tablist"` / `role="tab"` semantics and `aria-selected`/roving `tabIndex`
+- [x] Add keyboard navigation (ArrowLeft/ArrowRight/Home/End) for tabs
+- [x] Add `focus-visible` styles for tab buttons
 - [ ] (Optional) Add sticky tabs support for long pages (without breaking existing layouts)
 
 ## Tables

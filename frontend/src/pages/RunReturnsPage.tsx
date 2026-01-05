@@ -3,7 +3,10 @@ import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
 import { RunViewerHeader } from '../components/RunViewerHeader';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
@@ -84,12 +87,35 @@ export function RunReturnsPage() {
       <RunViewerHeader year={parsedYear} runId={decodedRunId} runName={ourEntryQuery.data?.run.name} activeTab="returns" />
 
       <Card>
-        {!calcuttaId && ourEntryQuery.isSuccess && <div className="text-gray-600">No calcutta_id found for this run.</div>}
-        {ourEntryQuery.isLoading && <div className="text-gray-600">Loading run context…</div>}
-        {ourEntryQuery.isError && <div className="text-red-600">Failed to load run context.</div>}
+        {!calcuttaId && ourEntryQuery.isSuccess ? (
+          <Alert variant="info" className="mb-4">
+            No calcutta_id found for this run.
+          </Alert>
+        ) : null}
 
-        {returnsQuery.isLoading && calcuttaId && <div className="text-gray-600">Loading returns…</div>}
-        {returnsQuery.isError && calcuttaId && <div className="text-red-600">Failed to load returns.</div>}
+        {ourEntryQuery.isLoading ? <LoadingState label="Loading run context..." layout="inline" /> : null}
+
+        {ourEntryQuery.isError ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to load run context</div>
+            <div className="mb-3">{ourEntryQuery.error instanceof Error ? ourEntryQuery.error.message : 'An error occurred'}</div>
+            <Button size="sm" onClick={() => ourEntryQuery.refetch()}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
+
+        {returnsQuery.isLoading && calcuttaId ? <LoadingState label="Loading returns..." layout="inline" /> : null}
+
+        {returnsQuery.isError && calcuttaId ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to load returns</div>
+            <div className="mb-3">{returnsQuery.error instanceof Error ? returnsQuery.error.message : 'An error occurred'}</div>
+            <Button size="sm" onClick={() => returnsQuery.refetch()}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
 
         {returnsQuery.data && (
           <div className="overflow-x-auto">
@@ -168,6 +194,12 @@ export function RunReturnsPage() {
             </table>
           </div>
         )}
+
+        {!returnsQuery.isLoading && !returnsQuery.isError && calcuttaId && !returnsQuery.data ? (
+          <Alert variant="info" className="mt-3">
+            No returns data available.
+          </Alert>
+        ) : null}
       </Card>
     </PageContainer>
   );
