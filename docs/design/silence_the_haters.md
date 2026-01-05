@@ -24,7 +24,7 @@
 
 - [x] **Add a `CONTRIBUTING.md`** with “how to run locally” for backend, frontend, data-science
 - [x] **Add a `SECURITY.md`** with reporting guidelines + note on secrets handling
-- [ ] **Ensure generated artifacts are not committed** (`out/`, `.venv/`, build output)
+- [x] **Ensure generated artifacts are not committed** (`out/`, `.venv/`, build output) (`d786d1d`)
 - [x] **Add a one-command developer bootstrap** (Makefile targets or scripts) (`56940c4`)
 
 ## Git history secret-scan commands (read-only)
