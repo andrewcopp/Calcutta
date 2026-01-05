@@ -7,6 +7,12 @@ export type SuiteCalcuttaEvaluation = {
   optimizer_key: string;
   n_sims: number;
   seed: number;
+  our_rank?: number | null;
+  our_mean_normalized_payout?: number | null;
+  our_median_normalized_payout?: number | null;
+  our_p_top1?: number | null;
+  our_p_in_money?: number | null;
+  total_simulations?: number | null;
   calcutta_id: string;
   game_outcome_run_id?: string | null;
   market_share_run_id?: string | null;

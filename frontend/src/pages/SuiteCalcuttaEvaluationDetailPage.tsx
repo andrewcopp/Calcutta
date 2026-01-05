@@ -55,6 +55,11 @@ export function SuiteCalcuttaEvaluationDetailPage() {
     return v.toFixed(3);
   };
 
+  const formatFloat = (v: number | null | undefined, digits: number) => {
+    if (v == null || Number.isNaN(v)) return '—';
+    return v.toFixed(digits);
+  };
+
   const renderPortfolioTable = (bids: SuiteCalcuttaEvaluationPortfolioBid[]) => {
     if (bids.length === 0) {
       return <div className="text-gray-700">No portfolio bids found.</div>;
@@ -183,6 +188,19 @@ export function SuiteCalcuttaEvaluationDetailPage() {
 
           <Card>
             <h2 className="text-xl font-semibold mb-4">Result</h2>
+
+            {detailQuery.data.status === 'succeeded' && detailQuery.data.our_mean_normalized_payout != null ? (
+              <div className="mb-4 text-sm">
+                <div className="text-gray-500">Headline (persisted)</div>
+                <div className="text-gray-900">
+                  rank={detailQuery.data.our_rank ?? '—'} · mean={formatFloat(detailQuery.data.our_mean_normalized_payout, 4)} · pTop1=
+                  {formatFloat(detailQuery.data.our_p_top1, 4)} · pInMoney={formatFloat(detailQuery.data.our_p_in_money, 4)}
+                  {detailQuery.data.total_simulations != null ? (
+                    <span className="text-gray-500"> · nSims={detailQuery.data.total_simulations}</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             {detailQuery.data.status !== 'succeeded' ? (
               <div className="text-gray-700">

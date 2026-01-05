@@ -68,6 +68,11 @@ export function SandboxPage() {
     return d.toLocaleString();
   };
 
+  const formatFloat = (v: number | null | undefined, digits: number) => {
+    if (v == null || Number.isNaN(v)) return '—';
+    return v.toFixed(digits);
+  };
+
   return (
     <PageContainer>
       <PageHeader title="Sandbox" subtitle="Browse historical TestSuite runs and drill into results." />
@@ -126,6 +131,8 @@ export function SandboxPage() {
                     selectedSuiteId ? `?suiteId=${encodeURIComponent(selectedSuiteId)}` : ''
                   }`;
 
+                  const showHeadline = it.status === 'succeeded' && it.our_mean_normalized_payout != null;
+
                   return (
                     <tr
                       key={it.id}
@@ -137,6 +144,12 @@ export function SandboxPage() {
                         <div className="text-xs text-gray-600">
                           {it.optimizer_key} · n={it.n_sims} · seed={it.seed}
                         </div>
+                        {showHeadline ? (
+                          <div className="text-xs text-gray-600 mt-1">
+                            our: rank={it.our_rank ?? '—'} · mean={formatFloat(it.our_mean_normalized_payout, 4)} · pTop1=
+                            {formatFloat(it.our_p_top1, 4)} · pInMoney={formatFloat(it.our_p_in_money, 4)}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-700">{calcuttaNameById.get(it.calcutta_id) || it.calcutta_id}</td>
                       <td className="px-3 py-2 text-sm text-gray-700">{it.status}</td>
