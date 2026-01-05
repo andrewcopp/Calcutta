@@ -6,6 +6,7 @@ Write ML predictions, simulations, and enriched data using UUIDs.
 import logging
 import pandas as pd
 import psycopg2.extras
+import datetime
 from typing import Dict
 from moneyball.db.connection import get_db_connection
 
@@ -269,11 +270,14 @@ def write_predicted_market_share(
                 cur.execute("""
                     DELETE FROM derived.predicted_market_share
                     WHERE calcutta_id = %s
+                      AND run_id IS NULL
                 """, (calcutta_id,))
             else:
                 cur.execute("""
                     DELETE FROM derived.predicted_market_share
                     WHERE tournament_id = %s
+                      AND calcutta_id IS NULL
+                      AND run_id IS NULL
                 """, (tournament_id,))
 
             # Map team_key to team_id
@@ -286,6 +290,7 @@ def write_predicted_market_share(
                 raise ValueError(f"Unmapped teams: {list(unmapped)}")
 
             # Prepare values
+            now = datetime.datetime.now(datetime.timezone.utc)
             values = [
                 (
                     calcutta_id,
@@ -293,6 +298,8 @@ def write_predicted_market_share(
                     str(row['team_id']),
                     float(row['predicted_auction_share_of_pool']),
                     float(row['predicted_auction_share_of_pool']) * 100.0,
+                    now,
+                    now,
                 )
                 for _, row in df.iterrows()
             ]
@@ -301,8 +308,8 @@ def write_predicted_market_share(
             psycopg2.extras.execute_batch(cur, """
                 INSERT INTO derived.predicted_market_share
                 (calcutta_id, tournament_id, team_id, predicted_share,
-                 predicted_points)
-                VALUES (%s, %s, %s, %s, %s)
+                 predicted_points, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, values)
 
             conn.commit()
