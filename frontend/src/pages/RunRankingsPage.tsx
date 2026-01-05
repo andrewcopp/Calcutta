@@ -3,6 +3,10 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
 import { RunViewerHeader } from '../components/RunViewerHeader';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer } from '../components/ui/Page';
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
@@ -30,13 +34,13 @@ export function RunRankingsPage() {
   const encodedRunId = useMemo(() => encodeURIComponent(decodedRunId), [decodedRunId]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageContainer>
       <RunViewerHeader year={parsedYear} runId={decodedRunId} runName={ourEntryQuery.data?.run.name} activeTab="rankings" />
 
       <div className="mb-8">
         {ourEntryQuery.data && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-lg shadow p-4">
+            <Card className="p-4">
               <div className="text-sm text-gray-500">Run Summary</div>
               <div className="mt-1 text-sm text-gray-700">
                 <div>Strategy: {ourEntryQuery.data.run.strategy}</div>
@@ -44,9 +48,9 @@ export function RunRankingsPage() {
                 <div>Budget: {ourEntryQuery.data.run.budget_points} points</div>
                 <div>Created: {new Date(ourEntryQuery.data.run.created_at).toLocaleString()}</div>
               </div>
-            </div>
+            </Card>
 
-            <div className="bg-amber-50 rounded-lg shadow p-4">
+            <Card className="bg-amber-50 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-amber-700">Our Strategy</div>
@@ -75,14 +79,14 @@ export function RunRankingsPage() {
                   <div className="font-medium text-gray-900">{formatPercent(ourEntryQuery.data.summary.p_in_money)}</div>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        {rankingsQuery.isLoading && <div className="text-gray-600">Loading…</div>}
-        {rankingsQuery.isError && <div className="text-red-600">Failed to load rankings.</div>}
+      <Card>
+        {rankingsQuery.isLoading && <LoadingState label="Loading rankings..." layout="inline" />}
+        {rankingsQuery.isError && <Alert variant="error">Failed to load rankings.</Alert>}
 
         {rankingsQuery.data && (
           <div className="overflow-x-auto">
@@ -119,7 +123,7 @@ export function RunRankingsPage() {
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }

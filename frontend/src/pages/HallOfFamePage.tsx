@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import {
   BestTeam,
   BestTeamsResponse,
@@ -53,14 +57,16 @@ export const HallOfFamePage: React.FC = () => {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link to="/admin" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-          Back to Admin Console
-        </Link>
-        <h1 className="text-3xl font-bold">Hall of Fame</h1>
-        <p className="text-gray-600 mt-2">Leaderboards across all calcuttas (normalized for year-to-year comparisons).</p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Hall of Fame"
+        subtitle="Leaderboards across all calcuttas (normalized for year-to-year comparisons)."
+        actions={
+          <Link to="/admin" className="text-blue-600 hover:text-blue-800">
+            Back to Admin Console
+          </Link>
+        }
+      />
 
       <div className="mb-6">
         <div className="border-b border-gray-200">
@@ -113,19 +119,17 @@ export const HallOfFamePage: React.FC = () => {
       </div>
 
       {activeTab === 'bestTeams' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <Card>
           <h2 className="text-xl font-semibold mb-2">Best Teams</h2>
           <p className="text-sm text-gray-600 mb-4">
             Teams ranked by normalized ROI where 1.0 = average performance within that Calcutta (levels the playing field across seeds). Yes, we call it
             "Adjusted for Inflation".
           </p>
 
-          {bestTeamsQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best teams...</div>}
+          {bestTeamsQuery.isLoading && <LoadingState label="Loading best teams..." layout="inline" />}
 
           {bestTeamsQuery.isError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              Error: {bestTeamsQuery.error instanceof Error ? bestTeamsQuery.error.message : 'An error occurred'}
-            </div>
+            <Alert variant="error">Error: {bestTeamsQuery.error instanceof Error ? bestTeamsQuery.error.message : 'An error occurred'}</Alert>
           )}
 
           {bestTeamsQuery.data && (
@@ -166,22 +170,20 @@ export const HallOfFamePage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {activeTab === 'bestInvestments' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <Card>
           <h2 className="text-xl font-semibold mb-2">Best Investments</h2>
           <p className="text-sm text-gray-600 mb-4">
             Individual picks ranked by normalized returns: Raw Returns / (Total Returns / Total Investment), where Total Investment = $100 × participants. Yes, we call it "Adjusted for Inflation".
           </p>
 
-          {bestInvestmentsQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best investments...</div>}
+          {bestInvestmentsQuery.isLoading && <LoadingState label="Loading best investments..." layout="inline" />}
 
           {bestInvestmentsQuery.isError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              Error: {bestInvestmentsQuery.error instanceof Error ? bestInvestmentsQuery.error.message : 'An error occurred'}
-            </div>
+            <Alert variant="error">Error: {bestInvestmentsQuery.error instanceof Error ? bestInvestmentsQuery.error.message : 'An error occurred'}</Alert>
           )}
 
           {bestInvestmentsQuery.data && (
@@ -228,22 +230,20 @@ export const HallOfFamePage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {activeTab === 'bestEntries' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <Card>
           <h2 className="text-xl font-semibold mb-2">Best Entries</h2>
           <p className="text-sm text-gray-600 mb-4">
             Entries ranked by normalized returns: Entry Total Returns / (Calcutta Total Returns / Calcutta Total Investment), where Calcutta Total Investment = $100 × participants.
           </p>
 
-          {bestEntriesQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best entries...</div>}
+          {bestEntriesQuery.isLoading && <LoadingState label="Loading best entries..." layout="inline" />}
 
           {bestEntriesQuery.isError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              Error: {bestEntriesQuery.error instanceof Error ? bestEntriesQuery.error.message : 'An error occurred'}
-            </div>
+            <Alert variant="error">Error: {bestEntriesQuery.error instanceof Error ? bestEntriesQuery.error.message : 'An error occurred'}</Alert>
           )}
 
           {bestEntriesQuery.data && (
@@ -282,11 +282,11 @@ export const HallOfFamePage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {activeTab === 'bestCareers' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <Card>
           <h2 className="text-xl font-semibold mb-2">Best Careers</h2>
           <p className="text-sm text-gray-600 mb-4">
             Careers ranked by average winnings per year (not shown). Tie breaks: wins, podiums, payouts, then top 10s.
@@ -305,12 +305,10 @@ export const HallOfFamePage: React.FC = () => {
             </label>
           </div>
 
-          {bestCareersQuery.isLoading && <div className="text-center text-sm text-gray-600">Loading best careers...</div>}
+          {bestCareersQuery.isLoading && <LoadingState label="Loading best careers..." layout="inline" />}
 
           {bestCareersQuery.isError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              Error: {bestCareersQuery.error instanceof Error ? bestCareersQuery.error.message : 'An error occurred'}
-            </div>
+            <Alert variant="error">Error: {bestCareersQuery.error instanceof Error ? bestCareersQuery.error.message : 'An error occurred'}</Alert>
           )}
 
           {bestCareersQuery.data && (
@@ -350,9 +348,9 @@ export const HallOfFamePage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

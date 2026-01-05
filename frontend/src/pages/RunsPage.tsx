@@ -2,6 +2,10 @@ import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 export function RunsPage() {
   const { year } = useParams<{ year: string }>();
@@ -19,13 +23,10 @@ export function RunsPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Runs</h1>
-        <p className="text-gray-600">Read-only viewer for recent strategy runs.</p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Runs" subtitle="Read-only viewer for recent strategy runs." />
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">{parsedYear}</h2>
           <div className="flex gap-2">
@@ -44,10 +45,8 @@ export function RunsPage() {
           </div>
         </div>
 
-        {runsQuery.isLoading && <div className="text-gray-600">Loading…</div>}
-        {runsQuery.isError && (
-          <div className="text-red-600">Failed to load runs.</div>
-        )}
+        {runsQuery.isLoading && <LoadingState label="Loading runs..." layout="inline" />}
+        {runsQuery.isError && <Alert variant="error">Failed to load runs.</Alert>}
 
         {runsQuery.data && (
           <div className="overflow-x-auto">
@@ -82,7 +81,7 @@ export function RunsPage() {
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }

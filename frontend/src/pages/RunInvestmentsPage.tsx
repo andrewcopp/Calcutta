@@ -3,6 +3,11 @@ import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
 import { RunViewerHeader } from '../components/RunViewerHeader';
+import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 export function RunInvestmentsPage() {
   const { year, runId } = useParams<{ year: string; runId: string }>();
@@ -78,16 +83,16 @@ export function RunInvestmentsPage() {
   }, [investmentsQuery.data, sortDir, sortKey]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageContainer>
       <RunViewerHeader year={parsedYear} runId={decodedRunId} runName={ourEntryQuery.data?.run.name} activeTab="investments" />
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card>
         {!calcuttaId && ourEntryQuery.isSuccess && <div className="text-gray-600">No calcutta_id found for this run.</div>}
-        {ourEntryQuery.isLoading && <div className="text-gray-600">Loading run context…</div>}
-        {ourEntryQuery.isError && <div className="text-red-600">Failed to load run context.</div>}
+        {ourEntryQuery.isLoading && <LoadingState label="Loading run context..." layout="inline" />}
+        {ourEntryQuery.isError && <Alert variant="error">Failed to load run context.</Alert>}
 
-        {investmentsQuery.isLoading && calcuttaId && <div className="text-gray-600">Loading investments…</div>}
-        {investmentsQuery.isError && calcuttaId && <div className="text-red-600">Failed to load investments.</div>}
+        {investmentsQuery.isLoading && calcuttaId && <LoadingState label="Loading investments..." layout="inline" />}
+        {investmentsQuery.isError && calcuttaId && <Alert variant="error">Failed to load investments.</Alert>}
 
         {investmentsQuery.data && (
           <div className="overflow-x-auto">
@@ -100,8 +105,8 @@ export function RunInvestmentsPage() {
               <div className="flex flex-col md:flex-row gap-2">
                 <label className="text-sm text-gray-700">
                   Strategy run
-                  <select
-                    className="ml-2 border rounded px-2 py-1 text-sm"
+                  <Select
+                    className="ml-2"
                     value={selectedStrategyGenerationRunId ?? ''}
                     onChange={(e) => setSelectedStrategyGenerationRunId(e.target.value || null)}
                   >
@@ -111,13 +116,13 @@ export function RunInvestmentsPage() {
                         {r.run_key}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
 
                 <label className="text-sm text-gray-700">
                   Sort
-                  <select
-                    className="ml-2 border rounded px-2 py-1 text-sm"
+                  <Select
+                    className="ml-2"
                     value={sortKey}
                     onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
                   >
@@ -126,15 +131,15 @@ export function RunInvestmentsPage() {
                     <option value="rational">Rational</option>
                     <option value="seed">Seed</option>
                     <option value="school_name">Team</option>
-                  </select>
+                  </Select>
                 </label>
 
                 <label className="text-sm text-gray-700">
                   Dir
-                  <select className="ml-2 border rounded px-2 py-1 text-sm" value={sortDir} onChange={(e) => setSortDir(e.target.value as typeof sortDir)}>
+                  <Select className="ml-2" value={sortDir} onChange={(e) => setSortDir(e.target.value as typeof sortDir)}>
                     <option value="desc">Desc</option>
                     <option value="asc">Asc</option>
-                  </select>
+                  </Select>
                 </label>
               </div>
             </div>
@@ -167,7 +172,7 @@ export function RunInvestmentsPage() {
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }
