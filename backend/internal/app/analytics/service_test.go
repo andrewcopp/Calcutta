@@ -63,8 +63,8 @@ func (s *stubAnalyticsRepo) GetCalcuttaPredictedInvestment(ctx context.Context, 
 	return nil, nil, nil, nil
 }
 
-func (s *stubAnalyticsRepo) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {
-	return nil, nil, nil
+func (s *stubAnalyticsRepo) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []ports.CalcuttaPredictedReturnsData, error) {
+	return nil, nil, nil, nil
 }
 
 func (s *stubAnalyticsRepo) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaSimulatedEntryData, error) {

@@ -170,8 +170,8 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
     - [ ] Write a `derived.market_share_runs` row and link artifacts via `derived.predicted_market_share.run_id`
     - [x] Ensure it can write both calcutta-scoped and (legacy) tournament-scoped rows as needed
   - [ ] Go readers/services:
-    - [ ] Accept explicit run_id selection
-    - [ ] Game outcomes: default to latest for the tournament
+    - [x] Accept explicit run_id selection
+    - [x] Game outcomes: default to latest for the tournament
     - [ ] Market share: default to latest for the calcutta if it exists; otherwise error (no naive fallback)
 
 - [ ] Discovery endpoints
@@ -207,12 +207,18 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 - StrategyGenerationRun: persisted optimized entry (existing)
 
 ### In-Game Predictions DAG
-- [ ] Schema v1 for `predicted_game_outcomes`
-  - [ ] run metadata table
-  - [ ] artifact table linked to run
+- [x] Schema v1 for `predicted_game_outcomes`
+  - [x] run metadata table (`derived.game_outcome_runs`)
+  - [x] artifact table linked to run (`derived.predicted_game_outcomes.run_id`)
 - [ ] Ensure tournament simulation selects a specific game-outcomes run
 
 ## Tooling notes (local)
+
+### Generate predicted game outcomes (run-scoped)
+This generator writes matchup probabilities to `derived.predicted_game_outcomes` with `run_id` populated and creates a `derived.game_outcome_runs` row.
+
+Command:
+- `go -C backend run ./cmd/generate-predicted-game-outcomes --season 2025`
 
 ### Seed a naive market baseline from PGO expected value (no Monte Carlo)
 We added a local seeding tool that computes predicted expected value (DP over bracket) and writes a tournament-scoped, legacy-style baseline `derived.predicted_market_share`.

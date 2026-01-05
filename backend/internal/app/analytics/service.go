@@ -257,11 +257,11 @@ func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID
 	return selectedID, marketShareSelectedID, results, nil
 }
 
-func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaPredictedReturnsResult, error) {
-	selectedID, data, err := s.repo.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID)
+func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedReturnsResult, error) {
+	selectedID, gameOutcomeSelectedID, data, err := s.repo.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID, gameOutcomeRunID)
 	if err != nil {
 		log.Printf("Error getting predicted returns: %v", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	results := make([]CalcuttaPredictedReturnsResult, 0, len(data))
@@ -282,7 +282,7 @@ func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID st
 		})
 	}
 
-	return selectedID, results, nil
+	return selectedID, gameOutcomeSelectedID, results, nil
 }
 
 func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryResult, error) {

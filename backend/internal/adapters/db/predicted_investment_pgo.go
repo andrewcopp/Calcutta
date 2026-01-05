@@ -33,7 +33,7 @@ func computeCalcuttaPredictedInvestmentFromPGO(ctx context.Context, pool *pgxpoo
 		return selectedMarketShareRunID, nil, fmt.Errorf("no predicted_market_share found for calcutta_id=%s", calcuttaID)
 	}
 
-	returns, err := computeCalcuttaPredictedReturnsFromPGO(ctx, pool, calcuttaID)
+	_, returns, err := computeCalcuttaPredictedReturnsFromPGO(ctx, pool, calcuttaID, nil)
 	if err != nil {
 		return selectedMarketShareRunID, nil, err
 	}

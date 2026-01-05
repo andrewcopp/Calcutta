@@ -149,17 +149,18 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context
 	return runIDPtr, marketShareSelectedID, out, nil
 }
 
-func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {
+func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []ports.CalcuttaPredictedReturnsData, error) {
 	runIDPtr, err := r.resolveStrategyGenerationRunID(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
-		return nil, nil, err
-	}
-	out, err := computeCalcuttaPredictedReturnsFromPGO(ctx, r.pool, calcuttaID)
-	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return runIDPtr, out, nil
+	gameOutcomeSelectedID, out, err := computeCalcuttaPredictedReturnsFromPGO(ctx, r.pool, calcuttaID, gameOutcomeRunID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return runIDPtr, gameOutcomeSelectedID, out, nil
 }
 
 func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaSimulatedEntryData, error) {

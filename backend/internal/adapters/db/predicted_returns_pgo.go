@@ -10,6 +10,7 @@ import (
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -42,48 +43,48 @@ type teamMeta struct {
 	Region     string
 }
 
-func computeCalcuttaPredictedReturnsFromPGO(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]ports.CalcuttaPredictedReturnsData, error) {
+func computeCalcuttaPredictedReturnsFromPGO(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, gameOutcomeRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {
 	if calcuttaID == "" {
-		return nil, errors.New("calcuttaID is required")
+		return nil, nil, errors.New("calcuttaID is required")
 	}
 
 	kenpomScale := 10.0
 
 	coreTournamentID, finalFour, err := loadTournamentForCalcutta(ctx, pool, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	scoringRules, err := loadScoringRules(ctx, pool, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(scoringRules) == 0 {
-		return nil, errors.New("no calcutta scoring rules found")
+		return nil, nil, errors.New("no calcutta scoring rules found")
 	}
 
 	teamsMeta, teams, netByTeamID, err := loadTeams(ctx, pool, coreTournamentID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	builder := appbracket.NewBracketBuilder()
 	br, err := builder.BuildBracket(coreTournamentID, teams, finalFour)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	probs, nPred, err := loadPredictedGameOutcomes(ctx, pool, coreTournamentID)
+	selectedGameOutcomeRunID, probs, nPred, err := loadPredictedGameOutcomesForTournament(ctx, pool, coreTournamentID, gameOutcomeRunID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if nPred == 0 {
-		return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
+		return selectedGameOutcomeRunID, nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
 	}
 
 	evByTeam, reachByTeam, err := computeExpectedValueFromPGO(br, probs, scoringRules, netByTeamID, kenpomScale)
 	if err != nil {
-		return nil, err
+		return selectedGameOutcomeRunID, nil, err
 	}
 
 	out := make([]ports.CalcuttaPredictedReturnsData, 0, len(teamsMeta))
@@ -118,7 +119,7 @@ func computeCalcuttaPredictedReturnsFromPGO(ctx context.Context, pool *pgxpool.P
 		return out[i].Seed < out[j].Seed
 	})
 
-	return out, nil
+	return selectedGameOutcomeRunID, out, nil
 }
 
 func loadTournamentForCalcutta(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (string, *models.FinalFourConfig, error) {
@@ -246,11 +247,82 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) ([]
 	return metas, teams, netByID, nil
 }
 
-func loadPredictedGameOutcomes(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (map[matchupKey]float64, int, error) {
+func loadPredictedGameOutcomesForTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID string, gameOutcomeRunID *string) (*string, map[matchupKey]float64, int, error) {
+	if gameOutcomeRunID != nil {
+		out, n, err := loadPredictedGameOutcomesByRunID(ctx, pool, *gameOutcomeRunID)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		if n == 0 {
+			return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *gameOutcomeRunID)
+		}
+		return gameOutcomeRunID, out, n, nil
+	}
+
+	var latestRunID string
+	if err := pool.QueryRow(ctx, `
+		SELECT id
+		FROM derived.game_outcome_runs
+		WHERE tournament_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, tournamentID).Scan(&latestRunID); err == nil {
+		latestRunIDPtr := &latestRunID
+		out, n, err := loadPredictedGameOutcomesByRunID(ctx, pool, latestRunID)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		if n > 0 {
+			return latestRunIDPtr, out, n, nil
+		}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, 0, err
+	}
+
+	out, n, err := loadTournamentPredictedGameOutcomes(ctx, pool, tournamentID)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	return nil, out, n, nil
+}
+
+func loadPredictedGameOutcomesByRunID(ctx context.Context, pool *pgxpool.Pool, runID string) (map[matchupKey]float64, int, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT game_id, team1_id, team2_id, p_team1_wins
+		FROM derived.predicted_game_outcomes
+		WHERE run_id = $1::uuid
+			AND deleted_at IS NULL
+	`, runID)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	out := make(map[matchupKey]float64)
+	n := 0
+	for rows.Next() {
+		var gameID, t1, t2 string
+		var p float64
+		if err := rows.Scan(&gameID, &t1, &t2, &p); err != nil {
+			return nil, 0, err
+		}
+		n++
+		out[matchupKey{GameID: gameID, Team1ID: t1, Team2ID: t2}] = p
+		out[matchupKey{GameID: gameID, Team1ID: t2, Team2ID: t1}] = 1.0 - p
+	}
+	if rows.Err() != nil {
+		return nil, 0, rows.Err()
+	}
+	return out, n, nil
+}
+
+func loadTournamentPredictedGameOutcomes(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (map[matchupKey]float64, int, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT game_id, team1_id, team2_id, p_team1_wins
 		FROM derived.predicted_game_outcomes
 		WHERE tournament_id = $1::uuid
+			AND run_id IS NULL
 			AND deleted_at IS NULL
 	`, tournamentID)
 	if err != nil {

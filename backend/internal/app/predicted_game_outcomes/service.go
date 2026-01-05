@@ -2,6 +2,7 @@ package predicted_game_outcomes
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -209,7 +210,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 		return a.team2ID < b.team2ID
 	})
 
-	if err := s.writePredictedGameOutcomes(ctx, coreTournamentID, rows); err != nil {
+	if err := s.writePredictedGameOutcomes(ctx, coreTournamentID, p, rows); err != nil {
 		return "", 0, err
 	}
 
@@ -354,6 +355,7 @@ func (s *Service) loadFinalFourConfig(ctx context.Context, coreTournamentID stri
 func (s *Service) writePredictedGameOutcomes(
 	ctx context.Context,
 	labTournamentID string,
+	p GenerateParams,
 	rows []predictionRow,
 ) error {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -364,20 +366,61 @@ func (s *Service) writePredictedGameOutcomes(
 		_ = tx.Rollback(ctx)
 	}()
 
+	params := map[string]any{
+		"season":        p.Season,
+		"kenpom_scale":  p.KenPomScale,
+		"n_sims":        p.NSims,
+		"seed":          p.Seed,
+		"model_version": p.ModelVersion,
+	}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	algorithmName := p.ModelVersion
+	if algorithmName == "" {
+		algorithmName = "kenpom"
+	}
+
+	var algorithmID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.algorithms (kind, name, params_json)
+		VALUES ('game_outcomes', $1, $2::jsonb)
+		ON CONFLICT (kind, name) WHERE deleted_at IS NULL
+		DO UPDATE SET
+			params_json = EXCLUDED.params_json,
+			updated_at = NOW()
+		RETURNING id
+	`, algorithmName, string(paramsJSON)).Scan(&algorithmID); err != nil {
+		return err
+	}
+
+	var runID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.game_outcome_runs (algorithm_id, tournament_id, params_json)
+		VALUES ($1::uuid, $2::uuid, $3::jsonb)
+		RETURNING id
+	`, algorithmID, labTournamentID, string(paramsJSON)).Scan(&runID); err != nil {
+		return err
+	}
+
+	// Legacy cleanup (temporary): remove old tournament-scoped rows so consumers don't
+	// accidentally read stale data.
 	_, err = tx.Exec(ctx, `
 		DELETE FROM derived.predicted_game_outcomes
-		WHERE tournament_id = $1
+		WHERE tournament_id = $1::uuid
+			AND run_id IS NULL
 	`, labTournamentID)
 	if err != nil {
 		return err
 	}
 
-	src := &predictionSource{rows: rows, idx: 0}
 	_, err = tx.CopyFrom(
 		ctx,
 		pgx.Identifier{"derived", "predicted_game_outcomes"},
-		[]string{"tournament_id", "game_id", "round", "team1_id", "team2_id", "p_team1_wins", "p_matchup", "model_version"},
-		src,
+		[]string{"tournament_id", "game_id", "round", "team1_id", "team2_id", "p_team1_wins", "p_matchup", "model_version", "run_id"},
+		&predictionSource{rows: rows, idx: 0, runID: runID},
 	)
 	if err != nil {
 		return err
@@ -390,8 +433,9 @@ func (s *Service) writePredictedGameOutcomes(
 }
 
 type predictionSource struct {
-	rows []predictionRow
-	idx  int
+	rows  []predictionRow
+	idx   int
+	runID string
 }
 
 func (s *predictionSource) Next() bool {
@@ -410,6 +454,7 @@ func (s *predictionSource) Values() ([]any, error) {
 		r.pTeam1Wins,
 		r.pMatchup,
 		r.modelVersion,
+		s.runID,
 	}, nil
 }
 

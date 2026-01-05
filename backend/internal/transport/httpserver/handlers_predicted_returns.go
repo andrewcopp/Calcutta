@@ -39,7 +39,12 @@ func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *htt
 		strategyGenerationRunID = &v
 	}
 
-	selectedID, data, err := s.app.Analytics.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID)
+	var gameOutcomeRunID *string
+	if v := r.URL.Query().Get("game_outcome_run_id"); v != "" {
+		gameOutcomeRunID = &v
+	}
+
+	selectedID, gameOutcomeSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID, gameOutcomeRunID)
 	if err != nil {
 		log.Printf("Error querying predicted returns: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted returns", "")
@@ -72,6 +77,7 @@ func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *htt
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"calcutta_id":                calcuttaID,
 		"strategy_generation_run_id": selectedID,
+		"game_outcome_run_id":        gameOutcomeSelectedID,
 		"teams":                      results,
 		"count":                      len(results),
 	})
