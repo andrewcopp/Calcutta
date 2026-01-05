@@ -6,6 +6,7 @@ import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -124,11 +125,21 @@ export const TournamentCreatePage: React.FC = () => {
 
       {schoolsQuery.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to load schools
+          <div className="font-semibold mb-1">Failed to load schools</div>
+          <div className="mb-3">{schoolsQuery.error instanceof Error ? schoolsQuery.error.message : 'An error occurred'}</div>
+          <Button size="sm" onClick={() => schoolsQuery.refetch()}>
+            Retry
+          </Button>
         </Alert>
       )}
 
       {schoolsQuery.isLoading && <LoadingState label="Loading schools..." layout="inline" />}
+
+      {!schoolsQuery.isLoading && !schoolsQuery.isError && schools.length === 0 ? (
+        <Alert variant="info" className="mb-4">
+          No schools are available.
+        </Alert>
+      ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <Card>
