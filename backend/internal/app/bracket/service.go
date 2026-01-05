@@ -239,6 +239,20 @@ func (s *Service) ValidateBracketSetup(ctx context.Context, tournamentID string)
 		}
 	}
 
+	for _, team := range teams {
+		key := regionSeed{region: team.Region, seed: team.Seed}
+		count := regionSeedCounts[key]
+		if count == 2 {
+			if team.Byes != 0 {
+				return fmt.Errorf("play-in team must have byes=0 (region=%s seed=%d team_id=%s byes=%d)", team.Region, team.Seed, team.ID, team.Byes)
+			}
+		} else if count == 1 {
+			if team.Byes != 1 {
+				return fmt.Errorf("non-play-in team must have byes=1 (region=%s seed=%d team_id=%s byes=%d)", team.Region, team.Seed, team.ID, team.Byes)
+			}
+		}
+	}
+
 	return nil
 }
 
