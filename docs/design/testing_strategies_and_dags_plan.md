@@ -204,7 +204,8 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 - [x] `derived.predicted_market_share` has rows for the tournament/calcutta (real model OR explicitly seeded baseline)
 - [x] Investments endpoint returns non-zero values
 - [x] Optimizer output matches “Our entry” behavior in UI
-- [ ] Only then: run Monte Carlo evaluation for distributions
+- [x] Only then: run Monte Carlo evaluation for distributions
+  - [x] Suite calcutta evaluation smoke test passed (end-to-end: enqueue -> running -> succeeded -> results)
 
 ### Testing Strategies DAG (registry + artifacts)
 - [ ] Design schema v1
@@ -267,6 +268,10 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
     - [ ] P(In Money)
     - [ ] Expected points vs actual points
     - [ ] Actual finish position
+  - [x] Suite calcutta evaluation workflow (single calcutta)
+    - [x] Select `game_outcome_run_id` + `market_share_run_id` + `optimizer_key`
+    - [x] Persist provenance in `derived.suite_calcutta_evaluations` (including `strategy_generation_run_id` + `calcutta_evaluation_run_id`)
+    - [x] API + worker execute evaluation and expose results via `calcutta_evaluation_run_id`
 
 - [ ] Evaluation modes
   - [ ] A) Evaluate a Calcutta as-is (in-app predicted finishes)
@@ -300,7 +305,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 - [x] Schema v1 for `predicted_game_outcomes`
   - [x] run metadata table (`derived.game_outcome_runs`)
   - [x] artifact table linked to run (`derived.predicted_game_outcomes.run_id`)
-- [ ] Ensure tournament simulation selects a specific game-outcomes run
+- [x] Ensure tournament simulation selects a specific game-outcomes run
 
 ## Tooling notes (local)
 
