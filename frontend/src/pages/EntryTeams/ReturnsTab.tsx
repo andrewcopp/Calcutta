@@ -1,4 +1,4 @@
-import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntryTeam, CalcuttaPortfolioTeam, School, TournamentTeam } from '../../types/calcutta';
 import { SegmentedBar } from '../../components/SegmentedBar';
 
 export const ReturnsTab: React.FC<{
@@ -11,7 +11,6 @@ export const ReturnsTab: React.FC<{
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
   teams: CalcuttaEntryTeam[];
   schools: School[];
-  portfolios: CalcuttaPortfolio[];
   getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
 }> = ({
   entryId,
@@ -23,7 +22,6 @@ export const ReturnsTab: React.FC<{
   allCalcuttaPortfolioTeams,
   teams,
   schools,
-  portfolios,
   getPortfolioTeamData,
 }) => {
   return (
@@ -121,28 +119,16 @@ export const ReturnsTab: React.FC<{
                   return ownershipB - ownershipA;
                 });
 
-                const currentPortfolioId = portfolios[0]?.id;
-
                 return teamsToShow.map((team) => {
                   const portfolioTeam = getPortfolioTeamData(team.teamId);
                   const tournamentTeam = tournamentTeams.find((tt) => tt.id === team.teamId);
                   const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === team.teamId);
 
                   const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
-                  const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.expectedPoints || 0), 0);
-                  const eliminated = team.team?.eliminated === true;
-                  const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
 
                   const userOwnership = portfolioTeam?.ownershipPercentage ?? 0;
                   const userActualPoints = totalActualPoints * userOwnership;
                   const othersActualPoints = totalActualPoints * (1 - userOwnership);
-                  const userPossiblePoints = totalPossiblePoints * userOwnership;
-                  const othersPossiblePoints = totalPossiblePoints * (1 - userOwnership);
-
-                  const userActualWidthPct = globalMax > 0 ? (userActualPoints / globalMax) * 100 : 0;
-                  const othersActualWidthPct = globalMax > 0 ? (othersActualPoints / globalMax) * 100 : 0;
-                  const userPossibleWidthPct = globalMax > 0 ? (userPossiblePoints / globalMax) * 100 : 0;
-                  const othersPossibleWidthPct = globalMax > 0 ? (othersPossiblePoints / globalMax) * 100 : 0;
 
                   return (
                     <tr key={team.id} className="bg-gray-50">
@@ -177,7 +163,7 @@ export const ReturnsTab: React.FC<{
                               : []),
                           ]}
                           backgroundColor="#F3F4F6"
-                          disabled={eliminated}
+                          disabled={team.team?.eliminated === true}
                           getTooltipTitle={(seg) => seg.label}
                           getTooltipValue={(seg) => `${seg.value.toFixed(2)} points`}
                         />

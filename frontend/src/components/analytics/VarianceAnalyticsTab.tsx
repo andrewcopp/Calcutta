@@ -42,7 +42,7 @@ export function VarianceAnalyticsTab({
               <XAxis dataKey="seed" type="number" domain={[1, 16]} allowDecimals={false} />
               <YAxis dataKey="normalizedBid" type="number" />
               <Tooltip
-                formatter={(value: number, name: string, props: any) => {
+                formatter={(value: number, name: string) => {
                   if (name === 'normalizedBid') return [value.toFixed(4), 'Normalized Total Bid'];
                   if (name === 'totalBid') return [`$${value.toFixed(2)}`, 'Total Bid'];
                   if (name === 'calcuttaTotalBid') return [`$${value.toFixed(2)}`, 'Calcutta Total'];

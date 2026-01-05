@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { Tournament, TournamentTeam } from '../types/calcutta';
+import { TournamentTeam } from '../types/calcutta';
 import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';

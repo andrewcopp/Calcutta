@@ -7,7 +7,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Calcutta } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/useUser';
 import { queryKeys } from '../queryKeys';
 
 interface CalcuttaRanking {

@@ -160,14 +160,20 @@ export function EntryTeamsPage() {
   });
 
   const entryName = entryTeamsQuery.data?.entryName || '';
-  const teams = entryTeamsQuery.data?.teams || [];
-  const schools = entryTeamsQuery.data?.schools || [];
-  const portfolios = entryTeamsQuery.data?.portfolios || [];
-  const portfolioTeams = entryTeamsQuery.data?.portfolioTeams || [];
-  const tournamentTeams = entryTeamsQuery.data?.tournamentTeams || [];
-  const allEntryTeams = entryTeamsQuery.data?.allEntryTeams || [];
-  const allCalcuttaPortfolios = entryTeamsQuery.data?.allCalcuttaPortfolios || [];
-  const allCalcuttaPortfolioTeams = entryTeamsQuery.data?.allCalcuttaPortfolioTeams || [];
+  const teams = useMemo(() => entryTeamsQuery.data?.teams ?? [], [entryTeamsQuery.data?.teams]);
+  const schools = useMemo(() => entryTeamsQuery.data?.schools ?? [], [entryTeamsQuery.data?.schools]);
+  const portfolios = useMemo(() => entryTeamsQuery.data?.portfolios ?? [], [entryTeamsQuery.data?.portfolios]);
+  const portfolioTeams = useMemo(() => entryTeamsQuery.data?.portfolioTeams ?? [], [entryTeamsQuery.data?.portfolioTeams]);
+  const tournamentTeams = useMemo(() => entryTeamsQuery.data?.tournamentTeams ?? [], [entryTeamsQuery.data?.tournamentTeams]);
+  const allEntryTeams = useMemo(() => entryTeamsQuery.data?.allEntryTeams ?? [], [entryTeamsQuery.data?.allEntryTeams]);
+  const allCalcuttaPortfolios = useMemo(
+    () => entryTeamsQuery.data?.allCalcuttaPortfolios ?? [],
+    [entryTeamsQuery.data?.allCalcuttaPortfolios]
+  );
+  const allCalcuttaPortfolioTeams = useMemo(
+    () => entryTeamsQuery.data?.allCalcuttaPortfolioTeams ?? [],
+    [entryTeamsQuery.data?.allCalcuttaPortfolioTeams]
+  );
 
   // Helper function to find portfolio team data for a given team ID
   const getPortfolioTeamData = useCallback(
@@ -290,45 +296,6 @@ export function EntryTeamsPage() {
     };
   };
 
-  const compareDesc = (a: number, b: number) => b - a;
-
-  const compareTeams = (a: CalcuttaEntryTeam, b: CalcuttaEntryTeam) => {
-    const portfolioTeamA = getPortfolioTeamData(a.teamId);
-    const portfolioTeamB = getPortfolioTeamData(b.teamId);
-
-    const pointsA = portfolioTeamA?.actualPoints || 0;
-    const pointsB = portfolioTeamB?.actualPoints || 0;
-    const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
-    const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-    const bidA = a.bid || 0;
-    const bidB = b.bid || 0;
-
-    if (sortBy === 'points') {
-      const byPoints = compareDesc(pointsA, pointsB);
-      if (byPoints !== 0) return byPoints;
-      const byOwnership = compareDesc(ownershipA, ownershipB);
-      if (byOwnership !== 0) return byOwnership;
-      return compareDesc(bidA, bidB);
-    }
-
-    if (sortBy === 'ownership') {
-      const byOwnership = compareDesc(ownershipA, ownershipB);
-      if (byOwnership !== 0) return byOwnership;
-      const byPoints = compareDesc(pointsA, pointsB);
-      if (byPoints !== 0) return byPoints;
-      return compareDesc(bidA, bidB);
-    }
-
-    const byBid = compareDesc(bidA, bidB);
-    if (byBid !== 0) return byBid;
-    const byPoints = compareDesc(pointsA, pointsB);
-    if (byPoints !== 0) return byPoints;
-    return compareDesc(ownershipA, ownershipB);
-  };
-
-  const sortedTeams = [...teams].sort(compareTeams);
-
-
   return (
     <PageContainer>
       <PageHeader
@@ -383,7 +350,6 @@ export function EntryTeamsPage() {
           allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
           teams={teams}
           schools={schools}
-          portfolios={portfolios}
           getPortfolioTeamData={getPortfolioTeamData}
         />
       )}

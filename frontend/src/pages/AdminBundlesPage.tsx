@@ -62,8 +62,11 @@ export const AdminBundlesPage: React.FC = () => {
         const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import/${uploadId}`, { credentials: 'include' });
         const body = (await res.json().catch(() => undefined)) as ImportStatusResponse | undefined;
         if (!res.ok) {
-          const msg = (body as any)?.error?.message || `Status check failed (${res.status})`;
-          throw new Error(msg);
+          const maybeError = body && typeof body === 'object' ? (body as Record<string, unknown>).error : undefined;
+          const rawMsg =
+            (maybeError && typeof maybeError === 'object' ? (maybeError as Record<string, unknown>).message : undefined) ||
+            `Status check failed (${res.status})`;
+          throw new Error(typeof rawMsg === 'string' ? rawMsg : String(rawMsg));
         }
         if (cancelled) return;
 
@@ -96,7 +99,7 @@ export const AdminBundlesPage: React.FC = () => {
       cancelled = true;
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
-  }, [API_URL, busy, uploadId]);
+  }, [busy, uploadId]);
 
   const download = async () => {
     setError(null);
@@ -142,10 +145,14 @@ export const AdminBundlesPage: React.FC = () => {
       form.append('file', file);
 
       const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import`, { method: 'POST', body: form, credentials: 'include' });
-      const body = await res.json().catch(() => undefined);
+      const body = (await res.json().catch(() => undefined)) as unknown;
       if (!res.ok) {
-        const msg = body?.error?.message || `Import failed (${res.status})`;
-        throw new Error(msg);
+        const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined;
+        const maybeError = record?.error;
+        const rawMsg =
+          (maybeError && typeof maybeError === 'object' ? (maybeError as Record<string, unknown>).message : undefined) ||
+          `Import failed (${res.status})`;
+        throw new Error(typeof rawMsg === 'string' ? rawMsg : String(rawMsg));
       }
       const started = body as ImportStartResponse;
       setUploadId(started.upload_id);

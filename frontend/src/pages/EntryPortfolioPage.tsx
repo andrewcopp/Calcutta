@@ -9,20 +9,23 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 
 export function EntryPortfolioPage() {
   const { year, runId, entryKey } = useParams<{ year: string; runId: string; entryKey: string }>();
-  const parsedYear = year ? Number(year) : undefined;
-
-  if (!parsedYear || Number.isNaN(parsedYear) || !runId || !entryKey) {
-    return <Navigate to="/runs" replace />;
-  }
-
-  const decodedRunId = useMemo(() => decodeURIComponent(runId), [runId]);
-  const decodedEntryKey = useMemo(() => decodeURIComponent(entryKey), [entryKey]);
+  const yearNumber = year ? Number(year) : NaN;
+  const parsedYear = Number.isFinite(yearNumber) ? yearNumber : null;
+  const decodedRunId = useMemo(() => (runId ? decodeURIComponent(runId) : ''), [runId]);
+  const decodedEntryKey = useMemo(() => (entryKey ? decodeURIComponent(entryKey) : ''), [entryKey]);
   const encodedRunId = useMemo(() => encodeURIComponent(decodedRunId), [decodedRunId]);
+
+  const hasValidParams = parsedYear !== null && Boolean(runId) && Boolean(entryKey);
 
   const portfolioQuery = useQuery({
     queryKey: ['mlAnalytics', 'entryPortfolio', parsedYear, decodedRunId, decodedEntryKey],
-    queryFn: () => mlAnalyticsService.getEntryPortfolio(parsedYear, decodedRunId, decodedEntryKey),
+    queryFn: () => mlAnalyticsService.getEntryPortfolio(parsedYear as number, decodedRunId, decodedEntryKey),
+    enabled: hasValidParams,
   });
+
+  if (!hasValidParams) {
+    return <Navigate to="/runs" replace />;
+  }
 
   return (
     <PageContainer>

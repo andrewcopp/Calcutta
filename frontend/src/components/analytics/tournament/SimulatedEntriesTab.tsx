@@ -36,10 +36,6 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
   const formatPoints = (points: number) => points.toFixed(1);
   const formatROI = (roi: number) => roi.toFixed(2);
 
-  if (!calcuttaId) {
-    return <Alert variant="info">Select a calcutta above to view simulated entries.</Alert>;
-  }
-
   const handleSort = (column: keyof TeamSimulatedEntry) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -67,6 +63,10 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
       return 0;
     });
   }, [simulatedEntry?.teams, sortColumn, sortDirection]);
+
+  if (!calcuttaId) {
+    return <Alert variant="info">Select a calcutta above to view simulated entries.</Alert>;
+  }
 
   const SortIcon = ({ column }: { column: keyof TeamSimulatedEntry }) => {
     if (sortColumn !== column) {

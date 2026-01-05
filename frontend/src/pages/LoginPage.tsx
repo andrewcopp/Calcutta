@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/Auth/AuthForm';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/useUser';
 
 export function LoginPage() {
   const navigate = useNavigate();

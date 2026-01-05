@@ -25,7 +25,7 @@ export function AnalyticsSnapshotExportCard() {
   });
 
   const tournaments = tournamentsQuery.data ?? [];
-  const calcuttas = calcuttasQuery.data ?? [];
+  const calcuttas = useMemo(() => calcuttasQuery.data ?? [], [calcuttasQuery.data]);
 
   const filteredCalcuttas = useMemo(() => {
     return exportTournamentId ? calcuttas.filter((c) => c.tournamentId === exportTournamentId) : calcuttas;

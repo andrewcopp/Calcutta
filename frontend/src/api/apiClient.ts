@@ -54,7 +54,8 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       if (!res.ok) return null;
-      const body = (await res.json().catch(() => undefined)) as any;
+      const rawBody = (await res.json().catch(() => undefined)) as unknown;
+      const body = rawBody && typeof rawBody === 'object' ? (rawBody as Record<string, unknown>) : undefined;
       const tok = body?.accessToken;
       if (typeof tok !== 'string' || tok.trim() === '') return null;
 

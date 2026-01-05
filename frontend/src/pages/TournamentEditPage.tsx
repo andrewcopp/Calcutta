@@ -103,7 +103,7 @@ export const TournamentEditPage: React.FC = () => {
     },
   });
 
-  const handleTeamUpdate = async (teamId: string, field: keyof TournamentTeam, value: any) => {
+  const handleTeamUpdate = async (teamId: string, field: keyof TournamentTeam, value: TournamentTeam[keyof TournamentTeam]) => {
     updateTeamMutation.mutate({
       teamId,
       updates: { [field]: value } as Partial<TournamentTeam>,

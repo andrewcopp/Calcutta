@@ -12,26 +12,29 @@ const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 export function RunRankingsPage() {
   const { year, runId } = useParams<{ year: string; runId: string }>();
-  const parsedYear = year ? Number(year) : undefined;
-
-  if (!parsedYear || Number.isNaN(parsedYear) || !runId) {
-    return <Navigate to="/runs" replace />;
-  }
-
-  const decodedRunId = useMemo(() => decodeURIComponent(runId), [runId]);
+  const yearNumber = year ? Number(year) : NaN;
+  const parsedYear = Number.isFinite(yearNumber) ? yearNumber : null;
+  const decodedRunId = useMemo(() => (runId ? decodeURIComponent(runId) : ''), [runId]);
+  const hasValidParams = parsedYear !== null && Boolean(runId);
 
   const rankingsQuery = useQuery({
     queryKey: ['mlAnalytics', 'entryRankings', parsedYear, decodedRunId],
-    queryFn: () => mlAnalyticsService.getEntryRankings(parsedYear, decodedRunId, 200, 0),
+    queryFn: () => mlAnalyticsService.getEntryRankings(parsedYear as number, decodedRunId, 200, 0),
+    enabled: hasValidParams,
   });
 
   const ourEntryQuery = useQuery({
     queryKey: ['mlAnalytics', 'ourEntryDetails', parsedYear, decodedRunId],
-    queryFn: () => mlAnalyticsService.getOurEntryDetails(parsedYear, decodedRunId),
+    queryFn: () => mlAnalyticsService.getOurEntryDetails(parsedYear as number, decodedRunId),
+    enabled: hasValidParams,
     retry: false,
   });
 
   const encodedRunId = useMemo(() => encodeURIComponent(decodedRunId), [decodedRunId]);
+
+  if (!hasValidParams) {
+    return <Navigate to="/runs" replace />;
+  }
 
   return (
     <PageContainer>

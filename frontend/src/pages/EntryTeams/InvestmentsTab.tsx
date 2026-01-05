@@ -15,7 +15,6 @@ export const InvestmentsTab: React.FC<{
   setShowAllTeams: (value: boolean) => void;
 }> = ({
   entryId,
-  teams,
   tournamentTeams,
   allEntryTeams,
   schools,

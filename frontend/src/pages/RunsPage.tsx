@@ -9,18 +9,20 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 
 export function RunsPage() {
   const { year } = useParams<{ year: string }>();
-  const parsedYear = year ? Number(year) : undefined;
-
   const fallbackYear = useMemo(() => new Date().getFullYear(), []);
-
-  if (!parsedYear || Number.isNaN(parsedYear)) {
-    return <Navigate to={`/runs/${fallbackYear}`} replace />;
-  }
+  const yearNumber = year ? Number(year) : NaN;
+  const parsedYear = Number.isFinite(yearNumber) ? yearNumber : null;
+  const hasValidYear = parsedYear !== null;
 
   const runsQuery = useQuery({
     queryKey: ['mlAnalytics', 'strategyRuns', parsedYear],
-    queryFn: () => mlAnalyticsService.getStrategyRuns(parsedYear),
+    queryFn: () => mlAnalyticsService.getStrategyRuns(parsedYear as number),
+    enabled: hasValidYear,
   });
+
+  if (!hasValidYear) {
+    return <Navigate to={`/runs/${fallbackYear}`} replace />;
+  }
 
   return (
     <PageContainer>

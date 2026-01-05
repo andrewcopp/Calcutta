@@ -50,7 +50,7 @@ export const BracketGameCard: React.FC<BracketGameCardProps> = ({
     return className;
   };
 
-  const renderTeam = (team?: BracketTeam, position?: 'top' | 'bottom') => {
+  const renderTeam = (team?: BracketTeam) => {
     if (!team) {
       return (
         <div className={getTeamClassName(undefined)}>
@@ -80,9 +80,9 @@ export const BracketGameCard: React.FC<BracketGameCardProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
       <div className="flex flex-col gap-2">
-        {renderTeam(game.team1, 'top')}
+        {renderTeam(game.team1)}
         <div className="text-center text-xs text-gray-400 font-medium">vs</div>
-        {renderTeam(game.team2, 'bottom')}
+        {renderTeam(game.team2)}
       </div>
       
       {game.region && game.round !== 'final_four' && game.round !== 'championship' && (

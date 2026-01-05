@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { CalcuttaEntryTeam, School, TournamentTeam } from '../types/calcutta';
+import { CalcuttaEntryTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';

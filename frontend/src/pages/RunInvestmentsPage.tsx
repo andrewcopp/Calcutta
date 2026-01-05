@@ -12,17 +12,15 @@ import { Select } from '../components/ui/Select';
 
 export function RunInvestmentsPage() {
   const { year, runId } = useParams<{ year: string; runId: string }>();
-  const parsedYear = year ? Number(year) : undefined;
-
-  if (!parsedYear || Number.isNaN(parsedYear) || !runId) {
-    return <Navigate to="/runs" replace />;
-  }
-
-  const decodedRunId = useMemo(() => decodeURIComponent(runId), [runId]);
+  const yearNumber = year ? Number(year) : NaN;
+  const parsedYear = Number.isFinite(yearNumber) ? yearNumber : null;
+  const decodedRunId = useMemo(() => (runId ? decodeURIComponent(runId) : ''), [runId]);
+  const hasValidParams = parsedYear !== null && Boolean(runId);
 
   const ourEntryQuery = useQuery({
     queryKey: ['mlAnalytics', 'ourEntryDetails', parsedYear, decodedRunId],
-    queryFn: () => mlAnalyticsService.getOurEntryDetails(parsedYear, decodedRunId),
+    queryFn: () => mlAnalyticsService.getOurEntryDetails(parsedYear as number, decodedRunId),
+    enabled: hasValidParams,
   });
 
   const calcuttaId = ourEntryQuery.data?.run.calcutta_id ?? null;
@@ -82,6 +80,10 @@ export function RunInvestmentsPage() {
       return mult * (a.delta - b.delta);
     });
   }, [investmentsQuery.data, sortDir, sortKey]);
+
+  if (!hasValidParams) {
+    return <Navigate to="/runs" replace />;
+  }
 
   return (
     <PageContainer>

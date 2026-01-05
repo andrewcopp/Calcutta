@@ -33,7 +33,7 @@ export function PredictionsPage() {
     enabled: !!selectedTournamentId,
   });
 
-  const calcuttas = calcuttasQuery.data ?? [];
+  const calcuttas = useMemo(() => calcuttasQuery.data ?? [], [calcuttasQuery.data]);
 
   const calcuttasForTournament = useMemo(
     () => calcuttas.filter((c) => c.tournamentId === selectedTournamentId),

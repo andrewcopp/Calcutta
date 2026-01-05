@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam, TournamentTeam, School } from '../types/calcutta';
+import { CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
@@ -135,15 +135,24 @@ export function CalcuttaEntriesPage() {
     },
   });
 
-  const entries = calcuttaEntriesQuery.data?.entries || [];
+  const entries = useMemo(() => calcuttaEntriesQuery.data?.entries ?? [], [calcuttaEntriesQuery.data?.entries]);
   const totalEntries = calcuttaEntriesQuery.data?.totalEntries || 0;
-  const schools: School[] = calcuttaEntriesQuery.data?.schools || [];
+  const schools = useMemo(() => calcuttaEntriesQuery.data?.schools ?? [], [calcuttaEntriesQuery.data?.schools]);
   const calcuttaName = calcuttaEntriesQuery.data?.calcuttaName || '';
-  const allEntryTeams = calcuttaEntriesQuery.data?.allEntryTeams || [];
+  const allEntryTeams = useMemo(() => calcuttaEntriesQuery.data?.allEntryTeams ?? [], [calcuttaEntriesQuery.data?.allEntryTeams]);
   const seedInvestmentData = calcuttaEntriesQuery.data?.seedInvestmentData || [];
-  const tournamentTeams = calcuttaEntriesQuery.data?.tournamentTeams || [];
-  const allCalcuttaPortfolios = calcuttaEntriesQuery.data?.allCalcuttaPortfolios || [];
-  const allCalcuttaPortfolioTeams = calcuttaEntriesQuery.data?.allCalcuttaPortfolioTeams || [];
+  const tournamentTeams = useMemo(
+    () => calcuttaEntriesQuery.data?.tournamentTeams ?? [],
+    [calcuttaEntriesQuery.data?.tournamentTeams]
+  );
+  const allCalcuttaPortfolios = useMemo(
+    () => calcuttaEntriesQuery.data?.allCalcuttaPortfolios ?? [],
+    [calcuttaEntriesQuery.data?.allCalcuttaPortfolios]
+  );
+  const allCalcuttaPortfolioTeams = useMemo(
+    () => calcuttaEntriesQuery.data?.allCalcuttaPortfolioTeams ?? [],
+    [calcuttaEntriesQuery.data?.allCalcuttaPortfolioTeams]
+  );
 
   const totalInvestment = useMemo(() => allEntryTeams.reduce((sum, et) => sum + (et.bid || 0), 0), [allEntryTeams]);
 
