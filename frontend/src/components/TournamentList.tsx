@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
 import { Card } from './ui/Card';
+import { Alert } from './ui/Alert';
+import { Button } from './ui/Button';
+import { LoadingState } from './ui/LoadingState';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from './ui/Table';
 import { Tournament } from '../types/calcutta';
 import { tournamentService } from '../services/tournamentService';
@@ -10,24 +13,45 @@ const TournamentList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadTournaments = async () => {
-      try {
-        const data = await tournamentService.getAllTournaments();
-        setTournaments(data);
-      } catch (err) {
-        setError('Failed to load tournaments');
-        console.error('Error loading tournaments:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadTournaments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await tournamentService.getAllTournaments();
+      setTournaments(data);
+    } catch (err) {
+      setError('Failed to load tournaments');
+      console.error('Error loading tournaments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadTournaments();
   }, []);
 
-  if (loading) return <div className="text-gray-500">Loading tournaments...</div>;
-  if (error) return <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>;
+  if (loading)
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Card>
+          <LoadingState label="Loading tournaments..." />
+        </Card>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Alert variant="error">
+          <div className="font-semibold mb-1">Failed to load tournaments</div>
+          <div className="mb-3">{error}</div>
+          <Button size="sm" onClick={loadTournaments}>
+            Retry
+          </Button>
+        </Alert>
+      </div>
+    );
 
   return (
     <div className="max-w-3xl mx-auto">

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -136,7 +137,7 @@ export function SimulationsPage() {
         <h2 className="text-xl font-semibold mb-4">Simulation Batches</h2>
 
         {batches.length === 0 ? (
-          <div className="text-gray-500">No simulation batches found for {season}.</div>
+          <Alert variant="info">No simulation batches found for {season}.</Alert>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
