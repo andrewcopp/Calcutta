@@ -32,6 +32,12 @@ data-science/airflow/logs/
 # Generated artifacts
 backend/exports/
 
+out/
+.venv/
+.windsurf/
+
+coverage.out
+
 # Log files
 *.log
 
