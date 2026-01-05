@@ -5,12 +5,13 @@
 - [x] **Verify no secrets are tracked:** `git status --ignored`, `git ls-files | grep -E '\\.env(\\.|$)'`
 - [ ] **Rotate any dev tokens/keys** that were ever shared outside the local machine
 - [x] **Scan git history for leaked secrets** (commands below)
+- [x] **Remove insecure default DB password fallbacks** in data-science code/docs
 - [ ] **Document rotations** in the “Findings / actions taken” section below
 
 ## Go backend: DX + correctness
 
-- [ ] **Remove hard exits from non-`main` packages** (e.g. `log.Fatalf` inside constructors)
-- [ ] **Make `cmd/*` CLIs consistent** (flags, help text, exit codes)
+- [x] **Remove hard exits from non-`main` packages** (e.g. `log.Fatalf` inside constructors) (`6600a17`)
+- [x] **Make `cmd/*` CLIs consistent** (flags, help text, exit codes) (`76ea23e`)
 - [ ] **Centralize config for all Go commands** (one loader; support `.env` + `.env.local`)
 - [x] **Fix `cmd/workers` to run multiple workers concurrently** (no longer blocks on first worker)
 
@@ -48,7 +49,7 @@
   - Generic secret/token/password scan returned matches that appear non-sensitive:
     - GitHub workflow permissions (`id-token: write` for OIDC)
     - runtime code references (e.g. `TokenManager{secret: []byte(secret)}`)
-    - default local DB password values in data-science scripts (not a leak, but a cleanup opportunity)
+    - default local DB password values in data-science scripts (not a leak; cleaned up in `75b4c06`)
   - Suspicious-filenames scan (`\\.(env|pem|key)$`) did not report any tracked history hits in the pasted output.
   - AWS key pattern scan (`AKIA[0-9A-Z]{16}`) returned no matches.
 - [ ] **Rotations performed:**
