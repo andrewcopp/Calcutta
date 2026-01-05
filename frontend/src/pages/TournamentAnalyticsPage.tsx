@@ -9,7 +9,10 @@ import { PredictedReturnsTab } from '../components/analytics/tournament/Predicte
 import { PredictedInvestmentTab } from '../components/analytics/tournament/PredictedInvestmentTab';
 import { SimulatedEntriesTab } from '../components/analytics/tournament/SimulatedEntriesTab';
 import { SimulatedCalcuttasTab } from '../components/analytics/tournament/SimulatedCalcuttasTab';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
@@ -21,17 +24,21 @@ export function TournamentAnalyticsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('simulations');
 
   // Fetch all tournaments
-  const { data: tournaments = [], isLoading: tournamentsLoading } = useQuery<Tournament[]>({
+  const tournamentsQuery = useQuery<Tournament[]>({
     queryKey: queryKeys.tournaments.all(),
     queryFn: tournamentService.getAllTournaments,
   });
 
+  const tournaments = tournamentsQuery.data ?? [];
+
   // Fetch all calcuttas (used to select scoring context for points-based analytics)
-  const { data: calcuttas = [], isLoading: calcuttasLoading } = useQuery<Calcutta[]>({
+  const calcuttasQuery = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
     queryFn: calcuttaService.getAllCalcuttas,
     enabled: !!selectedTournamentId,
   });
+
+  const calcuttas = calcuttasQuery.data ?? [];
 
   const calcuttasForTournament = calcuttas.filter((c) => c.tournamentId === selectedTournamentId);
 
@@ -46,10 +53,20 @@ export function TournamentAnalyticsPage() {
             Select Tournament:
           </label>
           
-          {tournamentsLoading ? (
-            <div className="text-gray-500">Loading tournaments...</div>
+          {tournamentsQuery.isLoading ? (
+            <LoadingState label="Loading tournaments..." layout="inline" />
+          ) : tournamentsQuery.isError ? (
+            <Alert variant="error" className="flex-1">
+              <div className="font-semibold mb-1">Failed to load tournaments</div>
+              <div className="mb-3">{tournamentsQuery.error instanceof Error ? tournamentsQuery.error.message : 'An error occurred'}</div>
+              <Button size="sm" onClick={() => tournamentsQuery.refetch()}>
+                Retry
+              </Button>
+            </Alert>
           ) : tournaments.length === 0 ? (
-            <div className="text-gray-500">No tournaments found</div>
+            <Alert variant="info" className="flex-1">
+              No tournaments found.
+            </Alert>
           ) : (
             <Select
               id="tournament-select"
@@ -80,10 +97,20 @@ export function TournamentAnalyticsPage() {
               Select Calcutta:
             </label>
 
-            {calcuttasLoading ? (
-              <div className="text-gray-500">Loading calcuttas...</div>
+            {calcuttasQuery.isLoading ? (
+              <LoadingState label="Loading calcuttas..." layout="inline" />
+            ) : calcuttasQuery.isError ? (
+              <Alert variant="error" className="flex-1">
+                <div className="font-semibold mb-1">Failed to load calcuttas</div>
+                <div className="mb-3">{calcuttasQuery.error instanceof Error ? calcuttasQuery.error.message : 'An error occurred'}</div>
+                <Button size="sm" onClick={() => calcuttasQuery.refetch()}>
+                  Retry
+                </Button>
+              </Alert>
             ) : calcuttasForTournament.length === 0 ? (
-              <div className="text-gray-500">No calcuttas found for this tournament</div>
+              <Alert variant="info" className="flex-1">
+                No calcuttas found for this tournament.
+              </Alert>
             ) : (
               <Select
                 id="calcutta-select"
