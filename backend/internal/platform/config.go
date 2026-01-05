@@ -181,7 +181,7 @@ func isGoTestProcess() bool {
 }
 
 func LoadConfigFromEnv() (Config, error) {
-	if !isGoTestProcess() {
+	if !isGoTestProcess() && envBool("DOTENV_ENABLED", true) {
 		loadDotEnvFiles()
 	}
 

@@ -19,6 +19,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
       - NODE_ENV=${NODE_ENV}
+      - DOTENV_ENABLED=false
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +31,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
       - NODE_ENV=${NODE_ENV}
+      - DOTENV_ENABLED=false
     depends_on:
       db:
         condition: service_healthy
@@ -59,6 +61,7 @@ services:
       - ops
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
+      - DOTENV_ENABLED=false
     depends_on:
       db:
         condition: service_healthy

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,24 +18,14 @@ func Initialize(ctx context.Context) error {
 		return err
 	}
 
-	// Create connection pool
-	config, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	pool, err = platform.OpenPGXPool(ctx, cfg, &platform.PGXPoolOptions{
+		MaxConns:          cfg.PGXPoolMaxConns,
+		MinConns:          cfg.PGXPoolMinConns,
+		MaxConnLifetime:   time.Duration(cfg.PGXPoolMaxConnLifetimeSeconds) * time.Second,
+		HealthCheckPeriod: time.Duration(cfg.PGXPoolHealthCheckPeriodSeconds) * time.Second,
+	})
 	if err != nil {
-		return fmt.Errorf("error parsing connection string: %v", err)
-	}
-
-	// Set pool configuration
-	config.MaxConns = 10
-
-	// Create the pool
-	pool, err = pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return fmt.Errorf("error creating connection pool: %v", err)
-	}
-
-	// Test the connection
-	if err := pool.Ping(ctx); err != nil {
-		return fmt.Errorf("error connecting to the database: %v", err)
+		return fmt.Errorf("db_connect_failed: %w", err)
 	}
 
 	return nil
