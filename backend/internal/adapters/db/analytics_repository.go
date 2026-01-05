@@ -141,7 +141,7 @@ func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) 
 	var err error
 	if kind != nil && *kind != "" {
 		rows, err = r.pool.Query(ctx, `
-			SELECT id::text, kind, name, description, params_json::bytea, created_at
+			SELECT id::text, kind, name, description, params_json::text, created_at
 			FROM derived.algorithms
 			WHERE kind = $1::text
 				AND deleted_at IS NULL
@@ -149,7 +149,7 @@ func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) 
 		`, *kind)
 	} else {
 		rows, err = r.pool.Query(ctx, `
-			SELECT id::text, kind, name, description, params_json::bytea, created_at
+			SELECT id::text, kind, name, description, params_json::text, created_at
 			FROM derived.algorithms
 			WHERE deleted_at IS NULL
 			ORDER BY created_at DESC
@@ -164,9 +164,9 @@ func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) 
 	for rows.Next() {
 		var id, k, name string
 		var desc *string
-		var params []byte
+		var paramsStr string
 		var createdAt time.Time
-		if err := rows.Scan(&id, &k, &name, &desc, &params, &createdAt); err != nil {
+		if err := rows.Scan(&id, &k, &name, &desc, &paramsStr, &createdAt); err != nil {
 			return nil, err
 		}
 		out = append(out, ports.Algorithm{
@@ -174,7 +174,7 @@ func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) 
 			Kind:        k,
 			Name:        name,
 			Description: desc,
-			ParamsJSON:  params,
+			ParamsJSON:  []byte(paramsStr),
 			CreatedAt:   createdAt,
 		})
 	}
@@ -190,7 +190,7 @@ func (r *AnalyticsRepository) ListGameOutcomeRunsByTournamentID(ctx context.Cont
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id::text, algorithm_id::text, tournament_id::text, params_json::bytea, git_sha, created_at
+		SELECT id::text, algorithm_id::text, tournament_id::text, params_json::text, git_sha, created_at
 		FROM derived.game_outcome_runs
 		WHERE tournament_id = $1::uuid
 			AND deleted_at IS NULL
@@ -203,11 +203,21 @@ func (r *AnalyticsRepository) ListGameOutcomeRunsByTournamentID(ctx context.Cont
 
 	out := make([]ports.GameOutcomeRun, 0)
 	for rows.Next() {
-		var run ports.GameOutcomeRun
-		if err := rows.Scan(&run.ID, &run.AlgorithmID, &run.TournamentID, &run.ParamsJSON, &run.GitSHA, &run.CreatedAt); err != nil {
+		var id, algorithmID, tid string
+		var paramsStr string
+		var gitSHA *string
+		var createdAt time.Time
+		if err := rows.Scan(&id, &algorithmID, &tid, &paramsStr, &gitSHA, &createdAt); err != nil {
 			return nil, err
 		}
-		out = append(out, run)
+		out = append(out, ports.GameOutcomeRun{
+			ID:           id,
+			AlgorithmID:  algorithmID,
+			TournamentID: tid,
+			ParamsJSON:   []byte(paramsStr),
+			GitSHA:       gitSHA,
+			CreatedAt:    createdAt,
+		})
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
@@ -221,7 +231,7 @@ func (r *AnalyticsRepository) ListMarketShareRunsByCalcuttaID(ctx context.Contex
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id::text, algorithm_id::text, calcutta_id::text, params_json::bytea, git_sha, created_at
+		SELECT id::text, algorithm_id::text, calcutta_id::text, params_json::text, git_sha, created_at
 		FROM derived.market_share_runs
 		WHERE calcutta_id = $1::uuid
 			AND deleted_at IS NULL
@@ -234,11 +244,21 @@ func (r *AnalyticsRepository) ListMarketShareRunsByCalcuttaID(ctx context.Contex
 
 	out := make([]ports.MarketShareRun, 0)
 	for rows.Next() {
-		var run ports.MarketShareRun
-		if err := rows.Scan(&run.ID, &run.AlgorithmID, &run.CalcuttaID, &run.ParamsJSON, &run.GitSHA, &run.CreatedAt); err != nil {
+		var id, algorithmID, cid string
+		var paramsStr string
+		var gitSHA *string
+		var createdAt time.Time
+		if err := rows.Scan(&id, &algorithmID, &cid, &paramsStr, &gitSHA, &createdAt); err != nil {
 			return nil, err
 		}
-		out = append(out, run)
+		out = append(out, ports.MarketShareRun{
+			ID:          id,
+			AlgorithmID: algorithmID,
+			CalcuttaID:  cid,
+			ParamsJSON:  []byte(paramsStr),
+			GitSHA:      gitSHA,
+			CreatedAt:   createdAt,
+		})
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()

@@ -65,6 +65,7 @@ type TeamPredictedMarketShare = {
 
 export function LabPage() {
   const [activeTab, setActiveTab] = useState<TabType>('advancements');
+  const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>('');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const [selectedCalcuttaId, setSelectedCalcuttaId] = useState<string | null>(null);
   const [selectedGameOutcomeRunId, setSelectedGameOutcomeRunId] = useState<string | null>(null);
@@ -95,6 +96,12 @@ export function LabPage() {
     },
   });
 
+  const algorithms = algorithmsQuery.data?.items ?? [];
+  const selectedAlgorithm = useMemo(
+    () => algorithms.find((a) => a.id === selectedAlgorithmId) ?? null,
+    [algorithms, selectedAlgorithmId]
+  );
+
   const gameOutcomeRunsQuery = useQuery<{ runs: GameOutcomeRun[] } | null>({
     queryKey: ['analytics', 'game-outcome-runs', selectedTournamentId],
     queryFn: async () => {
@@ -103,6 +110,12 @@ export function LabPage() {
     },
     enabled: Boolean(selectedTournamentId),
   });
+
+  const filteredGameOutcomeRuns = useMemo(() => {
+    const runs = gameOutcomeRunsQuery.data?.runs ?? [];
+    if (!selectedAlgorithmId) return runs;
+    return runs.filter((r) => r.algorithm_id === selectedAlgorithmId);
+  }, [gameOutcomeRunsQuery.data, selectedAlgorithmId]);
 
   const { data: calcuttas = [], isLoading: calcuttasLoading } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -123,6 +136,12 @@ export function LabPage() {
     },
     enabled: Boolean(selectedCalcuttaId) && activeTab === 'investments',
   });
+
+  const filteredMarketShareRuns = useMemo(() => {
+    const runs = marketShareRunsQuery.data?.runs ?? [];
+    if (!selectedAlgorithmId) return runs;
+    return runs.filter((r) => r.algorithm_id === selectedAlgorithmId);
+  }, [marketShareRunsQuery.data, selectedAlgorithmId]);
 
   const predictedAdvancementQuery = useQuery<{ teams: TeamPredictedAdvancement[] } | null>({
     queryKey: ['analytics', 'predicted-advancement', selectedTournamentId, selectedGameOutcomeRunId],
@@ -179,21 +198,43 @@ export function LabPage() {
       </Card>
 
       <Card className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Registered Algorithms</h2>
-        {algorithmsQuery.isLoading ? (
-          <div className="text-gray-500">Loading algorithms...</div>
-        ) : algorithmsQuery.data?.items?.length ? (
-          <div className="space-y-2">
-            {algorithmsQuery.data.items.map((a) => (
-              <div key={a.id} className="border border-gray-200 rounded-md px-3 py-2">
-                <div className="font-medium text-gray-900">{a.name}</div>
-                {a.description ? <div className="text-sm text-gray-600">{a.description}</div> : null}
-              </div>
-            ))}
+        <h2 className="text-xl font-semibold mb-4">Algorithm</h2>
+
+        {algorithmsQuery.isLoading ? <div className="text-gray-500">Loading algorithms...</div> : null}
+
+        {!algorithmsQuery.isLoading ? (
+          <div className="flex items-center gap-4">
+            <label htmlFor="algorithm-select" className="text-lg font-semibold whitespace-nowrap">
+              Select Algorithm:
+            </label>
+            <Select
+              id="algorithm-select"
+              value={selectedAlgorithmId}
+              onChange={(e) => {
+                const next = e.target.value;
+                setSelectedAlgorithmId(next);
+                // Clear run selections so we don't keep stale run IDs when switching algorithms.
+                setSelectedGameOutcomeRunId(null);
+                setSelectedMarketShareRunId(null);
+              }}
+              className="flex-1 max-w-2xl"
+            >
+              <option value="">All algorithms</option>
+              {algorithms.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </Select>
           </div>
-        ) : (
-          <div className="text-gray-500">No algorithms found for this category.</div>
-        )}
+        ) : null}
+
+        {selectedAlgorithm ? (
+          <div className="mt-4 text-sm text-gray-700">
+            <div className="font-medium text-gray-900">{selectedAlgorithm.name}</div>
+            {selectedAlgorithm.description ? <div className="text-gray-600">{selectedAlgorithm.description}</div> : null}
+          </div>
+        ) : null}
       </Card>
 
       {activeTab === 'advancements' && (
@@ -239,7 +280,7 @@ export function LabPage() {
 
               {gameOutcomeRunsQuery.isLoading ? (
                 <div className="text-gray-500">Loading runs...</div>
-              ) : gameOutcomeRunsQuery.data?.runs?.length ? (
+              ) : filteredGameOutcomeRuns.length ? (
                 <Select
                   id="game-outcome-run-select"
                   value={selectedGameOutcomeRunId || ''}
@@ -247,7 +288,7 @@ export function LabPage() {
                   className="flex-1 max-w-xl"
                 >
                   <option value="">-- Latest --</option>
-                  {gameOutcomeRunsQuery.data.runs.map((run) => (
+                  {filteredGameOutcomeRuns.map((run) => (
                     <option key={run.id} value={run.id}>
                       {new Date(run.created_at).toLocaleString()} ({run.id.slice(0, 8)})
                     </option>
@@ -412,7 +453,7 @@ export function LabPage() {
 
               {marketShareRunsQuery.isLoading ? (
                 <div className="text-gray-500">Loading runs...</div>
-              ) : marketShareRunsQuery.data?.runs?.length ? (
+              ) : filteredMarketShareRuns.length ? (
                 <Select
                   id="market-share-run-select"
                   value={selectedMarketShareRunId || ''}
@@ -420,7 +461,7 @@ export function LabPage() {
                   className="flex-1 max-w-xl"
                 >
                   <option value="">-- Latest --</option>
-                  {marketShareRunsQuery.data.runs.map((run) => (
+                  {filteredMarketShareRuns.map((run) => (
                     <option key={run.id} value={run.id}>
                       {new Date(run.created_at).toLocaleString()} ({run.id.slice(0, 8)})
                     </option>

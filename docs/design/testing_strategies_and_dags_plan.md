@@ -242,8 +242,8 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [x] Calcutta market share view (share-based; not pool points)
     - [x] `GET /api/analytics/calcuttas/{id}/predicted-market-share?market_share_run_id=...&game_outcome_run_id=...`
   - [ ] Suite results browsing
-    - [ ] List suites
-    - [ ] Suite detail (metadata + per-calcutta results)
+    - [x] List suites
+    - [x] Suite detail (metadata + per-calcutta results)
     - [ ] Result detail (generated entry + provenance)
   - [ ] Cleanup note: these Lab endpoints are additive; identify and retire legacy predicted returns/investment endpoints and pages once the new UI is wired
 
@@ -284,8 +284,8 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
     - [ ] Algorithm detail -> calcuttas with runs
     - [x] Calcutta detail -> per-team market share with rational + predicted + delta_percent
   - [ ] Sandbox: Suites browser
-    - [ ] List suites
-    - [ ] Suite detail -> per-calcutta results list + suite metadata
+    - [x] List suites
+    - [x] Suite detail -> per-calcutta results list + suite metadata
     - [ ] Result detail -> show generated entry and its provenance
 
 ### Naming glossary
