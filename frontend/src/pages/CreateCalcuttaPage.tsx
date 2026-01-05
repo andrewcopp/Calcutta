@@ -5,6 +5,13 @@ import { Tournament } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 export function CreateCalcuttaPage() {
   const navigate = useNavigate();
@@ -47,96 +54,84 @@ export function CreateCalcuttaPage() {
 
   if (tournamentsQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading tournaments...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading tournaments..." />
+      </PageContainer>
     );
   }
 
   if (tournamentsQuery.isError) {
     const message = tournamentsQuery.error instanceof Error ? tournamentsQuery.error.message : 'Failed to fetch tournaments';
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {message}
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">{message}</Alert>
+      </PageContainer>
     );
   }
 
   const tournaments: Tournament[] = tournamentsQuery.data || [];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageContainer>
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => navigate('/calcuttas')}
-            className="text-blue-500 hover:text-blue-700 mr-4"
-          >
-            ← Back to Calcuttas
-          </button>
-          <h1 className="text-3xl font-bold">Create New Calcutta</h1>
-        </div>
+        <PageHeader
+          title="Create New Calcutta"
+          actions={
+            <Button variant="ghost" onClick={() => navigate('/calcuttas')}>
+              ← Back to Calcuttas
+            </Button>
+          }
+        />
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {error ? <Alert variant="error" className="mb-4">{error}</Alert> : null}
 
-        <form onSubmit={handleCreateCalcutta} className="bg-white p-6 rounded-lg shadow">
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Calcutta Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={newCalcutta.name}
-                onChange={(e) => setNewCalcutta({ ...newCalcutta, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter a name for your Calcutta"
-                required
-              />
+        <Card>
+          <form onSubmit={handleCreateCalcutta}>
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Calcutta Name
+                </label>
+                <Input
+                  type="text"
+                  id="name"
+                  value={newCalcutta.name}
+                  onChange={(e) => setNewCalcutta({ ...newCalcutta, name: e.target.value })}
+                  placeholder="Enter a name for your Calcutta"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="tournament" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tournament
+                </label>
+                <Select
+                  id="tournament"
+                  value={newCalcutta.tournamentId}
+                  onChange={(e) => setNewCalcutta({ ...newCalcutta, tournamentId: e.target.value })}
+                  required
+                >
+                  <option value="">Select a tournament</option>
+                  {tournaments.map((tournament) => (
+                    <option key={tournament.id} value={tournament.id}>
+                      {tournament.name}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-1 text-sm text-gray-500">Select the tournament this Calcutta will be based on</p>
+              </div>
+
+              <div className="pt-2">
+                <Button type="submit" className="w-full" loading={createCalcuttaMutation.isPending}>
+                  Create Calcutta
+                </Button>
+              </div>
             </div>
-            
-            <div>
-              <label htmlFor="tournament" className="block text-sm font-medium text-gray-700">
-                Tournament
-              </label>
-              <select
-                id="tournament"
-                value={newCalcutta.tournamentId}
-                onChange={(e) => setNewCalcutta({ ...newCalcutta, tournamentId: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a tournament</option>
-                {tournaments.map((tournament) => (
-                  <option key={tournament.id} value={tournament.id}>
-                    {tournament.name}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-sm text-gray-500">
-                Select the tournament this Calcutta will be based on
-              </p>
-            </div>
-            
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={createCalcuttaMutation.isPending}
-                className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
-              >
-                {createCalcuttaMutation.isPending ? 'Creating...' : 'Create Calcutta'}
-              </button>
-            </div>
-          </div>
-        </form>
+          </form>
+        </Card>
       </div>
-    </div>
+    </PageContainer>
   );
-} 
+ }
+ 

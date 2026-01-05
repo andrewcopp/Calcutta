@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { School } from '../types/school';
 import { Tournament } from '../types/calcutta';
 import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 interface TeamToAdd {
   schoolId: string;
@@ -55,9 +61,7 @@ export const TournamentAddTeamsPage: React.FC = () => {
   const tournament: Tournament | null = tournamentQuery.data || null;
   const schools: School[] = schoolsQuery.data || [];
 
-  const filteredSchools = schools.filter(school =>
-    school.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSchools = schools.filter((school) => school.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleAddTeam = () => {
     if (!selectedSchool) {
@@ -99,14 +103,18 @@ export const TournamentAddTeamsPage: React.FC = () => {
   };
 
   if (!id) {
-    return <Alert variant="error">Missing required parameters</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">Missing required parameters</Alert>
+      </PageContainer>
+    );
   }
 
   if (tournamentQuery.isLoading || schoolsQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading..." />
+      </PageContainer>
     );
   }
 
@@ -117,125 +125,101 @@ export const TournamentAddTeamsPage: React.FC = () => {
       'Failed to load data';
 
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {message}
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error">{message}</Alert>
+      </PageContainer>
     );
   }
 
   if (!tournament) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
-      </div>
+      <PageContainer>
+        <LoadingState label="Loading..." />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Add Teams to {tournament.name}</h1>
-          <p className="text-gray-600">
-            {tournament.rounds} rounds • Created {new Date(tournament.created).toLocaleDateString()}
-          </p>
-        </div>
-        <button
-          onClick={() => navigate(`/admin/tournaments/${id}`)}
-          className="px-4 py-2 border rounded hover:bg-gray-100"
-        >
-          Cancel
-        </button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title={
+          <span>
+            Add Teams to {tournament.name}
+          </span>
+        }
+        subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
+        actions={
+          <Button variant="ghost" onClick={() => navigate(`/admin/tournaments/${id}`)}>
+            Cancel
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
+      {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="bg-white p-6 rounded-lg shadow">
+      <Card>
         <h2 className="text-xl font-semibold mb-4">Add Teams</h2>
-        <div className="flex gap-4 mb-4">
+        <div className="flex flex-col gap-4 mb-4 md:flex-row md:items-end">
           <div className="flex-1">
-            <input
+            <Input
               type="text"
               placeholder="Search schools..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 border rounded"
             />
           </div>
           <div className="flex-1">
-            <select
-              value={selectedSchool}
-              onChange={(e) => setSelectedSchool(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
+            <Select value={selectedSchool} onChange={(e) => setSelectedSchool(e.target.value)}>
               <option value="">Select a school</option>
-              {filteredSchools.map(school => (
+              {filteredSchools.map((school) => (
                 <option key={school.id} value={school.id}>
                   {school.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
-          <div className="w-32">
-            <input
+          <div className="w-full md:w-32">
+            <Input
               type="number"
-              min="1"
-              max="16"
+              min={1}
+              max={16}
               value={selectedSeed}
               onChange={(e) => setSelectedSeed(parseInt(e.target.value) || 1)}
-              className="w-full p-2 border rounded"
               placeholder="Seed"
             />
           </div>
-          <button
-            type="button"
-            onClick={handleAddTeam}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
+          <Button type="button" onClick={handleAddTeam}>
             Add Team
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-2">
           <h3 className="text-lg font-semibold mb-2">Teams to Add ({teamsToAdd.length}/68)</h3>
           {teamsToAdd.map((team, index) => {
-            const school = schools.find(s => s.id === team.schoolId);
+            const school = schools.find((s) => s.id === team.schoolId);
             return (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 border rounded"
-              >
+              <div key={index} className="flex items-center justify-between gap-4 p-2 border rounded-lg">
                 <span>
                   {school?.name || 'Unknown School'} (Seed {team.seed})
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTeam(index)}
-                  className="text-red-500 hover:text-red-700"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveTeam(index)}>
                   Remove
-                </button>
+                </Button>
               </div>
             );
           })}
         </div>
-      </div>
+      </Card>
 
       <div className="flex justify-end mt-8">
-        <button
+        <Button
           onClick={handleSubmit}
-          disabled={createTeamsMutation.isPending || teamsToAdd.length === 0}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+          loading={createTeamsMutation.isPending}
+          disabled={teamsToAdd.length === 0}
         >
-          {createTeamsMutation.isPending ? 'Creating Teams...' : 'Create Teams'}
-        </button>
+          Create Teams
+        </Button>
       </div>
-    </div>
+    </PageContainer>
   );
-};
+ };

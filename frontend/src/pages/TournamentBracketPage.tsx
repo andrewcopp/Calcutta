@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { BracketStructure, BracketGame, ROUND_LABELS, ROUND_ORDER, BracketRound } from '../types/bracket';
 import { Tournament } from '../types/calcutta';
 import { bracketService } from '../services/bracketService';
@@ -8,10 +8,14 @@ import { tournamentService } from '../services/tournamentService';
 import { BracketGameCard } from '../components/BracketGameCard';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 export const TournamentBracketPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -100,14 +104,18 @@ export const TournamentBracketPage: React.FC = () => {
   };
 
   if (!id) {
-    return <Alert variant="error">Missing required parameters</Alert>;
+    return (
+      <PageContainer>
+        <Alert variant="error">Missing required parameters</Alert>
+      </PageContainer>
+    );
   }
 
   if (tournamentQuery.isLoading || validationQuery.isLoading || (validationQuery.data?.valid === true && bracketQuery.isLoading)) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer>
         <LoadingState label="Loading bracket..." size="lg" />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -115,52 +123,43 @@ export const TournamentBracketPage: React.FC = () => {
 
   if (validationErrors.length > 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link to={`/admin/tournaments/${id}`} className="text-blue-600 hover:underline">
-            ← Back to Tournament
-          </Link>
-        </div>
-        
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-yellow-800 mb-4">
-            Bracket Setup Incomplete
-          </h2>
-          <p className="text-yellow-700 mb-4">
-            The tournament is not ready for bracket management. Please fix the following issues:
-          </p>
+      <PageContainer>
+        <PageHeader
+          title="Bracket"
+          subtitle="Bracket setup incomplete"
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => navigate(`/admin/tournaments/${id}`)}>
+                Back
+              </Button>
+              <Button onClick={() => navigate(`/admin/tournaments/${id}/teams/add`)}>Add Teams</Button>
+            </>
+          }
+        />
+
+        <Alert variant="warning" className="mb-4">
+          The tournament is not ready for bracket management. Please fix the following issues:
+        </Alert>
+
+        <Card>
           <ul className="list-disc list-inside space-y-2">
             {validationErrors.map((error, index) => (
-              <li key={index} className="text-yellow-700">{error}</li>
+              <li key={index}>{error}</li>
             ))}
           </ul>
-          <div className="mt-6">
-            <Link
-              to={`/admin/tournaments/${id}/teams/add`}
-              className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Add Teams
-            </Link>
-          </div>
-        </div>
-      </div>
+        </Card>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-800 mb-2">Error</h2>
-          <p className="text-red-700">{error}</p>
-          <button
-            onClick={loadData}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+        <Button onClick={loadData}>Retry</Button>
+      </PageContainer>
     );
   }
 
@@ -172,18 +171,12 @@ export const TournamentBracketPage: React.FC = () => {
       'Failed to load bracket';
 
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-800 mb-2">Error</h2>
-          <p className="text-red-700">{message}</p>
-          <button
-            onClick={loadData}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <PageContainer>
+        <Alert variant="error" className="mb-4">
+          {message}
+        </Alert>
+        <Button onClick={loadData}>Retry</Button>
+      </PageContainer>
     );
   }
 
@@ -194,47 +187,38 @@ export const TournamentBracketPage: React.FC = () => {
 
   if (!bracket) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <p className="text-gray-600">No bracket data available</p>
-      </div>
+      <PageContainer>
+        <Alert variant="info">No bracket data available</Alert>
+      </PageContainer>
     );
   }
 
   const gamesByRound = groupGamesByRound(bracket.games);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageContainer>
       {/* Header */}
-      <div className="mb-6">
-        <Link to={`/admin/tournaments/${id}`} className="text-blue-600 hover:underline mb-4 inline-block">
-          ← Back to Tournament
-        </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{tournament?.name} - Bracket</h1>
-            <p className="text-gray-600 mt-1">
-              Click on a team to select them as the winner. Click again to undo.
-            </p>
-          </div>
-          <button
-            onClick={loadData}
-            disabled={actionLoading}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            Refresh
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={`${tournament?.name ?? 'Tournament'} - Bracket`}
+        subtitle="Click on a team to select them as the winner. Click again to undo."
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => navigate(`/admin/tournaments/${id}`)}>
+              Back
+            </Button>
+            <Button variant="secondary" onClick={loadData} disabled={actionLoading}>
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       {/* Action Loading Indicator */}
-      {actionLoading && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-            <span className="text-blue-700">Updating bracket...</span>
-          </div>
-        </div>
-      )}
+      {actionLoading ? (
+        <Alert variant="info" className="mb-4">
+          <LoadingState layout="inline" label="Updating bracket..." />
+        </Alert>
+      ) : null}
 
       {/* Rounds */}
       <div className="space-y-8">
@@ -243,7 +227,7 @@ export const TournamentBracketPage: React.FC = () => {
           if (games.length === 0) return null;
 
           return (
-            <div key={round} className="bg-gray-50 rounded-lg p-6">
+            <Card key={round} className="bg-gray-50">
               <h2 className="text-2xl font-bold mb-4 text-gray-800">
                 {ROUND_LABELS[round]}
                 <span className="ml-3 text-sm font-normal text-gray-500">
@@ -262,12 +246,12 @@ export const TournamentBracketPage: React.FC = () => {
                   />
                 ))}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
-    </div>
+    </PageContainer>
   );
-};
+ };
 
 export default TournamentBracketPage;
