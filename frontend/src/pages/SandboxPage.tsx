@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Card } from '../components/ui/Card';
@@ -7,17 +8,13 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
-import {
-  suiteCalcuttaEvaluationsService,
-  type SuiteCalcuttaEvaluation,
-  type SuiteCalcuttaEvaluationPortfolioBid,
-  type SuiteCalcuttaEvaluationResult,
-} from '../services/suiteCalcuttaEvaluationsService';
+import { suiteCalcuttaEvaluationsService, type SuiteCalcuttaEvaluation } from '../services/suiteCalcuttaEvaluationsService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxPage() {
-  const [selectedSuiteId, setSelectedSuiteId] = useState<string>('');
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string>('');
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedSuiteId = searchParams.get('suiteId') || '';
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -32,6 +29,11 @@ export function SandboxPage() {
     return m;
   }, [calcuttas]);
 
+  const allEvaluationsQuery = useQuery({
+    queryKey: ['suite-calcutta-evaluations', 'list', 'all'],
+    queryFn: () => suiteCalcuttaEvaluationsService.list({ limit: 200, offset: 0 }),
+  });
+
   const listQuery = useQuery({
     queryKey: ['suite-calcutta-evaluations', 'list', selectedSuiteId],
     queryFn: () => suiteCalcuttaEvaluationsService.list({ suiteId: selectedSuiteId || undefined, limit: 200, offset: 0 }),
@@ -41,27 +43,14 @@ export function SandboxPage() {
 
   const suites = useMemo(() => {
     const byId = new Map<string, { id: string; name: string }>();
-    for (const it of items) {
+    const allItems: SuiteCalcuttaEvaluation[] = allEvaluationsQuery.data?.items ?? [];
+    for (const it of allItems) {
       if (!byId.has(it.suite_id)) {
         byId.set(it.suite_id, { id: it.suite_id, name: it.suite_name || it.suite_id });
       }
     }
     return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [items]);
-
-  const selectedEval = useMemo(() => items.find((it) => it.id === selectedEvaluationId) ?? null, [items, selectedEvaluationId]);
-
-  const detailQuery = useQuery({
-    queryKey: ['suite-calcutta-evaluations', 'get', selectedEvaluationId],
-    queryFn: () => suiteCalcuttaEvaluationsService.get(selectedEvaluationId),
-    enabled: Boolean(selectedEvaluationId),
-  });
-
-  const resultQuery = useQuery<SuiteCalcuttaEvaluationResult>({
-    queryKey: ['suite-calcutta-evaluations', 'result', selectedEvaluationId],
-    queryFn: () => suiteCalcuttaEvaluationsService.getResult(selectedEvaluationId),
-    enabled: Boolean(selectedEvaluationId) && detailQuery.data?.status === 'succeeded',
-  });
+  }, [allEvaluationsQuery.data?.items]);
 
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
@@ -79,43 +68,6 @@ export function SandboxPage() {
     return d.toLocaleString();
   };
 
-  const formatROI = (v: number) => {
-    if (Number.isNaN(v)) return '—';
-    return v.toFixed(3);
-  };
-
-  const renderPortfolioTable = (bids: SuiteCalcuttaEvaluationPortfolioBid[]) => {
-    if (bids.length === 0) {
-      return <div className="text-gray-700">No portfolio bids found.</div>;
-    }
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Bid</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Expected ROI</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {bids.map((b) => (
-              <tr key={b.team_id}>
-                <td className="px-3 py-2 text-sm text-gray-900">{b.school_name}</td>
-                <td className="px-3 py-2 text-sm text-gray-700">{b.seed}</td>
-                <td className="px-3 py-2 text-sm text-gray-700">{b.region}</td>
-                <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium">{b.bid_points}</td>
-                <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatROI(b.expected_roi)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
   return (
     <PageContainer>
       <PageHeader title="Sandbox" subtitle="Browse historical TestSuite runs and drill into results." />
@@ -129,8 +81,8 @@ export function SandboxPage() {
             id="suite-select"
             value={selectedSuiteId}
             onChange={(e) => {
-              setSelectedSuiteId(e.target.value);
-              setSelectedEvaluationId('');
+              const suiteId = e.target.value;
+              setSearchParams(suiteId ? { suiteId } : {}, { replace: true });
             }}
             className="flex-1 max-w-2xl"
           >
@@ -147,151 +99,56 @@ export function SandboxPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <h2 className="text-xl font-semibold mb-4">Evaluations</h2>
+      <Card>
+        <h2 className="text-xl font-semibold mb-4">Evaluations</h2>
 
-          {listQuery.isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
-          {listQuery.isError ? <div className="text-red-700">{showError(listQuery.error)}</div> : null}
+        {listQuery.isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
+        {listQuery.isError ? <div className="text-red-700">{showError(listQuery.error)}</div> : null}
 
-          {!listQuery.isLoading && !listQuery.isError && items.length === 0 ? (
-            <div className="text-gray-700">No suite evaluations found.</div>
-          ) : null}
+        {!listQuery.isLoading && !listQuery.isError && items.length === 0 ? (
+          <div className="text-gray-700">No suite evaluations found.</div>
+        ) : null}
 
-          {!listQuery.isLoading && !listQuery.isError && items.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((it) => {
-                    const active = it.id === selectedEvaluationId;
-                    return (
-                      <tr
-                        key={it.id}
-                        className={active ? 'bg-blue-50 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer'}
-                        onClick={() => setSelectedEvaluationId(it.id)}
-                      >
-                        <td className="px-3 py-2 text-sm text-gray-900">
-                          <div className="font-medium">{it.suite_name || it.suite_id}</div>
-                          <div className="text-xs text-gray-600">
-                            {it.optimizer_key} · n={it.n_sims} · seed={it.seed}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-700">
-                          {calcuttaNameById.get(it.calcutta_id) || it.calcutta_id}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-700">{it.status}</td>
-                        <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(it.created_at)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-        </Card>
+        {!listQuery.isLoading && !listQuery.isError && items.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {items.map((it) => {
+                  const detailUrl = `/sandbox/evaluations/${encodeURIComponent(it.id)}${
+                    selectedSuiteId ? `?suiteId=${encodeURIComponent(selectedSuiteId)}` : ''
+                  }`;
 
-        <Card>
-          <h2 className="text-xl font-semibold mb-4">Details</h2>
-
-          {!selectedEvaluationId ? <div className="text-gray-700">Select an evaluation to see details.</div> : null}
-
-          {selectedEvaluationId && detailQuery.isLoading ? <LoadingState label="Loading details..." layout="inline" /> : null}
-          {selectedEvaluationId && detailQuery.isError ? <div className="text-red-700">{showError(detailQuery.error)}</div> : null}
-
-          {detailQuery.data ? (
-            <div className="space-y-2 text-sm">
-              <div>
-                <div className="text-gray-500">Suite</div>
-                <div className="font-medium text-gray-900">{detailQuery.data.suite_name || detailQuery.data.suite_id}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Calcutta</div>
-                <div className="text-gray-900">{calcuttaNameById.get(detailQuery.data.calcutta_id) || detailQuery.data.calcutta_id}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Status</div>
-                <div className="text-gray-900">{detailQuery.data.status}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Starting state</div>
-                <div className="text-gray-900">{detailQuery.data.starting_state_key}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Excluded entry</div>
-                <div className="text-gray-900">{detailQuery.data.excluded_entry_name || '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Game outcomes run</div>
-                <div className="text-gray-900">{detailQuery.data.game_outcome_run_id || '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Market share run</div>
-                <div className="text-gray-900">{detailQuery.data.market_share_run_id || '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Created / Updated</div>
-                <div className="text-gray-900">
-                  {formatDateTime(detailQuery.data.created_at)}
-                  <span className="text-gray-500"> · </span>
-                  {formatDateTime(detailQuery.data.updated_at)}
-                </div>
-              </div>
-              {detailQuery.data.error_message ? (
-                <div>
-                  <div className="text-gray-500">Error</div>
-                  <div className="text-red-700 break-words">{detailQuery.data.error_message}</div>
-                </div>
-              ) : null}
-
-              {detailQuery.data.status === 'succeeded' ? (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="text-gray-500">Result</div>
-                  {resultQuery.isLoading ? <LoadingState label="Loading result..." layout="inline" /> : null}
-                  {resultQuery.isError ? <div className="text-red-700">{showError(resultQuery.error)}</div> : null}
-                  {resultQuery.data ? (
-                    <div className="space-y-4">
-                      <div>
-                        <div className="text-gray-500">Our Strategy performance</div>
-                        {resultQuery.data.our_strategy ? (
-                          <div className="mt-1 text-gray-900">
-                            <div>
-                              rank={resultQuery.data.our_strategy.rank} · mean={resultQuery.data.our_strategy.mean_normalized_payout.toFixed(4)} ·
-                              pTop1={resultQuery.data.our_strategy.p_top1.toFixed(4)} · pInMoney={resultQuery.data.our_strategy.p_in_money.toFixed(4)}
-                            </div>
-                            <div className="text-xs text-gray-600">nSims={resultQuery.data.our_strategy.total_simulations}</div>
-                          </div>
-                        ) : (
-                          <div className="mt-1 text-gray-700">No performance row found for Our Strategy.</div>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="text-gray-500">Generated entry (portfolio)</div>
-                        <div className="mt-2">{renderPortfolioTable(resultQuery.data.portfolio)}</div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {selectedEval && !detailQuery.data && !detailQuery.isLoading && !detailQuery.isError ? (
-            <div className="text-gray-700">
-              <div className="text-gray-500">Status</div>
-              <div className="text-gray-900">{selectedEval.status}</div>
-            </div>
-          ) : null}
-        </Card>
-      </div>
+                  return (
+                    <tr
+                      key={it.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => navigate(detailUrl)}
+                    >
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        <div className="font-medium">{it.suite_name || it.suite_id}</div>
+                        <div className="text-xs text-gray-600">
+                          {it.optimizer_key} · n={it.n_sims} · seed={it.seed}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-700">{calcuttaNameById.get(it.calcutta_id) || it.calcutta_id}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700">{it.status}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(it.created_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </Card>
     </PageContainer>
   );
 }

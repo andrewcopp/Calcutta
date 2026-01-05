@@ -26,6 +26,7 @@ import { RunInvestmentsPage } from './pages/RunInvestmentsPage';
 import { EntryPortfolioPage } from './pages/EntryPortfolioPage';
 import { LabPage } from './pages/LabPage';
 import { SandboxPage } from './pages/SandboxPage';
+import { SuiteCalcuttaEvaluationDetailPage } from './pages/SuiteCalcuttaEvaluationDetailPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 
@@ -49,6 +50,7 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
         <Route path="/lab" element={<LabPage />} />
         <Route path="/sandbox" element={<SandboxPage />} />
+        <Route path="/sandbox/evaluations/:id" element={<SuiteCalcuttaEvaluationDetailPage />} />
         <Route path="/runs" element={<RunsRedirect />} />
         <Route path="/runs/:year" element={<RunsPage />} />
         <Route path="/runs/:year/:runId" element={<RunRankingsPage />} />
