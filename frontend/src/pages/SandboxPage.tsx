@@ -111,6 +111,11 @@ export function SandboxPage() {
     return v.toFixed(digits);
   };
 
+  const formatCurrency = (cents: number | null | undefined) => {
+    if (cents == null || Number.isNaN(cents)) return '—';
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
   return (
     <PageContainer>
       <PageHeader title="Sandbox" subtitle="Browse historical TestSuite runs and drill into results." />
@@ -340,6 +345,10 @@ export function SandboxPage() {
 
                   const showHeadline = it.status === 'succeeded' && it.our_mean_normalized_payout != null;
 
+                  const showRealized =
+                    it.status === 'succeeded' &&
+                    (it.realized_finish_position != null || it.realized_total_points != null || it.realized_payout_cents != null);
+
                   return (
                     <tr
                       key={it.id}
@@ -355,6 +364,15 @@ export function SandboxPage() {
                           <div className="text-xs text-gray-600 mt-1">
                             our: rank={it.our_rank ?? '—'} · mean={formatFloat(it.our_mean_normalized_payout, 4)} · pTop1=
                             {formatFloat(it.our_p_top1, 4)} · pInMoney={formatFloat(it.our_p_in_money, 4)}
+                          </div>
+                        ) : null}
+
+                        {showRealized ? (
+                          <div className="text-xs text-gray-600 mt-1">
+                            realized: finish={it.realized_finish_position ?? '—'}
+                            {it.realized_is_tied ? ' (tied)' : ''} · payout={formatCurrency(it.realized_payout_cents)} · points=
+                            {formatFloat(it.realized_total_points, 2)}
+                            {it.realized_in_the_money != null ? ` · ITM=${it.realized_in_the_money ? 'yes' : 'no'}` : ''}
                           </div>
                         ) : null}
                       </td>

@@ -62,6 +62,11 @@ export function SuiteCalcuttaEvaluationDetailPage() {
     return v.toFixed(digits);
   };
 
+  const formatCurrency = (cents: number | null | undefined) => {
+    if (cents == null || Number.isNaN(cents)) return '—';
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
   const renderPortfolioTable = (bids: SuiteCalcuttaEvaluationPortfolioBid[]) => {
     if (bids.length === 0) {
       return <Alert variant="info">No portfolio bids found.</Alert>;
@@ -203,6 +208,23 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                   {formatFloat(detailQuery.data.our_p_top1, 4)} · pInMoney={formatFloat(detailQuery.data.our_p_in_money, 4)}
                   {detailQuery.data.total_simulations != null ? (
                     <span className="text-gray-500"> · nSims={detailQuery.data.total_simulations}</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {detailQuery.data.status === 'succeeded' &&
+            (detailQuery.data.realized_finish_position != null ||
+              detailQuery.data.realized_total_points != null ||
+              detailQuery.data.realized_payout_cents != null) ? (
+              <div className="mb-4 text-sm">
+                <div className="text-gray-500">Realized (historical)</div>
+                <div className="text-gray-900">
+                  finish={detailQuery.data.realized_finish_position ?? '—'}
+                  {detailQuery.data.realized_is_tied ? ' (tied)' : ''} · payout={formatCurrency(detailQuery.data.realized_payout_cents)} · points=
+                  {formatFloat(detailQuery.data.realized_total_points, 2)}
+                  {detailQuery.data.realized_in_the_money != null ? (
+                    <span className="text-gray-500"> · ITM={detailQuery.data.realized_in_the_money ? 'yes' : 'no'}</span>
                   ) : null}
                 </div>
               </div>

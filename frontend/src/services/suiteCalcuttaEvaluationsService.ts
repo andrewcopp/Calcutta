@@ -2,6 +2,7 @@ import { apiClient } from '../api/apiClient';
 
 export type SuiteCalcuttaEvaluation = {
   id: string;
+  suite_execution_id?: string | null;
   suite_id: string;
   suite_name: string;
   optimizer_key: string;
@@ -18,6 +19,11 @@ export type SuiteCalcuttaEvaluation = {
   market_share_run_id?: string | null;
   strategy_generation_run_id?: string | null;
   calcutta_evaluation_run_id?: string | null;
+  realized_finish_position?: number | null;
+  realized_is_tied?: boolean | null;
+  realized_in_the_money?: boolean | null;
+  realized_payout_cents?: number | null;
+  realized_total_points?: number | null;
   starting_state_key: string;
   excluded_entry_name?: string | null;
   status: string;

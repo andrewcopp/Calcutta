@@ -250,10 +250,10 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Sandbox persistence (inputs + outputs only; no simulation samples)
   - [ ] Persist suite definition (advancement algorithm/run selector, investment algorithm/run selector, optimizer, evaluation settings)
-  - [ ] Persist suite execution metadata (created_at, seed, n_sims, excluded entry name)
+  - [x] Persist suite execution metadata (created_at, seed, n_sims, excluded entry name)
   - [x] Persist evaluation-scoped config on each calcutta evaluation (seed, n_sims, optimizer_key)
   - [x] Persist per-calcutta headline results needed by UI (mean normalized payout, P(top 1), P(in money), expected position)
-  - [ ] Persist realized finish (deterministic finish vs historical results)
+  - [x] Persist realized finish (deterministic finish vs historical results)
   - [x] Persist a reference to the generated entry/provenance for drill-down
 
 - [ ] Strategy generation workflow
@@ -345,6 +345,10 @@ Command:
 
 ### Calcutta evaluation
 Monte Carlo evaluation should be run only after the DP returns + market baseline exist.
+
+Local note:
+- Suite calcutta evaluations are processed by the worker (`cmd/workers`) with `-suite-eval-worker=true`.
+- In local `docker-compose.yml`, this flag is enabled by default so `make dev`/`docker compose up` will process queued suite evals.
 
 ### Cleanup
 - [ ] Identify and retire exploratory/legacy tables/endpoints/UI once registry model is wired
