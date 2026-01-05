@@ -26,6 +26,9 @@ type suiteCalcuttaEvaluationRow struct {
 	CalcuttaID       string
 	GameOutcomeRunID string
 	MarketShareRunID string
+	OptimizerKey     *string
+	NSims            *int
+	Seed             *int
 	StartingStateKey string
 	ExcludedEntry    *string
 }
@@ -125,6 +128,9 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 			r.calcutta_id,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
+			r.optimizer_key,
+			r.n_sims,
+			r.seed,
 			r.starting_state_key,
 			r.excluded_entry_name
 	`
@@ -140,6 +146,9 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		&row.CalcuttaID,
 		&row.GameOutcomeRunID,
 		&row.MarketShareRunID,
+		&row.OptimizerKey,
+		&row.NSims,
+		&row.Seed,
 		&row.StartingStateKey,
 		&excluded,
 	); err != nil {
@@ -190,10 +199,24 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 
 	simSvc := appsimulatetournaments.New(s.pool)
 	goRunID := req.GameOutcomeRunID
+	nSims := 0
+	if req.NSims != nil {
+		nSims = *req.NSims
+	}
+	if nSims <= 0 {
+		nSims = s.resolveSuiteNSims(ctx, req.SuiteID, 10000)
+	}
+	seed := 0
+	if req.Seed != nil {
+		seed = *req.Seed
+	}
+	if seed == 0 {
+		seed = s.resolveSuiteSeed(ctx, req.SuiteID, 42)
+	}
 	simRes, err := simSvc.Run(ctx, appsimulatetournaments.RunParams{
 		Season:               year,
-		NSims:                s.resolveSuiteNSims(ctx, req.SuiteID, 10000),
-		Seed:                 s.resolveSuiteSeed(ctx, req.SuiteID, 42),
+		NSims:                nSims,
+		Seed:                 seed,
 		Workers:              0,
 		BatchSize:            500,
 		ProbabilitySourceKey: "suite_eval_worker",
@@ -207,11 +230,18 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 
 	rebSvc := reb.New(s.pool)
 	msRunID := req.MarketShareRunID
+	optimizerKey := ""
+	if req.OptimizerKey != nil {
+		optimizerKey = *req.OptimizerKey
+	}
+	if optimizerKey == "" {
+		optimizerKey = s.resolveSuiteOptimizerKey(ctx, req.SuiteID, "minlp_v1")
+	}
 	genRes, err := rebSvc.GenerateAndWrite(ctx, reb.GenerateParams{
 		CalcuttaID:            req.CalcuttaID,
 		RunKey:                runKey,
 		Name:                  "suite_eval_worker",
-		OptimizerKey:          s.resolveSuiteOptimizerKey(ctx, req.SuiteID, "minlp_v1"),
+		OptimizerKey:          optimizerKey,
 		MarketShareRunID:      &msRunID,
 		SimulatedTournamentID: &simRes.TournamentSimulationBatchID,
 	})
@@ -233,15 +263,105 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		return false
 	}
 
+	var (
+		ourRank                   *int
+		ourMeanNormalizedPayout   *float64
+		ourMedianNormalizedPayout *float64
+		ourPTop1                  *float64
+		ourPInMoney               *float64
+		totalSimulations          *int
+	)
+	if evalRunID != "" {
+		var (
+			rank                   int
+			meanNormalizedPayout   float64
+			medianNormalizedPayout float64
+			pTop1                  float64
+			pInMoney               float64
+			totalSims              int
+		)
+		err := s.pool.QueryRow(ctx, `
+			WITH ranked AS (
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
+					ep.entry_name,
+					COALESCE(ep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
+					COALESCE(ep.median_normalized_payout, 0.0)::double precision AS median_normalized_payout,
+					COALESCE(ep.p_top1, 0.0)::double precision AS p_top1,
+					COALESCE(ep.p_in_money, 0.0)::double precision AS p_in_money
+				FROM derived.entry_performance ep
+				WHERE ep.calcutta_evaluation_run_id = $1::uuid
+					AND ep.deleted_at IS NULL
+			)
+			SELECT
+				r.rank,
+				r.mean_normalized_payout,
+				r.median_normalized_payout,
+				r.p_top1,
+				r.p_in_money,
+				COALESCE((
+					SELECT st.n_sims::int
+					FROM derived.calcutta_evaluation_runs cer
+					JOIN derived.simulated_tournaments st
+						ON st.id = cer.simulated_tournament_id
+						AND st.deleted_at IS NULL
+					WHERE cer.id = $1::uuid
+						AND cer.deleted_at IS NULL
+					LIMIT 1
+				), 0)::int as total_simulations
+			FROM ranked r
+			WHERE r.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy')
+			ORDER BY r.rank ASC
+			LIMIT 1
+		`, evalRunID).Scan(
+			&rank,
+			&meanNormalizedPayout,
+			&medianNormalizedPayout,
+			&pTop1,
+			&pInMoney,
+			&totalSims,
+		)
+		if err == nil {
+			ourRank = &rank
+			ourMeanNormalizedPayout = &meanNormalizedPayout
+			ourMedianNormalizedPayout = &medianNormalizedPayout
+			ourPTop1 = &pTop1
+			ourPInMoney = &pInMoney
+			totalSimulations = &totalSims
+		}
+	}
+
 	_, err = s.pool.Exec(ctx, `
 		UPDATE derived.suite_calcutta_evaluations
 		SET status = 'succeeded',
-			strategy_generation_run_id = $2::uuid,
-			calcutta_evaluation_run_id = $3::uuid,
+			optimizer_key = $2,
+			n_sims = $3,
+			seed = $4,
+			strategy_generation_run_id = $5::uuid,
+			calcutta_evaluation_run_id = $6::uuid,
+			our_rank = $7,
+			our_mean_normalized_payout = $8,
+			our_median_normalized_payout = $9,
+			our_p_top1 = $10,
+			our_p_in_money = $11,
+			total_simulations = $12,
 			error_message = NULL,
 			updated_at = NOW()
 		WHERE id = $1::uuid
-	`, req.ID, genRes.StrategyGenerationRunID, evalRunID)
+	`,
+		req.ID,
+		optimizerKey,
+		nSims,
+		seed,
+		genRes.StrategyGenerationRunID,
+		evalRunID,
+		ourRank,
+		ourMeanNormalizedPayout,
+		ourMedianNormalizedPayout,
+		ourPTop1,
+		ourPInMoney,
+		totalSimulations,
+	)
 	if err != nil {
 		log.Printf("Error updating suite calcutta evaluation %s to succeeded: %v", req.ID, err)
 		return false

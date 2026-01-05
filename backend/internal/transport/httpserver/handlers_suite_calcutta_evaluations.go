@@ -17,25 +17,31 @@ type createSuiteCalcuttaEvaluationResponse struct {
 }
 
 type suiteCalcuttaEvaluationListItem struct {
-	ID                      string     `json:"id"`
-	SuiteID                 string     `json:"suite_id"`
-	SuiteName               string     `json:"suite_name"`
-	OptimizerKey            string     `json:"optimizer_key"`
-	NSims                   int        `json:"n_sims"`
-	Seed                    int        `json:"seed"`
-	CalcuttaID              string     `json:"calcutta_id"`
-	GameOutcomeRunID        *string    `json:"game_outcome_run_id,omitempty"`
-	MarketShareRunID        *string    `json:"market_share_run_id,omitempty"`
-	StrategyGenerationRunID *string    `json:"strategy_generation_run_id,omitempty"`
-	CalcuttaEvaluationRunID *string    `json:"calcutta_evaluation_run_id,omitempty"`
-	StartingStateKey        string     `json:"starting_state_key"`
-	ExcludedEntryName       *string    `json:"excluded_entry_name,omitempty"`
-	Status                  string     `json:"status"`
-	ClaimedAt               *time.Time `json:"claimed_at,omitempty"`
-	ClaimedBy               *string    `json:"claimed_by,omitempty"`
-	ErrorMessage            *string    `json:"error_message,omitempty"`
-	CreatedAt               time.Time  `json:"created_at"`
-	UpdatedAt               time.Time  `json:"updated_at"`
+	ID                        string     `json:"id"`
+	SuiteID                   string     `json:"suite_id"`
+	SuiteName                 string     `json:"suite_name"`
+	OptimizerKey              string     `json:"optimizer_key"`
+	NSims                     int        `json:"n_sims"`
+	Seed                      int        `json:"seed"`
+	OurRank                   *int       `json:"our_rank,omitempty"`
+	OurMeanNormalizedPayout   *float64   `json:"our_mean_normalized_payout,omitempty"`
+	OurMedianNormalizedPayout *float64   `json:"our_median_normalized_payout,omitempty"`
+	OurPTop1                  *float64   `json:"our_p_top1,omitempty"`
+	OurPInMoney               *float64   `json:"our_p_in_money,omitempty"`
+	TotalSimulations          *int       `json:"total_simulations,omitempty"`
+	CalcuttaID                string     `json:"calcutta_id"`
+	GameOutcomeRunID          *string    `json:"game_outcome_run_id,omitempty"`
+	MarketShareRunID          *string    `json:"market_share_run_id,omitempty"`
+	StrategyGenerationRunID   *string    `json:"strategy_generation_run_id,omitempty"`
+	CalcuttaEvaluationRunID   *string    `json:"calcutta_evaluation_run_id,omitempty"`
+	StartingStateKey          string     `json:"starting_state_key"`
+	ExcludedEntryName         *string    `json:"excluded_entry_name,omitempty"`
+	Status                    string     `json:"status"`
+	ClaimedAt                 *time.Time `json:"claimed_at,omitempty"`
+	ClaimedBy                 *string    `json:"claimed_by,omitempty"`
+	ErrorMessage              *string    `json:"error_message,omitempty"`
+	CreatedAt                 time.Time  `json:"created_at"`
+	UpdatedAt                 time.Time  `json:"updated_at"`
 }
 
 type suiteCalcuttaEvaluationListResponse struct {
@@ -101,8 +107,20 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 
 	// Resolve (or create) suite_id.
 	suiteID := ""
+	evalOptimizerKey := ""
 	if req.SuiteID != nil {
 		suiteID = *req.SuiteID
+		if req.OptimizerKey != nil {
+			evalOptimizerKey = *req.OptimizerKey
+		} else {
+			_ = s.pool.QueryRow(ctx, `
+				SELECT COALESCE(optimizer_key, '')
+				FROM derived.suites
+				WHERE id = $1::uuid
+					AND deleted_at IS NULL
+				LIMIT 1
+			`, suiteID).Scan(&evalOptimizerKey)
+		}
 	} else {
 		// Resolve algorithm ids from runs.
 		var goAlgID string
@@ -155,6 +173,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			return
 		}
 		suiteID = insertedID
+		evalOptimizerKey = *req.OptimizerKey
 	}
 
 	var evalID string
@@ -184,13 +203,16 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			calcutta_id,
 			game_outcome_run_id,
 			market_share_run_id,
+			optimizer_key,
+			n_sims,
+			seed,
 			starting_state_key,
 			excluded_entry_name
 		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6::text)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6::int, $7::int, $8, $9::text)
 		RETURNING id, status
 	`
-	if err := s.pool.QueryRow(ctx, q, suiteID, req.CalcuttaID, goRun, msRun, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	if err := s.pool.QueryRow(ctx, q, suiteID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, req.NSims, req.Seed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -218,9 +240,15 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 			r.id,
 			r.suite_id,
 			COALESCE(s.name, '') AS suite_name,
-			COALESCE(s.optimizer_key, '') AS optimizer_key,
-			COALESCE(s.n_sims, 0) AS n_sims,
-			COALESCE(s.seed, 0) AS seed,
+			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
+			COALESCE(r.n_sims, s.n_sims, 0) AS n_sims,
+			COALESCE(r.seed, s.seed, 0) AS seed,
+			r.our_rank,
+			r.our_mean_normalized_payout,
+			r.our_median_normalized_payout,
+			r.our_p_top1,
+			r.our_p_in_money,
+			r.total_simulations,
 			r.calcutta_id,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
@@ -261,6 +289,12 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 			&it.OptimizerKey,
 			&it.NSims,
 			&it.Seed,
+			&it.OurRank,
+			&it.OurMeanNormalizedPayout,
+			&it.OurMedianNormalizedPayout,
+			&it.OurPTop1,
+			&it.OurPInMoney,
+			&it.TotalSimulations,
 			&it.CalcuttaID,
 			&it.GameOutcomeRunID,
 			&it.MarketShareRunID,
@@ -302,9 +336,15 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 			r.id,
 			r.suite_id,
 			COALESCE(s.name, '') AS suite_name,
-			COALESCE(s.optimizer_key, '') AS optimizer_key,
-			COALESCE(s.n_sims, 0) AS n_sims,
-			COALESCE(s.seed, 0) AS seed,
+			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
+			COALESCE(r.n_sims, s.n_sims, 0) AS n_sims,
+			COALESCE(r.seed, s.seed, 0) AS seed,
+			r.our_rank,
+			r.our_mean_normalized_payout,
+			r.our_median_normalized_payout,
+			r.our_p_top1,
+			r.our_p_in_money,
+			r.total_simulations,
 			r.calcutta_id,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
@@ -332,6 +372,12 @@ func (s *Server) getSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *htt
 		&it.OptimizerKey,
 		&it.NSims,
 		&it.Seed,
+		&it.OurRank,
+		&it.OurMeanNormalizedPayout,
+		&it.OurMedianNormalizedPayout,
+		&it.OurPTop1,
+		&it.OurPInMoney,
+		&it.TotalSimulations,
 		&it.CalcuttaID,
 		&it.GameOutcomeRunID,
 		&it.MarketShareRunID,
@@ -370,9 +416,15 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 			r.id,
 			r.suite_id,
 			COALESCE(s.name, '') AS suite_name,
-			COALESCE(s.optimizer_key, '') AS optimizer_key,
-			COALESCE(s.n_sims, 0) AS n_sims,
-			COALESCE(s.seed, 0) AS seed,
+			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
+			COALESCE(r.n_sims, s.n_sims, 0) AS n_sims,
+			COALESCE(r.seed, s.seed, 0) AS seed,
+			r.our_rank,
+			r.our_mean_normalized_payout,
+			r.our_median_normalized_payout,
+			r.our_p_top1,
+			r.our_p_in_money,
+			r.total_simulations,
 			r.calcutta_id,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
@@ -400,6 +452,12 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 		&eval.OptimizerKey,
 		&eval.NSims,
 		&eval.Seed,
+		&eval.OurRank,
+		&eval.OurMeanNormalizedPayout,
+		&eval.OurMedianNormalizedPayout,
+		&eval.OurPTop1,
+		&eval.OurPInMoney,
+		&eval.TotalSimulations,
 		&eval.CalcuttaID,
 		&eval.GameOutcomeRunID,
 		&eval.MarketShareRunID,
