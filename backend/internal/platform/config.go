@@ -18,6 +18,15 @@ type Config struct {
 	Port                            string
 	BootstrapAdminEmail             string
 	BootstrapAdminPassword          string
+	SMTPHost                        string
+	SMTPPort                        int
+	SMTPUsername                    string
+	SMTPPassword                    string
+	SMTPFromEmail                   string
+	SMTPFromName                    string
+	SMTPStartTLS                    bool
+	InviteBaseURL                   string
+	InviteResendMinSeconds          int
 	MetricsEnabled                  bool
 	MetricsAuthToken                string
 	HTTPReadTimeoutSeconds          int
@@ -227,6 +236,17 @@ func LoadConfigFromEnv() (Config, error) {
 	metricsEnabled := envBool("METRICS_ENABLED", false)
 	metricsAuthToken := strings.TrimSpace(os.Getenv("METRICS_AUTH_TOKEN"))
 
+	smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
+	smtpPort := envInt("SMTP_PORT", 587, 0)
+	smtpUsername := strings.TrimSpace(os.Getenv("SMTP_USERNAME"))
+	smtpPassword := os.Getenv("SMTP_PASSWORD")
+	smtpFromEmail := strings.TrimSpace(os.Getenv("SMTP_FROM_EMAIL"))
+	smtpFromName := strings.TrimSpace(os.Getenv("SMTP_FROM_NAME"))
+	smtpStartTLS := envBool("SMTP_STARTTLS", true)
+
+	inviteBaseURL := strings.TrimSpace(os.Getenv("INVITE_BASE_URL"))
+	inviteResendMinSeconds := envInt("INVITE_RESEND_MIN_SECONDS", 60, 0)
+
 	pgxPoolMaxConns := envInt("PGX_POOL_MAX_CONNS", 10, 1)
 	pgxPoolMinConns := envInt("PGX_POOL_MIN_CONNS", 0, 0)
 	pgxPoolMaxConnLifetimeSeconds := envInt("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", 1800, 0)
@@ -269,6 +289,15 @@ func LoadConfigFromEnv() (Config, error) {
 		Port:                            os.Getenv("PORT"),
 		BootstrapAdminEmail:             strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")),
 		BootstrapAdminPassword:          os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
+		SMTPHost:                        smtpHost,
+		SMTPPort:                        smtpPort,
+		SMTPUsername:                    smtpUsername,
+		SMTPPassword:                    smtpPassword,
+		SMTPFromEmail:                   smtpFromEmail,
+		SMTPFromName:                    smtpFromName,
+		SMTPStartTLS:                    smtpStartTLS,
+		InviteBaseURL:                   inviteBaseURL,
+		InviteResendMinSeconds:          inviteResendMinSeconds,
 		MetricsEnabled:                  metricsEnabled,
 		MetricsAuthToken:                metricsAuthToken,
 		HTTPReadTimeoutSeconds:          httpReadTimeoutSeconds,

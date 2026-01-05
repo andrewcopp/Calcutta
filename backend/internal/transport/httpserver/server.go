@@ -25,6 +25,7 @@ type Server struct {
 	cognitoJWT   *cognitoJWTVerifier
 	pool         *pgxpool.Pool
 	cfg          platform.Config
+	emailSender  platform.EmailSender
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
@@ -47,6 +48,19 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 		cognitoJWT = created
 	}
 
+	var emailSender platform.EmailSender
+	if strings.TrimSpace(cfg.SMTPHost) != "" && strings.TrimSpace(cfg.SMTPFromEmail) != "" {
+		emailSender = &platform.SMTPSender{
+			Host:      cfg.SMTPHost,
+			Port:      cfg.SMTPPort,
+			Username:  cfg.SMTPUsername,
+			Password:  cfg.SMTPPassword,
+			FromEmail: cfg.SMTPFromEmail,
+			FromName:  cfg.SMTPFromName,
+			StartTLS:  cfg.SMTPStartTLS,
+		}
+	}
+
 	return &Server{
 		app:          a,
 		authRepo:     authRepo,
@@ -57,6 +71,7 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 		cognitoJWT:   cognitoJWT,
 		pool:         pool,
 		cfg:          cfg,
+		emailSender:  emailSender,
 	}, nil
 }
 

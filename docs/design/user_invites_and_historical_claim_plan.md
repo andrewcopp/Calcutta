@@ -105,8 +105,9 @@
 ## API endpoints
 
 - [ ] Admin-only:
-  - [x] `POST /admin/users/{id}/invite` (create + send invite)
-  - [x] `POST /admin/users/{id}/invite/resend`
+  - [x] `POST /admin/users/{id}/invite` (generate/rotate invite token; no email)
+  - [x] `POST /admin/users/{id}/invite/send` (rotate token + send email)
+  - [x] `POST /admin/users/{id}/invite/resend` (alias of `/invite/send`)
   - [ ] `POST /admin/entries/{id}/reassign` (manual fix)
   - [x] `GET /admin/users?status=invited` (list)
 - [ ] Public:
@@ -115,15 +116,16 @@
 
 ## Email delivery
 
-- [ ] Decide email provider approach:
-  - [ ] SMTP
-  - [ ] Transactional provider (SendGrid/Mailgun/etc.)
-- [ ] Create templates:
-  - [ ] Initial invite (“invited to 2026 Calcutta + view historical Calcuttas”)
-  - [ ] Resend invite
-- [ ] Add basic operational controls:
-  - [ ] Rate limiting resend
-  - [ ] Log send attempts + errors
+- [x] Decide email provider approach:
+  - [x] Local/offline: Mailpit via SMTP sink (no internet required)
+  - [x] Production: Postmark via SMTP
+  - [x] Implementation: wire generic SMTP client in backend so provider can be swapped
+- [x] Create templates:
+  - [x] Initial invite (casual v1 text template)
+  - [x] Resend invite (same content for now)
+- [x] Add basic operational controls:
+  - [x] Rate limiting resend via `INVITE_RESEND_MIN_SECONDS`
+  - [x] Log send attempts + errors via request logger
 
 ## Auth / authorization
 

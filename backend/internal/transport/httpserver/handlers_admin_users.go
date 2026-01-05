@@ -1,7 +1,10 @@
 package httpserver
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -12,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -38,7 +42,8 @@ type adminUsersListResponse struct {
 func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users", s.requirePermission("admin.users.read", s.adminUsersListHandler)).Methods("GET")
 	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}/invite/resend", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
+	r.HandleFunc("/api/admin/users/{id}/invite/send", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
+	r.HandleFunc("/api/admin/users/{id}/invite/resend", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
 }
 
 func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,61 +65,9 @@ func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request)
 	now := time.Now().UTC()
 	expiresAt := now.Add(7 * 24 * time.Hour)
 
-	var email string
-	var passwordHash *string
-	err := s.pool.QueryRow(r.Context(), `
-		SELECT email, status, password_hash
-		FROM users
-		WHERE id = $1 AND deleted_at IS NULL
-	`, userID).Scan(&email, new(string), &passwordHash)
+	inviteToken, email, err := s.generateInviteToken(r.Context(), userID, now, expiresAt, false, nil)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "user", ID: userID})
-			return
-		}
 		writeErrorFromErr(w, r, err)
-		return
-	}
-	if passwordHash != nil && strings.TrimSpace(*passwordHash) != "" {
-		writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "id", Message: "user already has a password set"})
-		return
-	}
-
-	var inviteToken string
-	var inviteHash string
-	for i := 0; i < 3; i++ {
-		created, err := coreauth.NewInviteToken()
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		createdHash := coreauth.HashInviteToken(created)
-
-		ct, err := s.pool.Exec(r.Context(), `
-			UPDATE users
-			SET
-			  status = 'requires_password_setup',
-			  invite_token_hash = $2,
-			  invite_expires_at = $3,
-			  invite_consumed_at = NULL,
-			  invited_at = COALESCE(invited_at, $4),
-			  last_invite_sent_at = $4,
-			  updated_at = $4
-			WHERE id = $1 AND deleted_at IS NULL
-		`, userID, createdHash, expiresAt, now)
-		if err != nil {
-			continue
-		}
-		if ct.RowsAffected() == 0 {
-			writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "user", ID: userID})
-			return
-		}
-		inviteToken = created
-		inviteHash = createdHash
-		break
-	}
-	if inviteToken == "" || inviteHash == "" {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "failed to generate invite token", "")
 		return
 	}
 
@@ -125,6 +78,198 @@ func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request)
 		InviteExpires: expiresAt.Format(time.RFC3339),
 		Status:        "requires_password_setup",
 	})
+}
+
+func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Request) {
+	if s.pool == nil {
+		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		return
+	}
+
+	userID := strings.TrimSpace(mux.Vars(r)["id"])
+	if userID == "" {
+		writeErrorFromErr(w, r, dtos.ErrFieldRequired("id"))
+		return
+	}
+	if _, err := uuid.Parse(userID); err != nil {
+		writeErrorFromErr(w, r, dtos.ErrFieldInvalid("id", "invalid uuid"))
+		return
+	}
+	if s.emailSender == nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_argument", "email sending is not configured", "")
+		return
+	}
+	if strings.TrimSpace(s.cfg.InviteBaseURL) == "" {
+		writeError(w, r, http.StatusBadRequest, "invalid_argument", "INVITE_BASE_URL is not configured", "")
+		return
+	}
+
+	now := time.Now().UTC()
+	expiresAt := now.Add(7 * 24 * time.Hour)
+
+	var lastSent *time.Time
+	inviteToken, email, err := s.generateInviteToken(r.Context(), userID, now, expiresAt, false, &lastSent)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if lastSent != nil && s.cfg.InviteResendMinSeconds > 0 {
+		min := time.Duration(s.cfg.InviteResendMinSeconds) * time.Second
+		if now.Sub(*lastSent) < min {
+			retryAfter := int(min.Seconds())
+			w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+			writeError(w, r, http.StatusTooManyRequests, "rate_limited", "Invite email recently sent; please try again soon", "")
+			return
+		}
+	}
+
+	inviteURL, err := buildInviteURL(s.cfg.InviteBaseURL, inviteToken)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	subject, body := buildInviteEmail(inviteURL, expiresAt)
+	err = s.emailSender.Send(r.Context(), email, subject, body)
+	if err != nil {
+		requestLogger(r.Context()).ErrorContext(r.Context(), "invite_email_send_failed", "event", "invite_email_send_failed", "user_id", userID, "email", email, "error", err.Error())
+		writeError(w, r, http.StatusInternalServerError, "internal_error", "failed to send invite email", "")
+		return
+	}
+
+	_, err = s.pool.Exec(r.Context(), `
+		UPDATE users
+		SET last_invite_sent_at = $2, updated_at = $2
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID, now)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	requestLogger(r.Context()).InfoContext(r.Context(), "invite_email_sent", "event", "invite_email_sent", "user_id", userID, "email", email)
+	writeJSON(w, http.StatusOK, dtos.AdminInviteUserResponse{
+		UserID:        userID,
+		Email:         email,
+		InviteToken:   inviteToken,
+		InviteExpires: expiresAt.Format(time.RFC3339),
+		Status:        "requires_password_setup",
+	})
+}
+
+func (s *Server) generateInviteToken(ctx context.Context, userID string, now time.Time, expiresAt time.Time, setLastSent bool, lastSentOut **time.Time) (string, string, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	defer tx.Rollback(ctx)
+
+	var email string
+	var passwordHash *string
+	var lastInviteSentAt pgtype.Timestamptz
+	err = tx.QueryRow(ctx, `
+		SELECT email, password_hash, last_invite_sent_at
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+		FOR UPDATE
+	`, userID).Scan(&email, &passwordHash, &lastInviteSentAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", "", &apperrors.NotFoundError{Resource: "user", ID: userID}
+		}
+		return "", "", err
+	}
+	if lastSentOut != nil {
+		if lastInviteSentAt.Valid {
+			t := lastInviteSentAt.Time.UTC()
+			*lastSentOut = &t
+		} else {
+			*lastSentOut = nil
+		}
+	}
+	if passwordHash != nil && strings.TrimSpace(*passwordHash) != "" {
+		return "", "", &apperrors.InvalidArgumentError{Field: "id", Message: "user already has a password set"}
+	}
+
+	var inviteToken string
+	var inviteHash string
+	for i := 0; i < 3; i++ {
+		created, err := coreauth.NewInviteToken()
+		if err != nil {
+			return "", "", err
+		}
+		createdHash := coreauth.HashInviteToken(created)
+
+		var ct pgconn.CommandTag
+		if setLastSent {
+			ct, err = tx.Exec(ctx, `
+				UPDATE users
+				SET
+				  status = 'requires_password_setup',
+				  invite_token_hash = $2,
+				  invite_expires_at = $3,
+				  invite_consumed_at = NULL,
+				  invited_at = COALESCE(invited_at, $4),
+				  last_invite_sent_at = $4,
+				  updated_at = $4
+				WHERE id = $1 AND deleted_at IS NULL
+			`, userID, createdHash, expiresAt, now)
+		} else {
+			ct, err = tx.Exec(ctx, `
+				UPDATE users
+				SET
+				  status = 'requires_password_setup',
+				  invite_token_hash = $2,
+				  invite_expires_at = $3,
+				  invite_consumed_at = NULL,
+				  invited_at = COALESCE(invited_at, $4),
+				  updated_at = $4
+				WHERE id = $1 AND deleted_at IS NULL
+			`, userID, createdHash, expiresAt, now)
+		}
+		if err != nil {
+			continue
+		}
+		if ct.RowsAffected() == 0 {
+			return "", "", &apperrors.NotFoundError{Resource: "user", ID: userID}
+		}
+		inviteToken = created
+		inviteHash = createdHash
+		break
+	}
+	if inviteToken == "" || inviteHash == "" {
+		return "", "", fmt.Errorf("failed to generate invite token")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", "", err
+	}
+	return inviteToken, email, nil
+}
+
+func buildInviteURL(base string, token string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(base))
+	if err != nil {
+		return "", err
+	}
+	if u.Scheme == "" {
+		return "", fmt.Errorf("invite base url must include scheme")
+	}
+	u.Path = strings.TrimRight(u.Path, "/") + "/invite"
+	q := u.Query()
+	q.Set("token", token)
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+func buildInviteEmail(inviteURL string, expiresAt time.Time) (string, string) {
+	subject := "You're invited to March Markets"
+	body := "Hey!\n\n" +
+		"You've been invited to March Markets.\n\n" +
+		"Set your password here:\n" + inviteURL + "\n\n" +
+		"This link expires at " + expiresAt.UTC().Format(time.RFC3339) + ".\n\n" +
+		"- March Markets"
+	return subject, body
 }
 
 func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
