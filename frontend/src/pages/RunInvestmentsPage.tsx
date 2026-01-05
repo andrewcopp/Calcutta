@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { mlAnalyticsService } from '../services/mlAnalyticsService';
 import { RunViewerHeader } from '../components/RunViewerHeader';
 import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer } from '../components/ui/Page';
@@ -87,12 +88,35 @@ export function RunInvestmentsPage() {
       <RunViewerHeader year={parsedYear} runId={decodedRunId} runName={ourEntryQuery.data?.run.name} activeTab="investments" />
 
       <Card>
-        {!calcuttaId && ourEntryQuery.isSuccess && <div className="text-gray-600">No calcutta_id found for this run.</div>}
-        {ourEntryQuery.isLoading && <LoadingState label="Loading run context..." layout="inline" />}
-        {ourEntryQuery.isError && <Alert variant="error">Failed to load run context.</Alert>}
+        {!calcuttaId && ourEntryQuery.isSuccess ? (
+          <Alert variant="info" className="mb-4">
+            No calcutta_id found for this run.
+          </Alert>
+        ) : null}
 
-        {investmentsQuery.isLoading && calcuttaId && <LoadingState label="Loading investments..." layout="inline" />}
-        {investmentsQuery.isError && calcuttaId && <Alert variant="error">Failed to load investments.</Alert>}
+        {ourEntryQuery.isLoading ? <LoadingState label="Loading run context..." layout="inline" /> : null}
+
+        {ourEntryQuery.isError ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to load run context</div>
+            <div className="mb-3">{ourEntryQuery.error instanceof Error ? ourEntryQuery.error.message : 'An error occurred'}</div>
+            <Button size="sm" onClick={() => ourEntryQuery.refetch()}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
+
+        {investmentsQuery.isLoading && calcuttaId ? <LoadingState label="Loading investments..." layout="inline" /> : null}
+
+        {investmentsQuery.isError && calcuttaId ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to load investments</div>
+            <div className="mb-3">{investmentsQuery.error instanceof Error ? investmentsQuery.error.message : 'An error occurred'}</div>
+            <Button size="sm" onClick={() => investmentsQuery.refetch()}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
 
         {investmentsQuery.data && (
           <div className="overflow-x-auto">
@@ -172,6 +196,12 @@ export function RunInvestmentsPage() {
             </table>
           </div>
         )}
+
+        {!investmentsQuery.isLoading && !investmentsQuery.isError && calcuttaId && !investmentsQuery.data ? (
+          <Alert variant="info" className="mt-3">
+            No investment data available.
+          </Alert>
+        ) : null}
       </Card>
     </PageContainer>
   );
