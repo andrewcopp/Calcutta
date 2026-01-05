@@ -251,8 +251,10 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 - [ ] Sandbox persistence (inputs + outputs only; no simulation samples)
   - [ ] Persist suite definition (advancement algorithm/run selector, investment algorithm/run selector, optimizer, evaluation settings)
   - [ ] Persist suite execution metadata (created_at, seed, n_sims, excluded entry name)
-  - [ ] Persist per-calcutta headline results needed by UI (expected position, mean normalized payout, P(top 1), P(in money), realized finish)
-  - [ ] Persist a reference to the generated entry/provenance for drill-down
+  - [x] Persist evaluation-scoped config on each calcutta evaluation (seed, n_sims, optimizer_key)
+  - [x] Persist per-calcutta headline results needed by UI (mean normalized payout, P(top 1), P(in money), expected position)
+  - [ ] Persist realized finish (deterministic finish vs historical results)
+  - [x] Persist a reference to the generated entry/provenance for drill-down
 
 - [ ] Strategy generation workflow
   - [ ] Select game-outcomes run + market share run + optimizer key
