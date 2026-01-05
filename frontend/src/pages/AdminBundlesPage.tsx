@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { API_URL, apiClient } from '../api/apiClient';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 
 type ImportStartResponse = {
   upload_id: string;
@@ -158,22 +163,18 @@ export const AdminBundlesPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Admin: Bundles</h1>
+    <PageContainer>
+      <PageHeader title="Admin: Bundles" />
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <Card className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Export</h2>
         <p className="text-gray-600 mb-4">Download a zip of the current DB state in bundle format.</p>
-        <button
-          onClick={download}
-          disabled={busy}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
+        <Button onClick={download} disabled={busy}>
           Download bundles (.zip)
-        </button>
-      </div>
+        </Button>
+      </Card>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <Card>
         <h2 className="text-xl font-semibold mb-2">Import</h2>
         <p className="text-gray-600 mb-4">Upload a bundles zip and import it into the database.</p>
 
@@ -185,17 +186,19 @@ export const AdminBundlesPage: React.FC = () => {
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
           <div>
-            <button
-              onClick={upload}
-              disabled={busy || !file}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-            >
+            <Button onClick={upload} disabled={busy || !file}>
               Upload + Import
-            </button>
+            </Button>
           </div>
         </div>
 
-        {error && <div className="mt-4 text-red-600">{error}</div>}
+        {busy ? <LoadingState label="Working..." layout="inline" /> : null}
+
+        {error && (
+          <Alert variant="error" className="mt-4">
+            {error}
+          </Alert>
+        )}
 
         {result && (
           <div className="mt-6">
@@ -203,8 +206,8 @@ export const AdminBundlesPage: React.FC = () => {
             <pre className="bg-gray-100 rounded p-4 overflow-auto text-sm">{JSON.stringify(result, null, 2)}</pre>
           </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 };
 
