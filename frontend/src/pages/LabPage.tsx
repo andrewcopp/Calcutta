@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TabsNav } from '../components/TabsNav';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -69,6 +69,7 @@ type TeamPredictedMarketShare = {
 };
 
 export function LabPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -181,7 +182,6 @@ export function LabPage() {
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Algorithm</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coverage</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -193,21 +193,19 @@ export function LabPage() {
                   const alg = algoById.get(row.id);
                   const desc = row.description ?? alg?.description;
                   return (
-                    <tr key={row.id} className="hover:bg-gray-50">
+                    <tr
+                      key={row.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setSelectedAlgorithmId(row.id);
+                        navigate(detailUrl);
+                      }}
+                    >
                       <td className="px-3 py-2 text-sm text-gray-900">
                         <div className="font-medium">{row.name}</div>
                         {desc ? <div className="text-xs text-gray-600">{desc}</div> : null}
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-700">{formatCoverage(row.covered, row.total)}</td>
-                      <td className="px-3 py-2 text-sm">
-                        <Link
-                          to={detailUrl}
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => setSelectedAlgorithmId(row.id)}
-                        >
-                          Open
-                        </Link>
-                      </td>
                     </tr>
                   );
                 })}

@@ -284,13 +284,13 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [x] Replace nav with Lab / Sandbox and remove legacy pages from navigation
   - [x] Coverage: use UI to identify missing runs (algorithms not yet run for a tournament / calcutta)
   - [ ] Lab: Advancements tab
-    - [x] Algorithm list (kind = game outcomes)
-    - [x] Algorithm detail -> tournaments with runs
-    - [x] Tournament detail -> per-team advancement probabilities (sortable; default by championship probability)
+    - [x] Algorithm list (kind = game outcomes; row-click navigates)
+    - [x] Algorithm detail -> tournaments list
+    - [x] Tournament detail (dedicated route: `/lab/advancements/algorithms/:algorithmId/tournaments/:tournamentId`) -> per-team advancement probabilities
   - [ ] Lab: Investments tab
-    - [x] Algorithm list (kind = market share)
-    - [x] Algorithm detail -> calcuttas with runs
-    - [x] Calcutta detail -> per-team market share with rational + predicted + delta_percent
+    - [x] Algorithm list (kind = market share; row-click navigates)
+    - [x] Algorithm detail -> calcuttas list
+    - [x] Calcutta detail (dedicated route: `/lab/investments/algorithms/:algorithmId/calcuttas/:calcuttaId`) -> per-team market share with rational + predicted + delta_percent
   - [ ] Sandbox: Suites browser
     - [x] List suites
     - [x] Suite detail -> per-calcutta results list + suite metadata

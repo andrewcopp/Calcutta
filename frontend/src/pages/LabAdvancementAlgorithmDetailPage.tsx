@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
-import { Select } from '../components/ui/Select';
 import { analyticsService } from '../services/analyticsService';
 
 type Algorithm = {
@@ -60,9 +59,7 @@ type TeamPredictedAdvancement = {
 
 export function LabAdvancementAlgorithmDetailPage() {
   const { algorithmId } = useParams<{ algorithmId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>(() => searchParams.get('tournamentId') || '');
-  const [selectedGameOutcomeRunId, setSelectedGameOutcomeRunId] = useState<string>(() => searchParams.get('gameOutcomeRunId') || '');
+  const navigate = useNavigate();
 
   const algorithmsQuery = useQuery<{ items: Algorithm[] } | null>({
     queryKey: ['analytics', 'algorithms', 'game_outcomes'],
@@ -87,63 +84,6 @@ export function LabAdvancementAlgorithmDetailPage() {
     enabled: Boolean(algorithmId),
   });
 
-  const runsQuery = useQuery<{ runs: GameOutcomeRun[] } | null>({
-    queryKey: ['analytics', 'game-outcome-runs', selectedTournamentId],
-    queryFn: async () => {
-      if (!selectedTournamentId) return null;
-      return analyticsService.listGameOutcomeRunsForTournament<{ runs: GameOutcomeRun[] }>(selectedTournamentId);
-    },
-    enabled: Boolean(selectedTournamentId),
-  });
-
-  const runs = useMemo(() => {
-    const all = runsQuery.data?.runs ?? [];
-    if (!algorithmId) return [];
-    return all.filter((r) => r.algorithm_id === algorithmId);
-  }, [runsQuery.data?.runs, algorithmId]);
-
-  useEffect(() => {
-    // When switching tournaments (or after loading runs), default to the latest run for this algorithm.
-    if (!selectedTournamentId) {
-      if (selectedGameOutcomeRunId) setSelectedGameOutcomeRunId('');
-      return;
-    }
-    if (selectedGameOutcomeRunId) return;
-    if (runs.length > 0) {
-      setSelectedGameOutcomeRunId(runs[0].id);
-    }
-  }, [runs, selectedTournamentId, selectedGameOutcomeRunId]);
-
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (selectedTournamentId) {
-      next.set('tournamentId', selectedTournamentId);
-    } else {
-      next.delete('tournamentId');
-    }
-    if (selectedGameOutcomeRunId) {
-      next.set('gameOutcomeRunId', selectedGameOutcomeRunId);
-    } else {
-      next.delete('gameOutcomeRunId');
-    }
-
-    if (next.toString() !== searchParams.toString()) {
-      setSearchParams(next, { replace: true });
-    }
-  }, [searchParams, selectedTournamentId, selectedGameOutcomeRunId, setSearchParams]);
-
-  const predictedAdvancementQuery = useQuery<{ teams: TeamPredictedAdvancement[] } | null>({
-    queryKey: ['analytics', 'predicted-advancement', selectedTournamentId, selectedGameOutcomeRunId],
-    queryFn: async () => {
-      if (!selectedTournamentId) return null;
-      return analyticsService.getTournamentPredictedAdvancement<{ teams: TeamPredictedAdvancement[] }>({
-        tournamentId: selectedTournamentId,
-        gameOutcomeRunId: selectedGameOutcomeRunId || undefined,
-      });
-    },
-    enabled: Boolean(selectedTournamentId),
-  });
-
   const tournaments = coverageDetailQuery.data?.items ?? [];
   const sortedTournaments = useMemo(() => {
     return tournaments
@@ -161,11 +101,6 @@ export function LabAdvancementAlgorithmDetailPage() {
         return a.tournament_name.localeCompare(b.tournament_name);
       });
   }, [tournaments]);
-  const selectedTournament = useMemo(() => {
-    return tournaments.find((t) => t.tournament_id === selectedTournamentId) ?? null;
-  }, [tournaments, selectedTournamentId]);
-
-  const formatProb = (p: number) => `${(p * 100).toFixed(1)}%`;
   const tournamentYear = (startingAt?: string | null) => {
     if (!startingAt) return '—';
     const d = new Date(startingAt);
@@ -239,14 +174,16 @@ export function LabAdvancementAlgorithmDetailPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedTournaments.map((t) => {
-                    const isSelected = t.tournament_id === selectedTournamentId;
                     return (
                       <tr
                         key={t.tournament_id}
-                        className={`hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
+                        className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => {
-                          setSelectedTournamentId(t.tournament_id);
-                          setSelectedGameOutcomeRunId('');
+                          navigate(
+                            `/lab/advancements/algorithms/${encodeURIComponent(algorithmId || '')}/tournaments/${encodeURIComponent(
+                              t.tournament_id
+                            )}`
+                          );
                         }}
                       >
                         <td className="px-3 py-2 text-sm text-gray-700">{tournamentYearOrName(t)}</td>
@@ -260,91 +197,6 @@ export function LabAdvancementAlgorithmDetailPage() {
             </div>
           ) : null}
         </Card>
-
-        {selectedTournamentId ? (
-          <Card>
-            <h2 className="text-xl font-semibold mb-4">{selectedTournament ? selectedTournament.tournament_name : 'Tournament'}</h2>
-
-            <div className="flex items-center gap-4">
-              <label htmlFor="game-outcome-run-select" className="text-lg font-semibold whitespace-nowrap">
-                Run:
-              </label>
-
-              {runsQuery.isLoading ? (
-                <div className="text-gray-500">Loading runs...</div>
-              ) : runs.length ? (
-                <Select
-                  id="game-outcome-run-select"
-                  value={selectedGameOutcomeRunId}
-                  onChange={(e) => setSelectedGameOutcomeRunId(e.target.value)}
-                  className="flex-1 max-w-xl"
-                >
-                  {runs
-                    .slice()
-                    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-                    .map((run) => (
-                      <option key={run.id} value={run.id}>
-                        {new Date(run.created_at).toLocaleString()} ({run.id.slice(0, 8)})
-                      </option>
-                    ))}
-                </Select>
-              ) : (
-                <div className="text-gray-700">No runs found for this algorithm + tournament.</div>
-              )}
-            </div>
-
-            <div className="mt-4 text-sm text-gray-600">Per-team cumulative probability of reaching each round (no points).</div>
-
-            <div className="mt-4">
-              {predictedAdvancementQuery.isLoading ? <div className="text-gray-500">Loading predicted advancement...</div> : null}
-
-              {!predictedAdvancementQuery.isLoading && predictedAdvancementQuery.data?.teams ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
-                          Team
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">PI</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">R64</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">R32</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">S16</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">E8</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">FF</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Champ</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
-                          Win
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {predictedAdvancementQuery.data.teams.map((team) => (
-                        <tr key={team.team_id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">{team.school_name}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{team.seed}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-600">{team.region}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.prob_pi)}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.reach_r64)}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.reach_r32)}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.reach_s16)}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.reach_e8)}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.reach_ff)}</td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-700">{formatProb(team.reach_champ)}</td>
-                          <td className="px-4 py-3 text-sm text-center font-semibold text-blue-700 bg-blue-50">{formatProb(team.win_champ)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : !predictedAdvancementQuery.isLoading ? (
-                <div className="text-gray-500">No predicted advancement data available.</div>
-              ) : null}
-            </div>
-          </Card>
-        ) : null}
       </div>
     </PageContainer>
   );
