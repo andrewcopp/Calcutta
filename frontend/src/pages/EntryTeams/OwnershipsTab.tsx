@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { OwnershipPieChart } from '../../components/charts/OwnershipPieChart';
+import { LoadingState } from '../../components/ui/LoadingState';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
 
 export const OwnershipsTab: React.FC<{
@@ -64,7 +65,9 @@ export const OwnershipsTab: React.FC<{
       </div>
 
       {ownershipLoading ? (
-        <div className="bg-white rounded-lg shadow p-6 text-gray-600">Loading ownerships…</div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <LoadingState label="Loading ownerships…" />
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {ownershipTeamsData.map((team) => {

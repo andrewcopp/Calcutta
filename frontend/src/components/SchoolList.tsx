@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { calcuttaService } from '../services/calcuttaService'
 import { School } from '../types/calcutta'
+import { Alert } from './ui/Alert'
+import { LoadingState } from './ui/LoadingState'
 
 export function SchoolList() {
     const [schools, setSchools] = useState<School[]>([])
@@ -29,8 +31,8 @@ export function SchoolList() {
     )
 
     if (error) return (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            Error: {error}
+        <div className="bg-white shadow rounded-lg p-6">
+            <Alert variant="error">{error}</Alert>
         </div>
     )
     
@@ -49,7 +51,7 @@ export function SchoolList() {
             </div>
 
             {loading ? (
-                <div className="text-center py-4">Loading schools...</div>
+                <LoadingState label="Loading schools..." />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredSchools.map(school => (
@@ -64,9 +66,7 @@ export function SchoolList() {
             )}
 
             {!loading && filteredSchools.length === 0 && (
-                <div className="text-center py-4 text-gray-500">
-                    No schools found matching your search.
-                </div>
+                <Alert variant="info">No schools found matching your search.</Alert>
             )}
         </div>
     )

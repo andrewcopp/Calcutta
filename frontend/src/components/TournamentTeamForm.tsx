@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { School } from '../types/school';
 import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
+import { Alert } from './ui/Alert';
 
 interface TournamentTeamFormProps {
   tournamentId: string;
@@ -105,9 +106,9 @@ export const TournamentTeamForm: React.FC<TournamentTeamFormProps> = ({
       <h2 className="text-2xl font-bold mb-4">Add Teams to Tournament</h2>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert variant="error" className="mb-4">
           {error}
-        </div>
+        </Alert>
       )}
 
       <div className="mb-6">

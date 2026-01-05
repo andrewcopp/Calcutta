@@ -9,6 +9,7 @@ import {
 } from '../../types/calcutta';
 import { getEntryColorById } from '../../utils/entryColors';
 import { OwnershipPieChart } from '../../components/charts/OwnershipPieChart';
+import { LoadingState } from '../../components/ui/LoadingState';
 
 interface OwnershipSlice {
   name: string;
@@ -151,7 +152,9 @@ export const OwnershipTab: React.FC<{
       </div>
 
       {ownershipLoading ? (
-        <div className="bg-white rounded-lg shadow p-6 text-gray-600">Loading ownership…</div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <LoadingState label="Loading ownership…" />
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {ownershipSortedTeams.map((team) => (
