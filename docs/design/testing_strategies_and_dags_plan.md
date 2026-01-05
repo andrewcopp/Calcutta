@@ -100,6 +100,11 @@ The DP evaluator must be aligned to these semantics; otherwise investments/retur
 - Default behavior: if missing, error loudly (avoid silent fallback).
 - If a developer wants local UX unblocked without running the market model, they must explicitly seed `derived.predicted_market_share` via a dev tool.
 
+Status:
+- `GET /api/analytics/calcuttas/{id}/predicted-investment` now accepts `market_share_run_id`.
+- Default behavior is: select the latest `derived.market_share_runs` row for the calcutta and use `derived.predicted_market_share.run_id`.
+- Legacy fallback (temporary): if no run exists, use tournament-scoped `run_id IS NULL` rows.
+
 ### Legacy bridging
 During migration:
 - existing tables may still hold rows with `run_id IS NULL`.
@@ -127,22 +132,22 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 ## Work plan (`- [ ]`)
 
 ### Immediate unblock / correctness
-- [ ] Commit predicted-investment fallback fix (analytics_calcutta_predictions.sql + sqlc output)
-- [ ] Implement pure `predicted_game_outcomes` -> predicted returns / expected value (no Monte Carlo)
-  - [ ] Use bracket DP over matchup probabilities to compute per-team round advancement + expected points
-  - [ ] Provide an explicit dev-only seeding tool for `derived.predicted_market_share` (no runtime fallback)
-- [ ] Verify frontend smoke run UX end-to-end
-  - [ ] /runs/2025 lists run
-  - [ ] Returns page loads and is non-empty
-  - [ ] Investments page loads and is non-empty
-  - [ ] “Our entry” behavior matches optimizer output
+- [x] Commit predicted-investment fallback fix (analytics_calcutta_predictions.sql + sqlc output)
+- [x] Implement pure `predicted_game_outcomes` -> predicted returns / expected value (no Monte Carlo)
+  - [x] Use bracket DP over matchup probabilities to compute per-team round advancement + expected points
+  - [x] Provide an explicit dev-only seeding tool for `derived.predicted_market_share` (no runtime fallback)
+- [x] Verify frontend smoke run UX end-to-end
+  - [x] /runs/2025 lists run
+  - [x] Returns page loads and is non-empty
+  - [x] Investments page loads and is non-empty
+  - [x] “Our entry” behavior matches optimizer output
 
 ### Practical smoke checklist (debug loop)
-- [ ] `derived.predicted_game_outcomes` has rows for the tournament
-- [ ] DP predicted returns are non-empty and stable (no Monte Carlo)
-- [ ] `derived.predicted_market_share` has rows for the tournament/calcutta (real model OR explicitly seeded baseline)
-- [ ] Investments endpoint returns non-zero values
-- [ ] Optimizer output matches “Our entry” behavior in UI
+- [x] `derived.predicted_game_outcomes` has rows for the tournament
+- [x] DP predicted returns are non-empty and stable (no Monte Carlo)
+- [x] `derived.predicted_market_share` has rows for the tournament/calcutta (real model OR explicitly seeded baseline)
+- [x] Investments endpoint returns non-zero values
+- [x] Optimizer output matches “Our entry” behavior in UI
 - [ ] Only then: run Monte Carlo evaluation for distributions
 
 ### Testing Strategies DAG (registry + artifacts)
@@ -161,9 +166,9 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
 
 - [ ] Update writers/readers
   - [ ] Python writers: write run metadata first, then artifacts linked to run
-  - [ ] Migrate `run_ridge_regression.py` / market-share DB writer off `lab_bronze.*` and onto current `core/derived`
+  - [x] Migrate `run_ridge_regression.py` / market-share DB writer off `lab_bronze.*` and onto current `core/derived`
     - [ ] Write a `derived.market_share_runs` row and link artifacts via `derived.predicted_market_share.run_id`
-    - [ ] Ensure it can write both calcutta-scoped and (legacy) tournament-scoped rows as needed
+    - [x] Ensure it can write both calcutta-scoped and (legacy) tournament-scoped rows as needed
   - [ ] Go readers/services:
     - [ ] Accept explicit run_id selection
     - [ ] Game outcomes: default to latest for the tournament
@@ -219,6 +224,19 @@ This is not a runtime fallback: production workflows should fail if market data 
 Command:
 - `go run ./backend/cmd/seed-naive-market-share-from-pgo --calcutta-id <uuid>`
 - `--dry-run` prints top teams and does not write
+
+### Seed ridge-predicted market share from DB (no `out/` snapshots)
+The ridge regression runner now trains/predicts from `core.*` and writes to `derived.predicted_market_share`.
+
+Notes:
+- It writes run-scoped rows (`run_id IS NOT NULL`) and creates a `derived.market_share_runs` row.
+- This requires dropping obsolete unique indexes on `(tournament_id, team_id)`; local migration now handles this.
+
+Migration:
+- `20260105031000_drop_obsolete_predicted_market_share_indexes`
+
+Command:
+- `data-science/.venv/bin/python data-science/scripts/run_ridge_regression.py 2025`
 
 ### Calcutta evaluation
 Monte Carlo evaluation should be run only after the DP returns + market baseline exist.

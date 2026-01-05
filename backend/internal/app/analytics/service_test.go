@@ -59,8 +59,8 @@ func (s *stubAnalyticsRepo) GetBestCareers(ctx context.Context, limit int) ([]po
 	return nil, nil
 }
 
-func (s *stubAnalyticsRepo) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedInvestmentData, error) {
-	return nil, nil, nil
+func (s *stubAnalyticsRepo) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []ports.CalcuttaPredictedInvestmentData, error) {
+	return nil, nil, nil, nil
 }
 
 func (s *stubAnalyticsRepo) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {

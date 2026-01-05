@@ -34,7 +34,7 @@ def run_ridge_regression(year: int = 2025):
     excluded_entry_name = os.getenv('EXCLUDED_ENTRY_NAME', 'Andrew Copp')
     print(f"Excluding entry from training: {excluded_entry_name}")
 
-    # Resolve core tournament + team slug->uuid mapping from database
+    # Resolve core tournament + calcutta + team slug->uuid mapping from database
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -54,6 +54,21 @@ def run_ridge_regression(year: int = 2025):
                 return
             tournament_id = result[0]
             print(f"Tournament ID: {tournament_id}")
+
+            cur.execute(
+                """
+                SELECT c.id
+                FROM core.calcuttas c
+                WHERE c.tournament_id = %s
+                  AND c.deleted_at IS NULL
+                ORDER BY c.created_at DESC
+                LIMIT 1
+                """,
+                (tournament_id,),
+            )
+            calcutta_row = cur.fetchone()
+            calcutta_id = str(calcutta_row[0]) if calcutta_row else None
+            print(f"Calcutta ID: {calcutta_id}")
 
             # Get team_id map (school_slug -> team_id UUID)
             # Ridge regression returns keys like "ncaa-tournament-2025:duke"
@@ -162,7 +177,14 @@ def run_ridge_regression(year: int = 2025):
         count = write_predicted_market_share(
             predictions_df=predictions,
             team_id_map=team_id_map,
+            calcutta_id=calcutta_id,
             tournament_id=tournament_id,
+            algorithm_name="ridge",
+            params={
+                "ridge_alpha": 1.0,
+                "feature_set": "optimal",
+                "excluded_entry_name": excluded_entry_name,
+            },
         )
         print(f"✓ Wrote {count} predictions to derived.predicted_market_share")
 

@@ -18,6 +18,11 @@ This file captures the most useful ideas and workflow concepts from the retired 
 - Exporting derived datasets (CSV/Parquet) is fine, but treat them as build artifacts.
 - Python direction: use the analytics snapshot export (zip -> parquet) as a reproducible “frozen” dataset input.
 
+Status:
+- The ridge regression market-share runner can now train/predict directly from Postgres `core.*` tables (no `out/` artifacts required).
+- It registers a run in `derived.market_share_runs` and writes artifacts to `derived.predicted_market_share` with `run_id` populated.
+- Local DB prerequisite: apply migrations (drops obsolete unique indexes that block multiple runs).
+
 ### 2) Leakage control: exclude your own entry from “market” features
 
 - When computing market investment totals/shares, support excluding a specific entry name (the Go sandbox used `-exclude-entry-name`), to:
@@ -91,6 +96,10 @@ These are the strongest hypotheses from the Go sandbox backlog to consider pursu
 - Derive canonical tables suitable for modeling:
   - per-team table with team metadata + realized points + market bid share
   - versions excluding a named entry
+
+### Local: seed ridge-predicted market share from DB
+- Apply migrations: `make ops-migrate`
+- Seed ridge: `data-science/.venv/bin/python data-science/scripts/run_ridge_regression.py 2025`
 
 ### B) Rebuild the “harness” loops
 

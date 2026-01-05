@@ -34,7 +34,12 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 		strategyGenerationRunID = &v
 	}
 
-	selectedID, data, err := s.app.Analytics.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID)
+	var marketShareRunID *string
+	if v := r.URL.Query().Get("market_share_run_id"); v != "" {
+		marketShareRunID = &v
+	}
+
+	selectedID, marketShareSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID, marketShareRunID)
 	if err != nil {
 		log.Printf("Error querying predicted investment: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted investment", "")
@@ -62,6 +67,7 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"calcutta_id":                calcuttaID,
 		"strategy_generation_run_id": selectedID,
+		"market_share_run_id":        marketShareSelectedID,
 		"teams":                      results,
 		"count":                      len(results),
 	})

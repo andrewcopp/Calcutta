@@ -7,7 +7,8 @@ import logging
 import pandas as pd
 import psycopg2.extras
 import datetime
-from typing import Dict
+import json
+from typing import Any, Dict, Optional
 from moneyball.db.connection import get_db_connection
 
 logger = logging.getLogger(__name__)
@@ -242,7 +243,10 @@ def write_predicted_market_share(
     team_id_map: Dict[str, str],
     calcutta_id: str = None,
     tournament_id: str = None,
-    model_version: str = None
+    model_version: str = None,
+    algorithm_name: str = "ridge",
+    params: Optional[Dict[str, Any]] = None,
+    git_sha: Optional[str] = None,
 ) -> int:
     """
     Write predicted market share from ridge regression model.
@@ -265,20 +269,60 @@ def write_predicted_market_share(
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Clear existing predictions
+            run_id: Optional[str] = None
+
+            # Preferred path: create a market_share_run for calcutta-scoped predictions.
             if calcutta_id:
-                cur.execute("""
-                    DELETE FROM derived.predicted_market_share
-                    WHERE calcutta_id = %s
-                      AND run_id IS NULL
-                """, (calcutta_id,))
-            else:
-                cur.execute("""
-                    DELETE FROM derived.predicted_market_share
-                    WHERE tournament_id = %s
-                      AND calcutta_id IS NULL
-                      AND run_id IS NULL
-                """, (tournament_id,))
+                algo_params_json = json.dumps(params or {})
+
+                cur.execute(
+                    """
+                    INSERT INTO derived.algorithms (kind, name, params_json)
+                    VALUES ('market_share', %s, %s::jsonb)
+                    ON CONFLICT (kind, name) WHERE deleted_at IS NULL
+                    DO UPDATE SET updated_at = NOW()
+                    RETURNING id
+                    """,
+                    (str(algorithm_name), algo_params_json),
+                )
+                algorithm_id = str(cur.fetchone()[0])
+
+                cur.execute(
+                    """
+                    INSERT INTO derived.market_share_runs (algorithm_id, calcutta_id, params_json, git_sha)
+                    VALUES (%s::uuid, %s::uuid, %s::jsonb, %s)
+                    RETURNING id
+                    """,
+                    (
+                        algorithm_id,
+                        str(calcutta_id),
+                        algo_params_json,
+                        str(git_sha) if git_sha else None,
+                    ),
+                )
+                run_id = str(cur.fetchone()[0])
+
+            # Legacy fallback: clear existing predictions (run_id IS NULL).
+            if not run_id:
+                if calcutta_id:
+                    cur.execute(
+                        """
+                        DELETE FROM derived.predicted_market_share
+                        WHERE calcutta_id = %s
+                          AND run_id IS NULL
+                        """,
+                        (calcutta_id,),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        DELETE FROM derived.predicted_market_share
+                        WHERE tournament_id = %s
+                          AND calcutta_id IS NULL
+                          AND run_id IS NULL
+                        """,
+                        (tournament_id,),
+                    )
 
             # Map team_key to team_id
             df = predictions_df.copy()
@@ -300,6 +344,7 @@ def write_predicted_market_share(
                     float(row['predicted_auction_share_of_pool']) * 100.0,
                     now,
                     now,
+                    run_id,
                 )
                 for _, row in df.iterrows()
             ]
@@ -308,8 +353,8 @@ def write_predicted_market_share(
             psycopg2.extras.execute_batch(cur, """
                 INSERT INTO derived.predicted_market_share
                 (calcutta_id, tournament_id, team_id, predicted_share,
-                 predicted_points, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                 predicted_points, created_at, updated_at, run_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, values)
 
             conn.commit()

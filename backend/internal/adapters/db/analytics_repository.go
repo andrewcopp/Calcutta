@@ -135,13 +135,18 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.Tea
 	return out, nil
 }
 
-func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedInvestmentData, error) {
-	out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, calcuttaID)
+func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []ports.CalcuttaPredictedInvestmentData, error) {
+	runIDPtr, err := r.resolveStrategyGenerationRunID(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return nil, out, nil
+	marketShareSelectedID, out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, calcuttaID, marketShareRunID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return runIDPtr, marketShareSelectedID, out, nil
 }
 
 func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {

@@ -234,11 +234,11 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 	return results, nil
 }
 
-func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaPredictedInvestmentResult, error) {
-	selectedID, data, err := s.repo.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID)
+func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []CalcuttaPredictedInvestmentResult, error) {
+	selectedID, marketShareSelectedID, data, err := s.repo.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID, marketShareRunID)
 	if err != nil {
 		log.Printf("Error getting predicted investment: %v", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	results := make([]CalcuttaPredictedInvestmentResult, 0, len(data))
@@ -254,7 +254,7 @@ func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID
 		})
 	}
 
-	return selectedID, results, nil
+	return selectedID, marketShareSelectedID, results, nil
 }
 
 func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaPredictedReturnsResult, error) {
