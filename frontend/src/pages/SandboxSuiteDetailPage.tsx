@@ -67,6 +67,8 @@ export function SandboxSuiteDetailPage() {
     enabled: Boolean(suiteId),
   });
 
+  const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : suiteId ? `Suite ${suiteId}` : 'Suite';
+
   const executionsQuery = useQuery({
     queryKey: ['suite-executions', 'list', suiteId],
     queryFn: () => suiteExecutionsService.list({ suiteId: suiteId!, limit: 200, offset: 0 }),
@@ -98,7 +100,7 @@ export function SandboxSuiteDetailPage() {
     <PageContainer className="max-w-none">
       <PageHeader
         title="Sandbox"
-        subtitle={suiteId ? `Suite ${suiteId}` : 'Suite'}
+        subtitle={suiteTitle}
         actions={
           <Link to="/sandbox/suites" className="text-blue-600 hover:text-blue-800">
             ← Back to Suites
@@ -166,6 +168,7 @@ export function SandboxSuiteDetailPage() {
                     const next = e.target.value;
                     setSearchParams(next ? { executionId: next } : {}, { replace: true });
                   }}
+                  disabled={executions.length === 0}
                 >
                   {executions.map((ex) => (
                     <option key={ex.id} value={ex.id}>
@@ -189,7 +192,7 @@ export function SandboxSuiteDetailPage() {
 
             {!executionsQuery.isLoading && !executionsQuery.isError && executions.length === 0 ? (
               <Alert variant="info" className="mt-3">
-                No suite executions found.
+                No suite executions found yet. Create one from the pipeline (or use the legacy Sandbox page to trigger individual evaluations).
               </Alert>
             ) : null}
 
@@ -244,8 +247,17 @@ export function SandboxSuiteDetailPage() {
                       return (
                         <tr
                           key={it.id}
-                          className="hover:bg-gray-50 cursor-pointer"
+                          className="hover:bg-gray-50 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                          role="link"
+                          tabIndex={0}
                           onClick={() => navigate(detailUrl)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigate(detailUrl);
+                            }
+                          }}
+                          aria-label={`Open evaluation ${it.id}`}
                         >
                           <td className="px-3 py-2 text-sm text-gray-900">
                             <div className="font-medium">{calcuttaNameById.get(it.calcutta_id) || it.calcutta_id}</div>

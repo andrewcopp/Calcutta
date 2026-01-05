@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -11,6 +11,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { suitesService, type SuiteListItem } from '../services/suitesService';
 
 export function SandboxSuitesListPage() {
+  const navigate = useNavigate();
   const listQuery = useQuery({
     queryKey: ['suites', 'list'],
     queryFn: () => suitesService.list({ limit: 200, offset: 0 }),
@@ -76,13 +77,26 @@ export function SandboxSuitesListPage() {
                     ? `${s.latest_execution_status ?? '—'} · ${s.latest_execution_id.slice(0, 8)}`
                     : '—';
 
+                  const href = `/sandbox/suites/${encodeURIComponent(s.id)}`;
+
                   return (
-                    <tr key={s.id} className="hover:bg-gray-50">
+                    <tr
+                      key={s.id}
+                      className="hover:bg-gray-50 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => navigate(href)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(href);
+                        }
+                      }}
+                      aria-label={`Open suite ${s.name || s.id}`}
+                    >
                       <td className="px-3 py-2 text-sm text-gray-900">
                         <div className="font-medium">
-                          <Link to={`/sandbox/suites/${encodeURIComponent(s.id)}`} className="text-blue-600 hover:text-blue-800">
-                            {s.name || s.id}
-                          </Link>
+                          <span className="text-blue-600 hover:text-blue-800">{s.name || s.id}</span>
                         </div>
                         <div className="text-xs text-gray-600">
                           {s.optimizer_key} · n={s.n_sims} · seed={s.seed}
