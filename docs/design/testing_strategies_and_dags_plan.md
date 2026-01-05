@@ -245,7 +245,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [ ] Suite results browsing
     - [x] List suites
     - [x] Suite detail (metadata + per-calcutta results)
-    - [ ] Result detail (generated entry + provenance)
+    - [x] Result detail (generated entry + provenance)
   - [ ] Cleanup note: these Lab endpoints are additive; identify and retire legacy predicted returns/investment endpoints and pages once the new UI is wired
 
 - [ ] Sandbox persistence (inputs + outputs only; no simulation samples)
@@ -291,7 +291,7 @@ Context: the purpose of C is to avoid overfitting. If we only test an algorithm 
   - [ ] Sandbox: Suites browser
     - [x] List suites
     - [x] Suite detail -> per-calcutta results list + suite metadata
-    - [ ] Result detail -> show generated entry and its provenance
+    - [x] Result detail -> show generated entry and its provenance (dedicated detail route: `/sandbox/evaluations/:id`)
 
 ### Naming glossary
 - Algorithm: stable definition (e.g. KenPom v1, Ridge Regression v2)
