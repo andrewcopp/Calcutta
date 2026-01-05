@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam, TournamentTeam, School } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
+import { Alert } from '../components/ui/Alert';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
@@ -194,7 +195,7 @@ export function CalcuttaEntriesPage() {
   }, [tournamentTeams, schoolNameById, allEntryTeams, allCalcuttaPortfolioTeams]);
 
   if (!calcuttaId) {
-    return <div className="error">Missing required parameters</div>;
+    return <Alert variant="error">Missing required parameters</Alert>;
   }
 
   if (calcuttaEntriesQuery.isLoading) {
@@ -203,7 +204,7 @@ export function CalcuttaEntriesPage() {
 
   if (calcuttaEntriesQuery.isError) {
     const message = calcuttaEntriesQuery.error instanceof Error ? calcuttaEntriesQuery.error.message : 'Failed to fetch data';
-    return <div className="error">{message}</div>;
+    return <Alert variant="error">{message}</Alert>;
   }
 
   return (

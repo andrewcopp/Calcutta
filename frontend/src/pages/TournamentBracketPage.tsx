@@ -7,6 +7,7 @@ import { bracketService } from '../services/bracketService';
 import { tournamentService } from '../services/tournamentService';
 import { BracketGameCard } from '../components/BracketGameCard';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
 
 export const TournamentBracketPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -98,7 +99,7 @@ export const TournamentBracketPage: React.FC = () => {
   };
 
   if (!id) {
-    return <div className="error">Missing required parameters</div>;
+    return <Alert variant="error">Missing required parameters</Alert>;
   }
 
   if (tournamentQuery.isLoading || validationQuery.isLoading || (validationQuery.data?.valid === true && bracketQuery.isLoading)) {

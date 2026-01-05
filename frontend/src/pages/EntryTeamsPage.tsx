@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
+import { Alert } from '../components/ui/Alert';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -241,7 +242,7 @@ export function EntryTeamsPage() {
   }, [activeTab, entryId, getPortfolioTeamData, ownershipShowAllTeams, schools, sortBy, teams, tournamentTeams]);
 
   if (!entryId || !calcuttaId) {
-    return <div className="error">Missing required parameters</div>;
+    return <Alert variant="error">Missing required parameters</Alert>;
   }
 
   if (entryTeamsQuery.isLoading) {
@@ -250,7 +251,7 @@ export function EntryTeamsPage() {
 
   if (entryTeamsQuery.isError) {
     const message = entryTeamsQuery.error instanceof Error ? entryTeamsQuery.error.message : 'Failed to fetch data';
-    return <div className="error">{message}</div>;
+    return <Alert variant="error">{message}</Alert>;
   }
 
   const ownershipLoading = entryTeamsQuery.isFetching;

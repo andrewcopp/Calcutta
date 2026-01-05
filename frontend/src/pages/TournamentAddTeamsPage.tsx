@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { School } from '../types/school';
 import { Tournament } from '../types/calcutta';
 import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
 
 interface TeamToAdd {
   schoolId: string;
@@ -98,7 +99,7 @@ export const TournamentAddTeamsPage: React.FC = () => {
   };
 
   if (!id) {
-    return <div className="error">Missing required parameters</div>;
+    return <Alert variant="error">Missing required parameters</Alert>;
   }
 
   if (tournamentQuery.isLoading || schoolsQuery.isLoading) {

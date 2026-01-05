@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, School, TournamentTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
+import { Alert } from '../components/ui/Alert';
 
 interface TeamStats {
   teamId: string;
@@ -78,7 +79,7 @@ export function CalcuttaTeamsPage() {
   });
 
   if (!calcuttaId) {
-    return <div className="error">Missing required parameters</div>;
+    return <Alert variant="error">Missing required parameters</Alert>;
   }
 
   if (calcuttaTeamsQuery.isLoading) {
@@ -87,7 +88,7 @@ export function CalcuttaTeamsPage() {
 
   if (calcuttaTeamsQuery.isError) {
     const message = calcuttaTeamsQuery.error instanceof Error ? calcuttaTeamsQuery.error.message : 'Failed to fetch team data';
-    return <div className="error">{message}</div>;
+    return <Alert variant="error">{message}</Alert>;
   }
 
   const teams = calcuttaTeamsQuery.data?.teams || [];
