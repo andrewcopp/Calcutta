@@ -95,7 +95,7 @@ export function LabEntryReportPage() {
         actions={
           data ? (
             <Link to={`/lab/entries/suites/${encodeURIComponent(data.suite_id)}`} className="text-blue-600 hover:text-blue-800">
-              ← Back to Suite
+              ← Back to Algorithm Combo
             </Link>
           ) : (
             <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
@@ -107,7 +107,7 @@ export function LabEntryReportPage() {
 
       <div className="space-y-6">
         <Card>
-          <h2 className="text-xl font-semibold mb-2">Header</h2>
+          <h2 className="text-xl font-semibold mb-2">Summary</h2>
 
           {reportQuery.isLoading ? <LoadingState label="Loading entry report..." layout="inline" /> : null}
 

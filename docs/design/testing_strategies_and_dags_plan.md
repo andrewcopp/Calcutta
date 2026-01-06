@@ -74,15 +74,44 @@ Per-team investments table:
 - Show `delta_percent` as percent difference derived from the ratio between predicted and rational market share (handle `rational=0` explicitly)
 - Color semantics: negative = green (buying opportunity), positive = red (over-invested)
 
+#### Tab: Entries
+Purpose:
+- Bridge from "theory" (advancement + market/investment) to "practice" (sandbox evaluation).
+- Show the deterministic entries produced by a *locked* algorithm combo.
+
+Behavior:
+- List all (advancement algorithm + investment/market-share algorithm + optimizer) combinations that have produced entries.
+- Click an algorithm combo -> show all calcuttas it was run for.
+- Click a calcutta -> show the generated entry and heuristics:
+  - Predicted returns
+  - Predicted investment / market share
+  - Predicted ROI
+  - Actual bids and recalculated ROI
+  - Full team table (all teams, including those not selected)
+
+Handoff boundary (Lab -> Sandbox):
+- A *collection of generated entries* (one per calcutta for a given algorithm combo).
+- That collection becomes a natural "suite" candidate in Sandbox so it can be evaluated as a group.
+
 ### Sandbox
 Source of truth:
 - TestSuites and their executions against all calcuttas (Mode C)
 
 Behavior:
 - List TestSuites that have been run
-- Each suite name describes the advancement algorithm, investment algorithm, and entry optimizer
-- Click suite -> show suite metadata (algorithms used, simulations per test, excluded entry name) + list of per-calcutta results
-- Click a per-calcutta result -> show the entry that produced those stats
+- Suite names are for convenience; they may describe advancement/investment/optimizer, but this is not a hard requirement.
+- A suite is primarily a grouping of calcuttas/entries that we want to evaluate together and compare at a glance.
+- Click suite -> show suite metadata (simulations per test, excluded entry name, etc.) + list of per-calcutta results
+- Click a per-calcutta result -> show the entry that produced those stats and evaluation distributions
+
+Notes on terminology (current state):
+- "Suite" and "Scenario" naming is inconsistent historically.
+- In Sandbox:
+  - A suite is a batch/grouping for evaluation convenience.
+  - A scenario is a specific calcutta we run N simulations against and then evaluate.
+- In Lab Entries:
+  - The key identity is the locked algorithm combo (advancement + investment/market-share + optimizer).
+  - The UI should be driven by that combo -> calcuttas -> entry report, even if underlying tables reuse "suite/scenario" concepts.
 
 Displayed per-calcutta headline stats:
 - Expected Position (Calcutta ranking)

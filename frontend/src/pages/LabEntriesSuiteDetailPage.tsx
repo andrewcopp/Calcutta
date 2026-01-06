@@ -116,10 +116,10 @@ export function LabEntriesSuiteDetailPage() {
         </Card>
 
         <Card>
-          <h2 className="text-xl font-semibold mb-4">Scenarios</h2>
+          <h2 className="text-xl font-semibold mb-4">Calcuttas</h2>
 
           {!detailQuery.isLoading && !detailQuery.isError && sorted.length === 0 ? (
-            <Alert variant="info">No scenarios found for this suite.</Alert>
+            <Alert variant="info">No calcuttas found for this algorithm combo.</Alert>
           ) : null}
 
           {!detailQuery.isLoading && !detailQuery.isError && sorted.length > 0 ? (

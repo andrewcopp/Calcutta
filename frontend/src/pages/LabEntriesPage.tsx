@@ -56,7 +56,7 @@ export function LabEntriesPage() {
     <PageContainer className="max-w-none">
       <PageHeader
         title="Entries"
-        subtitle="Generated entry coverage across suites (advancement + investment + optimizer)."
+        subtitle="Generated entries by algorithm combo (advancement + investment + optimizer)."
         actions={
           <Link to="/lab" className="text-blue-600 hover:text-blue-800">
             ← Back to Lab
@@ -65,7 +65,7 @@ export function LabEntriesPage() {
       />
 
       <Card>
-        <h2 className="text-xl font-semibold mb-4">Coverage</h2>
+        <h2 className="text-xl font-semibold mb-4">Algorithm Combos</h2>
 
         {coverageQuery.isLoading ? <LoadingState label="Loading entries coverage..." layout="inline" /> : null}
 
@@ -80,7 +80,7 @@ export function LabEntriesPage() {
         ) : null}
 
         {!coverageQuery.isLoading && !coverageQuery.isError && sorted.length === 0 ? (
-          <Alert variant="info">No suites found. Create a suite and scenarios first.</Alert>
+          <Alert variant="info">No algorithm combos found.</Alert>
         ) : null}
 
         {!coverageQuery.isLoading && !coverageQuery.isError && sorted.length > 0 ? (
@@ -88,11 +88,11 @@ export function LabEntriesPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Combo</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Advancement</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investment</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Optimizer</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coverage</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcuttas</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -104,7 +104,6 @@ export function LabEntriesPage() {
                   >
                     <td className="px-3 py-2 text-sm text-gray-900">
                       <div className="font-medium">{row.suite_name}</div>
-                      <div className="text-xs text-gray-500">id={row.suite_id}</div>
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-700">{row.advancement_algorithm_name}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{row.investment_algorithm_name}</td>
