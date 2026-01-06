@@ -20,11 +20,11 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const suiteId = searchParams.get('suiteId') || '';
+  const suiteId = searchParams.get('cohortId') || searchParams.get('suiteId') || '';
   const executionId = searchParams.get('executionId') || '';
   const backUrl = suiteId
-    ? `/sandbox/suites/${encodeURIComponent(suiteId)}${executionId ? `?executionId=${encodeURIComponent(executionId)}` : ''}`
-    : '/sandbox/suites';
+    ? `/sandbox/cohorts/${encodeURIComponent(suiteId)}${executionId ? `?executionId=${encodeURIComponent(executionId)}` : ''}`
+    : '/sandbox/cohorts';
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -318,7 +318,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                                       if (!clickable) return;
                                       navigate(
                                         `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
-                                          `${suiteId ? `?suiteId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+                                          `${suiteId ? `?cohortId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                       );
                                     }}
                                     onKeyDown={(ev) => {
@@ -327,7 +327,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                                         ev.preventDefault();
                                         navigate(
                                           `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
-                                            `${suiteId ? `?suiteId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+                                            `${suiteId ? `?cohortId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                         );
                                       }
                                     }}

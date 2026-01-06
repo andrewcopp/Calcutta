@@ -19,7 +19,7 @@ import type { Calcutta } from '../types/calcutta';
 
 export function SandboxSuiteDetailPage() {
   const navigate = useNavigate();
-  const { suiteId } = useParams<{ suiteId: string }>();
+  const { suiteId, cohortId } = useParams<{ suiteId?: string; cohortId?: string }>();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedExecutionId = searchParams.get('executionId') || '';
@@ -69,18 +69,20 @@ export function SandboxSuiteDetailPage() {
     return m ? m[0] : '—';
   };
 
+  const effectiveCohortId = cohortId || suiteId || '';
+
   const suiteQuery = useQuery({
-    queryKey: ['synthetic-calcutta-cohorts', 'get', suiteId],
-    queryFn: () => suitesService.get(suiteId!),
-    enabled: Boolean(suiteId),
+    queryKey: ['synthetic-calcutta-cohorts', 'get', effectiveCohortId],
+    queryFn: () => suitesService.get(effectiveCohortId),
+    enabled: Boolean(effectiveCohortId),
   });
 
-  const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : suiteId ? `Cohort ${suiteId}` : 'Cohort';
+  const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : effectiveCohortId ? `Cohort ${effectiveCohortId}` : 'Cohort';
 
   const syntheticCalcuttasQuery = useQuery({
-    queryKey: ['synthetic-calcuttas', 'list', suiteId],
-    queryFn: () => syntheticCalcuttasService.list({ cohortId: suiteId!, limit: 200, offset: 0 }),
-    enabled: Boolean(suiteId),
+    queryKey: ['synthetic-calcuttas', 'list', effectiveCohortId],
+    queryFn: () => syntheticCalcuttasService.list({ cohortId: effectiveCohortId, limit: 200, offset: 0 }),
+    enabled: Boolean(effectiveCohortId),
   });
 
   const syntheticCalcuttas: SyntheticCalcuttaListItem[] = useMemo(
@@ -95,13 +97,13 @@ export function SandboxSuiteDetailPage() {
 
   const createSyntheticCalcuttaMutation = useMutation({
     mutationFn: async () => {
-      if (!suiteId) throw new Error('Missing cohort ID');
+      if (!effectiveCohortId) throw new Error('Missing cohort ID');
       const src = effectiveSourceCalcuttaId;
       if (!src) throw new Error('Missing source calcutta');
-      return syntheticCalcuttasService.create({ cohortId: suiteId, sourceCalcuttaId: src });
+      return syntheticCalcuttasService.create({ cohortId: effectiveCohortId, sourceCalcuttaId: src });
     },
     onSuccess: async (res) => {
-      await queryClient.invalidateQueries({ queryKey: ['synthetic-calcuttas', 'list', suiteId] });
+      await queryClient.invalidateQueries({ queryKey: ['synthetic-calcuttas', 'list', effectiveCohortId] });
       const nextParams: Record<string, string> = {};
       if (selectedExecutionId) nextParams.executionId = selectedExecutionId;
       if (res?.id) nextParams.syntheticCalcuttaId = res.id;
@@ -150,9 +152,9 @@ export function SandboxSuiteDetailPage() {
   });
 
   const executionsQuery = useQuery({
-    queryKey: ['simulation-run-batches', 'list', suiteId],
-    queryFn: () => suiteExecutionsService.list({ suiteId: suiteId!, limit: 200, offset: 0 }),
-    enabled: Boolean(suiteId),
+    queryKey: ['simulation-run-batches', 'list', effectiveCohortId],
+    queryFn: () => suiteExecutionsService.list({ suiteId: effectiveCohortId, limit: 200, offset: 0 }),
+    enabled: Boolean(effectiveCohortId),
   });
 
   const executions = useMemo(() => executionsQuery.data?.items ?? [], [executionsQuery.data?.items]);
@@ -182,16 +184,16 @@ export function SandboxSuiteDetailPage() {
         title="Sandbox"
         subtitle={suiteTitle}
         leftActions={
-          <Link to="/sandbox/suites" className="text-blue-600 hover:text-blue-800">
+          <Link to="/sandbox/cohorts" className="text-blue-600 hover:text-blue-800">
             ← Back to Cohorts
           </Link>
         }
       />
 
-      {!suiteId ? <Alert variant="error">Missing cohort ID.</Alert> : null}
+      {!effectiveCohortId ? <Alert variant="error">Missing cohort ID.</Alert> : null}
 
-      {suiteId && suiteQuery.isLoading ? <LoadingState label="Loading cohort..." /> : null}
-      {suiteId && suiteQuery.isError ? (
+      {effectiveCohortId && suiteQuery.isLoading ? <LoadingState label="Loading cohort..." /> : null}
+      {effectiveCohortId && suiteQuery.isError ? (
         <Alert variant="error">
           <div className="font-semibold mb-1">Failed to load cohort</div>
           <div className="mb-3">{showError(suiteQuery.error)}</div>
@@ -252,7 +254,7 @@ export function SandboxSuiteDetailPage() {
                 </Select>
                 <Button
                   size="sm"
-                  disabled={createSyntheticCalcuttaMutation.isPending || !suiteId || !effectiveSourceCalcuttaId}
+                  disabled={createSyntheticCalcuttaMutation.isPending || !effectiveCohortId || !effectiveSourceCalcuttaId}
                   onClick={() => createSyntheticCalcuttaMutation.mutate()}
                 >
                   Create
@@ -540,8 +542,8 @@ export function SandboxSuiteDetailPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {evals.map((it) => {
-                      const detailUrl = `/sandbox/evaluations/${encodeURIComponent(it.id)}?suiteId=${encodeURIComponent(
-                        suiteId || ''
+                      const detailUrl = `/sandbox/evaluations/${encodeURIComponent(it.id)}?cohortId=${encodeURIComponent(
+                        effectiveCohortId
                       )}${effectiveExecutionId ? `&executionId=${encodeURIComponent(effectiveExecutionId)}` : ''}`;
 
                       const calcuttaName = calcuttaNameById.get(it.calcutta_id) || it.calcutta_id;

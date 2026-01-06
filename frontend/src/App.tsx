@@ -72,8 +72,10 @@ const AppLayout: React.FC = () => {
           path="/lab/investments/algorithms/:algorithmId/calcuttas/:calcuttaId"
           element={<LabInvestmentCalcuttaDetailPage />}
         />
-        <Route path="/sandbox" element={<Navigate to="/sandbox/suites" replace />} />
+        <Route path="/sandbox" element={<Navigate to="/sandbox/cohorts" replace />} />
         <Route path="/sandbox/legacy" element={<SandboxPage />} />
+        <Route path="/sandbox/cohorts" element={<SandboxSuitesListPage />} />
+        <Route path="/sandbox/cohorts/:cohortId" element={<SandboxSuiteDetailPage />} />
         <Route path="/sandbox/suites" element={<SandboxSuitesListPage />} />
         <Route path="/sandbox/suites/:suiteId" element={<SandboxSuiteDetailPage />} />
         <Route path="/sandbox/evaluations/:id" element={<SuiteCalcuttaEvaluationDetailPage />} />

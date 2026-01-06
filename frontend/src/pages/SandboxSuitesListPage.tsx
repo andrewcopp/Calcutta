@@ -20,7 +20,7 @@ export function SandboxSuitesListPage() {
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
-        return 'You do not have permission to view suites (403).';
+        return 'You do not have permission to view cohorts (403).';
       }
       return `Request failed (${err.status}): ${err.message}`;
     }
@@ -77,7 +77,7 @@ export function SandboxSuitesListPage() {
                     ? `${s.latest_execution_status ?? '—'} · ${s.latest_execution_id.slice(0, 8)}`
                     : '—';
 
-                  const href = `/sandbox/suites/${encodeURIComponent(s.id)}`;
+                  const href = `/sandbox/cohorts/${encodeURIComponent(s.id)}`;
 
                   return (
                     <tr

@@ -17,11 +17,11 @@ export function SuiteCalcuttaEvaluationEntryDetailPage() {
   const { id, snapshotEntryId } = useParams<{ id: string; snapshotEntryId: string }>();
   const [searchParams] = useSearchParams();
 
-  const suiteId = searchParams.get('suiteId') || '';
+  const suiteId = searchParams.get('cohortId') || searchParams.get('suiteId') || '';
   const executionId = searchParams.get('executionId') || '';
   const backUrl = id
-    ? `/sandbox/evaluations/${encodeURIComponent(id)}${suiteId ? `?suiteId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
-    : '/sandbox/suites';
+    ? `/sandbox/evaluations/${encodeURIComponent(id)}${suiteId ? `?cohortId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+    : '/sandbox/cohorts';
 
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {

@@ -23,7 +23,7 @@ export function SandboxPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedSuiteId = searchParams.get('suiteId') || '';
+  const selectedSuiteId = searchParams.get('cohortId') || searchParams.get('suiteId') || '';
 
   const [createCalcuttaId, setCreateCalcuttaId] = useState<string>('');
   const [createSuiteId, setCreateSuiteId] = useState<string>(() => selectedSuiteId);
@@ -93,7 +93,7 @@ export function SandboxPage() {
     mutationFn: async (req: CreateSuiteCalcuttaEvaluationRequest) => suiteCalcuttaEvaluationsService.create(req),
     onSuccess: async (res) => {
       await queryClient.invalidateQueries({ queryKey: ['simulation-runs'] });
-      navigate(`/sandbox/evaluations/${encodeURIComponent(res.id)}${selectedSuiteId ? `?suiteId=${encodeURIComponent(selectedSuiteId)}` : ''}`);
+      navigate(`/sandbox/evaluations/${encodeURIComponent(res.id)}${selectedSuiteId ? `?cohortId=${encodeURIComponent(selectedSuiteId)}` : ''}`);
     },
   });
 
@@ -333,7 +333,7 @@ export function SandboxPage() {
             value={selectedSuiteId}
             onChange={(e) => {
               const suiteId = e.target.value;
-              setSearchParams(suiteId ? { suiteId } : {}, { replace: true });
+              setSearchParams(suiteId ? { cohortId: suiteId } : {}, { replace: true });
             }}
             className="flex-1 max-w-2xl"
           >
@@ -384,7 +384,7 @@ export function SandboxPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {items.map((it) => {
                   const detailUrl = `/sandbox/evaluations/${encodeURIComponent(it.id)}${
-                    selectedSuiteId ? `?suiteId=${encodeURIComponent(selectedSuiteId)}` : ''
+                    selectedSuiteId ? `?cohortId=${encodeURIComponent(selectedSuiteId)}` : ''
                   }`;
 
                   const showHeadline = it.status === 'succeeded' && it.our_mean_normalized_payout != null;
