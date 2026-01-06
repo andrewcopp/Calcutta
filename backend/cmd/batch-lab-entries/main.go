@@ -60,6 +60,7 @@ func run() error {
 	var calcuttaID string
 	var seasonMin int
 	var seasonMax int
+	var pythonBin string
 	var pythonRunnerPath string
 	var excludedEntryName string
 	var nSims int
@@ -71,6 +72,7 @@ func run() error {
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Optional core.calcuttas.id (uuid). If empty, process all calcuttas in range")
 	flag.IntVar(&seasonMin, "season-min", 0, "Optional season year lower bound (inclusive)")
 	flag.IntVar(&seasonMax, "season-max", 0, "Optional season year upper bound (inclusive)")
+	flag.StringVar(&pythonBin, "python-bin", "python3", "Python interpreter to run the market-share runner")
 	flag.StringVar(&pythonRunnerPath, "python-market-runner", "", "Path to data-science/scripts/run_market_share_runner.py")
 	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Override excluded entry name (defaults to suite.excluded_entry_name or EXCLUDED_ENTRY_NAME)")
 	flag.IntVar(&nSims, "pgo-n-sims", 5000, "predicted_game_outcomes n_sims")
@@ -158,7 +160,7 @@ func run() error {
 			}
 
 			// Run python market-share model for this calcutta.
-			msRunID, err := runPythonMarketShare(ctx, absRunner, c.CalcuttaID, s.MarketShareAlgName, excl)
+			msRunID, err := runPythonMarketShare(ctx, pythonBin, absRunner, c.CalcuttaID, s.MarketShareAlgName, excl)
 			if err != nil {
 				return err
 			}
@@ -402,10 +404,10 @@ func ensureGameOutcomeRun(
 	return runID, nil
 }
 
-func runPythonMarketShare(ctx context.Context, runnerPath, calcuttaID, algorithmName, excludedEntryName string) (string, error) {
+func runPythonMarketShare(ctx context.Context, pythonBin, runnerPath, calcuttaID, algorithmName, excludedEntryName string) (string, error) {
 	cmd := exec.CommandContext(
 		ctx,
-		"python3",
+		pythonBin,
 		runnerPath,
 		"--calcutta-id",
 		calcuttaID,
