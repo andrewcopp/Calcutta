@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TabsNav } from '../components/TabsNav';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
 
-type TabType = 'advancements' | 'investments';
+type TabType = 'advancements' | 'investments' | 'entries';
 
 type Algorithm = {
   id: string;
@@ -74,11 +74,17 @@ export function LabPage() {
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const tab = searchParams.get('tab');
+    if (tab === 'entries') return 'entries';
     return tab === 'investments' ? 'investments' : 'advancements';
   });
   const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>(() => searchParams.get('algorithmId') || '');
 
   useEffect(() => {
+    if (activeTab === 'entries') {
+      navigate('/lab/entries');
+      return;
+    }
+
     const next = new URLSearchParams();
     next.set('tab', activeTab);
     if (selectedAlgorithmId) next.set('algorithmId', selectedAlgorithmId);
@@ -86,18 +92,14 @@ export function LabPage() {
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
-  }, [
-    activeTab,
-    selectedAlgorithmId,
-    searchParams,
-    setSearchParams,
-  ]);
+  }, [activeTab, selectedAlgorithmId, searchParams, setSearchParams, navigate]);
 
   const tabs = useMemo(
     () =>
       [
         { id: 'advancements' as const, label: 'Advancements' },
         { id: 'investments' as const, label: 'Investments' },
+        { id: 'entries' as const, label: 'Entries' },
       ] as const,
     []
   );
@@ -160,15 +162,7 @@ export function LabPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Lab"
-        subtitle="Browse registered algorithms and their run outputs."
-        actions={
-          <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
-            Entries →
-          </Link>
-        }
-      />
+      <PageHeader title="Lab" subtitle="Browse registered algorithms and their run outputs." />
 
       <Card className="mb-6">
         <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
