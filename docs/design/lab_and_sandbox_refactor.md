@@ -158,7 +158,7 @@ Resource-oriented URLs with stable IDs.
 
 - [ ] SyntheticCalcutta creation:
   - [x] `POST /synthetic-calcuttas` creates a snapshot when `calcuttaSnapshotId` is not provided
-  - [ ] `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
+  - [x] `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
 
 ### Proposed REST surface (initial)
 Catalogs (compiled-in registries):

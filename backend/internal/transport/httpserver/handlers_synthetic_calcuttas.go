@@ -32,6 +32,7 @@ type listSyntheticCalcuttasResponse struct {
 type createSyntheticCalcuttaRequest struct {
 	CohortID                  string  `json:"cohortId"`
 	CalcuttaID                string  `json:"calcuttaId"`
+	SourceCalcuttaID          *string `json:"sourceCalcuttaId"`
 	CalcuttaSnapshotID        *string `json:"calcuttaSnapshotId"`
 	FocusStrategyGenerationID *string `json:"focusStrategyGenerationRunId"`
 	FocusEntryName            *string `json:"focusEntryName"`
@@ -189,6 +190,23 @@ func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Re
 
 	req.CohortID = strings.TrimSpace(req.CohortID)
 	req.CalcuttaID = strings.TrimSpace(req.CalcuttaID)
+	resolvedCalcuttaID := req.CalcuttaID
+
+	if req.SourceCalcuttaID != nil {
+		v := strings.TrimSpace(*req.SourceCalcuttaID)
+		if v != "" {
+			if _, err := uuid.Parse(v); err != nil {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "sourceCalcuttaId must be a valid UUID", "sourceCalcuttaId")
+				return
+			}
+			if resolvedCalcuttaID == "" {
+				resolvedCalcuttaID = v
+			} else if resolvedCalcuttaID != v {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaId must match sourceCalcuttaId when both are provided", "calcuttaId")
+				return
+			}
+		}
+	}
 	if req.CohortID == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
 		return
@@ -197,11 +215,11 @@ func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Re
 		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
 		return
 	}
-	if req.CalcuttaID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaId is required", "calcuttaId")
+	if resolvedCalcuttaID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaId (or sourceCalcuttaId) is required", "calcuttaId")
 		return
 	}
-	if _, err := uuid.Parse(req.CalcuttaID); err != nil {
+	if _, err := uuid.Parse(resolvedCalcuttaID); err != nil {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaId must be a valid UUID", "calcuttaId")
 		return
 	}
@@ -277,7 +295,7 @@ func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Re
 	if providedSnapshotID != "" {
 		snapshotID = &providedSnapshotID
 	} else {
-		created, err := createSyntheticCalcuttaSnapshot(ctx, tx, req.CalcuttaID, excludedEntry, focusStrategyRunID, focusEntryName)
+		created, err := createSyntheticCalcuttaSnapshot(ctx, tx, resolvedCalcuttaID, excludedEntry, focusStrategyRunID, focusEntryName)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -299,7 +317,7 @@ func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Re
 			AND calcutta_id = $2::uuid
 			AND deleted_at IS NULL
 		RETURNING id::text
-	`, req.CohortID, req.CalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&syntheticID); err != nil {
+	`, req.CohortID, resolvedCalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&syntheticID); err != nil {
 		if err == pgx.ErrNoRows {
 			if err := tx.QueryRow(ctx, `
 				INSERT INTO derived.synthetic_calcuttas (
@@ -313,7 +331,7 @@ func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Re
 				)
 				VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6, $7)
 				RETURNING id::text
-			`, req.CohortID, req.CalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&syntheticID); err != nil {
+			`, req.CohortID, resolvedCalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&syntheticID); err != nil {
 				writeErrorFromErr(w, r, err)
 				return
 			}
