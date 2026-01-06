@@ -20,6 +20,10 @@ export type ListSuiteExecutionsResponse = {
   items: SuiteExecutionListItem[];
 };
 
+export type SimulationRunBatchListItem = SuiteExecutionListItem;
+
+export type ListSimulationRunBatchesResponse = ListSuiteExecutionsResponse;
+
 export const suiteExecutionsService = {
   async list(params?: { suiteId?: string; limit?: number; offset?: number }): Promise<ListSuiteExecutionsResponse> {
     const q = new URLSearchParams();
@@ -33,5 +37,15 @@ export const suiteExecutionsService = {
 
   async get(id: string): Promise<SuiteExecutionListItem> {
     return apiClient.get<SuiteExecutionListItem>(`/simulation-run-batches/${encodeURIComponent(id)}`);
+  },
+};
+
+export const simulationRunBatchesService = {
+  async list(params?: { cohortId?: string; limit?: number; offset?: number }): Promise<ListSimulationRunBatchesResponse> {
+    return suiteExecutionsService.list({ suiteId: params?.cohortId, limit: params?.limit, offset: params?.offset });
+  },
+
+  async get(id: string): Promise<SimulationRunBatchListItem> {
+    return suiteExecutionsService.get(id);
   },
 };

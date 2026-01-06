@@ -22,6 +22,10 @@ export type ListSuitesResponse = {
   items: SuiteListItem[];
 };
 
+export type CohortListItem = SuiteListItem;
+
+export type ListCohortsResponse = ListSuitesResponse;
+
 export const suitesService = {
   async list(params?: { limit?: number; offset?: number }): Promise<ListSuitesResponse> {
     const q = new URLSearchParams();
@@ -34,5 +38,15 @@ export const suitesService = {
 
   async get(id: string): Promise<SuiteListItem> {
     return apiClient.get<SuiteListItem>(`/synthetic-calcutta-cohorts/${encodeURIComponent(id)}`);
+  },
+};
+
+export const cohortsService = {
+  async list(params?: { limit?: number; offset?: number }): Promise<ListCohortsResponse> {
+    return suitesService.list(params);
+  },
+
+  async get(id: string): Promise<CohortListItem> {
+    return suitesService.get(id);
   },
 };

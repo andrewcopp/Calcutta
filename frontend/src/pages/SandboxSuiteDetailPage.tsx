@@ -10,9 +10,9 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
-import { suiteCalcuttaEvaluationsService, type SuiteCalcuttaEvaluation } from '../services/suiteCalcuttaEvaluationsService';
-import { suiteExecutionsService } from '../services/suiteExecutionsService';
-import { suitesService } from '../services/suitesService';
+import { simulationRunsService, type SuiteCalcuttaEvaluation } from '../services/suiteCalcuttaEvaluationsService';
+import { simulationRunBatchesService } from '../services/suiteExecutionsService';
+import { cohortsService } from '../services/suitesService';
 import { syntheticCalcuttasService, type SyntheticCalcuttaListItem } from '../services/syntheticCalcuttasService';
 import { syntheticEntriesService, type SyntheticEntryListItem } from '../services/syntheticEntriesService';
 import type { Calcutta } from '../types/calcutta';
@@ -73,7 +73,7 @@ export function SandboxSuiteDetailPage() {
 
   const suiteQuery = useQuery({
     queryKey: ['synthetic-calcutta-cohorts', 'get', effectiveCohortId],
-    queryFn: () => suitesService.get(effectiveCohortId),
+    queryFn: () => cohortsService.get(effectiveCohortId),
     enabled: Boolean(effectiveCohortId),
   });
 
@@ -153,7 +153,7 @@ export function SandboxSuiteDetailPage() {
 
   const executionsQuery = useQuery({
     queryKey: ['simulation-run-batches', 'list', effectiveCohortId],
-    queryFn: () => suiteExecutionsService.list({ suiteId: effectiveCohortId, limit: 200, offset: 0 }),
+    queryFn: () => simulationRunBatchesService.list({ cohortId: effectiveCohortId, limit: 200, offset: 0 }),
     enabled: Boolean(effectiveCohortId),
   });
 
@@ -168,8 +168,8 @@ export function SandboxSuiteDetailPage() {
   const evaluationsQuery = useQuery({
     queryKey: ['simulation-runs', 'list', 'simulation-run-batch', effectiveExecutionId],
     queryFn: () =>
-      suiteCalcuttaEvaluationsService.list({
-        suiteExecutionId: effectiveExecutionId || undefined,
+      simulationRunsService.list({
+        simulationRunBatchId: effectiveExecutionId || undefined,
         limit: 200,
         offset: 0,
       }),

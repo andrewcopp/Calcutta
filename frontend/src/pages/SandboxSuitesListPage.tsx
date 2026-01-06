@@ -8,13 +8,13 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
-import { suitesService, type SuiteListItem } from '../services/suitesService';
+import { cohortsService, type CohortListItem } from '../services/suitesService';
 
 export function SandboxSuitesListPage() {
   const navigate = useNavigate();
   const listQuery = useQuery({
     queryKey: ['synthetic-calcutta-cohorts', 'list'],
-    queryFn: () => suitesService.list({ limit: 200, offset: 0 }),
+    queryFn: () => cohortsService.list({ limit: 200, offset: 0 }),
   });
 
   const showError = (err: unknown) => {
@@ -34,7 +34,7 @@ export function SandboxSuitesListPage() {
     return d.toLocaleString();
   };
 
-  const suites: SuiteListItem[] = listQuery.data?.items ?? [];
+  const suites: CohortListItem[] = listQuery.data?.items ?? [];
 
   return (
     <PageContainer>
