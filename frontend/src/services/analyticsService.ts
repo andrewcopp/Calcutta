@@ -89,7 +89,19 @@ export const analyticsService = {
   },
 
   async getCalcuttaSimulatedCalcuttas<T>(calcuttaId: string): Promise<T> {
-    return apiClient.get<T>(`/analytics/calcuttas/${calcuttaId}/simulated-calcuttas`);
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/simulated-calcuttas`);
+  },
+
+  async listLabEntriesCoverage<T>(): Promise<T> {
+    return apiClient.get<T>('/lab/entries');
+  },
+
+  async getLabEntriesSuiteDetail<T>(suiteId: string): Promise<T> {
+    return apiClient.get<T>(`/lab/entries/suites/${encodeURIComponent(suiteId)}`);
+  },
+
+  async getLabEntryReport<T>(scenarioId: string): Promise<T> {
+    return apiClient.get<T>(`/lab/entries/scenarios/${encodeURIComponent(scenarioId)}`);
   },
 
   async exportAnalyticsSnapshot(tournamentId: string, calcuttaId: string): Promise<{ blob: Blob; filename: string }> {

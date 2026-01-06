@@ -29,6 +29,9 @@ import { LabAdvancementAlgorithmDetailPage } from './pages/LabAdvancementAlgorit
 import { LabAdvancementTournamentDetailPage } from './pages/LabAdvancementTournamentDetailPage';
 import { LabInvestmentAlgorithmDetailPage } from './pages/LabInvestmentAlgorithmDetailPage';
 import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDetailPage';
+import { LabEntriesPage } from './pages/LabEntriesPage';
+import { LabEntriesSuiteDetailPage } from './pages/LabEntriesSuiteDetailPage';
+import { LabEntryReportPage } from './pages/LabEntryReportPage';
 import { SandboxPage } from './pages/SandboxPage';
 import { SandboxSuitesListPage } from './pages/SandboxSuitesListPage';
 import { SandboxSuiteDetailPage } from './pages/SandboxSuiteDetailPage';
@@ -55,6 +58,9 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
         <Route path="/lab" element={<LabPage />} />
+        <Route path="/lab/entries" element={<LabEntriesPage />} />
+        <Route path="/lab/entries/suites/:suiteId" element={<LabEntriesSuiteDetailPage />} />
+        <Route path="/lab/entries/scenarios/:scenarioId" element={<LabEntryReportPage />} />
         <Route path="/lab/advancements/algorithms/:algorithmId" element={<LabAdvancementAlgorithmDetailPage />} />
         <Route
           path="/lab/advancements/algorithms/:algorithmId/tournaments/:tournamentId"

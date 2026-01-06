@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TabsNav } from '../components/TabsNav';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -160,7 +160,15 @@ export function LabPage() {
 
   return (
     <PageContainer>
-      <PageHeader title="Lab" subtitle="Browse registered algorithms and their run outputs." />
+      <PageHeader
+        title="Lab"
+        subtitle="Browse registered algorithms and their run outputs."
+        actions={
+          <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
+            Entries →
+          </Link>
+        }
+      />
 
       <Card className="mb-6">
         <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />

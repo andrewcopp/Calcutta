@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
@@ -142,7 +143,9 @@ func run() error {
 		return nil
 	}
 
-	marketShareRunID, inserted, err := writeNaivePredictedMarketShare(ctx, pool, cc.CalcuttaID, cc.CoreTournamentID, kenpomScale, evByTeam)
+	excludedEntryName := strings.TrimSpace(os.Getenv("EXCLUDED_ENTRY_NAME"))
+
+	marketShareRunID, inserted, err := writeNaivePredictedMarketShare(ctx, pool, cc.CalcuttaID, cc.CoreTournamentID, kenpomScale, excludedEntryName, evByTeam)
 	if err != nil {
 		return err
 	}
@@ -532,7 +535,7 @@ func applyReach(r *roundReach, round models.BracketRound, p float64) {
 	}
 }
 
-func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string, kenpomScale float64, evByTeam map[string]float64) (string, int, error) {
+func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string, kenpomScale float64, excludedEntryName string, evByTeam map[string]float64) (string, int, error) {
 	if calcuttaID == "" {
 		return "", 0, errors.New("calcuttaID is required")
 	}
@@ -550,8 +553,9 @@ func writeNaivePredictedMarketShare(ctx context.Context, pool *pgxpool.Pool, cal
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	params := map[string]any{
-		"source":       "naive_market_share_from_pgo",
-		"kenpom_scale": kenpomScale,
+		"source":              "naive_market_share_from_pgo",
+		"kenpom_scale":        kenpomScale,
+		"excluded_entry_name": excludedEntryName,
 	}
 	paramsJSON, err := json.Marshal(params)
 	if err != nil {

@@ -51,6 +51,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	s.registerSuiteRoutes(r)
 	s.registerSuiteScenarioRoutes(r)
 	s.registerStrategyGenerationRunRoutes(r)
+	s.registerLabEntriesRoutes(r)
 	s.registerSuiteCalcuttaEvaluationRoutes(r)
 	s.registerSuiteExecutionRoutes(r)
 	s.registerAnalyticsRoutes(r)
