@@ -11,6 +11,7 @@ import (
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/features/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/features/calcutta"
 	"github.com/andrewcopp/Calcutta/backend/internal/features/ml_analytics"
+	"github.com/andrewcopp/Calcutta/backend/internal/features/model_catalogs"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/features/school"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/features/tournament"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
@@ -54,6 +55,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	a.Calcutta = calcuttaService
 	a.Analytics = analyticsService
 	a.MLAnalytics = mlAnalyticsService
+	a.ModelCatalogs = model_catalogs.New()
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)
