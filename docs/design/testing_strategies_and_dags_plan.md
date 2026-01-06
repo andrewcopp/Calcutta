@@ -79,6 +79,13 @@ Purpose:
 - Bridge from "theory" (advancement + market/investment) to "practice" (sandbox evaluation).
 - Show the deterministic entries produced by a *locked* algorithm combo.
 
+Canonical combo identity (key):
+- `advancement_algorithm_id`
+- `investment/market_share_algorithm_id`
+- `optimizer_key`
+- `excluded_entry_name` (part of identity; changing it produces a distinct combo)
+- (optional) `starting_state_key` (typically `first_four_complete` or `round_of_64`)
+
 Behavior:
 - List all (advancement algorithm + investment/market-share algorithm + optimizer) combinations that have produced entries.
 - Click an algorithm combo -> show all calcuttas it was run for.
@@ -88,6 +95,25 @@ Behavior:
   - Predicted ROI
   - Actual bids and recalculated ROI
   - Full team table (all teams, including those not selected)
+
+Lab Entries report contract (replicates the legacy Python `detailed_investment_report` semantics):
+- Unit of display: per-team rows for the calcutta's tournament (show all teams).
+- Required persisted inputs (source-of-truth primitives):
+  - Returns primitive: per-team `expected_points` derived from a specific `game_outcome_run_id` combined with the calcutta scoring rules.
+  - Market primitive: per-team `predicted_market_share` derived from a specific `market_share_run_id` for that calcutta.
+  - Generation params: `assumed_entries` (default: 47), `excluded_entry_name`, `starting_state_key`.
+  - Optimizer output: per-team `our_bid` for the generated entry (most teams are 0).
+- Derived (computed) fields in the report:
+  - `predicted_market` = `predicted_market_share * assumed_entries`
+  - `predicted_roi` = `expected_points / predicted_market`
+  - `adjusted_roi` = `expected_points / (predicted_market + our_bid)`
+- Edge-case rules:
+  - If `predicted_market` is 0 (or non-finite), display ROI fields as `—` (avoid +/-inf).
+  - If `predicted_market + our_bid` is 0 (or non-finite), display `adjusted_roi` as `—`.
+  - `our_bid` is considered 0 when absent.
+- Run-selection rules:
+  - The report should prefer runs that match the combo identity, especially `excluded_entry_name`.
+  - Multiple deterministic generations are allowed; UI should default to the most recent run for the (combo, calcutta) pair.
 
 Handoff boundary (Lab -> Sandbox):
 - A *collection of generated entries* (one per calcutta for a given algorithm combo).
