@@ -137,6 +137,8 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 	ctx := r.Context()
 
 	// Load suite-level defaults.
+	var goAlgID string
+	var msAlgID string
 	var optimizerKey string
 	var nSims int
 	var seed int
@@ -144,6 +146,8 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 	var suiteExcludedEntryName *string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT
+			game_outcomes_algorithm_id::text,
+			market_share_algorithm_id::text,
 			COALESCE(optimizer_key, ''::text) AS optimizer_key,
 			COALESCE(n_sims, 0)::int AS n_sims,
 			COALESCE(seed, 0)::int AS seed,
@@ -153,7 +157,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, suiteID).Scan(&optimizerKey, &nSims, &seed, &startingStateKey, &suiteExcludedEntryName); err != nil {
+	`, suiteID).Scan(&goAlgID, &msAlgID, &optimizerKey, &nSims, &seed, &startingStateKey, &suiteExcludedEntryName); err != nil {
 		if err == pgx.ErrNoRows {
 			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "id")
 			return
@@ -162,40 +166,25 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	// Load focused scenarios. We join to strategy_generation_runs so the evaluation uses
-	// the same game_outcome_run_id + market_share_run_id provenance as the Lab entry.
+	// Load focused scenarios. We will resolve game_outcome_run_id + market_share_run_id
+	// based on suite algorithms + each scenario's tournament/calcutta.
 	type focusedScenarioRow struct {
-		CalcuttaID            string
-		StrategyGenRunID      string
-		GameOutcomeRunID      string
-		MarketShareRunID      string
-		ExcludedEntryName     *string
-		StartingStateKey      string
-		SuiteOptimizerKey     string
-		SuiteNSims            int
-		SuiteSeed             int
-		SuiteExcludedEntryAny *string
+		CalcuttaID        string
+		StrategyGenRunID  string
+		ExcludedEntryName *string
+		StartingStateKey  string
 	}
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT
 			sc.calcutta_id::text,
 			sc.focus_strategy_generation_run_id::text,
-			sgr.game_outcome_run_id::text,
-			sgr.market_share_run_id::text,
 			COALESCE(sc.excluded_entry_name, su.excluded_entry_name) AS excluded_entry_name,
-			COALESCE(NULLIF(su.starting_state_key, ''), 'post_first_four') AS starting_state_key,
-			COALESCE(su.optimizer_key, ''::text) AS optimizer_key,
-			COALESCE(su.n_sims, 0)::int AS n_sims,
-			COALESCE(su.seed, 0)::int AS seed,
-			su.excluded_entry_name
+			COALESCE(NULLIF(COALESCE(sc.starting_state_key, su.starting_state_key), ''), 'post_first_four') AS starting_state_key
 		FROM derived.suite_scenarios sc
 		JOIN derived.suites su
 			ON su.id = sc.suite_id
 			AND su.deleted_at IS NULL
-		JOIN derived.strategy_generation_runs sgr
-			ON sgr.id = sc.focus_strategy_generation_run_id
-			AND sgr.deleted_at IS NULL
 		WHERE sc.suite_id = $1::uuid
 			AND sc.deleted_at IS NULL
 			AND sc.focus_strategy_generation_run_id IS NOT NULL
@@ -213,14 +202,8 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 		if err := rows.Scan(
 			&fr.CalcuttaID,
 			&fr.StrategyGenRunID,
-			&fr.GameOutcomeRunID,
-			&fr.MarketShareRunID,
 			&fr.ExcludedEntryName,
 			&fr.StartingStateKey,
-			&fr.SuiteOptimizerKey,
-			&fr.SuiteNSims,
-			&fr.SuiteSeed,
-			&fr.SuiteExcludedEntryAny,
 		); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -271,6 +254,55 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 	}
 
 	for _, fr := range focused {
+		var tournamentID string
+		if err := tx.QueryRow(ctx, `
+			SELECT tournament_id::text
+			FROM core.calcuttas
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		`, fr.CalcuttaID).Scan(&tournamentID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		var goRunID string
+		if err := tx.QueryRow(ctx, `
+			SELECT id::text
+			FROM derived.game_outcome_runs
+			WHERE tournament_id = $1::uuid
+				AND algorithm_id = $2::uuid
+				AND deleted_at IS NULL
+			ORDER BY created_at DESC
+			LIMIT 1
+		`, tournamentID, goAlgID).Scan(&goRunID); err != nil {
+			if err == pgx.ErrNoRows {
+				writeError(w, r, http.StatusConflict, "missing_run", "Missing game-outcome run for suite algorithm", "gameOutcomeRunId")
+				return
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		var msRunID string
+		if err := tx.QueryRow(ctx, `
+			SELECT id::text
+			FROM derived.market_share_runs
+			WHERE calcutta_id = $1::uuid
+				AND algorithm_id = $2::uuid
+				AND deleted_at IS NULL
+			ORDER BY (CASE WHEN $3::text IS NOT NULL AND params_json->>'excluded_entry_name' = $3::text THEN 1 ELSE 0 END) DESC,
+				created_at DESC
+			LIMIT 1
+		`, fr.CalcuttaID, msAlgID, fr.ExcludedEntryName).Scan(&msRunID); err != nil {
+			if err == pgx.ErrNoRows {
+				writeError(w, r, http.StatusConflict, "missing_run", "Missing market-share run for suite algorithm", "marketShareRunId")
+				return
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
 		_, err := tx.Exec(ctx, `
 			INSERT INTO derived.suite_calcutta_evaluations (
 				suite_execution_id,
@@ -286,7 +318,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 				strategy_generation_run_id
 			)
 			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text, $11::uuid)
-		`, executionID, suiteID, fr.CalcuttaID, fr.GameOutcomeRunID, fr.MarketShareRunID, optimizerKey, nSims, seed, fr.StartingStateKey, fr.ExcludedEntryName, fr.StrategyGenRunID)
+		`, executionID, suiteID, fr.CalcuttaID, goRunID, msRunID, optimizerKey, nSims, seed, fr.StartingStateKey, fr.ExcludedEntryName, fr.StrategyGenRunID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return

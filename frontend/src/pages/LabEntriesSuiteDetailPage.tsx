@@ -93,7 +93,7 @@ export function LabEntriesSuiteDetailPage() {
 					onClick={async () => {
 						if (!suiteId) return;
 						const res = await analyticsService.createLabSuiteSandboxExecution<CreateSandboxExecutionResponse>(suiteId);
-						navigate(`/sandbox/suites/${encodeURIComponent(res.executionId)}`);
+						navigate(`/sandbox/suites/${encodeURIComponent(suiteId)}?executionId=${encodeURIComponent(res.executionId)}`);
 					}}
 				>
 					Run in Sandbox
