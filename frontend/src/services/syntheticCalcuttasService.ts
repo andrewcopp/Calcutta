@@ -19,7 +19,8 @@ export type ListSyntheticCalcuttasResponse = {
 
 export type CreateSyntheticCalcuttaRequest = {
   cohortId: string;
-  calcuttaId: string;
+  calcuttaId?: string;
+  sourceCalcuttaId?: string;
   calcuttaSnapshotId?: string;
   focusStrategyGenerationRunId?: string;
   focusEntryName?: string;

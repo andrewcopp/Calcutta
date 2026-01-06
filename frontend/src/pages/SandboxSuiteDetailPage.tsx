@@ -26,6 +26,7 @@ export function SandboxSuiteDetailPage() {
   const selectedSyntheticCalcuttaId = searchParams.get('syntheticCalcuttaId') || '';
 
   const [newSyntheticEntryName, setNewSyntheticEntryName] = useState<string>('');
+  const [sourceCalcuttaId, setSourceCalcuttaId] = useState<string>('');
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -86,6 +87,27 @@ export function SandboxSuiteDetailPage() {
     () => syntheticCalcuttasQuery.data?.items ?? [],
     [syntheticCalcuttasQuery.data?.items]
   );
+
+  const effectiveSourceCalcuttaId = useMemo(() => {
+    if (sourceCalcuttaId) return sourceCalcuttaId;
+    return calcuttas.length > 0 ? calcuttas[0].id : '';
+  }, [calcuttas, sourceCalcuttaId]);
+
+  const createSyntheticCalcuttaMutation = useMutation({
+    mutationFn: async () => {
+      if (!suiteId) throw new Error('Missing cohort ID');
+      const src = effectiveSourceCalcuttaId;
+      if (!src) throw new Error('Missing source calcutta');
+      return syntheticCalcuttasService.create({ cohortId: suiteId, sourceCalcuttaId: src });
+    },
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['synthetic-calcuttas', 'list', suiteId] });
+      const nextParams: Record<string, string> = {};
+      if (selectedExecutionId) nextParams.executionId = selectedExecutionId;
+      if (res?.id) nextParams.syntheticCalcuttaId = res.id;
+      setSearchParams(nextParams, { replace: true });
+    },
+  });
 
   const effectiveSyntheticCalcuttaId = useMemo(() => {
     if (selectedSyntheticCalcuttaId) return selectedSyntheticCalcuttaId;
@@ -216,7 +238,27 @@ export function SandboxSuiteDetailPage() {
           </Card>
 
           <Card>
-            <h2 className="text-xl font-semibold mb-4">Synthetic Calcuttas</h2>
+            <div className="flex items-end justify-between gap-4 mb-4">
+              <h2 className="text-xl font-semibold">Synthetic Calcuttas</h2>
+
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-gray-500 whitespace-nowrap">Source Calcutta</div>
+                <Select value={effectiveSourceCalcuttaId} onChange={(e) => setSourceCalcuttaId(e.target.value)} disabled={calcuttas.length === 0}>
+                  {calcuttas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {seasonFromCalcuttaName(c.name)} · {c.name}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  size="sm"
+                  disabled={createSyntheticCalcuttaMutation.isPending || !suiteId || !effectiveSourceCalcuttaId}
+                  onClick={() => createSyntheticCalcuttaMutation.mutate()}
+                >
+                  Create
+                </Button>
+              </div>
+            </div>
 
             {syntheticCalcuttasQuery.isLoading ? <LoadingState label="Loading synthetic calcuttas..." layout="inline" /> : null}
             {syntheticCalcuttasQuery.isError ? (
@@ -232,6 +274,12 @@ export function SandboxSuiteDetailPage() {
             {!syntheticCalcuttasQuery.isLoading && !syntheticCalcuttasQuery.isError && syntheticCalcuttas.length === 0 ? (
               <Alert variant="info" className="mt-3">
                 No synthetic calcuttas found for this cohort.
+              </Alert>
+            ) : null}
+
+            {createSyntheticCalcuttaMutation.isError ? (
+              <Alert variant="error" className="mt-3">
+                {showError(createSyntheticCalcuttaMutation.error)}
               </Alert>
             ) : null}
 
