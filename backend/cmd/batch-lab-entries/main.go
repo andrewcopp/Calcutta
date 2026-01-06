@@ -35,9 +35,10 @@ type suiteRow struct {
 }
 
 type calcuttaRow struct {
-	CalcuttaID   string
-	TournamentID string
-	SeasonYear   int
+	CalcuttaID                   string
+	TournamentID                 string
+	SeasonYear                   int
+	FocusStrategyGenerationRunID *string
 }
 
 type pythonRunnerResult struct {
@@ -66,6 +67,8 @@ func run() error {
 	var nSims int
 	var seed int
 	var kenpomScale float64
+	var skipExistingFocus bool
+	var useExistingMarketShare bool
 	var dryRun bool
 
 	flag.StringVar(&suiteID, "suite-id", "", "Optional derived.suites.id (uuid). If empty, process all suites")
@@ -73,27 +76,30 @@ func run() error {
 	flag.IntVar(&seasonMin, "season-min", 0, "Optional season year lower bound (inclusive)")
 	flag.IntVar(&seasonMax, "season-max", 0, "Optional season year upper bound (inclusive)")
 	flag.StringVar(&pythonBin, "python-bin", "python3", "Python interpreter to run the market-share runner")
-	flag.StringVar(&pythonRunnerPath, "python-market-runner", "", "Path to data-science/scripts/run_market_share_runner.py")
+	flag.StringVar(&pythonRunnerPath, "python-market-runner", "", "Optional path to data-science/scripts/run_market_share_runner.py (used only as fallback if no matching market_share_run exists)")
 	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Override excluded entry name (defaults to suite.excluded_entry_name or EXCLUDED_ENTRY_NAME)")
 	flag.IntVar(&nSims, "pgo-n-sims", 5000, "predicted_game_outcomes n_sims")
 	flag.IntVar(&seed, "pgo-seed", 42, "predicted_game_outcomes seed")
 	flag.Float64Var(&kenpomScale, "pgo-kenpom-scale", 10.0, "predicted_game_outcomes kenpom scale")
+	flag.BoolVar(&skipExistingFocus, "skip-existing-focus", true, "Skip suite_scenarios that already have focus_strategy_generation_run_id")
+	flag.BoolVar(&useExistingMarketShare, "use-existing-market-share", true, "Reuse existing market_share_runs (matching algorithm name + excluded_entry_name) and only call Python runner if missing")
 	flag.BoolVar(&dryRun, "dry-run", false, "If set, compute selections but do not write suite_scenarios focus run")
 	flag.Parse()
 
-	if pythonRunnerPath == "" {
-		return fmt.Errorf("--python-market-runner is required")
-	}
 	if seasonMin > 0 && seasonMax > 0 && seasonMax < seasonMin {
 		return fmt.Errorf("invalid season range: season-max < season-min")
 	}
 
-	absRunner, err := filepath.Abs(pythonRunnerPath)
-	if err != nil {
-		return err
-	}
-	if _, err := os.Stat(absRunner); err != nil {
-		return fmt.Errorf("python runner not found: %s", absRunner)
+	absRunner := ""
+	if strings.TrimSpace(pythonRunnerPath) != "" {
+		v, err := filepath.Abs(pythonRunnerPath)
+		if err != nil {
+			return err
+		}
+		if _, err := os.Stat(v); err != nil {
+			return fmt.Errorf("python runner not found: %s", v)
+		}
+		absRunner = v
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
@@ -139,6 +145,16 @@ func run() error {
 		}
 
 		for _, c := range calcuttas {
+			if skipExistingFocus && c.FocusStrategyGenerationRunID != nil && strings.TrimSpace(*c.FocusStrategyGenerationRunID) != "" {
+				slog.Info(
+					"scenario_skipped_existing_focus",
+					"suite_id", s.ID,
+					"calcutta_id", c.CalcuttaID,
+					"focus_strategy_generation_run_id", *c.FocusStrategyGenerationRunID,
+				)
+				continue
+			}
+
 			// Ensure PGO run exists for this tournament+algorithm.
 			goRunID, err := ensureGameOutcomeRun(ctx, pool, pgoSvc, s, c, nSims, seed, kenpomScale)
 			if err != nil {
@@ -159,10 +175,25 @@ func run() error {
 				return fmt.Errorf("excluded entry name is required (set suite.excluded_entry_name, --excluded-entry-name, or EXCLUDED_ENTRY_NAME)")
 			}
 
-			// Run python market-share model for this calcutta.
-			msRunID, err := runPythonMarketShare(ctx, pythonBin, absRunner, c.CalcuttaID, s.MarketShareAlgName, excl)
-			if err != nil {
-				return err
+			msRunID := ""
+			if useExistingMarketShare {
+				id, ok, err := resolveMarketShareRunID(ctx, pool, c.CalcuttaID, s.MarketShareAlgName, excl)
+				if err != nil {
+					return err
+				}
+				if ok {
+					msRunID = id
+				}
+			}
+			if msRunID == "" {
+				if absRunner == "" {
+					return fmt.Errorf("no matching market_share_run found for calcutta_id=%s algorithm=%s excluded_entry_name=%s (provide --python-market-runner to compute)", c.CalcuttaID, s.MarketShareAlgName, excl)
+				}
+				id, err := runPythonMarketShare(ctx, pythonBin, absRunner, c.CalcuttaID, s.MarketShareAlgName, excl)
+				if err != nil {
+					return err
+				}
+				msRunID = id
 			}
 
 			// Compute expected points from analytics service (PGO DP).
@@ -274,6 +305,29 @@ func loadSuites(ctx context.Context, pool *pgxpool.Pool, suiteID string) ([]suit
 	return out, nil
 }
 
+func resolveMarketShareRunID(ctx context.Context, pool *pgxpool.Pool, calcuttaID, algorithmName, excludedEntryName string) (string, bool, error) {
+	var id string
+	err := pool.QueryRow(ctx, `
+		SELECT msr.id::text
+		FROM derived.market_share_runs msr
+		JOIN derived.algorithms a ON a.id = msr.algorithm_id AND a.deleted_at IS NULL
+		WHERE msr.calcutta_id = $1::uuid
+			AND msr.deleted_at IS NULL
+			AND a.kind = 'market_share'
+			AND a.name = $2::text
+			AND msr.params_json->>'excluded_entry_name' = $3::text
+		ORDER BY msr.created_at DESC
+		LIMIT 1
+	`, calcuttaID, algorithmName, excludedEntryName).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}
+
 func ensureSuiteScenarios(ctx context.Context, pool *pgxpool.Pool, suiteID string, seasonMin, seasonMax int, calcuttaID string) error {
 	if strings.TrimSpace(calcuttaID) != "" {
 		_, err := pool.Exec(ctx, `
@@ -321,7 +375,8 @@ func listSuiteScenarioCalcuttas(ctx context.Context, pool *pgxpool.Pool, suiteID
 		SELECT
 			sc.calcutta_id::text,
 			c.tournament_id::text,
-			seas.year::int
+			seas.year::int,
+			sc.focus_strategy_generation_run_id::text
 		FROM derived.suite_scenarios sc
 		JOIN core.calcuttas c ON c.id = sc.calcutta_id AND c.deleted_at IS NULL
 		JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
@@ -339,7 +394,7 @@ func listSuiteScenarioCalcuttas(ctx context.Context, pool *pgxpool.Pool, suiteID
 	out := make([]calcuttaRow, 0)
 	for rows.Next() {
 		var c calcuttaRow
-		if err := rows.Scan(&c.CalcuttaID, &c.TournamentID, &c.SeasonYear); err != nil {
+		if err := rows.Scan(&c.CalcuttaID, &c.TournamentID, &c.SeasonYear, &c.FocusStrategyGenerationRunID); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
