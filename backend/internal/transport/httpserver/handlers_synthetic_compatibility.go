@@ -26,19 +26,6 @@ func (s *Server) registerSyntheticCompatibilityRoutes(r *mux.Router) {
 	).Methods("PATCH", "OPTIONS")
 
 	r.HandleFunc(
-		"/api/synthetic-calcuttas",
-		s.requirePermission("analytics.suite_scenarios.read", s.handleListSyntheticCalcuttas),
-	).Methods("GET", "OPTIONS")
-	r.HandleFunc(
-		"/api/synthetic-calcuttas",
-		s.requirePermission("analytics.suite_scenarios.write", s.handleCreateSyntheticCalcutta),
-	).Methods("POST", "OPTIONS")
-	r.HandleFunc(
-		"/api/synthetic-calcuttas/{id}",
-		s.requirePermission("analytics.suite_scenarios.read", s.handleGetSyntheticCalcutta),
-	).Methods("GET", "OPTIONS")
-
-	r.HandleFunc(
 		"/api/simulation-run-batches",
 		s.requirePermission("analytics.suite_executions.write", s.handleCreateSimulationRunBatch),
 	).Methods("POST", "OPTIONS")
@@ -83,51 +70,6 @@ func (s *Server) handleGetSyntheticCalcuttaCohort(w http.ResponseWriter, r *http
 
 func (s *Server) handlePatchSyntheticCalcuttaCohort(w http.ResponseWriter, r *http.Request) {
 	s.updateSuiteHandler(w, r)
-}
-
-func (s *Server) handleListSyntheticCalcuttas(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if v := strings.TrimSpace(q.Get("cohort_id")); v != "" {
-		q.Set("suite_id", v)
-	}
-	r.URL.RawQuery = q.Encode()
-	s.listSuiteScenariosHandler(w, r)
-}
-
-func (s *Server) handleGetSyntheticCalcutta(w http.ResponseWriter, r *http.Request) {
-	s.getSuiteScenarioHandler(w, r)
-}
-
-type createSyntheticCalcuttaRequest struct {
-	CohortID                  string  `json:"cohortId"`
-	CalcuttaID                string  `json:"calcuttaId"`
-	CalcuttaSnapshotID        *string `json:"calcuttaSnapshotId"`
-	FocusStrategyGenerationID *string `json:"focusStrategyGenerationRunId"`
-	FocusEntryName            *string `json:"focusEntryName"`
-	StartingStateKey          *string `json:"startingStateKey"`
-	ExcludedEntryName         *string `json:"excludedEntryName"`
-}
-
-func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Request) {
-	var req createSyntheticCalcuttaRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
-		return
-	}
-
-	body := map[string]any{
-		"suiteId":                      req.CohortID,
-		"calcuttaId":                   req.CalcuttaID,
-		"calcuttaSnapshotId":           req.CalcuttaSnapshotID,
-		"focusStrategyGenerationRunId": req.FocusStrategyGenerationID,
-		"focusEntryName":               req.FocusEntryName,
-		"startingStateKey":             req.StartingStateKey,
-		"excludedEntryName":            req.ExcludedEntryName,
-	}
-	b, _ := json.Marshal(body)
-	cloned := r.Clone(r.Context())
-	cloned.Body = io.NopCloser(bytes.NewReader(b))
-	s.createSuiteScenarioHandler(w, cloned)
 }
 
 func (s *Server) handleListSimulationRunBatches(w http.ResponseWriter, r *http.Request) {
@@ -237,8 +179,8 @@ func (s *Server) handleCreateSimulationRun(w http.ResponseWriter, r *http.Reques
 	var startingStateKey *string
 	var excludedEntryName *string
 	if err := s.pool.QueryRow(ctx, `
-		SELECT suite_id::text, calcutta_id::text, starting_state_key, excluded_entry_name
-		FROM derived.suite_scenarios
+		SELECT cohort_id::text, calcutta_id::text, starting_state_key, excluded_entry_name
+		FROM derived.synthetic_calcuttas
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
