@@ -157,8 +157,10 @@ Resource-oriented URLs with stable IDs.
 - [x] Smoke test: `/synthetic-calcutta-cohorts`, `/synthetic-calcuttas`, `/synthetic-entries` (create calcutta snapshot, list entries)
 
 - [ ] SyntheticCalcutta creation:
+  - [x] Backfill/repair legacy synthetic calcuttas to ensure `calcutta_snapshot_id` is always present
   - [x] `POST /synthetic-calcuttas` creates a snapshot when `calcuttaSnapshotId` is not provided
   - [x] `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
+  - [x] Sandbox UI supports creating synthetic calcuttas from a selected source calcutta
 
 ### Proposed REST surface (initial)
 Catalogs (compiled-in registries):
