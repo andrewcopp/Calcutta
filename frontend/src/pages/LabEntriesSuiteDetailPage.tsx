@@ -31,6 +31,11 @@ type SuiteDetailResponse = {
   }[];
 };
 
+type CreateSandboxExecutionResponse = {
+  executionId: string;
+  evaluationCount: number;
+};
+
 export function LabEntriesSuiteDetailPage() {
   const { suiteId } = useParams<{ suiteId: string }>();
   const navigate = useNavigate();
@@ -45,6 +50,10 @@ export function LabEntriesSuiteDetailPage() {
   });
 
   const items = detailQuery.data?.items ?? [];
+
+  const canRunInSandbox = useMemo(() => {
+    return items.some((it) => Boolean(it.strategy_generation_run_id));
+  }, [items]);
 
   const sorted = useMemo(() => {
     return items
@@ -77,6 +86,18 @@ export function LabEntriesSuiteDetailPage() {
             <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
               ← Back to Entries
             </Link>
+
+				<Button
+					size="sm"
+					disabled={!suiteId || detailQuery.isLoading || !canRunInSandbox}
+					onClick={async () => {
+						if (!suiteId) return;
+						const res = await analyticsService.createLabSuiteSandboxExecution<CreateSandboxExecutionResponse>(suiteId);
+						navigate(`/sandbox/suites/${encodeURIComponent(res.executionId)}`);
+					}}
+				>
+					Run in Sandbox
+				</Button>
           </div>
         }
       />

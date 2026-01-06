@@ -98,6 +98,11 @@ type labEntryReportResponse struct {
 	Teams                    []labEntryReportTeam        `json:"teams"`
 }
 
+type createLabSuiteSandboxExecutionResponse struct {
+	ExecutionID     string `json:"executionId"`
+	EvaluationCount int    `json:"evaluationCount"`
+}
+
 func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 	r.HandleFunc(
 		"/api/lab/entries",
@@ -111,6 +116,190 @@ func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 		"/api/lab/entries/scenarios/{id}",
 		s.requirePermission("analytics.suites.read", s.getLabEntryReportHandler),
 	).Methods("GET", "OPTIONS")
+	r.HandleFunc(
+		"/api/lab/entries/suites/{id}/sandbox-executions",
+		s.requirePermission("analytics.suite_executions.write", s.createLabSuiteSandboxExecutionHandler),
+	).Methods("POST", "OPTIONS")
+}
+
+func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	suiteID := strings.TrimSpace(vars["id"])
+	if suiteID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(suiteID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+
+	ctx := r.Context()
+
+	// Load suite-level defaults.
+	var optimizerKey string
+	var nSims int
+	var seed int
+	var startingStateKey string
+	var suiteExcludedEntryName *string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT
+			COALESCE(optimizer_key, ''::text) AS optimizer_key,
+			COALESCE(n_sims, 0)::int AS n_sims,
+			COALESCE(seed, 0)::int AS seed,
+			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			excluded_entry_name
+		FROM derived.suites
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, suiteID).Scan(&optimizerKey, &nSims, &seed, &startingStateKey, &suiteExcludedEntryName); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "id")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	// Load focused scenarios. We join to strategy_generation_runs so the evaluation uses
+	// the same game_outcome_run_id + market_share_run_id provenance as the Lab entry.
+	type focusedScenarioRow struct {
+		CalcuttaID            string
+		StrategyGenRunID      string
+		GameOutcomeRunID      string
+		MarketShareRunID      string
+		ExcludedEntryName     *string
+		StartingStateKey      string
+		SuiteOptimizerKey     string
+		SuiteNSims            int
+		SuiteSeed             int
+		SuiteExcludedEntryAny *string
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			sc.calcutta_id::text,
+			sc.focus_strategy_generation_run_id::text,
+			sgr.game_outcome_run_id::text,
+			sgr.market_share_run_id::text,
+			COALESCE(sc.excluded_entry_name, su.excluded_entry_name) AS excluded_entry_name,
+			COALESCE(NULLIF(su.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			COALESCE(su.optimizer_key, ''::text) AS optimizer_key,
+			COALESCE(su.n_sims, 0)::int AS n_sims,
+			COALESCE(su.seed, 0)::int AS seed,
+			su.excluded_entry_name
+		FROM derived.suite_scenarios sc
+		JOIN derived.suites su
+			ON su.id = sc.suite_id
+			AND su.deleted_at IS NULL
+		JOIN derived.strategy_generation_runs sgr
+			ON sgr.id = sc.focus_strategy_generation_run_id
+			AND sgr.deleted_at IS NULL
+		WHERE sc.suite_id = $1::uuid
+			AND sc.deleted_at IS NULL
+			AND sc.focus_strategy_generation_run_id IS NOT NULL
+		ORDER BY sc.created_at ASC
+	`, suiteID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	focused := make([]focusedScenarioRow, 0)
+	for rows.Next() {
+		var fr focusedScenarioRow
+		if err := rows.Scan(
+			&fr.CalcuttaID,
+			&fr.StrategyGenRunID,
+			&fr.GameOutcomeRunID,
+			&fr.MarketShareRunID,
+			&fr.ExcludedEntryName,
+			&fr.StartingStateKey,
+			&fr.SuiteOptimizerKey,
+			&fr.SuiteNSims,
+			&fr.SuiteSeed,
+			&fr.SuiteExcludedEntryAny,
+		); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		focused = append(focused, fr)
+	}
+	if err := rows.Err(); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if len(focused) == 0 {
+		writeError(w, r, http.StatusConflict, "missing_focus", "No focused scenarios found for suite", "id")
+		return
+	}
+
+	// Create suite_execution + evaluations transactionally.
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		_ = tx.Rollback(ctx)
+	}()
+
+	// Use suite defaults for execution; the evaluation rows can override excluded_entry_name per scenario.
+	var executionID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.suite_executions (
+			suite_id,
+			name,
+			optimizer_key,
+			n_sims,
+			seed,
+			starting_state_key,
+			excluded_entry_name,
+			status
+		)
+		VALUES ($1::uuid, NULL, $2, $3::int, $4::int, $5, $6::text, 'running')
+		RETURNING id::text
+	`, suiteID, optimizerKey, nSims, seed, startingStateKey, suiteExcludedEntryName).Scan(&executionID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	for _, fr := range focused {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO derived.suite_calcutta_evaluations (
+				suite_execution_id,
+				suite_id,
+				calcutta_id,
+				game_outcome_run_id,
+				market_share_run_id,
+				optimizer_key,
+				n_sims,
+				seed,
+				starting_state_key,
+				excluded_entry_name,
+				strategy_generation_run_id
+			)
+			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text, $11::uuid)
+		`, executionID, suiteID, fr.CalcuttaID, fr.GameOutcomeRunID, fr.MarketShareRunID, optimizerKey, nSims, seed, fr.StartingStateKey, fr.ExcludedEntryName, fr.StrategyGenRunID)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	committed = true
+
+	writeJSON(w, http.StatusCreated, createLabSuiteSandboxExecutionResponse{ExecutionID: executionID, EvaluationCount: len(focused)})
 }
 
 func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Request) {

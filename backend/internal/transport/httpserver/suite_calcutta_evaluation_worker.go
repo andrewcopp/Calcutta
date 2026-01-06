@@ -29,6 +29,7 @@ type suiteCalcuttaEvaluationRow struct {
 	CalcuttaID       string
 	GameOutcomeRunID string
 	MarketShareRunID string
+	StrategyGenRunID *string
 	OptimizerKey     *string
 	NSims            *int
 	Seed             *int
@@ -132,6 +133,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 			r.calcutta_id,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
+			r.strategy_generation_run_id,
 			r.optimizer_key,
 			r.n_sims,
 			r.seed,
@@ -151,6 +153,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		&row.CalcuttaID,
 		&row.GameOutcomeRunID,
 		&row.MarketShareRunID,
+		&row.StrategyGenRunID,
 		&row.OptimizerKey,
 		&row.NSims,
 		&row.Seed,
@@ -179,12 +182,18 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 
 	runKey := uuid.NewString()
 
+	strategyGenRunID := ""
+	if req.StrategyGenRunID != nil {
+		strategyGenRunID = *req.StrategyGenRunID
+	}
+	usingExistingStrategyGenRun := strategyGenRunID != ""
+
 	excluded := ""
 	if req.ExcludedEntry != nil {
 		excluded = *req.ExcludedEntry
 	}
 
-	log.Printf("suite_eval_worker start worker_id=%s eval_id=%s suite_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s starting_state_key=%s excluded_entry_name=%q",
+	log.Printf("suite_eval_worker start worker_id=%s eval_id=%s suite_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s strategy_generation_run_id=%s starting_state_key=%s excluded_entry_name=%q",
 		workerID,
 		req.ID,
 		req.SuiteID,
@@ -192,6 +201,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		runKey,
 		req.GameOutcomeRunID,
 		req.MarketShareRunID,
+		strategyGenRunID,
 		req.StartingStateKey,
 		excluded,
 	)
@@ -233,8 +243,6 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		return false
 	}
 
-	rebSvc := reb.New(s.pool)
-	msRunID := req.MarketShareRunID
 	optimizerKey := ""
 	if req.OptimizerKey != nil {
 		optimizerKey = *req.OptimizerKey
@@ -242,27 +250,45 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 	if optimizerKey == "" {
 		optimizerKey = s.resolveSuiteOptimizerKey(ctx, req.SuiteID, "minlp_v1")
 	}
-	genRes, err := rebSvc.GenerateAndWrite(ctx, reb.GenerateParams{
-		CalcuttaID:            req.CalcuttaID,
-		RunKey:                runKey,
-		Name:                  "suite_eval_worker",
-		OptimizerKey:          optimizerKey,
-		MarketShareRunID:      &msRunID,
-		SimulatedTournamentID: &simRes.TournamentSimulationBatchID,
-	})
-	if err != nil {
-		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
-		return false
+
+	if !usingExistingStrategyGenRun {
+		rebSvc := reb.New(s.pool)
+		msRunID := req.MarketShareRunID
+		genRes, err := rebSvc.GenerateAndWrite(ctx, reb.GenerateParams{
+			CalcuttaID:            req.CalcuttaID,
+			RunKey:                runKey,
+			Name:                  "suite_eval_worker",
+			OptimizerKey:          optimizerKey,
+			MarketShareRunID:      &msRunID,
+			SimulatedTournamentID: &simRes.TournamentSimulationBatchID,
+		})
+		if err != nil {
+			s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
+			return false
+		}
+		strategyGenRunID = genRes.StrategyGenerationRunID
 	}
 
 	evalSvc := appsimulatedcalcutta.New(s.pool)
-	evalRunID, err := evalSvc.CalculateSimulatedCalcuttaForEvaluationRun(
-		ctx,
-		req.CalcuttaID,
-		runKey,
-		excluded,
-		&simRes.TournamentSimulationBatchID,
-	)
+	evalRunID := ""
+	if usingExistingStrategyGenRun {
+		evalRunID, err = evalSvc.CalculateSimulatedCalcuttaForStrategyGenerationRun(
+			ctx,
+			req.CalcuttaID,
+			runKey,
+			excluded,
+			&simRes.TournamentSimulationBatchID,
+			strategyGenRunID,
+		)
+	} else {
+		evalRunID, err = evalSvc.CalculateSimulatedCalcuttaForEvaluationRun(
+			ctx,
+			req.CalcuttaID,
+			runKey,
+			excluded,
+			&simRes.TournamentSimulationBatchID,
+		)
+	}
 	if err != nil {
 		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
 		return false
@@ -341,7 +367,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		}
 	}
 
-	if realized, ok, err := s.computeRealizedFinishForStrategyGenerationRun(ctx, req.CalcuttaID, genRes.StrategyGenerationRunID); err != nil {
+	if realized, ok, err := s.computeRealizedFinishForStrategyGenerationRun(ctx, req.CalcuttaID, strategyGenRunID); err != nil {
 		log.Printf("Error computing realized finish for eval_id=%s: %v", req.ID, err)
 	} else if ok {
 		realizedFinishPosition = &realized.FinishPosition
@@ -378,7 +404,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		optimizerKey,
 		nSims,
 		seed,
-		genRes.StrategyGenerationRunID,
+		strategyGenRunID,
 		evalRunID,
 		ourRank,
 		ourMeanNormalizedPayout,
@@ -401,7 +427,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		workerID,
 		req.ID,
 		runKey,
-		genRes.StrategyGenerationRunID,
+		strategyGenRunID,
 		evalRunID,
 	)
 

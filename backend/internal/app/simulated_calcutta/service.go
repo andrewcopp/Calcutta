@@ -24,7 +24,7 @@ func New(pool *pgxpool.Pool) *Service {
 func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, calcuttaID string, runID string) error {
 	// Get excluded entry name from environment (e.g., "Andrew Copp")
 	excludedEntryName := os.Getenv("EXCLUDED_ENTRY_NAME")
-	_, err := s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, nil, nil)
+	_, err := s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, nil, nil, nil)
 	return err
 }
 
@@ -35,7 +35,21 @@ func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
 	excludedEntryName string,
 	tournamentSimulationBatchID *string,
 ) (string, error) {
-	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil)
+	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil, nil)
+}
+
+func (s *Service) CalculateSimulatedCalcuttaForStrategyGenerationRun(
+	ctx context.Context,
+	calcuttaID string,
+	runID string,
+	excludedEntryName string,
+	tournamentSimulationBatchID *string,
+	strategyGenerationRunID string,
+) (string, error) {
+	if strategyGenerationRunID == "" {
+		return "", fmt.Errorf("strategyGenerationRunID is required")
+	}
+	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil, &strategyGenerationRunID)
 }
 
 func (s *Service) CalculateSimulatedCalcuttaForEntryCandidate(
@@ -49,7 +63,7 @@ func (s *Service) CalculateSimulatedCalcuttaForEntryCandidate(
 	if entryCandidateID == "" {
 		return "", fmt.Errorf("entryCandidateID is required")
 	}
-	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, &entryCandidateID)
+	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, &entryCandidateID, nil)
 }
 
 func (s *Service) calculateSimulatedCalcuttaInternal(
@@ -59,6 +73,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	excludedEntryName string,
 	tournamentSimulationBatchIDOverride *string,
 	entryCandidateID *string,
+	strategyGenerationRunID *string,
 ) (string, error) {
 	log.Printf("Calculating simulated calcutta for calcutta %s, run %s", calcuttaID, runID)
 	if excludedEntryName != "" {
@@ -98,7 +113,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 		}
 	}
 
-	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runID, excludedEntryName, entryCandidateID)
+	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runID, excludedEntryName, entryCandidateID, strategyGenerationRunID)
 	if err != nil {
 		return "", fmt.Errorf("failed to create calcutta snapshot: %w", err)
 	}
@@ -117,7 +132,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
 
 	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, cc, runID, excludedEntryName, entryCandidateID)
+	entries, err := s.getEntries(ctx, cc, runID, excludedEntryName, entryCandidateID, strategyGenerationRunID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get entries: %w", err)
 	}

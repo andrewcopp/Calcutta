@@ -100,6 +100,10 @@ export const analyticsService = {
     return apiClient.get<T>(`/lab/entries/suites/${encodeURIComponent(suiteId)}`);
   },
 
+  async createLabSuiteSandboxExecution<T>(suiteId: string): Promise<T> {
+    return apiClient.post<T>(`/lab/entries/suites/${encodeURIComponent(suiteId)}/sandbox-executions`, {});
+  },
+
   async getLabEntryReport<T>(scenarioId: string): Promise<T> {
     return apiClient.get<T>(`/lab/entries/scenarios/${encodeURIComponent(scenarioId)}`);
   },

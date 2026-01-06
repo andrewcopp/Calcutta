@@ -142,7 +142,7 @@ func (s *Service) attachSimulationBatchToSimulatedTournaments(ctx context.Contex
 	return err
 }
 
-func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string, entryCandidateID *string) (string, error) {
+func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string, entryCandidateID *string, strategyGenerationRunID *string) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -248,13 +248,29 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 			return "", err
 		}
 
-		_, err := tx.Exec(ctx, `
-			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-			SELECT $1, greb.team_id, greb.bid_points
-			FROM derived.recommended_entry_bids greb
-			WHERE greb.run_id = $2
-				AND greb.deleted_at IS NULL
-		`, snapshotEntryID, runID)
+		if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
+				SELECT $1, greb.team_id, greb.bid_points
+				FROM derived.recommended_entry_bids greb
+				WHERE greb.strategy_generation_run_id = $2::uuid
+					AND greb.deleted_at IS NULL
+			`, snapshotEntryID, *strategyGenerationRunID)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
+				SELECT $1, greb.team_id, greb.bid_points
+				FROM derived.recommended_entry_bids greb
+				WHERE greb.run_id = $2::uuid
+					AND greb.deleted_at IS NULL
+			`, snapshotEntryID, runID)
+			if err != nil {
+				return "", err
+			}
+		}
 		if err != nil {
 			return "", err
 		}
@@ -300,7 +316,7 @@ func (s *Service) createCalcuttaEvaluationRun(ctx context.Context, tournamentSim
 	return evalID, nil
 }
 
-func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID string, excludedEntry string, entryCandidateID *string) (map[string]*Entry, error) {
+func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID string, excludedEntry string, entryCandidateID *string, strategyGenerationRunID *string) (map[string]*Entry, error) {
 	// Use canonical core tables for entries/bids.
 	query := `
 		SELECT
@@ -338,16 +354,24 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 		entries[entryName].Teams[teamID] = bidPoints
 	}
 
-	// Add our simulated entry from gold_recommended_entry_bids
-	// Map bronze_teams IDs to core.teams IDs in this tournament.
-	ourQuery := `
-		SELECT team_id, bid_points
-		FROM derived.recommended_entry_bids greb
-		WHERE greb.run_id = $1
-			AND greb.deleted_at IS NULL
-	`
-
-	ourRows, err := s.pool.Query(ctx, ourQuery, runID)
+	// Add our simulated entry.
+	// Prefer using the strategy_generation_run_id when provided (Lab / deterministic entries).
+	var ourRows pgx.Rows
+	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
+		ourRows, err = s.pool.Query(ctx, `
+			SELECT team_id, bid_points
+			FROM derived.recommended_entry_bids greb
+			WHERE greb.strategy_generation_run_id = $1::uuid
+				AND greb.deleted_at IS NULL
+		`, *strategyGenerationRunID)
+	} else {
+		ourRows, err = s.pool.Query(ctx, `
+			SELECT team_id, bid_points
+			FROM derived.recommended_entry_bids greb
+			WHERE greb.run_id = $1::uuid
+				AND greb.deleted_at IS NULL
+		`, runID)
+	}
 	if err != nil {
 		return nil, err
 	}
