@@ -38,7 +38,7 @@ export function SandboxSuiteDetailPage() {
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
-        return 'You do not have permission to view suites (403).';
+        return 'You do not have permission to view cohorts (403).';
       }
       return `Request failed (${err.status}): ${err.message}`;
     }
@@ -64,12 +64,12 @@ export function SandboxSuiteDetailPage() {
   };
 
   const suiteQuery = useQuery({
-    queryKey: ['suites', 'get', suiteId],
+    queryKey: ['synthetic-calcutta-cohorts', 'get', suiteId],
     queryFn: () => suitesService.get(suiteId!),
     enabled: Boolean(suiteId),
   });
 
-  const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : suiteId ? `Suite ${suiteId}` : 'Suite';
+  const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : suiteId ? `Cohort ${suiteId}` : 'Cohort';
 
   const syntheticCalcuttasQuery = useQuery({
     queryKey: ['synthetic-calcuttas', 'list', suiteId],
@@ -80,7 +80,7 @@ export function SandboxSuiteDetailPage() {
   const syntheticCalcuttas: SyntheticCalcuttaListItem[] = syntheticCalcuttasQuery.data?.items ?? [];
 
   const executionsQuery = useQuery({
-    queryKey: ['suite-executions', 'list', suiteId],
+    queryKey: ['simulation-run-batches', 'list', suiteId],
     queryFn: () => suiteExecutionsService.list({ suiteId: suiteId!, limit: 200, offset: 0 }),
     enabled: Boolean(suiteId),
   });
@@ -94,7 +94,7 @@ export function SandboxSuiteDetailPage() {
   }, [executions, selectedExecutionId, suiteQuery.data?.latest_execution_id]);
 
   const evaluationsQuery = useQuery({
-    queryKey: ['suite-calcutta-evaluations', 'list', 'suite-execution', effectiveExecutionId],
+    queryKey: ['simulation-runs', 'list', 'simulation-run-batch', effectiveExecutionId],
     queryFn: () =>
       suiteCalcuttaEvaluationsService.list({
         suiteExecutionId: effectiveExecutionId || undefined,
@@ -113,17 +113,17 @@ export function SandboxSuiteDetailPage() {
         subtitle={suiteTitle}
         leftActions={
           <Link to="/sandbox/suites" className="text-blue-600 hover:text-blue-800">
-            ← Back to Suites
+            ← Back to Cohorts
           </Link>
         }
       />
 
-      {!suiteId ? <Alert variant="error">Missing suite ID.</Alert> : null}
+      {!suiteId ? <Alert variant="error">Missing cohort ID.</Alert> : null}
 
-      {suiteId && suiteQuery.isLoading ? <LoadingState label="Loading suite..." /> : null}
+      {suiteId && suiteQuery.isLoading ? <LoadingState label="Loading cohort..." /> : null}
       {suiteId && suiteQuery.isError ? (
         <Alert variant="error">
-          <div className="font-semibold mb-1">Failed to load suite</div>
+          <div className="font-semibold mb-1">Failed to load cohort</div>
           <div className="mb-3">{showError(suiteQuery.error)}</div>
           <Button size="sm" onClick={() => suiteQuery.refetch()}>
             Retry
@@ -134,7 +134,7 @@ export function SandboxSuiteDetailPage() {
       {suiteQuery.data ? (
         <div className="space-y-6">
           <Card>
-            <h2 className="text-xl font-semibold mb-4">Suite</h2>
+            <h2 className="text-xl font-semibold mb-4">Cohort</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-gray-500">Name</div>
@@ -153,7 +153,7 @@ export function SandboxSuiteDetailPage() {
                 <div className="text-gray-900">{suiteQuery.data.seed}</div>
               </div>
               <div>
-                <div className="text-gray-500">Latest execution</div>
+                <div className="text-gray-500">Latest simulation run batch</div>
                 <div className="text-gray-900">
                   {suiteQuery.data.latest_execution_id
                     ? `${suiteQuery.data.latest_execution_status ?? '—'} · ${suiteQuery.data.latest_execution_id.slice(0, 8)}`
@@ -220,9 +220,9 @@ export function SandboxSuiteDetailPage() {
 
           <Card>
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold">Executions</h2>
+              <h2 className="text-xl font-semibold">Simulation Run Batches</h2>
               <div className="flex items-center gap-3">
-                <div className="text-sm text-gray-500 whitespace-nowrap">Execution</div>
+                <div className="text-sm text-gray-500 whitespace-nowrap">Run batch</div>
                 <Select
                   value={effectiveExecutionId}
                   onChange={(e) => {
@@ -240,10 +240,10 @@ export function SandboxSuiteDetailPage() {
               </div>
             </div>
 
-            {executionsQuery.isLoading ? <LoadingState label="Loading executions..." layout="inline" className="mt-3" /> : null}
+            {executionsQuery.isLoading ? <LoadingState label="Loading run batches..." layout="inline" className="mt-3" /> : null}
             {executionsQuery.isError ? (
               <Alert variant="error" className="mt-3">
-                <div className="font-semibold mb-1">Failed to load executions</div>
+                <div className="font-semibold mb-1">Failed to load run batches</div>
                 <div className="mb-3">{showError(executionsQuery.error)}</div>
                 <Button size="sm" onClick={() => executionsQuery.refetch()}>
                   Retry
@@ -253,24 +253,24 @@ export function SandboxSuiteDetailPage() {
 
             {!executionsQuery.isLoading && !executionsQuery.isError && executions.length === 0 ? (
               <Alert variant="info" className="mt-3">
-                No suite executions found yet. Create one from the pipeline (or use the legacy Sandbox page to trigger individual evaluations).
+                No simulation run batches found yet. Create one from the pipeline (or use the legacy Sandbox page to trigger individual runs).
               </Alert>
             ) : null}
 
             {effectiveExecutionId ? (
               <div className="mt-3 text-sm text-gray-600">
-                Showing evaluations for execution <code className="text-gray-800">{effectiveExecutionId}</code>
+                Showing simulation runs for run batch <code className="text-gray-800">{effectiveExecutionId}</code>
               </div>
             ) : null}
           </Card>
 
           <Card>
-            <h2 className="text-xl font-semibold mb-4">Evaluations</h2>
+            <h2 className="text-xl font-semibold mb-4">Simulation Runs</h2>
 
-            {evaluationsQuery.isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
+            {evaluationsQuery.isLoading ? <LoadingState label="Loading simulation runs..." layout="inline" /> : null}
             {evaluationsQuery.isError ? (
               <Alert variant="error" className="mt-3">
-                <div className="font-semibold mb-1">Failed to load evaluations</div>
+                <div className="font-semibold mb-1">Failed to load simulation runs</div>
                 <div className="mb-3">{showError(evaluationsQuery.error)}</div>
                 <Button size="sm" onClick={() => evaluationsQuery.refetch()}>
                   Retry
@@ -280,7 +280,7 @@ export function SandboxSuiteDetailPage() {
 
             {!evaluationsQuery.isLoading && !evaluationsQuery.isError && evals.length === 0 ? (
               <Alert variant="info" className="mt-3">
-                No evaluations found for this execution.
+                No simulation runs found for this run batch.
               </Alert>
             ) : null}
 
@@ -323,7 +323,7 @@ export function SandboxSuiteDetailPage() {
                               navigate(detailUrl);
                             }
                           }}
-                          aria-label={`Open evaluation ${it.id}`}
+                          aria-label={`Open simulation run ${it.id}`}
                         >
                           <td className="px-3 py-2 text-sm text-gray-900" title={calcuttaName}>
                             <div className="font-medium">{season}</div>

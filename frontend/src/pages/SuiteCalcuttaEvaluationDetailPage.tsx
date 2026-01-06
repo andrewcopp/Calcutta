@@ -42,7 +42,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
-        return 'You do not have permission to view suite evaluations (403).';
+        return 'You do not have permission to view simulation runs (403).';
       }
       return `Request failed (${err.status}): ${err.message}`;
     }
@@ -71,13 +71,13 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   };
 
   const detailQuery = useQuery({
-    queryKey: ['suite-calcutta-evaluations', 'get', id],
+    queryKey: ['simulation-runs', 'get', id],
     queryFn: () => suiteCalcuttaEvaluationsService.get(id!),
     enabled: Boolean(id),
   });
 
   const resultQuery = useQuery<SuiteCalcuttaEvaluationResult>({
-    queryKey: ['suite-calcutta-evaluations', 'result', id],
+    queryKey: ['simulation-runs', 'result', id],
     queryFn: () => suiteCalcuttaEvaluationsService.getResult(id!),
     enabled: Boolean(id) && detailQuery.data?.status === 'succeeded',
   });
@@ -126,7 +126,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   return (
     <PageContainer className="max-w-none">
       <PageHeader
-        title="Suite Evaluation"
+        title="Simulation Run"
         subtitle={id}
         leftActions={
           <Link to={backUrl} className="text-blue-600 hover:text-blue-800">
@@ -136,13 +136,13 @@ export function SuiteCalcuttaEvaluationDetailPage() {
       />
 
       {!id ? (
-        <Alert variant="error">Missing evaluation ID.</Alert>
+        <Alert variant="error">Missing simulation run ID.</Alert>
       ) : null}
 
-      {id && detailQuery.isLoading ? <LoadingState label="Loading evaluation..." /> : null}
+      {id && detailQuery.isLoading ? <LoadingState label="Loading simulation run..." /> : null}
       {id && detailQuery.isError ? (
         <Alert variant="error">
-          <div className="font-semibold mb-1">Failed to load evaluation</div>
+          <div className="font-semibold mb-1">Failed to load simulation run</div>
           <div className="mb-3">{showError(detailQuery.error)}</div>
           <Button size="sm" onClick={() => detailQuery.refetch()}>
             Retry
@@ -156,7 +156,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
             <h2 className="text-xl font-semibold mb-4">Provenance</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <div className="text-gray-500">Suite</div>
+                <div className="text-gray-500">Cohort</div>
                 <div className="font-medium text-gray-900">{detailQuery.data.suite_name || detailQuery.data.suite_id}</div>
               </div>
               <div>
@@ -244,7 +244,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
 
             {detailQuery.data.status !== 'succeeded' ? (
               <Alert variant="info">
-                Result is not available until the evaluation succeeds (current status: {detailQuery.data.status}).
+                Result is not available until the simulation run succeeds (current status: {detailQuery.data.status}).
               </Alert>
             ) : null}
 

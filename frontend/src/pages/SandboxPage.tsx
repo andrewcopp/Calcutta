@@ -60,12 +60,12 @@ export function SandboxPage() {
   }, [calcuttas]);
 
   const allEvaluationsQuery = useQuery({
-    queryKey: ['suite-calcutta-evaluations', 'list', 'all'],
+    queryKey: ['simulation-runs', 'list', 'all'],
     queryFn: () => suiteCalcuttaEvaluationsService.list({ limit: 200, offset: 0 }),
   });
 
   const listQuery = useQuery({
-    queryKey: ['suite-calcutta-evaluations', 'list', selectedSuiteId],
+    queryKey: ['simulation-runs', 'list', selectedSuiteId],
     queryFn: () => suiteCalcuttaEvaluationsService.list({ suiteId: selectedSuiteId || undefined, limit: 200, offset: 0 }),
   });
 
@@ -85,7 +85,7 @@ export function SandboxPage() {
   const createMutation = useMutation({
     mutationFn: async (req: CreateSuiteCalcuttaEvaluationRequest) => suiteCalcuttaEvaluationsService.create(req),
     onSuccess: async (res) => {
-      await queryClient.invalidateQueries({ queryKey: ['suite-calcutta-evaluations'] });
+      await queryClient.invalidateQueries({ queryKey: ['simulation-runs'] });
       navigate(`/sandbox/evaluations/${encodeURIComponent(res.id)}${selectedSuiteId ? `?suiteId=${encodeURIComponent(selectedSuiteId)}` : ''}`);
     },
   });
@@ -93,7 +93,7 @@ export function SandboxPage() {
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
-        return 'You do not have permission to view suite evaluations (403).';
+        return 'You do not have permission to view simulation runs (403).';
       }
       return `Request failed (${err.status}): ${err.message}`;
     }
@@ -118,10 +118,10 @@ export function SandboxPage() {
 
   return (
     <PageContainer>
-      <PageHeader title="Sandbox" subtitle="Browse historical TestSuite runs and drill into results." />
+      <PageHeader title="Sandbox" subtitle="Browse historical simulation runs and drill into results." />
 
       <Card className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">Trigger Evaluation</h2>
+        <h2 className="text-xl font-semibold mb-4">Trigger Simulation Run</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -153,7 +153,7 @@ export function SandboxPage() {
           </div>
 
           <div>
-            <div className="text-sm text-gray-500 mb-1">Suite (optional)</div>
+            <div className="text-sm text-gray-500 mb-1">Cohort (optional)</div>
             <Select
               value={createSuiteId}
               onChange={(e) => setCreateSuiteId(e.target.value)}
@@ -166,13 +166,13 @@ export function SandboxPage() {
                 </option>
               ))}
             </Select>
-            <div className="text-xs text-gray-600 mt-1">If empty, you must specify suite name + optimizer key.</div>
+            <div className="text-xs text-gray-600 mt-1">If empty, you must specify cohort name + optimizer key.</div>
           </div>
 
           {!createSuiteId ? (
             <>
               <div>
-                <div className="text-sm text-gray-500 mb-1">Suite name</div>
+                <div className="text-sm text-gray-500 mb-1">Cohort name</div>
                 <input
                   value={createSuiteName}
                   onChange={(e) => setCreateSuiteName(e.target.value)}
@@ -275,14 +275,14 @@ export function SandboxPage() {
         </div>
 
         <div className="mt-3 text-sm text-gray-600">
-          This action submits a new evaluation request (async) to <code className="text-gray-800">/api/suite-calcutta-evaluations</code>.
+          This action submits a new simulation run request (async) to <code className="text-gray-800">/api/simulation-runs</code>.
         </div>
       </Card>
 
       <Card className="mb-6">
         <div className="flex items-center gap-4">
           <label htmlFor="suite-select" className="text-lg font-semibold whitespace-nowrap">
-            Suite:
+            Cohort:
           </label>
           <Select
             id="suite-select"
@@ -293,7 +293,7 @@ export function SandboxPage() {
             }}
             className="flex-1 max-w-2xl"
           >
-            <option value="">All suites</option>
+            <option value="">All cohorts</option>
             {suites.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -302,17 +302,17 @@ export function SandboxPage() {
           </Select>
         </div>
         <div className="mt-3 text-sm text-gray-600">
-          This view is backed by <code className="text-gray-800">/api/suite-calcutta-evaluations</code> and shows each evaluation request/run.
+          This view is backed by <code className="text-gray-800">/api/simulation-runs</code> and shows each simulation run.
         </div>
       </Card>
 
       <Card>
-        <h2 className="text-xl font-semibold mb-4">Evaluations</h2>
+        <h2 className="text-xl font-semibold mb-4">Simulation Runs</h2>
 
-        {listQuery.isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
+        {listQuery.isLoading ? <LoadingState label="Loading simulation runs..." layout="inline" /> : null}
         {listQuery.isError ? (
           <Alert variant="error" className="mt-3">
-            <div className="font-semibold mb-1">Failed to load evaluations</div>
+            <div className="font-semibold mb-1">Failed to load simulation runs</div>
             <div className="mb-3">{showError(listQuery.error)}</div>
             <Button size="sm" onClick={() => listQuery.refetch()}>
               Retry
@@ -322,7 +322,7 @@ export function SandboxPage() {
 
         {!listQuery.isLoading && !listQuery.isError && items.length === 0 ? (
           <Alert variant="info" className="mt-3">
-            No suite evaluations found.
+            No simulation runs found.
           </Alert>
         ) : null}
 
@@ -331,7 +331,7 @@ export function SandboxPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cohort</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>

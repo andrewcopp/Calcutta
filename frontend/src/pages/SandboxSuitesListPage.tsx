@@ -13,7 +13,7 @@ import { suitesService, type SuiteListItem } from '../services/suitesService';
 export function SandboxSuitesListPage() {
   const navigate = useNavigate();
   const listQuery = useQuery({
-    queryKey: ['suites', 'list'],
+    queryKey: ['synthetic-calcutta-cohorts', 'list'],
     queryFn: () => suitesService.list({ limit: 200, offset: 0 }),
   });
 
@@ -38,16 +38,16 @@ export function SandboxSuitesListPage() {
 
   return (
     <PageContainer>
-      <PageHeader title="Sandbox" subtitle="Suites (collections of scenarios)" />
+      <PageHeader title="Sandbox" subtitle="Cohorts (collections of synthetic calcuttas)" />
 
       <Card>
-        <h2 className="text-xl font-semibold mb-4">Suites</h2>
+        <h2 className="text-xl font-semibold mb-4">Cohorts</h2>
 
-        {listQuery.isLoading ? <LoadingState label="Loading suites..." layout="inline" /> : null}
+        {listQuery.isLoading ? <LoadingState label="Loading cohorts..." layout="inline" /> : null}
 
         {listQuery.isError ? (
           <Alert variant="error" className="mt-3">
-            <div className="font-semibold mb-1">Failed to load suites</div>
+            <div className="font-semibold mb-1">Failed to load cohorts</div>
             <div className="mb-3">{showError(listQuery.error)}</div>
             <Button size="sm" onClick={() => listQuery.refetch()}>
               Retry
@@ -57,7 +57,7 @@ export function SandboxSuitesListPage() {
 
         {!listQuery.isLoading && !listQuery.isError && suites.length === 0 ? (
           <Alert variant="info" className="mt-3">
-            No suites found.
+            No cohorts found.
           </Alert>
         ) : null}
 
@@ -66,8 +66,8 @@ export function SandboxSuitesListPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latest execution</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cohort</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latest simulation run batch</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
                 </tr>
               </thead>
@@ -92,7 +92,7 @@ export function SandboxSuitesListPage() {
                           navigate(href);
                         }
                       }}
-                      aria-label={`Open suite ${s.name || s.id}`}
+                      aria-label={`Open cohort ${s.name || s.id}`}
                     >
                       <td className="px-3 py-2 text-sm text-gray-900">
                         <div className="font-medium">

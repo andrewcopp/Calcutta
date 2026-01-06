@@ -26,7 +26,7 @@ export function SuiteCalcuttaEvaluationEntryDetailPage() {
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.status === 403) {
-        return 'You do not have permission to view evaluation entries (403).';
+        return 'You do not have permission to view simulation run entries (403).';
       }
       return `Request failed (${err.status}): ${err.message}`;
     }
@@ -34,7 +34,7 @@ export function SuiteCalcuttaEvaluationEntryDetailPage() {
   };
 
   const entryQuery = useQuery<SuiteCalcuttaEvaluationSnapshotEntryResponse>({
-    queryKey: ['suite-calcutta-evaluations', 'snapshot-entry', id, snapshotEntryId],
+    queryKey: ['simulation-runs', 'snapshot-entry', id, snapshotEntryId],
     queryFn: () => suiteCalcuttaEvaluationsService.getSnapshotEntry(id!, snapshotEntryId!),
     enabled: Boolean(id && snapshotEntryId),
   });
@@ -56,7 +56,7 @@ export function SuiteCalcuttaEvaluationEntryDetailPage() {
         }
       />
 
-      {!id ? <Alert variant="error">Missing evaluation ID.</Alert> : null}
+      {!id ? <Alert variant="error">Missing simulation run ID.</Alert> : null}
       {!snapshotEntryId ? <Alert variant="error">Missing snapshot entry ID.</Alert> : null}
 
       {entryQuery.isLoading ? <LoadingState label="Loading entry..." /> : null}
