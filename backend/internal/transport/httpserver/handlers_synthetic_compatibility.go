@@ -197,6 +197,14 @@ type createSimulationRunRequest struct {
 	MarketShareRunID     *string `json:"marketShareRunId"`
 	NSims                *int    `json:"nSims"`
 	Seed                 *int    `json:"seed"`
+
+	// Legacy compatibility fields (old SuiteCalcuttaEvaluation create payload)
+	CalcuttaID        *string `json:"calcuttaId"`
+	SuiteExecutionID  *string `json:"suiteExecutionId"`
+	SuiteID           *string `json:"suiteId"`
+	SuiteName         *string `json:"suiteName"`
+	StartingStateKey  *string `json:"startingStateKey"`
+	ExcludedEntryName *string `json:"excludedEntryName"`
 }
 
 func (s *Server) handleCreateSimulationRun(w http.ResponseWriter, r *http.Request) {
@@ -205,11 +213,19 @@ func (s *Server) handleCreateSimulationRun(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
-	req.SyntheticCalcuttaID = strings.TrimSpace(req.SyntheticCalcuttaID)
-	if req.SyntheticCalcuttaID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId is required", "syntheticCalcuttaId")
+
+	// Legacy passthrough: allow the existing SuiteCalcuttaEvaluation create payload to work
+	// against the new endpoint without frontend changes beyond the URL.
+	if strings.TrimSpace(req.SyntheticCalcuttaID) == "" {
+		// Re-marshal the decoded request into JSON and pass through.
+		b, _ := json.Marshal(req)
+		cloned := r.Clone(r.Context())
+		cloned.Body = io.NopCloser(bytes.NewReader(b))
+		s.createSuiteCalcuttaEvaluationHandler(w, cloned)
 		return
 	}
+
+	req.SyntheticCalcuttaID = strings.TrimSpace(req.SyntheticCalcuttaID)
 	if _, err := uuid.Parse(req.SyntheticCalcuttaID); err != nil {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId must be a valid UUID", "syntheticCalcuttaId")
 		return

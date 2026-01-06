@@ -127,24 +127,24 @@ export const suiteCalcuttaEvaluationsService = {
     if (params?.offset != null) q.set('offset', String(params.offset));
 
     const suffix = q.toString() ? `?${q.toString()}` : '';
-    return apiClient.get<ListSuiteCalcuttaEvaluationsResponse>(`/suite-calcutta-evaluations${suffix}`);
+    return apiClient.get<ListSuiteCalcuttaEvaluationsResponse>(`/simulation-runs${suffix}`);
   },
 
   async get(id: string): Promise<SuiteCalcuttaEvaluation> {
-    return apiClient.get<SuiteCalcuttaEvaluation>(`/suite-calcutta-evaluations/${encodeURIComponent(id)}`);
+    return apiClient.get<SuiteCalcuttaEvaluation>(`/simulation-runs/${encodeURIComponent(id)}`);
   },
 
   async getResult(id: string): Promise<SuiteCalcuttaEvaluationResult> {
-    return apiClient.get<SuiteCalcuttaEvaluationResult>(`/suite-calcutta-evaluations/${encodeURIComponent(id)}/result`);
+    return apiClient.get<SuiteCalcuttaEvaluationResult>(`/simulation-runs/${encodeURIComponent(id)}/result`);
   },
 
   async getSnapshotEntry(id: string, snapshotEntryId: string): Promise<SuiteCalcuttaEvaluationSnapshotEntryResponse> {
     return apiClient.get<SuiteCalcuttaEvaluationSnapshotEntryResponse>(
-      `/suite-calcutta-evaluations/${encodeURIComponent(id)}/entries/${encodeURIComponent(snapshotEntryId)}`
+      `/simulation-runs/${encodeURIComponent(id)}/entries/${encodeURIComponent(snapshotEntryId)}`
     );
   },
 
   async create(req: CreateSuiteCalcuttaEvaluationRequest): Promise<CreateSuiteCalcuttaEvaluationResponse> {
-    return apiClient.post<CreateSuiteCalcuttaEvaluationResponse>('/suite-calcutta-evaluations', req);
+    return apiClient.post<CreateSuiteCalcuttaEvaluationResponse>('/simulation-runs', req);
   },
 };

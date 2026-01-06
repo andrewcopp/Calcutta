@@ -64,6 +64,11 @@ We treat the set of available models as part of the codebase.
   - EntryOptimizerInterface
   - SimulationModelInterface (if variants exist; otherwise a single implementation)
 
+- [x] Expose model catalog endpoints for UI discoverability:
+  - `GET /advancement-models`
+  - `GET /market-share-models`
+  - `GET /entry-optimizers`
+
 - [ ] Create registries with stable IDs:
   - `AvailableAdvancementModels` (e.g. `kenpom_ratings_v1`, `kenpom_ratings_v2`)
   - `AvailableMarketShareModels`
@@ -132,7 +137,9 @@ Resource-oriented URLs with stable IDs.
 
 - [ ] Ensure navigation uses nested routes only for convenience, not identity.
 
-- [ ] Add compatibility endpoints that proxy/redirect to new resources during migration.
+- [x] Add compatibility endpoints that proxy/redirect to new resources during migration.
+
+- [x] Implement compatibility-first Synthetic/Simulation endpoints in backend (new URLs, old behavior).
 
 - [ ] SyntheticCalcutta creation:
   - `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
