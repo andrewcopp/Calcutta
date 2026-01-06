@@ -144,6 +144,8 @@ Resource-oriented URLs with stable IDs.
 
 - [ ] Ensure navigation uses nested routes only for convenience, not identity.
 
+- [x] Frontend: canonical Sandbox routes use `/sandbox/cohorts` (keep `/sandbox/suites` as an alias during migration).
+
 - [x] Add compatibility endpoints that proxy/redirect to new resources during migration.
 
 - [x] Implement compatibility-first Synthetic/Simulation endpoints in backend (new URLs, old behavior).
