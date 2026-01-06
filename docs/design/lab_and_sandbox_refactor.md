@@ -112,13 +112,20 @@ Decisions:
 - Forecast is a UI label for simulation outputs derived from real calcuttas; domain nouns remain `SimulationRun`/`SimulationArtifact`.
 
 ### SyntheticCalcuttaCohorts / SyntheticCalcuttas
-- [ ] Introduce SyntheticCalcuttaCohorts and SyntheticCalcuttas as durable entities.
+- [ ] Introduce SyntheticCalcuttaCohorts as durable entities.
+- [x] Introduce SyntheticCalcuttas as durable entities (`derived.synthetic_calcuttas`), with backfill from `derived.suite_scenarios` (preserve IDs for compatibility).
 - [ ] SyntheticCalcutta should support:
   - optional source calcutta reference (historical or real) for copy/import convenience
   - full set of synthetic entries (all entries are SyntheticEntries)
   - add/edit/delete synthetic entries (not limited to swapping a single entry)
   - HighlightedEntry (the synthetic entry to show in cohort summaries)
   - optional notes/metadata
+
+- [x] SyntheticEntries CRUD (snapshot-backed) endpoints:
+  - `GET /synthetic-calcuttas/{synthetic_calcutta_id}/synthetic-entries`
+  - `POST /synthetic-calcuttas/{synthetic_calcutta_id}/synthetic-entries`
+  - `PATCH /synthetic-entries/{synthetic_entry_id}`
+  - `DELETE /synthetic-entries/{synthetic_entry_id}`
 
 ### Candidate inputs
 - [ ] Support two candidate sources:

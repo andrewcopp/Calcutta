@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
@@ -14,13 +14,18 @@ import { suiteCalcuttaEvaluationsService, type SuiteCalcuttaEvaluation } from '.
 import { suiteExecutionsService } from '../services/suiteExecutionsService';
 import { suitesService } from '../services/suitesService';
 import { syntheticCalcuttasService, type SyntheticCalcuttaListItem } from '../services/syntheticCalcuttasService';
+import { syntheticEntriesService, type SyntheticEntryListItem } from '../services/syntheticEntriesService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxSuiteDetailPage() {
   const navigate = useNavigate();
   const { suiteId } = useParams<{ suiteId: string }>();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedExecutionId = searchParams.get('executionId') || '';
+  const selectedSyntheticCalcuttaId = searchParams.get('syntheticCalcuttaId') || '';
+
+  const [newSyntheticEntryName, setNewSyntheticEntryName] = useState<string>('');
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -77,7 +82,50 @@ export function SandboxSuiteDetailPage() {
     enabled: Boolean(suiteId),
   });
 
-  const syntheticCalcuttas: SyntheticCalcuttaListItem[] = syntheticCalcuttasQuery.data?.items ?? [];
+  const syntheticCalcuttas: SyntheticCalcuttaListItem[] = useMemo(
+    () => syntheticCalcuttasQuery.data?.items ?? [],
+    [syntheticCalcuttasQuery.data?.items]
+  );
+
+  const effectiveSyntheticCalcuttaId = useMemo(() => {
+    if (selectedSyntheticCalcuttaId) return selectedSyntheticCalcuttaId;
+    return syntheticCalcuttas.length > 0 ? syntheticCalcuttas[0].id : '';
+  }, [selectedSyntheticCalcuttaId, syntheticCalcuttas]);
+
+  const syntheticEntriesQuery = useQuery({
+    queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId],
+    queryFn: () => syntheticEntriesService.list(effectiveSyntheticCalcuttaId),
+    enabled: Boolean(effectiveSyntheticCalcuttaId),
+  });
+
+  const syntheticEntries: SyntheticEntryListItem[] = syntheticEntriesQuery.data?.items ?? [];
+
+  const createSyntheticEntryMutation = useMutation({
+    mutationFn: async () => {
+      const name = newSyntheticEntryName.trim();
+      return syntheticEntriesService.create(effectiveSyntheticCalcuttaId, { displayName: name, teams: [] });
+    },
+    onSuccess: async () => {
+      setNewSyntheticEntryName('');
+      await queryClient.invalidateQueries({ queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId] });
+    },
+  });
+
+  const renameSyntheticEntryMutation = useMutation({
+    mutationFn: async (args: { id: string; displayName: string }) => {
+      return syntheticEntriesService.patch(args.id, { displayName: args.displayName });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId] });
+    },
+  });
+
+  const deleteSyntheticEntryMutation = useMutation({
+    mutationFn: async (id: string) => syntheticEntriesService.delete(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId] });
+    },
+  });
 
   const executionsQuery = useQuery({
     queryKey: ['simulation-run-batches', 'list', suiteId],
@@ -219,6 +267,148 @@ export function SandboxSuiteDetailPage() {
           </Card>
 
           <Card>
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="text-xl font-semibold">Synthetic Entries</h2>
+
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-gray-500 whitespace-nowrap">Synthetic Calcutta</div>
+                <Select
+                  value={effectiveSyntheticCalcuttaId}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    const nextParams: Record<string, string> = {};
+                    if (selectedExecutionId) nextParams.executionId = selectedExecutionId;
+                    if (next) nextParams.syntheticCalcuttaId = next;
+                    setSearchParams(nextParams, { replace: true });
+                  }}
+                  disabled={syntheticCalcuttas.length === 0}
+                >
+                  {syntheticCalcuttas.map((sc) => {
+                    const calcuttaName = calcuttaNameById.get(sc.calcutta_id) || sc.calcutta_id;
+                    return (
+                      <option key={sc.id} value={sc.id}>
+                        {seasonFromCalcuttaName(calcuttaName)} · {sc.id.slice(0, 8)}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </div>
+            </div>
+
+            {syntheticEntriesQuery.isLoading ? <LoadingState label="Loading synthetic entries..." layout="inline" className="mt-3" /> : null}
+            {syntheticEntriesQuery.isError ? (
+              <Alert variant="error" className="mt-3">
+                <div className="font-semibold mb-1">Failed to load synthetic entries</div>
+                <div className="mb-3">{showError(syntheticEntriesQuery.error)}</div>
+                <Button size="sm" onClick={() => syntheticEntriesQuery.refetch()}>
+                  Retry
+                </Button>
+              </Alert>
+            ) : null}
+
+            {effectiveSyntheticCalcuttaId && !syntheticEntriesQuery.isLoading && !syntheticEntriesQuery.isError ? (
+              <div className="mt-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={newSyntheticEntryName}
+                    onChange={(e) => setNewSyntheticEntryName(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="New synthetic entry name"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={
+                      createSyntheticEntryMutation.isPending ||
+                      !effectiveSyntheticCalcuttaId ||
+                      newSyntheticEntryName.trim().length === 0
+                    }
+                    onClick={() => createSyntheticEntryMutation.mutate()}
+                  >
+                    Create
+                  </Button>
+                </div>
+
+                {createSyntheticEntryMutation.isError ? (
+                  <Alert variant="error" className="mt-2">
+                    {showError(createSyntheticEntryMutation.error)}
+                  </Alert>
+                ) : null}
+
+                {syntheticEntries.length === 0 ? (
+                  <Alert variant="info" className="mt-3">
+                    No synthetic entries found for this synthetic calcutta.
+                  </Alert>
+                ) : (
+                  <div className="overflow-x-auto mt-3">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entry</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Teams</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {syntheticEntries.map((e) => (
+                          <tr key={e.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-sm text-gray-900">
+                              <div className="font-medium">{e.display_name}</div>
+                              <div className="text-xs text-gray-500">{e.is_synthetic ? 'synthetic' : 'imported'} · {e.id.slice(0, 8)}</div>
+                            </td>
+                            <td className="px-3 py-2 text-sm text-right text-gray-700">{e.teams?.length ?? 0}</td>
+                            <td className="px-3 py-2 text-sm text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={renameSyntheticEntryMutation.isPending}
+                                  onClick={() => {
+                                    const next = window.prompt('Rename synthetic entry', e.display_name);
+                                    if (!next) return;
+                                    const trimmed = next.trim();
+                                    if (!trimmed) return;
+                                    renameSyntheticEntryMutation.mutate({ id: e.id, displayName: trimmed });
+                                  }}
+                                >
+                                  Rename
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
+                                  disabled={deleteSyntheticEntryMutation.isPending || !e.is_synthetic}
+                                  onClick={() => {
+                                    if (!e.is_synthetic) return;
+                                    if (!window.confirm(`Delete synthetic entry "${e.display_name}"?`)) return;
+                                    deleteSyntheticEntryMutation.mutate(e.id);
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {renameSyntheticEntryMutation.isError ? (
+                  <Alert variant="error" className="mt-2">
+                    {showError(renameSyntheticEntryMutation.error)}
+                  </Alert>
+                ) : null}
+                {deleteSyntheticEntryMutation.isError ? (
+                  <Alert variant="error" className="mt-2">
+                    {showError(deleteSyntheticEntryMutation.error)}
+                  </Alert>
+                ) : null}
+              </div>
+            ) : null}
+          </Card>
+
+          <Card>
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold">Simulation Run Batches</h2>
               <div className="flex items-center gap-3">
@@ -227,7 +417,10 @@ export function SandboxSuiteDetailPage() {
                   value={effectiveExecutionId}
                   onChange={(e) => {
                     const next = e.target.value;
-                    setSearchParams(next ? { executionId: next } : {}, { replace: true });
+                    const nextParams: Record<string, string> = {};
+                    if (next) nextParams.executionId = next;
+                    if (selectedSyntheticCalcuttaId) nextParams.syntheticCalcuttaId = selectedSyntheticCalcuttaId;
+                    setSearchParams(nextParams, { replace: true });
                   }}
                   disabled={executions.length === 0}
                 >
