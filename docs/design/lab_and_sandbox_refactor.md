@@ -154,8 +154,11 @@ Resource-oriented URLs with stable IDs.
   - `syntheticCalcuttasService` -> `/synthetic-calcuttas`
   - `suiteExecutionsService` -> `/simulation-run-batches`
 
+- [x] Smoke test: `/synthetic-calcutta-cohorts`, `/synthetic-calcuttas`, `/synthetic-entries` (create calcutta snapshot, list entries)
+
 - [ ] SyntheticCalcutta creation:
-  - `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
+  - [x] `POST /synthetic-calcuttas` creates a snapshot when `calcuttaSnapshotId` is not provided
+  - [ ] `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
 
 ### Proposed REST surface (initial)
 Catalogs (compiled-in registries):

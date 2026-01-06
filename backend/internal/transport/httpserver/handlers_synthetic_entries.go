@@ -76,7 +76,7 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var snapshotID string
+	var snapshotID *string
 	if err := s.pool.QueryRow(r.Context(), `
 		SELECT calcutta_snapshot_id::text
 		FROM derived.synthetic_calcuttas
@@ -91,7 +91,7 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if strings.TrimSpace(snapshotID) == "" {
+	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
 		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 		return
 	}
@@ -112,7 +112,7 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		WHERE e.calcutta_snapshot_id = $1::uuid
 			AND e.deleted_at IS NULL
 		ORDER BY e.created_at ASC, et.bid_points DESC
-	`, snapshotID)
+	`, *snapshotID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -217,7 +217,7 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 	}
 
 	ctx := r.Context()
-	var snapshotID string
+	var snapshotID *string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT calcutta_snapshot_id::text
 		FROM derived.synthetic_calcuttas
@@ -232,7 +232,7 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if strings.TrimSpace(snapshotID) == "" {
+	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
 		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 		return
 	}
@@ -255,7 +255,7 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
 		VALUES ($1::uuid, NULL, $2, true)
 		RETURNING id::text
-	`, snapshotID, req.DisplayName).Scan(&entryID); err != nil {
+	`, *snapshotID, req.DisplayName).Scan(&entryID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
