@@ -60,20 +60,31 @@ export function LabEntryReportPage() {
 
   const data = reportQuery.data;
 
-  const [sortKey, setSortKey] = useState<'seed' | 'predicted_roi' | 'expected_points' | 'expected_market' | 'observed_roi' | 'our_bid'>('seed');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [sortKey, setSortKey] = useState<'seed' | 'predicted_roi' | 'expected_points' | 'expected_market' | 'observed_roi' | 'our_bid'>('predicted_roi');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const predictedROI = (t: EntryReportTeam) => {
+    if (!Number.isFinite(t.expected_points) || !Number.isFinite(t.expected_market)) return NaN;
+    if (t.expected_market <= 0) return t.expected_points / (t.expected_market + 1);
+    return t.predicted_roi;
+  };
 
   const sortedTeams = useMemo(() => {
     const teams = data?.teams ?? [];
     const mult = sortDir === 'asc' ? 1 : -1;
     return teams.slice().sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = sortKey === 'predicted_roi' ? predictedROI(a) : a[sortKey];
+      const bv = sortKey === 'predicted_roi' ? predictedROI(b) : b[sortKey];
+      if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+      if (!Number.isFinite(av)) return 1;
+      if (!Number.isFinite(bv)) return -1;
       return mult * (av - bv);
     });
   }, [data?.teams, sortKey, sortDir]);
 
   const fmt = (n: number, digits = 1) => {
+    if (n === Infinity) return '∞';
+    if (n === -Infinity) return '-∞';
     if (!Number.isFinite(n)) return '—';
     return n.toFixed(digits);
   };
@@ -207,7 +218,7 @@ export function LabEntryReportPage() {
                       <td className="px-3 py-2 text-sm text-gray-700">{t.region}</td>
                       <td className="px-3 py-2 text-sm text-right text-gray-700">{fmt(t.expected_points, 1)}</td>
                       <td className="px-3 py-2 text-sm text-right text-gray-700">{fmt(t.expected_market, 1)}</td>
-                      <td className="px-3 py-2 text-sm text-right text-gray-700">{fmt(t.predicted_roi, 2)}</td>
+                      <td className="px-3 py-2 text-sm text-right text-gray-700">{fmt(predictedROI(t), 2)}</td>
                       <td className="px-3 py-2 text-sm text-right font-semibold text-blue-700 bg-blue-50">{t.our_bid > 0 ? fmt(t.our_bid, 0) : '—'}</td>
                       <td className="px-3 py-2 text-sm text-right font-semibold text-blue-700 bg-blue-50">{t.our_bid > 0 ? fmt(t.observed_roi, 2) : '—'}</td>
                     </tr>

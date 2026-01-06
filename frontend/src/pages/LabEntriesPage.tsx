@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Alert } from '../components/ui/Alert';
@@ -27,6 +27,11 @@ type CoverageResponse = {
 export function LabEntriesPage() {
   const navigate = useNavigate();
 
+  const [sortKey, setSortKey] = useState<
+    'coverage' | 'suite_name' | 'advancement' | 'investment' | 'optimizer'
+  >('coverage');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
   const coverageQuery = useQuery<CoverageResponse>({
     queryKey: ['lab', 'entries', 'coverage'],
     queryFn: () => analyticsService.listLabEntriesCoverage<CoverageResponse>(),
@@ -35,17 +40,58 @@ export function LabEntriesPage() {
   const items = coverageQuery.data?.items ?? [];
 
   const sorted = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+
+    const byText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+
+    const byCoverageDesc = (a: CoverageItem, b: CoverageItem) => {
+      const aPct = a.total > 0 ? a.covered / a.total : 0;
+      const bPct = b.total > 0 ? b.covered / b.total : 0;
+      if (bPct !== aPct) return bPct - aPct;
+      if (b.covered !== a.covered) return b.covered - a.covered;
+      if (b.total !== a.total) return b.total - a.total;
+      return byText(a.suite_name, b.suite_name);
+    };
+
     return items
       .slice()
       .sort((a, b) => {
-        const aPct = a.total > 0 ? a.covered / a.total : 0;
-        const bPct = b.total > 0 ? b.covered / b.total : 0;
-        if (bPct !== aPct) return bPct - aPct;
-        if (b.covered !== a.covered) return b.covered - a.covered;
-        if (b.total !== a.total) return b.total - a.total;
-        return a.suite_name.localeCompare(b.suite_name);
+        let cmp = 0;
+        if (sortKey === 'coverage') {
+          cmp = byCoverageDesc(a, b) * dir;
+        } else if (sortKey === 'suite_name') {
+          cmp = byText(a.suite_name, b.suite_name) * dir;
+        } else if (sortKey === 'advancement') {
+          cmp = byText(a.advancement_algorithm_name, b.advancement_algorithm_name) * dir;
+        } else if (sortKey === 'investment') {
+          cmp = byText(a.investment_algorithm_name, b.investment_algorithm_name) * dir;
+        } else if (sortKey === 'optimizer') {
+          cmp = byText(a.optimizer_key, b.optimizer_key) * dir;
+        }
+
+        if (cmp !== 0) return cmp;
+        return byCoverageDesc(a, b);
       });
-  }, [items]);
+  }, [items, sortDir, sortKey]);
+
+  const toggleSort = (nextKey: typeof sortKey) => {
+    if (nextKey === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortKey(nextKey);
+    setSortDir(nextKey === 'coverage' ? 'desc' : 'asc');
+  };
+
+  const sortIndicator = (key: typeof sortKey) => {
+    if (key !== sortKey) return null;
+    return (
+      <span className="ml-1 text-[10px] text-gray-400">
+        {sortDir === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
 
   const formatCoverage = (covered: number, total: number) => {
     if (!Number.isFinite(total) || total <= 0) return String(covered);
@@ -88,11 +134,36 @@ export function LabEntriesPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Combo</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Advancement</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investment</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Optimizer</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcuttas</th>
+                  <th
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => toggleSort('suite_name')}
+                  >
+                    Combo{sortIndicator('suite_name')}
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => toggleSort('advancement')}
+                  >
+                    Advancement{sortIndicator('advancement')}
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => toggleSort('investment')}
+                  >
+                    Investment{sortIndicator('investment')}
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => toggleSort('optimizer')}
+                  >
+                    Optimizer{sortIndicator('optimizer')}
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => toggleSort('coverage')}
+                  >
+                    Calcuttas{sortIndicator('coverage')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
