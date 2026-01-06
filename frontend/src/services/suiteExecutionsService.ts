@@ -23,15 +23,15 @@ export type ListSuiteExecutionsResponse = {
 export const suiteExecutionsService = {
   async list(params?: { suiteId?: string; limit?: number; offset?: number }): Promise<ListSuiteExecutionsResponse> {
     const q = new URLSearchParams();
-    if (params?.suiteId) q.set('suite_id', params.suiteId);
+    if (params?.suiteId) q.set('cohort_id', params.suiteId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
 
     const suffix = q.toString() ? `?${q.toString()}` : '';
-    return apiClient.get<ListSuiteExecutionsResponse>(`/suite-executions${suffix}`);
+    return apiClient.get<ListSuiteExecutionsResponse>(`/simulation-run-batches${suffix}`);
   },
 
   async get(id: string): Promise<SuiteExecutionListItem> {
-    return apiClient.get<SuiteExecutionListItem>(`/suite-executions/${encodeURIComponent(id)}`);
+    return apiClient.get<SuiteExecutionListItem>(`/simulation-run-batches/${encodeURIComponent(id)}`);
   },
 };

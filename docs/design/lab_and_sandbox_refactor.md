@@ -145,6 +145,7 @@ Resource-oriented URLs with stable IDs.
   - `suiteCalcuttaEvaluationsService` -> `/simulation-runs`
   - `suitesService` -> `/synthetic-calcutta-cohorts`
   - `syntheticCalcuttasService` -> `/synthetic-calcuttas`
+  - `suiteExecutionsService` -> `/simulation-run-batches`
 
 - [ ] SyntheticCalcutta creation:
   - `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
