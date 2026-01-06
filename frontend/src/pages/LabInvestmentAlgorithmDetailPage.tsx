@@ -131,7 +131,7 @@ export function LabInvestmentAlgorithmDetailPage() {
       <PageHeader
         title="Investments Algorithm"
         subtitle={algorithm ? algorithm.name : algorithmId}
-        actions={
+        leftActions={
           <Link to="/lab" className="text-blue-600 hover:text-blue-800">
             ← Back to Lab
           </Link>

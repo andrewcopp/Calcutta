@@ -184,7 +184,7 @@ export function LabInvestmentCalcuttaDetailPage() {
       <PageHeader
         title="Investments"
         subtitle={calcutta ? calcutta.calcutta_name : calcuttaId}
-        actions={
+        leftActions={
           <Link to={`/lab/investments/algorithms/${encodeURIComponent(algorithmId || '')}`} className="text-blue-600 hover:text-blue-800">
             ← Back to Algorithm
           </Link>

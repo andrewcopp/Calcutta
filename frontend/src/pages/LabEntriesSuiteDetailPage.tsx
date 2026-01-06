@@ -81,12 +81,12 @@ export function LabEntriesSuiteDetailPage() {
       <PageHeader
         title="Entries"
         subtitle={suite ? suite.name : suiteId}
+        leftActions={
+          <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
+            ← Back to Entries
+          </Link>
+        }
         actions={
-          <div className="flex items-center gap-3">
-            <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
-              ← Back to Entries
-            </Link>
-
 				<Button
 					size="sm"
 					disabled={!suiteId || detailQuery.isLoading || !canRunInSandbox}
@@ -98,7 +98,6 @@ export function LabEntriesSuiteDetailPage() {
 				>
 					Run in Sandbox
 				</Button>
-          </div>
         }
       />
 

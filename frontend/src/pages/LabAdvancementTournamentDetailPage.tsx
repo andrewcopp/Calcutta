@@ -144,7 +144,7 @@ export function LabAdvancementTournamentDetailPage() {
       <PageHeader
         title="Advancements"
         subtitle={tournament ? tournament.tournament_name : tournamentId}
-        actions={
+        leftActions={
           <Link to={`/lab/advancements/algorithms/${encodeURIComponent(algorithmId || '')}`} className="text-blue-600 hover:text-blue-800">
             ← Back to Algorithm
           </Link>
