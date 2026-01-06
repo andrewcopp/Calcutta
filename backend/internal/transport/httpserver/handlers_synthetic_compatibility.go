@@ -13,19 +13,6 @@ import (
 
 func (s *Server) registerSyntheticCompatibilityRoutes(r *mux.Router) {
 	r.HandleFunc(
-		"/api/synthetic-calcutta-cohorts",
-		s.requirePermission("analytics.suites.read", s.handleListSyntheticCalcuttaCohorts),
-	).Methods("GET", "OPTIONS")
-	r.HandleFunc(
-		"/api/synthetic-calcutta-cohorts/{id}",
-		s.requirePermission("analytics.suites.read", s.handleGetSyntheticCalcuttaCohort),
-	).Methods("GET", "OPTIONS")
-	r.HandleFunc(
-		"/api/synthetic-calcutta-cohorts/{id}",
-		s.requirePermission("analytics.suites.write", s.handlePatchSyntheticCalcuttaCohort),
-	).Methods("PATCH", "OPTIONS")
-
-	r.HandleFunc(
 		"/api/simulation-run-batches",
 		s.requirePermission("analytics.suite_executions.write", s.handleCreateSimulationRunBatch),
 	).Methods("POST", "OPTIONS")
@@ -58,18 +45,6 @@ func (s *Server) registerSyntheticCompatibilityRoutes(r *mux.Router) {
 		"/api/simulation-runs/{id}/entries/{snapshotEntryId}",
 		s.requirePermission("analytics.suite_calcutta_evaluations.read", s.getSuiteCalcuttaEvaluationSnapshotEntryHandler),
 	).Methods("GET", "OPTIONS")
-}
-
-func (s *Server) handleListSyntheticCalcuttaCohorts(w http.ResponseWriter, r *http.Request) {
-	s.listSuitesHandler(w, r)
-}
-
-func (s *Server) handleGetSyntheticCalcuttaCohort(w http.ResponseWriter, r *http.Request) {
-	s.getSuiteHandler(w, r)
-}
-
-func (s *Server) handlePatchSyntheticCalcuttaCohort(w http.ResponseWriter, r *http.Request) {
-	s.updateSuiteHandler(w, r)
 }
 
 func (s *Server) handleListSimulationRunBatches(w http.ResponseWriter, r *http.Request) {

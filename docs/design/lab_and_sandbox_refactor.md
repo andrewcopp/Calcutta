@@ -112,7 +112,7 @@ Decisions:
 - Forecast is a UI label for simulation outputs derived from real calcuttas; domain nouns remain `SimulationRun`/`SimulationArtifact`.
 
 ### SyntheticCalcuttaCohorts / SyntheticCalcuttas
-- [ ] Introduce SyntheticCalcuttaCohorts as durable entities.
+- [x] Introduce SyntheticCalcuttaCohorts as durable entities (`derived.synthetic_calcutta_cohorts`), backed by `derived.suites` during migration.
 - [x] Introduce SyntheticCalcuttas as durable entities (`derived.synthetic_calcuttas`), with backfill from `derived.suite_scenarios` (preserve IDs for compatibility).
 - [ ] SyntheticCalcutta should support:
   - optional source calcutta reference (historical or real) for copy/import convenience
