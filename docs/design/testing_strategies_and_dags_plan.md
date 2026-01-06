@@ -54,6 +54,74 @@ Python market-share runner interface (subprocess contract)
   - `0` on success
   - non-zero on error
 
+## Implemented batch runbooks (current)
+
+We now have CLI batch entrypoints that can populate the Lab screens end-to-end.
+
+### Batch 1: Advancements (Predicted Game Outcomes) across seasons
+- Command: `backend/cmd/batch-generate-predicted-game-outcomes`
+- Purpose: ensure `derived.game_outcome_runs` + `derived.predicted_game_outcomes` exist for a year range.
+- Recommended usage:
+  - `--model-version kenpom-v1-go`
+  - `--skip-existing=true` (idempotent)
+
+Example (local dev with Docker Postgres exposed on localhost):
+
+```bash
+set -a; [ -f .env ] && . ./.env; [ -f .env.local ] && . ./.env.local; set +a
+go -C backend run ./cmd/batch-generate-predicted-game-outcomes \
+  --season-min 2017 --season-max 2024 \
+  --model-version kenpom-v1-go \
+  --skip-existing=true
+```
+
+### Batch 2: Investments (Market Share) across calcuttas
+- Command: `backend/cmd/batch-generate-market-share`
+- Purpose: call the Python runner per calcutta and persist:
+  - `derived.market_share_runs`
+  - `derived.predicted_market_share`
+- Key identity parameter: `excluded_entry_name` (must be stable and is part of the Lab combo identity)
+- Recommended usage:
+  - `--algorithm-name ridge`
+  - `--skip-existing=true` (idempotent by `(calcutta_id, algorithm_name, excluded_entry_name)`)
+
+Example:
+
+```bash
+set -a; [ -f .env ] && . ./.env; [ -f .env.local ] && . ./.env.local; set +a
+go -C backend run ./cmd/batch-generate-market-share \
+  --python-market-runner ../data-science/scripts/run_market_share_runner.py \
+  --python-bin ../data-science/.venv/bin/python \
+  --algorithm-name ridge \
+  --skip-existing=true \
+  --excluded-entry-name "${EXCLUDED_ENTRY_NAME}"
+```
+
+### Batch 3: Entries (deterministic optimizer output) across suites + calcuttas
+- Command: `backend/cmd/batch-lab-entries`
+- Purpose: generate deterministic entry bids using:
+  - expected points derived from a `game_outcome_run_id` and scoring rules
+  - predicted market share derived from a `market_share_run_id`
+  - optimizer allocation output
+- Persists:
+  - `derived.strategy_generation_runs`
+  - `derived.recommended_entry_bids`
+  - `derived.suite_scenarios.focus_strategy_generation_run_id`
+
+Important behavioral notes:
+- The command prefers reusing existing `market_share_runs` matching `(algorithm_name, excluded_entry_name)`.
+- It can skip scenarios that already have `focus_strategy_generation_run_id`.
+
+Example:
+
+```bash
+set -a; [ -f .env ] && . ./.env; [ -f .env.local ] && . ./.env.local; set +a
+go -C backend run ./cmd/batch-lab-entries \
+  --season-min 2017 --season-max 2024 \
+  --use-existing-market-share=true \
+  --skip-existing-focus=true
+```
+
 Frontend should:
 - discover registered algorithms + runs
 - allow selecting returns + market algorithms
@@ -133,7 +201,8 @@ Lab Entries report contract (replicates the legacy Python `detailed_investment_r
   - `predicted_roi` = `expected_points / predicted_market`
   - `adjusted_roi` = `expected_points / (predicted_market + our_bid)`
 - Edge-case rules:
-  - If `predicted_market` is 0 (or non-finite), display ROI fields as `—` (avoid +/-inf).
+  - If `predicted_market` is 0 (or non-finite), use a safe denominator for display/sorting:
+    - `predicted_roi_display = expected_points / (predicted_market + 1)`
   - If `predicted_market + our_bid` is 0 (or non-finite), display `adjusted_roi` as `—`.
   - `our_bid` is considered 0 when absent.
 - Run-selection rules:
