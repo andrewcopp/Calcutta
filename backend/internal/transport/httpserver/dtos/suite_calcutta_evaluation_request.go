@@ -7,20 +7,34 @@ import (
 )
 
 type CreateSuiteCalcuttaEvaluationRequest struct {
-	CalcuttaID        string  `json:"calcuttaId"`
-	SuiteExecutionID  *string `json:"suiteExecutionId"`
-	SuiteID           *string `json:"suiteId"`
-	SuiteName         *string `json:"suiteName"`
-	OptimizerKey      *string `json:"optimizerKey"`
-	GameOutcomeRunID  *string `json:"gameOutcomeRunId"`
-	MarketShareRunID  *string `json:"marketShareRunId"`
-	NSims             int     `json:"nSims"`
-	Seed              int     `json:"seed"`
-	StartingStateKey  string  `json:"startingStateKey"`
-	ExcludedEntryName *string `json:"excludedEntryName"`
+	CalcuttaID           string  `json:"calcuttaId"`
+	SuiteExecutionID     *string `json:"suiteExecutionId"`
+	SuiteID              *string `json:"suiteId"`
+	SuiteName            *string `json:"suiteName"`
+	CohortID             *string `json:"cohortId"`
+	CohortName           *string `json:"cohortName"`
+	SimulationRunBatchID *string `json:"simulationRunBatchId"`
+	OptimizerKey         *string `json:"optimizerKey"`
+	GameOutcomeRunID     *string `json:"gameOutcomeRunId"`
+	MarketShareRunID     *string `json:"marketShareRunId"`
+	NSims                int     `json:"nSims"`
+	Seed                 int     `json:"seed"`
+	StartingStateKey     string  `json:"startingStateKey"`
+	ExcludedEntryName    *string `json:"excludedEntryName"`
 }
 
 func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
+	// Compatibility aliases: prefer explicit suite* fields, but accept cohort*/simulationRunBatch*.
+	if r.SuiteID == nil && r.CohortID != nil {
+		r.SuiteID = r.CohortID
+	}
+	if r.SuiteName == nil && r.CohortName != nil {
+		r.SuiteName = r.CohortName
+	}
+	if r.SuiteExecutionID == nil && r.SimulationRunBatchID != nil {
+		r.SuiteExecutionID = r.SimulationRunBatchID
+	}
+
 	if strings.TrimSpace(r.CalcuttaID) == "" {
 		return ErrFieldRequired("calcuttaId")
 	}

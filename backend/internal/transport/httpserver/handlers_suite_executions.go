@@ -13,6 +13,7 @@ import (
 
 type createSuiteExecutionRequest struct {
 	SuiteID           string   `json:"suiteId"`
+	CohortID          *string  `json:"cohortId"`
 	Name              *string  `json:"name"`
 	CalcuttaIDs       []string `json:"calcuttaIds"`
 	OptimizerKey      *string  `json:"optimizerKey"`
@@ -68,9 +69,12 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
+	if strings.TrimSpace(req.SuiteID) == "" && req.CohortID != nil {
+		req.SuiteID = strings.TrimSpace(*req.CohortID)
+	}
 	req.SuiteID = strings.TrimSpace(req.SuiteID)
 	if req.SuiteID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "suiteId is required", "suiteId")
+		writeError(w, r, http.StatusBadRequest, "validation_error", "suiteId (or cohortId) is required", "suiteId")
 		return
 	}
 	if _, err := uuid.Parse(req.SuiteID); err != nil {
@@ -321,6 +325,9 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 
 func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Request) {
 	suiteID := r.URL.Query().Get("suite_id")
+	if strings.TrimSpace(suiteID) == "" {
+		suiteID = r.URL.Query().Get("cohort_id")
+	}
 	limit := getLimit(r, 50)
 	if limit <= 0 {
 		limit = 50

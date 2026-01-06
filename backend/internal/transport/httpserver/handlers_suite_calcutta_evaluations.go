@@ -716,7 +716,13 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *http.Request) {
 	calcuttaID := r.URL.Query().Get("calcutta_id")
 	suiteID := r.URL.Query().Get("suite_id")
+	if strings.TrimSpace(suiteID) == "" {
+		suiteID = r.URL.Query().Get("cohort_id")
+	}
 	suiteExecutionID := r.URL.Query().Get("suite_execution_id")
+	if strings.TrimSpace(suiteExecutionID) == "" {
+		suiteExecutionID = r.URL.Query().Get("simulation_run_batch_id")
+	}
 	limit := getLimit(r, 50)
 	if limit <= 0 {
 		limit = 50
