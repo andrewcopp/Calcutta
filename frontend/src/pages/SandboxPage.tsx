@@ -16,7 +16,7 @@ import {
   suiteCalcuttaEvaluationsService,
   type CreateSuiteCalcuttaEvaluationRequest,
   type SuiteCalcuttaEvaluation,
-} from '../services/suiteCalcuttaEvaluationsService';
+} from '../services/simulationRunsService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxPage() {

@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
-import { cohortsService, type CohortListItem } from '../services/suitesService';
+import { cohortsService, type CohortListItem } from '../services/cohortsService';
 
 export function SandboxSuitesListPage() {
   const navigate = useNavigate();

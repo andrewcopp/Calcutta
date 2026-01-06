@@ -12,7 +12,7 @@ import { calcuttaService } from '../services/calcuttaService';
 import {
   suiteCalcuttaEvaluationsService,
   type SuiteCalcuttaEvaluationResult,
-} from '../services/suiteCalcuttaEvaluationsService';
+} from '../services/simulationRunsService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SuiteCalcuttaEvaluationDetailPage() {

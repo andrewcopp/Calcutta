@@ -11,7 +11,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import {
   suiteCalcuttaEvaluationsService,
   type SuiteCalcuttaEvaluationSnapshotEntryResponse,
-} from '../services/suiteCalcuttaEvaluationsService';
+} from '../services/simulationRunsService';
 
 export function SuiteCalcuttaEvaluationEntryDetailPage() {
   const { id, snapshotEntryId } = useParams<{ id: string; snapshotEntryId: string }>();
