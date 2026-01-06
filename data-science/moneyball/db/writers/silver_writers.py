@@ -8,7 +8,7 @@ import pandas as pd
 import psycopg2.extras
 import datetime
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from moneyball.db.connection import get_db_connection
 
 logger = logging.getLogger(__name__)
@@ -264,6 +264,35 @@ def write_predicted_market_share(
     Returns:
         Number of rows inserted
     """
+    _, inserted = write_predicted_market_share_with_run(
+        predictions_df=predictions_df,
+        team_id_map=team_id_map,
+        calcutta_id=calcutta_id,
+        tournament_id=tournament_id,
+        model_version=model_version,
+        algorithm_name=algorithm_name,
+        params=params,
+        git_sha=git_sha,
+    )
+    return inserted
+
+
+def write_predicted_market_share_with_run(
+    *,
+    predictions_df: pd.DataFrame,
+    team_id_map: Dict[str, str],
+    calcutta_id: str = None,
+    tournament_id: str = None,
+    model_version: str = None,
+    algorithm_name: str = "ridge",
+    params: Optional[Dict[str, Any]] = None,
+    git_sha: Optional[str] = None,
+) -> Tuple[Optional[str], int]:
+    """Write predicted market share and return (run_id, rows_inserted).
+
+    This is the preferred interface for batch/orchestrated runs where callers
+    need the persisted `derived.market_share_runs.id`.
+    """
     if not calcutta_id and not tournament_id:
         raise ValueError("Must provide either calcutta_id or tournament_id")
 
@@ -360,4 +389,4 @@ def write_predicted_market_share(
             conn.commit()
             ref = calcutta_id or tournament_id
             logger.info(f"Wrote {len(values)} market shares for {ref}")
-            return len(values)
+            return run_id, len(values)

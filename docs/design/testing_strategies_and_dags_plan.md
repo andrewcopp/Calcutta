@@ -29,6 +29,31 @@ Go owns:
 - the MINLP allocator / portfolio construction
 - orchestration and evaluation services
 
+Worker execution model (v1): Go orchestrator + Python subprocess runner
+- Goal: keep a single orchestration/control plane in Go (CLI now, UI button later) while
+  allowing Python-only ML dependencies (scikit-learn ridge regression) for market share.
+- Go worker/orchestrator responsibilities:
+  - batch execution (iterate tournaments/calcuttas)
+  - selection rules (latest runs, combo identity including `excluded_entry_name`)
+  - persistence contracts (ensure runs/artifacts are written to `derived.*` tables)
+- Python runner responsibilities:
+  - compute market-share predictions for a specific calcutta
+  - write `derived.market_share_runs` + `derived.predicted_market_share`
+
+Python market-share runner interface (subprocess contract)
+- Entry point: `data-science/scripts/run_market_share_runner.py`
+- Inputs (CLI args):
+  - `--calcutta-id` (uuid)
+  - `--excluded-entry-name` (string; part of Lab combo identity)
+  - optional: `--ridge-alpha`, `--feature-set`, `--algorithm-name`, `--train-years`
+- Required env (for DB access): `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+- Output: a single JSON line to stdout:
+  - success: `{ "ok": true, "run_id": "...", "rows_inserted": 68, ... }`
+  - error: `{ "ok": false, "error": "..." }`
+- Exit code:
+  - `0` on success
+  - non-zero on error
+
 Frontend should:
 - discover registered algorithms + runs
 - allow selecting returns + market algorithms
