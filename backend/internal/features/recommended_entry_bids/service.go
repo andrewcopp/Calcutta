@@ -9,6 +9,10 @@ type Service = appreb.Service
 
 type GenerateParams = appreb.GenerateParams
 
+type GenerateFromPredictionsParams = appreb.GenerateFromPredictionsParams
+
+type ExpectedTeam = appreb.ExpectedTeam
+
 type GenerateResult = appreb.GenerateResult
 
 func New(pool *pgxpool.Pool) *Service {

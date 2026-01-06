@@ -34,6 +34,23 @@ type GenerateParams struct {
 	BudgetPoints          int
 }
 
+type GenerateFromPredictionsParams struct {
+	CalcuttaID           string
+	RunKey               string
+	Name                 string
+	OptimizerKey         string
+	GameOutcomeRunID     string
+	MarketShareRunID     string
+	ExcludedEntryName    string
+	ExpectedPointsByTeam []ExpectedTeam
+	PredictedShareByTeam map[string]float64
+	MinBidPoints         int
+	MaxBidPoints         int
+	MinTeams             int
+	MaxTeams             int
+	BudgetPoints         int
+}
+
 type GenerateResult struct {
 	StrategyGenerationRunID string
 	RunKey                  string
@@ -53,7 +70,7 @@ type calcuttaContext struct {
 	SimulatedTournamentID string
 }
 
-type expectedTeam struct {
+type ExpectedTeam struct {
 	TeamID         string
 	ExpectedPoints float64
 }
@@ -185,10 +202,11 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	simID := cc.SimulatedTournamentID
 	strategyRunID, err := upsertStrategyGenerationRun(ctx, tx, upsertStrategyGenerationRunParams{
 		RunKey:                runKey,
 		Name:                  name,
-		SimulatedTournamentID: cc.SimulatedTournamentID,
+		SimulatedTournamentID: &simID,
 		CalcuttaID:            cc.CalcuttaID,
 		Purpose:               "go_recommended_entry_bids",
 		ReturnsModelKey:       "legacy",
@@ -204,7 +222,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		RunID:                   runKey,
 		StrategyGenerationRunID: strategyRunID,
 		Bids:                    alloc.Bids,
-		ExpectedPointsByTeam:    expected,
+		ExpectedPointsByTeam:    toExpectedTeams(expected),
 		MarketPointsByTeam:      mapTeamMarketPoints(teams),
 	})
 	if err != nil {
@@ -221,6 +239,153 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		NTeams:                  len(alloc.Bids),
 		TotalBidPoints:          totalBid,
 		SimulatedTournamentID:   cc.SimulatedTournamentID,
+	}, nil
+}
+
+func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p GenerateFromPredictionsParams) (*GenerateResult, error) {
+	if p.CalcuttaID == "" {
+		return nil, errors.New("CalcuttaID is required")
+	}
+	if p.GameOutcomeRunID == "" {
+		return nil, errors.New("GameOutcomeRunID is required")
+	}
+	if p.MarketShareRunID == "" {
+		return nil, errors.New("MarketShareRunID is required")
+	}
+	if len(p.ExpectedPointsByTeam) == 0 {
+		return nil, errors.New("ExpectedPointsByTeam is required")
+	}
+	if len(p.PredictedShareByTeam) == 0 {
+		return nil, errors.New("PredictedShareByTeam is required")
+	}
+
+	cc, err := s.loadCalcuttaContext(ctx, p.CalcuttaID)
+	if err != nil {
+		return nil, err
+	}
+
+	minBid := p.MinBidPoints
+	if minBid <= 0 {
+		minBid = 1
+	}
+	maxBid := p.MaxBidPoints
+	if maxBid <= 0 {
+		maxBid = cc.MaxBidPoints
+	}
+
+	minTeams := p.MinTeams
+	if minTeams <= 0 {
+		minTeams = cc.MinTeams
+	}
+	maxTeams := p.MaxTeams
+	if maxTeams <= 0 {
+		maxTeams = cc.MaxTeams
+	}
+
+	budget := p.BudgetPoints
+	if budget <= 0 {
+		budget = cc.BudgetPoints
+	}
+
+	optimizerKey := p.OptimizerKey
+	if optimizerKey == "" {
+		optimizerKey = "minlp_v1"
+	}
+	if optimizerKey != "minlp_v1" {
+		return nil, fmt.Errorf("unsupported optimizer %q (supported: minlp_v1)", optimizerKey)
+	}
+
+	poolSize := float64(cc.NumEntries * cc.BudgetPoints)
+	teams := make([]Team, 0, len(p.ExpectedPointsByTeam))
+	for _, t := range p.ExpectedPointsByTeam {
+		share, ok := p.PredictedShareByTeam[t.TeamID]
+		if !ok {
+			return nil, fmt.Errorf("missing predicted_market_share for team_id=%s (calcutta_id=%s market_share_run_id=%s)", t.TeamID, cc.CalcuttaID, p.MarketShareRunID)
+		}
+		marketPoints := share * poolSize
+		teams = append(teams, Team{ID: t.TeamID, ExpectedPoints: t.ExpectedPoints, MarketPoints: marketPoints})
+	}
+
+	alloc, err := AllocateBids(teams, AllocationParams{
+		BudgetPoints: budget,
+		MinTeams:     minTeams,
+		MaxTeams:     maxTeams,
+		MinBidPoints: minBid,
+		MaxBidPoints: maxBid,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	totalBid := 0
+	for _, v := range alloc.Bids {
+		totalBid += v
+	}
+
+	runKey := p.RunKey
+	if runKey == "" {
+		runKey = uuid.NewString()
+	}
+	name := p.Name
+	if name == "" {
+		name = optimizerKey
+	}
+
+	paramsJSON, _ := json.Marshal(map[string]any{
+		"budget_points":       budget,
+		"min_teams":           minTeams,
+		"max_teams":           maxTeams,
+		"min_bid_points":      minBid,
+		"max_bid_points":      maxBid,
+		"pool_size_points":    poolSize,
+		"assumed_entries":     cc.NumEntries,
+		"excluded_entry_name": p.ExcludedEntryName,
+		"game_outcome_run_id": p.GameOutcomeRunID,
+		"market_share_run_id": p.MarketShareRunID,
+	})
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	strategyRunID, err := upsertStrategyGenerationRun(ctx, tx, upsertStrategyGenerationRunParams{
+		RunKey:                runKey,
+		Name:                  name,
+		SimulatedTournamentID: nil,
+		CalcuttaID:            cc.CalcuttaID,
+		Purpose:               "lab_entries_generation",
+		ReturnsModelKey:       "pgo_dp",
+		InvestmentModelKey:    "predicted_market_share",
+		OptimizerKey:          optimizerKey,
+		ParamsJSON:            paramsJSON,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = writeRecommendedEntryBids(ctx, tx, writeRecommendedEntryBidsParams{
+		RunID:                   runKey,
+		StrategyGenerationRunID: strategyRunID,
+		Bids:                    alloc.Bids,
+		ExpectedPointsByTeam:    p.ExpectedPointsByTeam,
+		MarketPointsByTeam:      mapTeamMarketPoints(teams),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return &GenerateResult{
+		StrategyGenerationRunID: strategyRunID,
+		RunKey:                  runKey,
+		NTeams:                  len(alloc.Bids),
+		TotalBidPoints:          totalBid,
+		SimulatedTournamentID:   "",
 	}, nil
 }
 
@@ -294,7 +459,7 @@ func (s *Service) getLatestSimulatedTournamentID(ctx context.Context, coreTourna
 	return batchID, true, nil
 }
 
-func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaContext) ([]expectedTeam, float64, error) {
+func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaContext) ([]ExpectedTeam, float64, error) {
 	q := `
 		SELECT
 			st.team_id,
@@ -312,7 +477,7 @@ func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaCont
 	}
 	defer rows.Close()
 
-	out := make([]expectedTeam, 0)
+	out := make([]ExpectedTeam, 0)
 	total := 0.0
 	for rows.Next() {
 		var teamID string
@@ -320,7 +485,7 @@ func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaCont
 		if err := rows.Scan(&teamID, &expected); err != nil {
 			return nil, 0, err
 		}
-		out = append(out, expectedTeam{TeamID: teamID, ExpectedPoints: expected})
+		out = append(out, ExpectedTeam{TeamID: teamID, ExpectedPoints: expected})
 		total += expected
 	}
 	if err := rows.Err(); err != nil {
@@ -388,7 +553,7 @@ func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaCon
 type upsertStrategyGenerationRunParams struct {
 	RunKey                string
 	Name                  string
-	SimulatedTournamentID string
+	SimulatedTournamentID *string
 	CalcuttaID            string
 	Purpose               string
 	ReturnsModelKey       string
@@ -440,9 +605,11 @@ type writeRecommendedEntryBidsParams struct {
 	RunID                   string
 	StrategyGenerationRunID string
 	Bids                    map[string]int
-	ExpectedPointsByTeam    []expectedTeam
+	ExpectedPointsByTeam    []ExpectedTeam
 	MarketPointsByTeam      map[string]float64
 }
+
+func toExpectedTeams(in []ExpectedTeam) []ExpectedTeam { return in }
 
 func mapTeamMarketPoints(teams []Team) map[string]float64 {
 	out := make(map[string]float64, len(teams))
