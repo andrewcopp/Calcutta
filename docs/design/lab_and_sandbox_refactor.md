@@ -69,12 +69,12 @@ We treat the set of available models as part of the codebase.
   - `GET /market-share-models`
   - `GET /entry-optimizers`
 
-- [ ] Create registries with stable IDs:
+- [x] Create registries with stable IDs:
   - `AvailableAdvancementModels` (e.g. `kenpom_ratings_v1`, `kenpom_ratings_v2`)
   - `AvailableMarketShareModels`
   - `AvailableEntryModels`
 
-- [ ] Ensure every model registry entry includes:
+- [x] Ensure every model registry entry includes:
   - `id` (stable string)
   - `display_name`
   - `schema_version` for produced artifacts
