@@ -72,7 +72,7 @@ We treat the set of available models as part of the codebase.
 - [x] Create registries with stable IDs:
   - `AvailableAdvancementModels` (e.g. `kenpom_ratings_v1`, `kenpom_ratings_v2`)
   - `AvailableMarketShareModels`
-  - `AvailableEntryModels`
+  - `AvailableEntryOptimizers`
 
 - [x] Ensure every model registry entry includes:
   - `id` (stable string)
