@@ -65,8 +65,7 @@ export function LabEntryReportPage() {
 
   const predictedROI = (t: EntryReportTeam) => {
     if (!Number.isFinite(t.expected_points) || !Number.isFinite(t.expected_market)) return NaN;
-    if (t.expected_market <= 0) return t.expected_points / (t.expected_market + 1);
-    return t.predicted_roi;
+    return t.expected_points / (t.expected_market + 1);
   };
 
   const sortedTeams = useMemo(() => {
