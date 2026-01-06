@@ -1,12 +1,16 @@
 package httpserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
+	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 )
@@ -73,10 +77,217 @@ type suiteCalcuttaEvaluationOurStrategyPerformance struct {
 	TotalSimulations       int     `json:"total_simulations"`
 }
 
+type suiteCalcuttaEvaluationEntryPerformance struct {
+	Rank                 int      `json:"rank"`
+	EntryName            string   `json:"entry_name"`
+	EntryID              *string  `json:"entry_id,omitempty"`
+	MeanNormalizedPayout float64  `json:"mean_normalized_payout"`
+	PTop1                float64  `json:"p_top1"`
+	PInMoney             float64  `json:"p_in_money"`
+	FinishPosition       *int     `json:"finish_position,omitempty"`
+	IsTied               *bool    `json:"is_tied,omitempty"`
+	InTheMoney           *bool    `json:"in_the_money,omitempty"`
+	PayoutCents          *int     `json:"payout_cents,omitempty"`
+	TotalPoints          *float64 `json:"total_points,omitempty"`
+}
+
 type suiteCalcuttaEvaluationResultResponse struct {
 	Evaluation  suiteCalcuttaEvaluationListItem                `json:"evaluation"`
 	Portfolio   []suiteCalcuttaEvaluationPortfolioBid          `json:"portfolio"`
 	OurStrategy *suiteCalcuttaEvaluationOurStrategyPerformance `json:"our_strategy,omitempty"`
+	Entries     []suiteCalcuttaEvaluationEntryPerformance      `json:"entries"`
+}
+
+type suiteCalcuttaEvalFinish struct {
+	FinishPosition int
+	IsTied         bool
+	InTheMoney     bool
+	PayoutCents    int
+	TotalPoints    float64
+}
+
+func (s *Server) computeHypotheticalFinishByEntryNameForStrategyRun(ctx context.Context, calcuttaID string, strategyGenerationRunID string) (map[string]*suiteCalcuttaEvalFinish, bool, error) {
+	if calcuttaID == "" || strategyGenerationRunID == "" {
+		return nil, false, nil
+	}
+
+	// Load payouts
+	payoutRows, err := s.pool.Query(ctx, `
+		SELECT position::int, amount_cents::int
+		FROM core.payouts
+		WHERE calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY position ASC
+	`, calcuttaID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer payoutRows.Close()
+
+	payouts := make([]*models.CalcuttaPayout, 0)
+	for payoutRows.Next() {
+		var pos int
+		var cents int
+		if err := payoutRows.Scan(&pos, &cents); err != nil {
+			return nil, false, err
+		}
+		payouts = append(payouts, &models.CalcuttaPayout{CalcuttaID: calcuttaID, Position: pos, AmountCents: cents})
+	}
+	if err := payoutRows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Load team points (actual wins/byes)
+	teamRows, err := s.pool.Query(ctx, `
+		WITH t AS (
+			SELECT tournament_id
+			FROM core.calcuttas
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		)
+		SELECT
+			team.id::text,
+			core.calcutta_points_for_progress($1::uuid, team.wins, team.byes)::float8
+		FROM core.teams team
+		JOIN t ON t.tournament_id = team.tournament_id
+		WHERE team.deleted_at IS NULL
+	`, calcuttaID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer teamRows.Close()
+
+	teamPoints := make(map[string]float64)
+	for teamRows.Next() {
+		var teamID string
+		var pts float64
+		if err := teamRows.Scan(&teamID, &pts); err != nil {
+			return nil, false, err
+		}
+		teamPoints[teamID] = pts
+	}
+	if err := teamRows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Load real entries and their bids
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			e.id::text,
+			e.name,
+			e.created_at,
+			et.team_id::text,
+			et.bid_points::int
+		FROM core.entries e
+		JOIN core.entry_teams et ON et.entry_id = e.id AND et.deleted_at IS NULL
+		WHERE e.calcutta_id = $1::uuid
+			AND e.deleted_at IS NULL
+		ORDER BY e.created_at ASC
+	`, calcuttaID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	entryByID := make(map[string]*models.CalcuttaEntry)
+	entryBids := make(map[string]map[string]float64)
+	existingTotalBid := make(map[string]float64)
+	for rows.Next() {
+		var entryID, name, teamID string
+		var createdAt time.Time
+		var bid int
+		if err := rows.Scan(&entryID, &name, &createdAt, &teamID, &bid); err != nil {
+			return nil, false, err
+		}
+		if _, ok := entryByID[entryID]; !ok {
+			entryByID[entryID] = &models.CalcuttaEntry{ID: entryID, Name: name, CalcuttaID: calcuttaID, Created: createdAt}
+			entryBids[entryID] = make(map[string]float64)
+		}
+		entryBids[entryID][teamID] += float64(bid)
+		existingTotalBid[teamID] += float64(bid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Load our strategy bids
+	ourBids := make(map[string]float64)
+	ourRows, err := s.pool.Query(ctx, `
+		SELECT team_id::text, bid_points::int
+		FROM derived.recommended_entry_bids
+		WHERE strategy_generation_run_id = $1::uuid
+			AND deleted_at IS NULL
+	`, strategyGenerationRunID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer ourRows.Close()
+	for ourRows.Next() {
+		var teamID string
+		var bid int
+		if err := ourRows.Scan(&teamID, &bid); err != nil {
+			return nil, false, err
+		}
+		ourBids[teamID] += float64(bid)
+	}
+	if err := ourRows.Err(); err != nil {
+		return nil, false, err
+	}
+	if len(ourBids) == 0 {
+		return nil, false, nil
+	}
+
+	entries := make([]*models.CalcuttaEntry, 0, len(entryByID)+1)
+	for entryID, e := range entryByID {
+		total := 0.0
+		for teamID, bid := range entryBids[entryID] {
+			pts, ok := teamPoints[teamID]
+			if !ok {
+				continue
+			}
+			den := existingTotalBid[teamID] + ourBids[teamID]
+			if den <= 0 {
+				continue
+			}
+			total += pts * (bid / den)
+		}
+		e.TotalPoints = total
+		entries = append(entries, e)
+	}
+
+	ourID := "our_strategy"
+	ourCreated := time.Now()
+	ourTotal := 0.0
+	for teamID, bid := range ourBids {
+		pts, ok := teamPoints[teamID]
+		if !ok {
+			continue
+		}
+		den := existingTotalBid[teamID] + bid
+		if den <= 0 {
+			continue
+		}
+		ourTotal += pts * (bid / den)
+	}
+	entries = append(entries, &models.CalcuttaEntry{ID: ourID, Name: "Our Strategy", CalcuttaID: calcuttaID, TotalPoints: ourTotal, Created: ourCreated})
+
+	_, results := appcalcutta.ComputeEntryPlacementsAndPayouts(entries, payouts)
+	out := make(map[string]*suiteCalcuttaEvalFinish)
+	for _, e := range entries {
+		res, ok := results[e.ID]
+		if !ok {
+			continue
+		}
+		out[e.Name] = &suiteCalcuttaEvalFinish{
+			FinishPosition: res.FinishPosition,
+			IsTied:         res.IsTied,
+			InTheMoney:     res.InTheMoney,
+			PayoutCents:    res.PayoutCents,
+			TotalPoints:    e.TotalPoints,
+		}
+	}
+	return out, true, nil
 }
 
 func (s *Server) registerSuiteCalcuttaEvaluationRoutes(r *mux.Router) {
@@ -771,9 +982,75 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 		}
 	}
 
+	entries := make([]suiteCalcuttaEvaluationEntryPerformance, 0)
+	finishByName := map[string]*suiteCalcuttaEvalFinish{}
+	if eval.CalcuttaID != "" && eval.StrategyGenerationRunID != nil && strings.TrimSpace(*eval.StrategyGenerationRunID) != "" {
+		if m, ok, err := s.computeHypotheticalFinishByEntryNameForStrategyRun(ctx, eval.CalcuttaID, *eval.StrategyGenerationRunID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		} else if ok {
+			finishByName = m
+		}
+	}
+
+	if eval.CalcuttaEvaluationRunID != nil && strings.TrimSpace(*eval.CalcuttaEvaluationRunID) != "" {
+		rows, err := s.pool.Query(ctx, `
+			WITH ranked AS (
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
+					ep.entry_name,
+					COALESCE(ep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
+					COALESCE(ep.p_top1, 0.0)::double precision AS p_top1,
+					COALESCE(ep.p_in_money, 0.0)::double precision AS p_in_money
+				FROM derived.entry_performance ep
+				WHERE ep.calcutta_evaluation_run_id = $1::uuid
+					AND ep.deleted_at IS NULL
+			)
+			SELECT
+				r.rank,
+				r.entry_name,
+				e.id::text as entry_id,
+				r.mean_normalized_payout,
+				r.p_top1,
+				r.p_in_money
+			FROM ranked r
+			LEFT JOIN core.entries e
+				ON e.calcutta_id = $2::uuid
+				AND e.name = r.entry_name
+				AND e.deleted_at IS NULL
+			ORDER BY r.rank ASC
+		`, *eval.CalcuttaEvaluationRunID, eval.CalcuttaID)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var it suiteCalcuttaEvaluationEntryPerformance
+			if err := rows.Scan(&it.Rank, &it.EntryName, &it.EntryID, &it.MeanNormalizedPayout, &it.PTop1, &it.PInMoney); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			if f := finishByName[it.EntryName]; f != nil {
+				it.FinishPosition = &f.FinishPosition
+				it.IsTied = &f.IsTied
+				it.InTheMoney = &f.InTheMoney
+				it.PayoutCents = &f.PayoutCents
+				it.TotalPoints = &f.TotalPoints
+			}
+			entries = append(entries, it)
+		}
+		if err := rows.Err(); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
+
 	writeJSON(w, http.StatusOK, suiteCalcuttaEvaluationResultResponse{
 		Evaluation:  eval,
 		Portfolio:   portfolio,
 		OurStrategy: our,
+		Entries:     entries,
 	})
 }

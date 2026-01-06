@@ -57,10 +57,25 @@ export type SuiteCalcuttaEvaluationOurStrategyPerformance = {
   total_simulations: number;
 };
 
+export type SuiteCalcuttaEvaluationEntryPerformance = {
+  rank: number;
+  entry_name: string;
+  entry_id?: string | null;
+  mean_normalized_payout: number;
+  p_top1: number;
+  p_in_money: number;
+  finish_position?: number | null;
+  is_tied?: boolean | null;
+  in_the_money?: boolean | null;
+  payout_cents?: number | null;
+  total_points?: number | null;
+};
+
 export type SuiteCalcuttaEvaluationResult = {
   evaluation: SuiteCalcuttaEvaluation;
   portfolio: SuiteCalcuttaEvaluationPortfolioBid[];
   our_strategy?: SuiteCalcuttaEvaluationOurStrategyPerformance | null;
+  entries: SuiteCalcuttaEvaluationEntryPerformance[];
 };
 
 export type CreateSuiteCalcuttaEvaluationRequest = {

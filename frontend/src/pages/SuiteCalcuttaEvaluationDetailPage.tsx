@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -19,6 +19,7 @@ import type { Calcutta } from '../types/calcutta';
 export function SuiteCalcuttaEvaluationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const suiteId = searchParams.get('suiteId') || '';
   const executionId = searchParams.get('executionId') || '';
@@ -63,6 +64,11 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   const formatFloat = (v: number | null | undefined, digits: number) => {
     if (v == null || Number.isNaN(v)) return '—';
     return v.toFixed(digits);
+  };
+
+  const fmtFinish = (pos?: number | null, tied?: boolean | null) => {
+    if (pos == null) return '—';
+    return `${pos}${tied ? ' (tied)' : ''}`;
   };
 
   const formatCurrency = (cents: number | null | undefined) => {
@@ -113,6 +119,47 @@ export function SuiteCalcuttaEvaluationDetailPage() {
     queryFn: () => suiteCalcuttaEvaluationsService.getResult(id!),
     enabled: Boolean(id) && detailQuery.data?.status === 'succeeded',
   });
+
+  const [sortKey, setSortKey] = useState<'mean' | 'p_top1' | 'p_in_money' | 'finish_position'>(
+    'mean'
+  );
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const sortedEntries = useMemo(() => {
+    const entries = resultQuery.data?.entries ?? [];
+    const mult = sortDir === 'asc' ? 1 : -1;
+    return entries.slice().sort((a, b) => {
+      const av =
+        sortKey === 'mean'
+          ? a.mean_normalized_payout
+          : sortKey === 'p_top1'
+            ? a.p_top1
+            : sortKey === 'p_in_money'
+              ? a.p_in_money
+              : a.finish_position ?? NaN;
+      const bv =
+        sortKey === 'mean'
+          ? b.mean_normalized_payout
+          : sortKey === 'p_top1'
+            ? b.p_top1
+            : sortKey === 'p_in_money'
+              ? b.p_in_money
+              : b.finish_position ?? NaN;
+      if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+      if (!Number.isFinite(av)) return 1;
+      if (!Number.isFinite(bv)) return -1;
+      return mult * (av - bv);
+    });
+  }, [resultQuery.data?.entries, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
 
   return (
     <PageContainer className="max-w-none">
@@ -255,17 +302,84 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                 {resultQuery.data ? (
                   <div className="space-y-6">
                     <div>
-                      <div className="text-gray-500">Our Strategy performance</div>
-                      {resultQuery.data.our_strategy ? (
-                        <div className="mt-1 text-gray-900">
-                          <div>
-                            rank={resultQuery.data.our_strategy.rank} · mean={resultQuery.data.our_strategy.mean_normalized_payout.toFixed(4)} ·
-                            pTop1={resultQuery.data.our_strategy.p_top1.toFixed(4)} · pInMoney={resultQuery.data.our_strategy.p_in_money.toFixed(4)}
-                          </div>
-                          <div className="text-xs text-gray-600">nSims={resultQuery.data.our_strategy.total_simulations}</div>
-                        </div>
+                      <div className="text-gray-500">Entries</div>
+                      {sortedEntries.length === 0 ? (
+                        <Alert variant="info" className="mt-2">
+                          No entry performance rows found.
+                        </Alert>
                       ) : (
-                        <div className="mt-1 text-gray-700">No performance row found for Our Strategy.</div>
+                        <div className="overflow-x-auto mt-2">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entry</th>
+                                <th
+                                  className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                  onClick={() => toggleSort('mean')}
+                                >
+                                  Mean Norm Payout
+                                </th>
+                                <th
+                                  className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                  onClick={() => toggleSort('p_top1')}
+                                >
+                                  P(Top 1)
+                                </th>
+                                <th
+                                  className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                  onClick={() => toggleSort('p_in_money')}
+                                >
+                                  P(In Money)
+                                </th>
+                                <th
+                                  className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                  onClick={() => toggleSort('finish_position')}
+                                >
+                                  Finish
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {sortedEntries.map((e) => {
+                                const clickable = Boolean(e.entry_id) && Boolean(detailQuery.data?.calcutta_id);
+                                return (
+                                  <tr
+                                    key={`${e.entry_name}-${e.rank}`}
+                                    className={
+                                      clickable
+                                        ? 'hover:bg-gray-50 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500'
+                                        : ''
+                                    }
+                                    role={clickable ? 'link' : undefined}
+                                    tabIndex={clickable ? 0 : undefined}
+                                    onClick={() => {
+                                      if (!clickable) return;
+                                      navigate(`/calcuttas/${encodeURIComponent(detailQuery.data!.calcutta_id)}/entries/${encodeURIComponent(e.entry_id!)}`);
+                                    }}
+                                    onKeyDown={(ev) => {
+                                      if (!clickable) return;
+                                      if (ev.key === 'Enter' || ev.key === ' ') {
+                                        ev.preventDefault();
+                                        navigate(
+                                          `/calcuttas/${encodeURIComponent(detailQuery.data!.calcutta_id)}/entries/${encodeURIComponent(e.entry_id!)}`
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <td className="px-3 py-2 text-sm text-gray-900">
+                                      <div className="font-medium">{e.entry_name}</div>
+                                      <div className="text-xs text-gray-500">rank={e.rank}</div>
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(e.mean_normalized_payout, 4)}</td>
+                                    <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(e.p_top1, 4)}</td>
+                                    <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(e.p_in_money, 4)}</td>
+                                    <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtFinish(e.finish_position, e.is_tied)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       )}
                     </div>
 

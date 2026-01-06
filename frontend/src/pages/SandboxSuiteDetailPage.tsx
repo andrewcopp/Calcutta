@@ -56,9 +56,10 @@ export function SandboxSuiteDetailPage() {
     return v.toFixed(digits);
   };
 
-  const formatCurrency = (cents: number | null | undefined) => {
-    if (cents == null || Number.isNaN(cents)) return '—';
-    return `$${(cents / 100).toFixed(2)}`;
+  const seasonFromCalcuttaName = (name: string | null | undefined) => {
+    if (!name) return '—';
+    const m = name.match(/\b(19|20)\d{2}\b/);
+    return m ? m[0] : '—';
   };
 
   const suiteQuery = useQuery({
@@ -228,9 +229,12 @@ export function SandboxSuiteDetailPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Season</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Mean Norm Payout</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(Top 1)</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(In Money)</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Finish</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -239,10 +243,12 @@ export function SandboxSuiteDetailPage() {
                         suiteId || ''
                       )}${effectiveExecutionId ? `&executionId=${encodeURIComponent(effectiveExecutionId)}` : ''}`;
 
-                      const showHeadline = it.status === 'succeeded' && it.our_mean_normalized_payout != null;
-                      const showRealized =
-                        it.status === 'succeeded' &&
-                        (it.realized_finish_position != null || it.realized_total_points != null || it.realized_payout_cents != null);
+                      const calcuttaName = calcuttaNameById.get(it.calcutta_id) || it.calcutta_id;
+                      const season = seasonFromCalcuttaName(calcuttaName);
+                      const finish =
+                        it.realized_finish_position != null
+                          ? `${it.realized_finish_position}${it.realized_is_tied ? ' (tied)' : ''}`
+                          : '—';
 
                       return (
                         <tr
@@ -259,30 +265,18 @@ export function SandboxSuiteDetailPage() {
                           }}
                           aria-label={`Open evaluation ${it.id}`}
                         >
-                          <td className="px-3 py-2 text-sm text-gray-900">
-                            <div className="font-medium">{calcuttaNameById.get(it.calcutta_id) || it.calcutta_id}</div>
-                            <div className="text-xs text-gray-600">
+                          <td className="px-3 py-2 text-sm text-gray-900" title={calcuttaName}>
+                            <div className="font-medium">{season}</div>
+                            <div className="text-xs text-gray-500">
                               {it.optimizer_key} · n={it.n_sims} · seed={it.seed}
                             </div>
-
-                            {showHeadline ? (
-                              <div className="text-xs text-gray-600 mt-1">
-                                our: rank={it.our_rank ?? '—'} · mean={formatFloat(it.our_mean_normalized_payout, 4)} · pTop1=
-                                {formatFloat(it.our_p_top1, 4)} · pInMoney={formatFloat(it.our_p_in_money, 4)}
-                              </div>
-                            ) : null}
-
-                            {showRealized ? (
-                              <div className="text-xs text-gray-600 mt-1">
-                                realized: finish={it.realized_finish_position ?? '—'}
-                                {it.realized_is_tied ? ' (tied)' : ''} · payout={formatCurrency(it.realized_payout_cents)} · points=
-                                {formatFloat(it.realized_total_points, 2)}
-                                {it.realized_in_the_money != null ? ` · ITM=${it.realized_in_the_money ? 'yes' : 'no'}` : ''}
-                              </div>
-                            ) : null}
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700">{it.status}</td>
-                          <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(it.created_at)}</td>
+
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{it.our_rank ?? '—'}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(it.our_mean_normalized_payout, 4)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(it.our_p_top1, 4)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(it.our_p_in_money, 4)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{finish}</td>
                         </tr>
                       );
                     })}
