@@ -11,6 +11,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
 import { analyticsService } from '../services/analyticsService';
+import { modelCatalogsService } from '../services/modelCatalogsService';
 import {
   suiteCalcuttaEvaluationsService,
   type CreateSuiteCalcuttaEvaluationRequest,
@@ -28,6 +29,7 @@ export function SandboxPage() {
   const [createSuiteId, setCreateSuiteId] = useState<string>(() => selectedSuiteId);
   const [createSuiteName, setCreateSuiteName] = useState<string>('');
   const [createOptimizerKey, setCreateOptimizerKey] = useState<string>('');
+  const [createOptimizerSelection, setCreateOptimizerSelection] = useState<string>('');
   const [createNSims, setCreateNSims] = useState<number>(25000);
   const [createSeed, setCreateSeed] = useState<number>(42);
   const [createStartingStateKey, setCreateStartingStateKey] = useState<string>('post_first_four');
@@ -49,6 +51,11 @@ export function SandboxPage() {
       }>(createCalcuttaId);
     },
     enabled: Boolean(createCalcuttaId),
+  });
+
+  const entryOptimizersQuery = useQuery({
+    queryKey: ['model-catalogs', 'entry-optimizers'],
+    queryFn: () => modelCatalogsService.listEntryOptimizers(),
   });
 
   const calcuttaNameById = useMemo(() => {
@@ -182,12 +189,49 @@ export function SandboxPage() {
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">Optimizer key</div>
-                <input
-                  value={createOptimizerKey}
-                  onChange={(e) => setCreateOptimizerKey(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                  placeholder="e.g. greedy_v1"
-                />
+                {!entryOptimizersQuery.isLoading && !entryOptimizersQuery.isError && (entryOptimizersQuery.data?.items?.length ?? 0) > 0 ? (
+                  <>
+                    <Select
+                      value={createOptimizerSelection}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCreateOptimizerSelection(v);
+                        if (v === '__custom__') {
+                          setCreateOptimizerKey('');
+                        } else {
+                          setCreateOptimizerKey(v);
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      <option value="">-- Select optimizer --</option>
+                      {entryOptimizersQuery.data!.items
+                        .slice()
+                        .sort((a, b) => a.display_name.localeCompare(b.display_name))
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.display_name}{m.deprecated ? ' (deprecated)' : ''}
+                          </option>
+                        ))}
+                      <option value="__custom__">Custom…</option>
+                    </Select>
+                    {createOptimizerSelection === '__custom__' ? (
+                      <input
+                        value={createOptimizerKey}
+                        onChange={(e) => setCreateOptimizerKey(e.target.value)}
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm mt-2"
+                        placeholder="e.g. minlp_v1"
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <input
+                    value={createOptimizerKey}
+                    onChange={(e) => setCreateOptimizerKey(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="e.g. minlp_v1"
+                  />
+                )}
               </div>
             </>
           ) : null}
