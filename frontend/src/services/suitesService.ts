@@ -29,10 +29,10 @@ export const suitesService = {
     if (params?.offset != null) q.set('offset', String(params.offset));
 
     const suffix = q.toString() ? `?${q.toString()}` : '';
-    return apiClient.get<ListSuitesResponse>(`/suites${suffix}`);
+    return apiClient.get<ListSuitesResponse>(`/synthetic-calcutta-cohorts${suffix}`);
   },
 
   async get(id: string): Promise<SuiteListItem> {
-    return apiClient.get<SuiteListItem>(`/suites/${encodeURIComponent(id)}`);
+    return apiClient.get<SuiteListItem>(`/synthetic-calcutta-cohorts/${encodeURIComponent(id)}`);
   },
 };
