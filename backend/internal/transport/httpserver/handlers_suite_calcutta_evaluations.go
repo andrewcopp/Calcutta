@@ -80,7 +80,7 @@ type suiteCalcuttaEvaluationOurStrategyPerformance struct {
 type suiteCalcuttaEvaluationEntryPerformance struct {
 	Rank                 int      `json:"rank"`
 	EntryName            string   `json:"entry_name"`
-	EntryID              *string  `json:"entry_id,omitempty"`
+	SnapshotEntryID      *string  `json:"snapshot_entry_id,omitempty"`
 	MeanNormalizedPayout float64  `json:"mean_normalized_payout"`
 	PTop1                float64  `json:"p_top1"`
 	PInMoney             float64  `json:"p_in_money"`
@@ -89,6 +89,21 @@ type suiteCalcuttaEvaluationEntryPerformance struct {
 	InTheMoney           *bool    `json:"in_the_money,omitempty"`
 	PayoutCents          *int     `json:"payout_cents,omitempty"`
 	TotalPoints          *float64 `json:"total_points,omitempty"`
+}
+
+type suiteCalcuttaSnapshotEntryTeam struct {
+	TeamID    string `json:"team_id"`
+	School    string `json:"school_name"`
+	Seed      int    `json:"seed"`
+	Region    string `json:"region"`
+	BidPoints int    `json:"bid_points"`
+}
+
+type suiteCalcuttaSnapshotEntryResponse struct {
+	SnapshotEntryID string                           `json:"snapshot_entry_id"`
+	DisplayName     string                           `json:"display_name"`
+	IsSynthetic     bool                             `json:"is_synthetic"`
+	Teams           []suiteCalcuttaSnapshotEntryTeam `json:"teams"`
 }
 
 type suiteCalcuttaEvaluationResultResponse struct {
@@ -307,6 +322,113 @@ func (s *Server) registerSuiteCalcuttaEvaluationRoutes(r *mux.Router) {
 		"/api/suite-calcutta-evaluations/{id}/result",
 		s.requirePermission("analytics.suite_calcutta_evaluations.read", s.getSuiteCalcuttaEvaluationResultHandler),
 	).Methods("GET", "OPTIONS")
+	r.HandleFunc(
+		"/api/suite-calcutta-evaluations/{id}/entries/{snapshotEntryId}",
+		s.requirePermission("analytics.suite_calcutta_evaluations.read", s.getSuiteCalcuttaEvaluationSnapshotEntryHandler),
+	).Methods("GET", "OPTIONS")
+}
+
+func (s *Server) getSuiteCalcuttaEvaluationSnapshotEntryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	evalID := vars["id"]
+	snapshotEntryID := vars["snapshotEntryId"]
+	if evalID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if snapshotEntryID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "snapshotEntryId is required", "snapshotEntryId")
+		return
+	}
+
+	ctx := r.Context()
+
+	var calcuttaEvaluationRunID *string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT calcutta_evaluation_run_id::text
+		FROM derived.suite_calcutta_evaluations
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, evalID).Scan(&calcuttaEvaluationRunID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if calcuttaEvaluationRunID == nil || strings.TrimSpace(*calcuttaEvaluationRunID) == "" {
+		writeError(w, r, http.StatusConflict, "invalid_state", "Evaluation has no calcutta_evaluation_run_id", "calcutta_evaluation_run_id")
+		return
+	}
+
+	var snapshotID string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT calcutta_snapshot_id::text
+		FROM derived.calcutta_evaluation_runs
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, *calcuttaEvaluationRunID).Scan(&snapshotID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	var displayName string
+	var isSynthetic bool
+	if err := s.pool.QueryRow(ctx, `
+		SELECT display_name, is_synthetic
+		FROM core.calcutta_snapshot_entries
+		WHERE id = $1::uuid
+			AND calcutta_snapshot_id = $2::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, snapshotEntryID, snapshotID).Scan(&displayName, &isSynthetic); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Snapshot entry not found for this evaluation", "snapshotEntryId")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			t.id::text,
+			s.name,
+			COALESCE(t.seed, 0)::int,
+			COALESCE(t.region, ''::text),
+			cset.bid_points::int
+		FROM core.calcutta_snapshot_entry_teams cset
+		JOIN core.teams t ON t.id = cset.team_id AND t.deleted_at IS NULL
+		JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+		WHERE cset.calcutta_snapshot_entry_id = $1::uuid
+			AND cset.deleted_at IS NULL
+		ORDER BY cset.bid_points DESC
+	`, snapshotEntryID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	teams := make([]suiteCalcuttaSnapshotEntryTeam, 0)
+	for rows.Next() {
+		var t suiteCalcuttaSnapshotEntryTeam
+		if err := rows.Scan(&t.TeamID, &t.School, &t.Seed, &t.Region, &t.BidPoints); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		teams = append(teams, t)
+	}
+	if err := rows.Err(); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, suiteCalcuttaSnapshotEntryResponse{
+		SnapshotEntryID: snapshotEntryID,
+		DisplayName:     displayName,
+		IsSynthetic:     isSynthetic,
+		Teams:           teams,
+	})
 }
 
 func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *http.Request) {
@@ -995,7 +1117,14 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 
 	if eval.CalcuttaEvaluationRunID != nil && strings.TrimSpace(*eval.CalcuttaEvaluationRunID) != "" {
 		rows, err := s.pool.Query(ctx, `
-			WITH ranked AS (
+			WITH cer AS (
+				SELECT calcutta_snapshot_id
+				FROM derived.calcutta_evaluation_runs
+				WHERE id = $1::uuid
+					AND deleted_at IS NULL
+				LIMIT 1
+			),
+			ranked AS (
 				SELECT
 					ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
 					ep.entry_name,
@@ -1009,17 +1138,17 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 			SELECT
 				r.rank,
 				r.entry_name,
-				e.id::text as entry_id,
+				se.id::text as snapshot_entry_id,
 				r.mean_normalized_payout,
 				r.p_top1,
 				r.p_in_money
 			FROM ranked r
-			LEFT JOIN core.entries e
-				ON e.calcutta_id = $2::uuid
-				AND e.name = r.entry_name
-				AND e.deleted_at IS NULL
+			LEFT JOIN core.calcutta_snapshot_entries se
+				ON se.calcutta_snapshot_id = (SELECT calcutta_snapshot_id FROM cer)
+				AND se.display_name = r.entry_name
+				AND se.deleted_at IS NULL
 			ORDER BY r.rank ASC
-		`, *eval.CalcuttaEvaluationRunID, eval.CalcuttaID)
+		`, *eval.CalcuttaEvaluationRunID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -1028,7 +1157,7 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 
 		for rows.Next() {
 			var it suiteCalcuttaEvaluationEntryPerformance
-			if err := rows.Scan(&it.Rank, &it.EntryName, &it.EntryID, &it.MeanNormalizedPayout, &it.PTop1, &it.PInMoney); err != nil {
+			if err := rows.Scan(&it.Rank, &it.EntryName, &it.SnapshotEntryID, &it.MeanNormalizedPayout, &it.PTop1, &it.PInMoney); err != nil {
 				writeErrorFromErr(w, r, err)
 				return
 			}

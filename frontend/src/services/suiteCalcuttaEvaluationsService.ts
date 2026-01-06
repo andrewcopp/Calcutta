@@ -60,7 +60,7 @@ export type SuiteCalcuttaEvaluationOurStrategyPerformance = {
 export type SuiteCalcuttaEvaluationEntryPerformance = {
   rank: number;
   entry_name: string;
-  entry_id?: string | null;
+  snapshot_entry_id?: string | null;
   mean_normalized_payout: number;
   p_top1: number;
   p_in_money: number;
@@ -76,6 +76,21 @@ export type SuiteCalcuttaEvaluationResult = {
   portfolio: SuiteCalcuttaEvaluationPortfolioBid[];
   our_strategy?: SuiteCalcuttaEvaluationOurStrategyPerformance | null;
   entries: SuiteCalcuttaEvaluationEntryPerformance[];
+};
+
+export type SuiteCalcuttaEvaluationSnapshotEntryTeam = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  bid_points: number;
+};
+
+export type SuiteCalcuttaEvaluationSnapshotEntryResponse = {
+  snapshot_entry_id: string;
+  display_name: string;
+  is_synthetic: boolean;
+  teams: SuiteCalcuttaEvaluationSnapshotEntryTeam[];
 };
 
 export type CreateSuiteCalcuttaEvaluationRequest = {
@@ -121,6 +136,12 @@ export const suiteCalcuttaEvaluationsService = {
 
   async getResult(id: string): Promise<SuiteCalcuttaEvaluationResult> {
     return apiClient.get<SuiteCalcuttaEvaluationResult>(`/suite-calcutta-evaluations/${encodeURIComponent(id)}/result`);
+  },
+
+  async getSnapshotEntry(id: string, snapshotEntryId: string): Promise<SuiteCalcuttaEvaluationSnapshotEntryResponse> {
+    return apiClient.get<SuiteCalcuttaEvaluationSnapshotEntryResponse>(
+      `/suite-calcutta-evaluations/${encodeURIComponent(id)}/entries/${encodeURIComponent(snapshotEntryId)}`
+    );
   },
 
   async create(req: CreateSuiteCalcuttaEvaluationRequest): Promise<CreateSuiteCalcuttaEvaluationResponse> {

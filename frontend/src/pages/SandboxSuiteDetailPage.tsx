@@ -102,7 +102,7 @@ export function SandboxSuiteDetailPage() {
       <PageHeader
         title="Sandbox"
         subtitle={suiteTitle}
-        actions={
+        leftActions={
           <Link to="/sandbox/suites" className="text-blue-600 hover:text-blue-800">
             ← Back to Suites
           </Link>

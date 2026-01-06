@@ -103,7 +103,7 @@ export function LabEntriesPage() {
       <PageHeader
         title="Entries"
         subtitle="Generated entries by algorithm combo (advancement + investment + optimizer)."
-        actions={
+        leftActions={
           <Link to="/lab" className="text-blue-600 hover:text-blue-800">
             ← Back to Lab
           </Link>

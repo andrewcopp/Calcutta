@@ -11,7 +11,6 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { calcuttaService } from '../services/calcuttaService';
 import {
   suiteCalcuttaEvaluationsService,
-  type SuiteCalcuttaEvaluationPortfolioBid,
   type SuiteCalcuttaEvaluationResult,
 } from '../services/suiteCalcuttaEvaluationsService';
 import type { Calcutta } from '../types/calcutta';
@@ -56,11 +55,6 @@ export function SuiteCalcuttaEvaluationDetailPage() {
     return d.toLocaleString();
   };
 
-  const formatROI = (v: number) => {
-    if (Number.isNaN(v)) return '—';
-    return v.toFixed(3);
-  };
-
   const formatFloat = (v: number | null | undefined, digits: number) => {
     if (v == null || Number.isNaN(v)) return '—';
     return v.toFixed(digits);
@@ -74,38 +68,6 @@ export function SuiteCalcuttaEvaluationDetailPage() {
   const formatCurrency = (cents: number | null | undefined) => {
     if (cents == null || Number.isNaN(cents)) return '—';
     return `$${(cents / 100).toFixed(2)}`;
-  };
-
-  const renderPortfolioTable = (bids: SuiteCalcuttaEvaluationPortfolioBid[]) => {
-    if (bids.length === 0) {
-      return <Alert variant="info">No portfolio bids found.</Alert>;
-    }
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Bid</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Expected ROI</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {bids.map((b) => (
-              <tr key={b.team_id}>
-                <td className="px-3 py-2 text-sm text-gray-900">{b.school_name}</td>
-                <td className="px-3 py-2 text-sm text-gray-700">{b.seed}</td>
-                <td className="px-3 py-2 text-sm text-gray-700">{b.region}</td>
-                <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium">{b.bid_points}</td>
-                <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatROI(b.expected_roi)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
   };
 
   const detailQuery = useQuery({
@@ -166,7 +128,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
       <PageHeader
         title="Suite Evaluation"
         subtitle={id}
-        actions={
+        leftActions={
           <Link to={backUrl} className="text-blue-600 hover:text-blue-800">
             ← Back to Sandbox
           </Link>
@@ -341,7 +303,7 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                               {sortedEntries.map((e) => {
-                                const clickable = Boolean(e.entry_id) && Boolean(detailQuery.data?.calcutta_id);
+                                const clickable = Boolean(e.snapshot_entry_id);
                                 return (
                                   <tr
                                     key={`${e.entry_name}-${e.rank}`}
@@ -354,14 +316,18 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                                     tabIndex={clickable ? 0 : undefined}
                                     onClick={() => {
                                       if (!clickable) return;
-                                      navigate(`/calcuttas/${encodeURIComponent(detailQuery.data!.calcutta_id)}/entries/${encodeURIComponent(e.entry_id!)}`);
+                                      navigate(
+                                        `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
+                                          `${suiteId ? `?suiteId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+                                      );
                                     }}
                                     onKeyDown={(ev) => {
                                       if (!clickable) return;
                                       if (ev.key === 'Enter' || ev.key === ' ') {
                                         ev.preventDefault();
                                         navigate(
-                                          `/calcuttas/${encodeURIComponent(detailQuery.data!.calcutta_id)}/entries/${encodeURIComponent(e.entry_id!)}`
+                                          `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
+                                            `${suiteId ? `?suiteId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                         );
                                       }
                                     }}
@@ -381,11 +347,6 @@ export function SuiteCalcuttaEvaluationDetailPage() {
                           </table>
                         </div>
                       )}
-                    </div>
-
-                    <div>
-                      <div className="text-gray-500">Generated entry (portfolio)</div>
-                      <div className="mt-2">{renderPortfolioTable(resultQuery.data.portfolio)}</div>
                     </div>
                   </div>
                 ) : null}
