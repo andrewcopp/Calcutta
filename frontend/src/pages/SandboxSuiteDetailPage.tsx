@@ -13,6 +13,7 @@ import { calcuttaService } from '../services/calcuttaService';
 import { suiteCalcuttaEvaluationsService, type SuiteCalcuttaEvaluation } from '../services/suiteCalcuttaEvaluationsService';
 import { suiteExecutionsService } from '../services/suiteExecutionsService';
 import { suitesService } from '../services/suitesService';
+import { syntheticCalcuttasService, type SyntheticCalcuttaListItem } from '../services/syntheticCalcuttasService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxSuiteDetailPage() {
@@ -69,6 +70,14 @@ export function SandboxSuiteDetailPage() {
   });
 
   const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : suiteId ? `Suite ${suiteId}` : 'Suite';
+
+  const syntheticCalcuttasQuery = useQuery({
+    queryKey: ['synthetic-calcuttas', 'list', suiteId],
+    queryFn: () => syntheticCalcuttasService.list({ cohortId: suiteId!, limit: 200, offset: 0 }),
+    enabled: Boolean(suiteId),
+  });
+
+  const syntheticCalcuttas: SyntheticCalcuttaListItem[] = syntheticCalcuttasQuery.data?.items ?? [];
 
   const executionsQuery = useQuery({
     queryKey: ['suite-executions', 'list', suiteId],
@@ -156,6 +165,57 @@ export function SandboxSuiteDetailPage() {
                 <div className="text-gray-900">{formatDateTime(suiteQuery.data.updated_at)}</div>
               </div>
             </div>
+          </Card>
+
+          <Card>
+            <h2 className="text-xl font-semibold mb-4">Synthetic Calcuttas</h2>
+
+            {syntheticCalcuttasQuery.isLoading ? <LoadingState label="Loading synthetic calcuttas..." layout="inline" /> : null}
+            {syntheticCalcuttasQuery.isError ? (
+              <Alert variant="error" className="mt-3">
+                <div className="font-semibold mb-1">Failed to load synthetic calcuttas</div>
+                <div className="mb-3">{showError(syntheticCalcuttasQuery.error)}</div>
+                <Button size="sm" onClick={() => syntheticCalcuttasQuery.refetch()}>
+                  Retry
+                </Button>
+              </Alert>
+            ) : null}
+
+            {!syntheticCalcuttasQuery.isLoading && !syntheticCalcuttasQuery.isError && syntheticCalcuttas.length === 0 ? (
+              <Alert variant="info" className="mt-3">
+                No synthetic calcuttas found for this cohort.
+              </Alert>
+            ) : null}
+
+            {!syntheticCalcuttasQuery.isLoading && !syntheticCalcuttasQuery.isError && syntheticCalcuttas.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Highlighted Entry</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {syntheticCalcuttas.map((sc) => {
+                      const calcuttaName = calcuttaNameById.get(sc.calcutta_id) || sc.calcutta_id;
+                      const highlighted = sc.focus_entry_name || '—';
+                      return (
+                        <tr key={sc.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 text-sm text-gray-900" title={calcuttaName}>
+                            <div className="font-medium">{seasonFromCalcuttaName(calcuttaName)}</div>
+                            <div className="text-xs text-gray-600">{calcuttaName}</div>
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-700">{highlighted}</td>
+                          <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(sc.created_at)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </Card>
 
           <Card>

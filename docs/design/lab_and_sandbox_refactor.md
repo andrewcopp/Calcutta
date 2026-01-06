@@ -144,6 +144,7 @@ Resource-oriented URLs with stable IDs.
 - [x] Cut over frontend services to compatibility endpoints:
   - `suiteCalcuttaEvaluationsService` -> `/simulation-runs`
   - `suitesService` -> `/synthetic-calcutta-cohorts`
+  - `syntheticCalcuttasService` -> `/synthetic-calcuttas`
 
 - [ ] SyntheticCalcutta creation:
   - `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
