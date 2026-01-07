@@ -24,6 +24,7 @@ const (
 
 type suiteCalcuttaEvaluationRow struct {
 	ID               string
+	RunKey           string
 	SuiteExecutionID *string
 	SuiteID          string
 	CalcuttaID       string
@@ -101,12 +102,12 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		_ = tx.Rollback(ctx)
 	}()
 
-	row := &suiteCalcuttaEvaluationRow{}
+	var runID string
 	q := `
 		WITH candidate AS (
 			SELECT id
-			FROM derived.suite_calcutta_evaluations
-			WHERE deleted_at IS NULL
+			FROM derived.run_jobs
+			WHERE run_kind = 'simulation'
 				AND (
 					status = 'queued'
 					OR (
@@ -119,15 +120,41 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		)
+		UPDATE derived.run_jobs j
+		SET status = 'running',
+			attempt = j.attempt + 1,
+			claimed_at = $1,
+			claimed_by = $3,
+			started_at = COALESCE(j.started_at, $1),
+			finished_at = NULL,
+			error_message = NULL,
+			updated_at = NOW()
+		FROM candidate
+		WHERE j.id = candidate.id
+		RETURNING j.run_id::text
+	`
+	if err := tx.QueryRow(ctx, q,
+		pgtype.Timestamptz{Time: now, Valid: true},
+		pgtype.Timestamptz{Time: staleBefore, Valid: true},
+		workerID,
+	).Scan(&runID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	row := &suiteCalcuttaEvaluationRow{}
+	q2 := `
 		UPDATE derived.suite_calcutta_evaluations r
 		SET status = 'running',
 			claimed_at = $1,
 			claimed_by = $3,
 			error_message = NULL
-		FROM candidate
-		WHERE r.id = candidate.id
+		WHERE r.id = $2::uuid
 		RETURNING
 			r.id,
+			r.run_key,
 			r.suite_execution_id,
 			r.suite_id,
 			r.calcutta_id,
@@ -142,12 +169,13 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 	`
 
 	var excluded *string
-	if err := tx.QueryRow(ctx, q,
+	if err := tx.QueryRow(ctx, q2,
 		pgtype.Timestamptz{Time: now, Valid: true},
-		pgtype.Timestamptz{Time: staleBefore, Valid: true},
+		runID,
 		workerID,
 	).Scan(
 		&row.ID,
+		&row.RunKey,
 		&row.SuiteExecutionID,
 		&row.SuiteID,
 		&row.CalcuttaID,
@@ -160,9 +188,6 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		&row.StartingStateKey,
 		&excluded,
 	); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, false, nil
-		}
 		return nil, false, err
 	}
 	row.ExcludedEntry = excluded
@@ -180,7 +205,10 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		return false
 	}
 
-	runKey := uuid.NewString()
+	runKey := req.RunKey
+	if runKey == "" {
+		runKey = uuid.NewString()
+	}
 
 	strategyGenRunID := ""
 	if req.StrategyGenRunID != nil {
@@ -422,6 +450,16 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		log.Printf("Error updating suite calcutta evaluation %s to succeeded: %v", req.ID, err)
 		return false
 	}
+
+	_, _ = s.pool.Exec(ctx, `
+		UPDATE derived.run_jobs
+		SET status = 'succeeded',
+			finished_at = NOW(),
+			error_message = NULL,
+			updated_at = NOW()
+		WHERE run_kind = 'simulation'
+			AND run_id = $1::uuid
+	`, req.ID)
 
 	log.Printf("suite_eval_worker success worker_id=%s eval_id=%s run_key=%s strategy_generation_run_id=%s calcutta_evaluation_run_id=%s",
 		workerID,
@@ -735,6 +773,16 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 		log.Printf("Error marking suite calcutta evaluation %s failed: %v (original error: %v)", evaluationID, e, err)
 		return
 	}
+
+	_, _ = s.pool.Exec(ctx, `
+		UPDATE derived.run_jobs
+		SET status = 'failed',
+			finished_at = NOW(),
+			error_message = $2,
+			updated_at = NOW()
+		WHERE run_kind = 'simulation'
+			AND run_id = $1::uuid
+	`, evaluationID, msg)
 
 	if suiteExecutionID != nil && *suiteExecutionID != "" {
 		s.updateSuiteExecutionStatus(ctx, *suiteExecutionID)

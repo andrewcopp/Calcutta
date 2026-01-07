@@ -82,8 +82,8 @@ We treat the set of available models as part of the codebase.
 
 ## Runs and artifacts
 ### Run lifecycle
-- [ ] Standardize run status fields (`queued`, `running`, `completed`, `failed`, `canceled`).
-- [ ] Standardize timestamps (`created_at`, `started_at`, `finished_at`).
+- [x] Standardize run status fields (`queued`, `running`, `succeeded`, `failed`) via a shared `derived.run_jobs` envelope queue (per-kind workers claim by `run_kind`).
+- [x] Standardize timestamps (`created_at`, `started_at`, `finished_at`) on `derived.run_jobs`.
 - [ ] Standardize run parameters serialization (`params_json`) and include `seed` where applicable.
 
 ### Artifacts
@@ -145,6 +145,10 @@ Resource-oriented URLs with stable IDs.
 - [ ] Ensure navigation uses nested routes only for convenience, not identity.
 
 - [x] Frontend: canonical Sandbox routes use `/sandbox/cohorts` (keep `/sandbox/suites` as an alias during migration).
+
+- [x] Frontend: rename Sandbox pages/services to cohort/simulation naming (keep old filenames/exports as shims during migration).
+
+- [x] Backend: accept `cohortId`/`cohort_id` and `simulationRunBatchId`/`simulation_run_batch_id` aliases for legacy `suite*` params.
 
 - [x] Add compatibility endpoints that proxy/redirect to new resources during migration.
 
