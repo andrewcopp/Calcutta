@@ -27,37 +27,37 @@ export function RunReturnsPage() {
 
   const calcuttaId = ourEntryQuery.data?.run.calcutta_id ?? null;
 
-  const strategyRunsQuery = useQuery({
-    queryKey: ['analytics', 'strategyGenerationRuns', calcuttaId],
-    queryFn: () => mlAnalyticsService.listStrategyGenerationRuns(calcuttaId as string),
+  const entryRunsQuery = useQuery({
+    queryKey: ['analytics', 'entryRuns', calcuttaId],
+    queryFn: () => mlAnalyticsService.listEntryRuns(calcuttaId as string),
     enabled: Boolean(calcuttaId),
   });
 
-  const defaultStrategyGenerationRunId = useMemo(() => {
-    const runs = strategyRunsQuery.data?.runs ?? [];
+  const defaultEntryRunId = useMemo(() => {
+    const runs = entryRunsQuery.data?.runs ?? [];
     const match = runs.find((r) => r.run_key === decodedRunId);
     return match?.id ?? null;
-  }, [strategyRunsQuery.data, decodedRunId]);
+  }, [entryRunsQuery.data, decodedRunId]);
 
-  const [selectedStrategyGenerationRunId, setSelectedStrategyGenerationRunId] = useState<string | null>(null);
+  const [selectedEntryRunId, setSelectedEntryRunId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (selectedStrategyGenerationRunId !== null) return;
-    if (!strategyRunsQuery.data) return;
-    if (defaultStrategyGenerationRunId) {
-      setSelectedStrategyGenerationRunId(defaultStrategyGenerationRunId);
+    if (selectedEntryRunId !== null) return;
+    if (!entryRunsQuery.data) return;
+    if (defaultEntryRunId) {
+      setSelectedEntryRunId(defaultEntryRunId);
     }
-  }, [defaultStrategyGenerationRunId, selectedStrategyGenerationRunId, strategyRunsQuery.data]);
+  }, [defaultEntryRunId, selectedEntryRunId, entryRunsQuery.data]);
 
   const [sortKey, setSortKey] = useState<'expected_value' | 'prob_champ' | 'seed' | 'school_name'>('expected_value');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
   const returnsQuery = useQuery({
-    queryKey: ['analytics', 'predictedReturns', calcuttaId, selectedStrategyGenerationRunId],
+    queryKey: ['analytics', 'predictedReturns', calcuttaId, selectedEntryRunId],
     queryFn: () =>
       mlAnalyticsService.getCalcuttaPredictedReturns({
         calcuttaId: calcuttaId as string,
-        strategyGenerationRunId: selectedStrategyGenerationRunId ?? undefined,
+        entryRunId: selectedEntryRunId ?? undefined,
       }),
     enabled: Boolean(calcuttaId),
   });
@@ -124,19 +124,19 @@ export function RunReturnsPage() {
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
               <div className="text-sm text-gray-700">
                 <div>Calcutta: {calcuttaId}</div>
-                <div>Strategy run id: {returnsQuery.data.strategy_generation_run_id || 'latest'}</div>
+                <div>Entry run id: {returnsQuery.data.entry_run_id || returnsQuery.data.strategy_generation_run_id || 'latest'}</div>
               </div>
 
               <div className="flex flex-col md:flex-row gap-2">
                 <label className="text-sm text-gray-700">
-                  Strategy run
+                  Entry run
                   <Select
                     className="ml-2"
-                    value={selectedStrategyGenerationRunId ?? ''}
-                    onChange={(e) => setSelectedStrategyGenerationRunId(e.target.value || null)}
+                    value={selectedEntryRunId ?? ''}
+                    onChange={(e) => setSelectedEntryRunId(e.target.value || null)}
                   >
                     <option value="">Latest</option>
-                    {(strategyRunsQuery.data?.runs ?? []).map((r) => (
+                    {(entryRunsQuery.data?.runs ?? []).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.run_key}
                       </option>

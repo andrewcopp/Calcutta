@@ -40,7 +40,8 @@ type createSyntheticEntryResponse struct {
 }
 
 type importSyntheticEntryRequest struct {
-	StrategyGenerationRunID string  `json:"strategyGenerationRunId"`
+	EntryRunID              string  `json:"entryRunId"`
+	StrategyGenerationRunID *string `json:"strategyGenerationRunId"`
 	DisplayName             *string `json:"displayName"`
 }
 
@@ -311,13 +312,22 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	req.StrategyGenerationRunID = strings.TrimSpace(req.StrategyGenerationRunID)
-	if req.StrategyGenerationRunID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "strategyGenerationRunId is required", "strategyGenerationRunId")
+	req.EntryRunID = strings.TrimSpace(req.EntryRunID)
+	if req.EntryRunID == "" {
+		// Temporary fallback for older callers.
+		if req.StrategyGenerationRunID != nil {
+			v := strings.TrimSpace(*req.StrategyGenerationRunID)
+			if v != "" {
+				req.EntryRunID = v
+			}
+		}
+	}
+	if req.EntryRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "entryRunId is required", "entryRunId")
 		return
 	}
-	if _, err := uuid.Parse(req.StrategyGenerationRunID); err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "strategyGenerationRunId must be a valid UUID", "strategyGenerationRunId")
+	if _, err := uuid.Parse(req.EntryRunID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "entryRunId must be a valid UUID", "entryRunId")
 		return
 	}
 
@@ -355,7 +365,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
 			LIMIT 1
-		`, req.StrategyGenerationRunID).Scan(&resolved)
+		`, req.EntryRunID).Scan(&resolved)
 		resolved = strings.TrimSpace(resolved)
 		if resolved == "" {
 			displayName = "Imported Strategy"
@@ -370,7 +380,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		WHERE strategy_generation_run_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY bid_points DESC
-	`, req.StrategyGenerationRunID)
+	`, req.EntryRunID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -391,7 +401,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if len(teams) == 0 {
-		writeError(w, r, http.StatusConflict, "invalid_state", "No recommended_entry_bids found for that strategyGenerationRunId", "strategyGenerationRunId")
+		writeError(w, r, http.StatusConflict, "invalid_state", "No recommended_entry_bids found for that entryRunId", "entryRunId")
 		return
 	}
 

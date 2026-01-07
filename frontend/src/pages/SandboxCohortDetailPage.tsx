@@ -15,6 +15,7 @@ import { simulationRunBatchesService } from '../services/simulationRunBatchesSer
 import { cohortsService } from '../services/cohortsService';
 import { syntheticCalcuttasService, type SyntheticCalcuttaListItem } from '../services/syntheticCalcuttasService';
 import { syntheticEntriesService, type SyntheticEntryListItem } from '../services/syntheticEntriesService';
+import { entryRunsService, type EntryRunListItem } from '../services/entryRunsService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxCohortDetailPage() {
@@ -27,6 +28,8 @@ export function SandboxCohortDetailPage() {
 
   const [newSyntheticEntryName, setNewSyntheticEntryName] = useState<string>('');
   const [sourceCalcuttaId, setSourceCalcuttaId] = useState<string>('');
+  const [selectedEntryRunId, setSelectedEntryRunId] = useState<string>('');
+  const [importSyntheticEntryName, setImportSyntheticEntryName] = useState<string>('');
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -116,6 +119,19 @@ export function SandboxCohortDetailPage() {
     return syntheticCalcuttas.length > 0 ? syntheticCalcuttas[0].id : '';
   }, [selectedSyntheticCalcuttaId, syntheticCalcuttas]);
 
+  const effectiveSyntheticCalcutta = useMemo(() => {
+    if (!effectiveSyntheticCalcuttaId) return null;
+    return syntheticCalcuttas.find((sc) => sc.id === effectiveSyntheticCalcuttaId) ?? null;
+  }, [effectiveSyntheticCalcuttaId, syntheticCalcuttas]);
+
+  const entryRunsQuery = useQuery({
+    queryKey: ['entry-runs', 'list', effectiveSyntheticCalcutta?.calcutta_id ?? ''],
+    queryFn: () => entryRunsService.list({ calcuttaId: effectiveSyntheticCalcutta?.calcutta_id ?? '', limit: 200, offset: 0 }),
+    enabled: Boolean(effectiveSyntheticCalcutta?.calcutta_id),
+  });
+
+  const entryRuns: EntryRunListItem[] = entryRunsQuery.data?.items ?? [];
+
   const syntheticEntriesQuery = useQuery({
     queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId],
     queryFn: () => syntheticEntriesService.list(effectiveSyntheticCalcuttaId),
@@ -147,6 +163,22 @@ export function SandboxCohortDetailPage() {
   const deleteSyntheticEntryMutation = useMutation({
     mutationFn: async (id: string) => syntheticEntriesService.delete(id),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId] });
+    },
+  });
+
+  const importSyntheticEntryMutation = useMutation({
+    mutationFn: async () => {
+      const entryRunId = selectedEntryRunId.trim();
+      if (!entryRunId) throw new Error('Missing entry run');
+      const displayName = importSyntheticEntryName.trim();
+      return syntheticEntriesService.importFromEntryRun(effectiveSyntheticCalcuttaId, {
+        entryRunId,
+        displayName: displayName.length > 0 ? displayName : undefined,
+      });
+    },
+    onSuccess: async () => {
+      setImportSyntheticEntryName('');
       await queryClient.invalidateQueries({ queryKey: ['synthetic-entries', 'list', effectiveSyntheticCalcuttaId] });
     },
   });
@@ -377,6 +409,54 @@ export function SandboxCohortDetailPage() {
                   >
                     Create
                   </Button>
+                </div>
+
+                <div className="mt-3">
+                  <div className="text-sm text-gray-500 mb-1">Import from Entry Run</div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={selectedEntryRunId}
+                      onChange={(e) => setSelectedEntryRunId(e.target.value)}
+                      disabled={entryRunsQuery.isLoading || entryRuns.length === 0}
+                    >
+                      <option value="">Select an entry run…</option>
+                      {entryRuns.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {(r.name || 'Entry Run') + ' · ' + r.id.slice(0, 8)}
+                        </option>
+                      ))}
+                    </Select>
+                    <input
+                      value={importSyntheticEntryName}
+                      onChange={(e) => setImportSyntheticEntryName(e.target.value)}
+                      className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+                      placeholder="Optional display name"
+                      disabled={!effectiveSyntheticCalcuttaId}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={
+                        importSyntheticEntryMutation.isPending ||
+                        !effectiveSyntheticCalcuttaId ||
+                        selectedEntryRunId.trim().length === 0
+                      }
+                      onClick={() => importSyntheticEntryMutation.mutate()}
+                    >
+                      Import
+                    </Button>
+                  </div>
+
+                  {entryRunsQuery.isError ? (
+                    <Alert variant="error" className="mt-2">
+                      Failed to load entry runs: {showError(entryRunsQuery.error)}
+                    </Alert>
+                  ) : null}
+
+                  {importSyntheticEntryMutation.isError ? (
+                    <Alert variant="error" className="mt-2">
+                      {showError(importSyntheticEntryMutation.error)}
+                    </Alert>
+                  ) : null}
                 </div>
 
                 {createSyntheticEntryMutation.isError ? (

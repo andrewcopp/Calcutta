@@ -45,11 +45,14 @@ This doc is a task checklist. Keep it updated as we execute the refactor.
 - **SimulationEvaluation**: derived metrics/summary for a SyntheticEntry within a SyntheticCalcutta.
 
 ## Mapping from current terms (to be filled as we refactor)
-- `SuiteCalcuttaEvaluation` -> `SyntheticCalcuttaCohort` (recommended)
-- `SuiteCalcuttaEvaluationEntry` -> `SimulationEvaluation` (per SyntheticEntry)
-- `StrategyGenerationRun` -> `EntryRun` (if it produces candidates) OR `EntryOptimizationRun` (if it produces optimized entries)
+- `suite` / `SyntheticCalcuttaCohort` -> `Cohort`
+- `suite_execution` -> `SimulationRunBatch`
+- `suite_scenario` -> `SyntheticCalcutta`
+- `suite_calcutta_evaluation` -> `SimulationRun`
+- `suite_calcutta_evaluation_entry` -> `SimulationEvaluation` (per SyntheticEntry)
+- `strategy_generation_run` -> `EntryRun` (canonical API name; legacy storage/worker uses StrategyGenerationRun)
 
-- [ ] Audit existing names in:
+- [x] Audit existing names in:
   - `backend/internal/transport/httpserver/handlers_suite_calcutta_evaluations.go`
   - `frontend/src/services/suiteCalcuttaEvaluationsService.ts`
   - `backend/internal/transport/httpserver/handlers_strategy_generation_runs.go`
@@ -112,6 +115,11 @@ We can keep separate artifact tables/types, but they should share a common contr
   - [x] StrategyGenerationRuns: always emit a `metrics` artifact.
   - [x] CalcuttaEvaluationRuns: always emit a `metrics` artifact.
 
+- [x] Implement canonical EntryRuns + EntryArtifacts API (initial):
+  - [x] `POST /entry-runs`, `GET /entry-runs`, `GET /entry-runs/{id}` (backed by legacy `derived.strategy_generation_runs`)
+  - [x] `GET /entry-runs/{id}/artifacts`, `GET /entry-runs/{id}/artifacts/{artifactKind}` (backed by `derived.run_artifacts`, `run_kind='strategy_generation'`)
+  - [ ] Add canonical `GET /entry-artifacts/{artifact_id}` (optional convenience alias)
+
 - [ ] When EntryRuns/EntryArtifacts are implemented, ensure EntryArtifacts explicitly reference exactly one:
   - AdvancementArtifact
   - MarketShareArtifact
@@ -145,8 +153,10 @@ Decisions:
 
 ### Candidate inputs
 - [x] Support two candidate sources:
-  - from EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta (currently implemented via `strategy_generation_run_id` import shim)
+  - from EntryRuns/EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta (currently implemented via `entryRunId`, with legacy fallback)
   - hand-authored SyntheticEntries (Sandbox)
+
+- [ ] Update SyntheticEntry import to use `entryArtifactId` (instead of `entryRunId`) and remove remaining compatibility shims.
 
 ## API + URL cleanup
 Resource-oriented URLs with stable IDs.
@@ -158,17 +168,23 @@ Resource-oriented URLs with stable IDs.
   - `/cohorts`, `/synthetic-calcuttas`, `/synthetic-entries`
   - `/cohorts/{cohort_id}/simulation-batches`, `/cohorts/{cohort_id}/simulations`
 
+- [x] Analytics: accept canonical `entry_run_id` (aliasing `strategy_generation_run_id`) for:
+  - [x] predicted returns
+  - [x] predicted investment
+  - [x] simulated entry
+  - [x] list entry runs: `GET /analytics/calcuttas/{id}/entry-runs` (alias of legacy strategy-generation-runs endpoint)
+
 - [ ] Ensure navigation uses nested routes only for convenience, not identity.
 
 - [x] Frontend: canonical Sandbox routes use `/sandbox/cohorts`.
 
 - [x] Frontend: rename Sandbox pages/services to cohort/simulation naming (keep old filenames/exports as shims during migration).
 
-- [x] Backend: accept `cohortId`/`cohort_id` and `simulationRunBatchId`/`simulation_run_batch_id` aliases for legacy `suite*` params.
+- [x] Backend: canonical params/fields only (legacy `suite*` params removed).
 
 - [x] Retire compatibility endpoints and legacy suite endpoints (cohort-scoped nested endpoints are canonical).
 
-- [x] Smoke test: `/synthetic-calcutta-cohorts`, `/synthetic-calcuttas`, `/synthetic-entries` (create calcutta snapshot, list entries)
+- [x] Smoke test: `/cohorts`, `/synthetic-calcuttas`, `/synthetic-entries` (create calcutta snapshot, list entries)
 
 - [x] Smoke test: `/cohorts`, `/cohorts/{cohort_id}/simulation-batches`, `/cohorts/{cohort_id}/simulations`
 
@@ -201,9 +217,9 @@ Lab runs/artifacts:
 - `GET /entry-artifacts/{artifact_id}`
 
 Sandbox authoring:
-- `POST /synthetic-calcutta-cohorts`
-- `GET /synthetic-calcutta-cohorts`
-- `GET /synthetic-calcutta-cohorts/{cohort_id}`
+- `POST /cohorts`
+- `GET /cohorts`
+- `GET /cohorts/{cohort_id}`
 
 - `POST /synthetic-calcuttas` (body supports `cohort_id` and optional `source_calcutta_id`)
 - `GET /synthetic-calcuttas/{synthetic_calcutta_id}`

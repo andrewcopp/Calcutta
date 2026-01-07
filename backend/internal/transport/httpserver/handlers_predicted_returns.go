@@ -34,9 +34,12 @@ func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var strategyGenerationRunID *string
-	if v := r.URL.Query().Get("strategy_generation_run_id"); v != "" {
-		strategyGenerationRunID = &v
+	var entryRunID *string
+	if v := r.URL.Query().Get("entry_run_id"); v != "" {
+		entryRunID = &v
+	} else if v := r.URL.Query().Get("strategy_generation_run_id"); v != "" {
+		// Backward compat.
+		entryRunID = &v
 	}
 
 	var gameOutcomeRunID *string
@@ -44,7 +47,7 @@ func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *htt
 		gameOutcomeRunID = &v
 	}
 
-	selectedID, gameOutcomeSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID, gameOutcomeRunID)
+	selectedID, gameOutcomeSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedReturns(ctx, calcuttaID, entryRunID, gameOutcomeRunID)
 	if err != nil {
 		log.Printf("Error querying predicted returns: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted returns", "")
@@ -76,6 +79,7 @@ func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *htt
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"calcutta_id":                calcuttaID,
+		"entry_run_id":               selectedID,
 		"strategy_generation_run_id": selectedID,
 		"game_outcome_run_id":        gameOutcomeSelectedID,
 		"teams":                      results,

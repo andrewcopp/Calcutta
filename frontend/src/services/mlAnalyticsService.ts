@@ -98,6 +98,10 @@ export type StrategyGenerationRunsResponse = {
   count: number;
 };
 
+export type EntryRun = StrategyGenerationRun;
+
+export type EntryRunsResponse = StrategyGenerationRunsResponse;
+
 export type TeamPredictedReturns = {
   team_id: string;
   school_name: string;
@@ -115,6 +119,7 @@ export type TeamPredictedReturns = {
 
 export type CalcuttaPredictedReturnsResponse = {
   calcutta_id: string;
+  entry_run_id: string | null;
   strategy_generation_run_id: string | null;
   teams: TeamPredictedReturns[];
   count: number;
@@ -132,6 +137,7 @@ export type TeamPredictedInvestment = {
 
 export type CalcuttaPredictedInvestmentResponse = {
   calcutta_id: string;
+  entry_run_id: string | null;
   strategy_generation_run_id: string | null;
   teams: TeamPredictedInvestment[];
   count: number;
@@ -167,12 +173,19 @@ export const mlAnalyticsService = {
     return apiClient.get<StrategyGenerationRunsResponse>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/strategy-generation-runs`);
   },
 
+  async listEntryRuns(calcuttaId: string): Promise<EntryRunsResponse> {
+    return apiClient.get<EntryRunsResponse>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/entry-runs`);
+  },
+
   async getCalcuttaPredictedReturns(params: {
     calcuttaId: string;
+    entryRunId?: string;
     strategyGenerationRunId?: string;
   }): Promise<CalcuttaPredictedReturnsResponse> {
     const query = new URLSearchParams();
-    if (params.strategyGenerationRunId) {
+    if (params.entryRunId) {
+      query.set('entry_run_id', params.entryRunId);
+    } else if (params.strategyGenerationRunId) {
       query.set('strategy_generation_run_id', params.strategyGenerationRunId);
     }
     const suffix = query.toString() ? `?${query.toString()}` : '';
@@ -183,10 +196,13 @@ export const mlAnalyticsService = {
 
   async getCalcuttaPredictedInvestment(params: {
     calcuttaId: string;
+    entryRunId?: string;
     strategyGenerationRunId?: string;
   }): Promise<CalcuttaPredictedInvestmentResponse> {
     const query = new URLSearchParams();
-    if (params.strategyGenerationRunId) {
+    if (params.entryRunId) {
+      query.set('entry_run_id', params.entryRunId);
+    } else if (params.strategyGenerationRunId) {
       query.set('strategy_generation_run_id', params.strategyGenerationRunId);
     }
     const suffix = query.toString() ? `?${query.toString()}` : '';

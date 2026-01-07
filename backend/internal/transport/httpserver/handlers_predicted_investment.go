@@ -29,9 +29,12 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 		return
 	}
 
-	var strategyGenerationRunID *string
-	if v := r.URL.Query().Get("strategy_generation_run_id"); v != "" {
-		strategyGenerationRunID = &v
+	var entryRunID *string
+	if v := r.URL.Query().Get("entry_run_id"); v != "" {
+		entryRunID = &v
+	} else if v := r.URL.Query().Get("strategy_generation_run_id"); v != "" {
+		// Backward compat.
+		entryRunID = &v
 	}
 
 	var marketShareRunID *string
@@ -39,7 +42,7 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 		marketShareRunID = &v
 	}
 
-	selectedID, marketShareSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID, marketShareRunID)
+	selectedID, marketShareSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedInvestment(ctx, calcuttaID, entryRunID, marketShareRunID)
 	if err != nil {
 		log.Printf("Error querying predicted investment: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted investment", "")
@@ -66,6 +69,7 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"calcutta_id":                calcuttaID,
+		"entry_run_id":               selectedID,
 		"strategy_generation_run_id": selectedID,
 		"market_share_run_id":        marketShareSelectedID,
 		"teams":                      results,

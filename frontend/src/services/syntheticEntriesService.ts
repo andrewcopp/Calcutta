@@ -28,6 +28,16 @@ export type CreateSyntheticEntryResponse = {
   id: string;
 };
 
+export type ImportSyntheticEntryRequest = {
+  entryRunId: string;
+  displayName?: string;
+};
+
+export type ImportSyntheticEntryResponse = {
+  id: string;
+  nTeams: number;
+};
+
 export type PatchSyntheticEntryRequest = {
   displayName?: string;
   teams?: { team_id: string; bid_points: number }[];
@@ -43,6 +53,16 @@ export const syntheticEntriesService = {
   async create(syntheticCalcuttaId: string, req: CreateSyntheticEntryRequest): Promise<CreateSyntheticEntryResponse> {
     return apiClient.post<CreateSyntheticEntryResponse>(
       `/synthetic-calcuttas/${encodeURIComponent(syntheticCalcuttaId)}/synthetic-entries`,
+      req
+    );
+  },
+
+  async importFromEntryRun(
+    syntheticCalcuttaId: string,
+    req: ImportSyntheticEntryRequest
+  ): Promise<ImportSyntheticEntryResponse> {
+    return apiClient.post<ImportSyntheticEntryResponse>(
+      `/synthetic-calcuttas/${encodeURIComponent(syntheticCalcuttaId)}/synthetic-entries/import`,
       req
     );
   },
