@@ -144,7 +144,7 @@ Decisions:
   - `DELETE /synthetic-entries/{synthetic_entry_id}`
 
 ### Candidate inputs
-- [ ] Support two candidate sources:
+- [ ] Support two candidate sources (next):
   - from EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta
   - hand-authored SyntheticEntries (Sandbox)
 
@@ -248,7 +248,7 @@ Batch orchestration (optional grouping record):
 ## Backend code refactor (reduce “big file” handlers)
 Target: smaller single-responsibility packages/files.
 
-- [ ] Split `handlers_suite_calcutta_evaluations.go` into (next):
+- [x] Split `handlers_suite_calcutta_evaluations.go` into:
   - routes/wiring
   - request/response DTOs
   - query/service layer
