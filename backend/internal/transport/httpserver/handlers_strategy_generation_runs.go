@@ -3,9 +3,9 @@ package httpserver
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 
-	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
@@ -113,24 +113,53 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
-	runKey := uuid.NewString()
+	runKeyUUID := uuid.NewString()
+	runKeyText := runKeyUUID
 
-	svc := reb.New(s.pool)
-	res, err := svc.GenerateAndWrite(ctx, reb.GenerateParams{
-		CalcuttaID:       req.CalcuttaID,
-		RunKey:           runKey,
-		Name:             name,
-		OptimizerKey:     optimizerKey,
-		MarketShareRunID: marketShareRunID,
-	})
-	if err != nil {
+	if optimizerKey == "" {
+		optimizerKey = "minlp_v1"
+	}
+
+	params := map[string]any{}
+	if marketShareRunID != nil {
+		params["market_share_run_id"] = *marketShareRunID
+	}
+	params["source"] = "api_strategy_generation"
+	paramsJSON, _ := json.Marshal(params)
+
+	gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
+	var gitSHAParam any
+	if gitSHA != "" {
+		gitSHAParam = gitSHA
+	} else {
+		gitSHAParam = nil
+	}
+
+	var runID string
+	if err := s.pool.QueryRow(ctx, `
+		INSERT INTO derived.strategy_generation_runs (
+			run_key,
+			run_key_uuid,
+			name,
+			simulated_tournament_id,
+			calcutta_id,
+			purpose,
+			returns_model_key,
+			investment_model_key,
+			optimizer_key,
+			params_json,
+			git_sha
+		)
+		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::jsonb, $7)
+		RETURNING id::text
+	`, runKeyText, runKeyUUID, name, req.CalcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
 	resp := createStrategyGenerationRunResponse{
-		StrategyGenerationRunID: res.StrategyGenerationRunID,
-		RunKey:                  res.RunKey,
+		StrategyGenerationRunID: runID,
+		RunKey:                  runKeyText,
 	}
 
 	if suiteScenarioID != "" {
@@ -169,7 +198,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 			return
 		}
 
-		snapshotID, err := createSuiteScenarioSnapshot(ctx, tx, scenarioCalcuttaID, excludedEntryName, res.StrategyGenerationRunID, nil)
+		snapshotID, err := createSuiteScenarioSnapshot(ctx, tx, scenarioCalcuttaID, excludedEntryName, runID, nil)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -183,7 +212,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 				updated_at = NOW()
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
-		`, suiteScenarioID, res.StrategyGenerationRunID, snapshotID)
+		`, suiteScenarioID, runID, snapshotID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return

@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 
-	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -58,28 +60,68 @@ func run() error {
 	}
 	defer pool.Close()
 
-	svc := reb.New(pool)
-	res, err := svc.GenerateAndWrite(context.Background(), reb.GenerateParams{
-		CalcuttaID:   calcuttaID,
-		RunKey:       runKey,
-		Name:         name,
-		OptimizerKey: optimizerKey,
-		BudgetPoints: budgetPoints,
-		MinTeams:     minTeams,
-		MaxTeams:     maxTeams,
-		MinBidPoints: minBid,
-		MaxBidPoints: maxBid,
-	})
-	if err != nil {
-		return fmt.Errorf("GenerateAndWrite failed: %w", err)
+	runKeyText := strings.TrimSpace(runKey)
+	runKeyUUID := ""
+	if runKeyText != "" {
+		if _, err := uuid.Parse(runKeyText); err == nil {
+			runKeyUUID = runKeyText
+		} else {
+			runKeyUUID = uuid.NewString()
+		}
+	} else {
+		runKeyUUID = uuid.NewString()
+		runKeyText = runKeyUUID
 	}
 
-	log.Printf("Generated strategy_generation_run_id=%s run_key=%s n_teams=%d total_bid=%d simulated_tournament_id=%s",
-		res.StrategyGenerationRunID,
-		res.RunKey,
-		res.NTeams,
-		res.TotalBidPoints,
-		res.SimulatedTournamentID,
-	)
+	if name == "" {
+		name = optimizerKey
+	}
+	if optimizerKey == "" {
+		optimizerKey = "minlp_v1"
+	}
+
+	params := map[string]any{
+		"budget_points":  budgetPoints,
+		"min_teams":      minTeams,
+		"max_teams":      maxTeams,
+		"min_bid_points": minBid,
+		"max_bid_points": maxBid,
+		"source":         "generate-recommended-entry-bids",
+	}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
+	var gitSHAParam any
+	if gitSHA != "" {
+		gitSHAParam = gitSHA
+	} else {
+		gitSHAParam = nil
+	}
+
+	var runID string
+	if err := pool.QueryRow(context.Background(), `
+		INSERT INTO derived.strategy_generation_runs (
+			run_key,
+			run_key_uuid,
+			name,
+			simulated_tournament_id,
+			calcutta_id,
+			purpose,
+			returns_model_key,
+			investment_model_key,
+			optimizer_key,
+			params_json,
+			git_sha
+		)
+		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::jsonb, $7)
+		RETURNING id::text
+	`, runKeyText, runKeyUUID, name, calcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+		return err
+	}
+
+	log.Printf("Enqueued strategy_generation_run_id=%s run_key=%s", runID, runKeyText)
 	return nil
 }

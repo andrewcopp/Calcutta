@@ -89,6 +89,7 @@ We treat the set of available models as part of the codebase.
 - [x] EntryEvaluationRequests: persist `params_json` on `derived.run_jobs` enqueue/backfill.
 - [x] MarketShareRuns: persist `params_json` on `derived.run_jobs` enqueue/backfill.
 - [x] GameOutcomeRuns: persist `params_json` on `derived.run_jobs` enqueue/backfill.
+- [x] StrategyGenerationRuns: persist `params_json` on `derived.run_jobs` enqueue/backfill.
 
 ### Artifacts
 We can keep separate artifact tables/types, but they should share a common contract:
@@ -103,6 +104,7 @@ We can keep separate artifact tables/types, but they should share a common contr
   - [x] EntryEvaluationRequests: always emit a `metrics` artifact.
   - [x] MarketShareRuns: always emit a `metrics` artifact.
   - [x] GameOutcomeRuns: always emit a `metrics` artifact.
+  - [x] StrategyGenerationRuns: always emit a `metrics` artifact.
 
 - [ ] Ensure EntryArtifacts explicitly reference exactly one:
   - AdvancementArtifact

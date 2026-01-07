@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -78,6 +79,104 @@ type ExpectedTeam struct {
 type marketShare struct {
 	TeamID         string
 	PredictedShare float64
+}
+
+type persistedStrategyGenerationParams struct {
+	MarketShareRunID string `json:"market_share_run_id"`
+	BudgetPoints     int    `json:"budget_points"`
+	MinTeams         int    `json:"min_teams"`
+	MaxTeams         int    `json:"max_teams"`
+	MinBidPoints     int    `json:"min_bid_points"`
+	MaxBidPoints     int    `json:"max_bid_points"`
+}
+
+func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Context, strategyGenerationRunID string) (*GenerateResult, error) {
+	if strings.TrimSpace(strategyGenerationRunID) == "" {
+		return nil, errors.New("strategyGenerationRunID is required")
+	}
+
+	var (
+		runKeyText     *string
+		runKeyUUIDText *string
+		name           *string
+		optimizerKey   *string
+		calcuttaID     string
+		simulatedID    *string
+		paramsJSON     []byte
+	)
+	if err := s.pool.QueryRow(ctx, `
+		SELECT
+			run_key,
+			COALESCE(run_key_uuid::text, ''::text) AS run_key_uuid,
+			name,
+			optimizer_key,
+			calcutta_id::text,
+			simulated_tournament_id::text,
+			params_json
+		FROM derived.strategy_generation_runs
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, strategyGenerationRunID).Scan(
+		&runKeyText,
+		&runKeyUUIDText,
+		&name,
+		&optimizerKey,
+		&calcuttaID,
+		&simulatedID,
+		&paramsJSON,
+	); err != nil {
+		return nil, err
+	}
+
+	pk := persistedStrategyGenerationParams{}
+	if len(paramsJSON) > 0 {
+		_ = json.Unmarshal(paramsJSON, &pk)
+	}
+
+	effRunKey := ""
+	if runKeyText != nil && strings.TrimSpace(*runKeyText) != "" {
+		effRunKey = strings.TrimSpace(*runKeyText)
+	} else if runKeyUUIDText != nil && strings.TrimSpace(*runKeyUUIDText) != "" {
+		effRunKey = strings.TrimSpace(*runKeyUUIDText)
+	} else {
+		effRunKey = uuid.NewString()
+	}
+
+	effName := ""
+	if name != nil {
+		effName = strings.TrimSpace(*name)
+	}
+	effOptimizerKey := ""
+	if optimizerKey != nil {
+		effOptimizerKey = strings.TrimSpace(*optimizerKey)
+	}
+
+	var marketShareRunID *string
+	if strings.TrimSpace(pk.MarketShareRunID) != "" {
+		v := strings.TrimSpace(pk.MarketShareRunID)
+		marketShareRunID = &v
+	}
+
+	var simTournamentID *string
+	if simulatedID != nil && strings.TrimSpace(*simulatedID) != "" {
+		v := strings.TrimSpace(*simulatedID)
+		simTournamentID = &v
+	}
+
+	return s.GenerateAndWrite(ctx, GenerateParams{
+		CalcuttaID:            calcuttaID,
+		RunKey:                effRunKey,
+		Name:                  effName,
+		OptimizerKey:          effOptimizerKey,
+		MarketShareRunID:      marketShareRunID,
+		SimulatedTournamentID: simTournamentID,
+		BudgetPoints:          pk.BudgetPoints,
+		MinTeams:              pk.MinTeams,
+		MaxTeams:              pk.MaxTeams,
+		MinBidPoints:          pk.MinBidPoints,
+		MaxBidPoints:          pk.MaxBidPoints,
+	})
 }
 
 func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*GenerateResult, error) {
