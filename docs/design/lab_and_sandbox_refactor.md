@@ -232,7 +232,7 @@ Batch orchestration (optional grouping record):
 
 ## Worker contract (Go <-> Python and async jobs)
 - [x] Standardize job submission envelope in `derived.run_jobs` (run_kind + params_json + seed + source).
-- [ ] Add explicit dataset refs to job submission payload (e.g., tournament_id, calcutta_id, snapshot ids) in a consistent schema per run kind.
+- [x] Add explicit dataset refs to job submission payload (e.g., tournament_id, calcutta_id, snapshot ids) in a consistent schema per run kind.
 
 - [x] Standardize progress events (percent + phase + message).
 
