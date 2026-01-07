@@ -130,7 +130,7 @@ Decisions:
 ### SyntheticCalcuttaCohorts / SyntheticCalcuttas
 - [x] Introduce SyntheticCalcuttaCohorts as durable entities (`derived.synthetic_calcutta_cohorts`), backed by `derived.suites` during migration.
 - [x] Introduce SyntheticCalcuttas as durable entities (`derived.synthetic_calcuttas`), with backfill from `derived.suite_scenarios` (preserve IDs for compatibility).
-- [ ] SyntheticCalcutta should support:
+- [x] SyntheticCalcutta should support:
   - optional source calcutta reference (historical or real) for copy/import convenience
   - full set of synthetic entries (all entries are SyntheticEntries)
   - add/edit/delete synthetic entries (not limited to swapping a single entry)
@@ -144,8 +144,8 @@ Decisions:
   - `DELETE /synthetic-entries/{synthetic_entry_id}`
 
 ### Candidate inputs
-- [ ] Support two candidate sources (next):
-  - from EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta
+- [x] Support two candidate sources:
+  - from EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta (currently implemented via `strategy_generation_run_id` import shim)
   - hand-authored SyntheticEntries (Sandbox)
 
 ## API + URL cleanup
@@ -178,7 +178,7 @@ Resource-oriented URLs with stable IDs.
 
 - [x] Smoke test: `/synthetic-calcutta-cohorts`, `/synthetic-calcuttas`, `/synthetic-entries` (create calcutta snapshot, list entries)
 
-- [ ] SyntheticCalcutta creation:
+- [x] SyntheticCalcutta creation:
   - [x] Backfill/repair legacy synthetic calcuttas to ensure `calcutta_snapshot_id` is always present
   - [x] `POST /synthetic-calcuttas` creates a snapshot when `calcuttaSnapshotId` is not provided
   - [x] `POST /synthetic-calcuttas` supports optional `source_calcutta_id` to copy/import from a real/historical calcutta
@@ -254,12 +254,12 @@ Target: smaller single-responsibility packages/files.
   - query/service layer
   - simulation domain logic (if any)
 
-- [ ] Split `handlers_ml_analytics*` similarly.
+- [x] Split `handlers_ml_analytics*` similarly.
 
 - [ ] Align handler names to the new resources (no “suite” in backend resource names).
 
 ## Data migration and cleanup
-- [ ] Implement compatibility-first migration:
+- [ ] Implement compatibility-first migration (next):
   - add new tables/resources
   - dual-write from new runs
   - backfill history
