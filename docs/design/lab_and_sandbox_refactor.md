@@ -118,7 +118,11 @@ We can keep separate artifact tables/types, but they should share a common contr
 - [x] Implement canonical EntryRuns + EntryArtifacts API (initial):
   - [x] `POST /entry-runs`, `GET /entry-runs`, `GET /entry-runs/{id}` (backed by legacy `derived.strategy_generation_runs`)
   - [x] `GET /entry-runs/{id}/artifacts`, `GET /entry-runs/{id}/artifacts/{artifactKind}` (backed by `derived.run_artifacts`, `run_kind='strategy_generation'`)
-  - [ ] Add canonical `GET /entry-artifacts/{artifact_id}` (optional convenience alias)
+  - [x] Add canonical `GET /entry-artifacts/{artifact_id}` (optional convenience alias)
+
+- [x] EntryArtifact lineage:
+  - [x] Add `input_market_share_artifact_id` / `input_advancement_artifact_id` fields to `derived.run_artifacts`
+  - [x] Populate lineage for strategy generation metrics artifacts (worker + backfill where possible)
 
 - [ ] When EntryRuns/EntryArtifacts are implemented, ensure EntryArtifacts explicitly reference exactly one:
   - AdvancementArtifact
@@ -153,10 +157,10 @@ Decisions:
 
 ### Candidate inputs
 - [x] Support two candidate sources:
-  - from EntryRuns/EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta (currently implemented via `entryRunId`, with legacy fallback)
+  - from EntryRuns/EntryArtifacts (Lab) by importing/copying them into SyntheticEntries scoped to a SyntheticCalcutta (implemented via `entryArtifactId`)
   - hand-authored SyntheticEntries (Sandbox)
 
-- [ ] Update SyntheticEntry import to use `entryArtifactId` (instead of `entryRunId`) and remove remaining compatibility shims.
+- [x] Update SyntheticEntry import to use `entryArtifactId` (instead of `entryRunId`) and remove remaining compatibility shims.
 
 ## API + URL cleanup
 Resource-oriented URLs with stable IDs.
@@ -288,9 +292,9 @@ Target: smaller single-responsibility packages/files.
   - [x] Lab tooling (`cmd/batch-lab-entries`)
 
 - [ ] Execute cutover plan:
-  - [ ] Run destructive migration in a fresh/dev DB
+  - [x] Run destructive migration in a fresh/dev DB
   - [ ] Deploy backend with canonical-table code
-  - [ ] Smoke test core flows (cohorts, synthetic calcuttas, run batches, runs, worker)
+  - [x] Smoke test core flows (cohorts, synthetic calcuttas, run batches, runs, worker)
   - [x] Cut over UI/service calls to canonical endpoints
   - [x] Delete/retire deprecated endpoints and remove compatibility shims
   - [x] Full cleanup: remove remaining suite terminology/aliases across backend + frontend; re-verify `go test ./...` and `npm run lint && npm run build`

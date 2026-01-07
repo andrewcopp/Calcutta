@@ -8,7 +8,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
 
-type SuiteDetailResponse = {
+type CohortDetailResponse = {
   cohort: {
     id: string;
     name: string;
@@ -40,11 +40,11 @@ export function LabEntriesSuiteDetailPage() {
   const { cohortId } = useParams<{ cohortId: string }>();
   const navigate = useNavigate();
 
-  const detailQuery = useQuery<SuiteDetailResponse | null>({
+  const detailQuery = useQuery<CohortDetailResponse | null>({
     queryKey: ['lab', 'entries', 'cohort', cohortId],
     queryFn: async () => {
       if (!cohortId) return null;
-      return analyticsService.getLabEntriesCohortDetail<SuiteDetailResponse>(cohortId);
+      return analyticsService.getLabEntriesCohortDetail<CohortDetailResponse>(cohortId);
     },
     enabled: Boolean(cohortId),
   });
@@ -67,7 +67,7 @@ export function LabEntriesSuiteDetailPage() {
       });
   }, [items]);
 
-  const suite = detailQuery.data?.cohort ?? null;
+  const cohort = detailQuery.data?.cohort ?? null;
 
   const fmtDateTime = (iso?: string | null) => {
     if (!iso) return '—';
@@ -80,7 +80,7 @@ export function LabEntriesSuiteDetailPage() {
     <PageContainer className="max-w-none">
       <PageHeader
         title="Entries"
-        subtitle={suite ? suite.name : cohortId}
+        subtitle={cohort ? cohort.name : cohortId}
         leftActions={
           <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
             ← Back to Entries
@@ -104,29 +104,29 @@ export function LabEntriesSuiteDetailPage() {
       <div className="space-y-6">
         <Card>
           <h2 className="text-xl font-semibold mb-2">Algorithm Combo</h2>
-          {detailQuery.isLoading ? <LoadingState label="Loading suite..." layout="inline" /> : null}
+          {detailQuery.isLoading ? <LoadingState label="Loading cohort..." layout="inline" /> : null}
 
-          {suite ? (
+          {cohort ? (
             <div className="text-sm text-gray-700">
               <div>
-                <span className="font-medium text-gray-900">Advancement:</span> {suite.advancement_algorithm.name}
+                <span className="font-medium text-gray-900">Advancement:</span> {cohort.advancement_algorithm.name}
               </div>
               <div>
-                <span className="font-medium text-gray-900">Investment:</span> {suite.investment_algorithm.name}
+                <span className="font-medium text-gray-900">Investment:</span> {cohort.investment_algorithm.name}
               </div>
               <div>
-                <span className="font-medium text-gray-900">Optimizer:</span> {suite.optimizer_key}
+                <span className="font-medium text-gray-900">Optimizer:</span> {cohort.optimizer_key}
               </div>
               <div className="text-gray-600 mt-1">
-                starting_state_key={suite.starting_state_key}
-                {suite.excluded_entry_name ? ` | excluded_entry_name=${suite.excluded_entry_name}` : ''}
+                starting_state_key={cohort.starting_state_key}
+                {cohort.excluded_entry_name ? ` | excluded_entry_name=${cohort.excluded_entry_name}` : ''}
               </div>
             </div>
           ) : null}
 
           {detailQuery.isError ? (
             <Alert variant="error" className="mt-3">
-              <div className="font-semibold mb-1">Failed to load suite</div>
+              <div className="font-semibold mb-1">Failed to load cohort</div>
               <div className="mb-3">{detailQuery.error instanceof Error ? detailQuery.error.message : 'An error occurred'}</div>
               <Button size="sm" onClick={() => detailQuery.refetch()}>
                 Retry

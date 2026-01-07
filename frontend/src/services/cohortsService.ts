@@ -1,6 +1,6 @@
 import { apiClient } from '../api/apiClient';
 
-export type SuiteListItem = {
+export type CohortListItem = {
   id: string;
   name: string;
   description?: string | null;
@@ -18,35 +18,27 @@ export type SuiteListItem = {
   updated_at: string;
 };
 
-export type ListSuitesResponse = {
-  items: SuiteListItem[];
+export type ListCohortsResponse = {
+  items: CohortListItem[];
 };
 
-export type CohortListItem = SuiteListItem;
+export type SuiteListItem = CohortListItem;
 
-export type ListCohortsResponse = ListSuitesResponse;
+export type ListSuitesResponse = ListCohortsResponse;
 
-export const suitesService = {
-  async list(params?: { limit?: number; offset?: number }): Promise<ListSuitesResponse> {
+export const cohortsService = {
+  async list(params?: { limit?: number; offset?: number }): Promise<ListCohortsResponse> {
     const q = new URLSearchParams();
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
 
     const suffix = q.toString() ? `?${q.toString()}` : '';
-    return apiClient.get<ListSuitesResponse>(`/cohorts${suffix}`);
-  },
-
-  async get(id: string): Promise<SuiteListItem> {
-    return apiClient.get<SuiteListItem>(`/cohorts/${encodeURIComponent(id)}`);
-  },
-};
-
-export const cohortsService = {
-  async list(params?: { limit?: number; offset?: number }): Promise<ListCohortsResponse> {
-    return suitesService.list(params);
+    return apiClient.get<ListCohortsResponse>(`/cohorts${suffix}`);
   },
 
   async get(id: string): Promise<CohortListItem> {
-    return suitesService.get(id);
+    return apiClient.get<CohortListItem>(`/cohorts/${encodeURIComponent(id)}`);
   },
 };
+
+export const suitesService = cohortsService;

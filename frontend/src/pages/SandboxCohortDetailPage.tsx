@@ -74,13 +74,13 @@ export function SandboxCohortDetailPage() {
 
   const effectiveCohortId = cohortId || '';
 
-  const suiteQuery = useQuery({
+  const cohortQuery = useQuery({
     queryKey: ['cohorts', 'get', effectiveCohortId],
     queryFn: () => cohortsService.get(effectiveCohortId),
     enabled: Boolean(effectiveCohortId),
   });
 
-  const suiteTitle = suiteQuery.data?.name ? `${suiteQuery.data.name}` : effectiveCohortId ? `Cohort ${effectiveCohortId}` : 'Cohort';
+  const cohortTitle = cohortQuery.data?.name ? `${cohortQuery.data.name}` : effectiveCohortId ? `Cohort ${effectiveCohortId}` : 'Cohort';
 
   const syntheticCalcuttasQuery = useQuery({
     queryKey: ['synthetic-calcuttas', 'list', effectiveCohortId],
@@ -195,9 +195,9 @@ export function SandboxCohortDetailPage() {
 
   const effectiveExecutionId = useMemo(() => {
     if (selectedExecutionId) return selectedExecutionId;
-    if (suiteQuery.data?.latest_execution_id) return suiteQuery.data.latest_execution_id;
+    if (cohortQuery.data?.latest_execution_id) return cohortQuery.data.latest_execution_id;
     return executions.length > 0 ? executions[0].id : '';
-  }, [executions, selectedExecutionId, suiteQuery.data?.latest_execution_id]);
+  }, [executions, selectedExecutionId, cohortQuery.data?.latest_execution_id]);
 
   const evaluationsQuery = useQuery({
     queryKey: ['simulation-runs', 'list', 'simulation-run-batch', effectiveExecutionId],
@@ -217,7 +217,7 @@ export function SandboxCohortDetailPage() {
     <PageContainer className="max-w-none">
       <PageHeader
         title="Sandbox"
-        subtitle={suiteTitle}
+        subtitle={cohortTitle}
         leftActions={
           <Link to="/sandbox/cohorts" className="text-blue-600 hover:text-blue-800">
             ← Back to Cohorts
@@ -227,49 +227,49 @@ export function SandboxCohortDetailPage() {
 
       {!effectiveCohortId ? <Alert variant="error">Missing cohort ID.</Alert> : null}
 
-      {effectiveCohortId && suiteQuery.isLoading ? <LoadingState label="Loading cohort..." /> : null}
-      {effectiveCohortId && suiteQuery.isError ? (
+      {effectiveCohortId && cohortQuery.isLoading ? <LoadingState label="Loading cohort..." /> : null}
+      {effectiveCohortId && cohortQuery.isError ? (
         <Alert variant="error">
           <div className="font-semibold mb-1">Failed to load cohort</div>
-          <div className="mb-3">{showError(suiteQuery.error)}</div>
-          <Button size="sm" onClick={() => suiteQuery.refetch()}>
+          <div className="mb-3">{showError(cohortQuery.error)}</div>
+          <Button size="sm" onClick={() => cohortQuery.refetch()}>
             Retry
           </Button>
         </Alert>
       ) : null}
 
-      {suiteQuery.data ? (
+      {cohortQuery.data ? (
         <div className="space-y-6">
           <Card>
             <h2 className="text-xl font-semibold mb-4">Cohort</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-gray-500">Name</div>
-                <div className="text-gray-900 font-medium">{suiteQuery.data.name || suiteQuery.data.id}</div>
+                <div className="text-gray-900 font-medium">{cohortQuery.data.name || cohortQuery.data.id}</div>
               </div>
               <div>
                 <div className="text-gray-500">Optimizer</div>
-                <div className="text-gray-900">{suiteQuery.data.optimizer_key}</div>
+                <div className="text-gray-900">{cohortQuery.data.optimizer_key}</div>
               </div>
               <div>
                 <div className="text-gray-500">nSims</div>
-                <div className="text-gray-900">{suiteQuery.data.n_sims}</div>
+                <div className="text-gray-900">{cohortQuery.data.n_sims}</div>
               </div>
               <div>
                 <div className="text-gray-500">Seed</div>
-                <div className="text-gray-900">{suiteQuery.data.seed}</div>
+                <div className="text-gray-900">{cohortQuery.data.seed}</div>
               </div>
               <div>
                 <div className="text-gray-500">Latest simulation run batch</div>
                 <div className="text-gray-900">
-                  {suiteQuery.data.latest_execution_id
-                    ? `${suiteQuery.data.latest_execution_status ?? '—'} · ${suiteQuery.data.latest_execution_id.slice(0, 8)}`
+                  {cohortQuery.data.latest_execution_id
+                    ? `${cohortQuery.data.latest_execution_status ?? '—'} · ${cohortQuery.data.latest_execution_id.slice(0, 8)}`
                     : '—'}
                 </div>
               </div>
               <div>
                 <div className="text-gray-500">Updated</div>
-                <div className="text-gray-900">{formatDateTime(suiteQuery.data.updated_at)}</div>
+                <div className="text-gray-900">{formatDateTime(cohortQuery.data.updated_at)}</div>
               </div>
             </div>
           </Card>

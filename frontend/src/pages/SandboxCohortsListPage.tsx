@@ -34,7 +34,7 @@ export function SandboxCohortsListPage() {
     return d.toLocaleString();
   };
 
-  const suites: CohortListItem[] = listQuery.data?.items ?? [];
+  const cohorts: CohortListItem[] = listQuery.data?.items ?? [];
 
   return (
     <PageContainer>
@@ -55,13 +55,13 @@ export function SandboxCohortsListPage() {
           </Alert>
         ) : null}
 
-        {!listQuery.isLoading && !listQuery.isError && suites.length === 0 ? (
+        {!listQuery.isLoading && !listQuery.isError && cohorts.length === 0 ? (
           <Alert variant="info" className="mt-3">
             No cohorts found.
           </Alert>
         ) : null}
 
-        {!listQuery.isLoading && !listQuery.isError && suites.length > 0 ? (
+        {!listQuery.isLoading && !listQuery.isError && cohorts.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -72,7 +72,7 @@ export function SandboxCohortsListPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {suites.map((s) => {
+                {cohorts.map((s) => {
                   const exec = s.latest_execution_id
                     ? `${s.latest_execution_status ?? '—'} · ${s.latest_execution_id.slice(0, 8)}`
                     : '—';
