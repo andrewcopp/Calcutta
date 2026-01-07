@@ -328,12 +328,14 @@ export function SandboxCohortDetailPage() {
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Highlighted Entry</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Open</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {syntheticCalcuttas.map((sc) => {
                       const calcuttaName = calcuttaNameById.get(sc.calcutta_id) || sc.calcutta_id;
                       const highlighted = sc.focus_entry_name || '—';
+                      const href = `/sandbox/synthetic-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
                       return (
                         <tr key={sc.id} className="hover:bg-gray-50">
                           <td className="px-3 py-2 text-sm text-gray-900" title={calcuttaName}>
@@ -342,6 +344,11 @@ export function SandboxCohortDetailPage() {
                           </td>
                           <td className="px-3 py-2 text-sm text-gray-700">{highlighted}</td>
                           <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(sc.created_at)}</td>
+                          <td className="px-3 py-2 text-sm text-right">
+                            <Link to={href} className="text-blue-600 hover:text-blue-800">
+                              View
+                            </Link>
+                          </td>
                         </tr>
                       );
                     })}
@@ -428,6 +435,14 @@ export function SandboxCohortDetailPage() {
                         </option>
                       ))}
                     </Select>
+                    {selectedEntryRunId.trim().length > 0 ? (
+                      <Link
+                        to={`/lab/entry-runs/${encodeURIComponent(selectedEntryRunId.trim())}`}
+                        className="text-blue-600 hover:text-blue-800 text-sm whitespace-nowrap"
+                      >
+                        View run
+                      </Link>
+                    ) : null}
                     <input
                       value={importSyntheticEntryName}
                       onChange={(e) => setImportSyntheticEntryName(e.target.value)}

@@ -25,8 +25,16 @@ export type EntryRunArtifact = {
   schema_version: string;
   storage_uri?: string | null;
   summary_json: unknown;
+  input_market_share_artifact_id?: string | null;
+  input_advancement_artifact_id?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type EntryRunArtifactListItem = EntryRunArtifact;
+
+export type ListEntryRunArtifactsResponse = {
+  items: EntryRunArtifactListItem[];
 };
 
 export const entryRunsService = {
@@ -42,6 +50,12 @@ export const entryRunsService = {
 
   async get(id: string): Promise<EntryRunListItem> {
     return apiClient.get<EntryRunListItem>(`/entry-runs/${encodeURIComponent(id)}`);
+  },
+
+  async listArtifacts(entryRunId: string): Promise<ListEntryRunArtifactsResponse> {
+    return apiClient.get<ListEntryRunArtifactsResponse>(
+      `/entry-runs/${encodeURIComponent(entryRunId)}/artifacts`
+    );
   },
 
   async getArtifact(entryRunId: string, artifactKind: string): Promise<EntryRunArtifact> {
