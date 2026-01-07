@@ -40,9 +40,8 @@ type createSyntheticEntryResponse struct {
 }
 
 type importSyntheticEntryRequest struct {
-	EntryRunID              string  `json:"entryRunId"`
-	StrategyGenerationRunID *string `json:"strategyGenerationRunId"`
-	DisplayName             *string `json:"displayName"`
+	EntryArtifactID string  `json:"entryArtifactId"`
+	DisplayName     *string `json:"displayName"`
 }
 
 type importSyntheticEntryResponse struct {
@@ -312,26 +311,44 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	req.EntryRunID = strings.TrimSpace(req.EntryRunID)
-	if req.EntryRunID == "" {
-		// Temporary fallback for older callers.
-		if req.StrategyGenerationRunID != nil {
-			v := strings.TrimSpace(*req.StrategyGenerationRunID)
-			if v != "" {
-				req.EntryRunID = v
-			}
-		}
-	}
-	if req.EntryRunID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "entryRunId is required", "entryRunId")
+	req.EntryArtifactID = strings.TrimSpace(req.EntryArtifactID)
+	if req.EntryArtifactID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "entryArtifactId is required", "entryArtifactId")
 		return
 	}
-	if _, err := uuid.Parse(req.EntryRunID); err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "entryRunId must be a valid UUID", "entryRunId")
+	if _, err := uuid.Parse(req.EntryArtifactID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "entryArtifactId must be a valid UUID", "entryArtifactId")
 		return
 	}
 
 	ctx := r.Context()
+
+	strategyGenerationRunID := ""
+	artifactKind := ""
+	if err := s.pool.QueryRow(ctx, `
+		SELECT run_id::text, artifact_kind
+		FROM derived.run_artifacts
+		WHERE id = $1::uuid
+			AND run_kind = 'strategy_generation'
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, req.EntryArtifactID).Scan(&strategyGenerationRunID, &artifactKind); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Entry artifact not found", "entryArtifactId")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	strategyGenerationRunID = strings.TrimSpace(strategyGenerationRunID)
+	if strategyGenerationRunID == "" {
+		writeError(w, r, http.StatusConflict, "invalid_state", "Entry artifact has no run_id", "entryArtifactId")
+		return
+	}
+	if strings.TrimSpace(artifactKind) != "metrics" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "entryArtifactId must reference a metrics artifact", "entryArtifactId")
+		return
+	}
 
 	var snapshotID *string
 	if err := s.pool.QueryRow(ctx, `
@@ -365,7 +382,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
 			LIMIT 1
-		`, req.EntryRunID).Scan(&resolved)
+		`, strategyGenerationRunID).Scan(&resolved)
 		resolved = strings.TrimSpace(resolved)
 		if resolved == "" {
 			displayName = "Imported Strategy"
@@ -380,7 +397,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		WHERE strategy_generation_run_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY bid_points DESC
-	`, req.EntryRunID)
+	`, strategyGenerationRunID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -401,7 +418,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if len(teams) == 0 {
-		writeError(w, r, http.StatusConflict, "invalid_state", "No recommended_entry_bids found for that entryRunId", "entryRunId")
+		writeError(w, r, http.StatusConflict, "invalid_state", "No recommended_entry_bids found for that entryArtifactId", "entryArtifactId")
 		return
 	}
 

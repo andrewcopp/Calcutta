@@ -17,6 +17,18 @@ export type ListEntryRunsResponse = {
   items: EntryRunListItem[];
 };
 
+export type EntryRunArtifact = {
+  id: string;
+  run_id: string;
+  run_key?: string | null;
+  artifact_kind: string;
+  schema_version: string;
+  storage_uri?: string | null;
+  summary_json: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 export const entryRunsService = {
   async list(params?: { calcuttaId?: string; limit?: number; offset?: number }): Promise<ListEntryRunsResponse> {
     const q = new URLSearchParams();
@@ -30,5 +42,11 @@ export const entryRunsService = {
 
   async get(id: string): Promise<EntryRunListItem> {
     return apiClient.get<EntryRunListItem>(`/entry-runs/${encodeURIComponent(id)}`);
+  },
+
+  async getArtifact(entryRunId: string, artifactKind: string): Promise<EntryRunArtifact> {
+    return apiClient.get<EntryRunArtifact>(
+      `/entry-runs/${encodeURIComponent(entryRunId)}/artifacts/${encodeURIComponent(artifactKind)}`
+    );
   },
 };

@@ -172,8 +172,10 @@ export function SandboxCohortDetailPage() {
       const entryRunId = selectedEntryRunId.trim();
       if (!entryRunId) throw new Error('Missing entry run');
       const displayName = importSyntheticEntryName.trim();
-      return syntheticEntriesService.importFromEntryRun(effectiveSyntheticCalcuttaId, {
-        entryRunId,
+
+      const metrics = await entryRunsService.getArtifact(entryRunId, 'metrics');
+      return syntheticEntriesService.importFromEntryArtifact(effectiveSyntheticCalcuttaId, {
+        entryArtifactId: metrics.id,
         displayName: displayName.length > 0 ? displayName : undefined,
       });
     },

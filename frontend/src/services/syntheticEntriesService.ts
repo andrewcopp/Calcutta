@@ -29,7 +29,7 @@ export type CreateSyntheticEntryResponse = {
 };
 
 export type ImportSyntheticEntryRequest = {
-  entryRunId: string;
+  entryArtifactId: string;
   displayName?: string;
 };
 
@@ -57,7 +57,7 @@ export const syntheticEntriesService = {
     );
   },
 
-  async importFromEntryRun(
+  async importFromEntryArtifact(
     syntheticCalcuttaId: string,
     req: ImportSyntheticEntryRequest
   ): Promise<ImportSyntheticEntryResponse> {

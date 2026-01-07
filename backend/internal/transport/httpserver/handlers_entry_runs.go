@@ -44,19 +44,28 @@ type listEntryRunsResponse struct {
 }
 
 type entryRunArtifactListItem struct {
-	ID            string          `json:"id"`
-	RunID         string          `json:"run_id"`
-	RunKey        *string         `json:"run_key,omitempty"`
-	ArtifactKind  string          `json:"artifact_kind"`
-	SchemaVersion string          `json:"schema_version"`
-	StorageURI    *string         `json:"storage_uri,omitempty"`
-	SummaryJSON   json.RawMessage `json:"summary_json"`
-	CreatedAt     string          `json:"created_at"`
-	UpdatedAt     string          `json:"updated_at"`
+	ID                         string          `json:"id"`
+	RunID                      string          `json:"run_id"`
+	RunKey                     *string         `json:"run_key,omitempty"`
+	ArtifactKind               string          `json:"artifact_kind"`
+	SchemaVersion              string          `json:"schema_version"`
+	StorageURI                 *string         `json:"storage_uri,omitempty"`
+	SummaryJSON                json.RawMessage `json:"summary_json"`
+	InputMarketShareArtifactID *string         `json:"input_market_share_artifact_id,omitempty"`
+	InputAdvancementArtifactID *string         `json:"input_advancement_artifact_id,omitempty"`
+	CreatedAt                  string          `json:"created_at"`
+	UpdatedAt                  string          `json:"updated_at"`
 }
 
 type listEntryRunArtifactsResponse struct {
 	Items []entryRunArtifactListItem `json:"items"`
+}
+
+func (s *Server) registerEntryArtifactRoutes(r *mux.Router) {
+	r.HandleFunc(
+		"/api/entry-artifacts/{id}",
+		s.requirePermission("analytics.strategy_generation_runs.read", s.getEntryArtifactHandler),
+	).Methods("GET", "OPTIONS")
 }
 
 func (s *Server) registerEntryRunRoutes(r *mux.Router) {
@@ -377,6 +386,68 @@ func (s *Server) getEntryRunHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, it)
 }
 
+func (s *Server) getEntryArtifactHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	artifactID := strings.TrimSpace(vars["id"])
+	if artifactID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(artifactID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+
+	var it entryRunArtifactListItem
+	var runKey *string
+	var summaryText string
+	if err := s.pool.QueryRow(r.Context(), `
+		SELECT
+			id::text,
+			run_id::text,
+			run_key::text,
+			artifact_kind,
+			schema_version,
+			storage_uri,
+			summary_json::text,
+			input_market_share_artifact_id::text,
+			input_advancement_artifact_id::text,
+			created_at::text,
+			updated_at::text
+		FROM derived.run_artifacts
+		WHERE id = $1::uuid
+			AND run_kind = 'strategy_generation'
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, artifactID).Scan(
+		&it.ID,
+		&it.RunID,
+		&runKey,
+		&it.ArtifactKind,
+		&it.SchemaVersion,
+		&it.StorageURI,
+		&summaryText,
+		&it.InputMarketShareArtifactID,
+		&it.InputAdvancementArtifactID,
+		&it.CreatedAt,
+		&it.UpdatedAt,
+	); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Entry artifact not found", "id")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if runKey != nil && strings.TrimSpace(*runKey) != "" {
+		v := strings.TrimSpace(*runKey)
+		it.RunKey = &v
+	}
+	it.SummaryJSON = json.RawMessage([]byte(summaryText))
+
+	writeJSON(w, http.StatusOK, it)
+}
+
 func (s *Server) listEntryRunArtifactsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	runID := strings.TrimSpace(vars["id"])
@@ -398,6 +469,8 @@ func (s *Server) listEntryRunArtifactsHandler(w http.ResponseWriter, r *http.Req
 			schema_version,
 			storage_uri,
 			summary_json::text,
+			input_market_share_artifact_id::text,
+			input_advancement_artifact_id::text,
 			created_at::text,
 			updated_at::text
 		FROM derived.run_artifacts
@@ -417,6 +490,8 @@ func (s *Server) listEntryRunArtifactsHandler(w http.ResponseWriter, r *http.Req
 		var it entryRunArtifactListItem
 		var runKey *string
 		var summaryText string
+		var inputMarketShareArtifactID *string
+		var inputAdvancementArtifactID *string
 		if err := rows.Scan(
 			&it.ID,
 			&it.RunID,
@@ -425,6 +500,8 @@ func (s *Server) listEntryRunArtifactsHandler(w http.ResponseWriter, r *http.Req
 			&it.SchemaVersion,
 			&it.StorageURI,
 			&summaryText,
+			&inputMarketShareArtifactID,
+			&inputAdvancementArtifactID,
 			&it.CreatedAt,
 			&it.UpdatedAt,
 		); err != nil {
@@ -434,6 +511,14 @@ func (s *Server) listEntryRunArtifactsHandler(w http.ResponseWriter, r *http.Req
 		if runKey != nil && strings.TrimSpace(*runKey) != "" {
 			v := strings.TrimSpace(*runKey)
 			it.RunKey = &v
+		}
+		if inputMarketShareArtifactID != nil && strings.TrimSpace(*inputMarketShareArtifactID) != "" {
+			v := strings.TrimSpace(*inputMarketShareArtifactID)
+			it.InputMarketShareArtifactID = &v
+		}
+		if inputAdvancementArtifactID != nil && strings.TrimSpace(*inputAdvancementArtifactID) != "" {
+			v := strings.TrimSpace(*inputAdvancementArtifactID)
+			it.InputAdvancementArtifactID = &v
 		}
 		it.SummaryJSON = json.RawMessage([]byte(summaryText))
 		items = append(items, it)
@@ -476,6 +561,8 @@ func (s *Server) getEntryRunArtifactHandler(w http.ResponseWriter, r *http.Reque
 			schema_version,
 			storage_uri,
 			summary_json::text,
+			input_market_share_artifact_id::text,
+			input_advancement_artifact_id::text,
 			created_at::text,
 			updated_at::text
 		FROM derived.run_artifacts
@@ -492,6 +579,8 @@ func (s *Server) getEntryRunArtifactHandler(w http.ResponseWriter, r *http.Reque
 		&it.SchemaVersion,
 		&it.StorageURI,
 		&summaryText,
+		&it.InputMarketShareArtifactID,
+		&it.InputAdvancementArtifactID,
 		&it.CreatedAt,
 		&it.UpdatedAt,
 	); err != nil {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	reb "github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
@@ -173,6 +174,34 @@ func (s *Server) processStrategyGenerationJob(ctx context.Context, workerID stri
 
 	s.updateRunJobProgress(ctx, "strategy_generation", job.RunID, 1.0, "succeeded", "Completed")
 
+	var inputMarketShareArtifactID any
+	if len(job.Params) > 0 {
+		var params map[string]any
+		if err := json.Unmarshal(job.Params, &params); err == nil {
+			if v, ok := params["market_share_run_id"]; ok {
+				if runIDStr, ok := v.(string); ok {
+					runIDStr = strings.TrimSpace(runIDStr)
+					if runIDStr != "" {
+						var artifactID string
+						_ = s.pool.QueryRow(ctx, `
+							SELECT id::text
+							FROM derived.run_artifacts
+							WHERE run_kind = 'market_share'
+								AND run_id = $1::uuid
+								AND artifact_kind = 'metrics'
+								AND deleted_at IS NULL
+							LIMIT 1
+					`, runIDStr).Scan(&artifactID)
+						artifactID = strings.TrimSpace(artifactID)
+						if artifactID != "" {
+							inputMarketShareArtifactID = artifactID
+						}
+					}
+				}
+			}
+		}
+	}
+
 	summary := map[string]any{
 		"status":                  "succeeded",
 		"strategyGenerationRunId": res.StrategyGenerationRunID,
@@ -199,18 +228,22 @@ func (s *Server) processStrategyGenerationJob(ctx context.Context, workerID stri
 				artifact_kind,
 				schema_version,
 				storage_uri,
-				summary_json
+				summary_json,
+				input_market_share_artifact_id,
+				input_advancement_artifact_id
 			)
-			VALUES ('strategy_generation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
+			VALUES ('strategy_generation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb, $4::uuid, NULL)
 			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
 			DO UPDATE
 			SET run_key = EXCLUDED.run_key,
 				schema_version = EXCLUDED.schema_version,
 				storage_uri = EXCLUDED.storage_uri,
 				summary_json = EXCLUDED.summary_json,
+				input_market_share_artifact_id = EXCLUDED.input_market_share_artifact_id,
+				input_advancement_artifact_id = EXCLUDED.input_advancement_artifact_id,
 				updated_at = NOW(),
 				deleted_at = NULL
-		`, job.RunID, runKeyParam, summaryJSON)
+		`, job.RunID, runKeyParam, summaryJSON, inputMarketShareArtifactID)
 	}
 
 	log.Printf("strategy_generation_worker success worker_id=%s run_id=%s run_key=%s n_teams=%d total_bid=%d dur_ms=%d",
@@ -251,6 +284,34 @@ func (s *Server) failStrategyGenerationJob(ctx context.Context, job *strategyGen
 	}
 	failureSummaryJSON, jerr := json.Marshal(failureSummary)
 	if jerr == nil {
+		var inputMarketShareArtifactID any
+		if job != nil && len(job.Params) > 0 {
+			var params map[string]any
+			if err := json.Unmarshal(job.Params, &params); err == nil {
+				if v, ok := params["market_share_run_id"]; ok {
+					if runIDStr, ok := v.(string); ok {
+						runIDStr = strings.TrimSpace(runIDStr)
+						if runIDStr != "" {
+							var artifactID string
+							_ = s.pool.QueryRow(ctx, `
+								SELECT id::text
+								FROM derived.run_artifacts
+								WHERE run_kind = 'market_share'
+									AND run_id = $1::uuid
+									AND artifact_kind = 'metrics'
+									AND deleted_at IS NULL
+								LIMIT 1
+							`, runIDStr).Scan(&artifactID)
+							artifactID = strings.TrimSpace(artifactID)
+							if artifactID != "" {
+								inputMarketShareArtifactID = artifactID
+							}
+						}
+					}
+				}
+			}
+		}
+
 		var runKeyParam any
 		if job.RunKey != "" {
 			runKeyParam = job.RunKey
@@ -265,17 +326,21 @@ func (s *Server) failStrategyGenerationJob(ctx context.Context, job *strategyGen
 				artifact_kind,
 				schema_version,
 				storage_uri,
-				summary_json
+				summary_json,
+				input_market_share_artifact_id,
+				input_advancement_artifact_id
 			)
-			VALUES ('strategy_generation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
+			VALUES ('strategy_generation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb, $4::uuid, NULL)
 			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
 			DO UPDATE
 			SET run_key = EXCLUDED.run_key,
 				schema_version = EXCLUDED.schema_version,
 				storage_uri = EXCLUDED.storage_uri,
 				summary_json = EXCLUDED.summary_json,
+				input_market_share_artifact_id = EXCLUDED.input_market_share_artifact_id,
+				input_advancement_artifact_id = EXCLUDED.input_advancement_artifact_id,
 				updated_at = NOW(),
 				deleted_at = NULL
-		`, job.RunID, runKeyParam, failureSummaryJSON)
+		`, job.RunID, runKeyParam, failureSummaryJSON, inputMarketShareArtifactID)
 	}
 }
