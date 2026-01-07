@@ -106,6 +106,36 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
+		var derivedSnapshotID *string
+		_ = s.pool.QueryRow(r.Context(), `
+			WITH latest AS (
+				SELECT sr.calcutta_evaluation_run_id
+				FROM derived.simulation_runs sr
+				WHERE sr.synthetic_calcutta_id = $1::uuid
+					AND sr.deleted_at IS NULL
+					AND sr.calcutta_evaluation_run_id IS NOT NULL
+				ORDER BY sr.created_at DESC
+				LIMIT 1
+			)
+			SELECT cer.calcutta_snapshot_id::text
+			FROM latest
+			JOIN derived.calcutta_evaluation_runs cer
+				ON cer.id = latest.calcutta_evaluation_run_id
+				AND cer.deleted_at IS NULL
+			LIMIT 1
+		`, syntheticCalcuttaID).Scan(&derivedSnapshotID)
+		if derivedSnapshotID != nil && strings.TrimSpace(*derivedSnapshotID) != "" {
+			_, _ = s.pool.Exec(r.Context(), `
+				UPDATE derived.synthetic_calcuttas
+				SET calcutta_snapshot_id = $2::uuid,
+					updated_at = NOW()
+				WHERE id = $1::uuid
+					AND deleted_at IS NULL
+			`, syntheticCalcuttaID, *derivedSnapshotID)
+			snapshotID = derivedSnapshotID
+		}
+	}
+	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
 		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 		return
 	}

@@ -338,6 +338,23 @@ func (s *Server) processSimulationRun(ctx context.Context, workerID string, req 
 		return false
 	}
 
+	if evalRunID != "" {
+		_, _ = s.pool.Exec(ctx, `
+			UPDATE derived.synthetic_calcuttas sc
+			SET calcutta_snapshot_id = cer.calcutta_snapshot_id,
+				focus_strategy_generation_run_id = $3::uuid,
+				focus_entry_name = COALESCE(NULLIF(sc.focus_entry_name, ''), 'Our Strategy'),
+				updated_at = NOW()
+			FROM derived.simulation_runs sr
+			JOIN derived.calcutta_evaluation_runs cer
+				ON cer.id = $2::uuid
+				AND cer.deleted_at IS NULL
+			WHERE sr.id = $1::uuid
+				AND sr.synthetic_calcutta_id = sc.id
+				AND sc.deleted_at IS NULL
+		`, req.ID, evalRunID, nullUUIDParam(strategyGenRunID))
+	}
+
 	var (
 		ourRank                   *int
 		ourMeanNormalizedPayout   *float64
