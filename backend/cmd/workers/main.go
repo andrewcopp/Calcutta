@@ -27,11 +27,11 @@ func run() error {
 
 	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
 	runEntryEvaluationWorker := flag.Bool("entry-eval-worker", true, "Run the entry evaluation worker")
-	runMarketShareWorker := flag.Bool("market-share-worker", false, "Run the market share worker")
-	runGameOutcomeWorker := flag.Bool("game-outcome-worker", false, "Run the predicted game outcomes worker")
-	runStrategyGenWorker := flag.Bool("strategy-generation-worker", false, "Run the strategy generation worker")
-	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", false, "Run the calcutta evaluation worker")
-	runSuiteEvaluationWorker := flag.Bool("suite-eval-worker", false, "Run the suite calcutta evaluation worker")
+	runMarketShareWorker := flag.Bool("market-share-worker", true, "Run the market share worker")
+	runGameOutcomeWorker := flag.Bool("game-outcome-worker", true, "Run the predicted game outcomes worker")
+	runStrategyGenWorker := flag.Bool("strategy-generation-worker", true, "Run the strategy generation worker")
+	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", true, "Run the calcutta evaluation worker")
+	runSuiteEvaluationWorker := flag.Bool("suite-eval-worker", true, "Run the suite calcutta evaluation worker")
 	flag.Parse()
 
 	if !*runBundleImportWorker && !*runEntryEvaluationWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runStrategyGenWorker && !*runCalcuttaEvalWorker && !*runSuiteEvaluationWorker {

@@ -354,6 +354,32 @@ func (s *Server) handleBulkCreateMarketShareRunsForAlgorithm(w http.ResponseWrit
 		return
 	}
 
+	// Requeue failed jobs for existing runs so users can retry after fixing worker/runtime issues.
+	// This avoids needing to delete runs or create duplicates when the first attempt failed due to infra (e.g. missing python deps).
+	requeueTag, err := s.pool.Exec(ctx, `
+		UPDATE derived.run_jobs j
+		SET status = 'queued',
+			claimed_at = NULL,
+			claimed_by = NULL,
+			finished_at = NULL,
+			error_message = NULL,
+			updated_at = NOW()
+		WHERE j.run_kind = 'market_share'
+			AND j.status = 'failed'
+			AND j.run_id IN (
+				SELECT r.id
+				FROM derived.market_share_runs r
+				WHERE r.algorithm_id = $1::uuid
+					AND r.deleted_at IS NULL
+					AND COALESCE(r.params_json->>'excluded_entry_name', '') = $2::text
+			)
+	`, algorithmID, excludedEntryName)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	requeued := int(requeueTag.RowsAffected())
+
 	// Bulk insert one run per calcutta (skip if a matching run already exists for algorithm+calcutta+excluded_entry_name).
 	cmdTag, err := s.pool.Exec(ctx, `
 		INSERT INTO derived.market_share_runs (
@@ -394,6 +420,7 @@ func (s *Server) handleBulkCreateMarketShareRunsForAlgorithm(w http.ResponseWrit
 		"total_calcuttas":     total,
 		"created":             created,
 		"skipped":             skipped,
+		"requeued":            requeued,
 		"excluded_entry_name": excludedEntryName,
 	})
 }

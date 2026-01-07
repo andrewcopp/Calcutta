@@ -35,7 +35,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["/app/bin/workers", "-suite-eval-worker=true"]
+    command: [
+      "/app/bin/workers",
+      "-bundle-import-worker=false",
+      "-entry-eval-worker=false",
+      "-market-share-worker=false",
+      "-game-outcome-worker=false",
+      "-strategy-generation-worker=false",
+      "-calcutta-eval-worker=false",
+      "-suite-eval-worker=true"
+    ]
 
   db:
     image: postgres:16-alpine
