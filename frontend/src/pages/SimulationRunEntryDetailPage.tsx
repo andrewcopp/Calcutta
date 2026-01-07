@@ -9,7 +9,7 @@ import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import {
-  suiteCalcuttaEvaluationsService,
+  simulationRunsService,
   type SuiteCalcuttaEvaluationSnapshotEntryResponse,
 } from '../services/simulationRunsService';
 
@@ -35,8 +35,13 @@ export function SimulationRunEntryDetailPage() {
 
   const entryQuery = useQuery<SuiteCalcuttaEvaluationSnapshotEntryResponse>({
     queryKey: ['simulation-runs', 'snapshot-entry', id, snapshotEntryId],
-    queryFn: () => suiteCalcuttaEvaluationsService.getSnapshotEntry(id!, snapshotEntryId!),
-    enabled: Boolean(id && snapshotEntryId),
+    queryFn: () =>
+      simulationRunsService.getSnapshotEntry({
+        cohortId: suiteId,
+        id: id!,
+        snapshotEntryId: snapshotEntryId!,
+      }),
+    enabled: Boolean(id && snapshotEntryId && suiteId),
   });
 
   const sortedTeams = useMemo(() => {

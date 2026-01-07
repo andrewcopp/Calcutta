@@ -37,16 +37,16 @@ type CreateSandboxExecutionResponse = {
 };
 
 export function LabEntriesSuiteDetailPage() {
-  const { suiteId } = useParams<{ suiteId: string }>();
+  const { cohortId } = useParams<{ cohortId: string }>();
   const navigate = useNavigate();
 
   const detailQuery = useQuery<SuiteDetailResponse | null>({
-    queryKey: ['lab', 'entries', 'suite', suiteId],
+    queryKey: ['lab', 'entries', 'cohort', cohortId],
     queryFn: async () => {
-      if (!suiteId) return null;
-      return analyticsService.getLabEntriesSuiteDetail<SuiteDetailResponse>(suiteId);
+      if (!cohortId) return null;
+      return analyticsService.getLabEntriesSuiteDetail<SuiteDetailResponse>(cohortId);
     },
-    enabled: Boolean(suiteId),
+    enabled: Boolean(cohortId),
   });
 
   const items = detailQuery.data?.items ?? [];
@@ -80,7 +80,7 @@ export function LabEntriesSuiteDetailPage() {
     <PageContainer className="max-w-none">
       <PageHeader
         title="Entries"
-        subtitle={suite ? suite.name : suiteId}
+        subtitle={suite ? suite.name : cohortId}
         leftActions={
           <Link to="/lab/entries" className="text-blue-600 hover:text-blue-800">
             ← Back to Entries
@@ -89,13 +89,13 @@ export function LabEntriesSuiteDetailPage() {
         actions={
 				<Button
 					size="sm"
-					disabled={!suiteId || detailQuery.isLoading || !canRunInSandbox}
+					disabled={!cohortId || detailQuery.isLoading || !canRunInSandbox}
 					onClick={async () => {
-						if (!suiteId) return;
-						const res = await analyticsService.createLabSuiteSandboxExecution<CreateSandboxExecutionResponse>(suiteId);
-						navigate(`/sandbox/suites/${encodeURIComponent(suiteId)}?executionId=${encodeURIComponent(res.executionId)}`);
-					}}
-				>
+						if (!cohortId) return;
+					const res = await analyticsService.createLabSuiteSandboxExecution<CreateSandboxExecutionResponse>(cohortId);
+					navigate(`/sandbox/cohorts/${encodeURIComponent(cohortId)}?executionId=${encodeURIComponent(res.executionId)}`);
+				}}
+			>
 					Run in Sandbox
 				</Button>
         }

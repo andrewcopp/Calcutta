@@ -24,28 +24,21 @@ export type SimulationRunBatchListItem = SuiteExecutionListItem;
 
 export type ListSimulationRunBatchesResponse = ListSuiteExecutionsResponse;
 
-export const suiteExecutionsService = {
-  async list(params?: { suiteId?: string; limit?: number; offset?: number }): Promise<ListSuiteExecutionsResponse> {
+export const simulationRunBatchesService = {
+  async list(params: { cohortId: string; limit?: number; offset?: number }): Promise<ListSimulationRunBatchesResponse> {
     const q = new URLSearchParams();
-    if (params?.suiteId) q.set('cohort_id', params.suiteId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
 
     const suffix = q.toString() ? `?${q.toString()}` : '';
-    return apiClient.get<ListSuiteExecutionsResponse>(`/simulation-run-batches${suffix}`);
+    return apiClient.get<ListSimulationRunBatchesResponse>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulation-batches${suffix}`
+    );
   },
 
-  async get(id: string): Promise<SuiteExecutionListItem> {
-    return apiClient.get<SuiteExecutionListItem>(`/simulation-run-batches/${encodeURIComponent(id)}`);
-  },
-};
-
-export const simulationRunBatchesService = {
-  async list(params?: { cohortId?: string; limit?: number; offset?: number }): Promise<ListSimulationRunBatchesResponse> {
-    return suiteExecutionsService.list({ suiteId: params?.cohortId, limit: params?.limit, offset: params?.offset });
-  },
-
-  async get(id: string): Promise<SimulationRunBatchListItem> {
-    return suiteExecutionsService.get(id);
+  async get(params: { cohortId: string; id: string }): Promise<SimulationRunBatchListItem> {
+    return apiClient.get<SimulationRunBatchListItem>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulation-batches/${encodeURIComponent(params.id)}`
+    );
   },
 };

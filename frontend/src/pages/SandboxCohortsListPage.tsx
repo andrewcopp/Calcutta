@@ -13,7 +13,7 @@ import { cohortsService, type CohortListItem } from '../services/cohortsService'
 export function SandboxCohortsListPage() {
   const navigate = useNavigate();
   const listQuery = useQuery({
-    queryKey: ['synthetic-calcutta-cohorts', 'list'],
+    queryKey: ['cohorts', 'list'],
     queryFn: () => cohortsService.list({ limit: 200, offset: 0 }),
   });
 

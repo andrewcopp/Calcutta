@@ -97,11 +97,11 @@ export const analyticsService = {
   },
 
   async getLabEntriesSuiteDetail<T>(suiteId: string): Promise<T> {
-    return apiClient.get<T>(`/lab/entries/suites/${encodeURIComponent(suiteId)}`);
+    return apiClient.get<T>(`/lab/entries/cohorts/${encodeURIComponent(suiteId)}`);
   },
 
   async createLabSuiteSandboxExecution<T>(suiteId: string): Promise<T> {
-    return apiClient.post<T>(`/lab/entries/suites/${encodeURIComponent(suiteId)}/sandbox-executions`, {});
+    return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(suiteId)}/sandbox-executions`, {});
   },
 
   async getLabEntryReport<T>(scenarioId: string): Promise<T> {

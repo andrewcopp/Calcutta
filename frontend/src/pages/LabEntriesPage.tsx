@@ -171,7 +171,7 @@ export function LabEntriesPage() {
                   <tr
                     key={row.suite_id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/entries/suites/${encodeURIComponent(row.suite_id)}`)}
+                    onClick={() => navigate(`/lab/entries/cohorts/${encodeURIComponent(row.suite_id)}`)}
                   >
                     <td className="px-3 py-2 text-sm text-gray-900">
                       <div className="font-medium">{row.suite_name}</div>

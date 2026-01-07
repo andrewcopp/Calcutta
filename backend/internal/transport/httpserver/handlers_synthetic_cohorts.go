@@ -11,15 +11,15 @@ import (
 
 func (s *Server) registerSyntheticCalcuttaCohortRoutes(r *mux.Router) {
 	r.HandleFunc(
-		"/api/synthetic-calcutta-cohorts",
+		"/api/cohorts",
 		s.requirePermission("analytics.suites.read", s.listSyntheticCalcuttaCohortsHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
-		"/api/synthetic-calcutta-cohorts/{id}",
+		"/api/cohorts/{id}",
 		s.requirePermission("analytics.suites.read", s.getSyntheticCalcuttaCohortHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
-		"/api/synthetic-calcutta-cohorts/{id}",
+		"/api/cohorts/{id}",
 		s.requirePermission("analytics.suites.write", s.patchSyntheticCalcuttaCohortHandler),
 	).Methods("PATCH", "OPTIONS")
 }

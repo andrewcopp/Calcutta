@@ -72,7 +72,7 @@ export function SandboxCohortDetailPage() {
   const effectiveCohortId = cohortId || suiteId || '';
 
   const suiteQuery = useQuery({
-    queryKey: ['synthetic-calcutta-cohorts', 'get', effectiveCohortId],
+    queryKey: ['cohorts', 'get', effectiveCohortId],
     queryFn: () => cohortsService.get(effectiveCohortId),
     enabled: Boolean(effectiveCohortId),
   });
@@ -169,11 +169,12 @@ export function SandboxCohortDetailPage() {
     queryKey: ['simulation-runs', 'list', 'simulation-run-batch', effectiveExecutionId],
     queryFn: () =>
       simulationRunsService.list({
-        simulationRunBatchId: effectiveExecutionId || undefined,
+        cohortId: effectiveCohortId,
+        simulationBatchId: effectiveExecutionId || undefined,
         limit: 200,
         offset: 0,
       }),
-    enabled: Boolean(effectiveExecutionId),
+    enabled: Boolean(effectiveCohortId && effectiveExecutionId),
   });
 
   const evals: SuiteCalcuttaEvaluation[] = evaluationsQuery.data?.items ?? [];

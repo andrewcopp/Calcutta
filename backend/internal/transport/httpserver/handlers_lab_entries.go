@@ -109,7 +109,7 @@ func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 		s.requirePermission("analytics.suites.read", s.listLabEntriesCoverageHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
-		"/api/lab/entries/suites/{id}",
+		"/api/lab/entries/cohorts/{id}",
 		s.requirePermission("analytics.suites.read", s.getLabEntriesSuiteDetailHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
@@ -117,7 +117,7 @@ func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 		s.requirePermission("analytics.suites.read", s.getLabEntryReportHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
-		"/api/lab/entries/suites/{id}/sandbox-executions",
+		"/api/lab/entries/cohorts/{id}/sandbox-executions",
 		s.requirePermission("analytics.suite_executions.write", s.createLabSuiteSandboxExecutionHandler),
 	).Methods("POST", "OPTIONS")
 }

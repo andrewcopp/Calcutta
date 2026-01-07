@@ -104,7 +104,7 @@ export function LabEntryReportPage() {
         subtitle={data ? `${data.season} — ${data.calcutta_name}` : scenarioId}
         leftActions={
           data ? (
-            <Link to={`/lab/entries/suites/${encodeURIComponent(data.suite_id)}`} className="text-blue-600 hover:text-blue-800">
+            <Link to={`/lab/entries/cohorts/${encodeURIComponent(data.suite_id)}`} className="text-blue-600 hover:text-blue-800">
               ← Back to Algorithm Combo
             </Link>
           ) : (

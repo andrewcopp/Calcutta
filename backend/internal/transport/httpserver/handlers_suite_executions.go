@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -50,17 +52,124 @@ type suiteExecutionListResponse struct {
 
 func (s *Server) registerSuiteExecutionRoutes(r *mux.Router) {
 	r.HandleFunc(
-		"/api/suite-executions",
-		s.requirePermission("analytics.suite_executions.write", s.createSuiteExecutionHandler),
+		"/api/cohorts/{cohortId}/simulation-batches",
+		s.requirePermission("analytics.suite_executions.write", s.createCohortSimulationBatchHandler),
 	).Methods("POST", "OPTIONS")
 	r.HandleFunc(
-		"/api/suite-executions",
-		s.requirePermission("analytics.suite_executions.read", s.listSuiteExecutionsHandler),
+		"/api/cohorts/{cohortId}/simulation-batches",
+		s.requirePermission("analytics.suite_executions.read", s.listCohortSimulationBatchesHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
-		"/api/suite-executions/{id}",
-		s.requirePermission("analytics.suite_executions.read", s.getSuiteExecutionHandler),
+		"/api/cohorts/{cohortId}/simulation-batches/{id}",
+		s.requirePermission("analytics.suite_executions.read", s.getCohortSimulationBatchHandler),
 	).Methods("GET", "OPTIONS")
+}
+
+func (s *Server) listCohortSimulationBatchesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	q := r.URL.Query()
+	q.Set("cohort_id", cohortID)
+	r.URL.RawQuery = q.Encode()
+	s.listSuiteExecutionsHandler(w, r)
+}
+
+func (s *Server) getCohortSimulationBatchHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+
+	id := strings.TrimSpace(vars["id"])
+	if id == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+
+	var it suiteExecutionListItem
+	if err := s.pool.QueryRow(r.Context(), `
+		SELECT
+			e.id::text,
+			e.cohort_id::text,
+			COALESCE(s.name, ''::text) AS suite_name,
+			e.name,
+			e.optimizer_key,
+			e.n_sims,
+			e.seed,
+			e.starting_state_key,
+			e.excluded_entry_name,
+			e.status,
+			e.error_message,
+			e.created_at,
+			e.updated_at
+		FROM derived.simulation_run_batches e
+		LEFT JOIN derived.synthetic_calcutta_cohorts s
+			ON s.id = e.cohort_id
+			AND s.deleted_at IS NULL
+		WHERE e.id = $1::uuid
+			AND e.deleted_at IS NULL
+		LIMIT 1
+	`, id).Scan(
+		&it.ID,
+		&it.SuiteID,
+		&it.SuiteName,
+		&it.Name,
+		&it.OptimizerKey,
+		&it.NSims,
+		&it.Seed,
+		&it.StartingStateKey,
+		&it.ExcludedEntry,
+		&it.Status,
+		&it.ErrorMessage,
+		&it.CreatedAt,
+		&it.UpdatedAt,
+	); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if strings.TrimSpace(it.SuiteID) != cohortID {
+		writeError(w, r, http.StatusNotFound, "not_found", "Simulation batch not found", "id")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, it)
+}
+
+func (s *Server) createCohortSimulationBatchHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+
+	var req createSuiteExecutionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if strings.TrimSpace(req.SuiteID) == "" {
+		req.SuiteID = cohortID
+	}
+	if req.CohortID == nil {
+		v := cohortID
+		req.CohortID = &v
+	}
+
+	b, _ := json.Marshal(req)
+	cloned := r.Clone(r.Context())
+	cloned.Body = io.NopCloser(bytes.NewReader(b))
+	s.createSuiteExecutionHandler(w, cloned)
 }
 
 func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Request) {

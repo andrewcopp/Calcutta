@@ -1,15 +1,153 @@
 package httpserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 )
+
+func (s *Server) listCohortSimulationsHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+
+	q := r.URL.Query()
+	q.Set("cohort_id", cohortID)
+	r.URL.RawQuery = q.Encode()
+	s.listSuiteCalcuttaEvaluationsHandler(w, r)
+}
+
+func (s *Server) getCohortSimulationHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	id := strings.TrimSpace(vars["id"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+	if id == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+
+	it, err := s.loadSuiteCalcuttaEvaluationByID(r.Context(), id)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if strings.TrimSpace(it.SuiteID) != cohortID {
+		writeError(w, r, http.StatusNotFound, "not_found", "Simulation not found", "id")
+		return
+	}
+	writeJSON(w, http.StatusOK, it)
+}
+
+func (s *Server) getCohortSimulationResultHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	id := strings.TrimSpace(vars["id"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+	if id == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+
+	it, err := s.loadSuiteCalcuttaEvaluationByID(r.Context(), id)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if strings.TrimSpace(it.SuiteID) != cohortID {
+		writeError(w, r, http.StatusNotFound, "not_found", "Simulation not found", "id")
+		return
+	}
+
+	s.getSuiteCalcuttaEvaluationResultHandler(w, r)
+}
+
+func (s *Server) getCohortSimulationSnapshotEntryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	id := strings.TrimSpace(vars["id"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+	if id == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+
+	it, err := s.loadSuiteCalcuttaEvaluationByID(r.Context(), id)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if strings.TrimSpace(it.SuiteID) != cohortID {
+		writeError(w, r, http.StatusNotFound, "not_found", "Simulation not found", "id")
+		return
+	}
+
+	s.getSuiteCalcuttaEvaluationSnapshotEntryHandler(w, r)
+}
+
+func (s *Server) createCohortSimulationHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["cohortId"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
+		return
+	}
+
+	var req dtos.CreateSuiteCalcuttaEvaluationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if req.CohortID == nil {
+		v := cohortID
+		req.CohortID = &v
+	}
+
+	b, _ := json.Marshal(req)
+	cloned := r.Clone(r.Context())
+	cloned.Body = io.NopCloser(bytes.NewReader(b))
+	s.createSuiteCalcuttaEvaluationHandler(w, cloned)
+}
 
 func (s *Server) getSuiteCalcuttaEvaluationSnapshotEntryHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -434,6 +572,9 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 	suiteExecutionID := r.URL.Query().Get("suite_execution_id")
 	if strings.TrimSpace(suiteExecutionID) == "" {
 		suiteExecutionID = r.URL.Query().Get("simulation_run_batch_id")
+	}
+	if strings.TrimSpace(suiteExecutionID) == "" {
+		suiteExecutionID = r.URL.Query().Get("simulation_batch_id")
 	}
 	limit := getLimit(r, 50)
 	if limit <= 0 {

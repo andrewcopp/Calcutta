@@ -32,7 +32,6 @@ import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDe
 import { LabEntriesPage } from './pages/LabEntriesPage';
 import { LabEntriesSuiteDetailPage } from './pages/LabEntriesSuiteDetailPage';
 import { LabEntryReportPage } from './pages/LabEntryReportPage';
-import { SandboxPage } from './pages/SandboxPage';
 import { SandboxCohortsListPage } from './pages/SandboxCohortsListPage';
 import { SandboxCohortDetailPage } from './pages/SandboxCohortDetailPage';
 import { SimulationRunDetailPage } from './pages/SimulationRunDetailPage';
@@ -60,7 +59,7 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
         <Route path="/lab" element={<LabPage />} />
         <Route path="/lab/entries" element={<LabEntriesPage />} />
-        <Route path="/lab/entries/suites/:suiteId" element={<LabEntriesSuiteDetailPage />} />
+        <Route path="/lab/entries/cohorts/:cohortId" element={<LabEntriesSuiteDetailPage />} />
         <Route path="/lab/entries/scenarios/:scenarioId" element={<LabEntryReportPage />} />
         <Route path="/lab/advancements/algorithms/:algorithmId" element={<LabAdvancementAlgorithmDetailPage />} />
         <Route
@@ -73,11 +72,8 @@ const AppLayout: React.FC = () => {
           element={<LabInvestmentCalcuttaDetailPage />}
         />
         <Route path="/sandbox" element={<Navigate to="/sandbox/cohorts" replace />} />
-        <Route path="/sandbox/legacy" element={<SandboxPage />} />
         <Route path="/sandbox/cohorts" element={<SandboxCohortsListPage />} />
         <Route path="/sandbox/cohorts/:cohortId" element={<SandboxCohortDetailPage />} />
-        <Route path="/sandbox/suites" element={<SandboxCohortsListPage />} />
-        <Route path="/sandbox/suites/:suiteId" element={<SandboxCohortDetailPage />} />
         <Route path="/sandbox/evaluations/:id" element={<SimulationRunDetailPage />} />
         <Route path="/sandbox/evaluations/:id/entries/:snapshotEntryId" element={<SimulationRunEntryDetailPage />} />
         <Route path="/runs" element={<RunsRedirect />} />

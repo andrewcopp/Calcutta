@@ -119,76 +119,54 @@ export type CreateSuiteCalcuttaEvaluationResponse = {
 
 export type CreateSimulationRunResponse = CreateSuiteCalcuttaEvaluationResponse;
 
-export type CreateSimulationRunRequest = CreateSuiteCalcuttaEvaluationRequest;
-
-export const suiteCalcuttaEvaluationsService = {
-  async list(params?: {
-    suiteId?: string;
-    suiteExecutionId?: string;
+export const simulationRunsService = {
+  async list(params: {
+    cohortId: string;
+    simulationBatchId?: string;
     calcuttaId?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ListSuiteCalcuttaEvaluationsResponse> {
+  }): Promise<ListSimulationRunsResponse> {
     const q = new URLSearchParams();
-    if (params?.suiteId) q.set('suite_id', params.suiteId);
-    if (params?.suiteExecutionId) q.set('suite_execution_id', params.suiteExecutionId);
+    if (params?.simulationBatchId) q.set('simulation_batch_id', params.simulationBatchId);
     if (params?.calcuttaId) q.set('calcutta_id', params.calcuttaId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
 
     const suffix = q.toString() ? `?${q.toString()}` : '';
-    return apiClient.get<ListSuiteCalcuttaEvaluationsResponse>(`/simulation-runs${suffix}`);
-  },
-
-  async get(id: string): Promise<SuiteCalcuttaEvaluation> {
-    return apiClient.get<SuiteCalcuttaEvaluation>(`/simulation-runs/${encodeURIComponent(id)}`);
-  },
-
-  async getResult(id: string): Promise<SuiteCalcuttaEvaluationResult> {
-    return apiClient.get<SuiteCalcuttaEvaluationResult>(`/simulation-runs/${encodeURIComponent(id)}/result`);
-  },
-
-  async getSnapshotEntry(id: string, snapshotEntryId: string): Promise<SuiteCalcuttaEvaluationSnapshotEntryResponse> {
-    return apiClient.get<SuiteCalcuttaEvaluationSnapshotEntryResponse>(
-      `/simulation-runs/${encodeURIComponent(id)}/entries/${encodeURIComponent(snapshotEntryId)}`
+    return apiClient.get<ListSimulationRunsResponse>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulations${suffix}`
     );
   },
 
-  async create(req: CreateSuiteCalcuttaEvaluationRequest): Promise<CreateSuiteCalcuttaEvaluationResponse> {
-    return apiClient.post<CreateSuiteCalcuttaEvaluationResponse>('/simulation-runs', req);
-  },
-};
-
-export const simulationRunsService = {
-  async list(params?: {
-    cohortId?: string;
-    simulationRunBatchId?: string;
-    calcuttaId?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<ListSimulationRunsResponse> {
-    return suiteCalcuttaEvaluationsService.list({
-      suiteId: params?.cohortId,
-      suiteExecutionId: params?.simulationRunBatchId,
-      calcuttaId: params?.calcuttaId,
-      limit: params?.limit,
-      offset: params?.offset,
-    });
+  async get(params: { cohortId: string; id: string }): Promise<SimulationRun> {
+    return apiClient.get<SimulationRun>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulations/${encodeURIComponent(params.id)}`
+    );
   },
 
-  async get(id: string): Promise<SimulationRun> {
-    return suiteCalcuttaEvaluationsService.get(id);
+  async getResult(params: { cohortId: string; id: string }): Promise<SimulationRunResult> {
+    return apiClient.get<SimulationRunResult>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulations/${encodeURIComponent(params.id)}/result`
+    );
   },
 
-  async getResult(id: string): Promise<SimulationRunResult> {
-    return suiteCalcuttaEvaluationsService.getResult(id);
+  async getSnapshotEntry(params: {
+    cohortId: string;
+    id: string;
+    snapshotEntryId: string;
+  }): Promise<SuiteCalcuttaEvaluationSnapshotEntryResponse> {
+    return apiClient.get<SuiteCalcuttaEvaluationSnapshotEntryResponse>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulations/${encodeURIComponent(params.id)}/entries/${encodeURIComponent(
+        params.snapshotEntryId
+      )}`
+    );
   },
 
-  async getSnapshotEntry(id: string, snapshotEntryId: string): Promise<SuiteCalcuttaEvaluationSnapshotEntryResponse> {
-    return suiteCalcuttaEvaluationsService.getSnapshotEntry(id, snapshotEntryId);
-  },
-
-  async create(req: CreateSimulationRunRequest): Promise<CreateSimulationRunResponse> {
-    return suiteCalcuttaEvaluationsService.create(req);
+  async create(params: { cohortId: string; req: CreateSuiteCalcuttaEvaluationRequest }): Promise<CreateSimulationRunResponse> {
+    return apiClient.post<CreateSimulationRunResponse>(
+      `/cohorts/${encodeURIComponent(params.cohortId)}/simulations`,
+      params.req
+    );
   },
 };

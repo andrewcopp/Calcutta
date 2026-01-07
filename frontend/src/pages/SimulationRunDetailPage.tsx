@@ -10,7 +10,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { calcuttaService } from '../services/calcuttaService';
 import {
-  suiteCalcuttaEvaluationsService,
+  simulationRunsService,
   type SuiteCalcuttaEvaluationResult,
 } from '../services/simulationRunsService';
 import type { Calcutta } from '../types/calcutta';
@@ -72,14 +72,14 @@ export function SimulationRunDetailPage() {
 
   const detailQuery = useQuery({
     queryKey: ['simulation-runs', 'get', id],
-    queryFn: () => suiteCalcuttaEvaluationsService.get(id!),
-    enabled: Boolean(id),
+    queryFn: () => simulationRunsService.get({ cohortId: suiteId, id: id! }),
+    enabled: Boolean(id && suiteId),
   });
 
   const resultQuery = useQuery<SuiteCalcuttaEvaluationResult>({
     queryKey: ['simulation-runs', 'result', id],
-    queryFn: () => suiteCalcuttaEvaluationsService.getResult(id!),
-    enabled: Boolean(id) && detailQuery.data?.status === 'succeeded',
+    queryFn: () => simulationRunsService.getResult({ cohortId: suiteId, id: id! }),
+    enabled: Boolean(id && suiteId) && detailQuery.data?.status === 'succeeded',
   });
 
   const [sortKey, setSortKey] = useState<'mean' | 'p_top1' | 'p_in_money' | 'finish_position'>(

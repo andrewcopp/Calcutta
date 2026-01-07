@@ -16,6 +16,16 @@ END $$;
 DROP VIEW IF EXISTS derived.simulation_runs;
 DROP VIEW IF EXISTS derived.simulation_run_batches;
 
+DO $$
+BEGIN
+    IF to_regclass('derived.suites') IS NOT NULL THEN
+        EXECUTE 'DROP TRIGGER IF EXISTS trg_sync_synthetic_calcutta_cohort_from_suite ON derived.suites';
+    END IF;
+    IF to_regclass('derived.suite_calcutta_evaluations') IS NOT NULL THEN
+        EXECUTE 'DROP TRIGGER IF EXISTS trg_derived_suite_calcutta_evaluations_enqueue_run_job ON derived.suite_calcutta_evaluations';
+    END IF;
+END $$;
+
 DROP FUNCTION IF EXISTS derived.sync_synthetic_calcutta_cohort_from_suite();
 DROP FUNCTION IF EXISTS derived.enqueue_run_job_for_suite_calcutta_evaluation();
 
