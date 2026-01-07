@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -461,6 +462,57 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 			AND run_id = $1::uuid
 	`, req.ID)
 
+	summary := map[string]any{
+		"status":                    "succeeded",
+		"evaluationId":              req.ID,
+		"runKey":                    runKey,
+		"optimizerKey":              optimizerKey,
+		"nSims":                     nSims,
+		"seed":                      seed,
+		"strategyGenerationRunId":   strategyGenRunID,
+		"calcuttaEvaluationRunId":   evalRunID,
+		"ourRank":                   ourRank,
+		"ourMeanNormalizedPayout":   ourMeanNormalizedPayout,
+		"ourMedianNormalizedPayout": ourMedianNormalizedPayout,
+		"ourPTop1":                  ourPTop1,
+		"ourPInMoney":               ourPInMoney,
+		"totalSimulations":          totalSimulations,
+		"realizedFinishPosition":    realizedFinishPosition,
+		"realizedIsTied":            realizedIsTied,
+		"realizedInTheMoney":        realizedInTheMoney,
+		"realizedPayoutCents":       realizedPayoutCents,
+		"realizedTotalPoints":       realizedTotalPoints,
+	}
+	summaryJSON, err := json.Marshal(summary)
+	if err == nil {
+		var runKeyParam any
+		if runKey != "" {
+			runKeyParam = runKey
+		} else {
+			runKeyParam = nil
+		}
+		_, _ = s.pool.Exec(ctx, `
+			INSERT INTO derived.run_artifacts (
+				run_kind,
+				run_id,
+				run_key,
+				artifact_kind,
+				schema_version,
+				storage_uri,
+				summary_json
+			)
+			VALUES ('simulation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
+			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
+			DO UPDATE
+			SET run_key = EXCLUDED.run_key,
+				schema_version = EXCLUDED.schema_version,
+				storage_uri = EXCLUDED.storage_uri,
+				summary_json = EXCLUDED.summary_json,
+				updated_at = NOW(),
+				deleted_at = NULL
+		`, req.ID, runKeyParam, summaryJSON)
+	}
+
 	log.Printf("suite_eval_worker success worker_id=%s eval_id=%s run_key=%s strategy_generation_run_id=%s calcutta_evaluation_run_id=%s",
 		workerID,
 		req.ID,
@@ -760,6 +812,7 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 	if err != nil {
 		msg = err.Error()
 	}
+	var runKey *string
 	var suiteExecutionID *string
 	e := s.pool.QueryRow(ctx, `
 		UPDATE derived.suite_calcutta_evaluations
@@ -767,8 +820,8 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 			error_message = $2,
 			updated_at = NOW()
 		WHERE id = $1::uuid
-		RETURNING suite_execution_id
-	`, evaluationID, msg).Scan(&suiteExecutionID)
+		RETURNING run_key::text, suite_execution_id
+	`, evaluationID, msg).Scan(&runKey, &suiteExecutionID)
 	if e != nil {
 		log.Printf("Error marking suite calcutta evaluation %s failed: %v (original error: %v)", evaluationID, e, err)
 		return
@@ -783,6 +836,42 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 		WHERE run_kind = 'simulation'
 			AND run_id = $1::uuid
 	`, evaluationID, msg)
+
+	failureSummary := map[string]any{
+		"status":       "failed",
+		"evaluationId": evaluationID,
+		"runKey":       runKey,
+		"errorMessage": msg,
+	}
+	failureSummaryJSON, err := json.Marshal(failureSummary)
+	if err == nil {
+		var runKeyParam any
+		if runKey != nil && *runKey != "" {
+			runKeyParam = *runKey
+		} else {
+			runKeyParam = nil
+		}
+		_, _ = s.pool.Exec(ctx, `
+			INSERT INTO derived.run_artifacts (
+				run_kind,
+				run_id,
+				run_key,
+				artifact_kind,
+				schema_version,
+				storage_uri,
+				summary_json
+			)
+			VALUES ('simulation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
+			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
+			DO UPDATE
+			SET run_key = EXCLUDED.run_key,
+				schema_version = EXCLUDED.schema_version,
+				storage_uri = EXCLUDED.storage_uri,
+				summary_json = EXCLUDED.summary_json,
+				updated_at = NOW(),
+				deleted_at = NULL
+		`, evaluationID, runKeyParam, failureSummaryJSON)
+	}
 
 	if suiteExecutionID != nil && *suiteExecutionID != "" {
 		s.updateSuiteExecutionStatus(ctx, *suiteExecutionID)
