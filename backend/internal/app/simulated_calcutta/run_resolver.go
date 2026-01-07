@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -260,19 +261,18 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 				return "", err
 			}
 		} else {
-			_, err := tx.Exec(ctx, `
-				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-				SELECT $1, greb.team_id, greb.bid_points
-				FROM derived.recommended_entry_bids greb
-				WHERE greb.run_id = $2::uuid
-					AND greb.deleted_at IS NULL
-			`, snapshotEntryID, runID)
-			if err != nil {
-				return "", err
+			if _, parseErr := uuid.Parse(runID); parseErr == nil {
+				_, err := tx.Exec(ctx, `
+					INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
+					SELECT $1, greb.team_id, greb.bid_points
+					FROM derived.recommended_entry_bids greb
+					WHERE greb.run_id = $2::uuid
+						AND greb.deleted_at IS NULL
+				`, snapshotEntryID, runID)
+				if err != nil {
+					return "", err
+				}
 			}
-		}
-		if err != nil {
-			return "", err
 		}
 	}
 

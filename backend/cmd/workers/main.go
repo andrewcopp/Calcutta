@@ -30,10 +30,11 @@ func run() error {
 	runMarketShareWorker := flag.Bool("market-share-worker", false, "Run the market share worker")
 	runGameOutcomeWorker := flag.Bool("game-outcome-worker", false, "Run the predicted game outcomes worker")
 	runStrategyGenWorker := flag.Bool("strategy-generation-worker", false, "Run the strategy generation worker")
+	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", false, "Run the calcutta evaluation worker")
 	runSuiteEvaluationWorker := flag.Bool("suite-eval-worker", false, "Run the suite calcutta evaluation worker")
 	flag.Parse()
 
-	if !*runBundleImportWorker && !*runEntryEvaluationWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runStrategyGenWorker && !*runSuiteEvaluationWorker {
+	if !*runBundleImportWorker && !*runEntryEvaluationWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runStrategyGenWorker && !*runCalcuttaEvalWorker && !*runSuiteEvaluationWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -92,6 +93,13 @@ func run() error {
 		go func() {
 			defer wg.Done()
 			s.RunStrategyGenerationWorker(ctx)
+		}()
+	}
+	if *runCalcuttaEvalWorker {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.RunCalcuttaEvaluationWorker(ctx)
 		}()
 	}
 	if *runSuiteEvaluationWorker {

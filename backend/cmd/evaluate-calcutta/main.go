@@ -24,12 +24,10 @@ func run() error {
 	var calcuttaID string
 	var tournamentSimulationBatchID string
 	var excludedEntryName string
-	var runID string
 
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Core calcutta UUID")
 	flag.StringVar(&tournamentSimulationBatchID, "tournament-simulation-batch-id", "", "Optional: derived.simulated_tournaments.id")
 	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Optional: entry name to exclude")
-	flag.StringVar(&runID, "run-id", "", "Optional: run_id tag for legacy compatibility")
 	flag.Parse()
 
 	if calcuttaID == "" {
@@ -38,9 +36,6 @@ func run() error {
 	}
 	if excludedEntryName == "" {
 		excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
-	}
-	if runID == "" {
-		runID = "go_eval"
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
@@ -60,12 +55,12 @@ func run() error {
 	}
 
 	svc := simulated_calcutta.New(pool)
-	_, err = svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, override)
+	evalRunID, runKey, err := svc.EnqueueCalcuttaEvaluationRun(context.Background(), calcuttaID, excludedEntryName, override)
 	if err != nil {
-		return fmt.Errorf("evaluation failed: %w", err)
+		return fmt.Errorf("enqueue failed: %w", err)
 	}
 
-	log.Printf("Calcutta evaluation complete for calcutta_id=%s", calcuttaID)
+	log.Printf("Enqueued calcutta evaluation run calcutta_id=%s calcutta_evaluation_run_id=%s run_key=%s", calcuttaID, evalRunID, runKey)
 	return nil
 }
 

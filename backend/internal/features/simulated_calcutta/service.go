@@ -15,6 +15,8 @@ type Entry = appsimulatedcalcutta.Entry
 
 type TeamSimResult = appsimulatedcalcutta.TeamSimResult
 
+type CalcuttaEvaluationResult = appsimulatedcalcutta.CalcuttaEvaluationResult
+
 func New(pool *pgxpool.Pool) *Service {
 	return appsimulatedcalcutta.New(pool)
 }
