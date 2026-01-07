@@ -40,6 +40,13 @@ type CreateSandboxExecutionResponse = {
   evaluationCount: number;
 };
 
+type GenerateLabEntriesResponse = {
+	created: number;
+	skipped: number;
+	failed: number;
+	failures: { scenario_id: string; calcutta_id: string; message: string }[];
+};
+
 export function LabEntriesSuiteDetailPage() {
   const { cohortId } = useParams<{ cohortId: string }>();
   const navigate = useNavigate();
@@ -47,6 +54,9 @@ export function LabEntriesSuiteDetailPage() {
 	const [nSimsText, setNSimsText] = useState<string>('');
 	const [excludedEntryId, setExcludedEntryId] = useState<string>('');
 	const [runInSandboxError, setRunInSandboxError] = useState<string | null>(null);
+	const [generateError, setGenerateError] = useState<string | null>(null);
+	const [generateResult, setGenerateResult] = useState<GenerateLabEntriesResponse | null>(null);
+	const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
   const detailQuery = useQuery<CohortDetailResponse | null>({
     queryKey: ['lab', 'entries', 'cohort', cohortId],
@@ -58,10 +68,6 @@ export function LabEntriesSuiteDetailPage() {
   });
 
   const items = detailQuery.data?.items ?? [];
-
-  const canRunInSandbox = useMemo(() => {
-    return items.some((it) => Boolean(it.strategy_generation_run_id));
-  }, [items]);
 
   const sorted = useMemo(() => {
     return items
@@ -88,6 +94,9 @@ export function LabEntriesSuiteDetailPage() {
 
 	const calcuttaEntries = entriesQuery.data ?? [];
 
+	const canRunInSandbox = useMemo(() => {
+		return items.some((it) => Boolean(it.strategy_generation_run_id));
+	}, [items]);
   const cohort = detailQuery.data?.cohort ?? null;
 
   const fmtDateTime = (iso?: string | null) => {
@@ -109,6 +118,29 @@ export function LabEntriesSuiteDetailPage() {
         }
         actions={
 			<div className="flex items-center gap-2">
+				<Button
+					size="sm"
+					variant="secondary"
+					disabled={!cohortId || detailQuery.isLoading || isGenerating}
+					onClick={async () => {
+						if (!cohortId) return;
+						setGenerateError(null);
+						setGenerateResult(null);
+						setIsGenerating(true);
+						try {
+							const res = await analyticsService.generateLabEntriesForCohort<GenerateLabEntriesResponse>(cohortId);
+							setGenerateResult(res);
+							await detailQuery.refetch();
+						} catch (err) {
+							setGenerateError(err instanceof Error ? err.message : 'Failed to generate entries');
+						} finally {
+							setIsGenerating(false);
+						}
+					}}
+				>
+					{isGenerating ? 'Generating…' : 'Generate Entries'}
+				</Button>
+
 				<div className="w-32">
 					<Input
 						type="number"
@@ -139,7 +171,6 @@ export function LabEntriesSuiteDetailPage() {
 					onClick={async () => {
 						if (!cohortId) return;
 						setRunInSandboxError(null);
-
 						const trimmed = nSimsText.trim();
 						let nSims: number | undefined;
 						if (trimmed !== '') {
@@ -177,6 +208,22 @@ export function LabEntriesSuiteDetailPage() {
         <Card>
           <h2 className="text-xl font-semibold mb-2">Algorithm Combo</h2>
           {detailQuery.isLoading ? <LoadingState label="Loading cohort..." layout="inline" /> : null}
+
+					{generateError ? (
+						<Alert variant="error" className="mt-3">
+							<div className="font-semibold mb-1">Failed to generate entries</div>
+							<div>{generateError}</div>
+						</Alert>
+					) : null}
+
+					{generateResult ? (
+						<Alert variant={generateResult.failed > 0 ? 'warning' : 'success'} className="mt-3">
+							<div className="font-semibold mb-1">Generate Entries</div>
+							<div>
+								created={generateResult.created} | skipped={generateResult.skipped} | failed={generateResult.failed}
+							</div>
+						</Alert>
+					) : null}
 
           {cohort ? (
             <div className="text-sm text-gray-700">

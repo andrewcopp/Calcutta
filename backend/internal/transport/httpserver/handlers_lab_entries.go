@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -106,6 +107,19 @@ type createLabSuiteSandboxExecutionResponse struct {
 	EvaluationCount int    `json:"evaluationCount"`
 }
 
+type generateLabEntriesFailure struct {
+	ScenarioID string `json:"scenario_id"`
+	CalcuttaID string `json:"calcutta_id"`
+	Message    string `json:"message"`
+}
+
+type generateLabEntriesResponse struct {
+	Created  int                         `json:"created"`
+	Skipped  int                         `json:"skipped"`
+	Failed   int                         `json:"failed"`
+	Failures []generateLabEntriesFailure `json:"failures"`
+}
+
 func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 	r.HandleFunc(
 		"/api/lab/entries",
@@ -123,6 +137,241 @@ func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 		"/api/lab/entries/cohorts/{id}/sandbox-executions",
 		s.requirePermission("analytics.suite_executions.write", s.createLabCohortSandboxExecutionHandler),
 	).Methods("POST", "OPTIONS")
+	r.HandleFunc(
+		"/api/lab/entries/cohorts/{id}/generate-entries",
+		s.requirePermission("analytics.strategy_generation_runs.write", s.generateLabEntriesForCohortHandler),
+	).Methods("POST", "OPTIONS")
+}
+
+func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	cohortID := strings.TrimSpace(vars["id"])
+	if cohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(cohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+
+	ctx := r.Context()
+
+	var msAlgID string
+	var optimizerKey string
+	var startingStateKey string
+	var cohortExcludedEntryName *string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT
+			market_share_algorithm_id::text,
+			COALESCE(optimizer_key, ''::text) AS optimizer_key,
+			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			excluded_entry_name
+		FROM derived.synthetic_calcutta_cohorts
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, cohortID).Scan(&msAlgID, &optimizerKey, &startingStateKey, &cohortExcludedEntryName); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Cohort not found", "id")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	optimizerKey = strings.TrimSpace(optimizerKey)
+	if optimizerKey == "" {
+		optimizerKey = "minlp_v1"
+	}
+	startingStateKey = strings.TrimSpace(startingStateKey)
+	if startingStateKey == "" {
+		startingStateKey = "post_first_four"
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		_ = tx.Rollback(ctx)
+	}()
+
+	// Ensure this cohort has scenarios for all calcuttas. (AUTO cohorts start empty.)
+	// We preserve any existing scenario-level overrides by only filling in NULL/empty fields.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO derived.synthetic_calcuttas (
+			cohort_id,
+			calcutta_id,
+			starting_state_key,
+			excluded_entry_name
+		)
+		SELECT
+			$1::uuid,
+			c.id,
+			$2,
+			$3
+		FROM core.calcuttas c
+		WHERE c.deleted_at IS NULL
+			AND NOT EXISTS (
+				SELECT 1
+				FROM derived.synthetic_calcuttas sc
+				WHERE sc.cohort_id = $1::uuid
+					AND sc.calcutta_id = c.id
+					AND sc.deleted_at IS NULL
+			)
+	`, cohortID, startingStateKey, cohortExcludedEntryName); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE derived.synthetic_calcuttas
+		SET starting_state_key = COALESCE(NULLIF(starting_state_key, ''), $2),
+			excluded_entry_name = COALESCE(NULLIF(excluded_entry_name, ''), $3),
+			updated_at = NOW()
+		WHERE cohort_id = $1::uuid
+			AND deleted_at IS NULL
+	`, cohortID, startingStateKey, cohortExcludedEntryName); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	type scenarioRow struct {
+		ScenarioID string
+		CalcuttaID string
+		Excluded   *string
+		FocusRunID *string
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT
+			id::text,
+			calcutta_id::text,
+			excluded_entry_name,
+			focus_strategy_generation_run_id::text
+		FROM derived.synthetic_calcuttas
+		WHERE cohort_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY created_at ASC
+	`, cohortID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	scenarios := make([]scenarioRow, 0)
+	for rows.Next() {
+		var sc scenarioRow
+		if err := rows.Scan(&sc.ScenarioID, &sc.CalcuttaID, &sc.Excluded, &sc.FocusRunID); err != nil {
+			rows.Close()
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		scenarios = append(scenarios, sc)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	rows.Close()
+
+	resp := generateLabEntriesResponse{Failures: make([]generateLabEntriesFailure, 0)}
+
+	for _, sc := range scenarios {
+
+		if sc.FocusRunID != nil && strings.TrimSpace(*sc.FocusRunID) != "" {
+			resp.Skipped++
+			continue
+		}
+
+		effExcluded := sc.Excluded
+		if effExcluded == nil {
+			effExcluded = cohortExcludedEntryName
+		}
+
+		var msRunID string
+		if err := tx.QueryRow(ctx, `
+			SELECT id::text
+			FROM derived.market_share_runs
+			WHERE calcutta_id = $1::uuid
+				AND algorithm_id = $2::uuid
+				AND deleted_at IS NULL
+			ORDER BY (CASE WHEN $3::text IS NOT NULL AND params_json->>'excluded_entry_name' = $3::text THEN 1 ELSE 0 END) DESC,
+				created_at DESC
+			LIMIT 1
+		`, sc.CalcuttaID, msAlgID, effExcluded).Scan(&msRunID); err != nil {
+			if err == pgx.ErrNoRows {
+				resp.Failed++
+				resp.Failures = append(resp.Failures, generateLabEntriesFailure{ScenarioID: sc.ScenarioID, CalcuttaID: sc.CalcuttaID, Message: "Missing market-share run for cohort algorithm"})
+				continue
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		runKeyUUID := uuid.NewString()
+		runKeyText := runKeyUUID
+		name := fmt.Sprintf("lab_entries_%s", optimizerKey)
+		params := map[string]any{"market_share_run_id": msRunID, "source": "lab_entries_generate"}
+		paramsJSON, _ := json.Marshal(params)
+
+		gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
+		var gitSHAParam any
+		if gitSHA != "" {
+			gitSHAParam = gitSHA
+		} else {
+			gitSHAParam = nil
+		}
+
+		var runID string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO derived.strategy_generation_runs (
+				run_key,
+				run_key_uuid,
+				name,
+				simulated_tournament_id,
+				calcutta_id,
+				purpose,
+				returns_model_key,
+				investment_model_key,
+				optimizer_key,
+				params_json,
+				git_sha
+			)
+			VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'lab_entries_generation', 'legacy', 'predicted_market_share', $5, $6::jsonb, $7)
+			RETURNING id::text
+		`, runKeyText, runKeyUUID, name, sc.CalcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE derived.synthetic_calcuttas
+			SET focus_strategy_generation_run_id = $2::uuid,
+				focus_entry_name = COALESCE(focus_entry_name, 'Our Strategy'),
+				updated_at = NOW()
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+		`, sc.ScenarioID, runID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		resp.Created++
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	committed = true
+
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) createLabCohortSandboxExecutionHandler(w http.ResponseWriter, r *http.Request) {
@@ -477,6 +726,32 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 			return
 		}
 	}
+	if len(goAlgs) == 0 {
+		rows, err := s.pool.Query(ctx, `
+			SELECT a.id::text, a.name
+			FROM derived.algorithms a
+			WHERE a.kind = 'game_outcomes'
+				AND a.deleted_at IS NULL
+			ORDER BY a.name ASC
+		`)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a alg
+			if err := rows.Scan(&a.ID, &a.Name); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			goAlgs = append(goAlgs, a)
+		}
+		if err := rows.Err(); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
 
 	msAlgs := make([]alg, 0)
 	{
@@ -492,6 +767,32 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 				ON ra.run_kind = 'market_share'
 				AND ra.run_id = msr.id
 				AND ra.deleted_at IS NULL
+			WHERE a.kind = 'market_share'
+				AND a.deleted_at IS NULL
+			ORDER BY a.name ASC
+		`)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a alg
+			if err := rows.Scan(&a.ID, &a.Name); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			msAlgs = append(msAlgs, a)
+		}
+		if err := rows.Err(); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
+	if len(msAlgs) == 0 {
+		rows, err := s.pool.Query(ctx, `
+			SELECT a.id::text, a.name
+			FROM derived.algorithms a
 			WHERE a.kind = 'market_share'
 				AND a.deleted_at IS NULL
 			ORDER BY a.name ASC

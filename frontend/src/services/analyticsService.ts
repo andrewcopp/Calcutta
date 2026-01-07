@@ -115,6 +115,10 @@ export const analyticsService = {
     return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/sandbox-executions`, params || {});
   },
 
+	async generateLabEntriesForCohort<T>(cohortId: string): Promise<T> {
+		return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/generate-entries`, {});
+	},
+
   async getLabEntryReport<T>(scenarioId: string): Promise<T> {
     return apiClient.get<T>(`/lab/entries/scenarios/${encodeURIComponent(scenarioId)}`);
   },
