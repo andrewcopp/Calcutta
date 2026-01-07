@@ -124,7 +124,7 @@ func (s *Service) createTournamentSimulationBatch(ctx context.Context, coreTourn
 			seed,
 			probability_source_key
 		)
-		VALUES ($1, $2, $3, 0, 'legacy')
+		VALUES ($1, $2, $3, 42, 'legacy')
 		RETURNING id
 	`, coreTournamentID, tournamentStateSnapshotID, nSims).Scan(&batchID); err != nil {
 		return "", err

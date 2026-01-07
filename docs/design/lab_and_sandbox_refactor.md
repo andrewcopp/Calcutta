@@ -238,7 +238,7 @@ Batch orchestration (optional grouping record):
   - produced artifacts registration
   - metrics artifact always produced
 
-- [ ] Require seeded simulations:
+- [x] Require seeded simulations:
   - seed is a required run param
   - any RNG usage is derived from the seed
 

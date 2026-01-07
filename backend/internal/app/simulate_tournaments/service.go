@@ -52,6 +52,9 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	if p.NSims <= 0 {
 		return nil, errors.New("NSims must be positive")
 	}
+	if p.Seed == 0 {
+		return nil, errors.New("Seed must be non-zero")
+	}
 	if p.BatchSize <= 0 {
 		return nil, errors.New("BatchSize must be positive")
 	}
