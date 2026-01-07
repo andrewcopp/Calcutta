@@ -271,12 +271,17 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 		excluded,
 	)
 
+	s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 0.05, "start", "Starting entry evaluation")
+
 	year, err := s.resolveSeasonYearByCalcuttaID(ctx, req.CalcuttaID)
 	if err != nil {
+		s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 1.0, "failed", err.Error())
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
 		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_key=%s err=%v", workerID, req.ID, runKey, err)
 		return 0, 0, false
 	}
+
+	s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 0.15, "simulate", "Simulating tournaments")
 
 	simSvc := appsimulatetournaments.New(s.pool)
 	simStart := time.Now()
@@ -291,10 +296,13 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	})
 	simDur := time.Since(simStart)
 	if err != nil {
+		s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 1.0, "failed", err.Error())
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
 		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_key=%s phase=simulate err=%v", workerID, req.ID, runKey, err)
 		return simDur, 0, false
 	}
+
+	s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 0.65, "evaluate", "Evaluating entry candidate")
 
 	evalSvc := appsimulatedcalcutta.New(s.pool)
 	evalStart := time.Now()
@@ -308,10 +316,13 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	)
 	evalDur := time.Since(evalStart)
 	if err != nil {
+		s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 1.0, "failed", err.Error())
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
 		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_key=%s phase=evaluate err=%v", workerID, req.ID, runKey, err)
 		return simDur, evalDur, false
 	}
+
+	s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 0.95, "persist", "Persisting results")
 
 	_, err = s.pool.Exec(ctx, `
 		UPDATE derived.entry_evaluation_requests
@@ -335,6 +346,8 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 		WHERE run_kind = 'entry_evaluation'
 			AND run_id = $1::uuid
 	`, req.ID)
+
+	s.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
 		"status":            "succeeded",
@@ -399,6 +412,7 @@ func (s *Server) failEntryEvaluationRequest(ctx context.Context, requestID strin
 	if err != nil {
 		msg = err.Error()
 	}
+	s.updateRunJobProgress(ctx, "entry_evaluation", requestID, 1.0, "failed", msg)
 	var runKey *string
 	_, e := s.pool.Exec(ctx, `
 		UPDATE derived.entry_evaluation_requests

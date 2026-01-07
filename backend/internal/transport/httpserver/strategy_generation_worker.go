@@ -148,6 +148,8 @@ func (s *Server) processStrategyGenerationJob(ctx context.Context, workerID stri
 	}
 
 	log.Printf("strategy_generation_worker start worker_id=%s run_id=%s run_key=%s", workerID, job.RunID, job.RunKey)
+	s.updateRunJobProgress(ctx, "strategy_generation", job.RunID, 0.05, "start", "Starting strategy generation job")
+	s.updateRunJobProgress(ctx, "strategy_generation", job.RunID, 0.25, "running", "Generating recommended entry bids")
 
 	svc := reb.New(s.pool)
 	start := time.Now()
@@ -168,6 +170,8 @@ func (s *Server) processStrategyGenerationJob(ctx context.Context, workerID stri
 		WHERE run_kind = 'strategy_generation'
 			AND run_id = $1::uuid
 	`, job.RunID)
+
+	s.updateRunJobProgress(ctx, "strategy_generation", job.RunID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
 		"status":                  "succeeded",
@@ -224,6 +228,9 @@ func (s *Server) failStrategyGenerationJob(ctx context.Context, job *strategyGen
 	msg := "unknown error"
 	if err != nil {
 		msg = err.Error()
+	}
+	if job != nil {
+		s.updateRunJobProgress(ctx, "strategy_generation", job.RunID, 1.0, "failed", msg)
 	}
 
 	_, _ = s.pool.Exec(ctx, `

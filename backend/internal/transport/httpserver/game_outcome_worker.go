@@ -148,6 +148,8 @@ func (s *Server) processGameOutcomeJob(ctx context.Context, workerID string, job
 	}
 
 	log.Printf("game_outcome_worker start worker_id=%s run_id=%s run_key=%s", workerID, job.RunID, job.RunKey)
+	s.updateRunJobProgress(ctx, "game_outcome", job.RunID, 0.05, "start", "Starting game outcome job")
+	s.updateRunJobProgress(ctx, "game_outcome", job.RunID, 0.25, "running", "Generating predicted game outcomes")
 
 	svc := pgo.New(s.pool)
 	start := time.Now()
@@ -168,6 +170,8 @@ func (s *Server) processGameOutcomeJob(ctx context.Context, workerID string, job
 		WHERE run_kind = 'game_outcome'
 			AND run_id = $1::uuid
 	`, job.RunID)
+
+	s.updateRunJobProgress(ctx, "game_outcome", job.RunID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
 		"status":       "succeeded",
@@ -221,6 +225,9 @@ func (s *Server) failGameOutcomeJob(ctx context.Context, job *gameOutcomeJob, er
 	msg := "unknown error"
 	if err != nil {
 		msg = err.Error()
+	}
+	if job != nil {
+		s.updateRunJobProgress(ctx, "game_outcome", job.RunID, 1.0, "failed", msg)
 	}
 
 	_, _ = s.pool.Exec(ctx, `

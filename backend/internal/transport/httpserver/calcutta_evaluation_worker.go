@@ -148,6 +148,8 @@ func (s *Server) processCalcuttaEvaluationJob(ctx context.Context, workerID stri
 	}
 
 	log.Printf("calcutta_eval_worker start worker_id=%s run_id=%s run_key=%s", workerID, job.RunID, job.RunKey)
+	s.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 0.05, "start", "Starting calcutta evaluation job")
+	s.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 0.25, "running", "Evaluating calcutta")
 
 	svc := appsimulatedcalcutta.New(s.pool)
 	start := time.Now()
@@ -168,6 +170,8 @@ func (s *Server) processCalcuttaEvaluationJob(ctx context.Context, workerID stri
 		WHERE run_kind = 'calcutta_evaluation'
 			AND run_id = $1::uuid
 	`, job.RunID)
+
+	s.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
 		"status":                  "succeeded",
@@ -217,6 +221,9 @@ func (s *Server) failCalcuttaEvaluationJob(ctx context.Context, job *calcuttaEva
 	msg := "unknown error"
 	if err != nil {
 		msg = err.Error()
+	}
+	if job != nil {
+		s.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 1.0, "failed", msg)
 	}
 
 	_, _ = s.pool.Exec(ctx, `

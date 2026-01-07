@@ -231,11 +231,14 @@ Batch orchestration (optional grouping record):
 - `GET /simulation-run-batches/{batch_id}` (returns created run ids + status summary)
 
 ## Worker contract (Go <-> Python and async jobs)
-- [ ] Standardize job submission payload (run kind + params + dataset refs + seed).
-- [ ] Standardize progress events (percent + phase + message).
-- [ ] Standardize completion contract:
-  - run status transitions
-  - produced artifacts registration
+- [x] Standardize job submission envelope in `derived.run_jobs` (run_kind + params_json + seed + source).
+- [ ] Add explicit dataset refs to job submission payload (e.g., tournament_id, calcutta_id, snapshot ids) in a consistent schema per run kind.
+
+- [x] Standardize progress events (percent + phase + message).
+
+- [x] Standardize completion contract for workerized run kinds:
+  - run status transitions via `derived.run_jobs`
+  - produced artifacts registration via `derived.run_artifacts`
   - metrics artifact always produced
 
 - [x] Require seeded simulations:

@@ -157,6 +157,8 @@ func (s *Server) processMarketShareJob(ctx context.Context, workerID string, job
 		return false
 	}
 
+	s.updateRunJobProgress(ctx, "market_share", job.RunID, 0.05, "start", "Starting market share job")
+
 	pythonBin := strings.TrimSpace(os.Getenv("PYTHON_BIN"))
 	if pythonBin == "" {
 		pythonBin = "python3"
@@ -185,12 +187,16 @@ func (s *Server) processMarketShareJob(ctx context.Context, workerID string, job
 	}
 	if resolvedRunner == "" {
 		err := errors.New("market share python runner not found; set PYTHON_MARKET_SHARE_RUNNER")
+		s.updateRunJobProgress(ctx, "market_share", job.RunID, 1.0, "failed", err.Error())
 		s.failMarketShareJob(ctx, job, err)
 		log.Printf("market_share_worker fail worker_id=%s run_id=%s run_key=%s err=%v", workerID, job.RunID, job.RunKey, err)
 		return false
 	}
 
+	s.updateRunJobProgress(ctx, "market_share", job.RunID, 0.15, "runner_resolved", "Resolved python runner")
+
 	log.Printf("market_share_worker start worker_id=%s run_id=%s run_key=%s", workerID, job.RunID, job.RunKey)
+	s.updateRunJobProgress(ctx, "market_share", job.RunID, 0.25, "running", "Running python market share runner")
 
 	cmd := exec.CommandContext(
 		ctx,
@@ -225,6 +231,7 @@ func (s *Server) processMarketShareJob(ctx context.Context, workerID string, job
 		if msg == "" {
 			msg = err.Error()
 		}
+		s.updateRunJobProgress(ctx, "market_share", job.RunID, 1.0, "failed", msg)
 		s.failMarketShareJob(ctx, job, errors.New(msg))
 		log.Printf("market_share_worker fail worker_id=%s run_id=%s run_key=%s dur_ms=%d err=%s", workerID, job.RunID, job.RunKey, dur.Milliseconds(), msg)
 		return false
@@ -234,6 +241,7 @@ func (s *Server) processMarketShareJob(ctx context.Context, workerID string, job
 		if parsed.Error != nil && strings.TrimSpace(*parsed.Error) != "" {
 			msg = *parsed.Error
 		}
+		s.updateRunJobProgress(ctx, "market_share", job.RunID, 1.0, "failed", msg)
 		s.failMarketShareJob(ctx, job, errors.New(msg))
 		log.Printf("market_share_worker fail worker_id=%s run_id=%s run_key=%s dur_ms=%d err=%s", workerID, job.RunID, job.RunKey, dur.Milliseconds(), msg)
 		return false
@@ -253,6 +261,8 @@ func (s *Server) processMarketShareJob(ctx context.Context, workerID string, job
 		WHERE run_kind = 'market_share'
 			AND run_id = $1::uuid
 	`, job.RunID)
+
+	s.updateRunJobProgress(ctx, "market_share", job.RunID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
 		"status":       "succeeded",

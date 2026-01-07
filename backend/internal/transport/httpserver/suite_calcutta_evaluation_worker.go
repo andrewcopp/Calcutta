@@ -235,11 +235,16 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		excluded,
 	)
 
+	s.updateRunJobProgress(ctx, "simulation", req.ID, 0.05, "start", "Starting suite calcutta evaluation")
+
 	year, err := s.resolveSeasonYearByCalcuttaID(ctx, req.CalcuttaID)
 	if err != nil {
+		s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
 		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
 		return false
 	}
+
+	s.updateRunJobProgress(ctx, "simulation", req.ID, 0.15, "simulate", "Simulating tournaments")
 
 	simSvc := appsimulatetournaments.New(s.pool)
 	goRunID := req.GameOutcomeRunID
@@ -268,9 +273,16 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		GameOutcomeRunID:     &goRunID,
 	})
 	if err != nil {
+		s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
 		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
 		return false
 	}
+
+	strategyMsg := "Generating strategy"
+	if usingExistingStrategyGenRun {
+		strategyMsg = "Using existing strategy generation run"
+	}
+	s.updateRunJobProgress(ctx, "simulation", req.ID, 0.55, "strategy", strategyMsg)
 
 	optimizerKey := ""
 	if req.OptimizerKey != nil {
@@ -292,6 +304,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 			SimulatedTournamentID: &simRes.TournamentSimulationBatchID,
 		})
 		if err != nil {
+			s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
 			s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
 			return false
 		}
@@ -300,6 +313,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 
 	evalSvc := appsimulatedcalcutta.New(s.pool)
 	evalRunID := ""
+	s.updateRunJobProgress(ctx, "simulation", req.ID, 0.75, "evaluate", "Evaluating calcutta")
 	if usingExistingStrategyGenRun {
 		evalRunID, err = evalSvc.CalculateSimulatedCalcuttaForStrategyGenerationRun(
 			ctx,
@@ -319,6 +333,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		)
 	}
 	if err != nil {
+		s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
 		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
 		return false
 	}
@@ -461,6 +476,8 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		WHERE run_kind = 'simulation'
 			AND run_id = $1::uuid
 	`, req.ID)
+
+	s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
 		"status":                    "succeeded",
@@ -812,6 +829,7 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 	if err != nil {
 		msg = err.Error()
 	}
+	s.updateRunJobProgress(ctx, "simulation", evaluationID, 1.0, "failed", msg)
 	var runKey *string
 	var suiteExecutionID *string
 	e := s.pool.QueryRow(ctx, `
