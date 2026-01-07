@@ -108,7 +108,7 @@ We can keep separate artifact tables/types, but they should share a common contr
   - [x] StrategyGenerationRuns: always emit a `metrics` artifact.
   - [x] CalcuttaEvaluationRuns: always emit a `metrics` artifact.
 
-- [ ] Ensure EntryArtifacts explicitly reference exactly one:
+- [ ] When EntryRuns/EntryArtifacts are implemented, ensure EntryArtifacts explicitly reference exactly one:
   - AdvancementArtifact
   - MarketShareArtifact
 
