@@ -14,8 +14,7 @@ import (
 )
 
 type createSuiteExecutionRequest struct {
-	SuiteID           string   `json:"suiteId"`
-	CohortID          *string  `json:"cohortId"`
+	CohortID          string   `json:"cohortId"`
 	Name              *string  `json:"name"`
 	CalcuttaIDs       []string `json:"calcuttaIds"`
 	OptimizerKey      *string  `json:"optimizerKey"`
@@ -32,8 +31,8 @@ type createSuiteExecutionResponse struct {
 
 type suiteExecutionListItem struct {
 	ID               string    `json:"id"`
-	SuiteID          string    `json:"suite_id"`
-	SuiteName        string    `json:"suite_name"`
+	CohortID         string    `json:"cohort_id"`
+	CohortName       string    `json:"cohort_name"`
 	Name             *string   `json:"name,omitempty"`
 	OptimizerKey     *string   `json:"optimizer_key,omitempty"`
 	NSims            *int      `json:"n_sims,omitempty"`
@@ -97,7 +96,7 @@ func (s *Server) getCohortSimulationBatchHandler(w http.ResponseWriter, r *http.
 		SELECT
 			e.id::text,
 			e.cohort_id::text,
-			COALESCE(s.name, ''::text) AS suite_name,
+			COALESCE(s.name, ''::text) AS cohort_name,
 			e.name,
 			e.optimizer_key,
 			e.n_sims,
@@ -117,8 +116,8 @@ func (s *Server) getCohortSimulationBatchHandler(w http.ResponseWriter, r *http.
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
-		&it.SuiteID,
-		&it.SuiteName,
+		&it.CohortID,
+		&it.CohortName,
 		&it.Name,
 		&it.OptimizerKey,
 		&it.NSims,
@@ -133,7 +132,7 @@ func (s *Server) getCohortSimulationBatchHandler(w http.ResponseWriter, r *http.
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if strings.TrimSpace(it.SuiteID) != cohortID {
+	if strings.TrimSpace(it.CohortID) != cohortID {
 		writeError(w, r, http.StatusNotFound, "not_found", "Simulation batch not found", "id")
 		return
 	}
@@ -158,12 +157,8 @@ func (s *Server) createCohortSimulationBatchHandler(w http.ResponseWriter, r *ht
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
-	if strings.TrimSpace(req.SuiteID) == "" {
-		req.SuiteID = cohortID
-	}
-	if req.CohortID == nil {
-		v := cohortID
-		req.CohortID = &v
+	if strings.TrimSpace(req.CohortID) == "" {
+		req.CohortID = cohortID
 	}
 
 	b, _ := json.Marshal(req)
@@ -178,16 +173,13 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
-	if strings.TrimSpace(req.SuiteID) == "" && req.CohortID != nil {
-		req.SuiteID = strings.TrimSpace(*req.CohortID)
-	}
-	req.SuiteID = strings.TrimSpace(req.SuiteID)
-	if req.SuiteID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "suiteId (or cohortId) is required", "suiteId")
+	req.CohortID = strings.TrimSpace(req.CohortID)
+	if req.CohortID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
 		return
 	}
-	if _, err := uuid.Parse(req.SuiteID); err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "suiteId must be a valid UUID", "suiteId")
+	if _, err := uuid.Parse(req.CohortID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId must be a valid UUID", "cohortId")
 		return
 	}
 
@@ -213,9 +205,9 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, req.SuiteID).Scan(&goAlgID, &msAlgID, &suiteOptimizerKey, &suiteNSims, &suiteSeed, &suiteStartingStateKey, &suiteExcludedEntryName); err != nil {
+	`, req.CohortID).Scan(&goAlgID, &msAlgID, &suiteOptimizerKey, &suiteNSims, &suiteSeed, &suiteStartingStateKey, &suiteExcludedEntryName); err != nil {
 		if err == pgx.ErrNoRows {
-			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "suiteId")
+			writeError(w, r, http.StatusNotFound, "not_found", "Cohort not found", "cohortId")
 			return
 		}
 		writeErrorFromErr(w, r, err)
@@ -230,7 +222,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 			WHERE cohort_id = $1::uuid
 				AND deleted_at IS NULL
 			ORDER BY created_at ASC
-		`, req.SuiteID)
+		`, req.CohortID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -348,7 +340,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		)
 		VALUES ($1::uuid, $2, $3, $4::int, $5::int, $6, $7::text, 'running')
 		RETURNING id::text, status
-	`, req.SuiteID, name, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded).Scan(&executionID, &status); err != nil {
+	`, req.CohortID, name, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded).Scan(&executionID, &status); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -414,7 +406,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 				updated_at = NOW(),
 				deleted_at = NULL
 			RETURNING id::text
-		`, req.SuiteID, calcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+		`, req.CohortID, calcuttaID).Scan(&syntheticCalcuttaID); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
@@ -434,7 +426,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 				excluded_entry_name
 			)
 			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text)
-		`, executionID, syntheticCalcuttaID, req.SuiteID, calcuttaID, goRunID, msRunID, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded)
+		`, executionID, syntheticCalcuttaID, req.CohortID, calcuttaID, goRunID, msRunID, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -451,10 +443,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Request) {
-	suiteID := r.URL.Query().Get("suite_id")
-	if strings.TrimSpace(suiteID) == "" {
-		suiteID = r.URL.Query().Get("cohort_id")
-	}
+	cohortID := r.URL.Query().Get("cohort_id")
 	limit := getLimit(r, 50)
 	if limit <= 0 {
 		limit = 50
@@ -471,7 +460,7 @@ func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Reque
 		SELECT
 			e.id::text,
 			e.cohort_id::text,
-			COALESCE(s.name, ''::text) AS suite_name,
+			COALESCE(s.name, ''::text) AS cohort_name,
 			e.name,
 			e.optimizer_key,
 			e.n_sims,
@@ -491,7 +480,7 @@ func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Reque
 		ORDER BY e.created_at DESC
 		LIMIT $2::int
 		OFFSET $3::int
-	`, nullUUIDParam(suiteID), limit, offset)
+	`, nullUUIDParam(cohortID), limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -503,8 +492,8 @@ func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Reque
 		var it suiteExecutionListItem
 		if err := rows.Scan(
 			&it.ID,
-			&it.SuiteID,
-			&it.SuiteName,
+			&it.CohortID,
+			&it.CohortName,
 			&it.Name,
 			&it.OptimizerKey,
 			&it.NSims,
@@ -542,7 +531,7 @@ func (s *Server) getSuiteExecutionHandler(w http.ResponseWriter, r *http.Request
 		SELECT
 			e.id::text,
 			e.cohort_id::text,
-			COALESCE(s.name, ''::text) AS suite_name,
+			COALESCE(s.name, ''::text) AS cohort_name,
 			e.name,
 			e.optimizer_key,
 			e.n_sims,
@@ -562,8 +551,8 @@ func (s *Server) getSuiteExecutionHandler(w http.ResponseWriter, r *http.Request
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
-		&it.SuiteID,
-		&it.SuiteName,
+		&it.CohortID,
+		&it.CohortName,
 		&it.Name,
 		&it.OptimizerKey,
 		&it.NSims,

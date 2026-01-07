@@ -1,9 +1,9 @@
 import { apiClient } from '../api/apiClient';
 
-export type SuiteExecutionListItem = {
+export type SimulationRunBatch = {
   id: string;
-  suite_id: string;
-  suite_name: string;
+  cohort_id: string;
+  cohort_name: string;
   name?: string | null;
   optimizer_key?: string | null;
   n_sims?: number | null;
@@ -16,13 +16,9 @@ export type SuiteExecutionListItem = {
   updated_at: string;
 };
 
-export type ListSuiteExecutionsResponse = {
-  items: SuiteExecutionListItem[];
+export type ListSimulationRunBatchesResponse = {
+  items: SimulationRunBatch[];
 };
-
-export type SimulationRunBatchListItem = SuiteExecutionListItem;
-
-export type ListSimulationRunBatchesResponse = ListSuiteExecutionsResponse;
 
 export const simulationRunBatchesService = {
   async list(params: { cohortId: string; limit?: number; offset?: number }): Promise<ListSimulationRunBatchesResponse> {
@@ -36,8 +32,8 @@ export const simulationRunBatchesService = {
     );
   },
 
-  async get(params: { cohortId: string; id: string }): Promise<SimulationRunBatchListItem> {
-    return apiClient.get<SimulationRunBatchListItem>(
+  async get(params: { cohortId: string; id: string }): Promise<SimulationRunBatch> {
+    return apiClient.get<SimulationRunBatch>(
       `/cohorts/${encodeURIComponent(params.cohortId)}/simulation-batches/${encodeURIComponent(params.id)}`
     );
   },

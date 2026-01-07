@@ -21,7 +21,7 @@ func (s *Server) loadSuiteCalcuttaEvaluations(
 			r.id,
 			r.simulation_run_batch_id,
 			r.cohort_id,
-			COALESCE(c.name, '') AS suite_name,
+			COALESCE(c.name, '') AS cohort_name,
 			COALESCE(r.optimizer_key, c.optimizer_key, '') AS optimizer_key,
 			COALESCE(r.n_sims, c.n_sims, 0) AS n_sims,
 			COALESCE(r.seed, c.seed, 0) AS seed,
@@ -71,9 +71,9 @@ func (s *Server) loadSuiteCalcuttaEvaluations(
 		var it suiteCalcuttaEvaluationListItem
 		if err := rows.Scan(
 			&it.ID,
-			&it.SuiteExecutionID,
-			&it.SuiteID,
-			&it.SuiteName,
+			&it.SimulationBatchID,
+			&it.CohortID,
+			&it.CohortName,
 			&it.OptimizerKey,
 			&it.NSims,
 			&it.Seed,
@@ -124,7 +124,7 @@ func (s *Server) loadSuiteCalcuttaEvaluationByID(ctx context.Context, id string)
 			r.id,
 			r.simulation_run_batch_id,
 			r.cohort_id,
-			COALESCE(c.name, '') AS suite_name,
+			COALESCE(c.name, '') AS cohort_name,
 			COALESCE(r.optimizer_key, c.optimizer_key, '') AS optimizer_key,
 			COALESCE(r.n_sims, c.n_sims, 0) AS n_sims,
 			COALESCE(r.seed, c.seed, 0) AS seed,
@@ -161,9 +161,9 @@ func (s *Server) loadSuiteCalcuttaEvaluationByID(ctx context.Context, id string)
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
-		&it.SuiteExecutionID,
-		&it.SuiteID,
-		&it.SuiteName,
+		&it.SimulationBatchID,
+		&it.CohortID,
+		&it.CohortName,
 		&it.OptimizerKey,
 		&it.NSims,
 		&it.Seed,

@@ -12,17 +12,17 @@ import (
 )
 
 type createStrategyGenerationRunRequest struct {
-	CalcuttaID       string  `json:"calcuttaId"`
-	SuiteScenarioID  *string `json:"suiteScenarioId"`
-	Name             *string `json:"name"`
-	OptimizerKey     *string `json:"optimizerKey"`
-	MarketShareRunID *string `json:"marketShareRunId"`
+	CalcuttaID          string  `json:"calcuttaId"`
+	SyntheticCalcuttaID *string `json:"syntheticCalcuttaId"`
+	Name                *string `json:"name"`
+	OptimizerKey        *string `json:"optimizerKey"`
+	MarketShareRunID    *string `json:"marketShareRunId"`
 }
 
 type createStrategyGenerationRunResponse struct {
 	StrategyGenerationRunID string  `json:"strategy_generation_run_id"`
 	RunKey                  string  `json:"run_key"`
-	SuiteScenarioID         *string `json:"suite_scenario_id,omitempty"`
+	SyntheticCalcuttaID     *string `json:"synthetic_calcutta_id,omitempty"`
 	CalcuttaSnapshotID      *string `json:"calcutta_snapshot_id,omitempty"`
 }
 
@@ -75,15 +75,15 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	suiteScenarioID := ""
-	if req.SuiteScenarioID != nil {
-		v := strings.TrimSpace(*req.SuiteScenarioID)
+	syntheticCalcuttaID := ""
+	if req.SyntheticCalcuttaID != nil {
+		v := strings.TrimSpace(*req.SyntheticCalcuttaID)
 		if v != "" {
 			if _, err := uuid.Parse(v); err != nil {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "suiteScenarioId must be a valid UUID", "suiteScenarioId")
+				writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId must be a valid UUID", "syntheticCalcuttaId")
 				return
 			}
-			suiteScenarioID = v
+			syntheticCalcuttaID = v
 		}
 	}
 
@@ -162,7 +162,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		RunKey:                  runKeyText,
 	}
 
-	if suiteScenarioID != "" {
+	if syntheticCalcuttaID != "" {
 		tx, err := s.pool.Begin(ctx)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
@@ -185,20 +185,20 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
 			LIMIT 1
-		`, suiteScenarioID).Scan(&scenarioCalcuttaID, &excludedEntryName, &startingStateKey); err != nil {
+		`, syntheticCalcuttaID).Scan(&scenarioCalcuttaID, &excludedEntryName, &startingStateKey); err != nil {
 			if err == pgx.ErrNoRows {
-				writeError(w, r, http.StatusNotFound, "not_found", "Suite scenario not found", "suiteScenarioId")
+				writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "syntheticCalcuttaId")
 				return
 			}
 			writeErrorFromErr(w, r, err)
 			return
 		}
 		if scenarioCalcuttaID != req.CalcuttaID {
-			writeError(w, r, http.StatusBadRequest, "validation_error", "suiteScenarioId does not match calcuttaId", "suiteScenarioId")
+			writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId does not match calcuttaId", "syntheticCalcuttaId")
 			return
 		}
 
-		snapshotID, err := createSuiteScenarioSnapshot(ctx, tx, scenarioCalcuttaID, excludedEntryName, runID, nil)
+		snapshotID, err := createSyntheticCalcuttaSnapshot(ctx, tx, scenarioCalcuttaID, excludedEntryName, runID, nil)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -212,7 +212,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 				updated_at = NOW()
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
-		`, suiteScenarioID, runID, snapshotID)
+		`, syntheticCalcuttaID, runID, snapshotID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -224,7 +224,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		}
 		committed = true
 
-		resp.SuiteScenarioID = &suiteScenarioID
+		resp.SyntheticCalcuttaID = &syntheticCalcuttaID
 		resp.CalcuttaSnapshotID = &snapshotID
 	}
 

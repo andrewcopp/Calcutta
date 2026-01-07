@@ -96,12 +96,12 @@ export const analyticsService = {
     return apiClient.get<T>('/lab/entries');
   },
 
-  async getLabEntriesSuiteDetail<T>(suiteId: string): Promise<T> {
-    return apiClient.get<T>(`/lab/entries/cohorts/${encodeURIComponent(suiteId)}`);
+  async getLabEntriesCohortDetail<T>(cohortId: string): Promise<T> {
+    return apiClient.get<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}`);
   },
 
-  async createLabSuiteSandboxExecution<T>(suiteId: string): Promise<T> {
-    return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(suiteId)}/sandbox-executions`, {});
+  async createLabCohortSandboxExecution<T>(cohortId: string): Promise<T> {
+    return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/sandbox-executions`, {});
   },
 
   async getLabEntryReport<T>(scenarioId: string): Promise<T> {

@@ -36,18 +36,7 @@ type listSuitesResponse struct {
 }
 
 func (s *Server) registerSuiteRoutes(r *mux.Router) {
-	r.HandleFunc(
-		"/api/suites",
-		s.requirePermission("analytics.suites.read", s.listSuitesHandler),
-	).Methods("GET", "OPTIONS")
-	r.HandleFunc(
-		"/api/suites/{id}",
-		s.requirePermission("analytics.suites.read", s.getSuiteHandler),
-	).Methods("GET", "OPTIONS")
-	r.HandleFunc(
-		"/api/suites/{id}",
-		s.requirePermission("analytics.suites.write", s.updateSuiteHandler),
-	).Methods("PATCH", "OPTIONS")
+	_ = r
 }
 
 type updateSuiteRequest struct {

@@ -11,7 +11,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { calcuttaService } from '../services/calcuttaService';
 import {
   simulationRunsService,
-  type SuiteCalcuttaEvaluationResult,
+  type SimulationRunResult,
 } from '../services/simulationRunsService';
 import type { Calcutta } from '../types/calcutta';
 
@@ -20,10 +20,10 @@ export function SimulationRunDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const suiteId = searchParams.get('cohortId') || searchParams.get('suiteId') || '';
+  const cohortId = searchParams.get('cohortId') || '';
   const executionId = searchParams.get('executionId') || '';
-  const backUrl = suiteId
-    ? `/sandbox/cohorts/${encodeURIComponent(suiteId)}${executionId ? `?executionId=${encodeURIComponent(executionId)}` : ''}`
+  const backUrl = cohortId
+    ? `/sandbox/cohorts/${encodeURIComponent(cohortId)}${executionId ? `?executionId=${encodeURIComponent(executionId)}` : ''}`
     : '/sandbox/cohorts';
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
@@ -72,14 +72,14 @@ export function SimulationRunDetailPage() {
 
   const detailQuery = useQuery({
     queryKey: ['simulation-runs', 'get', id],
-    queryFn: () => simulationRunsService.get({ cohortId: suiteId, id: id! }),
-    enabled: Boolean(id && suiteId),
+    queryFn: () => simulationRunsService.get({ cohortId, id: id! }),
+    enabled: Boolean(id && cohortId),
   });
 
-  const resultQuery = useQuery<SuiteCalcuttaEvaluationResult>({
+  const resultQuery = useQuery<SimulationRunResult>({
     queryKey: ['simulation-runs', 'result', id],
-    queryFn: () => simulationRunsService.getResult({ cohortId: suiteId, id: id! }),
-    enabled: Boolean(id && suiteId) && detailQuery.data?.status === 'succeeded',
+    queryFn: () => simulationRunsService.getResult({ cohortId, id: id! }),
+    enabled: Boolean(id && cohortId) && detailQuery.data?.status === 'succeeded',
   });
 
   const [sortKey, setSortKey] = useState<'mean' | 'p_top1' | 'p_in_money' | 'finish_position'>(
@@ -157,7 +157,7 @@ export function SimulationRunDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-gray-500">Cohort</div>
-                <div className="font-medium text-gray-900">{detailQuery.data.suite_name || detailQuery.data.suite_id}</div>
+                <div className="font-medium text-gray-900">{detailQuery.data.cohort_name || detailQuery.data.cohort_id}</div>
               </div>
               <div>
                 <div className="text-gray-500">Calcutta</div>
@@ -318,7 +318,7 @@ export function SimulationRunDetailPage() {
                                       if (!clickable) return;
                                       navigate(
                                         `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
-                                          `${suiteId ? `?cohortId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+                                          `${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                       );
                                     }}
                                     onKeyDown={(ev) => {
@@ -327,7 +327,7 @@ export function SimulationRunDetailPage() {
                                         ev.preventDefault();
                                         navigate(
                                           `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
-                                            `${suiteId ? `?cohortId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+                                            `${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                         );
                                       }
                                     }}

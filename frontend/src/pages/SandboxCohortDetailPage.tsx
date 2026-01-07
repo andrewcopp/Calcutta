@@ -10,7 +10,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
-import { simulationRunsService, type SuiteCalcuttaEvaluation } from '../services/simulationRunsService';
+import { simulationRunsService, type SimulationRun } from '../services/simulationRunsService';
 import { simulationRunBatchesService } from '../services/simulationRunBatchesService';
 import { cohortsService } from '../services/cohortsService';
 import { syntheticCalcuttasService, type SyntheticCalcuttaListItem } from '../services/syntheticCalcuttasService';
@@ -19,7 +19,7 @@ import type { Calcutta } from '../types/calcutta';
 
 export function SandboxCohortDetailPage() {
   const navigate = useNavigate();
-  const { suiteId, cohortId } = useParams<{ suiteId?: string; cohortId?: string }>();
+  const { cohortId } = useParams<{ cohortId?: string }>();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedExecutionId = searchParams.get('executionId') || '';
@@ -69,7 +69,7 @@ export function SandboxCohortDetailPage() {
     return m ? m[0] : '—';
   };
 
-  const effectiveCohortId = cohortId || suiteId || '';
+  const effectiveCohortId = cohortId || '';
 
   const suiteQuery = useQuery({
     queryKey: ['cohorts', 'get', effectiveCohortId],
@@ -177,7 +177,7 @@ export function SandboxCohortDetailPage() {
     enabled: Boolean(effectiveCohortId && effectiveExecutionId),
   });
 
-  const evals: SuiteCalcuttaEvaluation[] = evaluationsQuery.data?.items ?? [];
+  const evals: SimulationRun[] = evaluationsQuery.data?.items ?? [];
 
   return (
     <PageContainer className="max-w-none">

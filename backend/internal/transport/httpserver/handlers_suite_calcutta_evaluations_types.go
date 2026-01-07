@@ -9,9 +9,9 @@ type createSuiteCalcuttaEvaluationResponse struct {
 
 type suiteCalcuttaEvaluationListItem struct {
 	ID                        string     `json:"id"`
-	SuiteExecutionID          *string    `json:"suite_execution_id,omitempty"`
-	SuiteID                   string     `json:"suite_id"`
-	SuiteName                 string     `json:"suite_name"`
+	SimulationBatchID         *string    `json:"simulation_batch_id,omitempty"`
+	CohortID                  string     `json:"cohort_id"`
+	CohortName                string     `json:"cohort_name"`
 	OptimizerKey              string     `json:"optimizer_key"`
 	NSims                     int        `json:"n_sims"`
 	Seed                      int        `json:"seed"`

@@ -1,10 +1,10 @@
 import { apiClient } from '../api/apiClient';
 
-export type SuiteCalcuttaEvaluation = {
+export type SimulationRun = {
   id: string;
-  suite_execution_id?: string | null;
-  suite_id: string;
-  suite_name: string;
+  simulation_batch_id?: string | null;
+  cohort_id: string;
+  cohort_name: string;
   optimizer_key: string;
   n_sims: number;
   seed: number;
@@ -34,15 +34,11 @@ export type SuiteCalcuttaEvaluation = {
   updated_at: string;
 };
 
-export type SimulationRun = SuiteCalcuttaEvaluation;
-
-export type ListSuiteCalcuttaEvaluationsResponse = {
-  items: SuiteCalcuttaEvaluation[];
+export type ListSimulationRunsResponse = {
+  items: SimulationRun[];
 };
 
-export type ListSimulationRunsResponse = ListSuiteCalcuttaEvaluationsResponse;
-
-export type SuiteCalcuttaEvaluationPortfolioBid = {
+export type SimulationRunPortfolioBid = {
   team_id: string;
   school_name: string;
   seed: number;
@@ -51,7 +47,7 @@ export type SuiteCalcuttaEvaluationPortfolioBid = {
   expected_roi: number;
 };
 
-export type SuiteCalcuttaEvaluationOurStrategyPerformance = {
+export type SimulationRunOurStrategyPerformance = {
   rank: number;
   entry_name: string;
   mean_normalized_payout: number;
@@ -61,7 +57,7 @@ export type SuiteCalcuttaEvaluationOurStrategyPerformance = {
   total_simulations: number;
 };
 
-export type SuiteCalcuttaEvaluationEntryPerformance = {
+export type SimulationRunEntryPerformance = {
   rank: number;
   entry_name: string;
   snapshot_entry_id?: string | null;
@@ -75,16 +71,14 @@ export type SuiteCalcuttaEvaluationEntryPerformance = {
   total_points?: number | null;
 };
 
-export type SuiteCalcuttaEvaluationResult = {
-  evaluation: SuiteCalcuttaEvaluation;
-  portfolio: SuiteCalcuttaEvaluationPortfolioBid[];
-  our_strategy?: SuiteCalcuttaEvaluationOurStrategyPerformance | null;
-  entries: SuiteCalcuttaEvaluationEntryPerformance[];
+export type SimulationRunResult = {
+  evaluation: SimulationRun;
+  portfolio: SimulationRunPortfolioBid[];
+  our_strategy?: SimulationRunOurStrategyPerformance | null;
+  entries: SimulationRunEntryPerformance[];
 };
 
-export type SimulationRunResult = SuiteCalcuttaEvaluationResult;
-
-export type SuiteCalcuttaEvaluationSnapshotEntryTeam = {
+export type SimulationRunSnapshotEntryTeam = {
   team_id: string;
   school_name: string;
   seed: number;
@@ -92,17 +86,16 @@ export type SuiteCalcuttaEvaluationSnapshotEntryTeam = {
   bid_points: number;
 };
 
-export type SuiteCalcuttaEvaluationSnapshotEntryResponse = {
+export type SimulationRunSnapshotEntryResponse = {
   snapshot_entry_id: string;
   display_name: string;
   is_synthetic: boolean;
-  teams: SuiteCalcuttaEvaluationSnapshotEntryTeam[];
+  teams: SimulationRunSnapshotEntryTeam[];
 };
 
-export type CreateSuiteCalcuttaEvaluationRequest = {
+export type CreateSimulationRunRequest = {
   calcuttaId: string;
-  suiteId?: string;
-  suiteName?: string;
+  simulationRunBatchId?: string;
   optimizerKey?: string;
   gameOutcomeRunId: string;
   marketShareRunId: string;
@@ -112,12 +105,10 @@ export type CreateSuiteCalcuttaEvaluationRequest = {
   excludedEntryName?: string;
 };
 
-export type CreateSuiteCalcuttaEvaluationResponse = {
+export type CreateSimulationRunResponse = {
   id: string;
   status: string;
 };
-
-export type CreateSimulationRunResponse = CreateSuiteCalcuttaEvaluationResponse;
 
 export const simulationRunsService = {
   async list(params: {
@@ -155,15 +146,15 @@ export const simulationRunsService = {
     cohortId: string;
     id: string;
     snapshotEntryId: string;
-  }): Promise<SuiteCalcuttaEvaluationSnapshotEntryResponse> {
-    return apiClient.get<SuiteCalcuttaEvaluationSnapshotEntryResponse>(
+  }): Promise<SimulationRunSnapshotEntryResponse> {
+    return apiClient.get<SimulationRunSnapshotEntryResponse>(
       `/cohorts/${encodeURIComponent(params.cohortId)}/simulations/${encodeURIComponent(params.id)}/entries/${encodeURIComponent(
         params.snapshotEntryId
       )}`
     );
   },
 
-  async create(params: { cohortId: string; req: CreateSuiteCalcuttaEvaluationRequest }): Promise<CreateSimulationRunResponse> {
+  async create(params: { cohortId: string; req: CreateSimulationRunRequest }): Promise<CreateSimulationRunResponse> {
     return apiClient.post<CreateSimulationRunResponse>(
       `/cohorts/${encodeURIComponent(params.cohortId)}/simulations`,
       params.req

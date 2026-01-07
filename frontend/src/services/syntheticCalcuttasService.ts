@@ -2,7 +2,7 @@ import { apiClient } from '../api/apiClient';
 
 export type SyntheticCalcuttaListItem = {
   id: string;
-  suite_id: string;
+  cohort_id: string;
   calcutta_id: string;
   calcutta_snapshot_id?: string | null;
   focus_strategy_generation_run_id?: string | null;

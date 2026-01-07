@@ -9,8 +9,8 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
 
 type CoverageItem = {
-  suite_id: string;
-  suite_name: string;
+  cohort_id: string;
+  cohort_name: string;
   advancement_algorithm_id: string;
   advancement_algorithm_name: string;
   investment_algorithm_id: string;
@@ -28,7 +28,7 @@ export function LabEntriesPage() {
   const navigate = useNavigate();
 
   const [sortKey, setSortKey] = useState<
-    'coverage' | 'suite_name' | 'advancement' | 'investment' | 'optimizer'
+    'coverage' | 'cohort_name' | 'advancement' | 'investment' | 'optimizer'
   >('coverage');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -50,7 +50,7 @@ export function LabEntriesPage() {
       if (bPct !== aPct) return bPct - aPct;
       if (b.covered !== a.covered) return b.covered - a.covered;
       if (b.total !== a.total) return b.total - a.total;
-      return byText(a.suite_name, b.suite_name);
+      return byText(a.cohort_name, b.cohort_name);
     };
 
     return items
@@ -59,8 +59,8 @@ export function LabEntriesPage() {
         let cmp = 0;
         if (sortKey === 'coverage') {
           cmp = byCoverageDesc(a, b) * dir;
-        } else if (sortKey === 'suite_name') {
-          cmp = byText(a.suite_name, b.suite_name) * dir;
+        } else if (sortKey === 'cohort_name') {
+          cmp = byText(a.cohort_name, b.cohort_name) * dir;
         } else if (sortKey === 'advancement') {
           cmp = byText(a.advancement_algorithm_name, b.advancement_algorithm_name) * dir;
         } else if (sortKey === 'investment') {
@@ -136,9 +136,9 @@ export function LabEntriesPage() {
                 <tr>
                   <th
                     className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
-                    onClick={() => toggleSort('suite_name')}
+                    onClick={() => toggleSort('cohort_name')}
                   >
-                    Combo{sortIndicator('suite_name')}
+                    Combo{sortIndicator('cohort_name')}
                   </th>
                   <th
                     className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
@@ -169,12 +169,12 @@ export function LabEntriesPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {sorted.map((row) => (
                   <tr
-                    key={row.suite_id}
+                    key={row.cohort_id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/entries/cohorts/${encodeURIComponent(row.suite_id)}`)}
+                    onClick={() => navigate(`/lab/entries/cohorts/${encodeURIComponent(row.cohort_id)}`)}
                   >
                     <td className="px-3 py-2 text-sm text-gray-900">
-                      <div className="font-medium">{row.suite_name}</div>
+                      <div className="font-medium">{row.cohort_name}</div>
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-700">{row.advancement_algorithm_name}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{row.investment_algorithm_name}</td>

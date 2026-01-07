@@ -151,32 +151,26 @@ Decisions:
 ## API + URL cleanup
 Resource-oriented URLs with stable IDs.
 
-- [ ] Define canonical resources:
+- [x] Define canonical resources:
   - `/advancement-runs`, `/advancement-artifacts`
   - `/market-share-runs`, `/market-share-artifacts`
   - `/entry-runs`, `/entry-artifacts`
-  - `/synthetic-calcutta-cohorts`, `/synthetic-calcuttas`, `/synthetic-entries`
-  - `/simulation-runs`, `/simulation-artifacts`
+  - `/cohorts`, `/synthetic-calcuttas`, `/synthetic-entries`
+  - `/cohorts/{cohort_id}/simulation-batches`, `/cohorts/{cohort_id}/simulations`
 
 - [ ] Ensure navigation uses nested routes only for convenience, not identity.
 
-- [x] Frontend: canonical Sandbox routes use `/sandbox/cohorts` (keep `/sandbox/suites` as an alias during migration).
+- [x] Frontend: canonical Sandbox routes use `/sandbox/cohorts`.
 
 - [x] Frontend: rename Sandbox pages/services to cohort/simulation naming (keep old filenames/exports as shims during migration).
 
 - [x] Backend: accept `cohortId`/`cohort_id` and `simulationRunBatchId`/`simulation_run_batch_id` aliases for legacy `suite*` params.
 
-- [x] Add compatibility endpoints that proxy/redirect to new resources during migration.
-
-- [x] Implement compatibility-first Synthetic/Simulation endpoints in backend (new URLs, old behavior).
-
-- [x] Cut over frontend services to compatibility endpoints:
-  - `suiteCalcuttaEvaluationsService` -> `/simulation-runs`
-  - `suitesService` -> `/synthetic-calcutta-cohorts`
-  - `syntheticCalcuttasService` -> `/synthetic-calcuttas`
-  - `suiteExecutionsService` -> `/simulation-run-batches`
+- [x] Retire compatibility endpoints and legacy suite endpoints (cohort-scoped nested endpoints are canonical).
 
 - [x] Smoke test: `/synthetic-calcutta-cohorts`, `/synthetic-calcuttas`, `/synthetic-entries` (create calcutta snapshot, list entries)
+
+- [x] Smoke test: `/cohorts`, `/cohorts/{cohort_id}/simulation-batches`, `/cohorts/{cohort_id}/simulations`
 
 - [x] SyntheticCalcutta creation:
   - [x] Backfill/repair legacy synthetic calcuttas to ensure `calcutta_snapshot_id` is always present
@@ -256,7 +250,7 @@ Target: smaller single-responsibility packages/files.
 
 - [x] Split `handlers_ml_analytics*` similarly.
 
-- [ ] Align handler names to the new resources (no “suite” in backend resource names).
+- [x] Align handler names to the new resources (no “suite” in backend resource names).
 
 ## Data migration and cleanup
 - [x] Add canonical read views: `derived.simulation_runs` and `derived.simulation_run_batches` (backed by `derived.suite_*` tables)
@@ -281,8 +275,9 @@ Target: smaller single-responsibility packages/files.
   - [ ] Run destructive migration in a fresh/dev DB
   - [ ] Deploy backend with canonical-table code
   - [ ] Smoke test core flows (cohorts, synthetic calcuttas, run batches, runs, worker)
-  - [ ] Cut over UI/service calls to canonical endpoints
-  - [ ] Delete/retire deprecated endpoints and remove compatibility shims
+  - [x] Cut over UI/service calls to canonical endpoints
+  - [x] Delete/retire deprecated endpoints and remove compatibility shims
+  - [x] Full cleanup: remove remaining suite terminology/aliases across backend + frontend; re-verify `go test ./...` and `npm run lint && npm run build`
 
 - [ ] Create a concrete “final cleanup” checklist:
   - tables to drop

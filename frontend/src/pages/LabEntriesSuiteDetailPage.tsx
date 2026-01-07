@@ -9,7 +9,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
 
 type SuiteDetailResponse = {
-  suite: {
+  cohort: {
     id: string;
     name: string;
     advancement_algorithm: { id: string; name: string };
@@ -44,7 +44,7 @@ export function LabEntriesSuiteDetailPage() {
     queryKey: ['lab', 'entries', 'cohort', cohortId],
     queryFn: async () => {
       if (!cohortId) return null;
-      return analyticsService.getLabEntriesSuiteDetail<SuiteDetailResponse>(cohortId);
+      return analyticsService.getLabEntriesCohortDetail<SuiteDetailResponse>(cohortId);
     },
     enabled: Boolean(cohortId),
   });
@@ -67,7 +67,7 @@ export function LabEntriesSuiteDetailPage() {
       });
   }, [items]);
 
-  const suite = detailQuery.data?.suite ?? null;
+  const suite = detailQuery.data?.cohort ?? null;
 
   const fmtDateTime = (iso?: string | null) => {
     if (!iso) return '—';
@@ -92,7 +92,7 @@ export function LabEntriesSuiteDetailPage() {
 					disabled={!cohortId || detailQuery.isLoading || !canRunInSandbox}
 					onClick={async () => {
 						if (!cohortId) return;
-					const res = await analyticsService.createLabSuiteSandboxExecution<CreateSandboxExecutionResponse>(cohortId);
+					const res = await analyticsService.createLabCohortSandboxExecution<CreateSandboxExecutionResponse>(cohortId);
 					navigate(`/sandbox/cohorts/${encodeURIComponent(cohortId)}?executionId=${encodeURIComponent(res.executionId)}`);
 				}}
 			>

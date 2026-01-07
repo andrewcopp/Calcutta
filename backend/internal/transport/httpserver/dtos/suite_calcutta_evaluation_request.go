@@ -6,13 +6,9 @@ import (
 	"github.com/google/uuid"
 )
 
-type CreateSuiteCalcuttaEvaluationRequest struct {
+type CreateSimulationRunRequest struct {
 	CalcuttaID           string  `json:"calcuttaId"`
-	SuiteExecutionID     *string `json:"suiteExecutionId"`
-	SuiteID              *string `json:"suiteId"`
-	SuiteName            *string `json:"suiteName"`
 	CohortID             *string `json:"cohortId"`
-	CohortName           *string `json:"cohortName"`
 	SimulationRunBatchID *string `json:"simulationRunBatchId"`
 	OptimizerKey         *string `json:"optimizerKey"`
 	GameOutcomeRunID     *string `json:"gameOutcomeRunId"`
@@ -23,18 +19,7 @@ type CreateSuiteCalcuttaEvaluationRequest struct {
 	ExcludedEntryName    *string `json:"excludedEntryName"`
 }
 
-func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
-	// Compatibility aliases: prefer explicit suite* fields, but accept cohort*/simulationRunBatch*.
-	if r.SuiteID == nil && r.CohortID != nil {
-		r.SuiteID = r.CohortID
-	}
-	if r.SuiteName == nil && r.CohortName != nil {
-		r.SuiteName = r.CohortName
-	}
-	if r.SuiteExecutionID == nil && r.SimulationRunBatchID != nil {
-		r.SuiteExecutionID = r.SimulationRunBatchID
-	}
-
+func (r *CreateSimulationRunRequest) Validate() error {
 	if strings.TrimSpace(r.CalcuttaID) == "" {
 		return ErrFieldRequired("calcuttaId")
 	}
@@ -42,36 +27,27 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 		return ErrFieldInvalid("calcuttaId", "must be a valid UUID")
 	}
 
-	if r.SuiteExecutionID != nil {
-		trimmed := strings.TrimSpace(*r.SuiteExecutionID)
+	if r.SimulationRunBatchID != nil {
+		trimmed := strings.TrimSpace(*r.SimulationRunBatchID)
 		if trimmed == "" {
-			r.SuiteExecutionID = nil
+			r.SimulationRunBatchID = nil
 		} else {
 			if _, err := uuid.Parse(trimmed); err != nil {
-				return ErrFieldInvalid("suiteExecutionId", "must be a valid UUID")
+				return ErrFieldInvalid("simulationRunBatchId", "must be a valid UUID")
 			}
-			r.SuiteExecutionID = &trimmed
+			r.SimulationRunBatchID = &trimmed
 		}
 	}
 
-	if r.SuiteID != nil {
-		trimmed := strings.TrimSpace(*r.SuiteID)
+	if r.CohortID != nil {
+		trimmed := strings.TrimSpace(*r.CohortID)
 		if trimmed == "" {
-			r.SuiteID = nil
+			r.CohortID = nil
 		} else {
 			if _, err := uuid.Parse(trimmed); err != nil {
-				return ErrFieldInvalid("suiteId", "must be a valid UUID")
+				return ErrFieldInvalid("cohortId", "must be a valid UUID")
 			}
-			r.SuiteID = &trimmed
-		}
-	}
-
-	if r.SuiteName != nil {
-		trimmed := strings.TrimSpace(*r.SuiteName)
-		if trimmed == "" {
-			r.SuiteName = nil
-		} else {
-			r.SuiteName = &trimmed
+			r.CohortID = &trimmed
 		}
 	}
 
@@ -108,7 +84,7 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 		}
 	}
 
-	if r.SuiteExecutionID == nil {
+	if r.SimulationRunBatchID == nil {
 		if r.GameOutcomeRunID == nil {
 			return ErrFieldRequired("gameOutcomeRunId")
 		}
@@ -124,7 +100,10 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 		return ErrFieldInvalid("startingStateKey", "must be 'current' or 'post_first_four'")
 	}
 
-	if r.SuiteExecutionID == nil {
+	if r.SimulationRunBatchID == nil {
+		if r.CohortID == nil {
+			return ErrFieldRequired("cohortId")
+		}
 		if r.NSims <= 0 {
 			return ErrFieldInvalid("nSims", "must be positive")
 		}
@@ -139,16 +118,6 @@ func (r *CreateSuiteCalcuttaEvaluationRequest) Validate() error {
 			r.ExcludedEntryName = nil
 		} else {
 			r.ExcludedEntryName = &trimmed
-		}
-	}
-
-	if r.SuiteID == nil && r.SuiteExecutionID == nil {
-		// If not specifying SuiteID, require enough info to resolve/create.
-		if r.SuiteName == nil {
-			return ErrFieldRequired("suiteName")
-		}
-		if r.OptimizerKey == nil {
-			return ErrFieldRequired("optimizerKey")
 		}
 	}
 

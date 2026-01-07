@@ -14,7 +14,7 @@ import (
 
 type syntheticCalcuttaListItem struct {
 	ID                        string          `json:"id"`
-	SuiteID                   string          `json:"suite_id"`
+	CohortID                  string          `json:"cohort_id"`
 	CalcuttaID                string          `json:"calcutta_id"`
 	CalcuttaSnapshotID        *string         `json:"calcutta_snapshot_id,omitempty"`
 	HighlightedEntryID        *string         `json:"highlighted_entry_id,omitempty"`
@@ -122,7 +122,7 @@ func (s *Server) handleListSyntheticCalcuttas(w http.ResponseWriter, r *http.Req
 		var it syntheticCalcuttaListItem
 		if err := rows.Scan(
 			&it.ID,
-			&it.SuiteID,
+			&it.CohortID,
 			&it.CalcuttaID,
 			&it.CalcuttaSnapshotID,
 			&it.HighlightedEntryID,
@@ -182,7 +182,7 @@ func (s *Server) handleGetSyntheticCalcutta(w http.ResponseWriter, r *http.Reque
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
-		&it.SuiteID,
+		&it.CohortID,
 		&it.CalcuttaID,
 		&it.CalcuttaSnapshotID,
 		&it.HighlightedEntryID,

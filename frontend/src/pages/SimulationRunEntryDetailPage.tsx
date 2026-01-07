@@ -10,17 +10,17 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import {
   simulationRunsService,
-  type SuiteCalcuttaEvaluationSnapshotEntryResponse,
+  type SimulationRunSnapshotEntryResponse,
 } from '../services/simulationRunsService';
 
 export function SimulationRunEntryDetailPage() {
   const { id, snapshotEntryId } = useParams<{ id: string; snapshotEntryId: string }>();
   const [searchParams] = useSearchParams();
 
-  const suiteId = searchParams.get('cohortId') || searchParams.get('suiteId') || '';
+  const cohortId = searchParams.get('cohortId') || '';
   const executionId = searchParams.get('executionId') || '';
   const backUrl = id
-    ? `/sandbox/evaluations/${encodeURIComponent(id)}${suiteId ? `?cohortId=${encodeURIComponent(suiteId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+    ? `/sandbox/evaluations/${encodeURIComponent(id)}${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
     : '/sandbox/cohorts';
 
   const showError = (err: unknown) => {
@@ -33,15 +33,15 @@ export function SimulationRunEntryDetailPage() {
     return err instanceof Error ? err.message : 'Unknown error';
   };
 
-  const entryQuery = useQuery<SuiteCalcuttaEvaluationSnapshotEntryResponse>({
+  const entryQuery = useQuery<SimulationRunSnapshotEntryResponse>({
     queryKey: ['simulation-runs', 'snapshot-entry', id, snapshotEntryId],
     queryFn: () =>
       simulationRunsService.getSnapshotEntry({
-        cohortId: suiteId,
+        cohortId,
         id: id!,
         snapshotEntryId: snapshotEntryId!,
       }),
-    enabled: Boolean(id && snapshotEntryId && suiteId),
+    enabled: Boolean(id && snapshotEntryId && cohortId),
   });
 
   const sortedTeams = useMemo(() => {

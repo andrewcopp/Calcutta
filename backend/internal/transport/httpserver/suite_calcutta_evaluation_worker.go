@@ -19,41 +19,41 @@ import (
 )
 
 const (
-	defaultSuiteEvalWorkerPollInterval = 2 * time.Second
-	defaultSuiteEvalWorkerStaleAfter   = 30 * time.Minute
+	defaultSimulationWorkerPollInterval = 2 * time.Second
+	defaultSimulationWorkerStaleAfter   = 30 * time.Minute
 )
 
-type suiteCalcuttaEvaluationRow struct {
-	ID               string
-	RunKey           string
-	SuiteExecutionID *string
-	SuiteID          string
-	CalcuttaID       string
-	GameOutcomeRunID string
-	MarketShareRunID string
-	StrategyGenRunID *string
-	OptimizerKey     *string
-	NSims            *int
-	Seed             *int
-	StartingStateKey string
-	ExcludedEntry    *string
+type simulationRunRow struct {
+	ID                      string
+	RunKey                  string
+	SimulationBatchID       *string
+	CohortID                string
+	CalcuttaID              string
+	GameOutcomeRunID        string
+	MarketShareRunID        string
+	StrategyGenerationRunID *string
+	OptimizerKey            *string
+	NSims                   *int
+	Seed                    *int
+	StartingStateKey        string
+	ExcludedEntry           *string
 }
 
-func (s *Server) RunSuiteCalcuttaEvaluationWorker(ctx context.Context) {
-	s.RunSuiteCalcuttaEvaluationWorkerWithOptions(ctx, defaultSuiteEvalWorkerPollInterval, defaultSuiteEvalWorkerStaleAfter)
+func (s *Server) RunSimulationWorker(ctx context.Context) {
+	s.RunSimulationWorkerWithOptions(ctx, defaultSimulationWorkerPollInterval, defaultSimulationWorkerStaleAfter)
 }
 
-func (s *Server) RunSuiteCalcuttaEvaluationWorkerWithOptions(ctx context.Context, pollInterval time.Duration, staleAfter time.Duration) {
+func (s *Server) RunSimulationWorkerWithOptions(ctx context.Context, pollInterval time.Duration, staleAfter time.Duration) {
 	if s.pool == nil {
-		log.Printf("suite eval worker disabled: database pool not available")
+		log.Printf("simulation worker disabled: database pool not available")
 		<-ctx.Done()
 		return
 	}
 	if pollInterval <= 0 {
-		pollInterval = defaultSuiteEvalWorkerPollInterval
+		pollInterval = defaultSimulationWorkerPollInterval
 	}
 	if staleAfter <= 0 {
-		staleAfter = defaultSuiteEvalWorkerStaleAfter
+		staleAfter = defaultSimulationWorkerStaleAfter
 	}
 
 	t := time.NewTicker(pollInterval)
@@ -61,7 +61,7 @@ func (s *Server) RunSuiteCalcuttaEvaluationWorkerWithOptions(ctx context.Context
 
 	workerID := os.Getenv("HOSTNAME")
 	if workerID == "" {
-		workerID = "suite-eval-worker"
+		workerID = "simulation-worker"
 	}
 
 	for {
@@ -69,21 +69,21 @@ func (s *Server) RunSuiteCalcuttaEvaluationWorkerWithOptions(ctx context.Context
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			req, ok, err := s.claimNextSuiteCalcuttaEvaluation(ctx, workerID, staleAfter)
+			req, ok, err := s.claimNextSimulationRun(ctx, workerID, staleAfter)
 			if err != nil {
-				log.Printf("Error claiming next suite calcutta evaluation: %v", err)
+				log.Printf("Error claiming next simulation run: %v", err)
 				continue
 			}
 			if !ok {
 				continue
 			}
 
-			_ = s.processSuiteCalcuttaEvaluation(ctx, workerID, req)
+			_ = s.processSimulationRun(ctx, workerID, req)
 		}
 	}
 }
 
-func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID string, staleAfter time.Duration) (*suiteCalcuttaEvaluationRow, bool, error) {
+func (s *Server) claimNextSimulationRun(ctx context.Context, workerID string, staleAfter time.Duration) (*simulationRunRow, bool, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -145,7 +145,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		return nil, false, err
 	}
 
-	row := &suiteCalcuttaEvaluationRow{}
+	row := &simulationRunRow{}
 	q2 := `
 		UPDATE derived.simulation_runs r
 		SET status = 'running',
@@ -177,12 +177,12 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 	).Scan(
 		&row.ID,
 		&row.RunKey,
-		&row.SuiteExecutionID,
-		&row.SuiteID,
+		&row.SimulationBatchID,
+		&row.CohortID,
 		&row.CalcuttaID,
 		&row.GameOutcomeRunID,
 		&row.MarketShareRunID,
-		&row.StrategyGenRunID,
+		&row.StrategyGenerationRunID,
 		&row.OptimizerKey,
 		&row.NSims,
 		&row.Seed,
@@ -201,7 +201,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 	return row, true, nil
 }
 
-func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID string, req *suiteCalcuttaEvaluationRow) bool {
+func (s *Server) processSimulationRun(ctx context.Context, workerID string, req *simulationRunRow) bool {
 	if req == nil {
 		return false
 	}
@@ -212,8 +212,8 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 	}
 
 	strategyGenRunID := ""
-	if req.StrategyGenRunID != nil {
-		strategyGenRunID = *req.StrategyGenRunID
+	if req.StrategyGenerationRunID != nil {
+		strategyGenRunID = *req.StrategyGenerationRunID
 	}
 	usingExistingStrategyGenRun := strategyGenRunID != ""
 
@@ -222,10 +222,10 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		excluded = *req.ExcludedEntry
 	}
 
-	log.Printf("suite_eval_worker start worker_id=%s eval_id=%s suite_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s strategy_generation_run_id=%s starting_state_key=%s excluded_entry_name=%q",
+	log.Printf("simulation_worker start worker_id=%s run_id=%s cohort_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s strategy_generation_run_id=%s starting_state_key=%s excluded_entry_name=%q",
 		workerID,
 		req.ID,
-		req.SuiteID,
+		req.CohortID,
 		req.CalcuttaID,
 		runKey,
 		req.GameOutcomeRunID,
@@ -235,12 +235,12 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		excluded,
 	)
 
-	s.updateRunJobProgress(ctx, "simulation", req.ID, 0.05, "start", "Starting suite calcutta evaluation")
+	s.updateRunJobProgress(ctx, "simulation", req.ID, 0.05, "start", "Starting simulation run")
 
 	year, err := s.resolveSeasonYearByCalcuttaID(ctx, req.CalcuttaID)
 	if err != nil {
 		s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
-		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
+		s.failSimulationRun(ctx, req.ID, err)
 		return false
 	}
 
@@ -253,14 +253,14 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		nSims = *req.NSims
 	}
 	if nSims <= 0 {
-		nSims = s.resolveSuiteNSims(ctx, req.SuiteID, 10000)
+		nSims = s.resolveCohortNSims(ctx, req.CohortID, 10000)
 	}
 	seed := 0
 	if req.Seed != nil {
 		seed = *req.Seed
 	}
 	if seed == 0 {
-		seed = s.resolveSuiteSeed(ctx, req.SuiteID, 42)
+		seed = s.resolveCohortSeed(ctx, req.CohortID, 42)
 	}
 	simRes, err := simSvc.Run(ctx, appsimulatetournaments.RunParams{
 		Season:               year,
@@ -268,13 +268,13 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		Seed:                 seed,
 		Workers:              0,
 		BatchSize:            500,
-		ProbabilitySourceKey: "suite_eval_worker",
+		ProbabilitySourceKey: "simulation_worker",
 		StartingStateKey:     req.StartingStateKey,
 		GameOutcomeRunID:     &goRunID,
 	})
 	if err != nil {
 		s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
-		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
+		s.failSimulationRun(ctx, req.ID, err)
 		return false
 	}
 
@@ -289,7 +289,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		optimizerKey = *req.OptimizerKey
 	}
 	if optimizerKey == "" {
-		optimizerKey = s.resolveSuiteOptimizerKey(ctx, req.SuiteID, "minlp_v1")
+		optimizerKey = s.resolveCohortOptimizerKey(ctx, req.CohortID, "minlp_v1")
 	}
 
 	if !usingExistingStrategyGenRun {
@@ -298,14 +298,14 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		genRes, err := rebSvc.GenerateAndWrite(ctx, reb.GenerateParams{
 			CalcuttaID:            req.CalcuttaID,
 			RunKey:                runKey,
-			Name:                  "suite_eval_worker",
+			Name:                  "simulation_worker",
 			OptimizerKey:          optimizerKey,
 			MarketShareRunID:      &msRunID,
 			SimulatedTournamentID: &simRes.TournamentSimulationBatchID,
 		})
 		if err != nil {
 			s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
-			s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
+			s.failSimulationRun(ctx, req.ID, err)
 			return false
 		}
 		strategyGenRunID = genRes.StrategyGenerationRunID
@@ -334,7 +334,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 	}
 	if err != nil {
 		s.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
-		s.failSuiteCalcuttaEvaluation(ctx, req.ID, err)
+		s.failSimulationRun(ctx, req.ID, err)
 		return false
 	}
 
@@ -463,7 +463,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		realizedTotalPoints,
 	)
 	if err != nil {
-		log.Printf("Error updating suite calcutta evaluation %s to succeeded: %v", req.ID, err)
+		log.Printf("Error updating simulation run %s to succeeded: %v", req.ID, err)
 		return false
 	}
 
@@ -530,7 +530,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		`, req.ID, runKeyParam, summaryJSON)
 	}
 
-	log.Printf("suite_eval_worker success worker_id=%s eval_id=%s run_key=%s strategy_generation_run_id=%s calcutta_evaluation_run_id=%s",
+	log.Printf("simulation_worker success worker_id=%s run_id=%s run_key=%s strategy_generation_run_id=%s calcutta_evaluation_run_id=%s",
 		workerID,
 		req.ID,
 		runKey,
@@ -538,8 +538,8 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 		evalRunID,
 	)
 
-	if req.SuiteExecutionID != nil && *req.SuiteExecutionID != "" {
-		s.updateSuiteExecutionStatus(ctx, *req.SuiteExecutionID)
+	if req.SimulationBatchID != nil && *req.SimulationBatchID != "" {
+		s.updateSimulationBatchStatus(ctx, *req.SimulationBatchID)
 	}
 	return true
 }
@@ -735,8 +735,8 @@ func (s *Server) computeRealizedFinishForStrategyGenerationRun(ctx context.Conte
 	return out, true, nil
 }
 
-func (s *Server) updateSuiteExecutionStatus(ctx context.Context, suiteExecutionID string) {
-	if suiteExecutionID == "" {
+func (s *Server) updateSimulationBatchStatus(ctx context.Context, simulationBatchID string) {
+	if simulationBatchID == "" {
 		return
 	}
 	_, _ = s.pool.Exec(ctx, `
@@ -770,10 +770,10 @@ func (s *Server) updateSuiteExecutionStatus(ctx context.Context, suiteExecutionI
 		FROM agg a
 		WHERE e.id = $1::uuid
 			AND e.deleted_at IS NULL
-	`, suiteExecutionID)
+	`, simulationBatchID)
 }
 
-func (s *Server) resolveSuiteNSims(ctx context.Context, suiteID string, fallback int) int {
+func (s *Server) resolveCohortNSims(ctx context.Context, cohortID string, fallback int) int {
 	var n int
 	if err := s.pool.QueryRow(ctx, `
 		SELECT n_sims
@@ -781,7 +781,7 @@ func (s *Server) resolveSuiteNSims(ctx context.Context, suiteID string, fallback
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, suiteID).Scan(&n); err != nil {
+	`, cohortID).Scan(&n); err != nil {
 		return fallback
 	}
 	if n <= 0 {
@@ -790,7 +790,7 @@ func (s *Server) resolveSuiteNSims(ctx context.Context, suiteID string, fallback
 	return n
 }
 
-func (s *Server) resolveSuiteSeed(ctx context.Context, suiteID string, fallback int) int {
+func (s *Server) resolveCohortSeed(ctx context.Context, cohortID string, fallback int) int {
 	var seed int
 	if err := s.pool.QueryRow(ctx, `
 		SELECT seed
@@ -798,7 +798,7 @@ func (s *Server) resolveSuiteSeed(ctx context.Context, suiteID string, fallback 
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, suiteID).Scan(&seed); err != nil {
+	`, cohortID).Scan(&seed); err != nil {
 		return fallback
 	}
 	if seed == 0 {
@@ -807,7 +807,7 @@ func (s *Server) resolveSuiteSeed(ctx context.Context, suiteID string, fallback 
 	return seed
 }
 
-func (s *Server) resolveSuiteOptimizerKey(ctx context.Context, suiteID string, fallback string) string {
+func (s *Server) resolveCohortOptimizerKey(ctx context.Context, cohortID string, fallback string) string {
 	var key string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT optimizer_key
@@ -815,7 +815,7 @@ func (s *Server) resolveSuiteOptimizerKey(ctx context.Context, suiteID string, f
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, suiteID).Scan(&key); err != nil {
+	`, cohortID).Scan(&key); err != nil {
 		return fallback
 	}
 	if key == "" {
@@ -824,14 +824,14 @@ func (s *Server) resolveSuiteOptimizerKey(ctx context.Context, suiteID string, f
 	return key
 }
 
-func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID string, err error) {
+func (s *Server) failSimulationRun(ctx context.Context, evaluationID string, err error) {
 	msg := "unknown error"
 	if err != nil {
 		msg = err.Error()
 	}
 	s.updateRunJobProgress(ctx, "simulation", evaluationID, 1.0, "failed", msg)
 	var runKey *string
-	var suiteExecutionID *string
+	var simulationBatchID *string
 	e := s.pool.QueryRow(ctx, `
 		UPDATE derived.simulation_runs
 		SET status = 'failed',
@@ -839,9 +839,9 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 			updated_at = NOW()
 		WHERE id = $1::uuid
 		RETURNING run_key::text, simulation_run_batch_id::text
-	`, evaluationID, msg).Scan(&runKey, &suiteExecutionID)
+	`, evaluationID, msg).Scan(&runKey, &simulationBatchID)
 	if e != nil {
-		log.Printf("Error marking suite calcutta evaluation %s failed: %v (original error: %v)", evaluationID, e, err)
+		log.Printf("Error marking simulation run %s failed: %v (original error: %v)", evaluationID, e, err)
 		return
 	}
 
@@ -891,7 +891,7 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 		`, evaluationID, runKeyParam, failureSummaryJSON)
 	}
 
-	if suiteExecutionID != nil && *suiteExecutionID != "" {
-		s.updateSuiteExecutionStatus(ctx, *suiteExecutionID)
+	if simulationBatchID != nil && *simulationBatchID != "" {
+		s.updateSimulationBatchStatus(ctx, *simulationBatchID)
 	}
 }

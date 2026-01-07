@@ -54,7 +54,7 @@ func (s *Server) getCohortSimulationHandler(w http.ResponseWriter, r *http.Reque
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if strings.TrimSpace(it.SuiteID) != cohortID {
+	if strings.TrimSpace(it.CohortID) != cohortID {
 		writeError(w, r, http.StatusNotFound, "not_found", "Simulation not found", "id")
 		return
 	}
@@ -83,7 +83,7 @@ func (s *Server) getCohortSimulationResultHandler(w http.ResponseWriter, r *http
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if strings.TrimSpace(it.SuiteID) != cohortID {
+	if strings.TrimSpace(it.CohortID) != cohortID {
 		writeError(w, r, http.StatusNotFound, "not_found", "Simulation not found", "id")
 		return
 	}
@@ -113,7 +113,7 @@ func (s *Server) getCohortSimulationSnapshotEntryHandler(w http.ResponseWriter, 
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if strings.TrimSpace(it.SuiteID) != cohortID {
+	if strings.TrimSpace(it.CohortID) != cohortID {
 		writeError(w, r, http.StatusNotFound, "not_found", "Simulation not found", "id")
 		return
 	}
@@ -133,7 +133,7 @@ func (s *Server) createCohortSimulationHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var req dtos.CreateSuiteCalcuttaEvaluationRequest
+	var req dtos.CreateSimulationRunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
@@ -253,7 +253,7 @@ func (s *Server) getSuiteCalcuttaEvaluationSnapshotEntryHandler(w http.ResponseW
 }
 
 func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *http.Request) {
-	var req dtos.CreateSuiteCalcuttaEvaluationRequest
+	var req dtos.CreateSimulationRunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
@@ -265,17 +265,17 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	suiteExecutionID := ""
-	if req.SuiteExecutionID != nil {
-		suiteExecutionID = *req.SuiteExecutionID
+	simulationBatchID := ""
+	if req.SimulationRunBatchID != nil {
+		simulationBatchID = *req.SimulationRunBatchID
 	}
 
-	// Resolve (or create) suite_id.
-	suiteID := ""
+	// Resolve cohort_id.
+	cohortID := ""
 	evalOptimizerKey := ""
-	if suiteExecutionID != "" {
-		// Inherit suite + config from suite execution.
-		var execSuiteID string
+	if simulationBatchID != "" {
+		// Inherit cohort + config from simulation batch.
+		var execCohortID string
 		var execOptimizerKey *string
 		var execNSims *int
 		var execSeed *int
@@ -288,7 +288,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 		var suiteSeed int
 		if err := s.pool.QueryRow(ctx, `
 			SELECT
-				e.suite_id::text,
+				e.cohort_id::text,
 				e.optimizer_key,
 				e.n_sims,
 				e.seed,
@@ -296,16 +296,16 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 				e.excluded_entry_name,
 				COALESCE(s.game_outcomes_algorithm_id::text, ''::text) AS game_outcomes_algorithm_id,
 				COALESCE(s.market_share_algorithm_id::text, ''::text) AS market_share_algorithm_id,
-				COALESCE(s.optimizer_key, ''::text) AS suite_optimizer_key,
-				COALESCE(s.n_sims, 0)::int AS suite_n_sims,
-				COALESCE(s.seed, 0)::int AS suite_seed
+				COALESCE(s.optimizer_key, ''::text) AS cohort_optimizer_key,
+				COALESCE(s.n_sims, 0)::int AS cohort_n_sims,
+				COALESCE(s.seed, 0)::int AS cohort_seed
 			FROM derived.simulation_run_batches e
 			JOIN derived.synthetic_calcutta_cohorts s ON s.id = e.cohort_id AND s.deleted_at IS NULL
 			WHERE e.id = $1::uuid
 				AND e.deleted_at IS NULL
 			LIMIT 1
-		`, suiteExecutionID).Scan(
-			&execSuiteID,
+		`, simulationBatchID).Scan(
+			&execCohortID,
 			&execOptimizerKey,
 			&execNSims,
 			&execSeed,
@@ -321,7 +321,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			return
 		}
 
-		suiteID = execSuiteID
+		cohortID = execCohortID
 
 		// Determine effective optimizer/nSims/seed using request overrides then execution then suite defaults.
 		if req.OptimizerKey != nil {
@@ -377,7 +377,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 					), ''::text) AS id
 				`, tournamentID, goAlgID).Scan(&resolved)
 				if resolved == "" {
-					writeError(w, r, http.StatusConflict, "missing_run", "Missing game-outcome run for suite execution", "gameOutcomeRunId")
+					writeError(w, r, http.StatusConflict, "missing_run", "Missing game-outcome run for simulation batch", "gameOutcomeRunId")
 					return
 				}
 				req.GameOutcomeRunID = &resolved
@@ -397,14 +397,20 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 					), ''::text) AS id
 				`, req.CalcuttaID, msAlgID).Scan(&resolved)
 				if resolved == "" {
-					writeError(w, r, http.StatusConflict, "missing_run", "Missing market-share run for suite execution", "marketShareRunId")
+					writeError(w, r, http.StatusConflict, "missing_run", "Missing market-share run for simulation batch", "marketShareRunId")
 					return
 				}
 				req.MarketShareRunID = &resolved
 			}
 		}
-	} else if req.SuiteID != nil {
-		suiteID = *req.SuiteID
+	} else {
+		if req.CohortID != nil {
+			cohortID = *req.CohortID
+		}
+		if strings.TrimSpace(cohortID) == "" {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "cohortId is required", "cohortId")
+			return
+		}
 		if req.OptimizerKey != nil {
 			evalOptimizerKey = *req.OptimizerKey
 		} else {
@@ -414,72 +420,8 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 				WHERE id = $1::uuid
 					AND deleted_at IS NULL
 				LIMIT 1
-			`, suiteID).Scan(&evalOptimizerKey)
+			`, cohortID).Scan(&evalOptimizerKey)
 		}
-	} else {
-		// Resolve algorithm ids from runs.
-		var goAlgID string
-		if err := s.pool.QueryRow(ctx, `
-			SELECT algorithm_id::text
-			FROM derived.game_outcome_runs
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, *req.GameOutcomeRunID).Scan(&goAlgID); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		var msAlgID string
-		if err := s.pool.QueryRow(ctx, `
-			SELECT algorithm_id::text
-			FROM derived.market_share_runs
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, *req.MarketShareRunID).Scan(&msAlgID); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		var excluded any
-		if req.ExcludedEntryName != nil {
-			excluded = *req.ExcludedEntryName
-		} else {
-			excluded = nil
-		}
-
-		var insertedID string
-		if err := s.pool.QueryRow(ctx, `
-			INSERT INTO derived.synthetic_calcutta_cohorts (
-				name,
-				description,
-				game_outcomes_algorithm_id,
-				market_share_algorithm_id,
-				optimizer_key,
-				n_sims,
-				seed,
-				starting_state_key,
-				excluded_entry_name,
-				params_json
-			)
-			VALUES ($1, NULL, $2::uuid, $3::uuid, $4, $5, $6, $7, $8::text, '{}'::jsonb)
-			ON CONFLICT (name) WHERE deleted_at IS NULL
-			DO UPDATE SET
-				game_outcomes_algorithm_id = EXCLUDED.game_outcomes_algorithm_id,
-				market_share_algorithm_id = EXCLUDED.market_share_algorithm_id,
-				optimizer_key = EXCLUDED.optimizer_key,
-				n_sims = EXCLUDED.n_sims,
-				seed = EXCLUDED.seed,
-				starting_state_key = EXCLUDED.starting_state_key,
-				excluded_entry_name = EXCLUDED.excluded_entry_name,
-				updated_at = NOW(),
-				deleted_at = NULL
-			RETURNING id
-		`, *req.SuiteName, goAlgID, msAlgID, *req.OptimizerKey, req.NSims, req.Seed, req.StartingStateKey, excluded).Scan(&insertedID); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		suiteID = insertedID
-		evalOptimizerKey = *req.OptimizerKey
 	}
 
 	var syntheticCalcuttaID string
@@ -494,7 +436,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			updated_at = NOW(),
 			deleted_at = NULL
 		RETURNING id::text
-	`, suiteID, req.CalcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+	`, cohortID, req.CalcuttaID).Scan(&syntheticCalcuttaID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -538,8 +480,8 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 		RETURNING id, status
 	`
 	var execID any
-	if suiteExecutionID != "" {
-		execID = suiteExecutionID
+	if simulationBatchID != "" {
+		execID = simulationBatchID
 	} else {
 		execID = nil
 	}
@@ -555,7 +497,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 	} else {
 		effSeed = nil
 	}
-	if err := s.pool.QueryRow(ctx, q, execID, syntheticCalcuttaID, suiteID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, effNSims, effSeed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	if err := s.pool.QueryRow(ctx, q, execID, syntheticCalcuttaID, cohortID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, effNSims, effSeed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -565,17 +507,8 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 
 func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *http.Request) {
 	calcuttaID := r.URL.Query().Get("calcutta_id")
-	suiteID := r.URL.Query().Get("suite_id")
-	if strings.TrimSpace(suiteID) == "" {
-		suiteID = r.URL.Query().Get("cohort_id")
-	}
-	suiteExecutionID := r.URL.Query().Get("suite_execution_id")
-	if strings.TrimSpace(suiteExecutionID) == "" {
-		suiteExecutionID = r.URL.Query().Get("simulation_run_batch_id")
-	}
-	if strings.TrimSpace(suiteExecutionID) == "" {
-		suiteExecutionID = r.URL.Query().Get("simulation_batch_id")
-	}
+	cohortID := r.URL.Query().Get("cohort_id")
+	simulationBatchID := r.URL.Query().Get("simulation_batch_id")
 	limit := getLimit(r, 50)
 	if limit <= 0 {
 		limit = 50
@@ -588,7 +521,7 @@ func (s *Server) listSuiteCalcuttaEvaluationsHandler(w http.ResponseWriter, r *h
 		offset = 0
 	}
 
-	items, err := s.loadSuiteCalcuttaEvaluations(r.Context(), calcuttaID, suiteID, suiteExecutionID, limit, offset)
+	items, err := s.loadSuiteCalcuttaEvaluations(r.Context(), calcuttaID, cohortID, simulationBatchID, limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return

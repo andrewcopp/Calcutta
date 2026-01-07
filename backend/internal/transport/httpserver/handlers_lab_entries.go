@@ -10,8 +10,8 @@ import (
 )
 
 type labEntriesCoverageItem struct {
-	SuiteID                  string `json:"suite_id"`
-	SuiteName                string `json:"suite_name"`
+	CohortID                 string `json:"cohort_id"`
+	CohortName               string `json:"cohort_name"`
 	AdvancementAlgorithmID   string `json:"advancement_algorithm_id"`
 	AdvancementAlgorithmName string `json:"advancement_algorithm_name"`
 	InvestmentAlgorithmID    string `json:"investment_algorithm_id"`
@@ -38,7 +38,7 @@ type labEntriesSuiteScenarioItem struct {
 }
 
 type labEntriesSuiteDetailResponse struct {
-	Suite struct {
+	Cohort struct {
 		ID                   string `json:"id"`
 		Name                 string `json:"name"`
 		AdvancementAlgorithm struct {
@@ -52,7 +52,7 @@ type labEntriesSuiteDetailResponse struct {
 		OptimizerKey      string  `json:"optimizer_key"`
 		StartingStateKey  string  `json:"starting_state_key"`
 		ExcludedEntryName *string `json:"excluded_entry_name,omitempty"`
-	} `json:"suite"`
+	} `json:"cohort"`
 	Items []labEntriesSuiteScenarioItem `json:"items"`
 }
 
@@ -74,8 +74,8 @@ type labEntryReportScoringRule struct {
 }
 
 type labEntryReportResponse struct {
-	SuiteScenarioID          string                      `json:"suite_scenario_id"`
-	SuiteID                  string                      `json:"suite_id"`
+	ScenarioID               string                      `json:"scenario_id"`
+	CohortID                 string                      `json:"cohort_id"`
 	CalcuttaID               string                      `json:"calcutta_id"`
 	CalcuttaName             string                      `json:"calcutta_name"`
 	Season                   string                      `json:"season"`
@@ -110,7 +110,7 @@ func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
 		"/api/lab/entries/cohorts/{id}",
-		s.requirePermission("analytics.suites.read", s.getLabEntriesSuiteDetailHandler),
+		s.requirePermission("analytics.suites.read", s.getLabEntriesCohortDetailHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
 		"/api/lab/entries/scenarios/{id}",
@@ -118,18 +118,18 @@ func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
 		"/api/lab/entries/cohorts/{id}/sandbox-executions",
-		s.requirePermission("analytics.suite_executions.write", s.createLabSuiteSandboxExecutionHandler),
+		s.requirePermission("analytics.suite_executions.write", s.createLabCohortSandboxExecutionHandler),
 	).Methods("POST", "OPTIONS")
 }
 
-func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createLabCohortSandboxExecutionHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	suiteID := strings.TrimSpace(vars["id"])
-	if suiteID == "" {
+	cohortID := strings.TrimSpace(vars["id"])
+	if cohortID == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
 		return
 	}
-	if _, err := uuid.Parse(suiteID); err != nil {
+	if _, err := uuid.Parse(cohortID); err != nil {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
 		return
 	}
@@ -157,9 +157,9 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, suiteID).Scan(&goAlgID, &msAlgID, &optimizerKey, &nSims, &seed, &startingStateKey, &suiteExcludedEntryName); err != nil {
+	`, cohortID).Scan(&goAlgID, &msAlgID, &optimizerKey, &nSims, &seed, &startingStateKey, &suiteExcludedEntryName); err != nil {
 		if err == pgx.ErrNoRows {
-			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "id")
+			writeError(w, r, http.StatusNotFound, "not_found", "Cohort not found", "id")
 			return
 		}
 		writeErrorFromErr(w, r, err)
@@ -188,7 +188,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 			AND sc.deleted_at IS NULL
 			AND sc.focus_strategy_generation_run_id IS NOT NULL
 		ORDER BY sc.created_at ASC
-	`, suiteID)
+	`, cohortID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -248,7 +248,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 		)
 		VALUES ($1::uuid, NULL, $2, $3::int, $4::int, $5, $6::text, 'running')
 		RETURNING id::text
-	`, suiteID, optimizerKey, nSims, seed, startingStateKey, suiteExcludedEntryName).Scan(&executionID); err != nil {
+	`, cohortID, optimizerKey, nSims, seed, startingStateKey, suiteExcludedEntryName).Scan(&executionID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -274,7 +274,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 				AND calcutta_id = $2::uuid
 				AND deleted_at IS NULL
 			LIMIT 1
-		`, suiteID, fr.CalcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+		`, cohortID, fr.CalcuttaID).Scan(&syntheticCalcuttaID); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
@@ -341,7 +341,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 				strategy_generation_run_id
 			)
 			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text, $12::uuid)
-		`, executionID, syntheticCalcuttaID, suiteID, fr.CalcuttaID, goRunID, msRunID, optimizerKey, nSims, seed, effStarting, effExcluded, fr.StrategyGenRunID)
+		`, executionID, syntheticCalcuttaID, cohortID, fr.CalcuttaID, goRunID, msRunID, optimizerKey, nSims, seed, effStarting, effExcluded, fr.StrategyGenRunID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -400,8 +400,8 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 	for rows.Next() {
 		var it labEntriesCoverageItem
 		if err := rows.Scan(
-			&it.SuiteID,
-			&it.SuiteName,
+			&it.CohortID,
+			&it.CohortName,
 			&it.AdvancementAlgorithmID,
 			&it.AdvancementAlgorithmName,
 			&it.InvestmentAlgorithmID,
@@ -423,14 +423,14 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, labEntriesCoverageResponse{Items: items})
 }
 
-func (s *Server) getLabEntriesSuiteDetailHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getLabEntriesCohortDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	suiteID := strings.TrimSpace(vars["id"])
-	if suiteID == "" {
+	cohortID := strings.TrimSpace(vars["id"])
+	if cohortID == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
 		return
 	}
-	if _, err := uuid.Parse(suiteID); err != nil {
+	if _, err := uuid.Parse(cohortID); err != nil {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
 		return
 	}
@@ -454,25 +454,25 @@ func (s *Server) getLabEntriesSuiteDetailHandler(w http.ResponseWriter, r *http.
 		WHERE s.id = $1::uuid
 			AND s.deleted_at IS NULL
 		LIMIT 1
-	`, suiteID).Scan(
-		&resp.Suite.ID,
-		&resp.Suite.Name,
-		&resp.Suite.AdvancementAlgorithm.ID,
-		&resp.Suite.AdvancementAlgorithm.Name,
-		&resp.Suite.InvestmentAlgorithm.ID,
-		&resp.Suite.InvestmentAlgorithm.Name,
-		&resp.Suite.OptimizerKey,
-		&resp.Suite.StartingStateKey,
+	`, cohortID).Scan(
+		&resp.Cohort.ID,
+		&resp.Cohort.Name,
+		&resp.Cohort.AdvancementAlgorithm.ID,
+		&resp.Cohort.AdvancementAlgorithm.Name,
+		&resp.Cohort.InvestmentAlgorithm.ID,
+		&resp.Cohort.InvestmentAlgorithm.Name,
+		&resp.Cohort.OptimizerKey,
+		&resp.Cohort.StartingStateKey,
 		&excl,
 	); err != nil {
 		if err == pgx.ErrNoRows {
-			writeError(w, r, http.StatusNotFound, "not_found", "Suite not found", "id")
+			writeError(w, r, http.StatusNotFound, "not_found", "Cohort not found", "id")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	resp.Suite.ExcludedEntryName = excl
+	resp.Cohort.ExcludedEntryName = excl
 
 	rows, err := s.pool.Query(r.Context(), `
 		WITH team_counts AS (
@@ -502,7 +502,7 @@ func (s *Server) getLabEntriesSuiteDetailHandler(w http.ResponseWriter, r *http.
 		WHERE sc.cohort_id = $1::uuid
 			AND sc.deleted_at IS NULL
 		ORDER BY seas.year DESC
-	`, suiteID)
+	`, cohortID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -803,8 +803,8 @@ func (s *Server) getLabEntryReportHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	resp := labEntryReportResponse{
-		SuiteScenarioID:          scenarioID,
-		SuiteID:                  suiteID,
+		ScenarioID:               scenarioID,
+		CohortID:                 suiteID,
 		CalcuttaID:               calcuttaID,
 		CalcuttaName:             calcuttaName,
 		Season:                   seasonYear,
