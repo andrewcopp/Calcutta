@@ -58,7 +58,7 @@ This doc is a task checklist. Keep it updated as we execute the refactor.
 ## Model registries (code, not DB)
 We treat the set of available models as part of the codebase.
 
-- [ ] Define stable interfaces for:
+- [x] Define stable interfaces for:
   - AdvancementModelInterface
   - MarketShareModelInterface
   - EntryOptimizerInterface
