@@ -261,6 +261,7 @@ Target: smaller single-responsibility packages/files.
 ## Data migration and cleanup
 - [ ] Implement compatibility-first migration (next):
   - add new tables/resources
+  - [x] Add canonical read views: `derived.simulation_runs` and `derived.simulation_run_batches` (backed by `derived.suite_*` tables)
   - dual-write from new runs
   - backfill history
   - cut over UI
