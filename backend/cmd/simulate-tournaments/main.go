@@ -9,7 +9,7 @@ import (
 	"os"
 	"runtime"
 
-	sim "github.com/andrewcopp/Calcutta/backend/internal/features/simulate_tournaments"
+	sim "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 

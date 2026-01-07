@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	analytics "github.com/andrewcopp/Calcutta/backend/internal/features/analytics"
+	analytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 )
 
 func TestThatToAnalyticsResponseReturnsZeroValueForNilInput(t *testing.T) {

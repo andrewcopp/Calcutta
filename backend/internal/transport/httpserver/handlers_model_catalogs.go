@@ -3,7 +3,7 @@ package httpserver
 import (
 	"net/http"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/features/model_catalogs"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/model_catalogs"
 	"github.com/gorilla/mux"
 )
 

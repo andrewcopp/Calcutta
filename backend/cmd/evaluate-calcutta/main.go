@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 

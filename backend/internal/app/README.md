@@ -16,19 +16,19 @@ This package subtree is the backend **composition root**.
 
 ## Import conventions (Option A)
 
-- **Outside of `internal/app/**`**, code should depend on feature wrappers under:
-  - `backend/internal/features/<feature>`
+- **Outside of `internal/app/**`**, code should depend directly on feature packages under:
+  - `backend/internal/app/<feature>`
 
-- The legacy packages under `internal/app/<service>` are treated as **implementation details** behind the `internal/features/*` wrappers.
+- `backend/internal/features/*` is deprecated and should not be used.
 
 ### Examples
 
 Preferred:
 
-- `github.com/andrewcopp/Calcutta/backend/internal/features/analytics`
-- `github.com/andrewcopp/Calcutta/backend/internal/features/auth`
+- `github.com/andrewcopp/Calcutta/backend/internal/app/analytics`
+- `github.com/andrewcopp/Calcutta/backend/internal/app/auth`
 
 Avoid:
 
-- `github.com/andrewcopp/Calcutta/backend/internal/app/analytics`
-- `github.com/andrewcopp/Calcutta/backend/internal/app/auth`
+- `github.com/andrewcopp/Calcutta/backend/internal/features/analytics`
+- `github.com/andrewcopp/Calcutta/backend/internal/features/auth`

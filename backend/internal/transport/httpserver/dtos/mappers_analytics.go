@@ -1,6 +1,6 @@
 package dtos
 
-import analytics "github.com/andrewcopp/Calcutta/backend/internal/features/analytics"
+import analytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 
 func ToAnalyticsResponse(result *analytics.AnalyticsResult) AnalyticsResponse {
 	if result == nil {

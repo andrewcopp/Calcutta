@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
+	reb "github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )

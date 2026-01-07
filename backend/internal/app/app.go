@@ -1,14 +1,14 @@
 package app
 
 import (
-	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/features/analytics"
-	appauth "github.com/andrewcopp/Calcutta/backend/internal/features/auth"
-	"github.com/andrewcopp/Calcutta/backend/internal/features/bracket"
-	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/features/calcutta"
-	"github.com/andrewcopp/Calcutta/backend/internal/features/ml_analytics"
-	"github.com/andrewcopp/Calcutta/backend/internal/features/model_catalogs"
-	appschool "github.com/andrewcopp/Calcutta/backend/internal/features/school"
-	apptournament "github.com/andrewcopp/Calcutta/backend/internal/features/tournament"
+	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
+	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
+	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/ml_analytics"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/model_catalogs"
+	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
+	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 )
 
 type App struct {

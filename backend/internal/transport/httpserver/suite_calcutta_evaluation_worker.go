@@ -9,9 +9,9 @@ import (
 	"time"
 
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
-	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
-	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/features/simulate_tournaments"
-	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/features/simulated_calcutta"
+	reb "github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
+	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
+	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

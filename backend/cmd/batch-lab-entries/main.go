@@ -15,8 +15,8 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
-	pgo "github.com/andrewcopp/Calcutta/backend/internal/features/predicted_game_outcomes"
-	reb "github.com/andrewcopp/Calcutta/backend/internal/features/recommended_entry_bids"
+	pgo "github.com/andrewcopp/Calcutta/backend/internal/app/predicted_game_outcomes"
+	reb "github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
