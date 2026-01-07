@@ -52,7 +52,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "go run ./cmd/workers -suite-eval-worker=true"
+    command: sh -c "go run ./cmd/workers -suite-eval-worker=true -game-outcome-worker=true"
 
   db:
     image: postgres:16-alpine
