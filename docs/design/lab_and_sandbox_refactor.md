@@ -85,6 +85,7 @@ We treat the set of available models as part of the codebase.
 - [x] Standardize run status fields (`queued`, `running`, `succeeded`, `failed`) via a shared `derived.run_jobs` envelope queue (per-kind workers claim by `run_kind`).
 - [x] Standardize timestamps (`created_at`, `started_at`, `finished_at`) on `derived.run_jobs`.
 - [ ] Standardize run parameters serialization (`params_json`) and include `seed` where applicable.
+- [x] SimulationRuns: persist `params_json` on `derived.run_jobs` enqueue/backfill.
 
 ### Artifacts
 We can keep separate artifact tables/types, but they should share a common contract:
@@ -93,8 +94,9 @@ We can keep separate artifact tables/types, but they should share a common contr
 - `storage_uri` / payload pointer
 - `summary_json` (small UI-friendly preview)
 
-- [ ] Decide on the final approach:
-  - [ ] Option: Typed artifact tables (AdvancementArtifacts, MarketShareArtifacts, EntryArtifacts, SimulationArtifacts) + a shared contract (`run_id`, `schema_version`, `storage_uri`, `summary_json`)
+- [x] Decide on the final approach:
+  - [x] Shared registry table `derived.run_artifacts` (keyed by `run_kind`, `run_id`, `artifact_kind`) implementing the shared contract.
+  - [x] SimulationRuns: always emit a `metrics` artifact.
 
 - [ ] Ensure EntryArtifacts explicitly reference exactly one:
   - AdvancementArtifact
