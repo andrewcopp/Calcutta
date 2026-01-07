@@ -29,6 +29,9 @@ func RegisteredAlgorithms() []Algorithm {
 		"seed":          42,
 	})
 
+	msRidgeParams, _ := json.Marshal(map[string]any{})
+	msNaiveEVParams, _ := json.Marshal(map[string]any{})
+
 	return []Algorithm{
 		{
 			Kind:        "game_outcomes",
@@ -41,6 +44,18 @@ func RegisteredAlgorithms() []Algorithm {
 			Name:        "kenpom-v1-sigma11-go",
 			Description: "KenPom V1 (Go), sigma=11",
 			ParamsJSON:  params2,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "ridge",
+			Description: "Ridge Regression (Python runner)",
+			ParamsJSON:  msRidgeParams,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "naive-ev-baseline",
+			Description: "Naive EV Baseline",
+			ParamsJSON:  msNaiveEVParams,
 		},
 	}
 }
@@ -92,6 +107,17 @@ func SyncToDatabase(ctx context.Context, pool *pgxpool.Pool, algorithms []Algori
 			AND name = ANY($1::text[])
 			AND deleted_at IS NULL
 	`, []string{"smoke_go", "smoke-go"})
+	if err != nil {
+		return err
+	}
+
+	_, err = pool.Exec(ctx, `
+		UPDATE derived.algorithms
+		SET deleted_at = NOW(), updated_at = NOW()
+		WHERE kind = 'market_share'
+			AND name = ANY($1::text[])
+			AND deleted_at IS NULL
+	`, []string{"smoke_ms"})
 	if err != nil {
 		return err
 	}
