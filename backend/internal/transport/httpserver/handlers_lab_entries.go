@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -358,7 +359,159 @@ func (s *Server) createLabCohortSandboxExecutionHandler(w http.ResponseWriter, r
 }
 
 func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pool.Query(r.Context(), `
+	ctx := r.Context()
+
+	type alg struct {
+		ID   string
+		Name string
+	}
+
+	// Discover which algorithms currently have artifacts.
+	goAlgs := make([]alg, 0)
+	{
+		rows, err := s.pool.Query(ctx, `
+			SELECT DISTINCT
+				a.id::text,
+				a.name
+			FROM derived.algorithms a
+			JOIN derived.game_outcome_runs gor
+				ON gor.algorithm_id = a.id
+				AND gor.deleted_at IS NULL
+			JOIN derived.run_artifacts ra
+				ON ra.run_kind = 'game_outcome'
+				AND ra.run_id = gor.id
+				AND ra.deleted_at IS NULL
+			WHERE a.kind = 'game_outcomes'
+				AND a.deleted_at IS NULL
+			ORDER BY a.name ASC
+		`)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a alg
+			if err := rows.Scan(&a.ID, &a.Name); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			goAlgs = append(goAlgs, a)
+		}
+		if err := rows.Err(); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
+
+	msAlgs := make([]alg, 0)
+	{
+		rows, err := s.pool.Query(ctx, `
+			SELECT DISTINCT
+				a.id::text,
+				a.name
+			FROM derived.algorithms a
+			JOIN derived.market_share_runs msr
+				ON msr.algorithm_id = a.id
+				AND msr.deleted_at IS NULL
+			JOIN derived.run_artifacts ra
+				ON ra.run_kind = 'market_share'
+				AND ra.run_id = msr.id
+				AND ra.deleted_at IS NULL
+			WHERE a.kind = 'market_share'
+				AND a.deleted_at IS NULL
+			ORDER BY a.name ASC
+		`)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a alg
+			if err := rows.Scan(&a.ID, &a.Name); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			msAlgs = append(msAlgs, a)
+		}
+		if err := rows.Err(); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
+
+	optimizerKeys := make([]string, 0)
+	if s.app != nil && s.app.ModelCatalogs != nil {
+		desc := s.app.ModelCatalogs.ListEntryOptimizers()
+		for _, d := range desc {
+			if d.Deprecated {
+				continue
+			}
+			if strings.TrimSpace(d.ID) == "" {
+				continue
+			}
+			optimizerKeys = append(optimizerKeys, strings.TrimSpace(d.ID))
+		}
+	}
+	if len(optimizerKeys) == 0 {
+		optimizerKeys = append(optimizerKeys, "minlp_v1")
+	}
+
+	// Upsert deterministic auto cohorts for each combo so the UI can drill in.
+	for _, goa := range goAlgs {
+		for _, msa := range msAlgs {
+			for _, opt := range optimizerKeys {
+				name := fmt.Sprintf("AUTO: %s + %s + %s", goa.Name, msa.Name, opt)
+				stableID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("lab_entries|go=%s|ms=%s|opt=%s", goa.ID, msa.ID, opt))).String()
+				_, err := s.pool.Exec(ctx, `
+					INSERT INTO derived.synthetic_calcutta_cohorts (
+						id,
+						name,
+						description,
+						game_outcomes_algorithm_id,
+						market_share_algorithm_id,
+						optimizer_key,
+						n_sims,
+						seed,
+						starting_state_key,
+						params_json
+					)
+					VALUES (
+						$1::uuid,
+						$2,
+						NULL,
+						$3::uuid,
+						$4::uuid,
+						$5,
+						5000,
+						42,
+						'post_first_four',
+						'{"auto": true}'::jsonb
+					)
+					ON CONFLICT (id)
+					DO UPDATE SET
+						name = EXCLUDED.name,
+						description = EXCLUDED.description,
+						game_outcomes_algorithm_id = EXCLUDED.game_outcomes_algorithm_id,
+						market_share_algorithm_id = EXCLUDED.market_share_algorithm_id,
+						optimizer_key = EXCLUDED.optimizer_key,
+						n_sims = EXCLUDED.n_sims,
+						seed = EXCLUDED.seed,
+						starting_state_key = EXCLUDED.starting_state_key,
+						params_json = EXCLUDED.params_json,
+						updated_at = NOW(),
+						deleted_at = NULL
+				`, stableID, name, goa.ID, msa.ID, opt)
+				if err != nil {
+					writeErrorFromErr(w, r, err)
+					return
+				}
+			}
+		}
+	}
+
+	rows, err := s.pool.Query(ctx, `
 		WITH scenario_counts AS (
 			SELECT
 				cohort_id,
@@ -388,6 +541,7 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 		LEFT JOIN scenario_counts sc
 			ON sc.cohort_id = s.id
 		WHERE s.deleted_at IS NULL
+			AND COALESCE(s.params_json->>'auto', 'false') = 'true'
 		ORDER BY s.created_at DESC
 	`)
 	if err != nil {
