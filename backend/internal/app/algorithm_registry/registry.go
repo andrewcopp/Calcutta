@@ -85,5 +85,16 @@ func SyncToDatabase(ctx context.Context, pool *pgxpool.Pool, algorithms []Algori
 		}
 	}
 
+	_, err := pool.Exec(ctx, `
+		UPDATE derived.algorithms
+		SET deleted_at = NOW(), updated_at = NOW()
+		WHERE kind = 'game_outcomes'
+			AND name = ANY($1::text[])
+			AND deleted_at IS NULL
+	`, []string{"smoke_go", "smoke-go"})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

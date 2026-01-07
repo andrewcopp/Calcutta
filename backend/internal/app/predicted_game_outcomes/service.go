@@ -8,12 +8,33 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strings"
 
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func defaultKenPomScaleForModelVersion(modelVersion string) float64 {
+	mv := strings.TrimSpace(strings.ToLower(modelVersion))
+	if mv == "kenpom-v1-sigma11-go" {
+		return 11.0
+	}
+	return 10.0
+}
+
+func normalizeKenPomScale(scale float64, modelVersion string) float64 {
+	if scale <= 0 {
+		return defaultKenPomScaleForModelVersion(modelVersion)
+	}
+
+	mv := strings.TrimSpace(strings.ToLower(modelVersion))
+	if mv == "kenpom-v1-sigma11-go" && scale == 10.0 {
+		return 11.0
+	}
+	return scale
+}
 
 type Service struct {
 	pool *pgxpool.Pool
@@ -70,6 +91,8 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 	if p.NSims <= 0 {
 		return "", 0, errors.New("NSims must be positive")
 	}
+
+	p.KenPomScale = normalizeKenPomScale(p.KenPomScale, p.ModelVersion)
 	if p.KenPomScale <= 0 {
 		return "", 0, errors.New("KenPomScale must be positive")
 	}
@@ -258,9 +281,7 @@ func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID strin
 		pp.ModelVersion = *modelVersion
 	}
 
-	if pp.KenPomScale <= 0 {
-		pp.KenPomScale = 10.0
-	}
+	pp.KenPomScale = normalizeKenPomScale(pp.KenPomScale, pp.ModelVersion)
 	if pp.NSims <= 0 {
 		pp.NSims = 5000
 	}
