@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -21,6 +22,7 @@ const (
 
 type entryEvaluationRequestRow struct {
 	ID               string
+	RunKey           string
 	CalcuttaID       string
 	EntryCandidateID string
 	ExcludedEntry    *string
@@ -149,12 +151,12 @@ func (s *Server) claimNextEntryEvaluationRequest(ctx context.Context, workerID s
 		_ = tx.Rollback(ctx)
 	}()
 
-	row := &entryEvaluationRequestRow{}
+	var runID string
 	q := `
 		WITH candidate AS (
 			SELECT id
-			FROM derived.entry_evaluation_requests
-			WHERE deleted_at IS NULL
+			FROM derived.run_jobs
+			WHERE run_kind = 'entry_evaluation'
 				AND (
 					status = 'queued'
 					OR (
@@ -167,28 +169,58 @@ func (s *Server) claimNextEntryEvaluationRequest(ctx context.Context, workerID s
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		)
+		UPDATE derived.run_jobs j
+		SET status = 'running',
+			attempt = j.attempt + 1,
+			claimed_at = $1,
+			claimed_by = $3,
+			started_at = COALESCE(j.started_at, $1),
+			finished_at = NULL,
+			error_message = NULL,
+			updated_at = NOW()
+		FROM candidate
+		WHERE j.id = candidate.id
+		RETURNING j.run_id::text
+	`
+	if err := tx.QueryRow(ctx, q,
+		pgtype.Timestamptz{Time: now, Valid: true},
+		pgtype.Timestamptz{Time: staleBefore, Valid: true},
+		workerID,
+	).Scan(&runID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	row := &entryEvaluationRequestRow{}
+	q2 := `
 		UPDATE derived.entry_evaluation_requests r
 		SET status = 'running',
 			claimed_at = $1,
 			claimed_by = $3,
 			error_message = NULL
-		FROM candidate
-		WHERE r.id = candidate.id
+		WHERE r.id = $2::uuid
 		RETURNING
 			r.id,
+			r.run_key,
 			r.calcutta_id,
 			r.entry_candidate_id,
 			r.excluded_entry_name,
 			r.starting_state_key,
 			r.n_sims,
 			r.seed,
-			r.experiment_key,
-			r.request_source
+			COALESCE(r.experiment_key, ''::text) AS experiment_key,
+			COALESCE(r.request_source, ''::text) AS request_source
 	`
-
 	var excluded *string
-	if err := tx.QueryRow(ctx, q, pgtype.Timestamptz{Time: now, Valid: true}, pgtype.Timestamptz{Time: staleBefore, Valid: true}, workerID).Scan(
+	if err := tx.QueryRow(ctx, q2,
+		pgtype.Timestamptz{Time: now, Valid: true},
+		runID,
+		workerID,
+	).Scan(
 		&row.ID,
+		&row.RunKey,
 		&row.CalcuttaID,
 		&row.EntryCandidateID,
 		&excluded,
@@ -198,9 +230,6 @@ func (s *Server) claimNextEntryEvaluationRequest(ctx context.Context, workerID s
 		&row.ExperimentKey,
 		&row.RequestSource,
 	); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, false, nil
-		}
 		return nil, false, err
 	}
 	row.ExcludedEntry = excluded
@@ -218,17 +247,20 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 		return 0, 0, false
 	}
 
-	runID := uuid.NewString()
+	runKey := req.RunKey
+	if runKey == "" {
+		runKey = uuid.NewString()
+	}
 
 	excluded := ""
 	if req.ExcludedEntry != nil {
 		excluded = *req.ExcludedEntry
 	}
 
-	log.Printf("entry_eval_worker start worker_id=%s request_id=%s run_id=%s calcutta_id=%s entry_candidate_id=%s experiment_key=%s request_source=%s starting_state_key=%s n_sims=%d seed=%d excluded_entry_name=%q",
+	log.Printf("entry_eval_worker start worker_id=%s request_id=%s run_key=%s calcutta_id=%s entry_candidate_id=%s experiment_key=%s request_source=%s starting_state_key=%s n_sims=%d seed=%d excluded_entry_name=%q",
 		workerID,
 		req.ID,
-		runID,
+		runKey,
 		req.CalcuttaID,
 		req.EntryCandidateID,
 		req.ExperimentKey,
@@ -242,7 +274,7 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	year, err := s.resolveSeasonYearByCalcuttaID(ctx, req.CalcuttaID)
 	if err != nil {
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
-		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_id=%s err=%v", workerID, req.ID, runID, err)
+		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_key=%s err=%v", workerID, req.ID, runKey, err)
 		return 0, 0, false
 	}
 
@@ -260,7 +292,7 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	simDur := time.Since(simStart)
 	if err != nil {
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
-		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_id=%s phase=simulate err=%v", workerID, req.ID, runID, err)
+		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_key=%s phase=simulate err=%v", workerID, req.ID, runKey, err)
 		return simDur, 0, false
 	}
 
@@ -269,7 +301,7 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	evalRunID, err := evalSvc.CalculateSimulatedCalcuttaForEntryCandidate(
 		ctx,
 		req.CalcuttaID,
-		runID,
+		runKey,
 		excluded,
 		&simRes.TournamentSimulationBatchID,
 		req.EntryCandidateID,
@@ -277,7 +309,7 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 	evalDur := time.Since(evalStart)
 	if err != nil {
 		s.failEntryEvaluationRequest(ctx, req.ID, err)
-		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_id=%s phase=evaluate err=%v", workerID, req.ID, runID, err)
+		log.Printf("entry_eval_worker fail worker_id=%s request_id=%s run_key=%s phase=evaluate err=%v", workerID, req.ID, runKey, err)
 		return simDur, evalDur, false
 	}
 
@@ -294,10 +326,67 @@ func (s *Server) processEntryEvaluationRequest(ctx context.Context, workerID str
 		return simDur, evalDur, false
 	}
 
-	log.Printf("entry_eval_worker success worker_id=%s request_id=%s run_id=%s evaluation_run_id=%s sim_ms=%d eval_ms=%d",
+	_, _ = s.pool.Exec(ctx, `
+		UPDATE derived.run_jobs
+		SET status = 'succeeded',
+			finished_at = NOW(),
+			error_message = NULL,
+			updated_at = NOW()
+		WHERE run_kind = 'entry_evaluation'
+			AND run_id = $1::uuid
+	`, req.ID)
+
+	summary := map[string]any{
+		"status":            "succeeded",
+		"requestId":         req.ID,
+		"runKey":            runKey,
+		"calcuttaId":        req.CalcuttaID,
+		"entryCandidateId":  req.EntryCandidateID,
+		"startingStateKey":  req.StartingStateKey,
+		"nSims":             req.NSims,
+		"seed":              req.Seed,
+		"experimentKey":     req.ExperimentKey,
+		"requestSource":     req.RequestSource,
+		"evaluationRunId":   evalRunID,
+		"simulationBatchId": simRes.TournamentSimulationBatchID,
+		"simMs":             simDur.Milliseconds(),
+		"evalMs":            evalDur.Milliseconds(),
+		"excludedEntryName": excluded,
+	}
+	summaryJSON, jerr := json.Marshal(summary)
+	if jerr == nil {
+		var runKeyParam any
+		if runKey != "" {
+			runKeyParam = runKey
+		} else {
+			runKeyParam = nil
+		}
+		_, _ = s.pool.Exec(ctx, `
+			INSERT INTO derived.run_artifacts (
+				run_kind,
+				run_id,
+				run_key,
+				artifact_kind,
+				schema_version,
+				storage_uri,
+				summary_json
+			)
+			VALUES ('entry_evaluation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
+			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
+			DO UPDATE
+			SET run_key = EXCLUDED.run_key,
+				schema_version = EXCLUDED.schema_version,
+				storage_uri = EXCLUDED.storage_uri,
+				summary_json = EXCLUDED.summary_json,
+				updated_at = NOW(),
+				deleted_at = NULL
+		`, req.ID, runKeyParam, summaryJSON)
+	}
+
+	log.Printf("entry_eval_worker success worker_id=%s request_id=%s run_key=%s evaluation_run_id=%s sim_ms=%d eval_ms=%d",
 		workerID,
 		req.ID,
-		runID,
+		runKey,
 		evalRunID,
 		simDur.Milliseconds(),
 		evalDur.Milliseconds(),
@@ -310,6 +399,7 @@ func (s *Server) failEntryEvaluationRequest(ctx context.Context, requestID strin
 	if err != nil {
 		msg = err.Error()
 	}
+	var runKey *string
 	_, e := s.pool.Exec(ctx, `
 		UPDATE derived.entry_evaluation_requests
 		SET status = 'failed',
@@ -319,6 +409,59 @@ func (s *Server) failEntryEvaluationRequest(ctx context.Context, requestID strin
 	`, requestID, msg)
 	if e != nil {
 		log.Printf("Error marking entry evaluation request %s failed: %v (original error: %v)", requestID, e, err)
+	}
+
+	_ = s.pool.QueryRow(ctx, `
+		SELECT run_key::text
+		FROM derived.entry_evaluation_requests
+		WHERE id = $1::uuid
+		LIMIT 1
+	`, requestID).Scan(&runKey)
+
+	_, _ = s.pool.Exec(ctx, `
+		UPDATE derived.run_jobs
+		SET status = 'failed',
+			finished_at = NOW(),
+			error_message = $2,
+			updated_at = NOW()
+		WHERE run_kind = 'entry_evaluation'
+			AND run_id = $1::uuid
+	`, requestID, msg)
+
+	failureSummary := map[string]any{
+		"status":       "failed",
+		"requestId":    requestID,
+		"runKey":       runKey,
+		"errorMessage": msg,
+	}
+	failureSummaryJSON, jerr := json.Marshal(failureSummary)
+	if jerr == nil {
+		var runKeyParam any
+		if runKey != nil && *runKey != "" {
+			runKeyParam = *runKey
+		} else {
+			runKeyParam = nil
+		}
+		_, _ = s.pool.Exec(ctx, `
+			INSERT INTO derived.run_artifacts (
+				run_kind,
+				run_id,
+				run_key,
+				artifact_kind,
+				schema_version,
+				storage_uri,
+				summary_json
+			)
+			VALUES ('entry_evaluation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
+			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
+			DO UPDATE
+			SET run_key = EXCLUDED.run_key,
+				schema_version = EXCLUDED.schema_version,
+				storage_uri = EXCLUDED.storage_uri,
+				summary_json = EXCLUDED.summary_json,
+				updated_at = NOW(),
+				deleted_at = NULL
+		`, requestID, runKeyParam, failureSummaryJSON)
 	}
 }
 
