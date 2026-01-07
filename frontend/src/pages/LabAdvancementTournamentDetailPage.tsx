@@ -138,6 +138,24 @@ export function LabAdvancementTournamentDetailPage() {
   });
 
   const formatProb = (p: number) => `${(p * 100).toFixed(1)}%`;
+  const formatTotal = (n: number) => n.toFixed(2);
+
+  const totals = useMemo(() => {
+    const teams = predictedAdvancementQuery.data?.teams ?? [];
+    const sum = (key: keyof TeamPredictedAdvancement) => teams.reduce((acc, t) => acc + (typeof t[key] === 'number' ? (t[key] as number) : 0), 0);
+
+    return {
+      prob_pi: sum('prob_pi'),
+      reach_r64: sum('reach_r64'),
+      reach_r32: sum('reach_r32'),
+      reach_s16: sum('reach_s16'),
+      reach_e8: sum('reach_e8'),
+      reach_ff: sum('reach_ff'),
+      reach_champ: sum('reach_champ'),
+      win_champ: sum('win_champ'),
+      teams_count: teams.length,
+    };
+  }, [predictedAdvancementQuery.data?.teams]);
 
   return (
     <PageContainer className="max-w-none">
@@ -236,6 +254,20 @@ export function LabAdvancementTournamentDetailPage() {
                       <td className="px-4 py-3 text-sm text-center font-semibold text-blue-700 bg-blue-50">{formatProb(team.win_champ)}</td>
                     </tr>
                   ))}
+
+                  <tr className="bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 sticky left-0 bg-gray-50">Total</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-500">{totals.teams_count}</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-500">—</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.prob_pi)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.reach_r64)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.reach_r32)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.reach_s16)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.reach_e8)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.reach_ff)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-gray-900">{formatTotal(totals.reach_champ)}</td>
+                    <td className="px-4 py-3 text-sm text-center font-semibold text-blue-800 bg-blue-100">{formatTotal(totals.win_champ)}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
