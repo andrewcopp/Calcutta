@@ -108,8 +108,11 @@ export const analyticsService = {
     return apiClient.get<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}`);
   },
 
-  async createLabCohortSandboxExecution<T>(cohortId: string): Promise<T> {
-    return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/sandbox-executions`, {});
+  async createLabCohortSandboxExecution<T>(
+    cohortId: string,
+    params?: { nSims?: number; excludedEntryId?: string; excludedEntryName?: string }
+  ): Promise<T> {
+    return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/sandbox-executions`, params || {});
   },
 
   async getLabEntryReport<T>(scenarioId: string): Promise<T> {

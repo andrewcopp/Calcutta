@@ -1,12 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
+import { calcuttaService } from '../services/calcuttaService';
 import { analyticsService } from '../services/analyticsService';
+import type { CalcuttaEntry } from '../types/calcutta';
 
 type CohortDetailResponse = {
   cohort: {
@@ -40,6 +44,10 @@ export function LabEntriesSuiteDetailPage() {
   const { cohortId } = useParams<{ cohortId: string }>();
   const navigate = useNavigate();
 
+	const [nSimsText, setNSimsText] = useState<string>('');
+	const [excludedEntryId, setExcludedEntryId] = useState<string>('');
+	const [runInSandboxError, setRunInSandboxError] = useState<string | null>(null);
+
   const detailQuery = useQuery<CohortDetailResponse | null>({
     queryKey: ['lab', 'entries', 'cohort', cohortId],
     queryFn: async () => {
@@ -67,6 +75,19 @@ export function LabEntriesSuiteDetailPage() {
       });
   }, [items]);
 
+	const latestCalcuttaId = sorted.length > 0 ? sorted[0].calcutta_id : '';
+
+	const entriesQuery = useQuery<CalcuttaEntry[]>({
+		queryKey: ['calcuttas', latestCalcuttaId, 'entries'],
+		queryFn: async () => {
+			if (!latestCalcuttaId) return [];
+			return calcuttaService.getCalcuttaEntries(latestCalcuttaId);
+		},
+		enabled: Boolean(latestCalcuttaId),
+	});
+
+	const calcuttaEntries = entriesQuery.data ?? [];
+
   const cohort = detailQuery.data?.cohort ?? null;
 
   const fmtDateTime = (iso?: string | null) => {
@@ -87,19 +108,70 @@ export function LabEntriesSuiteDetailPage() {
           </Link>
         }
         actions={
+			<div className="flex items-center gap-2">
+				<div className="w-32">
+					<Input
+						type="number"
+						min={0}
+						placeholder="nSims"
+						value={nSimsText}
+						onChange={(e) => setNSimsText(e.target.value)}
+						disabled={!cohortId || detailQuery.isLoading}
+					/>
+				</div>
+				<div className="w-64">
+					<Select
+						value={excludedEntryId}
+						onChange={(e) => setExcludedEntryId(e.target.value)}
+						disabled={!cohortId || detailQuery.isLoading || entriesQuery.isLoading || calcuttaEntries.length === 0}
+					>
+						<option value="">Exclude entry (none)</option>
+						{calcuttaEntries.map((e) => (
+							<option key={e.id} value={e.id}>
+								{e.name}
+							</option>
+						))}
+					</Select>
+				</div>
 				<Button
 					size="sm"
 					disabled={!cohortId || detailQuery.isLoading || !canRunInSandbox}
 					onClick={async () => {
 						if (!cohortId) return;
-					const res = await analyticsService.createLabCohortSandboxExecution<CreateSandboxExecutionResponse>(cohortId);
-					navigate(`/sandbox/cohorts/${encodeURIComponent(cohortId)}?executionId=${encodeURIComponent(res.executionId)}`);
-				}}
-			>
+						setRunInSandboxError(null);
+
+						const trimmed = nSimsText.trim();
+						let nSims: number | undefined;
+						if (trimmed !== '') {
+							if (!/^\d+$/.test(trimmed)) {
+								setRunInSandboxError('nSims must be a non-negative integer');
+								return;
+							}
+							nSims = Number(trimmed);
+						}
+
+						try {
+							const res = await analyticsService.createLabCohortSandboxExecution<CreateSandboxExecutionResponse>(cohortId, {
+								nSims,
+								excludedEntryId: excludedEntryId || undefined,
+							});
+							navigate(`/sandbox/cohorts/${encodeURIComponent(cohortId)}?executionId=${encodeURIComponent(res.executionId)}`);
+						} catch (err) {
+							setRunInSandboxError(err instanceof Error ? err.message : 'Failed to run sandbox execution');
+						}
+					}}
+				>
 					Run in Sandbox
 				</Button>
+			</div>
         }
       />
+
+			{runInSandboxError ? (
+				<Alert variant="error" className="mb-4">
+					{runInSandboxError}
+				</Alert>
+			) : null}
 
       <div className="space-y-6">
         <Card>

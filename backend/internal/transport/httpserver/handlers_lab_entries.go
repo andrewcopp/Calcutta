@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -135,6 +137,38 @@ func (s *Server) createLabCohortSandboxExecutionHandler(w http.ResponseWriter, r
 		return
 	}
 
+	type createLabCohortSandboxExecutionRequest struct {
+		NSims             *int    `json:"nSims"`
+		ExcludedEntryID   *string `json:"excludedEntryId"`
+		ExcludedEntryName *string `json:"excludedEntryName"`
+	}
+
+	var req createLabCohortSandboxExecutionRequest
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+			writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+			return
+		}
+	}
+	if req.NSims != nil && *req.NSims < 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "nSims must be >= 0", "nSims")
+		return
+	}
+	if req.ExcludedEntryID != nil {
+		v := strings.TrimSpace(*req.ExcludedEntryID)
+		if v != "" {
+			if _, err := uuid.Parse(v); err != nil {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "excludedEntryId must be a valid UUID", "excludedEntryId")
+				return
+			}
+		}
+		*req.ExcludedEntryID = v
+	}
+	if req.ExcludedEntryName != nil {
+		v := strings.TrimSpace(*req.ExcludedEntryName)
+		*req.ExcludedEntryName = v
+	}
+
 	ctx := r.Context()
 
 	// Load suite-level defaults.
@@ -165,6 +199,46 @@ func (s *Server) createLabCohortSandboxExecutionHandler(w http.ResponseWriter, r
 		}
 		writeErrorFromErr(w, r, err)
 		return
+	}
+
+	if req.NSims != nil {
+		nSims = *req.NSims
+	}
+
+	// Allow override by entry ID (resolve to name) or explicit name.
+	if req.ExcludedEntryID != nil && strings.TrimSpace(*req.ExcludedEntryID) != "" {
+		var excludedName string
+		if err := s.pool.QueryRow(ctx, `
+			SELECT ce.name
+			FROM core.entries ce
+			JOIN derived.synthetic_calcuttas sc
+				ON sc.calcutta_id = ce.calcutta_id
+				AND sc.cohort_id = $2::uuid
+				AND sc.deleted_at IS NULL
+			WHERE ce.id = $1::uuid
+				AND ce.deleted_at IS NULL
+			LIMIT 1
+		`, *req.ExcludedEntryID, cohortID).Scan(&excludedName); err != nil {
+			if err == pgx.ErrNoRows {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "excludedEntryId not found for this cohort", "excludedEntryId")
+				return
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		excludedName = strings.TrimSpace(excludedName)
+		if excludedName == "" {
+			suiteExcludedEntryName = nil
+		} else {
+			suiteExcludedEntryName = &excludedName
+		}
+	} else if req.ExcludedEntryName != nil {
+		if strings.TrimSpace(*req.ExcludedEntryName) == "" {
+			suiteExcludedEntryName = nil
+		} else {
+			name := strings.TrimSpace(*req.ExcludedEntryName)
+			suiteExcludedEntryName = &name
+		}
 	}
 
 	// Load focused scenarios. We will resolve game_outcome_run_id + market_share_run_id
