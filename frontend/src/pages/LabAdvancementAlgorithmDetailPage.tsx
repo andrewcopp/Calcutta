@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
@@ -60,6 +62,9 @@ type TeamPredictedAdvancement = {
 export function LabAdvancementAlgorithmDetailPage() {
   const { algorithmId } = useParams<{ algorithmId: string }>();
   const navigate = useNavigate();
+
+	const [runAllError, setRunAllError] = useState<string | null>(null);
+	const [runAllLoading, setRunAllLoading] = useState(false);
 
   const algorithmsQuery = useQuery<{ items: Algorithm[] } | null>({
     queryKey: ['analytics', 'algorithms', 'game_outcomes'],
@@ -120,6 +125,21 @@ export function LabAdvancementAlgorithmDetailPage() {
     return d.toLocaleString();
   };
 
+	const runAll = async () => {
+		if (!algorithmId) return;
+		setRunAllError(null);
+		setRunAllLoading(true);
+		try {
+			await analyticsService.bulkCreateGameOutcomeRunsForAlgorithm(algorithmId);
+			await coverageDetailQuery.refetch();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to enqueue runs';
+			setRunAllError(msg);
+		} finally {
+			setRunAllLoading(false);
+		}
+	};
+
   return (
     <PageContainer className="max-w-none">
       <PageHeader
@@ -130,9 +150,16 @@ export function LabAdvancementAlgorithmDetailPage() {
             ← Back to Lab
           </Link>
         }
+		actions={
+			<Button onClick={runAll} loading={runAllLoading} disabled={!algorithmId || algorithmsQuery.isLoading}>
+				Run for all tournaments
+			</Button>
+		}
       />
 
       <div className="space-y-6">
+			{runAllError ? <Alert variant="error">{runAllError}</Alert> : null}
+
         <Card>
           <h2 className="text-xl font-semibold mb-2">Algorithm</h2>
           {algorithmsQuery.isLoading ? <div className="text-gray-500">Loading algorithm...</div> : null}

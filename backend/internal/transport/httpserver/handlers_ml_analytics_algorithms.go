@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -148,5 +151,104 @@ func (s *Server) handleGetLatestPredictionRunsForCalcutta(w http.ResponseWriter,
 		"tournament_id":       latest.TournamentID,
 		"game_outcome_run_id": latest.GameOutcomeRunID,
 		"market_share_run_id": latest.MarketShareRunID,
+	})
+}
+
+func (s *Server) handleBulkCreateGameOutcomeRunsForAlgorithm(w http.ResponseWriter, r *http.Request) {
+	if s.pool == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "unavailable", "Database not available", "")
+		return
+	}
+
+	vars := mux.Vars(r)
+	algorithmID := strings.TrimSpace(vars["id"])
+	if algorithmID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Missing algorithm ID", "id")
+		return
+	}
+	if _, err := uuid.Parse(algorithmID); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Algorithm ID must be a valid UUID", "id")
+		return
+	}
+
+	ctx := r.Context()
+
+	var exists bool
+	if err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM derived.algorithms a
+			WHERE a.id = $1::uuid
+				AND a.deleted_at IS NULL
+			LIMIT 1
+		)
+	`, algorithmID).Scan(&exists); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if !exists {
+		writeError(w, r, http.StatusNotFound, "not_found", "Algorithm not found", "id")
+		return
+	}
+
+	gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
+	var gitSHAParam any
+	if gitSHA != "" {
+		gitSHAParam = gitSHA
+	} else {
+		gitSHAParam = nil
+	}
+
+	paramsJSON, _ := json.Marshal(map[string]any{"source": "api_bulk"})
+
+	var total int
+	if err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(*)::int
+		FROM core.tournaments
+		WHERE deleted_at IS NULL
+	`).Scan(&total); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	// Bulk insert one run per tournament (skip if a run already exists for algorithm+tournament).
+	cmdTag, err := s.pool.Exec(ctx, `
+		INSERT INTO derived.game_outcome_runs (
+			algorithm_id,
+			tournament_id,
+			params_json,
+			git_sha
+		)
+		SELECT
+			$1::uuid,
+			t.id,
+			$2::jsonb,
+			$3
+		FROM core.tournaments t
+		WHERE t.deleted_at IS NULL
+			AND NOT EXISTS (
+				SELECT 1
+				FROM derived.game_outcome_runs r
+				WHERE r.algorithm_id = $1::uuid
+					AND r.tournament_id = t.id
+					AND r.deleted_at IS NULL
+			)
+	`, algorithmID, string(paramsJSON), gitSHAParam)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	created := int(cmdTag.RowsAffected())
+	skipped := total - created
+	if skipped < 0 {
+		skipped = 0
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"algorithm_id":      algorithmID,
+		"total_tournaments": total,
+		"created":           created,
+		"skipped":           skipped,
 	})
 }

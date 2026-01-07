@@ -31,6 +31,10 @@ export const analyticsService = {
     return apiClient.get<T>(`/analytics/algorithms/${encodeURIComponent(algorithmId)}/coverage/market-share`);
   },
 
+	async bulkCreateGameOutcomeRunsForAlgorithm<T>(algorithmId: string): Promise<T> {
+		return apiClient.post<T>(`/analytics/algorithms/${encodeURIComponent(algorithmId)}/game-outcome-runs/bulk`, {});
+	},
+
   async listGameOutcomeRunsForTournament<T>(tournamentId: string): Promise<T> {
     return apiClient.get<T>(`/analytics/tournaments/${encodeURIComponent(tournamentId)}/game-outcome-runs`);
   },
