@@ -77,7 +77,7 @@ func (s *Server) listSuiteScenariosHandler(w http.ResponseWriter, r *http.Reques
 	rows, err := s.pool.Query(r.Context(), `
 		SELECT
 			sc.id::text,
-			sc.suite_id::text,
+			sc.cohort_id::text,
 			sc.calcutta_id::text,
 			sc.calcutta_snapshot_id::text,
 			sc.focus_strategy_generation_run_id::text,
@@ -86,9 +86,9 @@ func (s *Server) listSuiteScenariosHandler(w http.ResponseWriter, r *http.Reques
 			sc.excluded_entry_name,
 			sc.created_at,
 			sc.updated_at
-		FROM derived.suite_scenarios sc
+		FROM derived.synthetic_calcuttas sc
 		WHERE sc.deleted_at IS NULL
-			AND ($1::uuid IS NULL OR sc.suite_id = $1::uuid)
+			AND ($1::uuid IS NULL OR sc.cohort_id = $1::uuid)
 			AND ($2::uuid IS NULL OR sc.calcutta_id = $2::uuid)
 		ORDER BY sc.created_at DESC
 		LIMIT $3::int
@@ -144,7 +144,7 @@ func (s *Server) getSuiteScenarioHandler(w http.ResponseWriter, r *http.Request)
 	if err := s.pool.QueryRow(r.Context(), `
 		SELECT
 			sc.id::text,
-			sc.suite_id::text,
+			sc.cohort_id::text,
 			sc.calcutta_id::text,
 			sc.calcutta_snapshot_id::text,
 			sc.focus_strategy_generation_run_id::text,
@@ -153,7 +153,7 @@ func (s *Server) getSuiteScenarioHandler(w http.ResponseWriter, r *http.Request)
 			sc.excluded_entry_name,
 			sc.created_at,
 			sc.updated_at
-		FROM derived.suite_scenarios sc
+		FROM derived.synthetic_calcuttas sc
 		WHERE sc.id = $1::uuid
 			AND sc.deleted_at IS NULL
 		LIMIT 1
@@ -284,10 +284,10 @@ func (s *Server) createSuiteScenarioHandler(w http.ResponseWriter, r *http.Reque
 		snapshotID = &created
 	}
 
-	// Upsert suite_scenarios using UPDATE-then-INSERT to avoid partial index ON CONFLICT issues.
+	// Upsert synthetic_calcuttas using UPDATE-then-INSERT to avoid partial index ON CONFLICT issues.
 	var scenarioID string
 	if err := tx.QueryRow(ctx, `
-		UPDATE derived.suite_scenarios
+		UPDATE derived.synthetic_calcuttas
 		SET calcutta_snapshot_id = $3::uuid,
 			focus_strategy_generation_run_id = $4::uuid,
 			focus_entry_name = $5,
@@ -295,15 +295,15 @@ func (s *Server) createSuiteScenarioHandler(w http.ResponseWriter, r *http.Reque
 			excluded_entry_name = $7,
 			updated_at = NOW(),
 			deleted_at = NULL
-		WHERE suite_id = $1::uuid
+		WHERE cohort_id = $1::uuid
 			AND calcutta_id = $2::uuid
 			AND deleted_at IS NULL
 		RETURNING id::text
 	`, req.SuiteID, req.CalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&scenarioID); err != nil {
 		if err == pgx.ErrNoRows {
 			if err := tx.QueryRow(ctx, `
-				INSERT INTO derived.suite_scenarios (
-					suite_id,
+				INSERT INTO derived.synthetic_calcuttas (
+					cohort_id,
 					calcutta_id,
 					calcutta_snapshot_id,
 					focus_strategy_generation_run_id,

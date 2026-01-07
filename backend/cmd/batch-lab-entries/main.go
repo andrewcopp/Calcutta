@@ -71,19 +71,19 @@ func run() error {
 	var useExistingMarketShare bool
 	var dryRun bool
 
-	flag.StringVar(&suiteID, "suite-id", "", "Optional derived.suites.id (uuid). If empty, process all suites")
+	flag.StringVar(&suiteID, "suite-id", "", "Optional derived.synthetic_calcutta_cohorts.id (uuid). If empty, process all cohorts")
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Optional core.calcuttas.id (uuid). If empty, process all calcuttas in range")
 	flag.IntVar(&seasonMin, "season-min", 0, "Optional season year lower bound (inclusive)")
 	flag.IntVar(&seasonMax, "season-max", 0, "Optional season year upper bound (inclusive)")
 	flag.StringVar(&pythonBin, "python-bin", "python3", "Python interpreter to run the market-share runner")
 	flag.StringVar(&pythonRunnerPath, "python-market-runner", "", "Optional path to data-science/scripts/run_market_share_runner.py (used only as fallback if no matching market_share_run exists)")
-	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Override excluded entry name (defaults to suite.excluded_entry_name or EXCLUDED_ENTRY_NAME)")
+	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Override excluded entry name (defaults to cohort.excluded_entry_name or EXCLUDED_ENTRY_NAME)")
 	flag.IntVar(&nSims, "pgo-n-sims", 5000, "predicted_game_outcomes n_sims")
 	flag.IntVar(&seed, "pgo-seed", 42, "predicted_game_outcomes seed")
 	flag.Float64Var(&kenpomScale, "pgo-kenpom-scale", 10.0, "predicted_game_outcomes kenpom scale")
-	flag.BoolVar(&skipExistingFocus, "skip-existing-focus", true, "Skip suite_scenarios that already have focus_strategy_generation_run_id")
+	flag.BoolVar(&skipExistingFocus, "skip-existing-focus", true, "Skip synthetic_calcuttas that already have focus_strategy_generation_run_id")
 	flag.BoolVar(&useExistingMarketShare, "use-existing-market-share", true, "Reuse existing market_share_runs (matching algorithm name + excluded_entry_name) and only call Python runner if missing")
-	flag.BoolVar(&dryRun, "dry-run", false, "If set, compute selections but do not write suite_scenarios focus run")
+	flag.BoolVar(&dryRun, "dry-run", false, "If set, compute selections but do not write synthetic_calcuttas focus run")
 	flag.Parse()
 
 	if seasonMin > 0 && seasonMax > 0 && seasonMax < seasonMin {
@@ -269,7 +269,7 @@ func loadSuites(ctx context.Context, pool *pgxpool.Pool, suiteID string) ([]suit
 			s.optimizer_key,
 			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
 			s.excluded_entry_name
-		FROM derived.suites s
+		FROM derived.synthetic_calcutta_cohorts s
 		JOIN derived.algorithms goa ON goa.id = s.game_outcomes_algorithm_id AND goa.deleted_at IS NULL
 		JOIN derived.algorithms msa ON msa.id = s.market_share_algorithm_id AND msa.deleted_at IS NULL
 		WHERE s.deleted_at IS NULL
@@ -331,9 +331,9 @@ func resolveMarketShareRunID(ctx context.Context, pool *pgxpool.Pool, calcuttaID
 func ensureSuiteScenarios(ctx context.Context, pool *pgxpool.Pool, suiteID string, seasonMin, seasonMax int, calcuttaID string) error {
 	if strings.TrimSpace(calcuttaID) != "" {
 		_, err := pool.Exec(ctx, `
-			INSERT INTO derived.suite_scenarios (suite_id, calcutta_id, starting_state_key, excluded_entry_name)
+			INSERT INTO derived.synthetic_calcuttas (cohort_id, calcutta_id, starting_state_key, excluded_entry_name)
 			VALUES ($1::uuid, $2::uuid, NULL, NULL)
-			ON CONFLICT (suite_id, calcutta_id) WHERE deleted_at IS NULL
+			ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
 			DO NOTHING
 		`, suiteID, calcuttaID)
 		return err
@@ -350,14 +350,14 @@ func ensureSuiteScenarios(ctx context.Context, pool *pgxpool.Pool, suiteID strin
 	}
 
 	_, err := pool.Exec(ctx, `
-		INSERT INTO derived.suite_scenarios (suite_id, calcutta_id, starting_state_key, excluded_entry_name)
+		INSERT INTO derived.synthetic_calcuttas (cohort_id, calcutta_id, starting_state_key, excluded_entry_name)
 		SELECT $1::uuid, c.id, NULL, NULL
 		FROM core.calcuttas c
 		JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 		JOIN core.seasons s ON s.id = t.season_id AND s.deleted_at IS NULL
 		WHERE c.deleted_at IS NULL
 		  AND s.year BETWEEN $2::int AND $3::int
-		ON CONFLICT (suite_id, calcutta_id) WHERE deleted_at IS NULL
+		ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
 		DO NOTHING
 	`, suiteID, seasonMin, seasonMax)
 	return err
@@ -377,11 +377,11 @@ func listSuiteScenarioCalcuttas(ctx context.Context, pool *pgxpool.Pool, suiteID
 			c.tournament_id::text,
 			seas.year::int,
 			sc.focus_strategy_generation_run_id::text
-		FROM derived.suite_scenarios sc
+		FROM derived.synthetic_calcuttas sc
 		JOIN core.calcuttas c ON c.id = sc.calcutta_id AND c.deleted_at IS NULL
 		JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 		JOIN core.seasons seas ON seas.id = t.season_id AND seas.deleted_at IS NULL
-		WHERE sc.suite_id = $1::uuid
+		WHERE sc.cohort_id = $1::uuid
 		  AND sc.deleted_at IS NULL
 		  %s
 		ORDER BY seas.year ASC
@@ -541,12 +541,12 @@ func loadMarketSharesByRunID(ctx context.Context, pool *pgxpool.Pool, runID stri
 
 func attachFocusRunToSuiteScenario(ctx context.Context, pool *pgxpool.Pool, suiteID, calcuttaID, strategyRunID, startingStateKey, excludedEntryName string) error {
 	_, err := pool.Exec(ctx, `
-		UPDATE derived.suite_scenarios
+		UPDATE derived.synthetic_calcuttas
 		SET focus_strategy_generation_run_id = $3::uuid,
 		    starting_state_key = COALESCE(NULLIF($4::text, ''), starting_state_key),
 		    excluded_entry_name = $5::text,
 		    updated_at = NOW()
-		WHERE suite_id = $1::uuid
+		WHERE cohort_id = $1::uuid
 		  AND calcutta_id = $2::uuid
 		  AND deleted_at IS NULL
 	`, suiteID, calcuttaID, strategyRunID, startingStateKey, excludedEntryName)

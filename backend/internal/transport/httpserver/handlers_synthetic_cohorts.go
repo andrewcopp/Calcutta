@@ -39,25 +39,24 @@ func (s *Server) listSyntheticCalcuttaCohortsHandler(w http.ResponseWriter, r *h
 
 	rows, err := s.pool.Query(r.Context(), `
 		SELECT
-			s.id::text,
-			COALESCE(s.name, ''::text) AS name,
-			s.description,
-			s.game_outcomes_algorithm_id::text,
-			s.market_share_algorithm_id::text,
-			s.optimizer_key,
-			s.n_sims,
-			s.seed,
-			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
-			s.excluded_entry_name,
+			c.id::text,
+			COALESCE(c.name, ''::text) AS name,
+			c.description,
+			c.game_outcomes_algorithm_id::text,
+			c.market_share_algorithm_id::text,
+			c.optimizer_key,
+			c.n_sims,
+			c.seed,
+			COALESCE(NULLIF(c.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			c.excluded_entry_name,
 			le.id,
 			le.name,
 			le.status,
 			le.created_at,
 			le.updated_at,
-			s.created_at,
-			s.updated_at
+			c.created_at,
+			c.updated_at
 		FROM derived.synthetic_calcutta_cohorts c
-		JOIN derived.suites s ON s.id = c.id
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -65,15 +64,14 @@ func (s *Server) listSyntheticCalcuttaCohortsHandler(w http.ResponseWriter, r *h
 				e.status,
 				e.created_at,
 				e.updated_at
-			FROM derived.suite_executions e
-			WHERE e.suite_id = s.id
+			FROM derived.simulation_run_batches e
+			WHERE e.cohort_id = c.id
 				AND e.deleted_at IS NULL
 			ORDER BY e.created_at DESC
 			LIMIT 1
 		) le ON TRUE
 		WHERE c.deleted_at IS NULL
-			AND s.deleted_at IS NULL
-		ORDER BY s.created_at DESC
+		ORDER BY c.created_at DESC
 		LIMIT $1::int
 		OFFSET $2::int
 	`, limit, offset)
@@ -133,25 +131,24 @@ func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *htt
 	var it suiteListItem
 	if err := s.pool.QueryRow(r.Context(), `
 		SELECT
-			s.id::text,
-			COALESCE(s.name, ''::text) AS name,
-			s.description,
-			s.game_outcomes_algorithm_id::text,
-			s.market_share_algorithm_id::text,
-			s.optimizer_key,
-			s.n_sims,
-			s.seed,
-			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
-			s.excluded_entry_name,
+			c.id::text,
+			COALESCE(c.name, ''::text) AS name,
+			c.description,
+			c.game_outcomes_algorithm_id::text,
+			c.market_share_algorithm_id::text,
+			c.optimizer_key,
+			c.n_sims,
+			c.seed,
+			COALESCE(NULLIF(c.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			c.excluded_entry_name,
 			le.id,
 			le.name,
 			le.status,
 			le.created_at,
 			le.updated_at,
-			s.created_at,
-			s.updated_at
+			c.created_at,
+			c.updated_at
 		FROM derived.synthetic_calcutta_cohorts c
-		JOIN derived.suites s ON s.id = c.id
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -159,15 +156,14 @@ func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *htt
 				e.status,
 				e.created_at,
 				e.updated_at
-			FROM derived.suite_executions e
-			WHERE e.suite_id = s.id
+			FROM derived.simulation_run_batches e
+			WHERE e.cohort_id = c.id
 				AND e.deleted_at IS NULL
 			ORDER BY e.created_at DESC
 			LIMIT 1
 		) le ON TRUE
 		WHERE c.id = $1::uuid
 			AND c.deleted_at IS NULL
-			AND s.deleted_at IS NULL
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
@@ -200,6 +196,6 @@ func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *htt
 }
 
 func (s *Server) patchSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *http.Request) {
-	// Keep compatibility: updates are still performed against derived.suites.
+	// Keep compatibility: re-use suite patch handler for cohort patch.
 	s.updateSuiteHandler(w, r)
 }

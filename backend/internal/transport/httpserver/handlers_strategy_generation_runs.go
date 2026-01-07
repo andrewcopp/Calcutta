@@ -181,7 +181,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		var startingStateKey *string
 		if err := tx.QueryRow(ctx, `
 			SELECT calcutta_id::text, excluded_entry_name, starting_state_key
-			FROM derived.suite_scenarios
+			FROM derived.synthetic_calcuttas
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
 			LIMIT 1
@@ -205,7 +205,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		}
 
 		_, err = tx.Exec(ctx, `
-			UPDATE derived.suite_scenarios
+			UPDATE derived.synthetic_calcuttas
 			SET focus_strategy_generation_run_id = $2::uuid,
 				calcutta_snapshot_id = $3::uuid,
 				focus_entry_name = COALESCE(focus_entry_name, 'Our Strategy'),

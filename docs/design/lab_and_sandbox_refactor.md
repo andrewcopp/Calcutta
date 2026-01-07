@@ -259,13 +259,30 @@ Target: smaller single-responsibility packages/files.
 - [ ] Align handler names to the new resources (no “suite” in backend resource names).
 
 ## Data migration and cleanup
-- [ ] Implement compatibility-first migration (next):
-  - add new tables/resources
-  - [x] Add canonical read views: `derived.simulation_runs` and `derived.simulation_run_batches` (backed by `derived.suite_*` tables)
-  - dual-write from new runs
-  - backfill history
-  - cut over UI
-  - delete/retire deprecated tables and endpoints
+- [x] Add canonical read views: `derived.simulation_runs` and `derived.simulation_run_batches` (backed by `derived.suite_*` tables)
+
+- [x] Implement clean-slate migration (preferred):
+  - [x] Truncate most of `derived.*` (including `run_jobs` and `run_artifacts`)
+  - [x] Drop legacy `derived.suite*` tables and temporary simulation views
+  - [x] Create canonical tables:
+    - `derived.synthetic_calcutta_cohorts`
+    - `derived.synthetic_calcuttas`
+    - `derived.simulation_run_batches`
+    - `derived.simulation_runs`
+    - recreate `derived.run_jobs` + `derived.run_artifacts`
+  - [x] Add enqueue triggers for `simulation_runs` -> `run_jobs`
+
+- [x] Rewire backend to canonical tables (no `derived.suite*` table usage in Go code):
+  - [x] Handlers
+  - [x] Worker (simulation run job processor)
+  - [x] Lab tooling (`cmd/batch-lab-entries`)
+
+- [ ] Execute cutover plan:
+  - [ ] Run destructive migration in a fresh/dev DB
+  - [ ] Deploy backend with canonical-table code
+  - [ ] Smoke test core flows (cohorts, synthetic calcuttas, run batches, runs, worker)
+  - [ ] Cut over UI/service calls to canonical endpoints
+  - [ ] Delete/retire deprecated endpoints and remove compatibility shims
 
 - [ ] Create a concrete “final cleanup” checklist:
   - tables to drop

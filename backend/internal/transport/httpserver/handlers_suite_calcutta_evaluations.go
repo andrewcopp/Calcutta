@@ -29,7 +29,7 @@ func (s *Server) getSuiteCalcuttaEvaluationSnapshotEntryHandler(w http.ResponseW
 	var calcuttaEvaluationRunID *string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT calcutta_evaluation_run_id::text
-		FROM derived.suite_calcutta_evaluations
+		FROM derived.simulation_runs
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -161,8 +161,8 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 				COALESCE(s.optimizer_key, ''::text) AS suite_optimizer_key,
 				COALESCE(s.n_sims, 0)::int AS suite_n_sims,
 				COALESCE(s.seed, 0)::int AS suite_seed
-			FROM derived.suite_executions e
-			JOIN derived.suites s ON s.id = e.suite_id AND s.deleted_at IS NULL
+			FROM derived.simulation_run_batches e
+			JOIN derived.synthetic_calcutta_cohorts s ON s.id = e.cohort_id AND s.deleted_at IS NULL
 			WHERE e.id = $1::uuid
 				AND e.deleted_at IS NULL
 			LIMIT 1
@@ -211,7 +211,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			req.ExcludedEntryName = execExcludedEntryName
 		}
 
-		// Resolve run IDs from suite algorithms if not explicitly provided.
+		// Resolve run IDs from cohort algorithms if not explicitly provided.
 		if req.GameOutcomeRunID == nil || req.MarketShareRunID == nil {
 			var tournamentID string
 			if err := s.pool.QueryRow(ctx, `
@@ -272,7 +272,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 		} else {
 			_ = s.pool.QueryRow(ctx, `
 				SELECT COALESCE(optimizer_key, '')
-				FROM derived.suites
+				FROM derived.synthetic_calcutta_cohorts
 				WHERE id = $1::uuid
 					AND deleted_at IS NULL
 				LIMIT 1
@@ -302,9 +302,16 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			return
 		}
 
+		var excluded any
+		if req.ExcludedEntryName != nil {
+			excluded = *req.ExcludedEntryName
+		} else {
+			excluded = nil
+		}
+
 		var insertedID string
 		if err := s.pool.QueryRow(ctx, `
-			INSERT INTO derived.suites (
+			INSERT INTO derived.synthetic_calcutta_cohorts (
 				name,
 				description,
 				game_outcomes_algorithm_id,
@@ -312,9 +319,11 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 				optimizer_key,
 				n_sims,
 				seed,
+				starting_state_key,
+				excluded_entry_name,
 				params_json
 			)
-			VALUES ($1, NULL, $2::uuid, $3::uuid, $4, $5, $6, '{}'::jsonb)
+			VALUES ($1, NULL, $2::uuid, $3::uuid, $4, $5, $6, $7, $8::text, '{}'::jsonb)
 			ON CONFLICT (name) WHERE deleted_at IS NULL
 			DO UPDATE SET
 				game_outcomes_algorithm_id = EXCLUDED.game_outcomes_algorithm_id,
@@ -322,15 +331,34 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 				optimizer_key = EXCLUDED.optimizer_key,
 				n_sims = EXCLUDED.n_sims,
 				seed = EXCLUDED.seed,
+				starting_state_key = EXCLUDED.starting_state_key,
+				excluded_entry_name = EXCLUDED.excluded_entry_name,
 				updated_at = NOW(),
 				deleted_at = NULL
 			RETURNING id
-		`, *req.SuiteName, goAlgID, msAlgID, *req.OptimizerKey, req.NSims, req.Seed).Scan(&insertedID); err != nil {
+		`, *req.SuiteName, goAlgID, msAlgID, *req.OptimizerKey, req.NSims, req.Seed, req.StartingStateKey, excluded).Scan(&insertedID); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
 		suiteID = insertedID
 		evalOptimizerKey = *req.OptimizerKey
+	}
+
+	var syntheticCalcuttaID string
+	if err := s.pool.QueryRow(ctx, `
+		INSERT INTO derived.synthetic_calcuttas (
+			cohort_id,
+			calcutta_id
+		)
+		VALUES ($1::uuid, $2::uuid)
+		ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
+		DO UPDATE SET
+			updated_at = NOW(),
+			deleted_at = NULL
+		RETURNING id::text
+	`, suiteID, req.CalcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
 	}
 
 	var evalID string
@@ -355,9 +383,10 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 	}
 
 	q := `
-		INSERT INTO derived.suite_calcutta_evaluations (
-			suite_execution_id,
-			suite_id,
+		INSERT INTO derived.simulation_runs (
+			simulation_run_batch_id,
+			synthetic_calcutta_id,
+			cohort_id,
 			calcutta_id,
 			game_outcome_run_id,
 			market_share_run_id,
@@ -367,7 +396,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 			starting_state_key,
 			excluded_entry_name
 		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text)
 		RETURNING id, status
 	`
 	var execID any
@@ -388,7 +417,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 	} else {
 		effSeed = nil
 	}
-	if err := s.pool.QueryRow(ctx, q, execID, suiteID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, effNSims, effSeed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	if err := s.pool.QueryRow(ctx, q, execID, syntheticCalcuttaID, suiteID, req.CalcuttaID, goRun, msRun, evalOptimizerKey, effNSims, effSeed, req.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}

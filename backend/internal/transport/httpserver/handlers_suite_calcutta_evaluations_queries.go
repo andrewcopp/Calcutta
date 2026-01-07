@@ -19,12 +19,12 @@ func (s *Server) loadSuiteCalcuttaEvaluations(
 	rows, err := s.pool.Query(ctx, `
 		SELECT
 			r.id,
-			r.suite_execution_id,
-			r.suite_id,
-			COALESCE(s.name, '') AS suite_name,
-			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
-			COALESCE(r.n_sims, s.n_sims, 0) AS n_sims,
-			COALESCE(r.seed, s.seed, 0) AS seed,
+			r.simulation_run_batch_id,
+			r.cohort_id,
+			COALESCE(c.name, '') AS suite_name,
+			COALESCE(r.optimizer_key, c.optimizer_key, '') AS optimizer_key,
+			COALESCE(r.n_sims, c.n_sims, 0) AS n_sims,
+			COALESCE(r.seed, c.seed, 0) AS seed,
 			r.our_rank,
 			r.our_mean_normalized_payout,
 			r.our_median_normalized_payout,
@@ -49,14 +49,14 @@ func (s *Server) loadSuiteCalcuttaEvaluations(
 			r.error_message,
 			r.created_at,
 			r.updated_at
-		FROM derived.suite_calcutta_evaluations r
-		LEFT JOIN derived.suites s
-			ON s.id = r.suite_id
-			AND s.deleted_at IS NULL
+		FROM derived.simulation_runs r
+		LEFT JOIN derived.synthetic_calcutta_cohorts c
+			ON c.id = r.cohort_id
+			AND c.deleted_at IS NULL
 		WHERE r.deleted_at IS NULL
 			AND ($1::uuid IS NULL OR r.calcutta_id = $1::uuid)
-			AND ($2::uuid IS NULL OR r.suite_id = $2::uuid)
-			AND ($3::uuid IS NULL OR r.suite_execution_id = $3::uuid)
+			AND ($2::uuid IS NULL OR r.cohort_id = $2::uuid)
+			AND ($3::uuid IS NULL OR r.simulation_run_batch_id = $3::uuid)
 		ORDER BY r.created_at DESC
 		LIMIT $4::int
 		OFFSET $5::int
@@ -122,12 +122,12 @@ func (s *Server) loadSuiteCalcuttaEvaluationByID(ctx context.Context, id string)
 	err := s.pool.QueryRow(ctx, `
 		SELECT
 			r.id,
-			r.suite_execution_id,
-			r.suite_id,
-			COALESCE(s.name, '') AS suite_name,
-			COALESCE(r.optimizer_key, s.optimizer_key, '') AS optimizer_key,
-			COALESCE(r.n_sims, s.n_sims, 0) AS n_sims,
-			COALESCE(r.seed, s.seed, 0) AS seed,
+			r.simulation_run_batch_id,
+			r.cohort_id,
+			COALESCE(c.name, '') AS suite_name,
+			COALESCE(r.optimizer_key, c.optimizer_key, '') AS optimizer_key,
+			COALESCE(r.n_sims, c.n_sims, 0) AS n_sims,
+			COALESCE(r.seed, c.seed, 0) AS seed,
 			r.our_rank,
 			r.our_mean_normalized_payout,
 			r.our_median_normalized_payout,
@@ -152,10 +152,10 @@ func (s *Server) loadSuiteCalcuttaEvaluationByID(ctx context.Context, id string)
 			r.error_message,
 			r.created_at,
 			r.updated_at
-		FROM derived.suite_calcutta_evaluations r
-		LEFT JOIN derived.suites s
-			ON s.id = r.suite_id
-			AND s.deleted_at IS NULL
+		FROM derived.simulation_runs r
+		LEFT JOIN derived.synthetic_calcutta_cohorts c
+			ON c.id = r.cohort_id
+			AND c.deleted_at IS NULL
 		WHERE r.id = $1::uuid
 			AND r.deleted_at IS NULL
 		LIMIT 1

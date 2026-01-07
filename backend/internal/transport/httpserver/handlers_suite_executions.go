@@ -96,11 +96,11 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 			game_outcomes_algorithm_id::text,
 			market_share_algorithm_id::text,
 			COALESCE(optimizer_key, ''::text) AS optimizer_key,
-			COALESCE(n_sims, 0)::int AS n_sims,
-			COALESCE(seed, 0)::int AS seed,
+			n_sims,
+			seed,
 			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
 			excluded_entry_name
-		FROM derived.suites
+		FROM derived.synthetic_calcutta_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -117,8 +117,8 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 	if len(req.CalcuttaIDs) == 0 {
 		rows, err := s.pool.Query(ctx, `
 			SELECT calcutta_id::text
-			FROM derived.suite_scenarios
-			WHERE suite_id = $1::uuid
+			FROM derived.synthetic_calcuttas
+			WHERE cohort_id = $1::uuid
 				AND deleted_at IS NULL
 			ORDER BY created_at ASC
 		`, req.SuiteID)
@@ -227,8 +227,8 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 	var executionID string
 	var status string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.suite_executions (
-			suite_id,
+		INSERT INTO derived.simulation_run_batches (
+			cohort_id,
 			name,
 			optimizer_key,
 			n_sims,
@@ -293,10 +293,28 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		var syntheticCalcuttaID string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO derived.synthetic_calcuttas (
+				cohort_id,
+				calcutta_id
+			)
+			VALUES ($1::uuid, $2::uuid)
+			ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
+			DO UPDATE SET
+				updated_at = NOW(),
+				deleted_at = NULL
+			RETURNING id::text
+		`, req.SuiteID, calcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
 		_, err := tx.Exec(ctx, `
-			INSERT INTO derived.suite_calcutta_evaluations (
-				suite_execution_id,
-				suite_id,
+			INSERT INTO derived.simulation_runs (
+				simulation_run_batch_id,
+				synthetic_calcutta_id,
+				cohort_id,
 				calcutta_id,
 				game_outcome_run_id,
 				market_share_run_id,
@@ -306,8 +324,8 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 				starting_state_key,
 				excluded_entry_name
 			)
-			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text)
-		`, executionID, req.SuiteID, calcuttaID, goRunID, msRunID, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded)
+			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text)
+		`, executionID, syntheticCalcuttaID, req.SuiteID, calcuttaID, goRunID, msRunID, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -343,7 +361,7 @@ func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Reque
 	rows, err := s.pool.Query(r.Context(), `
 		SELECT
 			e.id::text,
-			e.suite_id::text,
+			e.cohort_id::text,
 			COALESCE(s.name, ''::text) AS suite_name,
 			e.name,
 			e.optimizer_key,
@@ -355,12 +373,12 @@ func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Reque
 			e.error_message,
 			e.created_at,
 			e.updated_at
-		FROM derived.suite_executions e
-		LEFT JOIN derived.suites s
-			ON s.id = e.suite_id
+		FROM derived.simulation_run_batches e
+		LEFT JOIN derived.synthetic_calcutta_cohorts s
+			ON s.id = e.cohort_id
 			AND s.deleted_at IS NULL
 		WHERE e.deleted_at IS NULL
-			AND ($1::uuid IS NULL OR e.suite_id = $1::uuid)
+			AND ($1::uuid IS NULL OR e.cohort_id = $1::uuid)
 		ORDER BY e.created_at DESC
 		LIMIT $2::int
 		OFFSET $3::int
@@ -414,7 +432,7 @@ func (s *Server) getSuiteExecutionHandler(w http.ResponseWriter, r *http.Request
 	if err := s.pool.QueryRow(r.Context(), `
 		SELECT
 			e.id::text,
-			e.suite_id::text,
+			e.cohort_id::text,
 			COALESCE(s.name, ''::text) AS suite_name,
 			e.name,
 			e.optimizer_key,
@@ -426,9 +444,9 @@ func (s *Server) getSuiteExecutionHandler(w http.ResponseWriter, r *http.Request
 			e.error_message,
 			e.created_at,
 			e.updated_at
-		FROM derived.suite_executions e
-		LEFT JOIN derived.suites s
-			ON s.id = e.suite_id
+		FROM derived.simulation_run_batches e
+		LEFT JOIN derived.synthetic_calcutta_cohorts s
+			ON s.id = e.cohort_id
 			AND s.deleted_at IS NULL
 		WHERE e.id = $1::uuid
 			AND e.deleted_at IS NULL

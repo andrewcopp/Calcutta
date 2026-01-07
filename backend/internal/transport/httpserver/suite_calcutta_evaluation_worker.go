@@ -147,7 +147,7 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 
 	row := &suiteCalcuttaEvaluationRow{}
 	q2 := `
-		UPDATE derived.suite_calcutta_evaluations r
+		UPDATE derived.simulation_runs r
 		SET status = 'running',
 			claimed_at = $1,
 			claimed_by = $3,
@@ -155,9 +155,9 @@ func (s *Server) claimNextSuiteCalcuttaEvaluation(ctx context.Context, workerID 
 		WHERE r.id = $2::uuid
 		RETURNING
 			r.id,
-			r.run_key,
-			r.suite_execution_id,
-			r.suite_id,
+			r.run_key::text,
+			r.simulation_run_batch_id::text,
+			r.cohort_id::text,
 			r.calcutta_id,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
@@ -422,7 +422,7 @@ func (s *Server) processSuiteCalcuttaEvaluation(ctx context.Context, workerID st
 	}
 
 	_, err = s.pool.Exec(ctx, `
-		UPDATE derived.suite_calcutta_evaluations
+		UPDATE derived.simulation_runs
 		SET status = 'succeeded',
 			optimizer_key = $2,
 			n_sims = $3,
@@ -744,11 +744,11 @@ func (s *Server) updateSuiteExecutionStatus(ctx context.Context, suiteExecutionI
 			SELECT
 				SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)::int AS failed,
 				SUM(CASE WHEN status IN ('queued', 'running') THEN 1 ELSE 0 END)::int AS pending
-			FROM derived.suite_calcutta_evaluations
-			WHERE suite_execution_id = $1::uuid
+			FROM derived.simulation_runs
+			WHERE simulation_run_batch_id = $1::uuid
 				AND deleted_at IS NULL
 		)
-		UPDATE derived.suite_executions e
+		UPDATE derived.simulation_run_batches e
 		SET status = CASE
 			WHEN a.failed > 0 THEN 'failed'
 			WHEN a.pending > 0 THEN 'running'
@@ -757,8 +757,8 @@ func (s *Server) updateSuiteExecutionStatus(ctx context.Context, suiteExecutionI
 			error_message = CASE
 			WHEN a.failed > 0 THEN COALESCE((
 				SELECT error_message
-				FROM derived.suite_calcutta_evaluations
-				WHERE suite_execution_id = $1::uuid
+				FROM derived.simulation_runs
+				WHERE simulation_run_batch_id = $1::uuid
 					AND status = 'failed'
 					AND error_message IS NOT NULL
 					AND deleted_at IS NULL
@@ -777,7 +777,7 @@ func (s *Server) resolveSuiteNSims(ctx context.Context, suiteID string, fallback
 	var n int
 	if err := s.pool.QueryRow(ctx, `
 		SELECT n_sims
-		FROM derived.suites
+		FROM derived.synthetic_calcutta_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -794,7 +794,7 @@ func (s *Server) resolveSuiteSeed(ctx context.Context, suiteID string, fallback 
 	var seed int
 	if err := s.pool.QueryRow(ctx, `
 		SELECT seed
-		FROM derived.suites
+		FROM derived.synthetic_calcutta_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -811,7 +811,7 @@ func (s *Server) resolveSuiteOptimizerKey(ctx context.Context, suiteID string, f
 	var key string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT optimizer_key
-		FROM derived.suites
+		FROM derived.synthetic_calcutta_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -833,12 +833,12 @@ func (s *Server) failSuiteCalcuttaEvaluation(ctx context.Context, evaluationID s
 	var runKey *string
 	var suiteExecutionID *string
 	e := s.pool.QueryRow(ctx, `
-		UPDATE derived.suite_calcutta_evaluations
+		UPDATE derived.simulation_runs
 		SET status = 'failed',
 			error_message = $2,
 			updated_at = NOW()
 		WHERE id = $1::uuid
-		RETURNING run_key::text, suite_execution_id
+		RETURNING run_key::text, simulation_run_batch_id::text
 	`, evaluationID, msg).Scan(&runKey, &suiteExecutionID)
 	if e != nil {
 		log.Printf("Error marking suite calcutta evaluation %s failed: %v (original error: %v)", evaluationID, e, err)

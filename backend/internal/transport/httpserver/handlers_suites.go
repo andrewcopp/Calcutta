@@ -73,24 +73,24 @@ func (s *Server) listSuitesHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := s.pool.Query(r.Context(), `
 		SELECT
-			s.id::text,
-			COALESCE(s.name, ''::text) AS name,
-			s.description,
-			s.game_outcomes_algorithm_id::text,
-			s.market_share_algorithm_id::text,
-			s.optimizer_key,
-			s.n_sims,
-			s.seed,
-			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
-			s.excluded_entry_name,
+			c.id::text,
+			COALESCE(c.name, ''::text) AS name,
+			c.description,
+			c.game_outcomes_algorithm_id::text,
+			c.market_share_algorithm_id::text,
+			c.optimizer_key,
+			c.n_sims,
+			c.seed,
+			COALESCE(NULLIF(c.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			c.excluded_entry_name,
 			le.id,
 			le.name,
 			le.status,
 			le.created_at,
 			le.updated_at,
-			s.created_at,
-			s.updated_at
-		FROM derived.suites s
+			c.created_at,
+			c.updated_at
+		FROM derived.synthetic_calcutta_cohorts c
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -98,14 +98,14 @@ func (s *Server) listSuitesHandler(w http.ResponseWriter, r *http.Request) {
 				e.status,
 				e.created_at,
 				e.updated_at
-			FROM derived.suite_executions e
-			WHERE e.suite_id = s.id
+			FROM derived.simulation_run_batches e
+			WHERE e.cohort_id = c.id
 				AND e.deleted_at IS NULL
 			ORDER BY e.created_at DESC
 			LIMIT 1
 		) le ON TRUE
-		WHERE s.deleted_at IS NULL
-		ORDER BY s.created_at DESC
+		WHERE c.deleted_at IS NULL
+		ORDER BY c.created_at DESC
 		LIMIT $1::int
 		OFFSET $2::int
 	`, limit, offset)
@@ -165,24 +165,24 @@ func (s *Server) getSuiteHandler(w http.ResponseWriter, r *http.Request) {
 	var it suiteListItem
 	if err := s.pool.QueryRow(r.Context(), `
 		SELECT
-			s.id::text,
-			COALESCE(s.name, ''::text) AS name,
-			s.description,
-			s.game_outcomes_algorithm_id::text,
-			s.market_share_algorithm_id::text,
-			s.optimizer_key,
-			s.n_sims,
-			s.seed,
-			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
-			s.excluded_entry_name,
+			c.id::text,
+			COALESCE(c.name, ''::text) AS name,
+			c.description,
+			c.game_outcomes_algorithm_id::text,
+			c.market_share_algorithm_id::text,
+			c.optimizer_key,
+			c.n_sims,
+			c.seed,
+			COALESCE(NULLIF(c.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			c.excluded_entry_name,
 			le.id,
 			le.name,
 			le.status,
 			le.created_at,
 			le.updated_at,
-			s.created_at,
-			s.updated_at
-		FROM derived.suites s
+			c.created_at,
+			c.updated_at
+		FROM derived.synthetic_calcutta_cohorts c
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -190,14 +190,14 @@ func (s *Server) getSuiteHandler(w http.ResponseWriter, r *http.Request) {
 				e.status,
 				e.created_at,
 				e.updated_at
-			FROM derived.suite_executions e
-			WHERE e.suite_id = s.id
+			FROM derived.simulation_run_batches e
+			WHERE e.cohort_id = c.id
 				AND e.deleted_at IS NULL
 			ORDER BY e.created_at DESC
 			LIMIT 1
 		) le ON TRUE
-		WHERE s.id = $1::uuid
-			AND s.deleted_at IS NULL
+		WHERE c.id = $1::uuid
+			AND c.deleted_at IS NULL
 		LIMIT 1
 	`, id).Scan(
 		&it.ID,
@@ -306,7 +306,7 @@ func (s *Server) updateSuiteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ct, err := s.pool.Exec(r.Context(), `
-		UPDATE derived.suites
+		UPDATE derived.synthetic_calcutta_cohorts
 		SET optimizer_key = COALESCE($2::text, optimizer_key),
 			n_sims = COALESCE($3::int, n_sims),
 			seed = COALESCE($4::int, seed),

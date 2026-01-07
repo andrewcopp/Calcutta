@@ -149,11 +149,11 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 			game_outcomes_algorithm_id::text,
 			market_share_algorithm_id::text,
 			COALESCE(optimizer_key, ''::text) AS optimizer_key,
-			COALESCE(n_sims, 0)::int AS n_sims,
-			COALESCE(seed, 0)::int AS seed,
+			n_sims,
+			seed,
 			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
 			excluded_entry_name
-		FROM derived.suites
+		FROM derived.synthetic_calcutta_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -169,23 +169,22 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 	// Load focused scenarios. We will resolve game_outcome_run_id + market_share_run_id
 	// based on suite algorithms + each scenario's tournament/calcutta.
 	type focusedScenarioRow struct {
-		CalcuttaID        string
-		StrategyGenRunID  string
-		ExcludedEntryName *string
-		StartingStateKey  string
+		SyntheticCalcuttaID string
+		CalcuttaID          string
+		StrategyGenRunID    string
+		ExcludedEntryName   *string
+		StartingStateKey    string
 	}
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT
+			sc.id::text,
 			sc.calcutta_id::text,
 			sc.focus_strategy_generation_run_id::text,
-			COALESCE(sc.excluded_entry_name, su.excluded_entry_name) AS excluded_entry_name,
-			COALESCE(NULLIF(COALESCE(sc.starting_state_key, su.starting_state_key), ''), 'post_first_four') AS starting_state_key
-		FROM derived.suite_scenarios sc
-		JOIN derived.suites su
-			ON su.id = sc.suite_id
-			AND su.deleted_at IS NULL
-		WHERE sc.suite_id = $1::uuid
+			sc.excluded_entry_name,
+			COALESCE(NULLIF(sc.starting_state_key, ''), ''::text) AS starting_state_key
+		FROM derived.synthetic_calcuttas sc
+		WHERE sc.cohort_id = $1::uuid
 			AND sc.deleted_at IS NULL
 			AND sc.focus_strategy_generation_run_id IS NOT NULL
 		ORDER BY sc.created_at ASC
@@ -200,6 +199,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 	for rows.Next() {
 		var fr focusedScenarioRow
 		if err := rows.Scan(
+			&fr.SyntheticCalcuttaID,
 			&fr.CalcuttaID,
 			&fr.StrategyGenRunID,
 			&fr.ExcludedEntryName,
@@ -236,8 +236,8 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 	// Use suite defaults for execution; the evaluation rows can override excluded_entry_name per scenario.
 	var executionID string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.suite_executions (
-			suite_id,
+		INSERT INTO derived.simulation_run_batches (
+			cohort_id,
 			name,
 			optimizer_key,
 			n_sims,
@@ -266,6 +266,19 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 			return
 		}
 
+		var syntheticCalcuttaID string
+		if err := tx.QueryRow(ctx, `
+			SELECT id::text
+			FROM derived.synthetic_calcuttas
+			WHERE cohort_id = $1::uuid
+				AND calcutta_id = $2::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		`, suiteID, fr.CalcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
 		var goRunID string
 		if err := tx.QueryRow(ctx, `
 			SELECT id::text
@@ -285,6 +298,10 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 		}
 
 		var msRunID string
+		effExcluded := fr.ExcludedEntryName
+		if effExcluded == nil {
+			effExcluded = suiteExcludedEntryName
+		}
 		if err := tx.QueryRow(ctx, `
 			SELECT id::text
 			FROM derived.market_share_runs
@@ -294,7 +311,7 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 			ORDER BY (CASE WHEN $3::text IS NOT NULL AND params_json->>'excluded_entry_name' = $3::text THEN 1 ELSE 0 END) DESC,
 				created_at DESC
 			LIMIT 1
-		`, fr.CalcuttaID, msAlgID, fr.ExcludedEntryName).Scan(&msRunID); err != nil {
+		`, fr.CalcuttaID, msAlgID, effExcluded).Scan(&msRunID); err != nil {
 			if err == pgx.ErrNoRows {
 				writeError(w, r, http.StatusConflict, "missing_run", "Missing market-share run for suite algorithm", "marketShareRunId")
 				return
@@ -303,10 +320,16 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 			return
 		}
 
+		effStarting := startingStateKey
+		if strings.TrimSpace(fr.StartingStateKey) != "" {
+			effStarting = fr.StartingStateKey
+		}
+
 		_, err := tx.Exec(ctx, `
-			INSERT INTO derived.suite_calcutta_evaluations (
-				suite_execution_id,
-				suite_id,
+			INSERT INTO derived.simulation_runs (
+				simulation_run_batch_id,
+				synthetic_calcutta_id,
+				cohort_id,
 				calcutta_id,
 				game_outcome_run_id,
 				market_share_run_id,
@@ -317,8 +340,8 @@ func (s *Server) createLabSuiteSandboxExecutionHandler(w http.ResponseWriter, r 
 				excluded_entry_name,
 				strategy_generation_run_id
 			)
-			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text, $11::uuid)
-		`, executionID, suiteID, fr.CalcuttaID, goRunID, msRunID, optimizerKey, nSims, seed, fr.StartingStateKey, fr.ExcludedEntryName, fr.StrategyGenRunID)
+			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text, $12::uuid)
+		`, executionID, syntheticCalcuttaID, suiteID, fr.CalcuttaID, goRunID, msRunID, optimizerKey, nSims, seed, effStarting, effExcluded, fr.StrategyGenRunID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -338,12 +361,12 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 	rows, err := s.pool.Query(r.Context(), `
 		WITH scenario_counts AS (
 			SELECT
-				suite_id,
+				cohort_id,
 				COUNT(*)::int AS total,
 				COUNT(*) FILTER (WHERE focus_strategy_generation_run_id IS NOT NULL)::int AS covered
-			FROM derived.suite_scenarios
+			FROM derived.synthetic_calcuttas
 			WHERE deleted_at IS NULL
-			GROUP BY suite_id
+			GROUP BY cohort_id
 		)
 		SELECT
 			s.id::text,
@@ -355,7 +378,7 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 			s.optimizer_key,
 			COALESCE(sc.covered, 0)::int,
 			COALESCE(sc.total, 0)::int
-		FROM derived.suites s
+		FROM derived.synthetic_calcutta_cohorts s
 		JOIN derived.algorithms goa
 			ON goa.id = s.game_outcomes_algorithm_id
 			AND goa.deleted_at IS NULL
@@ -363,7 +386,7 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 			ON msa.id = s.market_share_algorithm_id
 			AND msa.deleted_at IS NULL
 		LEFT JOIN scenario_counts sc
-			ON sc.suite_id = s.id
+			ON sc.cohort_id = s.id
 		WHERE s.deleted_at IS NULL
 		ORDER BY s.created_at DESC
 	`)
@@ -425,7 +448,7 @@ func (s *Server) getLabEntriesSuiteDetailHandler(w http.ResponseWriter, r *http.
 			s.optimizer_key,
 			COALESCE(NULLIF(s.starting_state_key, ''), 'post_first_four') AS starting_state_key,
 			s.excluded_entry_name
-		FROM derived.suites s
+		FROM derived.synthetic_calcutta_cohorts s
 		JOIN derived.algorithms goa ON goa.id = s.game_outcomes_algorithm_id AND goa.deleted_at IS NULL
 		JOIN derived.algorithms msa ON msa.id = s.market_share_algorithm_id AND msa.deleted_at IS NULL
 		WHERE s.id = $1::uuid
@@ -468,7 +491,7 @@ func (s *Server) getLabEntriesSuiteDetailHandler(w http.ResponseWriter, r *http.
 			sgr.created_at::text,
 			sc.created_at::text,
 			sc.focus_strategy_generation_run_id::text
-		FROM derived.suite_scenarios sc
+		FROM derived.synthetic_calcuttas sc
 		JOIN core.calcuttas c ON c.id = sc.calcutta_id AND c.deleted_at IS NULL
 		JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 		JOIN core.seasons seas ON seas.id = t.season_id
@@ -476,7 +499,7 @@ func (s *Server) getLabEntriesSuiteDetailHandler(w http.ResponseWriter, r *http.
 		LEFT JOIN derived.strategy_generation_runs sgr
 			ON sgr.id = sc.focus_strategy_generation_run_id
 			AND sgr.deleted_at IS NULL
-		WHERE sc.suite_id = $1::uuid
+		WHERE sc.cohort_id = $1::uuid
 			AND sc.deleted_at IS NULL
 		ORDER BY seas.year DESC
 	`, suiteID)
@@ -550,7 +573,7 @@ func (s *Server) getLabEntryReportHandler(w http.ResponseWriter, r *http.Request
 	err := s.pool.QueryRow(r.Context(), `
 		SELECT
 			sc.id::text,
-			sc.suite_id::text,
+			sc.cohort_id::text,
 			su.name,
 			sc.calcutta_id::text,
 			c.name,
@@ -569,8 +592,8 @@ func (s *Server) getLabEntryReportHandler(w http.ResponseWriter, r *http.Request
 			COALESCE(c.max_bid, 50)::int,
 			su.excluded_entry_name,
 			sc.excluded_entry_name
-		FROM derived.suite_scenarios sc
-		JOIN derived.suites su ON su.id = sc.suite_id AND su.deleted_at IS NULL
+		FROM derived.synthetic_calcuttas sc
+		JOIN derived.synthetic_calcutta_cohorts su ON su.id = sc.cohort_id AND su.deleted_at IS NULL
 		JOIN derived.algorithms goa ON goa.id = su.game_outcomes_algorithm_id AND goa.deleted_at IS NULL
 		JOIN derived.algorithms msa ON msa.id = su.market_share_algorithm_id AND msa.deleted_at IS NULL
 		JOIN core.calcuttas c ON c.id = sc.calcutta_id AND c.deleted_at IS NULL
