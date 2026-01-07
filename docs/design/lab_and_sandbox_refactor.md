@@ -64,6 +64,10 @@ We treat the set of available models as part of the codebase.
   - EntryOptimizerInterface
   - SimulationModelInterface (if variants exist; otherwise a single implementation)
 
+  Notes:
+  - Interfaces are compute-only (pure input -> output artifact payload).
+  - Workers / services own orchestration and persistence (run rows, run_jobs, run_artifacts).
+
 - [x] Expose model catalog endpoints for UI discoverability:
   - `GET /advancement-models`
   - `GET /market-share-models`
