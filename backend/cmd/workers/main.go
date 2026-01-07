@@ -27,10 +27,11 @@ func run() error {
 
 	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
 	runEntryEvaluationWorker := flag.Bool("entry-eval-worker", true, "Run the entry evaluation worker")
+	runMarketShareWorker := flag.Bool("market-share-worker", false, "Run the market share worker")
 	runSuiteEvaluationWorker := flag.Bool("suite-eval-worker", false, "Run the suite calcutta evaluation worker")
 	flag.Parse()
 
-	if !*runBundleImportWorker && !*runEntryEvaluationWorker && !*runSuiteEvaluationWorker {
+	if !*runBundleImportWorker && !*runEntryEvaluationWorker && !*runMarketShareWorker && !*runSuiteEvaluationWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -68,6 +69,13 @@ func run() error {
 		go func() {
 			defer wg.Done()
 			s.RunEntryEvaluationWorker(ctx)
+		}()
+	}
+	if *runMarketShareWorker {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.RunMarketShareWorker(ctx)
 		}()
 	}
 	if *runSuiteEvaluationWorker {

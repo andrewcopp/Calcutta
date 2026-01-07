@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,8 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
-	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
@@ -22,13 +20,6 @@ type calcuttaRow struct {
 	CalcuttaID   string
 	TournamentID string
 	SeasonYear   int
-}
-
-type pythonRunnerResult struct {
-	OK           bool    `json:"ok"`
-	RunID        *string `json:"run_id"`
-	RowsInserted *int    `json:"rows_inserted"`
-	Error        *string `json:"error"`
 }
 
 func main() {
@@ -43,25 +34,24 @@ func run() error {
 	var calcuttaID string
 	var seasonMin int
 	var seasonMax int
-	var pythonBin string
-	var pythonRunnerPath string
 	var excludedEntryName string
 	var algorithmName string
+	var ridgeAlpha float64
+	var featureSet string
+	var trainYears string
 	var skipExisting bool
 
 	flag.StringVar(&calcuttaID, "calcutta-id", "", "Optional core.calcuttas.id (uuid). If empty, process all calcuttas")
 	flag.IntVar(&seasonMin, "season-min", 0, "Optional season year lower bound (inclusive)")
 	flag.IntVar(&seasonMax, "season-max", 0, "Optional season year upper bound (inclusive)")
-	flag.StringVar(&pythonBin, "python-bin", "python3", "Python interpreter to run the market-share runner")
-	flag.StringVar(&pythonRunnerPath, "python-market-runner", "", "Path to data-science/scripts/run_market_share_runner.py")
 	flag.StringVar(&excludedEntryName, "excluded-entry-name", "", "Entry name to exclude from training (defaults to EXCLUDED_ENTRY_NAME env)")
 	flag.StringVar(&algorithmName, "algorithm-name", "ridge", "Market share algorithm name (stored on derived.algorithms kind=market_share)")
+	flag.Float64Var(&ridgeAlpha, "ridge-alpha", 1.0, "Ridge alpha (stored in derived.market_share_runs.params_json)")
+	flag.StringVar(&featureSet, "feature-set", "optimal", "Feature set (stored in derived.market_share_runs.params_json)")
+	flag.StringVar(&trainYears, "train-years", "", "Comma-separated training years (optional; stored in derived.market_share_runs.params_json)")
 	flag.BoolVar(&skipExisting, "skip-existing", true, "Skip calcuttas that already have a matching market_share_run (same algorithm + excluded_entry_name)")
 	flag.Parse()
 
-	if pythonRunnerPath == "" {
-		return fmt.Errorf("--python-market-runner is required")
-	}
 	if seasonMin > 0 && seasonMax > 0 && seasonMax < seasonMin {
 		return fmt.Errorf("invalid season range: season-max < season-min")
 	}
@@ -70,14 +60,6 @@ func run() error {
 	}
 	if excludedEntryName == "" {
 		return fmt.Errorf("excluded entry name is required (set --excluded-entry-name or EXCLUDED_ENTRY_NAME)")
-	}
-
-	absRunner, err := filepath.Abs(pythonRunnerPath)
-	if err != nil {
-		return err
-	}
-	if _, err := os.Stat(absRunner); err != nil {
-		return fmt.Errorf("python runner not found: %s", absRunner)
 	}
 
 	cfg, err := platform.LoadConfigFromEnv()
@@ -123,24 +105,16 @@ func run() error {
 			}
 		}
 
-		runID, inserted, err := runPythonMarketShare(
-			ctx,
-			pythonBin,
-			absRunner,
-			c.CalcuttaID,
-			algorithmName,
-			excludedEntryName,
-		)
+		runID, err := submitMarketShareRun(ctx, pool, c.CalcuttaID, algorithmName, excludedEntryName, ridgeAlpha, featureSet, trainYears)
 		if err != nil {
 			return err
 		}
 
 		slog.Info(
-			"calcutta_done",
+			"calcutta_enqueued",
 			"calcutta_id", c.CalcuttaID,
 			"season", c.SeasonYear,
 			"market_share_run_id", runID,
-			"rows", inserted,
 		)
 	}
 
@@ -226,57 +200,63 @@ func hasMarketShareRun(ctx context.Context, pool *pgxpool.Pool, calcuttaID, algo
 	return true, nil
 }
 
-func runPythonMarketShare(ctx context.Context, pythonBin, runnerPath, calcuttaID, algorithmName, excludedEntryName string) (string, int, error) {
-	cmd := exec.CommandContext(
-		ctx,
-		pythonBin,
-		runnerPath,
-		"--calcutta-id",
-		calcuttaID,
-		"--excluded-entry-name",
-		excludedEntryName,
-		"--algorithm-name",
-		algorithmName,
-	)
-	cmd.Env = os.Environ()
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	outStr := strings.TrimSpace(stdout.String())
-	if outStr == "" {
-		outStr = "{}"
+func submitMarketShareRun(ctx context.Context, pool *pgxpool.Pool, calcuttaID, algorithmName, excludedEntryName string, ridgeAlpha float64, featureSet string, trainYears string) (string, error) {
+	params := map[string]interface{}{
+		"excluded_entry_name": excludedEntryName,
+		"ridge_alpha":         ridgeAlpha,
+		"feature_set":         featureSet,
+		"source":              "batch-generate-market-share",
 	}
-
-	var parsed pythonRunnerResult
-	_ = json.Unmarshal([]byte(outStr), &parsed)
-
+	if strings.TrimSpace(trainYears) != "" {
+		parts := strings.Split(trainYears, ",")
+		years := make([]int, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			y, err := strconv.Atoi(p)
+			if err != nil {
+				return "", fmt.Errorf("invalid train year %q", p)
+			}
+			years = append(years, y)
+		}
+		if len(years) > 0 {
+			params["train_years"] = years
+		}
+	}
+	paramsJSON, err := json.Marshal(params)
 	if err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if parsed.Error != nil && strings.TrimSpace(*parsed.Error) != "" {
-			msg = *parsed.Error
-		}
-		if msg == "" {
-			msg = err.Error()
-		}
-		return "", 0, fmt.Errorf("python runner failed: %s", msg)
+		return "", err
 	}
-	if !parsed.OK {
-		msg := "python runner returned ok=false"
-		if parsed.Error != nil && strings.TrimSpace(*parsed.Error) != "" {
-			msg = *parsed.Error
-		}
-		return "", 0, errors.New(msg)
+
+	var algorithmID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO derived.algorithms (kind, name, params_json)
+		VALUES ('market_share', $1::text, '{}'::jsonb)
+		ON CONFLICT (kind, name) WHERE deleted_at IS NULL
+		DO UPDATE SET updated_at = NOW()
+		RETURNING id::text
+	`, algorithmName).Scan(&algorithmID); err != nil {
+		return "", err
 	}
-	if parsed.RunID == nil || strings.TrimSpace(*parsed.RunID) == "" {
-		return "", 0, errors.New("python runner did not return run_id")
+
+	gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
+	var gitSHAParam any
+	if gitSHA != "" {
+		gitSHAParam = gitSHA
+	} else {
+		gitSHAParam = nil
 	}
-	inserted := 0
-	if parsed.RowsInserted != nil {
-		inserted = *parsed.RowsInserted
+
+	var runID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO derived.market_share_runs (algorithm_id, calcutta_id, params_json, git_sha)
+		VALUES ($1::uuid, $2::uuid, $3::jsonb, $4)
+		RETURNING id::text
+	`, algorithmID, calcuttaID, paramsJSON, gitSHAParam).Scan(&runID); err != nil {
+		return "", err
 	}
-	return strings.TrimSpace(*parsed.RunID), inserted, nil
+
+	return runID, nil
 }

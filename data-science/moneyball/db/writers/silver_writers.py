@@ -285,6 +285,7 @@ def write_predicted_market_share_with_run(
     tournament_id: str = None,
     model_version: str = None,
     algorithm_name: str = "ridge",
+    run_id: Optional[str] = None,
     params: Optional[Dict[str, Any]] = None,
     git_sha: Optional[str] = None,
 ) -> Tuple[Optional[str], int]:
@@ -298,10 +299,8 @@ def write_predicted_market_share_with_run(
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            run_id: Optional[str] = None
-
             # Preferred path: create a market_share_run for calcutta-scoped predictions.
-            if calcutta_id:
+            if not run_id and calcutta_id:
                 algo_params_json = json.dumps(params or {})
 
                 cur.execute(

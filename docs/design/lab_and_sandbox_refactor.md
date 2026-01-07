@@ -86,6 +86,8 @@ We treat the set of available models as part of the codebase.
 - [x] Standardize timestamps (`created_at`, `started_at`, `finished_at`) on `derived.run_jobs`.
 - [ ] Standardize run parameters serialization (`params_json`) and include `seed` where applicable.
 - [x] SimulationRuns: persist `params_json` on `derived.run_jobs` enqueue/backfill.
+- [x] EntryEvaluationRequests: persist `params_json` on `derived.run_jobs` enqueue/backfill.
+- [x] MarketShareRuns: persist `params_json` on `derived.run_jobs` enqueue/backfill.
 
 ### Artifacts
 We can keep separate artifact tables/types, but they should share a common contract:
@@ -97,6 +99,8 @@ We can keep separate artifact tables/types, but they should share a common contr
 - [x] Decide on the final approach:
   - [x] Shared registry table `derived.run_artifacts` (keyed by `run_kind`, `run_id`, `artifact_kind`) implementing the shared contract.
   - [x] SimulationRuns: always emit a `metrics` artifact.
+  - [x] EntryEvaluationRequests: always emit a `metrics` artifact.
+  - [x] MarketShareRuns: always emit a `metrics` artifact.
 
 - [ ] Ensure EntryArtifacts explicitly reference exactly one:
   - AdvancementArtifact

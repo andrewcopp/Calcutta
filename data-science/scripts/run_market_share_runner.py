@@ -72,6 +72,67 @@ def _default_train_years(*, target_year: int) -> List[int]:
     return [y for y in all_years if int(y) != int(target_year)]
 
 
+def _parse_train_years(v: Any) -> Optional[List[int]]:
+    if v is None:
+        return None
+    if isinstance(v, list):
+        out: List[int] = []
+        for x in v:
+            try:
+                out.append(int(x))
+            except Exception:
+                continue
+        return out
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        out = []
+        for part in s.split(","):
+            p = part.strip()
+            if not p:
+                continue
+            try:
+                out.append(int(p))
+            except Exception:
+                continue
+        return out
+    return None
+
+
+def _read_market_share_run(*, run_id: str) -> Dict[str, Any]:
+    from moneyball.db.connection import get_db_connection
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    r.id::text AS run_id,
+                    r.calcutta_id::text AS calcutta_id,
+                    r.params_json,
+                    a.name AS algorithm_name
+                FROM derived.market_share_runs r
+                JOIN derived.algorithms a
+                  ON a.id = r.algorithm_id
+                 AND a.deleted_at IS NULL
+                WHERE r.id = %s::uuid
+                  AND r.deleted_at IS NULL
+                LIMIT 1
+                """,
+                (run_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise ValueError(f"market_share_run not found: {run_id}")
+            return {
+                "run_id": str(row[0]),
+                "calcutta_id": str(row[1]),
+                "params_json": row[2] or {},
+                "algorithm_name": str(row[3]),
+            }
+
+
 def main() -> int:
     _ensure_project_root_on_path()
 
@@ -81,12 +142,7 @@ def main() -> int:
             "artifacts."
         )
     )
-    parser.add_argument("--calcutta-id", required=True)
-    parser.add_argument("--excluded-entry-name", required=True)
-    parser.add_argument("--ridge-alpha", type=float, default=1.0)
-    parser.add_argument("--feature-set", default="optimal")
-    parser.add_argument("--algorithm-name", default="ridge")
-    parser.add_argument("--train-years", default="")
+    parser.add_argument("--run-id", required=True)
 
     args = parser.parse_args()
 
@@ -99,19 +155,20 @@ def main() -> int:
             write_predicted_market_share_with_run,
         )
 
-        excluded_entry_name = str(args.excluded_entry_name)
-        ctx = _read_calcutta_context(calcutta_id=str(args.calcutta_id))
+        run = _read_market_share_run(run_id=str(args.run_id))
+        params = run.get("params_json") or {}
+
+        excluded_entry_name = str(params.get("excluded_entry_name") or "")
+        if not excluded_entry_name:
+            raise ValueError("excluded_entry_name is required in params_json")
+
+        ctx = _read_calcutta_context(calcutta_id=str(run["calcutta_id"]))
         tournament_id = ctx["tournament_id"]
         season_year = int(ctx["season_year"])
         team_id_map = _read_team_id_map(tournament_id=tournament_id)
 
-        if args.train_years.strip():
-            train_years = [
-                int(y.strip())
-                for y in args.train_years.split(",")
-                if y.strip()
-            ]
-        else:
+        train_years = _parse_train_years(params.get("train_years"))
+        if not train_years:
             train_years = _default_train_years(target_year=season_year)
 
         exclude_entry_names: Optional[List[str]] = (
@@ -150,8 +207,8 @@ def main() -> int:
         predictions = predict_auction_share_of_pool(
             train_team_dataset=train_ds,
             predict_team_dataset=predict_ds,
-            ridge_alpha=float(args.ridge_alpha),
-            feature_set=str(args.feature_set),
+            ridge_alpha=float(params.get("ridge_alpha") or 1.0),
+            feature_set=str(params.get("feature_set") or "optimal"),
         )
 
         predictions["team_key"] = (
@@ -159,21 +216,15 @@ def main() -> int:
         )
 
         git_sha = os.getenv("GIT_SHA")
-        params: Dict[str, Any] = {
-            "ridge_alpha": float(args.ridge_alpha),
-            "feature_set": str(args.feature_set),
-            "excluded_entry_name": excluded_entry_name,
-            "train_years": train_years,
-            "source": "python_runner",
-        }
 
         run_id, inserted = write_predicted_market_share_with_run(
             predictions_df=predictions,
             team_id_map=team_id_map,
-            calcutta_id=str(args.calcutta_id),
+            calcutta_id=str(run["calcutta_id"]),
             tournament_id=None,
-            algorithm_name=str(args.algorithm_name),
-            params=params,
+            algorithm_name=str(run["algorithm_name"]),
+            run_id=str(run["run_id"]),
+            params=None,
             git_sha=git_sha,
         )
 
@@ -181,13 +232,11 @@ def main() -> int:
             "ok": True,
             "run_id": run_id,
             "rows_inserted": inserted,
-            "calcutta_id": str(args.calcutta_id),
+            "calcutta_id": str(run["calcutta_id"]),
             "tournament_id": tournament_id,
             "season_year": season_year,
             "excluded_entry_name": excluded_entry_name,
-            "algorithm_name": str(args.algorithm_name),
-            "ridge_alpha": float(args.ridge_alpha),
-            "feature_set": str(args.feature_set),
+            "algorithm_name": str(run["algorithm_name"]),
         }
         sys.stdout.write(json.dumps(out) + "\n")
         return 0
