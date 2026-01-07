@@ -248,7 +248,7 @@ Batch orchestration (optional grouping record):
 ## Backend code refactor (reduce “big file” handlers)
 Target: smaller single-responsibility packages/files.
 
-- [ ] Split `handlers_suite_calcutta_evaluations.go` into:
+- [ ] Split `handlers_suite_calcutta_evaluations.go` into (next):
   - routes/wiring
   - request/response DTOs
   - query/service layer
