@@ -1,10 +1,12 @@
 package bootstrap
 
 import (
+	"context"
 	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/algorithm_registry"
 	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
@@ -47,6 +49,9 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
 	analyticsService := appanalytics.New(analyticsRepo)
+	if err := algorithm_registry.SyncToDatabase(context.Background(), pool, algorithm_registry.RegisteredAlgorithms()); err != nil {
+		return nil, nil, err
+	}
 
 	mlAnalyticsRepo := dbadapters.NewMLAnalyticsRepository(pool)
 	mlAnalyticsService := ml_analytics.New(mlAnalyticsRepo)
