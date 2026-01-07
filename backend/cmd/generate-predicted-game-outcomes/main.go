@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
-	"runtime"
 
-	pgo "github.com/andrewcopp/Calcutta/backend/internal/features/predicted_game_outcomes"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 
@@ -59,29 +58,74 @@ func run() error {
 	}
 	defer pool.Close()
 
-	log.Printf("Generating predicted_game_outcomes season=%d n_sims=%d seed=%d kenpom_scale=%.3f gomaxprocs=%d",
+	log.Printf("Enqueuing predicted_game_outcomes season=%d n_sims=%d seed=%d kenpom_scale=%.3f",
 		season,
 		nSims,
 		seed,
 		kenpomScale,
-		runtime.GOMAXPROCS(0),
 	)
 
-	svc := pgo.New(pool)
-	coreTournamentID, nRows, err := svc.GenerateAndWrite(
-		context.Background(),
-		pgo.GenerateParams{
-			Season:       season,
-			KenPomScale:  kenpomScale,
-			NSims:        nSims,
-			Seed:         seed,
-			ModelVersion: modelVersion,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("GenerateAndWrite failed: %w", err)
+	var coreTournamentID string
+	if err := pool.QueryRow(context.Background(), `
+		SELECT t.id::text
+		FROM core.tournaments t
+		JOIN core.seasons s ON s.id = t.season_id AND s.deleted_at IS NULL
+		WHERE s.year = $1::int
+			AND t.deleted_at IS NULL
+		ORDER BY t.created_at DESC
+		LIMIT 1
+	`, season).Scan(&coreTournamentID); err != nil {
+		return err
 	}
 
-	log.Printf("Wrote %d predicted_game_outcomes rows for core_tournament_id=%s", nRows, coreTournamentID)
+	params := map[string]any{
+		"season":        season,
+		"kenpom_scale":  kenpomScale,
+		"n_sims":        nSims,
+		"seed":          seed,
+		"model_version": modelVersion,
+		"source":        "generate-predicted-game-outcomes",
+	}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	algorithmName := modelVersion
+	if algorithmName == "" {
+		algorithmName = "kenpom"
+	}
+
+	var algorithmID string
+	if err := pool.QueryRow(context.Background(), `
+		INSERT INTO derived.algorithms (kind, name, params_json)
+		VALUES ('game_outcomes', $1, $2::jsonb)
+		ON CONFLICT (kind, name) WHERE deleted_at IS NULL
+		DO UPDATE SET
+			params_json = EXCLUDED.params_json,
+			updated_at = NOW()
+		RETURNING id::text
+	`, algorithmName, string(paramsJSON)).Scan(&algorithmID); err != nil {
+		return err
+	}
+
+	gitSHA := os.Getenv("GIT_SHA")
+	var gitSHAParam any
+	if gitSHA != "" {
+		gitSHAParam = gitSHA
+	} else {
+		gitSHAParam = nil
+	}
+
+	var runID string
+	if err := pool.QueryRow(context.Background(), `
+		INSERT INTO derived.game_outcome_runs (algorithm_id, tournament_id, params_json, git_sha)
+		VALUES ($1::uuid, $2::uuid, $3::jsonb, $4)
+		RETURNING id::text
+	`, algorithmID, coreTournamentID, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+		return err
+	}
+
+	log.Printf("Enqueued game_outcome_run_id=%s tournament_id=%s", runID, coreTournamentID)
 	return nil
 }

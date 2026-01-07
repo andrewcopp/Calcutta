@@ -31,6 +31,14 @@ type GenerateParams struct {
 	ModelVersion string
 }
 
+type persistedParams struct {
+	Season       int     `json:"season"`
+	KenPomScale  float64 `json:"kenpom_scale"`
+	NSims        int     `json:"n_sims"`
+	Seed         int     `json:"seed"`
+	ModelVersion string  `json:"model_version"`
+}
+
 type matchupKey struct {
 	gameID  string
 	team1ID string
@@ -211,6 +219,196 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 	})
 
 	if err := s.writePredictedGameOutcomes(ctx, coreTournamentID, p, rows); err != nil {
+		return "", 0, err
+	}
+
+	return coreTournamentID, len(rows), nil
+}
+
+func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID string) (string, int, error) {
+	if runID == "" {
+		return "", 0, errors.New("runID is required")
+	}
+
+	var coreTournamentID string
+	var paramsRaw []byte
+	var modelVersion *string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT
+			r.tournament_id::text,
+			r.params_json,
+			COALESCE(NULLIF(a.name, ''), NULL) AS model_version
+		FROM derived.game_outcome_runs r
+		JOIN derived.algorithms a ON a.id = r.algorithm_id AND a.deleted_at IS NULL
+		WHERE r.id = $1::uuid
+			AND r.deleted_at IS NULL
+		LIMIT 1
+	`, runID).Scan(&coreTournamentID, &paramsRaw, &modelVersion); err != nil {
+		return "", 0, err
+	}
+	if coreTournamentID == "" {
+		return "", 0, errors.New("game_outcome_run missing tournament_id")
+	}
+
+	pp := persistedParams{}
+	if len(paramsRaw) > 0 {
+		_ = json.Unmarshal(paramsRaw, &pp)
+	}
+	if modelVersion != nil && *modelVersion != "" {
+		pp.ModelVersion = *modelVersion
+	}
+
+	if pp.KenPomScale <= 0 {
+		pp.KenPomScale = 10.0
+	}
+	if pp.NSims <= 0 {
+		pp.NSims = 5000
+	}
+	if pp.Seed == 0 {
+		pp.Seed = 42
+	}
+
+	ff, err := s.loadFinalFourConfig(ctx, coreTournamentID)
+	if err != nil {
+		return "", 0, err
+	}
+
+	teams, netByTeamID, err := s.loadTeams(ctx, coreTournamentID)
+	if err != nil {
+		return "", 0, err
+	}
+
+	builder := appbracket.NewBracketBuilder()
+	br, err := builder.BuildBracket(coreTournamentID, teams, ff)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to build bracket: %w", err)
+	}
+
+	games, prevByNext, metaByGame := prepareGames(br)
+
+	matchupCounts := make(map[matchupKey]int)
+	team1WinCounts := make(map[matchupKey]int)
+
+	rng := rand.New(rand.NewSource(int64(pp.Seed)))
+	for i := 0; i < pp.NSims; i++ {
+		winnersByGame := make(map[string]string, len(games))
+
+		for _, g := range games {
+			if g == nil || g.GameID == "" {
+				continue
+			}
+			gid := g.GameID
+
+			t1 := ""
+			t2 := ""
+			if g.Team1 != nil {
+				t1 = g.Team1.TeamID
+			}
+			if g.Team2 != nil {
+				t2 = g.Team2.TeamID
+			}
+
+			if t1 == "" {
+				slots := prevByNext[gid]
+				if slots != nil {
+					if prev := slots[1]; prev != "" {
+						t1 = winnersByGame[prev]
+					}
+				}
+			}
+			if t2 == "" {
+				slots := prevByNext[gid]
+				if slots != nil {
+					if prev := slots[2]; prev != "" {
+						t2 = winnersByGame[prev]
+					}
+				}
+			}
+
+			if t1 == "" || t2 == "" {
+				continue
+			}
+
+			net1, ok1 := netByTeamID[t1]
+			net2, ok2 := netByTeamID[t2]
+			if !ok1 || !ok2 {
+				continue
+			}
+
+			p1 := winProb(net1, net2, pp.KenPomScale)
+			winner := t2
+			if rng.Float64() < p1 {
+				winner = t1
+			}
+			winnersByGame[gid] = winner
+
+			k := matchupKey{gameID: gid, team1ID: t1, team2ID: t2}
+			matchupCounts[k] = matchupCounts[k] + 1
+			if winner == t1 {
+				team1WinCounts[k] = team1WinCounts[k] + 1
+			}
+		}
+	}
+
+	nSimsF := float64(pp.NSims)
+	rows := make([]predictionRow, 0, len(matchupCounts))
+	for k, c := range matchupCounts {
+		if c <= 0 {
+			continue
+		}
+
+		meta := metaByGame[k.gameID]
+		pMatchup := 0.0
+		if nSimsF > 0 {
+			pMatchup = float64(c) / nSimsF
+		}
+
+		w1 := team1WinCounts[k]
+		pTeam1 := float64(w1) / float64(c)
+
+		roundInt := meta.round.StorageInt()
+		mv := (*string)(nil)
+		if pp.ModelVersion != "" {
+			mv = &pp.ModelVersion
+		}
+
+		rows = append(rows, predictionRow{
+			tournamentID: coreTournamentID,
+			gameID:       meta.gameID,
+			roundInt:     roundInt,
+			team1ID:      k.team1ID,
+			team2ID:      k.team2ID,
+			pTeam1Wins:   pTeam1,
+			pMatchup:     pMatchup,
+			modelVersion: mv,
+		})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		a := rows[i]
+		b := rows[j]
+		ma := metaByGame[a.gameID]
+		mb := metaByGame[b.gameID]
+		if ma.order != mb.order {
+			return ma.order < mb.order
+		}
+		if ma.sort != mb.sort {
+			return ma.sort < mb.sort
+		}
+		if a.gameID != b.gameID {
+			return a.gameID < b.gameID
+		}
+		if a.pMatchup != b.pMatchup {
+			return a.pMatchup > b.pMatchup
+		}
+		if a.team1ID != b.team1ID {
+			return a.team1ID < b.team1ID
+		}
+		return a.team2ID < b.team2ID
+	})
+
+	gp := GenerateParams{Season: pp.Season, KenPomScale: pp.KenPomScale, NSims: pp.NSims, Seed: pp.Seed, ModelVersion: pp.ModelVersion}
+	if err := s.writePredictedGameOutcomesForRun(ctx, coreTournamentID, gp, rows, runID); err != nil {
 		return "", 0, err
 	}
 
@@ -412,6 +610,57 @@ func (s *Service) writePredictedGameOutcomes(
 		WHERE tournament_id = $1::uuid
 			AND run_id IS NULL
 	`, labTournamentID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"derived", "predicted_game_outcomes"},
+		[]string{"tournament_id", "game_id", "round", "team1_id", "team2_id", "p_team1_wins", "p_matchup", "model_version", "run_id"},
+		&predictionSource{rows: rows, idx: 0, runID: runID},
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) writePredictedGameOutcomesForRun(
+	ctx context.Context,
+	coreTournamentID string,
+	p GenerateParams,
+	rows []predictionRow,
+	runID string,
+) error {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	// Idempotency: clear any previously written rows for this run.
+	_, err = tx.Exec(ctx, `
+		DELETE FROM derived.predicted_game_outcomes
+		WHERE run_id = $1::uuid
+	`, runID)
+	if err != nil {
+		return err
+	}
+
+	// Legacy cleanup (temporary): remove old tournament-scoped rows so consumers don't
+	// accidentally read stale data.
+	_, err = tx.Exec(ctx, `
+		DELETE FROM derived.predicted_game_outcomes
+		WHERE tournament_id = $1::uuid
+			AND run_id IS NULL
+	`, coreTournamentID)
 	if err != nil {
 		return err
 	}
