@@ -63,6 +63,10 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		"/api/analytics/algorithms/{id}/game-outcome-runs/bulk",
 		s.requirePermission("analytics.strategy_generation_runs.write", s.handleBulkCreateGameOutcomeRunsForAlgorithm),
 	).Methods("POST", "OPTIONS")
+	r.HandleFunc(
+		"/api/analytics/algorithms/{id}/market-share-runs/bulk",
+		s.requirePermission("analytics.strategy_generation_runs.write", s.handleBulkCreateMarketShareRunsForAlgorithm),
+	).Methods("POST", "OPTIONS")
 	s.registerHallOfFameRoutes(r)
 }
 

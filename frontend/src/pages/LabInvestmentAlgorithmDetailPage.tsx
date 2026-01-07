@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
@@ -67,6 +69,9 @@ export function LabInvestmentAlgorithmDetailPage() {
   const { algorithmId } = useParams<{ algorithmId: string }>();
   const navigate = useNavigate();
 
+	const [runAllError, setRunAllError] = useState<string | null>(null);
+	const [runAllLoading, setRunAllLoading] = useState(false);
+
   const algorithmsQuery = useQuery<{ items: Algorithm[] } | null>({
     queryKey: ['analytics', 'algorithms', 'market_share'],
     queryFn: async () => {
@@ -126,6 +131,34 @@ export function LabInvestmentAlgorithmDetailPage() {
     return m ? m[1] : '—';
   };
 
+	const runAll = async () => {
+		if (!algorithmId) return;
+		setRunAllError(null);
+		if (algorithm?.name !== 'ridge') {
+			setRunAllError("Bulk execution is only supported for the 'ridge' algorithm.");
+			return;
+		}
+
+		const excluded = window.prompt('excluded_entry_name (required for ridge training):', '');
+		if (excluded === null) return;
+		const excludedEntryName = excluded.trim();
+		if (!excludedEntryName) {
+			setRunAllError('excluded_entry_name is required');
+			return;
+		}
+
+		setRunAllLoading(true);
+		try {
+			await analyticsService.bulkCreateMarketShareRunsForAlgorithm(algorithmId, { excluded_entry_name: excludedEntryName });
+			await coverageDetailQuery.refetch();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to enqueue runs';
+			setRunAllError(msg);
+		} finally {
+			setRunAllLoading(false);
+		}
+	};
+
   return (
     <PageContainer className="max-w-none">
       <PageHeader
@@ -136,9 +169,20 @@ export function LabInvestmentAlgorithmDetailPage() {
             ← Back to Lab
           </Link>
         }
+			actions={
+				<Button
+					onClick={runAll}
+					loading={runAllLoading}
+					disabled={!algorithmId || algorithmsQuery.isLoading || algorithm?.name !== 'ridge'}
+				>
+					Run for all calcuttas
+				</Button>
+			}
       />
 
       <div className="space-y-6">
+			{runAllError ? <Alert variant="error">{runAllError}</Alert> : null}
+
         <Card>
           <h2 className="text-xl font-semibold mb-2">Algorithm</h2>
           {algorithmsQuery.isLoading ? <div className="text-gray-500">Loading algorithm...</div> : null}
