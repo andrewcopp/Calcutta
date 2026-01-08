@@ -1,11 +1,16 @@
 import json
 import os
-import subprocess
 import sys
 import time
+import traceback
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from importlib import util
+from io import StringIO
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+from contextlib import redirect_stderr, redirect_stdout
 
 import psycopg2
 
@@ -210,7 +215,7 @@ def _run_market_share_runner(
     *,
     run_id: str,
 ) -> Tuple[bool, Dict[str, Any], str]:
-    python_bin = os.getenv("PYTHON_BIN", "python3").strip() or "python3"
+    start = time.time()
     runner = os.getenv("PYTHON_MARKET_SHARE_RUNNER", "").strip()
     if not runner:
         runner = os.path.join(
@@ -218,48 +223,97 @@ def _run_market_share_runner(
             "run_market_share_runner.py",
         )
 
-    start = time.time()
+    stdout_buf = StringIO()
+    stderr_buf = StringIO()
+
+    failure: Optional[Dict[str, Any]] = None
+    result: Dict[str, Any] = {}
     try:
-        cp = subprocess.run(
-            [python_bin, runner, "--run-id", str(run_id)],
-            capture_output=True,
-            text=True,
-            env=os.environ.copy(),
+        runner_path = Path(runner).resolve()
+        spec = util.spec_from_file_location(
+            "calcutta_market_share_runner",
+            runner_path,
         )
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"failed to load python runner: {runner_path}")
+        mod = util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        runner_fn = getattr(mod, "run_market_share_runner", None)
+        if runner_fn is None or not callable(runner_fn):
+            raise RuntimeError(
+                (
+                    "python runner missing callable: "
+                    "run_market_share_runner(run_id=...)"
+                )
+            )
+
+        with redirect_stdout(stdout_buf), redirect_stderr(stderr_buf):
+            out = runner_fn(run_id=str(run_id))
+        if isinstance(out, dict):
+            result = out
+        else:
+            result = {"ok": True, "result": out}
+
     except Exception as e:
-        return False, {}, str(e)
+        failure = {
+            "kind": "exception",
+            "message": str(e),
+            "errorType": type(e).__name__,
+            "traceback": traceback.format_exc(),
+        }
 
     dur_ms = int((time.time() - start) * 1000)
-    stdout = ((cp.stdout or "").strip() or "{}")
-    stderr = (cp.stderr or "").strip()
+    stdout = (stdout_buf.getvalue() or "").strip()
+    stderr = (stderr_buf.getvalue() or "").strip()
 
-    parsed: Dict[str, Any] = {}
-    try:
-        parsed = json.loads(stdout)
-    except Exception:
-        parsed = {}
-
-    if cp.returncode != 0:
-        msg = (
-            parsed.get("error")
-            or stderr
-            or f"python runner failed (exit={cp.returncode})"
-        )
+    if failure is not None:
+        failure["stdout"] = stdout
+        failure["stderr"] = stderr
         return (
             False,
-            {"durationMs": dur_ms, "stdout": stdout, "stderr": stderr},
-            str(msg),
+            {
+                "durationMs": dur_ms,
+                "stdout": stdout,
+                "stderr": stderr,
+                "failure": failure,
+            },
+            str(failure.get("message") or "python runner failed"),
         )
 
-    if not bool(parsed.get("ok")):
-        msg = parsed.get("error") or "python runner returned ok=false"
+    if not bool(result.get("ok", True)):
+        msg = str(result.get("error") or "python runner returned ok=false")
+        failure = {
+            "kind": "runner_error",
+            "message": msg,
+            "errorType": str(result.get("error_type") or "RunnerError"),
+            "traceback": result.get("traceback"),
+            "stdout": stdout,
+            "stderr": stderr,
+            "result": result,
+        }
         return (
             False,
-            {"durationMs": dur_ms, "stdout": stdout, "stderr": stderr},
-            str(msg),
+            {
+                "durationMs": dur_ms,
+                "stdout": stdout,
+                "stderr": stderr,
+                "failure": failure,
+                "result": result,
+            },
+            msg,
         )
 
-    return True, {"durationMs": dur_ms, "result": parsed}, ""
+    return (
+        True,
+        {
+            "durationMs": dur_ms,
+            "stdout": stdout,
+            "stderr": stderr,
+            "result": result,
+        },
+        "",
+    )
 
 
 def main() -> int:
@@ -328,6 +382,13 @@ def main() -> int:
             else:
                 summary["status"] = "failed"
                 summary["errorMessage"] = err
+                failure = meta.get("failure")
+                if isinstance(failure, dict):
+                    summary["failure"] = failure
+                if meta.get("stdout"):
+                    summary["stdout"] = meta.get("stdout")
+                if meta.get("stderr"):
+                    summary["stderr"] = meta.get("stderr")
 
                 with conn:
                     _mark_job_failed(

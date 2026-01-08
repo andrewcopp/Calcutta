@@ -133,9 +133,103 @@ def _read_market_share_run(*, run_id: str) -> Dict[str, Any]:
             }
 
 
-def main() -> int:
+def run_market_share_runner(*, run_id: str) -> Dict[str, Any]:
     _ensure_project_root_on_path()
 
+    from moneyball.db.readers import read_ridge_team_dataset_for_year
+    from moneyball.models.predicted_auction_share_of_pool import (
+        predict_auction_share_of_pool,
+    )
+    from moneyball.db.writers.silver_writers import (
+        write_predicted_market_share_with_run,
+    )
+
+    run = _read_market_share_run(run_id=str(run_id))
+    params = run.get("params_json") or {}
+
+    excluded_entry_name = str(params.get("excluded_entry_name") or "")
+    if not excluded_entry_name:
+        raise ValueError("excluded_entry_name is required in params_json")
+
+    ctx = _read_calcutta_context(calcutta_id=str(run["calcutta_id"]))
+    tournament_id = ctx["tournament_id"]
+    season_year = int(ctx["season_year"])
+    team_id_map = _read_team_id_map(tournament_id=tournament_id)
+
+    train_years = _parse_train_years(params.get("train_years"))
+    if not train_years:
+        train_years = _default_train_years(target_year=season_year)
+
+    exclude_entry_names: Optional[List[str]] = (
+        [excluded_entry_name] if excluded_entry_name else None
+    )
+
+    train_frames = []
+    for y in train_years:
+        try:
+            df = read_ridge_team_dataset_for_year(
+                y,
+                exclude_entry_names=exclude_entry_names,
+                include_target=True,
+            )
+        except Exception:
+            continue
+        train_frames.append(df)
+
+    if not train_frames:
+        raise ValueError("no training frames loaded")
+
+    import pandas as pd
+
+    train_ds = pd.concat(train_frames, ignore_index=True)
+    if "team_share_of_pool" in train_ds.columns:
+        train_ds = train_ds[train_ds["team_share_of_pool"].notna()].copy()
+    if train_ds.empty:
+        raise ValueError("no training rows (team_share_of_pool all NULL)")
+
+    predict_ds = read_ridge_team_dataset_for_year(
+        season_year,
+        exclude_entry_names=None,
+        include_target=False,
+    )
+
+    predictions = predict_auction_share_of_pool(
+        train_team_dataset=train_ds,
+        predict_team_dataset=predict_ds,
+        ridge_alpha=float(params.get("ridge_alpha") or 1.0),
+        feature_set=str(params.get("feature_set") or "optimal"),
+    )
+
+    predictions["team_key"] = (
+        predictions["team_key"].astype(str).str.split(":").str[-1]
+    )
+
+    git_sha = os.getenv("GIT_SHA")
+
+    run_id_out, inserted = write_predicted_market_share_with_run(
+        predictions_df=predictions,
+        team_id_map=team_id_map,
+        calcutta_id=str(run["calcutta_id"]),
+        tournament_id=None,
+        algorithm_name=str(run["algorithm_name"]),
+        run_id=str(run["run_id"]),
+        params=None,
+        git_sha=git_sha,
+    )
+
+    return {
+        "ok": True,
+        "run_id": run_id_out,
+        "rows_inserted": inserted,
+        "calcutta_id": str(run["calcutta_id"]),
+        "tournament_id": tournament_id,
+        "season_year": season_year,
+        "excluded_entry_name": excluded_entry_name,
+        "algorithm_name": str(run["algorithm_name"]),
+    }
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Run market-share model for a specific calcutta and persist "
@@ -147,104 +241,18 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        from moneyball.db.readers import read_ridge_team_dataset_for_year
-        from moneyball.models.predicted_auction_share_of_pool import (
-            predict_auction_share_of_pool,
-        )
-        from moneyball.db.writers.silver_writers import (
-            write_predicted_market_share_with_run,
-        )
-
-        run = _read_market_share_run(run_id=str(args.run_id))
-        params = run.get("params_json") or {}
-
-        excluded_entry_name = str(params.get("excluded_entry_name") or "")
-        if not excluded_entry_name:
-            raise ValueError("excluded_entry_name is required in params_json")
-
-        ctx = _read_calcutta_context(calcutta_id=str(run["calcutta_id"]))
-        tournament_id = ctx["tournament_id"]
-        season_year = int(ctx["season_year"])
-        team_id_map = _read_team_id_map(tournament_id=tournament_id)
-
-        train_years = _parse_train_years(params.get("train_years"))
-        if not train_years:
-            train_years = _default_train_years(target_year=season_year)
-
-        exclude_entry_names: Optional[List[str]] = (
-            [excluded_entry_name] if excluded_entry_name else None
-        )
-
-        train_frames = []
-        for y in train_years:
-            try:
-                df = read_ridge_team_dataset_for_year(
-                    y,
-                    exclude_entry_names=exclude_entry_names,
-                    include_target=True,
-                )
-            except Exception:
-                continue
-            train_frames.append(df)
-
-        if not train_frames:
-            raise ValueError("no training frames loaded")
-
-        import pandas as pd
-
-        train_ds = pd.concat(train_frames, ignore_index=True)
-        if "team_share_of_pool" in train_ds.columns:
-            train_ds = train_ds[train_ds["team_share_of_pool"].notna()].copy()
-        if train_ds.empty:
-            raise ValueError("no training rows (team_share_of_pool all NULL)")
-
-        predict_ds = read_ridge_team_dataset_for_year(
-            season_year,
-            exclude_entry_names=None,
-            include_target=False,
-        )
-
-        predictions = predict_auction_share_of_pool(
-            train_team_dataset=train_ds,
-            predict_team_dataset=predict_ds,
-            ridge_alpha=float(params.get("ridge_alpha") or 1.0),
-            feature_set=str(params.get("feature_set") or "optimal"),
-        )
-
-        predictions["team_key"] = (
-            predictions["team_key"].astype(str).str.split(":").str[-1]
-        )
-
-        git_sha = os.getenv("GIT_SHA")
-
-        run_id, inserted = write_predicted_market_share_with_run(
-            predictions_df=predictions,
-            team_id_map=team_id_map,
-            calcutta_id=str(run["calcutta_id"]),
-            tournament_id=None,
-            algorithm_name=str(run["algorithm_name"]),
-            run_id=str(run["run_id"]),
-            params=None,
-            git_sha=git_sha,
-        )
-
-        out = {
-            "ok": True,
-            "run_id": run_id,
-            "rows_inserted": inserted,
-            "calcutta_id": str(run["calcutta_id"]),
-            "tournament_id": tournament_id,
-            "season_year": season_year,
-            "excluded_entry_name": excluded_entry_name,
-            "algorithm_name": str(run["algorithm_name"]),
-        }
+        out = run_market_share_runner(run_id=str(args.run_id))
         sys.stdout.write(json.dumps(out) + "\n")
         return 0
 
     except Exception as e:
+        import traceback
+
         out = {
             "ok": False,
             "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc(),
         }
         sys.stdout.write(json.dumps(out) + "\n")
         return 1
