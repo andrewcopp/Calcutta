@@ -46,6 +46,10 @@ func (s *Server) handleGetCalcuttaPredictedReturns(w http.ResponseWriter, r *htt
 	if v := r.URL.Query().Get("game_outcome_run_id"); v != "" {
 		gameOutcomeRunID = &v
 	}
+	if gameOutcomeRunID == nil || *gameOutcomeRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "game_outcome_run_id is required", "game_outcome_run_id")
+		return
+	}
 
 	selectedID, gameOutcomeSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedReturns(ctx, calcuttaID, entryRunID, gameOutcomeRunID)
 	if err != nil {

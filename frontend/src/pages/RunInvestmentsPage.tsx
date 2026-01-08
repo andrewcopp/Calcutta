@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { mlAnalyticsService } from '../services/mlAnalyticsService';
+import { mlAnalyticsService, type EntryRunsResponse, type OurEntryDetailsResponse } from '../services/mlAnalyticsService';
+import { analyticsService } from '../services/analyticsService';
 import { RunViewerHeader } from '../components/RunViewerHeader';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -10,6 +11,26 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
+type TeamPredictedInvestmentRow = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  rational: number;
+  predicted: number;
+  delta: number;
+};
+
+type CalcuttaPredictedInvestmentResponse = {
+  calcutta_id: string;
+  entry_run_id?: string | null;
+  strategy_generation_run_id?: string | null;
+  market_share_run_id?: string | null;
+  game_outcome_run_id?: string | null;
+  teams: TeamPredictedInvestmentRow[];
+  count: number;
+};
+
 export function RunInvestmentsPage() {
   const { year, runId } = useParams<{ year: string; runId: string }>();
   const yearNumber = year ? Number(year) : NaN;
@@ -17,7 +38,7 @@ export function RunInvestmentsPage() {
   const decodedRunId = useMemo(() => (runId ? decodeURIComponent(runId) : ''), [runId]);
   const hasValidParams = parsedYear !== null && Boolean(runId);
 
-  const ourEntryQuery = useQuery({
+  const ourEntryQuery = useQuery<OurEntryDetailsResponse>({
     queryKey: ['mlAnalytics', 'ourEntryDetails', parsedYear, decodedRunId],
     queryFn: () => mlAnalyticsService.getOurEntryDetails(parsedYear as number, decodedRunId),
     enabled: hasValidParams,
@@ -25,7 +46,7 @@ export function RunInvestmentsPage() {
 
   const calcuttaId = ourEntryQuery.data?.run.calcutta_id ?? null;
 
-  const entryRunsQuery = useQuery({
+  const entryRunsQuery = useQuery<EntryRunsResponse>({
     queryKey: ['analytics', 'entryRuns', calcuttaId],
     queryFn: () => mlAnalyticsService.listEntryRuns(calcuttaId as string),
     enabled: Boolean(calcuttaId),
@@ -50,14 +71,29 @@ export function RunInvestmentsPage() {
   const [sortKey, setSortKey] = useState<'delta' | 'predicted' | 'rational' | 'seed' | 'school_name'>('delta');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
-  const investmentsQuery = useQuery({
-    queryKey: ['analytics', 'predictedInvestment', calcuttaId, selectedEntryRunId],
-    queryFn: () =>
-      mlAnalyticsService.getCalcuttaPredictedInvestment({
+  const latestRunsQuery = useQuery<{ game_outcome_run_id?: string | null; market_share_run_id?: string | null } | null>({
+    queryKey: ['analytics', 'latest-prediction-runs', calcuttaId],
+    queryFn: async () => {
+      if (!calcuttaId) return null;
+      return analyticsService.getLatestPredictionRunsForCalcutta<{ game_outcome_run_id?: string | null; market_share_run_id?: string | null }>(calcuttaId);
+    },
+    enabled: Boolean(calcuttaId),
+  });
+
+  const gameOutcomeRunId = latestRunsQuery.data?.game_outcome_run_id ?? null;
+  const marketShareRunId = latestRunsQuery.data?.market_share_run_id ?? null;
+
+  const investmentsQuery = useQuery<CalcuttaPredictedInvestmentResponse>({
+    queryKey: ['analytics', 'predictedInvestment', calcuttaId, selectedEntryRunId, marketShareRunId, gameOutcomeRunId],
+    queryFn: () => {
+      return analyticsService.getCalcuttaPredictedInvestment({
         calcuttaId: calcuttaId as string,
         entryRunId: selectedEntryRunId ?? undefined,
-      }),
-    enabled: Boolean(calcuttaId),
+        marketShareRunId: marketShareRunId as string,
+        gameOutcomeRunId: gameOutcomeRunId as string,
+      });
+    },
+    enabled: Boolean(calcuttaId) && Boolean(marketShareRunId) && Boolean(gameOutcomeRunId),
   });
 
   const sortedTeams = useMemo(() => {

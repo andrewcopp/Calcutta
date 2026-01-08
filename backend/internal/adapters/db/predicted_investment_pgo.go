@@ -7,13 +7,24 @@ import (
 	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func computeCalcuttaPredictedInvestmentFromPGO(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, marketShareRunID *string) (*string, []ports.CalcuttaPredictedInvestmentData, error) {
+func computeCalcuttaPredictedInvestmentFromPGO(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	calcuttaID string,
+	marketShareRunID *string,
+	gameOutcomeRunID *string,
+) (*string, []ports.CalcuttaPredictedInvestmentData, error) {
 	if calcuttaID == "" {
 		return nil, nil, errors.New("calcuttaID is required")
+	}
+	if marketShareRunID == nil || *marketShareRunID == "" {
+		return nil, nil, errors.New("market_share_run_id is required")
+	}
+	if gameOutcomeRunID == nil || *gameOutcomeRunID == "" {
+		return nil, nil, errors.New("game_outcome_run_id is required")
 	}
 
 	coreTournamentID, budgetPoints, err := loadTournamentAndBudgetForCalcutta(ctx, pool, calcuttaID)
@@ -34,7 +45,7 @@ func computeCalcuttaPredictedInvestmentFromPGO(ctx context.Context, pool *pgxpoo
 		return selectedMarketShareRunID, nil, fmt.Errorf("no predicted_market_share found for calcutta_id=%s", calcuttaID)
 	}
 
-	_, returns, err := computeCalcuttaPredictedReturnsFromPGO(ctx, pool, calcuttaID, nil)
+	_, returns, err := computeCalcuttaPredictedReturnsFromPGO(ctx, pool, calcuttaID, gameOutcomeRunID)
 	if err != nil {
 		return selectedMarketShareRunID, nil, err
 	}
@@ -154,44 +165,18 @@ func loadPredictedMarketShareForCalcutta(
 	tournamentID string,
 	marketShareRunID *string,
 ) (*string, map[string]float64, error) {
-	// If caller provided an explicit run_id, use it.
-	if marketShareRunID != nil {
-		out, err := loadPredictedMarketShareByRunID(ctx, pool, *marketShareRunID)
-		if err != nil {
-			return marketShareRunID, nil, err
-		}
-		if len(out) == 0 {
-			return marketShareRunID, nil, fmt.Errorf("no predicted_market_share rows for run_id=%s", *marketShareRunID)
-		}
-		return marketShareRunID, out, nil
+	if marketShareRunID == nil || *marketShareRunID == "" {
+		return nil, nil, errors.New("market_share_run_id is required")
 	}
 
-	// Default: select latest market_share_run for calcutta.
-	var latestRunID string
-	err := pool.QueryRow(ctx, `
-		SELECT id::text
-		FROM derived.market_share_runs
-		WHERE calcutta_id = $1::uuid
-			AND deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT 1
-	`, calcuttaID).Scan(&latestRunID)
+	out, err := loadPredictedMarketShareByRunID(ctx, pool, *marketShareRunID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, fmt.Errorf("no market_share_runs found for calcutta_id=%s", calcuttaID)
-		}
-		return nil, nil, err
-	}
-
-	ptr := &latestRunID
-	out, err := loadPredictedMarketShareByRunID(ctx, pool, latestRunID)
-	if err != nil {
-		return ptr, nil, err
+		return marketShareRunID, nil, err
 	}
 	if len(out) == 0 {
-		return ptr, nil, fmt.Errorf("no predicted_market_share rows for run_id=%s", latestRunID)
+		return marketShareRunID, nil, fmt.Errorf("no predicted_market_share rows for run_id=%s", *marketShareRunID)
 	}
-	return ptr, out, nil
+	return marketShareRunID, out, nil
 }
 
 func loadPredictedMarketShareByRunID(ctx context.Context, pool *pgxpool.Pool, runID string) (map[string]float64, error) {

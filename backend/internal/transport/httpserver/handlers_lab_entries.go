@@ -1270,50 +1270,43 @@ func (s *Server) getLabEntryReportHandler(w http.ResponseWriter, r *http.Request
 		excluded = suiteExcluded
 	}
 
-	// Resolve latest matching prediction runs for this suite.
-	var gameOutcomeRunID *string
-	{
-		var id string
-		err := s.pool.QueryRow(r.Context(), `
-			SELECT gor.id::text
-			FROM derived.game_outcome_runs gor
-			WHERE gor.tournament_id = $1::uuid
-				AND gor.algorithm_id = $2::uuid
-				AND gor.deleted_at IS NULL
-			ORDER BY gor.created_at DESC
-			LIMIT 1
-		`, tournamentID, advAlgID).Scan(&id)
-		if err != nil {
-			if err != pgx.ErrNoRows {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		} else {
-			gameOutcomeRunID = &id
-		}
+	// Require explicit upstream run IDs (no latest-run fallbacks).
+	if strategyRunID == nil || strings.TrimSpace(*strategyRunID) == "" {
+		writeError(w, r, http.StatusConflict, "missing_focus_strategy_generation_run", "focus_strategy_generation_run_id is required to generate a deterministic report", "focus_strategy_generation_run_id")
+		return
 	}
 
+	var gameOutcomeRunID *string
 	var marketShareRunID *string
 	{
-		var id string
-		err := s.pool.QueryRow(r.Context(), `
-			SELECT msr.id::text
-			FROM derived.market_share_runs msr
-			WHERE msr.calcutta_id = $1::uuid
-				AND msr.algorithm_id = $2::uuid
-				AND msr.deleted_at IS NULL
-			ORDER BY (CASE WHEN $3::text IS NOT NULL AND msr.params_json->>'excluded_entry_name' = $3::text THEN 1 ELSE 0 END) DESC,
-				msr.created_at DESC
+		var goID *string
+		var msID *string
+		if err := s.pool.QueryRow(r.Context(), `
+			SELECT game_outcome_run_id::text, market_share_run_id::text
+			FROM derived.strategy_generation_runs
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
 			LIMIT 1
-		`, calcuttaID, invAlgID, excluded).Scan(&id)
-		if err != nil {
-			if err != pgx.ErrNoRows {
-				writeErrorFromErr(w, r, err)
+		`, *strategyRunID).Scan(&goID, &msID); err != nil {
+			if err == pgx.ErrNoRows {
+				writeError(w, r, http.StatusNotFound, "not_found", "strategy generation run not found", "strategy_generation_run_id")
 				return
 			}
-		} else {
-			marketShareRunID = &id
+			writeErrorFromErr(w, r, err)
+			return
 		}
+		if goID == nil || strings.TrimSpace(*goID) == "" {
+			writeError(w, r, http.StatusConflict, "missing_game_outcome_run_id", "game_outcome_run_id is required on the focus strategy generation run", "game_outcome_run_id")
+			return
+		}
+		if msID == nil || strings.TrimSpace(*msID) == "" {
+			writeError(w, r, http.StatusConflict, "missing_market_share_run_id", "market_share_run_id is required on the focus strategy generation run", "market_share_run_id")
+			return
+		}
+		goVal := strings.TrimSpace(*goID)
+		msVal := strings.TrimSpace(*msID)
+		gameOutcomeRunID = &goVal
+		marketShareRunID = &msVal
 	}
 
 	// Assumed entries for pool sizing.

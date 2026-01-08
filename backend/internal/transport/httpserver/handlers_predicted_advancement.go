@@ -36,6 +36,10 @@ func (s *Server) handleGetTournamentPredictedAdvancement(w http.ResponseWriter, 
 	if v := r.URL.Query().Get("game_outcome_run_id"); v != "" {
 		gameOutcomeRunID = &v
 	}
+	if gameOutcomeRunID == nil || *gameOutcomeRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "game_outcome_run_id is required", "game_outcome_run_id")
+		return
+	}
 
 	selectedRunID, data, err := s.app.Analytics.GetTournamentPredictedAdvancement(ctx, tournamentID, gameOutcomeRunID)
 	if err != nil {

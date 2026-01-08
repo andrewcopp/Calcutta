@@ -41,8 +41,21 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 	if v := r.URL.Query().Get("market_share_run_id"); v != "" {
 		marketShareRunID = &v
 	}
+	if marketShareRunID == nil || *marketShareRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "market_share_run_id is required", "market_share_run_id")
+		return
+	}
 
-	selectedID, marketShareSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedInvestment(ctx, calcuttaID, entryRunID, marketShareRunID)
+	var gameOutcomeRunID *string
+	if v := r.URL.Query().Get("game_outcome_run_id"); v != "" {
+		gameOutcomeRunID = &v
+	}
+	if gameOutcomeRunID == nil || *gameOutcomeRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "game_outcome_run_id is required", "game_outcome_run_id")
+		return
+	}
+
+	selectedID, marketShareSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedInvestment(ctx, calcuttaID, entryRunID, marketShareRunID, gameOutcomeRunID)
 	if err != nil {
 		log.Printf("Error querying predicted investment: %v", err)
 		writeError(w, r, http.StatusInternalServerError, "database_error", "Failed to query predicted investment", "")
@@ -72,6 +85,7 @@ func (s *Server) handleGetCalcuttaPredictedInvestment(w http.ResponseWriter, r *
 		"entry_run_id":               selectedID,
 		"strategy_generation_run_id": selectedID,
 		"market_share_run_id":        marketShareSelectedID,
+		"game_outcome_run_id":        *gameOutcomeRunID,
 		"teams":                      results,
 		"count":                      len(results),
 	})

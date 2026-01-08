@@ -4,6 +4,7 @@ import { analyticsService } from '../../../services/analyticsService';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/Button';
 import { LoadingState } from '../../ui/LoadingState';
+import { entryRunsService } from '../../../services/entryRunsService';
 
 interface TeamSimulatedEntry {
   team_id: string;
@@ -22,13 +23,31 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
   const [sortColumn, setSortColumn] = React.useState<keyof TeamSimulatedEntry>('seed');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
-  const simulatedEntryQuery = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
-    queryKey: ['analytics', 'simulated-entry', calcuttaId],
+  const entryRunsQuery = useQuery<{ items: Array<{ id: string; created_at: string }> } | null>({
+    queryKey: ['entry-runs', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
-      return analyticsService.getCalcuttaSimulatedEntry<{ teams: TeamSimulatedEntry[] }>(calcuttaId);
+      return entryRunsService.list({ calcuttaId });
     },
     enabled: !!calcuttaId,
+  });
+
+  const entryRunId = React.useMemo(() => {
+    const items = entryRunsQuery.data?.items ?? [];
+    if (items.length === 0) return null;
+    // Default to most recent by created_at.
+    const sorted = items.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return sorted[0]?.id ?? null;
+  }, [entryRunsQuery.data?.items]);
+
+  const simulatedEntryQuery = useQuery<{ teams: TeamSimulatedEntry[] } | null>({
+    queryKey: ['analytics', 'simulated-entry', calcuttaId, entryRunId],
+    queryFn: async () => {
+      if (!calcuttaId) return null;
+      if (!entryRunId) return null;
+      return analyticsService.getCalcuttaSimulatedEntry<{ teams: TeamSimulatedEntry[] }>({ calcuttaId, entryRunId });
+    },
+    enabled: !!calcuttaId && !!entryRunId,
   });
 
   const simulatedEntry = simulatedEntryQuery.data;
@@ -81,6 +100,12 @@ export function SimulatedEntriesTab({ calcuttaId }: { calcuttaId: string | null 
       <p className="text-gray-600 mb-6">
         Detailed investment report showing expected performance, market predictions, and ROI analysis for all teams.
       </p>
+
+      {!entryRunsQuery.isLoading && !entryRunsQuery.isError && !entryRunId ? (
+        <Alert variant="warning" className="mb-3">
+          No entry run found for this calcutta.
+        </Alert>
+      ) : null}
 
       {simulatedEntryQuery.isLoading ? (
         <LoadingState label="Loading simulated entry data..." layout="inline" />

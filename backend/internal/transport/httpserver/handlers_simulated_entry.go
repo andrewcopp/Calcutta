@@ -38,6 +38,10 @@ func (s *Server) handleGetCalcuttaSimulatedEntry(w http.ResponseWriter, r *http.
 		// Backward compat.
 		entryRunID = &v
 	}
+	if entryRunID == nil || *entryRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "entry_run_id is required", "entry_run_id")
+		return
+	}
 
 	selectedID, data, err := s.app.Analytics.GetCalcuttaSimulatedEntry(ctx, calcuttaID, entryRunID)
 	if err != nil {

@@ -31,10 +31,18 @@ func (s *Server) handleGetCalcuttaPredictedMarketShare(w http.ResponseWriter, r 
 	if v := r.URL.Query().Get("market_share_run_id"); v != "" {
 		marketShareRunID = &v
 	}
+	if marketShareRunID == nil || *marketShareRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "market_share_run_id is required", "market_share_run_id")
+		return
+	}
 
 	var gameOutcomeRunID *string
 	if v := r.URL.Query().Get("game_outcome_run_id"); v != "" {
 		gameOutcomeRunID = &v
+	}
+	if gameOutcomeRunID == nil || *gameOutcomeRunID == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "game_outcome_run_id is required", "game_outcome_run_id")
+		return
 	}
 
 	marketShareSelectedID, gameOutcomeSelectedID, data, err := s.app.Analytics.GetCalcuttaPredictedMarketShare(ctx, calcuttaID, marketShareRunID, gameOutcomeRunID)

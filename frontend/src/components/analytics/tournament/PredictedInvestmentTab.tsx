@@ -16,13 +16,33 @@ interface TeamPredictedInvestment {
 
 // Predicted Investment Tab Component
 export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const predictedInvestmentQuery = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
-    queryKey: ['analytics', 'predicted-investment', calcuttaId],
+  const latestRunsQuery = useQuery<{ game_outcome_run_id?: string | null; market_share_run_id?: string | null } | null>({
+    queryKey: ['analytics', 'latest-prediction-runs', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
-      return analyticsService.getCalcuttaPredictedInvestment<{ teams: TeamPredictedInvestment[] }>(calcuttaId);
+      return analyticsService.getLatestPredictionRunsForCalcutta<{
+        game_outcome_run_id?: string | null;
+        market_share_run_id?: string | null;
+      }>(calcuttaId);
     },
     enabled: !!calcuttaId,
+  });
+
+  const gameOutcomeRunId = latestRunsQuery.data?.game_outcome_run_id ?? null;
+  const marketShareRunId = latestRunsQuery.data?.market_share_run_id ?? null;
+
+  const predictedInvestmentQuery = useQuery<{ teams: TeamPredictedInvestment[] } | null>({
+    queryKey: ['analytics', 'predicted-investment', calcuttaId, marketShareRunId, gameOutcomeRunId],
+    queryFn: async () => {
+      if (!calcuttaId) return null;
+      if (!marketShareRunId || !gameOutcomeRunId) return null;
+      return analyticsService.getCalcuttaPredictedInvestment<{ teams: TeamPredictedInvestment[] }>({
+        calcuttaId,
+        marketShareRunId,
+        gameOutcomeRunId,
+      });
+    },
+    enabled: !!calcuttaId && !!marketShareRunId && !!gameOutcomeRunId,
   });
 
   const predictedInvestment = predictedInvestmentQuery.data;
@@ -65,6 +85,12 @@ export function PredictedInvestmentTab({ calcuttaId }: { calcuttaId: string | nu
           </li>
         </ul>
       </div>
+
+      {!latestRunsQuery.isLoading && !latestRunsQuery.isError && (!marketShareRunId || !gameOutcomeRunId) ? (
+        <Alert variant="warning" className="mb-3">
+          Missing latest prediction runs for this calcutta.
+        </Alert>
+      ) : null}
 
       {predictedInvestmentQuery.isLoading ? (
         <LoadingState label="Loading predicted investment data..." layout="inline" />

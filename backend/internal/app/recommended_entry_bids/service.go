@@ -298,18 +298,10 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		return nil, err
 	}
 
-	if p.SimulatedTournamentID != nil && *p.SimulatedTournamentID != "" {
-		cc.SimulatedTournamentID = *p.SimulatedTournamentID
-	} else {
-		simID, ok, err := s.getLatestSimulatedTournamentID(ctx, cc.CoreTournamentID)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, fmt.Errorf("no simulated_tournaments batch found for calcutta_id=%s", p.CalcuttaID)
-		}
-		cc.SimulatedTournamentID = simID
+	if p.SimulatedTournamentID == nil || *p.SimulatedTournamentID == "" {
+		return nil, errors.New("simulated_tournament_id is required")
 	}
+	cc.SimulatedTournamentID = *p.SimulatedTournamentID
 
 	expected, _, err := s.loadExpectedPointsByTeam(ctx, cc)
 	if err != nil {
@@ -720,27 +712,10 @@ func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaCon
 	if cc.CalcuttaID == "" {
 		return nil, nil, errors.New("calcutta_id is required")
 	}
-
-	selected := (*string)(nil)
-	if marketShareRunID != nil && *marketShareRunID != "" {
-		selected = marketShareRunID
-	} else {
-		var latestRunID string
-		if err := s.pool.QueryRow(ctx, `
-			SELECT id::text
-			FROM derived.market_share_runs
-			WHERE calcutta_id = $1::uuid
-				AND deleted_at IS NULL
-			ORDER BY created_at DESC
-			LIMIT 1
-		`, cc.CalcuttaID).Scan(&latestRunID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, nil, fmt.Errorf("no market_share_runs found for calcutta_id=%s", cc.CalcuttaID)
-			}
-			return nil, nil, err
-		}
-		selected = &latestRunID
+	if marketShareRunID == nil || *marketShareRunID == "" {
+		return nil, nil, errors.New("market_share_run_id is required")
 	}
+	selected := marketShareRunID
 
 	q := `
 		SELECT team_id, predicted_share

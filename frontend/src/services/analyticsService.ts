@@ -84,16 +84,37 @@ export const analyticsService = {
     return apiClient.get<T>(`/analytics/tournaments/${tournamentId}/simulations`);
   },
 
-  async getCalcuttaPredictedReturns<T>(calcuttaId: string): Promise<T> {
-    return apiClient.get<T>(`/analytics/calcuttas/${calcuttaId}/predicted-returns`);
+  async getCalcuttaPredictedReturns<T>(params: { calcuttaId: string; entryRunId?: string; gameOutcomeRunId: string }): Promise<T> {
+    const query = new URLSearchParams();
+    if (params.entryRunId) {
+      query.set('entry_run_id', params.entryRunId);
+    }
+    query.set('game_outcome_run_id', params.gameOutcomeRunId);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(params.calcuttaId)}/predicted-returns${suffix}`);
   },
 
-  async getCalcuttaPredictedInvestment<T>(calcuttaId: string): Promise<T> {
-    return apiClient.get<T>(`/analytics/calcuttas/${calcuttaId}/predicted-investment`);
+  async getCalcuttaPredictedInvestment<T>(params: {
+    calcuttaId: string;
+    entryRunId?: string;
+    marketShareRunId: string;
+    gameOutcomeRunId: string;
+  }): Promise<T> {
+    const query = new URLSearchParams();
+    if (params.entryRunId) {
+      query.set('entry_run_id', params.entryRunId);
+    }
+    query.set('market_share_run_id', params.marketShareRunId);
+    query.set('game_outcome_run_id', params.gameOutcomeRunId);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(params.calcuttaId)}/predicted-investment${suffix}`);
   },
 
-  async getCalcuttaSimulatedEntry<T>(calcuttaId: string): Promise<T> {
-    return apiClient.get<T>(`/analytics/calcuttas/${calcuttaId}/simulated-entry`);
+  async getCalcuttaSimulatedEntry<T>(params: { calcuttaId: string; entryRunId: string }): Promise<T> {
+    const query = new URLSearchParams();
+    query.set('entry_run_id', params.entryRunId);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(params.calcuttaId)}/simulated-entry${suffix}`);
   },
 
   async getCalcuttaSimulatedCalcuttas<T>(calcuttaId: string): Promise<T> {

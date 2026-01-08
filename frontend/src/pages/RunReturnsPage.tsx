@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { mlAnalyticsService } from '../services/mlAnalyticsService';
+import { mlAnalyticsService, type EntryRunsResponse, type OurEntryDetailsResponse } from '../services/mlAnalyticsService';
+import { analyticsService } from '../services/analyticsService';
 import { RunViewerHeader } from '../components/RunViewerHeader';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -9,6 +10,30 @@ import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
+
+type TeamPredictedReturnsRow = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  prob_pi: number;
+  prob_r64: number;
+  prob_r32: number;
+  prob_s16: number;
+  prob_e8: number;
+  prob_ff: number;
+  prob_champ: number;
+  expected_value: number;
+};
+
+type CalcuttaPredictedReturnsResponse = {
+  calcutta_id: string;
+  entry_run_id?: string | null;
+  strategy_generation_run_id?: string | null;
+  game_outcome_run_id?: string | null;
+  teams: TeamPredictedReturnsRow[];
+  count: number;
+};
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
@@ -19,7 +44,7 @@ export function RunReturnsPage() {
   const decodedRunId = useMemo(() => (runId ? decodeURIComponent(runId) : ''), [runId]);
   const hasValidParams = parsedYear !== null && Boolean(runId);
 
-  const ourEntryQuery = useQuery({
+  const ourEntryQuery = useQuery<OurEntryDetailsResponse>({
     queryKey: ['mlAnalytics', 'ourEntryDetails', parsedYear, decodedRunId],
     queryFn: () => mlAnalyticsService.getOurEntryDetails(parsedYear as number, decodedRunId),
     enabled: hasValidParams,
@@ -27,7 +52,7 @@ export function RunReturnsPage() {
 
   const calcuttaId = ourEntryQuery.data?.run.calcutta_id ?? null;
 
-  const entryRunsQuery = useQuery({
+  const entryRunsQuery = useQuery<EntryRunsResponse>({
     queryKey: ['analytics', 'entryRuns', calcuttaId],
     queryFn: () => mlAnalyticsService.listEntryRuns(calcuttaId as string),
     enabled: Boolean(calcuttaId),
@@ -52,14 +77,27 @@ export function RunReturnsPage() {
   const [sortKey, setSortKey] = useState<'expected_value' | 'prob_champ' | 'seed' | 'school_name'>('expected_value');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
-  const returnsQuery = useQuery({
-    queryKey: ['analytics', 'predictedReturns', calcuttaId, selectedEntryRunId],
-    queryFn: () =>
-      mlAnalyticsService.getCalcuttaPredictedReturns({
+  const latestRunsQuery = useQuery<{ game_outcome_run_id?: string | null } | null>({
+    queryKey: ['analytics', 'latest-prediction-runs', calcuttaId],
+    queryFn: async () => {
+      if (!calcuttaId) return null;
+      return analyticsService.getLatestPredictionRunsForCalcutta<{ game_outcome_run_id?: string | null }>(calcuttaId);
+    },
+    enabled: Boolean(calcuttaId),
+  });
+
+  const gameOutcomeRunId = latestRunsQuery.data?.game_outcome_run_id ?? null;
+
+  const returnsQuery = useQuery<CalcuttaPredictedReturnsResponse>({
+    queryKey: ['analytics', 'predictedReturns', calcuttaId, selectedEntryRunId, gameOutcomeRunId],
+    queryFn: () => {
+      return analyticsService.getCalcuttaPredictedReturns({
         calcuttaId: calcuttaId as string,
         entryRunId: selectedEntryRunId ?? undefined,
-      }),
-    enabled: Boolean(calcuttaId),
+        gameOutcomeRunId: gameOutcomeRunId as string,
+      });
+    },
+    enabled: Boolean(calcuttaId) && Boolean(gameOutcomeRunId),
   });
 
   const sortedTeams = useMemo(() => {

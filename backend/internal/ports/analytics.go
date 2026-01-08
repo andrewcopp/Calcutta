@@ -209,7 +209,7 @@ type AnalyticsRepo interface {
 	GetBestInvestmentBids(ctx context.Context, limit int) ([]InvestmentLeaderboardData, error)
 	GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderboardData, error)
 	GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardData, error)
-	GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []CalcuttaPredictedInvestmentData, error)
+	GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedInvestmentData, error)
 	GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedReturnsData, error)
 	GetTournamentPredictedAdvancement(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, []TournamentPredictedAdvancementData, error)
 	GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaID string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedMarketShareData, error)

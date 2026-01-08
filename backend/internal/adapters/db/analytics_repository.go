@@ -58,15 +58,7 @@ func (r *AnalyticsRepository) resolveStrategyGenerationRunID(ctx context.Context
 		runID := *strategyGenerationRunID
 		return &runID, nil
 	}
-
-	latestID, err := r.q.GetLatestStrategyGenerationRunIDByCoreCalcuttaID(ctx, calcuttaID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &latestID, nil
+	return nil, nil
 }
 
 func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]ports.SeedAnalyticsData, float64, float64, error) {
@@ -319,13 +311,13 @@ func (r *AnalyticsRepository) GetLatestPredictionRunsForCalcutta(ctx context.Con
 	}, nil
 }
 
-func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string) (*string, *string, []ports.CalcuttaPredictedInvestmentData, error) {
+func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []ports.CalcuttaPredictedInvestmentData, error) {
 	runIDPtr, err := r.resolveStrategyGenerationRunID(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	marketShareSelectedID, out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, calcuttaID, marketShareRunID)
+	marketShareSelectedID, out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, calcuttaID, marketShareRunID, gameOutcomeRunID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -368,34 +360,15 @@ func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, cal
 	if err != nil {
 		return nil, nil, err
 	}
-	if runIDPtr != nil {
-		runID := *runIDPtr
-		rows, err := r.q.GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams{
-			StrategyGenerationRunID: runID,
-			CalcuttaID:              calcuttaID,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		out := make([]ports.CalcuttaSimulatedEntryData, 0, len(rows))
-		for _, row := range rows {
-			out = append(out, ports.CalcuttaSimulatedEntryData{
-				TeamID:         row.TeamID,
-				SchoolName:     row.SchoolName,
-				Seed:           int(row.Seed),
-				Region:         row.Region,
-				ExpectedPoints: row.ExpectedPoints,
-				ExpectedMarket: row.ExpectedMarket,
-				OurBid:         row.OurBid,
-			})
-		}
-
-		return runIDPtr, out, nil
+	if runIDPtr == nil {
+		return nil, nil, errors.New("strategy_generation_run_id is required")
 	}
 
-	// Legacy fallback.
-	rows, err := r.q.GetCalcuttaSimulatedEntry(ctx, calcuttaID)
+	runID := *runIDPtr
+	rows, err := r.q.GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams{
+		StrategyGenerationRunID: runID,
+		CalcuttaID:              calcuttaID,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -413,7 +386,7 @@ func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, cal
 		})
 	}
 
-	return nil, out, nil
+	return runIDPtr, out, nil
 }
 
 func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]ports.SeedVarianceData, error) {

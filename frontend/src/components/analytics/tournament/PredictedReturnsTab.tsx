@@ -21,13 +21,28 @@ interface TeamPredictedReturns {
 
 // Predicted Returns Tab Component
 export function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null }) {
-  const predictedReturnsQuery = useQuery<{ teams: TeamPredictedReturns[] } | null>({
-    queryKey: ['analytics', 'predicted-returns', calcuttaId],
+  const latestRunsQuery = useQuery<{ game_outcome_run_id?: string | null } | null>({
+    queryKey: ['analytics', 'latest-prediction-runs', calcuttaId],
     queryFn: async () => {
       if (!calcuttaId) return null;
-      return analyticsService.getCalcuttaPredictedReturns<{ teams: TeamPredictedReturns[] }>(calcuttaId);
+      return analyticsService.getLatestPredictionRunsForCalcutta<{ game_outcome_run_id?: string | null }>(calcuttaId);
     },
     enabled: !!calcuttaId,
+  });
+
+  const gameOutcomeRunId = latestRunsQuery.data?.game_outcome_run_id ?? null;
+
+  const predictedReturnsQuery = useQuery<{ teams: TeamPredictedReturns[] } | null>({
+    queryKey: ['analytics', 'predicted-returns', calcuttaId, gameOutcomeRunId],
+    queryFn: async () => {
+      if (!calcuttaId) return null;
+      if (!gameOutcomeRunId) return null;
+      return analyticsService.getCalcuttaPredictedReturns<{ teams: TeamPredictedReturns[] }>({
+        calcuttaId,
+        gameOutcomeRunId,
+      });
+    },
+    enabled: !!calcuttaId && !!gameOutcomeRunId,
   });
 
   const predictedReturns = predictedReturnsQuery.data;
@@ -46,6 +61,12 @@ export function PredictedReturnsTab({ calcuttaId }: { calcuttaId: string | null 
         Probability of reaching each round and expected value for all teams based on {predictedReturns?.teams.length ? '5,000' : ''}{' '}
         simulations.
       </p>
+
+      {!latestRunsQuery.isLoading && !latestRunsQuery.isError && !gameOutcomeRunId ? (
+        <Alert variant="warning" className="mb-3">
+          No latest game outcome run found for this calcutta.
+        </Alert>
+      ) : null}
 
       {predictedReturnsQuery.isLoading ? (
         <LoadingState label="Loading predicted returns..." layout="inline" />
