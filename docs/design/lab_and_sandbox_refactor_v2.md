@@ -206,7 +206,7 @@ This doc is a task checklist. Keep it updated as work lands.
 
 - [x] PR A: Remove AUTO cohort upsert from GET; add explicit creation path.
 - [x] PR B: Remove snapshot repair-on-read; enforce invariant.
-- [ ] PR C: Replace “Our Strategy” string matching with stable IDs.
+- [x] PR C: Replace “Our Strategy” string matching with stable IDs.
 - [x] PR D: Add explicit upstream run columns + backfill.
 - [x] PR E: Introduce Candidate tables + migrate sandbox endpoints.
 - [x] PR F: Move worker logic out of transport layer.
@@ -224,7 +224,8 @@ This doc is a task checklist. Keep it updated as work lands.
 - [x] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
    - Enforced `marketShareArtifactId` on entry/strategy run creation and persisted `market_share_artifact_id` into `run_jobs.params_json`.
    - Worker now requires and validates upstream lineage before writing the `strategy_generation` metrics artifact.
-- [ ] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
+- [x] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
+   - Restored `dataset_refs` in the `strategy_generation` `run_jobs` enqueue contract + backfilled missing `dataset_refs` rows.
 - [ ] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
 - [ ] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
 - [ ] PR N: Standardize retry/backoff + dead-letter policy across run kinds.
