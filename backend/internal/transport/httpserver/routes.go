@@ -57,8 +57,8 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	s.registerSyntheticCalcuttaCohortRoutes(r)
 	s.registerSyntheticCalcuttaRoutes(r)
 	s.registerSyntheticEntryRoutes(r)
-	s.registerSuiteCalcuttaEvaluationRoutes(r)
-	s.registerSuiteExecutionRoutes(r)
+	s.registerCohortSimulationRoutes(r)
+	s.registerCohortSimulationBatchRoutes(r)
 	s.registerAnalyticsRoutes(r)
 	r.HandleFunc(
 		"/api/analytics/algorithms/{id}/game-outcome-runs/bulk",

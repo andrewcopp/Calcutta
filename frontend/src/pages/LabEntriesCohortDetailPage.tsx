@@ -47,7 +47,7 @@ type GenerateLabEntriesResponse = {
 	failures: { scenario_id: string; calcutta_id: string; message: string }[];
 };
 
-export function LabEntriesSuiteDetailPage() {
+export function LabEntriesCohortDetailPage() {
   const { cohortId } = useParams<{ cohortId: string }>();
   const navigate = useNavigate();
 

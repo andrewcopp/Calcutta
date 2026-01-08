@@ -22,10 +22,6 @@ export type ListCohortsResponse = {
   items: CohortListItem[];
 };
 
-export type SuiteListItem = CohortListItem;
-
-export type ListSuitesResponse = ListCohortsResponse;
-
 export const cohortsService = {
   async list(params?: { limit?: number; offset?: number }): Promise<ListCohortsResponse> {
     const q = new URLSearchParams();
@@ -40,5 +36,3 @@ export const cohortsService = {
     return apiClient.get<CohortListItem>(`/cohorts/${encodeURIComponent(id)}`);
   },
 };
-
-export const suitesService = cohortsService;

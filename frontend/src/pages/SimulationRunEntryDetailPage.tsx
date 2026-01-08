@@ -20,7 +20,7 @@ export function SimulationRunEntryDetailPage() {
   const cohortId = searchParams.get('cohortId') || '';
   const executionId = searchParams.get('executionId') || '';
   const backUrl = id
-    ? `/sandbox/evaluations/${encodeURIComponent(id)}${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
+    ? `/sandbox/simulation-runs/${encodeURIComponent(id)}${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
     : '/sandbox/cohorts';
 
   const showError = (err: unknown) => {

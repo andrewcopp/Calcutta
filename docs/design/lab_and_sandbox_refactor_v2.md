@@ -182,7 +182,7 @@ This doc is a task checklist. Keep it updated as work lands.
 # Phase 5 — API/UX consolidation (finish the refactor)
 
 ## 5.1 Remove remaining legacy “suite*” naming
-- [ ] Remove remaining suite terminology from handler names, DTOs, routes, and frontend service naming.
+- [x] Remove remaining suite terminology from handler names, DTOs, routes, and frontend service naming.
   - **Acceptance**:
     - No `suite_` endpoints remain as public API.
     - Compatibility shims are deleted.
@@ -219,7 +219,7 @@ This doc is a task checklist. Keep it updated as work lands.
    - Added `ARTIFACTS_DIR` config and plumbed into `SimulationWorker`.
    - Exported heavy outputs (`derived.entry_performance`, `derived.entry_simulation_outcomes`) to JSONL and stored `storage_uri` in `derived.run_artifacts`.
    - Added `backend/cmd/tools/retain-simulation-runs` retention sweeper (dry-run by default).
-- [ ] PR H: Delete legacy suite shims/endpoints; final naming cleanup.
+- [x] PR H: Delete legacy suite shims/endpoints; final naming cleanup.
 - [x] PR I: Eliminate remaining “latest-run” heuristics in correctness-critical paths.
 - [x] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
    - Enforced `marketShareArtifactId` on entry/strategy run creation and persisted `market_share_artifact_id` into `run_jobs.params_json`.

@@ -1,13 +1,39 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 )
+
+type cohortListItem struct {
+	ID                       string     `json:"id"`
+	Name                     string     `json:"name"`
+	Description              *string    `json:"description,omitempty"`
+	GameOutcomesAlgID        string     `json:"game_outcomes_algorithm_id"`
+	MarketShareAlgID         string     `json:"market_share_algorithm_id"`
+	OptimizerKey             string     `json:"optimizer_key"`
+	NSims                    int        `json:"n_sims"`
+	Seed                     int        `json:"seed"`
+	StartingStateKey         string     `json:"starting_state_key"`
+	ExcludedEntryName        *string    `json:"excluded_entry_name,omitempty"`
+	LatestExecutionID        *string    `json:"latest_execution_id,omitempty"`
+	LatestExecutionName      *string    `json:"latest_execution_name,omitempty"`
+	LatestExecutionStatus    *string    `json:"latest_execution_status,omitempty"`
+	LatestExecutionCreatedAt *time.Time `json:"latest_execution_created_at,omitempty"`
+	LatestExecutionUpdatedAt *time.Time `json:"latest_execution_updated_at,omitempty"`
+	CreatedAt                time.Time  `json:"created_at"`
+	UpdatedAt                time.Time  `json:"updated_at"`
+}
+
+type listCohortsResponse struct {
+	Items []cohortListItem `json:"items"`
+}
 
 func (s *Server) registerSyntheticCalcuttaCohortRoutes(r *mux.Router) {
 	r.HandleFunc(
@@ -81,9 +107,9 @@ func (s *Server) listSyntheticCalcuttaCohortsHandler(w http.ResponseWriter, r *h
 	}
 	defer rows.Close()
 
-	items := make([]suiteListItem, 0)
+	items := make([]cohortListItem, 0)
 	for rows.Next() {
-		var it suiteListItem
+		var it cohortListItem
 		if err := rows.Scan(
 			&it.ID,
 			&it.Name,
@@ -113,7 +139,7 @@ func (s *Server) listSyntheticCalcuttaCohortsHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	writeJSON(w, http.StatusOK, listSuitesResponse{Items: items})
+	writeJSON(w, http.StatusOK, listCohortsResponse{Items: items})
 }
 
 func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +154,7 @@ func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var it suiteListItem
+	var it cohortListItem
 	if err := s.pool.QueryRow(r.Context(), `
 		SELECT
 			c.id::text,
@@ -196,6 +222,112 @@ func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *htt
 }
 
 func (s *Server) patchSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *http.Request) {
-	// Keep compatibility: re-use suite patch handler for cohort patch.
-	s.updateSuiteHandler(w, r)
+	vars := mux.Vars(r)
+	id := strings.TrimSpace(vars["id"])
+	if id == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+
+	type patchCohortRequest struct {
+		OptimizerKey      *string `json:"optimizerKey"`
+		NSims             *int    `json:"nSims"`
+		Seed              *int    `json:"seed"`
+		StartingStateKey  *string `json:"startingStateKey"`
+		ExcludedEntryName *string `json:"excludedEntryName"`
+	}
+
+	var req patchCohortRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+
+	var optimizer any
+	if req.OptimizerKey != nil {
+		v := strings.TrimSpace(*req.OptimizerKey)
+		if v == "" {
+			optimizer = nil
+		} else {
+			optimizer = v
+		}
+	} else {
+		optimizer = nil
+	}
+
+	var nSims any
+	if req.NSims != nil {
+		if *req.NSims <= 0 {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "nSims must be positive", "nSims")
+			return
+		}
+		nSims = *req.NSims
+	} else {
+		nSims = nil
+	}
+
+	var seed any
+	if req.Seed != nil {
+		seed = *req.Seed
+	} else {
+		seed = nil
+	}
+
+	var starting any
+	if req.StartingStateKey != nil {
+		v := strings.TrimSpace(*req.StartingStateKey)
+		if v != "" && v != "post_first_four" && v != "current" {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "startingStateKey must be 'current' or 'post_first_four'", "startingStateKey")
+			return
+		}
+		if v == "" {
+			starting = nil
+		} else {
+			starting = v
+		}
+	} else {
+		starting = nil
+	}
+
+	var excluded any
+	if req.ExcludedEntryName != nil {
+		v := strings.TrimSpace(*req.ExcludedEntryName)
+		if v == "" {
+			excluded = nil
+		} else {
+			excluded = v
+		}
+	} else {
+		excluded = nil
+	}
+
+	ct, err := s.pool.Exec(r.Context(), `
+		UPDATE derived.synthetic_calcutta_cohorts
+		SET optimizer_key = COALESCE($2::text, optimizer_key),
+			n_sims = COALESCE($3::int, n_sims),
+			seed = COALESCE($4::int, seed),
+			starting_state_key = COALESCE($5::text, starting_state_key),
+			excluded_entry_name = CASE
+				WHEN $6::text IS NULL THEN excluded_entry_name
+				ELSE $6::text
+			END,
+			updated_at = NOW(),
+			deleted_at = NULL
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+	`, id, optimizer, nSims, seed, starting, excluded)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if ct.RowsAffected() == 0 {
+		writeError(w, r, http.StatusNotFound, "not_found", "Cohort not found", "id")
+		return
+	}
+
+	s.getSyntheticCalcuttaCohortHandler(w, r)
 }

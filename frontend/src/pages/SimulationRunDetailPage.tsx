@@ -13,6 +13,7 @@ import {
   simulationRunsService,
   type SimulationRunResult,
 } from '../services/simulationRunsService';
+import { runProgressService, type RunProgressEvent } from '../services/runProgressService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SimulationRunDetailPage() {
@@ -81,6 +82,18 @@ export function SimulationRunDetailPage() {
     queryFn: () => simulationRunsService.getResult({ cohortId, id: id! }),
     enabled: Boolean(id && cohortId) && detailQuery.data?.status === 'succeeded',
   });
+
+  const progressQuery = useQuery({
+    queryKey: ['run-progress', 'simulation', id],
+    queryFn: () => runProgressService.get('simulation', id || ''),
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+  const progressEvents: RunProgressEvent[] = useMemo(() => {
+    const items = progressQuery.data?.events ?? [];
+    return items.slice();
+  }, [progressQuery.data?.events]);
 
   const [sortKey, setSortKey] = useState<'mean' | 'p_top1' | 'p_in_money' | 'finish_position'>(
     'mean'
@@ -152,6 +165,67 @@ export function SimulationRunDetailPage() {
 
       {detailQuery.data ? (
         <div className="space-y-6">
+          <Card>
+            <h2 className="text-xl font-semibold mb-4">Run Progress</h2>
+
+            {progressQuery.isLoading ? <LoadingState label="Loading run progress..." layout="inline" /> : null}
+            {progressQuery.isError ? (
+              <Alert variant="warning" className="mt-3">
+                Run progress is not available.
+              </Alert>
+            ) : null}
+
+            {progressQuery.data ? (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-gray-500">run_kind</div>
+                    <div className="text-gray-900 font-medium">{progressQuery.data.run_kind}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">status</div>
+                    <div className="text-gray-900">{progressQuery.data.status}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">attempt</div>
+                    <div className="text-gray-900">{progressQuery.data.attempt}</div>
+                  </div>
+                </div>
+
+                {progressEvents.length === 0 ? (
+                  <Alert variant="info">No progress events recorded.</Alert>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phase</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Percent</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {progressEvents.map((ev) => (
+                          <tr key={ev.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap">
+                              {formatDateTime(ev.created_at)}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-700">{ev.phase || '—'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-900 break-words">{ev.message || '—'}</td>
+                            <td className="px-3 py-2 text-xs text-right text-gray-700">
+                              {ev.percent != null ? `${Math.round(ev.percent * 100)}%` : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </Card>
+
           <Card>
             <h2 className="text-xl font-semibold mb-4">Provenance</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -317,7 +391,7 @@ export function SimulationRunDetailPage() {
                                     onClick={() => {
                                       if (!clickable) return;
                                       navigate(
-                                        `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
+                                        `/sandbox/simulation-runs/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
                                           `${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                       );
                                     }}
@@ -326,7 +400,7 @@ export function SimulationRunDetailPage() {
                                       if (ev.key === 'Enter' || ev.key === ' ') {
                                         ev.preventDefault();
                                         navigate(
-                                          `/sandbox/evaluations/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
+                                          `/sandbox/simulation-runs/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.snapshot_entry_id || '')}` +
                                             `${cohortId ? `?cohortId=${encodeURIComponent(cohortId)}${executionId ? `&executionId=${encodeURIComponent(executionId)}` : ''}` : ''}`
                                         );
                                       }

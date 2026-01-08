@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
 import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
@@ -30,7 +30,7 @@ import { LabAdvancementTournamentDetailPage } from './pages/LabAdvancementTourna
 import { LabInvestmentAlgorithmDetailPage } from './pages/LabInvestmentAlgorithmDetailPage';
 import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDetailPage';
 import { LabEntriesPage } from './pages/LabEntriesPage';
-import { LabEntriesSuiteDetailPage } from './pages/LabEntriesSuiteDetailPage';
+import { LabEntriesCohortDetailPage } from './pages/LabEntriesCohortDetailPage';
 import { LabEntryReportPage } from './pages/LabEntryReportPage';
 import { SandboxCohortsListPage } from './pages/SandboxCohortsListPage';
 import { SandboxCohortDetailPage } from './pages/SandboxCohortDetailPage';
@@ -45,6 +45,23 @@ import { UserProvider } from './contexts/UserContext';
 const RunsRedirect: React.FC = () => {
   const year = new Date().getFullYear();
   return <Navigate to={`/runs/${year}`} replace />;
+};
+
+const SandboxEvaluationRedirect: React.FC = () => {
+  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/sandbox/simulation-runs/${encodeURIComponent(id || '')}${location.search || ''}`} replace />;
+};
+
+const SandboxEvaluationEntryRedirect: React.FC = () => {
+  const location = useLocation();
+  const { id, snapshotEntryId } = useParams<{ id: string; snapshotEntryId: string }>();
+  return (
+    <Navigate
+      to={`/sandbox/simulation-runs/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(snapshotEntryId || '')}${location.search || ''}`}
+      replace
+    />
+  );
 };
 
 const AppLayout: React.FC = () => {
@@ -64,7 +81,7 @@ const AppLayout: React.FC = () => {
         <Route path="/lab/entries" element={<LabEntriesPage />} />
         <Route path="/lab/entry-runs/:runId" element={<EntryRunDetailPage />} />
         <Route path="/lab/entry-artifacts/:artifactId" element={<EntryArtifactDetailPage />} />
-        <Route path="/lab/entries/cohorts/:cohortId" element={<LabEntriesSuiteDetailPage />} />
+        <Route path="/lab/entries/cohorts/:cohortId" element={<LabEntriesCohortDetailPage />} />
         <Route path="/lab/entries/scenarios/:scenarioId" element={<LabEntryReportPage />} />
         <Route path="/lab/advancements/algorithms/:algorithmId" element={<LabAdvancementAlgorithmDetailPage />} />
         <Route
@@ -80,8 +97,10 @@ const AppLayout: React.FC = () => {
         <Route path="/sandbox/cohorts" element={<SandboxCohortsListPage />} />
         <Route path="/sandbox/cohorts/:cohortId" element={<SandboxCohortDetailPage />} />
         <Route path="/sandbox/synthetic-calcuttas/:id" element={<SyntheticCalcuttaDetailPage />} />
-        <Route path="/sandbox/evaluations/:id" element={<SimulationRunDetailPage />} />
-        <Route path="/sandbox/evaluations/:id/entries/:snapshotEntryId" element={<SimulationRunEntryDetailPage />} />
+        <Route path="/sandbox/simulation-runs/:id" element={<SimulationRunDetailPage />} />
+        <Route path="/sandbox/simulation-runs/:id/entries/:snapshotEntryId" element={<SimulationRunEntryDetailPage />} />
+        <Route path="/sandbox/evaluations/:id" element={<SandboxEvaluationRedirect />} />
+        <Route path="/sandbox/evaluations/:id/entries/:snapshotEntryId" element={<SandboxEvaluationEntryRedirect />} />
         <Route path="/runs" element={<RunsRedirect />} />
         <Route path="/runs/:year" element={<RunsPage />} />
         <Route path="/runs/:year/:runId" element={<RunRankingsPage />} />

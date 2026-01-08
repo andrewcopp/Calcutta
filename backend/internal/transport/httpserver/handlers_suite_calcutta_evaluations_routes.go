@@ -2,7 +2,7 @@ package httpserver
 
 import "github.com/gorilla/mux"
 
-func (s *Server) registerSuiteCalcuttaEvaluationRoutes(r *mux.Router) {
+func (s *Server) registerCohortSimulationRoutes(r *mux.Router) {
 	r.HandleFunc(
 		"/api/cohorts/{cohortId}/simulations",
 		s.requirePermission("analytics.suite_calcutta_evaluations.write", s.createCohortSimulationHandler),

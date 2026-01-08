@@ -49,7 +49,7 @@ type suiteExecutionListResponse struct {
 	Items []suiteExecutionListItem `json:"items"`
 }
 
-func (s *Server) registerSuiteExecutionRoutes(r *mux.Router) {
+func (s *Server) registerCohortSimulationBatchRoutes(r *mux.Router) {
 	r.HandleFunc(
 		"/api/cohorts/{cohortId}/simulation-batches",
 		s.requirePermission("analytics.suite_executions.write", s.createCohortSimulationBatchHandler),
