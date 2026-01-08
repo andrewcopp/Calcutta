@@ -19,10 +19,10 @@ This doc is a task checklist. Keep it updated as work lands.
 - “Candidate identity” is stable and does not depend on display names.
 
 ## Current reality (symptoms)
-- Some GET/read paths write state (AUTO cohort upserts; snapshot repair-on-read).
-- Lab generation uses “latest run” heuristics (time-based selection) rather than pinned lineage.
-- Candidate selection/metrics rely on string matching (e.g. “Our Strategy”).
-- Workers and orchestration logic still live in transport layer.
+- Read endpoints do not write state.
+- Lab generation avoids “latest run” heuristics in correctness-critical paths.
+- Candidate selection/metrics do not rely on brittle string matching.
+- Workers and orchestration logic live outside the transport layer.
 - Artifacts are mostly `metrics` only; heavy outputs live in ad-hoc tables.
 
 ---
@@ -57,7 +57,7 @@ This doc is a task checklist. Keep it updated as work lands.
     - Multiple candidates with arbitrary names work.
 
 ## 0.3 Make Lab/Sandbox determinism explicit
-- [ ] Stop selecting upstream runs using “latest created_at” heuristics for correctness-critical operations.
+- [x] Stop selecting upstream runs using “latest created_at” heuristics for correctness-critical operations.
   - **Acceptance**:
     - When generating entries or simulations, upstream artifact/run IDs are explicitly specified or deterministically resolved via pinned config.
     - Re-running the same request yields the same upstream references unless explicitly changed.
@@ -145,7 +145,7 @@ This doc is a task checklist. Keep it updated as work lands.
     - Failures have structured exception info.
     - No stdout JSON parsing is required for success/failure.
 
-- [ ] Standardize retry/backoff and dead-letter policy across run kinds.
+- [x] Standardize retry/backoff and dead-letter policy across run kinds.
   - **Acceptance**:
     - Poison jobs do not loop forever.
     - Operators can see attempt count, last error, last claimed_by.
@@ -167,7 +167,7 @@ This doc is a task checklist. Keep it updated as work lands.
     - per-entry distribution summaries
     - per-team investment/ownership tables
 
-- [ ] Add `storage_uri` support for non-trivial outputs (e.g. parquet/JSONL) and keep `summary_json` small.
+- [x] Add `storage_uri` support for non-trivial outputs (e.g. parquet/JSONL) and keep `summary_json` small.
   - **Acceptance**:
     - Artifacts can be fetched without custom queries per run kind.
 
@@ -224,12 +224,12 @@ This doc is a task checklist. Keep it updated as work lands.
 - [x] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
    - Enforced `marketShareArtifactId` on entry/strategy run creation and persisted `market_share_artifact_id` into `run_jobs.params_json`.
    - Worker now requires and validates upstream lineage before writing the `strategy_generation` metrics artifact.
-- [x] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
+ - [x] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
    - Restored `dataset_refs` in the `strategy_generation` `run_jobs` enqueue contract + backfilled missing `dataset_refs` rows.
-- [x] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
-- [ ] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
-- [ ] PR N: Standardize retry/backoff + dead-letter policy across run kinds.
-- [ ] PR O: Standardize run progress events and make progress queryable by run.
-- [ ] PR P: Artifact slices decision + implement `storage_uri` for at least one non-trivial artifact.
-- [ ] PR Q: Implement explicit retention/cleanup job for runs/artifacts.
-- [ ] PR R: UI drill-down pages + navigation pivots (runs/artifacts/evaluations) to match canonical nouns.
+ - [x] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
+- [x] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
+- [x] PR N: Standardize retry/backoff + dead-letter policy across run kinds.
+ - [ ] PR O: Standardize run progress events and make progress queryable by run.
+ - [ ] PR P: Artifact slices decision + implement `storage_uri` for at least one non-trivial artifact.
+ - [ ] PR Q: Implement explicit retention/cleanup job for runs/artifacts.
+ - [ ] PR R: UI drill-down pages + navigation pivots (runs/artifacts/evaluations) to match canonical nouns.
