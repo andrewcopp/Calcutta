@@ -1,0 +1,293 @@
+# WS-A: Sandbox model — SimulatedCalcuttas + SimulatedEntries (v1)
+
+## Status
+Draft
+
+## Goal
+Replace the current Sandbox persistence model (synthetic calcuttas + snapshots + candidate attachments) with a clean, self-contained Sandbox model:
+- **SimulatedCalcuttas**: evaluation fixtures (rules + payouts + entries)
+- **SimulatedEntries**: editable entries inside a simulated calcutta
+
+This workstream is specifically about the **Sandbox data model + API**.
+
+## Non-goals
+- Lab Candidate model changes (see WS-B).
+- Worker decomposition or run schema changes (see WS-C), beyond updating references.
+- transport/httpserver package cleanup (tracked separately).
+
+---
+
+# Core definitions
+
+## SimulatedCalcutta
+A **SimulatedCalcutta** is a Sandbox-owned evaluation fixture.
+
+Properties:
+- Always tied to a `tournament_id`.
+- May optionally record a `base_calcutta_id` purely as provenance (“seed / starting point”).
+- Is **self-contained**: it stores its own payouts, scoring rules, and entries.
+- Can diverge arbitrarily from its seed; it is not required to remain “similar” to the real calcutta.
+
+## SimulatedEntry
+A **SimulatedEntry** is an editable entry belonging to a SimulatedCalcutta.
+
+Properties:
+- Can originate from:
+  - manual entry creation
+  - copying a real entry from a real calcutta (instantiation path)
+  - importing a Lab Candidate
+- Remains editable regardless of origin.
+
+## Focus/highlight
+Focus/highlight is by `simulated_entry_id`.
+
+---
+
+# Data model (Postgres)
+All new tables live under `derived.*`.
+
+## `derived.simulated_calcuttas`
+Fields:
+- `id uuid primary key`
+- `name text not null`
+- `description text null`
+- `tournament_id uuid not null` (FK to `core.tournaments.id`)
+- `base_calcutta_id uuid null` (FK to `core.calcuttas.id`; optional)
+- `starting_state_key text not null default 'post_first_four'`
+- `excluded_entry_name text null`
+- `highlighted_simulated_entry_id uuid null` (FK to `derived.simulated_entries.id`)
+- `metadata_json jsonb not null default '{}'::jsonb`
+- `created_at timestamptz not null default now()`
+- `updated_at timestamptz not null default now()`
+- `deleted_at timestamptz null`
+
+Notes:
+- We keep `highlighted_simulated_entry_id` on the simulated calcutta for UX convenience.
+
+## `derived.simulated_calcutta_payouts`
+Fields:
+- `id uuid primary key`
+- `simulated_calcutta_id uuid not null` (FK)
+- `position int not null`
+- `amount_cents int not null`
+- `created_at/updated_at/deleted_at`
+
+Constraints:
+- Unique `(simulated_calcutta_id, position)` where `deleted_at is null`.
+
+## `derived.simulated_calcutta_scoring_rules`
+Fields:
+- `id uuid primary key`
+- `simulated_calcutta_id uuid not null` (FK)
+- `win_index int not null`
+- `points_awarded int not null`
+- `created_at/updated_at/deleted_at`
+
+Constraints:
+- Unique `(simulated_calcutta_id, win_index)` where `deleted_at is null`.
+
+## `derived.simulated_entries`
+Fields:
+- `id uuid primary key`
+- `simulated_calcutta_id uuid not null` (FK)
+- `display_name text not null`
+- `source_kind text not null` (enum-ish: `manual` | `from_real_entry` | `from_candidate`)
+- `source_entry_id uuid null` (FK to `core.entries.id`)
+- `source_candidate_id uuid null` (FK to `derived.candidates.id`)
+- `created_at/updated_at/deleted_at`
+
+Notes:
+- Display name is not used as identity.
+
+## `derived.simulated_entry_teams`
+Fields:
+- `id uuid primary key`
+- `simulated_entry_id uuid not null` (FK)
+- `team_id uuid not null` (FK to `core.teams.id`)
+- `bid_points int not null`
+- `created_at/updated_at/deleted_at`
+
+Constraints:
+- Unique `(simulated_entry_id, team_id)` where `deleted_at is null`.
+
+---
+
+# API surface (v1)
+Routes shown with a proposed prefix; naming finalization is tracked in WS-D.
+
+## Create SimulatedCalcutta (from scratch)
+`POST /api/simulated-calcuttas`
+
+Request:
+- `name: string`
+- `description?: string`
+- `tournamentId: string`
+- `startingStateKey?: 'post_first_four' | 'current'`
+- `excludedEntryName?: string`
+- `payouts: Array<{ position: number, amountCents: number }>`
+- `scoringRules: Array<{ winIndex: number, pointsAwarded: number }>`
+- `metadata?: object`
+
+Response:
+- `{ id: string }`
+
+Contract:
+- Creates a fully-formed simulated calcutta with rules/payouts.
+- Creates **no entries**.
+
+## Create SimulatedCalcutta (instantiate from real calcutta)
+`POST /api/simulated-calcuttas/from-calcutta`
+
+Request:
+- `calcuttaId: string`
+- `name?: string`
+- `description?: string`
+- `startingStateKey?: 'post_first_four' | 'current'`
+- `excludedEntryName?: string`
+- `metadata?: object`
+
+Response:
+- `{ id: string, copiedEntries: number }`
+
+Contract:
+- Copies:
+  - tournament_id (from the real calcutta)
+  - payouts
+  - scoring rules
+  - entries + bids
+- Sets `base_calcutta_id = calcuttaId`.
+- Copied entries are normal `simulated_entries` and remain editable.
+
+## Read/list simulated calcuttas
+- `GET /api/simulated-calcuttas` (paginated)
+- `GET /api/simulated-calcuttas/{id}`
+
+## Edit simulated calcutta
+`PATCH /api/simulated-calcuttas/{id}`
+- Update name/description/metadata
+- Update `highlightedSimulatedEntryId`
+
+## Replace rules/payouts
+Two acceptable designs (pick one during implementation):
+- **Option 1**: `PUT /api/simulated-calcuttas/{id}/rules` with full replace payload
+- **Option 2**: granular CRUD endpoints for payouts/rules
+
+v1 recommendation: **full replace** (simpler, fewer partial states).
+
+## SimulatedEntries
+- `GET /api/simulated-calcuttas/{id}/entries`
+- `POST /api/simulated-calcuttas/{id}/entries` (manual create)
+- `PATCH /api/simulated-calcuttas/{id}/entries/{entryId}` (rename / replace teams)
+- `DELETE /api/simulated-calcuttas/{id}/entries/{entryId}`
+
+### Import Candidate as SimulatedEntry
+`POST /api/simulated-calcuttas/{id}/entries/import-candidate`
+
+Request:
+- `candidateId: string`
+- `displayName?: string`
+
+Response:
+- `{ simulatedEntryId: string, nTeams: number }`
+
+Contract:
+- Creates a new simulated entry with `source_kind='from_candidate'` and copies the bid set.
+
+---
+
+# Invariants (non-negotiable)
+- Read endpoints perform no inserts/updates (“no writes on GET”).
+- A simulated calcutta is always created with complete rules/payouts.
+- A simulated calcutta can be evaluated without any implicit “repair/create missing snapshot state” behavior.
+- Entries are editable regardless of origin.
+
+---
+
+# Migration plan (avoid half-finished state)
+This plan explicitly avoids long-lived dual-write states.
+
+## Phase A0 — Add new schema
+- Add `derived.simulated_*` tables and indexes.
+- Add minimal adapter/service layer for creating and reading simulated calcuttas.
+
+Acceptance:
+- New schema exists.
+- No existing behavior changes.
+
+## Phase A1 — Add new endpoints + UI behind a feature flag
+- Implement `POST /simulated-calcuttas` and `/from-calcutta`.
+- Implement entry list/create/edit/delete.
+
+Acceptance:
+- A user can create a simulated calcutta from scratch and from a real calcutta.
+- A user can add/edit/delete entries.
+
+## Phase A2 — Simulation integration uses `simulated_calcuttas`
+- Update new simulation creation flow to point at `simulated_calcutta_id`.
+- Worker reads rules/payouts/entries from simulated tables.
+
+Acceptance:
+- Simulations can run against simulated calcuttas without referencing synthetic/snapshot tables.
+
+## Phase A3 — Backfill legacy data (one-way)
+- Backfill existing synthetic/snapshot scenarios into new simulated calcuttas.
+- Provide a mapping table if needed during cutover (e.g., `derived.legacy_simulated_id_map`), but do not keep it long-term.
+
+Acceptance:
+- Existing Sandbox scenarios appear as simulated calcuttas.
+
+## Phase A4 — Cutover + freeze legacy writes
+- UI uses only simulated endpoints.
+- Legacy synthetic/snapshot endpoints become read-only or return 410.
+
+Acceptance:
+- No new writes happen to synthetic/snapshot tables.
+
+## Phase A5 — Drop old tables and code
+- Drop:
+  - `derived.synthetic_calcuttas*`
+  - `core.calcutta_snapshots*`
+  - `derived.synthetic_calcutta_candidates`
+- Remove legacy code paths.
+
+Acceptance:
+- No production code references old tables.
+- DB schema no longer contains synthetic/snapshot tables.
+
+---
+
+# Parallelization and prerequisites
+This workstream is designed to be parallelizable.
+
+- Can proceed in parallel with WS-B (Lab Candidates) because the only coupling is the optional import endpoint.
+- WS-C (worker/run schema) can begin immediately via pure-function refactors, but the final cutover to simulated tables depends on Phase A2.
+
+---
+
+# Open questions
+- Do we allow editing scoring rules/payouts after simulations have been run? If yes, do we version simulated calcuttas or treat simulations as referencing a specific immutable revision?
+- Do we want sandbox cohorts as a separate feature (join table), or keep grouping external to the DB?
+
+# Open tasks
+- [ ] Confirm whether scoring rules/payouts are editable after evaluations exist; if yes, decide on revisioning/versioning approach.
+- [ ] Add `derived.simulated_*` schema (tables + indexes + constraints).
+- [ ] Implement `POST /api/simulated-calcuttas` (create from scratch: rules+payouts only).
+- [ ] Implement `POST /api/simulated-calcuttas/from-calcutta` (instantiate from real calcutta).
+- [ ] Implement read endpoints:
+  - [ ] `GET /api/simulated-calcuttas`
+  - [ ] `GET /api/simulated-calcuttas/{id}`
+- [ ] Implement simulated calcutta updates:
+  - [ ] `PATCH /api/simulated-calcuttas/{id}` (name/description/metadata/highlight)
+  - [ ] Rules/payouts update endpoint (choose full replace vs granular CRUD; v1 recommends full replace)
+- [ ] Implement SimulatedEntry endpoints:
+  - [ ] `GET /api/simulated-calcuttas/{id}/entries`
+  - [ ] `POST /api/simulated-calcuttas/{id}/entries` (manual create)
+  - [ ] `PATCH /api/simulated-calcuttas/{id}/entries/{entryId}` (rename/replace teams)
+  - [ ] `DELETE /api/simulated-calcuttas/{id}/entries/{entryId}`
+- [ ] Implement Candidate import endpoint:
+  - [ ] `POST /api/simulated-calcuttas/{id}/entries/import-candidate`
+- [ ] Add invariant test/assertion: SimulatedCalcutta read endpoints must not write (no implicit repair/create).
+- [ ] Update simulation creation + worker read paths to use `derived.simulated_*` as the source of truth (Phase A2).
+- [ ] Implement one-way backfill of existing synthetic/snapshot scenarios into simulated calcuttas (Phase A3).
+- [ ] Cut over UI and freeze legacy writes to synthetic/snapshot tables (Phase A4).
+- [ ] Drop legacy tables and remove legacy endpoints/code paths (Phase A5).
