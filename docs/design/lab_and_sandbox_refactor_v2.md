@@ -19,10 +19,10 @@ This doc is a task checklist. Keep it updated as work lands.
 - “Candidate identity” is stable and does not depend on display names.
 
 ## Current reality (symptoms)
-- Read endpoints do not write state.
-- Lab generation avoids “latest run” heuristics in correctness-critical paths.
-- Candidate selection/metrics do not rely on brittle string matching.
-- Workers and orchestration logic live outside the transport layer.
+- Some GET/read paths write state (AUTO cohort upserts; snapshot repair-on-read).
+- Lab generation uses “latest run” heuristics (time-based selection) rather than pinned lineage.
+- Candidate selection/metrics rely on string matching (e.g. “Our Strategy”).
+- Workers and orchestration logic still live in transport layer.
 - Artifacts are mostly `metrics` only; heavy outputs live in ad-hoc tables.
 
 ---
