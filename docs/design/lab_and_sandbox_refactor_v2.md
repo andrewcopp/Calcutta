@@ -100,32 +100,34 @@ This doc is a task checklist. Keep it updated as work lands.
 # Phase 2 — Candidate identity (stop overloading snapshot rows)
 
 ## 2.1 Introduce a durable Candidate/SyntheticEntry concept
-- [ ] Create a first-class table for candidates, e.g. `derived.candidates` or `derived.synthetic_entries`.
-  - Suggested fields:
-    - `id`
-    - `source_kind` (`manual` | `entry_artifact` | `other`)
-    - `source_entry_artifact_id` (nullable)
-    - `display_name`
-    - `created_at`, `updated_at`, `deleted_at`
-    - `metadata_json`
-  - **Acceptance**:
-    - Candidate has stable identity independent of any specific snapshot.
+- [x] Create a first-class table for candidates, e.g. `derived.candidates` or `derived.synthetic_entries`.
+   - Suggested fields:
+     - `id`
+     - `source_kind` (`manual` | `entry_artifact` | `other`)
+     - `source_entry_artifact_id` (nullable)
+     - `display_name`
+     - `created_at`, `updated_at`, `deleted_at`
+     - `metadata_json`
+   - **Acceptance**:
+     - Candidate has stable identity independent of any specific snapshot.
 
-- [ ] Create a table that materializes a candidate into a specific synthetic calcutta snapshot, e.g.:
-  - `derived.synthetic_calcutta_candidates` with:
-    - `synthetic_calcutta_id`
-    - `candidate_id`
-    - `snapshot_entry_id`
-  - **Acceptance**:
-    - Same candidate can be evaluated across multiple synthetic calcuttas without copying definition.
+- [x] Create a table that materializes a candidate into a specific synthetic calcutta snapshot, e.g.:
+   - `derived.synthetic_calcutta_candidates` with:
+     - `synthetic_calcutta_id`
+     - `candidate_id`
+     - `snapshot_entry_id`
+   - **Acceptance**:
+     - Same candidate can be evaluated across multiple synthetic calcuttas without copying definition.
 
 ## 2.2 Update Sandbox endpoints to operate on Candidate IDs
-- [ ] Update “import synthetic entry” endpoint to create a Candidate (if not exists) and attach it.
-- [ ] Update manual entry creation to create a Candidate + attach it.
-- [ ] Update patch/delete to operate on candidate attachment (and snapshot entry materialization), not directly on snapshot entries.
-  - **Acceptance**:
-    - UI can list candidates for a synthetic calcutta.
-    - Editing a candidate updates the materialized snapshot entry or regenerates it deterministically.
+- [x] Update “import synthetic entry” endpoint to create a Candidate (if not exists) and attach it.
+- [x] Update manual entry creation to create a Candidate + attach it.
+- [x] Update patch/delete to operate on candidate attachment (and snapshot entry materialization), not directly on snapshot entries.
+   - **Acceptance**:
+     - UI can list candidates for a synthetic calcutta.
+     - Editing a candidate updates the materialized snapshot entry or regenerates it deterministically.
+
+- [ ] Add explicit “candidate” naming in the API surface (alias routes), while keeping current endpoints for compatibility.
 
 ---
 
@@ -200,13 +202,13 @@ This doc is a task checklist. Keep it updated as work lands.
 
 ---
 
-# Appendix — Suggested PR sequence (small, safe increments)
+ # Appendix — Suggested PR sequence (small, safe increments)
 
 - [x] PR A: Remove AUTO cohort upsert from GET; add explicit creation path.
 - [x] PR B: Remove snapshot repair-on-read; enforce invariant.
-- [x] PR C: Replace “Our Strategy” string matching with stable IDs.
+- [ ] PR C: Replace “Our Strategy” string matching with stable IDs.
 - [x] PR D: Add explicit upstream run columns + backfill.
-- [ ] PR E: Introduce Candidate tables + migrate sandbox endpoints.
+- [x] PR E: Introduce Candidate tables + migrate sandbox endpoints.
 - [ ] PR F: Move worker logic out of transport layer.
 - [ ] PR G: Artifact storage expansion + retention job.
 - [ ] PR H: Delete legacy suite shims/endpoints; final naming cleanup.

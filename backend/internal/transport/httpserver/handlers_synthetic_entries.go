@@ -17,17 +17,19 @@ type syntheticEntryTeam struct {
 }
 
 type syntheticEntryListItem struct {
-	ID          string               `json:"id"`
-	EntryID     *string              `json:"entry_id,omitempty"`
-	DisplayName string               `json:"display_name"`
-	IsSynthetic bool                 `json:"is_synthetic"`
-	Rank        *int                 `json:"rank"`
-	Mean        *float64             `json:"mean_normalized_payout"`
-	PTop1       *float64             `json:"p_top1"`
-	PInMoney    *float64             `json:"p_in_money"`
-	Teams       []syntheticEntryTeam `json:"teams"`
-	CreatedAt   time.Time            `json:"created_at"`
-	UpdatedAt   time.Time            `json:"updated_at"`
+	ID            string               `json:"id"`
+	CandidateID   string               `json:"candidate_id"`
+	SnapshotEntry string               `json:"snapshot_entry_id"`
+	EntryID       *string              `json:"entry_id,omitempty"`
+	DisplayName   string               `json:"display_name"`
+	IsSynthetic   bool                 `json:"is_synthetic"`
+	Rank          *int                 `json:"rank"`
+	Mean          *float64             `json:"mean_normalized_payout"`
+	PTop1         *float64             `json:"p_top1"`
+	PInMoney      *float64             `json:"p_in_money"`
+	Teams         []syntheticEntryTeam `json:"teams"`
+	CreatedAt     time.Time            `json:"created_at"`
+	UpdatedAt     time.Time            `json:"updated_at"`
 }
 
 type listSyntheticEntriesResponse struct {
@@ -148,7 +150,9 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 			WHERE ep.deleted_at IS NULL
 		)
 		SELECT
-			e.id::text,
+			scc.id::text,
+			scc.candidate_id::text,
+			scc.snapshot_entry_id::text,
 			e.entry_id::text,
 			e.display_name,
 			e.is_synthetic,
@@ -160,15 +164,22 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 			p.mean_normalized_payout,
 			p.p_top1,
 			p.p_in_money
-		FROM core.calcutta_snapshot_entries e
+		FROM derived.synthetic_calcutta_candidates scc
+		JOIN derived.candidates c
+			ON c.id = scc.candidate_id
+			AND c.deleted_at IS NULL
+		JOIN core.calcutta_snapshot_entries e
+			ON e.id = scc.snapshot_entry_id
+			AND e.calcutta_snapshot_id = $1::uuid
+			AND e.deleted_at IS NULL
 		LEFT JOIN core.calcutta_snapshot_entry_teams et
 			ON et.calcutta_snapshot_entry_id = e.id
 			AND et.deleted_at IS NULL
 		LEFT JOIN perf p
 			ON p.entry_name = e.display_name
-		WHERE e.calcutta_snapshot_id = $1::uuid
-			AND e.deleted_at IS NULL
-		ORDER BY e.created_at ASC, et.bid_points DESC
+		WHERE scc.synthetic_calcutta_id = $2::uuid
+			AND scc.deleted_at IS NULL
+		ORDER BY scc.created_at ASC, et.bid_points DESC
 	`, *snapshotID, syntheticCalcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
@@ -179,7 +190,9 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 	byID := make(map[string]*syntheticEntryListItem)
 	order := make([]string, 0)
 	for rows.Next() {
-		var entryID string
+		var attachmentID string
+		var candidateID string
+		var snapshotEntryID string
 		var sourceEntryID *string
 		var displayName string
 		var isSynthetic bool
@@ -193,7 +206,9 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		var pInMoney *float64
 
 		if err := rows.Scan(
-			&entryID,
+			&attachmentID,
+			&candidateID,
+			&snapshotEntryID,
 			&sourceEntryID,
 			&displayName,
 			&isSynthetic,
@@ -210,23 +225,25 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		it, ok := byID[entryID]
+		it, ok := byID[attachmentID]
 		if !ok {
 			it = &syntheticEntryListItem{
-				ID:          entryID,
-				EntryID:     sourceEntryID,
-				DisplayName: displayName,
-				IsSynthetic: isSynthetic,
-				Rank:        rank,
-				Mean:        mean,
-				PTop1:       pTop1,
-				PInMoney:    pInMoney,
-				Teams:       make([]syntheticEntryTeam, 0),
-				CreatedAt:   createdAt,
-				UpdatedAt:   updatedAt,
+				ID:            attachmentID,
+				CandidateID:   candidateID,
+				SnapshotEntry: snapshotEntryID,
+				EntryID:       sourceEntryID,
+				DisplayName:   displayName,
+				IsSynthetic:   isSynthetic,
+				Rank:          rank,
+				Mean:          mean,
+				PTop1:         pTop1,
+				PInMoney:      pInMoney,
+				Teams:         make([]syntheticEntryTeam, 0),
+				CreatedAt:     createdAt,
+				UpdatedAt:     updatedAt,
 			}
-			byID[entryID] = it
-			order = append(order, entryID)
+			byID[attachmentID] = it
+			order = append(order, attachmentID)
 		}
 
 		if teamID != nil && bidPoints != nil {
@@ -324,12 +341,25 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		_ = tx.Rollback(ctx)
 	}()
 
-	var entryID string
+	metadata := map[string]any{"teams": req.Teams}
+	metadataJSON, _ := json.Marshal(metadata)
+
+	var candidateID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.candidates (source_kind, source_entry_artifact_id, display_name, metadata_json)
+		VALUES ('manual', NULL, $1, $2::jsonb)
+		RETURNING id::text
+	`, req.DisplayName, string(metadataJSON)).Scan(&candidateID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	var snapshotEntryID string
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
 		VALUES ($1::uuid, NULL, $2, true)
 		RETURNING id::text
-	`, *snapshotID, req.DisplayName).Scan(&entryID); err != nil {
+	`, *snapshotID, req.DisplayName).Scan(&snapshotEntryID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -338,10 +368,20 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
 			VALUES ($1::uuid, $2::uuid, $3::int)
-		`, entryID, t.TeamID, t.BidPoints); err != nil {
+		`, snapshotEntryID, t.TeamID, t.BidPoints); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
+	}
+
+	var attachmentID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.synthetic_calcutta_candidates (synthetic_calcutta_id, candidate_id, snapshot_entry_id)
+		VALUES ($1::uuid, $2::uuid, $3::uuid)
+		RETURNING id::text
+	`, syntheticCalcuttaID, candidateID, snapshotEntryID).Scan(&attachmentID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -350,7 +390,7 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 	}
 	committed = true
 
-	writeJSON(w, http.StatusCreated, createSyntheticEntryResponse{ID: entryID})
+	writeJSON(w, http.StatusCreated, createSyntheticEntryResponse{ID: attachmentID})
 }
 
 func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Request) {
@@ -495,12 +535,58 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		_ = tx.Rollback(ctx)
 	}()
 
-	var entryID string
+	var candidateID string
+	if err := tx.QueryRow(ctx, `
+		SELECT id::text
+		FROM derived.candidates
+		WHERE source_kind = 'entry_artifact'
+			AND source_entry_artifact_id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, req.EntryArtifactID).Scan(&candidateID); err != nil {
+		if err == pgx.ErrNoRows {
+			if err := tx.QueryRow(ctx, `
+				INSERT INTO derived.candidates (source_kind, source_entry_artifact_id, display_name, metadata_json)
+				VALUES ('entry_artifact', $1::uuid, $2, '{}'::jsonb)
+				RETURNING id::text
+			`, req.EntryArtifactID, displayName).Scan(&candidateID); err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+		} else {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+	}
+
+	// If already attached, return existing attachment.
+	var existingAttachmentID string
+	if err := tx.QueryRow(ctx, `
+		SELECT id::text
+		FROM derived.synthetic_calcutta_candidates
+		WHERE synthetic_calcutta_id = $1::uuid
+			AND candidate_id = $2::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, syntheticCalcuttaID, candidateID).Scan(&existingAttachmentID); err == nil {
+		if err := tx.Commit(ctx); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		committed = true
+		writeJSON(w, http.StatusCreated, importSyntheticEntryResponse{ID: existingAttachmentID, NTeams: len(teams)})
+		return
+	} else if err != pgx.ErrNoRows {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	var snapshotEntryID string
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
 		VALUES ($1::uuid, NULL, $2, true)
 		RETURNING id::text
-	`, *snapshotID, displayName).Scan(&entryID); err != nil {
+	`, *snapshotID, displayName).Scan(&snapshotEntryID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -509,10 +595,20 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
 			VALUES ($1::uuid, $2::uuid, $3::int)
-		`, entryID, t.TeamID, t.BidPoints); err != nil {
+		`, snapshotEntryID, t.TeamID, t.BidPoints); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
+	}
+
+	var attachmentID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO derived.synthetic_calcutta_candidates (synthetic_calcutta_id, candidate_id, snapshot_entry_id)
+		VALUES ($1::uuid, $2::uuid, $3::uuid)
+		RETURNING id::text
+	`, syntheticCalcuttaID, candidateID, snapshotEntryID).Scan(&attachmentID); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -521,7 +617,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 	}
 	committed = true
 
-	writeJSON(w, http.StatusCreated, importSyntheticEntryResponse{ID: entryID, NTeams: len(teams)})
+	writeJSON(w, http.StatusCreated, importSyntheticEntryResponse{ID: attachmentID, NTeams: len(teams)})
 }
 
 func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Request) {
@@ -566,25 +662,59 @@ func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Reques
 		_ = tx.Rollback(ctx)
 	}()
 
+	var candidateID string
+	var snapshotEntryID string
+	var sourceKind string
+	if err := tx.QueryRow(ctx, `
+		SELECT
+			scc.candidate_id::text,
+			scc.snapshot_entry_id::text,
+			c.source_kind
+		FROM derived.synthetic_calcutta_candidates scc
+		JOIN derived.candidates c
+			ON c.id = scc.candidate_id
+			AND c.deleted_at IS NULL
+		WHERE scc.id = $1::uuid
+			AND scc.deleted_at IS NULL
+		LIMIT 1
+	`, id).Scan(&candidateID, &snapshotEntryID, &sourceKind); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic entry not found", "id")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
 	if displayName != nil {
-		ct, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
+			UPDATE derived.candidates
+			SET display_name = $2,
+				updated_at = NOW()
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+		`, candidateID, *displayName); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		if _, err := tx.Exec(ctx, `
 			UPDATE core.calcutta_snapshot_entries
 			SET display_name = $2,
 				updated_at = NOW()
 			WHERE id = $1::uuid
 				AND deleted_at IS NULL
-		`, id, *displayName)
-		if err != nil {
+		`, snapshotEntryID, *displayName); err != nil {
 			writeErrorFromErr(w, r, err)
-			return
-		}
-		if ct.RowsAffected() == 0 {
-			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic entry not found", "id")
 			return
 		}
 	}
 
 	if req.Teams != nil {
+		if sourceKind != "manual" {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "Only manual candidates can be edited", "teams")
+			return
+		}
+
 		teams := *req.Teams
 		for i := range teams {
 			teams[i].TeamID = strings.TrimSpace(teams[i].TeamID)
@@ -602,10 +732,23 @@ func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Reques
 			}
 		}
 
+		metadata := map[string]any{"teams": teams}
+		metadataJSON, _ := json.Marshal(metadata)
+		if _, err := tx.Exec(ctx, `
+			UPDATE derived.candidates
+			SET metadata_json = $2::jsonb,
+				updated_at = NOW()
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+		`, candidateID, string(metadataJSON)); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
 		if _, err := tx.Exec(ctx, `
 			DELETE FROM core.calcutta_snapshot_entry_teams
 			WHERE calcutta_snapshot_entry_id = $1::uuid
-		`, id); err != nil {
+		`, snapshotEntryID); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
@@ -614,7 +757,7 @@ func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Reques
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
 				VALUES ($1::uuid, $2::uuid, $3::int)
-			`, id, t.TeamID, t.BidPoints); err != nil {
+			`, snapshotEntryID, t.TeamID, t.BidPoints); err != nil {
 				writeErrorFromErr(w, r, err)
 				return
 			}
@@ -642,21 +785,76 @@ func (s *Server) handleDeleteSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ct, err := s.pool.Exec(r.Context(), `
+	ctx := r.Context()
+
+	var snapshotEntryID string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT snapshot_entry_id::text
+		FROM derived.synthetic_calcutta_candidates
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, id).Scan(&snapshotEntryID); err != nil {
+		if err == pgx.ErrNoRows {
+			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic entry not found", "id")
+			return
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		_ = tx.Rollback(ctx)
+	}()
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE derived.synthetic_calcutta_candidates
+		SET deleted_at = NOW(),
+			updated_at = NOW()
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+	`, id); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if _, err := tx.Exec(ctx, `
 		UPDATE core.calcutta_snapshot_entries
 		SET deleted_at = NOW(),
 			updated_at = NOW()
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
-	`, id)
-	if err != nil {
+	`, snapshotEntryID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if ct.RowsAffected() == 0 {
-		writeError(w, r, http.StatusNotFound, "not_found", "Synthetic entry not found", "id")
+
+	// If this entry is highlighted anywhere, clear the highlight.
+	if _, err := tx.Exec(ctx, `
+		UPDATE derived.synthetic_calcuttas
+		SET highlighted_snapshot_entry_id = NULL,
+			updated_at = NOW()
+		WHERE highlighted_snapshot_entry_id = $1::uuid
+			AND deleted_at IS NULL
+	`, snapshotEntryID); err != nil {
+		writeErrorFromErr(w, r, err)
 		return
 	}
+
+	if err := tx.Commit(ctx); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	committed = true
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

@@ -7,6 +7,8 @@ export type SyntheticEntryTeam = {
 
 export type SyntheticEntryListItem = {
   id: string;
+  candidate_id?: string;
+  snapshot_entry_id?: string;
   entry_id?: string | null;
   display_name: string;
   is_synthetic: boolean;
