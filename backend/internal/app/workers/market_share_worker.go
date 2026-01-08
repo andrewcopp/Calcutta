@@ -116,7 +116,7 @@ func (w *MarketShareWorker) claimNextMarketShareJob(ctx context.Context, workerI
 	}()
 
 	job := &marketShareJob{}
-	_, _ = tx.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET status = 'failed',
 			finished_at = NOW(),
@@ -125,9 +125,11 @@ func (w *MarketShareWorker) claimNextMarketShareJob(ctx context.Context, workerI
 		WHERE run_kind = 'market_share'
 			AND status = 'running'
 			AND claimed_at IS NOT NULL
-			AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
+			AND claimed_at < ($1::timestamptz - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
 			AND attempt >= $3
-	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts)
+	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts); err != nil {
+		return nil, false, err
+	}
 
 	q := `
 		WITH candidate AS (
@@ -140,7 +142,7 @@ func (w *MarketShareWorker) claimNextMarketShareJob(ctx context.Context, workerI
 					OR (
 						status = 'running'
 						AND claimed_at IS NOT NULL
-						AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
+						AND claimed_at < ($1::timestamptz - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
 					)
 				)
 			ORDER BY created_at ASC

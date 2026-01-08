@@ -126,7 +126,7 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		_ = tx.Rollback(ctx)
 	}()
 
-	_, _ = tx.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET status = 'failed',
 			finished_at = NOW(),
@@ -135,9 +135,11 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		WHERE run_kind = 'simulation'
 			AND status = 'running'
 			AND claimed_at IS NOT NULL
-			AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
+			AND claimed_at < ($1::timestamptz - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
 			AND attempt >= $3
-	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts)
+	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts); err != nil {
+		return nil, false, err
+	}
 
 	var runID string
 	q := `
@@ -151,7 +153,7 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 					OR (
 						status = 'running'
 						AND claimed_at IS NOT NULL
-						AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
+						AND claimed_at < ($1::timestamptz - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
 					)
 				)
 			ORDER BY created_at ASC
