@@ -110,6 +110,18 @@ WITH strategy_run AS (
 		AND sgr.deleted_at IS NULL
 	LIMIT 1
 ),
+focus AS (
+	SELECT se.display_name
+	FROM derived.simulation_runs sr
+	JOIN core.calcutta_snapshot_entries se
+		ON se.id = sr.focus_snapshot_entry_id
+		AND se.deleted_at IS NULL
+	JOIN strategy_run r ON r.strategy_generation_run_id = sr.strategy_generation_run_id
+	WHERE sr.deleted_at IS NULL
+		AND sr.focus_snapshot_entry_id IS NOT NULL
+	ORDER BY sr.created_at DESC
+	LIMIT 1
+),
 base AS (
 	SELECT
 		gep.entry_name,
@@ -124,7 +136,7 @@ with_totals AS (
 	SELECT
 		ROW_NUMBER() OVER (ORDER BY b.mean_normalized_payout DESC)::int AS rank,
 		b.entry_name,
-		(b.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy'))::boolean AS is_our_strategy,
+		COALESCE((b.entry_name = (SELECT display_name FROM focus)), false)::boolean AS is_our_strategy,
 		b.mean_normalized_payout,
 		b.p_top1,
 		b.p_in_money,
@@ -205,11 +217,30 @@ WITH base AS (
 	WHERE gep.run_id = sqlc.arg(run_id)::text
 		AND gep.deleted_at IS NULL
 ),
+strategy_run AS (
+	SELECT sgr.id AS strategy_generation_run_id
+	FROM derived.strategy_generation_runs sgr
+	WHERE sgr.run_key = sqlc.arg(run_id)::text
+		AND sgr.deleted_at IS NULL
+	LIMIT 1
+),
+focus AS (
+	SELECT se.display_name
+	FROM derived.simulation_runs sr
+	JOIN core.calcutta_snapshot_entries se
+		ON se.id = sr.focus_snapshot_entry_id
+		AND se.deleted_at IS NULL
+	JOIN strategy_run r ON r.strategy_generation_run_id = sr.strategy_generation_run_id
+	WHERE sr.deleted_at IS NULL
+		AND sr.focus_snapshot_entry_id IS NOT NULL
+	ORDER BY sr.created_at DESC
+	LIMIT 1
+),
 with_totals AS (
 	SELECT
 		ROW_NUMBER() OVER (ORDER BY b.mean_normalized_payout DESC)::int AS rank,
 		b.entry_name,
-		(b.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy'))::boolean AS is_our_strategy,
+		COALESCE((b.entry_name = (SELECT display_name FROM focus)), false)::boolean AS is_our_strategy,
 		b.mean_normalized_payout,
 		b.p_top1,
 		b.p_in_money,

@@ -646,7 +646,17 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 	if eval.CalcuttaEvaluationRunID != nil && *eval.CalcuttaEvaluationRunID != "" {
 		var tmp suiteCalcuttaEvaluationOurStrategyPerformance
 		err := s.pool.QueryRow(ctx, `
-			WITH ranked AS (
+			WITH focus AS (
+				SELECT se.display_name
+				FROM derived.simulation_runs sr
+				JOIN core.calcutta_snapshot_entries se
+					ON se.id = sr.focus_snapshot_entry_id
+					AND se.deleted_at IS NULL
+				WHERE sr.id = $2::uuid
+					AND sr.deleted_at IS NULL
+				LIMIT 1
+			),
+			ranked AS (
 				SELECT
 					ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
 					ep.entry_name,
@@ -676,10 +686,10 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 					LIMIT 1
 				), 0)::int as total_simulations
 			FROM ranked r
-			WHERE r.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy')
+			WHERE r.entry_name = (SELECT display_name FROM focus)
 			ORDER BY r.rank ASC
 			LIMIT 1
-		`, *eval.CalcuttaEvaluationRunID).Scan(
+		`, *eval.CalcuttaEvaluationRunID, eval.ID).Scan(
 			&tmp.Rank,
 			&tmp.EntryName,
 			&tmp.MeanNormalizedPayout,

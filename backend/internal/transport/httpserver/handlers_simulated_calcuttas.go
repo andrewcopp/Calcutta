@@ -47,9 +47,50 @@ func (s *Server) handleGetCalcuttaSimulatedCalcuttas(w http.ResponseWriter, r *h
 		return
 	}
 
+	var focusEntryName *string
+	if evalRunID != nil && *evalRunID != "" {
+		var name string
+		if err := s.pool.QueryRow(ctx, `
+			WITH focus AS (
+				SELECT sr.focus_snapshot_entry_id
+				FROM derived.simulation_runs sr
+				WHERE sr.calcutta_evaluation_run_id = $1::uuid
+					AND sr.deleted_at IS NULL
+				LIMIT 1
+			)
+			SELECT se.display_name
+			FROM core.calcutta_snapshot_entries se
+			WHERE se.id = (SELECT focus_snapshot_entry_id FROM focus)
+				AND se.deleted_at IS NULL
+			LIMIT 1
+		`, *evalRunID).Scan(&name); err == nil {
+			focusEntryName = &name
+		}
+	} else {
+		var name string
+		if err := s.pool.QueryRow(ctx, `
+			WITH latest AS (
+				SELECT sr.focus_snapshot_entry_id
+				FROM derived.simulation_runs sr
+				WHERE sr.calcutta_id = $1::uuid
+					AND sr.deleted_at IS NULL
+					AND sr.focus_snapshot_entry_id IS NOT NULL
+				ORDER BY sr.created_at DESC
+				LIMIT 1
+			)
+			SELECT se.display_name
+			FROM core.calcutta_snapshot_entries se
+			WHERE se.id = (SELECT focus_snapshot_entry_id FROM latest)
+				AND se.deleted_at IS NULL
+			LIMIT 1
+		`, calcuttaID).Scan(&name); err == nil {
+			focusEntryName = &name
+		}
+	}
+
 	results := make([]EntryRanking, 0, len(data))
 	for _, d := range data {
-		isOurStrategy := d.EntryName == "Out Strategy" || d.EntryName == "our_strategy" || d.EntryName == "Our Strategy"
+		isOurStrategy := focusEntryName != nil && d.EntryName == *focusEntryName
 		results = append(results, EntryRanking{
 			Rank:             d.Rank,
 			EntryName:        d.EntryName,

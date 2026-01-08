@@ -8,3 +8,13 @@ func nullUUIDParam(v string) any {
 	}
 	return v
 }
+
+func nullUUIDParamPtr(v *string) any {
+	if v == nil {
+		return nil
+	}
+	if *v == "" {
+		return nil
+	}
+	return *v
+}

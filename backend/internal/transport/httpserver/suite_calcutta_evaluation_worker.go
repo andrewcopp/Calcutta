@@ -338,12 +338,64 @@ func (s *Server) processSimulationRun(ctx context.Context, workerID string, req 
 		return false
 	}
 
+	var focusSnapshotEntryID *string
+	var focusEntryName *string
+	if evalRunID != "" && strategyGenRunID != "" {
+		var seID string
+		var name string
+		err := s.pool.QueryRow(ctx, `
+			WITH cer AS (
+				SELECT calcutta_snapshot_id
+				FROM derived.calcutta_evaluation_runs
+				WHERE id = $1::uuid
+					AND deleted_at IS NULL
+				LIMIT 1
+			),
+			target AS (
+				SELECT team_id, bid_points::int
+				FROM derived.recommended_entry_bids
+				WHERE strategy_generation_run_id = $2::uuid
+					AND deleted_at IS NULL
+			),
+			candidate AS (
+				SELECT cse.id::text AS id, cse.display_name
+				FROM core.calcutta_snapshot_entries cse
+				WHERE cse.calcutta_snapshot_id = (SELECT calcutta_snapshot_id FROM cer)
+					AND cse.is_synthetic = true
+					AND cse.deleted_at IS NULL
+					AND NOT EXISTS (
+						(SELECT team_id, bid_points FROM target)
+						EXCEPT
+						(SELECT cset.team_id, cset.bid_points::int
+						 FROM core.calcutta_snapshot_entry_teams cset
+						 WHERE cset.calcutta_snapshot_entry_id = cse.id
+							AND cset.deleted_at IS NULL)
+					)
+					AND NOT EXISTS (
+						(SELECT cset.team_id, cset.bid_points::int
+						 FROM core.calcutta_snapshot_entry_teams cset
+						 WHERE cset.calcutta_snapshot_entry_id = cse.id
+							AND cset.deleted_at IS NULL)
+						EXCEPT
+						(SELECT team_id, bid_points FROM target)
+					)
+				LIMIT 1
+			)
+			SELECT id, display_name
+			FROM candidate
+		`, evalRunID, strategyGenRunID).Scan(&seID, &name)
+		if err == nil {
+			focusSnapshotEntryID = &seID
+			focusEntryName = &name
+		}
+	}
+
 	if evalRunID != "" {
 		_, _ = s.pool.Exec(ctx, `
 			UPDATE derived.synthetic_calcuttas sc
 			SET calcutta_snapshot_id = cer.calcutta_snapshot_id,
 				focus_strategy_generation_run_id = $3::uuid,
-				focus_entry_name = COALESCE(NULLIF(sc.focus_entry_name, ''), 'Our Strategy'),
+				focus_entry_name = COALESCE(NULLIF(sc.focus_entry_name, ''), $4::text),
 				updated_at = NOW()
 			FROM derived.simulation_runs sr
 			JOIN derived.calcutta_evaluation_runs cer
@@ -352,7 +404,7 @@ func (s *Server) processSimulationRun(ctx context.Context, workerID string, req 
 			WHERE sr.id = $1::uuid
 				AND sr.synthetic_calcutta_id = sc.id
 				AND sc.deleted_at IS NULL
-		`, req.ID, evalRunID, nullUUIDParam(strategyGenRunID))
+		`, req.ID, evalRunID, nullUUIDParam(strategyGenRunID), focusEntryName)
 	}
 
 	var (
@@ -407,10 +459,10 @@ func (s *Server) processSimulationRun(ctx context.Context, workerID string, req 
 					LIMIT 1
 				), 0)::int as total_simulations
 			FROM ranked r
-			WHERE r.entry_name IN ('Our Strategy', 'our_strategy', 'Out Strategy')
+			WHERE r.entry_name = $2::text
 			ORDER BY r.rank ASC
 			LIMIT 1
-		`, evalRunID).Scan(
+		`, evalRunID, focusEntryName).Scan(
 			&rank,
 			&meanNormalizedPayout,
 			&medianNormalizedPayout,
@@ -446,17 +498,18 @@ func (s *Server) processSimulationRun(ctx context.Context, workerID string, req 
 			seed = $4,
 			strategy_generation_run_id = $5::uuid,
 			calcutta_evaluation_run_id = $6::uuid,
-			our_rank = $7,
-			our_mean_normalized_payout = $8,
-			our_median_normalized_payout = $9,
-			our_p_top1 = $10,
-			our_p_in_money = $11,
-			total_simulations = $12,
-			realized_finish_position = $13,
-			realized_is_tied = $14,
-			realized_in_the_money = $15,
-			realized_payout_cents = $16,
-			realized_total_points = $17,
+			focus_snapshot_entry_id = $7::uuid,
+			our_rank = $8,
+			our_mean_normalized_payout = $9,
+			our_median_normalized_payout = $10,
+			our_p_top1 = $11,
+			our_p_in_money = $12,
+			total_simulations = $13,
+			realized_finish_position = $14,
+			realized_is_tied = $15,
+			realized_in_the_money = $16,
+			realized_payout_cents = $17,
+			realized_total_points = $18,
 			error_message = NULL,
 			updated_at = NOW()
 		WHERE id = $1::uuid
@@ -467,6 +520,7 @@ func (s *Server) processSimulationRun(ctx context.Context, workerID string, req 
 		seed,
 		strategyGenRunID,
 		evalRunID,
+		nullUUIDParamPtr(focusSnapshotEntryID),
 		ourRank,
 		ourMeanNormalizedPayout,
 		ourMedianNormalizedPayout,

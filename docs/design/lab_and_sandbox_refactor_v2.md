@@ -47,8 +47,11 @@ This doc is a task checklist. Keep it updated as work lands.
   - **Acceptance**: a test fails if any write query is executed during these read handlers.
 
 ## 0.2 Remove name-based correctness hacks
-- [ ] Replace “Our Strategy” string matching in simulation worker metrics selection.
+- [x] Replace “Our Strategy” string matching in simulation worker metrics selection.
   - **Implementation idea**: store a stable `focus_snapshot_entry_id` / `focus_candidate_id` on the SimulationRun.
+  - **Implementation**:
+    - Persist `derived.simulation_runs.focus_snapshot_entry_id` (FK to `core.calcutta_snapshot_entries`).
+    - Simulation worker + read paths use `focus_snapshot_entry_id` (resolved to `display_name`) instead of brittle string matching.
   - **Acceptance**:
     - Simulation summary metrics for “focus” do not depend on entry_name.
     - Multiple candidates with arbitrary names work.
@@ -201,7 +204,7 @@ This doc is a task checklist. Keep it updated as work lands.
 
 - [x] PR A: Remove AUTO cohort upsert from GET; add explicit creation path.
 - [x] PR B: Remove snapshot repair-on-read; enforce invariant.
-- [ ] PR C: Replace “Our Strategy” string matching with stable IDs.
+- [x] PR C: Replace “Our Strategy” string matching with stable IDs.
 - [x] PR D: Add explicit upstream run columns + backfill.
 - [ ] PR E: Introduce Candidate tables + migrate sandbox endpoints.
 - [ ] PR F: Move worker logic out of transport layer.
