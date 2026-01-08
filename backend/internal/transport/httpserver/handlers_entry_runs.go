@@ -12,11 +12,12 @@ import (
 )
 
 type createEntryRunRequest struct {
-	CalcuttaID          string  `json:"calcuttaId"`
-	SyntheticCalcuttaID *string `json:"syntheticCalcuttaId"`
-	Name                *string `json:"name"`
-	OptimizerKey        *string `json:"optimizerKey"`
-	MarketShareRunID    *string `json:"marketShareRunId"`
+	CalcuttaID            string  `json:"calcuttaId"`
+	SyntheticCalcuttaID   *string `json:"syntheticCalcuttaId"`
+	Name                  *string `json:"name"`
+	OptimizerKey          *string `json:"optimizerKey"`
+	MarketShareArtifactID *string `json:"marketShareArtifactId"`
+	MarketShareRunID      *string `json:"marketShareRunId"`
 }
 
 type createEntryRunResponse struct {
@@ -136,6 +137,18 @@ func (s *Server) createEntryRunHandler(w http.ResponseWriter, r *http.Request) {
 		optimizerKey = "minlp_v1"
 	}
 
+	marketShareArtifactID := (*string)(nil)
+	if req.MarketShareArtifactID != nil {
+		v := strings.TrimSpace(*req.MarketShareArtifactID)
+		if v != "" {
+			if _, err := uuid.Parse(v); err != nil {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareArtifactId must be a valid UUID", "marketShareArtifactId")
+				return
+			}
+			marketShareArtifactID = &v
+		}
+	}
+
 	marketShareRunID := (*string)(nil)
 	if req.MarketShareRunID != nil {
 		v := strings.TrimSpace(*req.MarketShareRunID)
@@ -149,12 +162,72 @@ func (s *Server) createEntryRunHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+
+	var inputMarketShareArtifactID *string
+	if marketShareArtifactID != nil {
+		var runIDFromArtifact string
+		if err := s.pool.QueryRow(ctx, `
+			SELECT r.id::text
+			FROM derived.run_artifacts a
+			JOIN derived.market_share_runs r
+				ON r.id = a.run_id
+				AND r.deleted_at IS NULL
+			WHERE a.id = $1::uuid
+				AND a.run_kind = 'market_share'
+				AND a.run_id = r.id
+				AND r.calcutta_id = $2::uuid
+				AND a.artifact_kind = 'metrics'
+				AND a.deleted_at IS NULL
+			LIMIT 1
+		`, *marketShareArtifactID, req.CalcuttaID).Scan(&runIDFromArtifact); err != nil {
+			if err == pgx.ErrNoRows {
+				writeError(w, r, http.StatusNotFound, "not_found", "Market share artifact not found", "marketShareArtifactId")
+				return
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		marketShareRunID = &runIDFromArtifact
+		inputMarketShareArtifactID = marketShareArtifactID
+	} else if marketShareRunID != nil {
+		var artifactID string
+		if err := s.pool.QueryRow(ctx, `
+			SELECT a.id::text
+			FROM derived.market_share_runs r
+			JOIN derived.run_artifacts a
+				ON a.run_kind = 'market_share'
+				AND a.run_id = r.id
+				AND a.artifact_kind = 'metrics'
+				AND a.deleted_at IS NULL
+			WHERE r.id = $1::uuid
+				AND r.calcutta_id = $2::uuid
+				AND r.deleted_at IS NULL
+			LIMIT 1
+		`, *marketShareRunID, req.CalcuttaID).Scan(&artifactID); err != nil {
+			if err == pgx.ErrNoRows {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareRunId must refer to a market share run with an available metrics artifact; pass marketShareArtifactId instead", "marketShareRunId")
+				return
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		artifactID = strings.TrimSpace(artifactID)
+		if artifactID != "" {
+			inputMarketShareArtifactID = &artifactID
+		}
+	} else {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareArtifactId is required", "marketShareArtifactId")
+		return
+	}
 	runKeyUUID := uuid.NewString()
 	runKeyText := runKeyUUID
 
 	params := map[string]any{}
 	if marketShareRunID != nil {
 		params["market_share_run_id"] = *marketShareRunID
+	}
+	if inputMarketShareArtifactID != nil {
+		params["market_share_artifact_id"] = *inputMarketShareArtifactID
 	}
 	params["source"] = "api_entry_run"
 	paramsJSON, _ := json.Marshal(params)

@@ -221,7 +221,9 @@ This doc is a task checklist. Keep it updated as work lands.
    - Added `backend/cmd/tools/retain-simulation-runs` retention sweeper (dry-run by default).
 - [ ] PR H: Delete legacy suite shims/endpoints; final naming cleanup.
 - [ ] PR I: Eliminate remaining “latest-run” heuristics in correctness-critical paths.
-- [ ] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
+- [x] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
+   - Enforced `marketShareArtifactId` on entry/strategy run creation and persisted `market_share_artifact_id` into `run_jobs.params_json`.
+   - Worker now requires and validates upstream lineage before writing the `strategy_generation` metrics artifact.
 - [ ] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
 - [ ] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
 - [ ] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.

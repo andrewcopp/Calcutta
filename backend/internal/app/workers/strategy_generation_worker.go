@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -37,6 +38,88 @@ type strategyGenJob struct {
 	RunKey    string
 	Params    json.RawMessage
 	ClaimedAt time.Time
+}
+
+func (w *StrategyGenerationWorker) resolveMarketShareArtifactID(ctx context.Context, job *strategyGenJob) (string, bool, error) {
+	if job == nil {
+		return "", false, errors.New("job is required")
+	}
+
+	var params map[string]any
+	if len(job.Params) > 0 {
+		_ = json.Unmarshal(job.Params, &params)
+	}
+
+	if v, ok := params["market_share_artifact_id"]; ok {
+		if id, ok := v.(string); ok {
+			id = strings.TrimSpace(id)
+			if id != "" {
+				var verified string
+				err := w.pool.QueryRow(ctx, `
+					SELECT id::text
+					FROM derived.run_artifacts
+					WHERE id = $1::uuid
+						AND run_kind = 'market_share'
+						AND artifact_kind = 'metrics'
+						AND deleted_at IS NULL
+					LIMIT 1
+				`, id).Scan(&verified)
+				if err != nil {
+					if errors.Is(err, pgx.ErrNoRows) {
+						return "", false, fmt.Errorf("market_share_artifact_id not found: %s", id)
+					}
+					return "", false, err
+				}
+				verified = strings.TrimSpace(verified)
+				if verified == "" {
+					return "", false, fmt.Errorf("market_share_artifact_id not found: %s", id)
+				}
+				return verified, true, nil
+			}
+		}
+	}
+
+	marketShareRunID := ""
+	if v, ok := params["market_share_run_id"]; ok {
+		if id, ok := v.(string); ok {
+			marketShareRunID = strings.TrimSpace(id)
+		}
+	}
+	if marketShareRunID == "" {
+		_ = w.pool.QueryRow(ctx, `
+			SELECT COALESCE(market_share_run_id::text, '')
+			FROM derived.strategy_generation_runs
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		`, job.RunID).Scan(&marketShareRunID)
+		marketShareRunID = strings.TrimSpace(marketShareRunID)
+	}
+	if marketShareRunID == "" {
+		return "", false, nil
+	}
+
+	var artifactID string
+	err := w.pool.QueryRow(ctx, `
+		SELECT id::text
+		FROM derived.run_artifacts
+		WHERE run_kind = 'market_share'
+			AND run_id = $1::uuid
+			AND artifact_kind = 'metrics'
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, marketShareRunID).Scan(&artifactID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, fmt.Errorf("no market_share metrics artifact found for run_id=%s", marketShareRunID)
+		}
+		return "", false, err
+	}
+	artifactID = strings.TrimSpace(artifactID)
+	if artifactID == "" {
+		return "", false, fmt.Errorf("no market_share metrics artifact found for run_id=%s", marketShareRunID)
+	}
+	return artifactID, true, nil
 }
 
 func (w *StrategyGenerationWorker) Run(ctx context.Context) {
@@ -175,6 +258,19 @@ func (w *StrategyGenerationWorker) processStrategyGenerationJob(ctx context.Cont
 		return false
 	}
 
+	resolvedMarketShareArtifactID, ok, err := w.resolveMarketShareArtifactID(ctx, job)
+	if err != nil {
+		w.failStrategyGenerationJob(ctx, job, err)
+		log.Printf("strategy_generation_worker fail worker_id=%s run_id=%s run_key=%s dur_ms=%d err=%v", workerID, job.RunID, job.RunKey, dur.Milliseconds(), err)
+		return false
+	}
+	if !ok || strings.TrimSpace(resolvedMarketShareArtifactID) == "" {
+		err := errors.New("market_share_artifact_id is required")
+		w.failStrategyGenerationJob(ctx, job, err)
+		log.Printf("strategy_generation_worker fail worker_id=%s run_id=%s run_key=%s dur_ms=%d err=%v", workerID, job.RunID, job.RunKey, dur.Milliseconds(), err)
+		return false
+	}
+
 	_, _ = w.pool.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET status = 'succeeded',
@@ -186,34 +282,7 @@ func (w *StrategyGenerationWorker) processStrategyGenerationJob(ctx context.Cont
 	`, job.RunID)
 
 	w.updateRunJobProgress(ctx, "strategy_generation", job.RunID, 1.0, "succeeded", "Completed")
-
-	var inputMarketShareArtifactID any
-	if len(job.Params) > 0 {
-		var params map[string]any
-		if err := json.Unmarshal(job.Params, &params); err == nil {
-			if v, ok := params["market_share_run_id"]; ok {
-				if runIDStr, ok := v.(string); ok {
-					runIDStr = strings.TrimSpace(runIDStr)
-					if runIDStr != "" {
-						var artifactID string
-						_ = w.pool.QueryRow(ctx, `
-							SELECT id::text
-							FROM derived.run_artifacts
-							WHERE run_kind = 'market_share'
-								AND run_id = $1::uuid
-								AND artifact_kind = 'metrics'
-								AND deleted_at IS NULL
-							LIMIT 1
-						`, runIDStr).Scan(&artifactID)
-						artifactID = strings.TrimSpace(artifactID)
-						if artifactID != "" {
-							inputMarketShareArtifactID = artifactID
-						}
-					}
-				}
-			}
-		}
-	}
+	inputMarketShareArtifactID := any(resolvedMarketShareArtifactID)
 
 	summary := map[string]any{
 		"status":                  "succeeded",
@@ -298,29 +367,11 @@ func (w *StrategyGenerationWorker) failStrategyGenerationJob(ctx context.Context
 	failureSummaryJSON, jerr := json.Marshal(failureSummary)
 	if jerr == nil {
 		var inputMarketShareArtifactID any
-		if job != nil && len(job.Params) > 0 {
-			var params map[string]any
-			if err := json.Unmarshal(job.Params, &params); err == nil {
-				if v, ok := params["market_share_run_id"]; ok {
-					if runIDStr, ok := v.(string); ok {
-						runIDStr = strings.TrimSpace(runIDStr)
-						if runIDStr != "" {
-							var artifactID string
-							_ = w.pool.QueryRow(ctx, `
-								SELECT id::text
-								FROM derived.run_artifacts
-								WHERE run_kind = 'market_share'
-									AND run_id = $1::uuid
-									AND artifact_kind = 'metrics'
-									AND deleted_at IS NULL
-								LIMIT 1
-							`, runIDStr).Scan(&artifactID)
-							artifactID = strings.TrimSpace(artifactID)
-							if artifactID != "" {
-								inputMarketShareArtifactID = artifactID
-							}
-						}
-					}
+		if job != nil {
+			if resolved, ok, rerr := w.resolveMarketShareArtifactID(ctx, job); rerr == nil && ok {
+				resolved = strings.TrimSpace(resolved)
+				if resolved != "" {
+					inputMarketShareArtifactID = resolved
 				}
 			}
 		}

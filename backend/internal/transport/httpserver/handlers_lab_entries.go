@@ -327,19 +327,25 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 		}
 
 		var msRunID string
+		var msArtifactID string
 		if err := tx.QueryRow(ctx, `
-			SELECT id::text
-			FROM derived.market_share_runs
-			WHERE calcutta_id = $1::uuid
-				AND algorithm_id = $2::uuid
-				AND deleted_at IS NULL
-			ORDER BY (CASE WHEN $3::text IS NOT NULL AND params_json->>'excluded_entry_name' = $3::text THEN 1 ELSE 0 END) DESC,
-				created_at DESC
+			SELECT r.id::text, a.id::text
+			FROM derived.market_share_runs r
+			JOIN derived.run_artifacts a
+				ON a.run_kind = 'market_share'
+				AND a.run_id = r.id
+				AND a.artifact_kind = 'metrics'
+				AND a.deleted_at IS NULL
+			WHERE r.calcutta_id = $1::uuid
+				AND r.algorithm_id = $2::uuid
+				AND r.deleted_at IS NULL
+			ORDER BY (CASE WHEN $3::text IS NOT NULL AND r.params_json->>'excluded_entry_name' = $3::text THEN 1 ELSE 0 END) DESC,
+				r.created_at DESC
 			LIMIT 1
-		`, sc.CalcuttaID, msAlgID, effExcluded).Scan(&msRunID); err != nil {
+		`, sc.CalcuttaID, msAlgID, effExcluded).Scan(&msRunID, &msArtifactID); err != nil {
 			if err == pgx.ErrNoRows {
 				resp.Failed++
-				resp.Failures = append(resp.Failures, generateLabEntriesFailure{ScenarioID: sc.ScenarioID, CalcuttaID: sc.CalcuttaID, Message: "Missing market-share run for cohort algorithm"})
+				resp.Failures = append(resp.Failures, generateLabEntriesFailure{ScenarioID: sc.ScenarioID, CalcuttaID: sc.CalcuttaID, Message: "Missing market-share run (with metrics artifact) for cohort algorithm"})
 				continue
 			}
 			writeErrorFromErr(w, r, err)
@@ -380,7 +386,7 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 		runKeyUUID := uuid.NewString()
 		runKeyText := runKeyUUID
 		name := fmt.Sprintf("lab_entries_%s", optimizerKey)
-		params := map[string]any{"market_share_run_id": msRunID, "game_outcome_run_id": goRunID, "excluded_entry_name": effExcluded, "source": "lab_entries_generate"}
+		params := map[string]any{"market_share_run_id": msRunID, "market_share_artifact_id": msArtifactID, "game_outcome_run_id": goRunID, "excluded_entry_name": effExcluded, "source": "lab_entries_generate"}
 		paramsJSON, _ := json.Marshal(params)
 
 		gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
