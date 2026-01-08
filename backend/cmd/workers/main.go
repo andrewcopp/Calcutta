@@ -27,7 +27,7 @@ func run() error {
 
 	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
 	runEntryEvaluationWorker := flag.Bool("entry-eval-worker", true, "Run the entry evaluation worker")
-	runMarketShareWorker := flag.Bool("market-share-worker", true, "Run the market share worker")
+	runMarketShareWorker := flag.Bool("market-share-worker", false, "Run the market share worker (normally run via data-science/scripts/market_share_job_worker.py)")
 	runGameOutcomeWorker := flag.Bool("game-outcome-worker", true, "Run the predicted game outcomes worker")
 	runStrategyGenWorker := flag.Bool("strategy-generation-worker", true, "Run the strategy generation worker")
 	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", true, "Run the calcutta evaluation worker")
