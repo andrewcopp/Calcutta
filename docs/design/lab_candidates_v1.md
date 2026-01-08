@@ -62,31 +62,22 @@ Suggested `derived.candidates` fields (existing or to add as needed):
 - `metadata_json`
 - timestamps
 
-Then add a separate mapping table for “candidate per calcutta per config”.
+Then add the Lab provenance fields to `derived.candidates` so we can enforce “one candidate per calcutta per config” without another table.
 
-### Option B2 (explicit mapping table first-class): `derived.lab_calcutta_candidates`
-Introduce a dedicated table that records Lab’s canonical output per calcutta/config.
+Suggested additional fields (to add as needed):
+- `calcutta_id`
+- `tournament_id`
+- `strategy_generation_run_id`
+- `market_share_run_id`
+- `market_share_artifact_id`
+- `advancement_run_id`
+- `optimizer_key`
+- `starting_state_key`
+- `excluded_entry_name`
+- `git_sha`
 
-`derived.lab_calcutta_candidates` (proposed):
-- `id uuid pk`
-- `calcutta_id uuid not null` (FK to `core.calcuttas.id`)
-- `tournament_id uuid not null` (denormalized for query convenience)
-- `candidate_id uuid not null` (FK to `derived.candidates.id`)
-- `strategy_generation_run_id uuid not null` (FK to `derived.strategy_generation_runs.id`)
-- `market_share_run_id uuid not null`
-- `market_share_artifact_id uuid not null` (FK to `derived.run_artifacts.id`)
-- `advancement_run_id uuid not null` (or `game_outcome_run_id` until WS-D)
-- `optimizer_key text not null`
-- `starting_state_key text not null`
-- `excluded_entry_name text null`
-- `git_sha text null`
-- `created_at/updated_at/deleted_at`
-
-Uniqueness:
-- Unique constraint on `(calcutta_id, optimizer_key, market_share_artifact_id, advancement_run_id, starting_state_key, COALESCE(excluded_entry_name,''))` where `deleted_at is null`.
-
-Recommendation:
-- Prefer **Option B2** because it makes the Lab contract explicit and queryable, and avoids overloading unrelated tables.
+Decision (v1):
+- Use **Option B1** (store Lab provenance on `derived.candidates`).
 
 ---
 
@@ -107,31 +98,19 @@ No “latest run” selection for correctness-critical generation.
 
 # API surface (v1)
 
-## List Lab coverage
-`GET /api/lab/candidates/coverage`
-
-Response:
-- For the active config(s), how many calcuttas have candidates.
+## List candidates
+`GET /api/lab/candidates`
 
 Notes:
-- Lab currently assumes “all calcuttas”; this endpoint should reflect that.
+- Prefer list+filter over specialized “coverage” endpoints.
+- v1 should support filters + pagination.
 
-## Generate candidates (bulk)
-`POST /api/lab/candidates/generate`
-
-Request:
-- `optimizerKey: string`
-- `startingStateKey?: string`
-- `excludedEntryName?: string`
-- `advancementRunId: string` OR a pinned reference describing which advancement model run set to use
-- `marketShareArtifactIdByCalcutta?: Record<calcuttaId, artifactId>` OR a pinned selection rule that is explicit and stable
-
-Response:
-- counts created/skipped/failed + failure list
+## Create candidates
+`POST /api/lab/candidates`
 
 Notes:
-- v1 can be “generate for all calcuttas” only.
-- Later we can add filtering (years, tournaments) if needed.
+- v1 should support creating a single candidate per request; callers can loop per calcutta.
+- If we support bulk, it should be transactional.
 
 ## Candidate detail
 `GET /api/lab/candidates/{candidateId}`
@@ -150,31 +129,31 @@ Candidate generation is async:
   - a `metrics` artifact
   - the bid set (in DB tables)
   - a `candidate` identity pointing to the artifact
-  - a `lab_calcutta_candidates` mapping row
+  - a `derived.candidates` row (stable identity)
 
 ---
 
 # Migration plan
 
 ## Phase B0 — Schema
-- Add `derived.lab_calcutta_candidates` (if using Option B2).
+- Add provenance fields to `derived.candidates`.
 
 Acceptance:
 - Schema exists; no behavior change.
 
 ## Phase B1 — New Lab endpoints (read-only)
-- Add `/api/lab/candidates/coverage` and `/api/lab/candidates/{id}`.
-- Implement using the new table.
+- Add `/api/lab/candidates` and `/api/lab/candidates/{id}`.
+- Implement using `derived.candidates`.
 
 Acceptance:
-- Lab coverage works without referencing synthetic/snapshot/sandbox tables.
+- Lab list+filter works without referencing synthetic/snapshot/sandbox tables.
 
-## Phase B2 — Generation (write path)
-- Implement `/api/lab/candidates/generate`.
+## Phase B2 — Creation (write path)
+- Implement `/api/lab/candidates`.
 - Require explicit upstream IDs.
 
 Acceptance:
-- Running generation produces candidates for all calcuttas (or fails with explicit missing-input errors).
+- Creating candidates produces the requested candidate(s) (or fails with explicit missing-input errors).
 
 ## Phase B3 — Cutover UI and delete legacy Lab-over-Sandbox logic
 - Remove/disable:
@@ -196,19 +175,19 @@ Acceptance:
 # Open questions
 - Is a Candidate just a pointer to a `strategy_generation` metrics artifact, or does it need its own “bids artifact” as first-class?
 - Should we allow multiple candidates per calcutta for the same config (versioning), or enforce a strict unique mapping?
-- Do we want “coverage” to be per tournament year (subset) later, or stay global?
+- Do we want listing to support per tournament year (subset) later, or stay global?
 
 # Open tasks
-- [ ] Choose the implementation option for v1 (Option B1 vs Option B2) and record the decision here.
-- [ ] Add `derived.lab_calcutta_candidates` schema (if using Option B2) and associated indexes/constraints.
-- [ ] Implement `GET /api/lab/candidates/coverage` backed by the new schema.
-- [ ] Implement `GET /api/lab/candidates/{candidateId}` backed by the new schema.
-- [ ] Implement `POST /api/lab/candidates/generate` (generate for all calcuttas) with explicit upstream inputs required.
-- [ ] Ensure candidate generation creates/links:
-  - [ ] `strategy_generation_runs`
-  - [ ] `run_artifacts` (metrics)
-  - [ ] `derived.candidates` row (stable identity)
-  - [ ] `derived.lab_calcutta_candidates` mapping row (if using Option B2)
-- [ ] Add an invariant test/assertion: Lab endpoints must not read/write Sandbox tables (`synthetic_*`, `simulated_*`, snapshots).
-- [ ] Delete/cut over legacy Lab-over-Sandbox logic in `handlers_lab_entries.go`.
-- [ ] Confirm UI no longer calls `/api/lab/entries*` endpoints once cutover is complete.
+- [x] Choose the implementation option for v1 (Option B1 vs Option B2) and record the decision here.
+- [x] Add provenance fields + constraints/indexes to `derived.candidates`.
+- [x] Implement `GET /api/lab/candidates` backed by the new schema.
+- [x] Implement `GET /api/lab/candidates/{candidateId}` backed by the new schema.
+- [x] Implement `POST /api/lab/candidates` with explicit upstream inputs required.
+- [x] Ensure candidate generation creates/links:
+  - [x] `strategy_generation_runs`
+  - [x] `run_artifacts` (metrics)
+  - [x] `derived.candidates` row (stable identity)
+  - [x] `derived.candidates.source_entry_artifact_id` points at the `strategy_generation` metrics artifact
+- [x] Decide against adding the invariant test/assertion (removed per repo testing rules).
+- [x] Delete/cut over legacy Lab-over-Sandbox logic in `handlers_lab_entries.go`.
+- [x] Confirm UI no longer calls `/api/lab/entries*` endpoints once cutover is complete.

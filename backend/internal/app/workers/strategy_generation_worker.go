@@ -11,6 +11,7 @@ import (
 	"time"
 
 	reb "github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -347,6 +348,41 @@ func (w *StrategyGenerationWorker) processStrategyGenerationJob(ctx context.Cont
 				updated_at = NOW(),
 				deleted_at = NULL
 		`, job.RunID, runKeyParam, summaryJSON, inputMarketShareArtifactID)
+
+		var artifactID string
+		_ = w.pool.QueryRow(ctx, `
+			SELECT id::text
+			FROM derived.run_artifacts
+			WHERE run_kind = 'strategy_generation'
+				AND run_id = $1::uuid
+				AND artifact_kind = 'metrics'
+				AND deleted_at IS NULL
+			LIMIT 1
+		`, job.RunID).Scan(&artifactID)
+		artifactID = strings.TrimSpace(artifactID)
+
+		candidateID := ""
+		var params map[string]any
+		if len(job.Params) > 0 {
+			_ = json.Unmarshal(job.Params, &params)
+		}
+		if v, ok := params["candidate_id"]; ok {
+			if s, ok := v.(string); ok {
+				candidateID = strings.TrimSpace(s)
+			}
+		}
+
+		if candidateID != "" && artifactID != "" {
+			if _, err := uuid.Parse(candidateID); err == nil {
+				_, _ = w.pool.Exec(ctx, `
+					UPDATE derived.candidates
+					SET source_entry_artifact_id = $2::uuid,
+						updated_at = NOW()
+					WHERE id = $1::uuid
+						AND deleted_at IS NULL
+				`, candidateID, artifactID)
+			}
+		}
 	}
 
 	log.Printf("strategy_generation_worker success worker_id=%s run_id=%s run_key=%s n_teams=%d total_bid=%d dur_ms=%d",

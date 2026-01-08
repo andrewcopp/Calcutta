@@ -49,6 +49,7 @@ pytest
 - Prefer deterministic logic and deterministic tests.
 - Avoid hard exits (`log.Fatal`, `os.Exit`) outside of `main` packages.
 - Never commit secrets. Use `.env.example` placeholders only.
+- Prefer lean, flexible APIs (list + filters, composable primitives). Only add specialized/optimized endpoints when a real performance or UX constraint demands it.
 
 ## Database changes
 

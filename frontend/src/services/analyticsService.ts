@@ -121,32 +121,38 @@ export const analyticsService = {
     return apiClient.get<T>(`/analytics/calcuttas/${encodeURIComponent(calcuttaId)}/simulated-calcuttas`);
   },
 
-  async listLabEntriesCoverage<T>(): Promise<T> {
-    return apiClient.get<T>('/lab/entries');
-  },
-
-	async syncLabEntriesAutoCohorts<T>(): Promise<T> {
-		return apiClient.post<T>('/lab/entries/auto-cohorts/sync', {});
+	async listLabCandidates<T>(params?: {
+		calcuttaId?: string;
+		tournamentId?: string;
+		strategyGenerationRunId?: string;
+		marketShareArtifactId?: string;
+		advancementRunId?: string;
+		optimizerKey?: string;
+		startingStateKey?: string;
+		excludedEntryName?: string;
+		sourceKind?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<T> {
+		const q = new URLSearchParams();
+		if (params?.calcuttaId) q.set('calcutta_id', params.calcuttaId);
+		if (params?.tournamentId) q.set('tournament_id', params.tournamentId);
+		if (params?.strategyGenerationRunId) q.set('strategy_generation_run_id', params.strategyGenerationRunId);
+		if (params?.marketShareArtifactId) q.set('market_share_artifact_id', params.marketShareArtifactId);
+		if (params?.advancementRunId) q.set('advancement_run_id', params.advancementRunId);
+		if (params?.optimizerKey) q.set('optimizer_key', params.optimizerKey);
+		if (params?.startingStateKey) q.set('starting_state_key', params.startingStateKey);
+		if (params?.excludedEntryName) q.set('excluded_entry_name', params.excludedEntryName);
+		if (params?.sourceKind) q.set('source_kind', params.sourceKind);
+		if (params?.limit != null) q.set('limit', String(params.limit));
+		if (params?.offset != null) q.set('offset', String(params.offset));
+		const suffix = q.toString() ? `?${q.toString()}` : '';
+		return apiClient.get<T>(`/lab/candidates${suffix}`);
 	},
 
-  async getLabEntriesCohortDetail<T>(cohortId: string): Promise<T> {
-    return apiClient.get<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}`);
-  },
-
-  async createLabCohortSandboxExecution<T>(
-    cohortId: string,
-    params?: { nSims?: number; excludedEntryId?: string; excludedEntryName?: string }
-  ): Promise<T> {
-    return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/sandbox-executions`, params || {});
-  },
-
-	async generateLabEntriesForCohort<T>(cohortId: string): Promise<T> {
-		return apiClient.post<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}/generate-entries`, {});
+	async getLabCandidate<T>(candidateId: string): Promise<T> {
+		return apiClient.get<T>(`/lab/candidates/${encodeURIComponent(candidateId)}`);
 	},
-
-  async getLabEntryReport<T>(scenarioId: string): Promise<T> {
-    return apiClient.get<T>(`/lab/entries/scenarios/${encodeURIComponent(scenarioId)}`);
-  },
 
   async exportAnalyticsSnapshot(tournamentId: string, calcuttaId: string): Promise<{ blob: Blob; filename: string }> {
     const url = new URL(`${API_URL}/api/admin/analytics/export`);

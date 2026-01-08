@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
 
-type TabType = 'advancements' | 'investments' | 'entries';
+type TabType = 'advancements' | 'investments' | 'candidates';
 
 type Algorithm = {
   id: string;
@@ -74,14 +74,14 @@ export function LabPage() {
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'entries') return 'entries';
+    if (tab === 'candidates') return 'candidates';
     return tab === 'investments' ? 'investments' : 'advancements';
   });
   const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>(() => searchParams.get('algorithmId') || '');
 
   useEffect(() => {
-    if (activeTab === 'entries') {
-      navigate('/lab/entries');
+    if (activeTab === 'candidates') {
+      navigate('/lab/candidates');
       return;
     }
 
@@ -99,7 +99,7 @@ export function LabPage() {
       [
         { id: 'advancements' as const, label: 'Advancements' },
         { id: 'investments' as const, label: 'Investments' },
-        { id: 'entries' as const, label: 'Entries' },
+        { id: 'candidates' as const, label: 'Candidates' },
       ] as const,
     []
   );

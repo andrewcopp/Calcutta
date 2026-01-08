@@ -29,9 +29,8 @@ import { LabAdvancementAlgorithmDetailPage } from './pages/LabAdvancementAlgorit
 import { LabAdvancementTournamentDetailPage } from './pages/LabAdvancementTournamentDetailPage';
 import { LabInvestmentAlgorithmDetailPage } from './pages/LabInvestmentAlgorithmDetailPage';
 import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDetailPage';
-import { LabEntriesPage } from './pages/LabEntriesPage';
-import { LabEntriesCohortDetailPage } from './pages/LabEntriesCohortDetailPage';
-import { LabEntryReportPage } from './pages/LabEntryReportPage';
+import { LabCandidatesPage } from './pages/LabCandidatesPage';
+import { LabCandidateDetailPage } from './pages/LabCandidateDetailPage';
 import { SandboxCohortsListPage } from './pages/SandboxCohortsListPage';
 import { SandboxCohortDetailPage } from './pages/SandboxCohortDetailPage';
 import { SimulationRunDetailPage } from './pages/SimulationRunDetailPage';
@@ -78,11 +77,13 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
         <Route path="/lab" element={<LabPage />} />
-        <Route path="/lab/entries" element={<LabEntriesPage />} />
+        <Route path="/lab/entries" element={<Navigate to="/lab/candidates" replace />} />
+        <Route path="/lab/entries/cohorts/:cohortId" element={<Navigate to="/lab/candidates" replace />} />
+        <Route path="/lab/entries/scenarios/:scenarioId" element={<Navigate to="/lab/candidates" replace />} />
+        <Route path="/lab/candidates" element={<LabCandidatesPage />} />
+        <Route path="/lab/candidates/:candidateId" element={<LabCandidateDetailPage />} />
         <Route path="/lab/entry-runs/:runId" element={<EntryRunDetailPage />} />
         <Route path="/lab/entry-artifacts/:artifactId" element={<EntryArtifactDetailPage />} />
-        <Route path="/lab/entries/cohorts/:cohortId" element={<LabEntriesCohortDetailPage />} />
-        <Route path="/lab/entries/scenarios/:scenarioId" element={<LabEntryReportPage />} />
         <Route path="/lab/advancements/algorithms/:algorithmId" element={<LabAdvancementAlgorithmDetailPage />} />
         <Route
           path="/lab/advancements/algorithms/:algorithmId/tournaments/:tournamentId"
