@@ -80,13 +80,13 @@ This doc is a task checklist. Keep it updated as work lands.
   - **Acceptance**: no StrategyGenerationRun is created without explicit upstream IDs.
 
 ## 1.2 Strengthen run_artifacts lineage contract
-- [ ] Enforce that `strategy_generation` `metrics` artifact references exactly one:
+- [x] Enforce that `strategy_generation` `metrics` artifact references exactly one:
   - `input_market_share_artifact_id`
   - `input_advancement_artifact_id` (or game outcome artifact, depending on the final naming)
   - **Acceptance**:
     - UI can traverse lineage from entry artifact -> upstream artifacts.
 
-- [ ] Add validation at artifact write time (worker/service) to prevent missing lineage.
+- [x] Add validation at artifact write time (worker/service) to prevent missing lineage.
   - **Acceptance**: artifact write fails fast (and marks run failed) if lineage is missing.
 
 ## 1.3 Dataset refs become first-class and consistent
