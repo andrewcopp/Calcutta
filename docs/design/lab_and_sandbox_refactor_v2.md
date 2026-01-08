@@ -151,8 +151,8 @@ This doc is a task checklist. Keep it updated as work lands.
     - Operators can see attempt count, last error, last claimed_by.
 
 ## 3.3 Structured progress + logs
-- [ ] Ensure all run kinds emit progress events in a consistent shape.
-- [ ] Ensure progress is queryable by run_id.
+- [x] Ensure all run kinds emit progress events in a consistent shape.
+- [x] Ensure progress is queryable by run_id.
   - **Acceptance**:
     - UI can show a timeline: queued -> running (phases) -> succeeded/failed.
 
@@ -229,7 +229,7 @@ This doc is a task checklist. Keep it updated as work lands.
  - [x] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
 - [x] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
 - [x] PR N: Standardize retry/backoff + dead-letter policy across run kinds.
- - [ ] PR O: Standardize run progress events and make progress queryable by run.
+ - [x] PR O: Standardize run progress events and make progress queryable by run.
  - [ ] PR P: Artifact slices decision + implement `storage_uri` for at least one non-trivial artifact.
  - [ ] PR Q: Implement explicit retention/cleanup job for runs/artifacts.
  - [ ] PR R: UI drill-down pages + navigation pivots (runs/artifacts/evaluations) to match canonical nouns.

@@ -57,4 +57,34 @@ func (w *DBProgressWriter) Update(ctx context.Context, runKind string, runID str
 	if err != nil {
 		log.Printf("run_job_progress_update_failed run_kind=%s run_id=%s err=%v", runKind, runID, err)
 	}
+
+	_, err = w.pool.Exec(ctx, `
+		INSERT INTO derived.run_progress_events (
+			run_kind,
+			run_id,
+			run_key,
+			event_kind,
+			percent,
+			phase,
+			message,
+			source,
+			payload_json
+		)
+		SELECT
+			j.run_kind,
+			j.run_id,
+			j.run_key,
+			'progress',
+			$3::double precision,
+			$4,
+			$5,
+			'worker',
+			'{}'::jsonb
+		FROM derived.run_jobs j
+		WHERE j.run_kind = $1
+			AND j.run_id = $2::uuid
+	`, runKind, runID, percent, phase, message)
+	if err != nil {
+		log.Printf("run_progress_event_insert_failed run_kind=%s run_id=%s err=%v", runKind, runID, err)
+	}
 }
