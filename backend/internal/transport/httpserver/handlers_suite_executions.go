@@ -395,6 +395,8 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 		}
 
 		var syntheticCalcuttaID string
+		var syntheticSnapshotID *string
+		var existingExcludedEntryName *string
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO derived.synthetic_calcuttas (
 				cohort_id,
@@ -405,10 +407,29 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 			DO UPDATE SET
 				updated_at = NOW(),
 				deleted_at = NULL
-			RETURNING id::text
-		`, req.CohortID, calcuttaID).Scan(&syntheticCalcuttaID); err != nil {
+			RETURNING id::text, calcutta_snapshot_id::text, excluded_entry_name
+		`, req.CohortID, calcuttaID).Scan(&syntheticCalcuttaID, &syntheticSnapshotID, &existingExcludedEntryName); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
+		}
+
+		if syntheticSnapshotID == nil || strings.TrimSpace(*syntheticSnapshotID) == "" {
+			createdSnapshotID, err := createSyntheticCalcuttaSnapshot(ctx, tx, calcuttaID, existingExcludedEntryName, "", nil)
+			if err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			_, err = tx.Exec(ctx, `
+				UPDATE derived.synthetic_calcuttas
+				SET calcutta_snapshot_id = $2::uuid,
+					updated_at = NOW()
+				WHERE id = $1::uuid
+					AND deleted_at IS NULL
+			`, syntheticCalcuttaID, createdSnapshotID)
+			if err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
 		}
 
 		_, err := tx.Exec(ctx, `

@@ -336,7 +336,10 @@ func ensureSuiteScenarios(ctx context.Context, pool *pgxpool.Pool, suiteID strin
 			ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
 			DO NOTHING
 		`, suiteID, calcuttaID)
-		return err
+		if err != nil {
+			return err
+		}
+		return ensureSyntheticCalcuttaSnapshots(ctx, pool, suiteID, calcuttaID)
 	}
 
 	if seasonMin <= 0 && seasonMax <= 0 {
@@ -360,7 +363,172 @@ func ensureSuiteScenarios(ctx context.Context, pool *pgxpool.Pool, suiteID strin
 		ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
 		DO NOTHING
 	`, suiteID, seasonMin, seasonMax)
-	return err
+	if err != nil {
+		return err
+	}
+	return ensureSyntheticCalcuttaSnapshots(ctx, pool, suiteID, "")
+}
+
+func ensureSyntheticCalcuttaSnapshots(ctx context.Context, pool *pgxpool.Pool, cohortID string, calcuttaID string) error {
+	args := []any{cohortID}
+	where := ""
+	if strings.TrimSpace(calcuttaID) != "" {
+		where = " AND sc.calcutta_id = $2::uuid "
+		args = append(args, calcuttaID)
+	}
+
+	rows, err := pool.Query(ctx, fmt.Sprintf(`
+		SELECT sc.id::text, sc.calcutta_id::text, sc.excluded_entry_name
+		FROM derived.synthetic_calcuttas sc
+		WHERE sc.cohort_id = $1::uuid
+			AND sc.deleted_at IS NULL
+			AND sc.calcutta_snapshot_id IS NULL
+			%s
+		ORDER BY sc.created_at ASC
+	`, where), args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	type row struct {
+		syntheticCalcuttaID string
+		calcuttaID          string
+		excludedEntryName   *string
+	}
+	missing := make([]row, 0)
+	for rows.Next() {
+		var r row
+		if err := rows.Scan(&r.syntheticCalcuttaID, &r.calcuttaID, &r.excludedEntryName); err != nil {
+			return err
+		}
+		missing = append(missing, r)
+	}
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+
+	for _, m := range missing {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return err
+		}
+
+		createdSnapshotID, err := createSyntheticCalcuttaSnapshotForSyntheticCalcutta(ctx, tx, m.calcuttaID, m.excludedEntryName)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return err
+		}
+		_, err = tx.Exec(ctx, `
+			UPDATE derived.synthetic_calcuttas
+			SET calcutta_snapshot_id = $2::uuid,
+				updated_at = NOW()
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+		`, m.syntheticCalcuttaID, createdSnapshotID)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return err
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createSyntheticCalcuttaSnapshotForSyntheticCalcutta(
+	ctx context.Context,
+	tx pgx.Tx,
+	calcuttaID string,
+	excludedEntryName *string,
+) (string, error) {
+	var snapshotID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO core.calcutta_snapshots (base_calcutta_id, snapshot_type, description)
+		VALUES ($1::uuid, 'synthetic_calcutta', 'Synthetic calcutta snapshot')
+		RETURNING id
+	`, calcuttaID).Scan(&snapshotID); err != nil {
+		return "", err
+	}
+
+	_, err := tx.Exec(ctx, `
+		INSERT INTO core.calcutta_snapshot_payouts (calcutta_snapshot_id, position, amount_cents)
+		SELECT $2, position, amount_cents
+		FROM core.payouts
+		WHERE calcutta_id = $1
+			AND deleted_at IS NULL
+	`, calcuttaID, snapshotID)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO core.calcutta_snapshot_scoring_rules (calcutta_snapshot_id, win_index, points_awarded)
+		SELECT $2, win_index, points_awarded
+		FROM core.calcutta_scoring_rules
+		WHERE calcutta_id = $1
+			AND deleted_at IS NULL
+	`, calcuttaID, snapshotID)
+	if err != nil {
+		return "", err
+	}
+
+	excluded := ""
+	if excludedEntryName != nil {
+		excluded = strings.TrimSpace(*excludedEntryName)
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT id::text, name
+		FROM core.entries
+		WHERE calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+			AND (name != $2 OR $2 = '')
+		ORDER BY created_at ASC
+	`, calcuttaID, excluded)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var entryID string
+		var entryName string
+		if err := rows.Scan(&entryID, &entryName); err != nil {
+			return "", err
+		}
+
+		var snapshotEntryID string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
+			VALUES ($1::uuid, $2::uuid, $3, false)
+			RETURNING id
+		`, snapshotID, entryID, entryName).Scan(&snapshotEntryID); err != nil {
+			return "", err
+		}
+
+		_, err := tx.Exec(ctx, `
+			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
+			SELECT $1::uuid, team_id, bid_points
+			FROM core.entry_teams
+			WHERE entry_id = $2::uuid
+				AND deleted_at IS NULL
+		`, snapshotEntryID, entryID)
+		if err != nil {
+			return "", err
+		}
+	}
+	if rows.Err() != nil {
+		return "", rows.Err()
+	}
+
+	return snapshotID, nil
 }
 
 func listSuiteScenarioCalcuttas(ctx context.Context, pool *pgxpool.Pool, suiteID string, calcuttaID string) ([]calcuttaRow, error) {

@@ -94,8 +94,19 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	ctx := r.Context()
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
 	var snapshotID *string
-	if err := s.pool.QueryRow(r.Context(), `
+	if err := tx.QueryRow(ctx, `
 		SELECT calcutta_snapshot_id::text
 		FROM derived.synthetic_calcuttas
 		WHERE id = $1::uuid
@@ -110,41 +121,11 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-		var derivedSnapshotID *string
-		_ = s.pool.QueryRow(r.Context(), `
-			WITH latest AS (
-				SELECT sr.calcutta_evaluation_run_id
-				FROM derived.simulation_runs sr
-				WHERE sr.synthetic_calcutta_id = $1::uuid
-					AND sr.deleted_at IS NULL
-					AND sr.calcutta_evaluation_run_id IS NOT NULL
-				ORDER BY sr.created_at DESC
-				LIMIT 1
-			)
-			SELECT cer.calcutta_snapshot_id::text
-			FROM latest
-			JOIN derived.calcutta_evaluation_runs cer
-				ON cer.id = latest.calcutta_evaluation_run_id
-				AND cer.deleted_at IS NULL
-			LIMIT 1
-		`, syntheticCalcuttaID).Scan(&derivedSnapshotID)
-		if derivedSnapshotID != nil && strings.TrimSpace(*derivedSnapshotID) != "" {
-			_, _ = s.pool.Exec(r.Context(), `
-				UPDATE derived.synthetic_calcuttas
-				SET calcutta_snapshot_id = $2::uuid,
-					updated_at = NOW()
-				WHERE id = $1::uuid
-					AND deleted_at IS NULL
-			`, syntheticCalcuttaID, *derivedSnapshotID)
-			snapshotID = derivedSnapshotID
-		}
-	}
-	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
 		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 		return
 	}
 
-	rows, err := s.pool.Query(r.Context(), `
+	rows, err := tx.Query(ctx, `
 		WITH latest_eval AS (
 			SELECT sr.calcutta_evaluation_run_id
 			FROM derived.simulation_runs sr
@@ -260,6 +241,11 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 	items := make([]syntheticEntryListItem, 0, len(order))
 	for _, id := range order {
 		items = append(items, *byID[id])
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
 	}
 
 	writeJSON(w, http.StatusOK, listSyntheticEntriesResponse{Items: items})
