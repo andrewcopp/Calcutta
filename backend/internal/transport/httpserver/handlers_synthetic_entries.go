@@ -73,6 +73,21 @@ func (s *Server) registerSyntheticEntryRoutes(r *mux.Router) {
 		"/api/synthetic-calcuttas/{id}/synthetic-entries/import",
 		s.requirePermission("analytics.suite_scenarios.write", s.handleImportSyntheticEntry),
 	).Methods("POST", "OPTIONS")
+
+	// Candidate alias routes (preferred naming).
+	r.HandleFunc(
+		"/api/synthetic-calcuttas/{id}/candidates",
+		s.requirePermission("analytics.suite_scenarios.read", s.handleListSyntheticEntries),
+	).Methods("GET", "OPTIONS")
+	r.HandleFunc(
+		"/api/synthetic-calcuttas/{id}/candidates",
+		s.requirePermission("analytics.suite_scenarios.write", s.handleCreateSyntheticEntry),
+	).Methods("POST", "OPTIONS")
+	r.HandleFunc(
+		"/api/synthetic-calcuttas/{id}/candidates/import",
+		s.requirePermission("analytics.suite_scenarios.write", s.handleImportSyntheticEntry),
+	).Methods("POST", "OPTIONS")
+
 	// TODO: prefer nested routes long-term; keep flat resource routes for now.
 	r.HandleFunc(
 		"/api/synthetic-entries/{id}",
@@ -80,6 +95,16 @@ func (s *Server) registerSyntheticEntryRoutes(r *mux.Router) {
 	).Methods("PATCH", "OPTIONS")
 	r.HandleFunc(
 		"/api/synthetic-entries/{id}",
+		s.requirePermission("analytics.suite_scenarios.write", s.handleDeleteSyntheticEntry),
+	).Methods("DELETE", "OPTIONS")
+
+	// Candidate attachment alias routes.
+	r.HandleFunc(
+		"/api/synthetic-calcutta-candidates/{id}",
+		s.requirePermission("analytics.suite_scenarios.write", s.handlePatchSyntheticEntry),
+	).Methods("PATCH", "OPTIONS")
+	r.HandleFunc(
+		"/api/synthetic-calcutta-candidates/{id}",
 		s.requirePermission("analytics.suite_scenarios.write", s.handleDeleteSyntheticEntry),
 	).Methods("DELETE", "OPTIONS")
 }
