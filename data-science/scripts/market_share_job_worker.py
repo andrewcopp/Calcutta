@@ -4,7 +4,7 @@ import sys
 import time
 import traceback
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from importlib import util
 from io import StringIO
 from pathlib import Path
@@ -39,6 +39,19 @@ def _env_seconds(name: str, default_seconds: int) -> int:
     return _env_int(name, default_seconds)
 
 
+def _env_max_attempts(default_attempts: int = 5) -> int:
+    v = str(os.getenv("RUN_JOBS_MAX_ATTEMPTS", "")).strip()
+    if not v:
+        return default_attempts
+    try:
+        n = int(v)
+        if n <= 0:
+            return default_attempts
+        return n
+    except Exception:
+        return default_attempts
+
+
 def _connect() -> psycopg2.extensions.connection:
     # Prefer DB_* (matches moneyball.db.connection expectations)
     host = os.getenv("DB_HOST", "db").strip() or "db"
@@ -60,21 +73,60 @@ def _claim_next_job(
     conn: psycopg2.extensions.connection,
     *,
     worker_id: str,
-    stale_before: datetime,
+    now: datetime,
+    base_stale_after_seconds: int,
+    max_attempts: int,
 ) -> Optional[Job]:
     with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE derived.run_jobs
+            SET status = 'failed',
+                finished_at = NOW(),
+                error_message = COALESCE(
+                    error_message,
+                    'max_attempts_exceeded'
+                ),
+                updated_at = NOW()
+            WHERE run_kind = 'market_share'
+              AND status = 'running'
+              AND claimed_at IS NOT NULL
+              AND claimed_at < (
+                %s
+                - make_interval(
+                    secs => (
+                        %s * POWER(2, GREATEST(attempt - 1, 0))
+                    )
+                )
+              )
+              AND attempt >= %s
+            """,
+            (
+                now,
+                int(base_stale_after_seconds),
+                int(max_attempts),
+            ),
+        )
         cur.execute(
             """
             WITH candidate AS (
                 SELECT id
                 FROM derived.run_jobs
                 WHERE run_kind = 'market_share'
+                  AND attempt < %s
                   AND (
                         status = 'queued'
                      OR (
                         status = 'running'
                         AND claimed_at IS NOT NULL
-                        AND claimed_at < %s
+                        AND claimed_at < (
+                            %s
+                            - make_interval(
+                                secs => (
+                                    %s * POWER(2, GREATEST(attempt - 1, 0))
+                                )
+                            )
+                        )
                      )
                   )
                 ORDER BY created_at ASC
@@ -103,7 +155,9 @@ def _claim_next_job(
                 j.params_json
             """,
             (
-                stale_before,
+                int(max_attempts),
+                now,
+                int(base_stale_after_seconds),
                 _utc_now(),
                 worker_id,
                 _utc_now(),
@@ -322,6 +376,7 @@ def main() -> int:
         "MARKET_SHARE_STALE_AFTER_SECONDS",
         30 * 60,
     )
+    max_attempts = _env_max_attempts(5)
 
     worker_id = os.getenv("HOSTNAME", "market-share-python-worker").strip()
     if not worker_id:
@@ -333,15 +388,15 @@ def main() -> int:
             conn = _connect()
             conn.autocommit = False
 
-            stale_before = _utc_now() - timedelta(
-                seconds=stale_after_seconds
-            )
+            now = _utc_now()
 
             with conn:
                 job = _claim_next_job(
                     conn,
                     worker_id=worker_id,
-                    stale_before=stale_before,
+                    now=now,
+                    base_stale_after_seconds=stale_after_seconds,
+                    max_attempts=max_attempts,
                 )
 
             if job is None:

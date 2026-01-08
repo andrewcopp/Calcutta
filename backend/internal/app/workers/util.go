@@ -2,6 +2,9 @@ package workers
 
 import (
 	"context"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,4 +41,19 @@ func resolveSeasonYearByCalcuttaID(ctx context.Context, pool *pgxpool.Pool, calc
 		return 0, err
 	}
 	return year, nil
+}
+
+func resolveRunJobsMaxAttempts(defaultValue int) int {
+	v := strings.TrimSpace(os.Getenv("RUN_JOBS_MAX_ATTEMPTS"))
+	if v == "" {
+		return defaultValue
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return defaultValue
+	}
+	if n <= 0 {
+		return defaultValue
+	}
+	return n
 }

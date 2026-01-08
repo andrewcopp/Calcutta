@@ -97,7 +97,11 @@ func (w *MarketShareWorker) claimNextMarketShareJob(ctx context.Context, workerI
 	}
 
 	now := time.Now().UTC()
-	staleBefore := now.Add(-staleAfter)
+	maxAttempts := resolveRunJobsMaxAttempts(5)
+	baseStaleSeconds := staleAfter.Seconds()
+	if baseStaleSeconds <= 0 {
+		baseStaleSeconds = defaultMarketShareWorkerStaleAfter.Seconds()
+	}
 
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -112,17 +116,31 @@ func (w *MarketShareWorker) claimNextMarketShareJob(ctx context.Context, workerI
 	}()
 
 	job := &marketShareJob{}
+	_, _ = tx.Exec(ctx, `
+		UPDATE derived.run_jobs
+		SET status = 'failed',
+			finished_at = NOW(),
+			error_message = COALESCE(error_message, 'max_attempts_exceeded'),
+			updated_at = NOW()
+		WHERE run_kind = 'market_share'
+			AND status = 'running'
+			AND claimed_at IS NOT NULL
+			AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
+			AND attempt >= $3
+	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts)
+
 	q := `
 		WITH candidate AS (
 			SELECT id
 			FROM derived.run_jobs
 			WHERE run_kind = 'market_share'
+				AND attempt < $4
 				AND (
 					status = 'queued'
 					OR (
 						status = 'running'
 						AND claimed_at IS NOT NULL
-						AND claimed_at < $2
+						AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
 					)
 				)
 			ORDER BY created_at ASC
@@ -146,8 +164,9 @@ func (w *MarketShareWorker) claimNextMarketShareJob(ctx context.Context, workerI
 	var paramsStr string
 	if err := tx.QueryRow(ctx, q,
 		pgtype.Timestamptz{Time: now, Valid: true},
-		pgtype.Timestamptz{Time: staleBefore, Valid: true},
+		baseStaleSeconds,
 		workerID,
+		maxAttempts,
 	).Scan(&job.RunID, &job.RunKey, &paramsStr); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, nil

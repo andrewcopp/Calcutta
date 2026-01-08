@@ -108,7 +108,11 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 	}
 
 	now := time.Now().UTC()
-	staleBefore := now.Add(-staleAfter)
+	maxAttempts := resolveRunJobsMaxAttempts(5)
+	baseStaleSeconds := staleAfter.Seconds()
+	if baseStaleSeconds <= 0 {
+		baseStaleSeconds = defaultSimulationWorkerStaleAfter.Seconds()
+	}
 
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -122,18 +126,32 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		_ = tx.Rollback(ctx)
 	}()
 
+	_, _ = tx.Exec(ctx, `
+		UPDATE derived.run_jobs
+		SET status = 'failed',
+			finished_at = NOW(),
+			error_message = COALESCE(error_message, 'max_attempts_exceeded'),
+			updated_at = NOW()
+		WHERE run_kind = 'simulation'
+			AND status = 'running'
+			AND claimed_at IS NOT NULL
+			AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
+			AND attempt >= $3
+	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts)
+
 	var runID string
 	q := `
 		WITH candidate AS (
 			SELECT id
 			FROM derived.run_jobs
 			WHERE run_kind = 'simulation'
+				AND attempt < $4
 				AND (
 					status = 'queued'
 					OR (
 						status = 'running'
 						AND claimed_at IS NOT NULL
-						AND claimed_at < $2
+						AND claimed_at < ($1 - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
 					)
 				)
 			ORDER BY created_at ASC
@@ -155,8 +173,9 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 	`
 	if err := tx.QueryRow(ctx, q,
 		pgtype.Timestamptz{Time: now, Valid: true},
-		pgtype.Timestamptz{Time: staleBefore, Valid: true},
+		baseStaleSeconds,
 		workerID,
+		maxAttempts,
 	).Scan(&runID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, nil
