@@ -1,13 +1,13 @@
 package httpserver
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/gorilla/mux"
 )
 
@@ -45,7 +45,7 @@ func TestThatPredictedReturnsHandlerReturns400WhenGameOutcomeRunIDIsMissing(t *t
 	// GIVEN a request missing required game_outcome_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/calcuttas/abc/predicted-returns", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 
@@ -69,7 +69,7 @@ func TestThatPredictedInvestmentHandlerReturns400WhenMarketShareRunIDIsMissing(t
 	// GIVEN a request missing required market_share_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/calcuttas/abc/predicted-investment?game_outcome_run_id=go1", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 
@@ -93,7 +93,7 @@ func TestThatPredictedInvestmentHandlerReturns400WhenGameOutcomeRunIDIsMissing(t
 	// GIVEN a request missing required game_outcome_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/calcuttas/abc/predicted-investment?market_share_run_id=ms1", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 
@@ -117,7 +117,7 @@ func TestThatPredictedMarketShareHandlerReturns400WhenMarketShareRunIDIsMissing(
 	// GIVEN a request missing required market_share_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/calcuttas/abc/predicted-market-share?game_outcome_run_id=go1", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 
@@ -141,7 +141,7 @@ func TestThatPredictedMarketShareHandlerReturns400WhenGameOutcomeRunIDIsMissing(
 	// GIVEN a request missing required game_outcome_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/calcuttas/abc/predicted-market-share?market_share_run_id=ms1", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 
@@ -165,7 +165,7 @@ func TestThatPredictedAdvancementHandlerReturns400WhenGameOutcomeRunIDIsMissing(
 	// GIVEN a request missing required game_outcome_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/tournaments/abc/predicted-advancement", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 
@@ -189,7 +189,7 @@ func TestThatSimulatedEntryHandlerReturns400WhenEntryRunIDIsMissing(t *testing.T
 	// GIVEN a request missing required entry_run_id
 	s := &Server{}
 	req := httptest.NewRequest(http.MethodGet, "/analytics/calcuttas/abc/simulated-entry", nil)
-	req = req.WithContext(context.WithValue(req.Context(), requestIDKey, "req-1"))
+	req = req.WithContext(requestctx.WithRequestID(req.Context(), "req-1"))
 	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
 	w := httptest.NewRecorder()
 

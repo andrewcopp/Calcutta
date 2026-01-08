@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 )
 
 type apiErrorEnvelopeForTest struct {
@@ -26,7 +26,7 @@ type apiErrorEnvelopeForTest struct {
 
 func TestThatWriteErrorFromErrReturns500ForNilError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, nil)
@@ -40,7 +40,7 @@ func TestThatWriteErrorFromErrReturns500ForNilError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturnsInternalErrorCodeForUnknownError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, errors.New("boom"))
@@ -59,7 +59,7 @@ func TestThatWriteErrorFromErrReturnsInternalErrorCodeForUnknownError(t *testing
 
 func TestThatWriteErrorFromErrIncludesRequestIDInResponse(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, errors.New("boom"))
@@ -85,7 +85,7 @@ func TestThatWriteErrorFromErrLogsStructuredJSONForUnknownError(t *testing.T) {
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/boom", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, errors.New("boom"))
@@ -123,7 +123,7 @@ func TestThatWriteErrorFromErrLogsStructuredJSONForUnknownError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturnsUnauthorizedCodeForUnauthorizedError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.UnauthorizedError{})
@@ -142,7 +142,7 @@ func TestThatWriteErrorFromErrReturnsUnauthorizedCodeForUnauthorizedError(t *tes
 
 func TestThatWriteErrorFromErrReturnsNotFoundCodeForNotFoundError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"})
@@ -161,7 +161,7 @@ func TestThatWriteErrorFromErrReturnsNotFoundCodeForNotFoundError(t *testing.T) 
 
 func TestThatWriteErrorFromErrReturns409ForAlreadyExistsError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
@@ -175,7 +175,7 @@ func TestThatWriteErrorFromErrReturns409ForAlreadyExistsError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturnsConflictCodeForAlreadyExistsError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
@@ -194,7 +194,7 @@ func TestThatWriteErrorFromErrReturnsConflictCodeForAlreadyExistsError(t *testin
 
 func TestThatWriteErrorFromErrReturnsConflictFieldForAlreadyExistsError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
@@ -213,7 +213,7 @@ func TestThatWriteErrorFromErrReturnsConflictFieldForAlreadyExistsError(t *testi
 
 func TestThatWriteErrorFromErrReturnsValidationErrorCodeForValidationError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
@@ -232,7 +232,7 @@ func TestThatWriteErrorFromErrReturnsValidationErrorCodeForValidationError(t *te
 
 func TestThatWriteErrorFromErrReturnsValidationErrorMessageForValidationError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
@@ -251,7 +251,7 @@ func TestThatWriteErrorFromErrReturnsValidationErrorMessageForValidationError(t 
 
 func TestThatWriteErrorFromErrReturnsValidationErrorFieldForValidationError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
@@ -270,7 +270,7 @@ func TestThatWriteErrorFromErrReturnsValidationErrorFieldForValidationError(t *t
 
 func TestThatWriteErrorFromErrReturns400ForValidationError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
@@ -284,7 +284,7 @@ func TestThatWriteErrorFromErrReturns400ForValidationError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturnsInvalidArgumentCodeForInvalidArgumentError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
@@ -303,7 +303,7 @@ func TestThatWriteErrorFromErrReturnsInvalidArgumentCodeForInvalidArgumentError(
 
 func TestThatWriteErrorFromErrReturns400ForInvalidArgumentError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
@@ -317,7 +317,7 @@ func TestThatWriteErrorFromErrReturns400ForInvalidArgumentError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturnsInvalidArgumentFieldForInvalidArgumentError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
@@ -336,7 +336,7 @@ func TestThatWriteErrorFromErrReturnsInvalidArgumentFieldForInvalidArgumentError
 
 func TestThatWriteErrorFromErrReturns404ForNotFoundError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"})
@@ -350,7 +350,7 @@ func TestThatWriteErrorFromErrReturns404ForNotFoundError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturns401ForUnauthorizedError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, &apperrors.UnauthorizedError{})
@@ -364,7 +364,7 @@ func TestThatWriteErrorFromErrReturns401ForUnauthorizedError(t *testing.T) {
 
 func TestThatWriteErrorFromErrReturns500ForUnknownError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "req-1"))
+	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
 	writeErrorFromErr(w, r, errors.New("boom"))

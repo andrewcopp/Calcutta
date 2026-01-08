@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/middleware"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/gorilla/mux"
 )
 
@@ -45,9 +47,9 @@ func Run() error {
 	r := mux.NewRouter()
 	r.Use(requestIDMiddleware)
 	r.Use(loggingMiddleware)
-	r.Use(corsMiddleware(cfg.AllowedOrigins))
+	r.Use(middleware.CORSMiddleware(cfg.AllowedOrigins))
 	r.Use(rateLimitMiddleware(cfg.RateLimitRPM))
-	r.Use(maxBodyBytesMiddleware(cfg.HTTPMaxBodyBytes))
+	r.Use(middleware.MaxBodyBytesMiddleware(cfg.HTTPMaxBodyBytes))
 	r.Use(server.authenticateMiddleware)
 
 	// Routes
@@ -55,7 +57,7 @@ func Run() error {
 
 	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestLogger(r.Context()).WarnContext(
+		requestctx.Logger(r.Context()).WarnContext(
 			r.Context(),
 			"http_not_found",
 			"event", "http_not_found",

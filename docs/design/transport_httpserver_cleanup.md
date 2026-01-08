@@ -8,15 +8,61 @@
 
 ## Progress so far (completed)
 - [x] Decide worker runtime model: long-running workers deployed as a separate ECS service; UI actions enqueue jobs
-- [x] Deprecate `backend/internal/features/*` immediately by migrating all Go imports to `backend/internal/app/*`
+- [x] Remove legacy wrapper packages by migrating all Go imports to `backend/internal/app/*`
 - [x] Update `backend/internal/app/README.md` to reflect `internal/app/<feature>` as the canonical import path
 
+## Plan of attack (milestones)
+- [ ] Milestone 0: hygiene + guardrails
+  - [x] Ensure the doc’s dependency rules are the reference for the refactor (see: [Target architecture (DBClient / HTTPClient / models / adapters)](#target-architecture-dbclient--httpclient--models--adapters))
+  - [x] Confirm/remove any remaining references to the deleted legacy wrapper layer (Go, docs, scripts)
+  - [x] Add a CI guardrail to prevent the legacy wrapper layer from reappearing
+  - [x] Decide whether to introduce temporary allowlists for import-boundary checks during migration (decision: defer until Milestone 7; only legacy-wrapper guardrail is enforced for now)
+- [x] Milestone 1: map the current state
+  - [x] Complete the inventory and classification for `transport/httpserver` (see: [Inventory + classification](#inventory--classification))
+  - [x] Fill in the move map until every file has a target package (see: [Move map](#move-map-fill-in-during-inventory))
+- [x] Milestone 2: low-risk package reshuffle (no behavior change)
+  - [x] Move middleware + error helpers into subpackages (see: [Target structure (package layout)](#target-structure-package-layout))
+    - [x] Move CORS + max-body-bytes middleware into `httpserver/middleware`
+    - [x] Move logging middleware into `httpserver/middleware` (keep root wrapper)
+    - [x] Move rate limiting middleware into `httpserver/middleware` (keep root wrapper)
+    - [x] Move HTTP error helpers into `httpserver/httperr` (keep root wrapper)
+  - [x] Introduce first feature subpackage (`modelcatalogs`) and migrate it without behavior changes
+  - [x] Extract shared response helper (`httpserver/response.WriteJSON`) to avoid feature-package import cycles
+  - [x] Extract request context helpers (`httpserver/requestctx`) and update call sites/tests
+  - [x] Introduce additional feature subpackages under `httpserver/` and migrate one feature end-to-end without changing logic (see: [Proposed `httpserver/` layout (feature-first)](#proposed-httpserver-layout-feature-first))
+- [ ] Milestone 3: handler cleanup (feature-first)
+  - [ ] Carve out 1 feature (recommended: `mlanalytics`) into `transport/httpserver/<feature>` with `routes.go`, `handlers.go`, `types.go`, `params.go`
+  - [ ] Update top-level routing to compose feature route registrars (see: [Routing + wiring](#routing--wiring))
+- [ ] Milestone 4: repositories eviction
+  - [ ] Remove repository shims and ensure handlers call `app` services/ports (see: [Repositories: eviction plan](#repositories-eviction-plan))
+  - [ ] Ensure DB adapter construction happens in wiring outside `transport/httpserver`
+- [ ] Milestone 5: workers eviction
+  - [ ] Move `*_worker.go` out of `transport/httpserver` into a worker layer and make dependencies explicit (see: [Workers: eviction plan](#workers-eviction-plan))
+  - [ ] Align the worker entrypoint with the ECS service model (see: [Worker runtime model (app-triggered, not CLI)](#worker-runtime-model-app-triggered-not-cli))
+- [ ] Milestone 6: naming + cleanup
+  - [ ] Remove `handlers_*` filename prefixes once feature packages exist (see: [Naming + file cleanup](#naming--file-cleanup))
+  - [ ] Align backend resource naming (remove “suite” where it no longer matches API resources)
+- [ ] Milestone 7: enforce the boundaries
+  - [ ] Add CI checks for forbidden imports and anti-regression checks for new `*_repository.go` / `*_worker.go` under `transport/httpserver` (see: [Best-practice guardrails](#best-practice-guardrails-avoid-the-sideways-look))
+
 ## Next steps (near-term)
-- [ ] Delete `backend/internal/features/` directory (should be safe now that imports are migrated)
-- [ ] Run backend tests to confirm: `go test ./...` (from `backend/`)
-- [ ] Re-run grep to confirm no remaining `internal/features` references anywhere (Go, docs, scripts)
+- [x] Delete legacy wrapper directory
+- [x] Run backend tests to confirm: `go test ./...` (from `backend/`)
+- [x] Re-run grep to confirm no remaining references to the deleted legacy wrapper layer (Go, docs, scripts)
 
 ## Target architecture (DBClient / HTTPClient / models / adapters)
+- [ ] Architecture note (keep this true as the refactor progresses):
+  - [ ] `internal/app/...` is the canonical home for feature logic (use-cases/services) and the port interfaces they depend on
+  - [ ] `internal/adapters/...` contains concrete IO implementations (DB repositories, external clients)
+  - [ ] `internal/transport/httpserver/...` is an inbound HTTP adapter: routing, middleware, request/response DTOs, and error mapping
+  - [ ] Dependency direction:
+    - [ ] `transport/httpserver` -> `app` (calls use-cases)
+    - [ ] `adapters/*` -> `app` (implements ports)
+    - [ ] `app` must not import `transport` or concrete `adapters`
+  - [ ] DTO/type boundaries:
+    - [ ] HTTP DTOs stay in `transport/httpserver`
+    - [ ] DB row/query types stay in `adapters/db`
+    - [ ] Mapping between layers happens at the edges
 - [ ] Agree on core conceptual buckets:
   - [ ] **Models (core/app)**: domain types + use-cases/services
   - [ ] **DBClient**: the database handle/transaction abstraction (sql.DB/sqlx/pgx/etc.)
@@ -64,6 +110,43 @@
   - [ ] `internal/adapters/db/` already contains `api_keys_repository.go`, `auth_repository.go`, `authz_repository.go`, `user_repository.go` (i.e., canonical DB adapter implementations already exist)
   - [ ] `transport/httpserver/*_worker.go` implement long-running poller workers directly as `Server` methods and directly manage DB transactions via `s.pool`
   - [ ] There is an existing `internal/adapters/httpapi/` package that likely wants to absorb some shared HTTP server primitives (router/response helpers)
+
+## Milestone 1 inventory snapshot (current `transport/httpserver`)
+- [ ] Classify these buckets and keep them up to date as files move:
+  - [ ] **HTTP server wiring (keep in root `httpserver` package, but may be slimmed)**
+    - [ ] `main.go` (contains `Run()`)
+    - [ ] `server.go` (constructs server, holds dependencies)
+    - [ ] `routes.go` (top-level route composition)
+  - [ ] **Transport infra (move into subpackages under `httpserver/` in Milestone 2)**
+    - [ ] `middleware.go`, `middleware_auth.go`
+    - [ ] `http_helpers.go`
+    - [ ] `params.go`, `sql_params.go`
+    - [ ] `metrics.go`
+    - [ ] `cognito_jwt_verifier.go`
+  - [ ] **DTOs (currently centralized under `httpserver/dtos/`)**
+    - [ ] `dtos/*.go` (14 files)
+  - [ ] **Repository shims (delete in Milestone 4; redundant wrappers over `adapters/db`)**
+    - [ ] `api_keys_repository.go`, `auth_repository.go`, `authz_repository.go`, `user_repository.go`
+  - [ ] **Worker shims (delete in Milestone 5; workers already exist under `internal/app/workers`)**
+    - [ ] `bundle_import_worker.go`, `entry_evaluation_worker.go`, `market_share_worker.go`, `game_outcome_worker.go`, `strategy_generation_worker.go`, `calcutta_evaluation_worker.go`
+  - [ ] **Feature handlers (largest set; to be moved into `httpserver/<feature>/...`)**
+    - [ ] Admin: `handlers_admin_*`
+    - [ ] Auth: `handlers_auth*`
+    - [ ] Analytics read endpoints: `handlers_analytics.go`, `handlers_hall_of_fame*` (if present)
+    - [ ] ML analytics endpoints: `handlers_ml_analytics*`
+    - [ ] Tournaments: `handlers_tournaments*`, `handlers_tournament_analytics.go`
+    - [ ] Bracket: `handlers_bracket.go`
+    - [ ] Calcuttas/entries/portfolios: `handlers_calcuttas*`, `handlers_portfolios*`
+    - [ ] Runs/progress/artifacts: `handlers_run_progress.go`, `handlers_entry_runs.go`
+    - [ ] Entry eval requests: `handlers_entry_evaluation_requests.go`
+    - [ ] Strategy generation runs: `handlers_strategy_generation_runs.go`
+    - [ ] Lab + synthetic data: `handlers_lab_entries*`, `handlers_synthetic_*`
+    - [ ] Cohorts/simulations: `handlers_suite_calcutta_evaluations*` (to be renamed away from “suite”)
+    - [ ] Model catalogs: `handlers_model_catalogs.go`
+  - [ ] **Tests to relocate alongside moved packages**
+    - [ ] `http_helpers_test.go`
+    - [ ] `handlers_*_test.go` (various)
+    - [ ] `dtos/mappers_analytics_test.go`
 
 ## Proposed `httpserver/` layout (feature-first)
 - [ ] Create feature subpackages under `httpserver/` so names don’t encode architecture:
@@ -156,23 +239,20 @@
   - [ ] Jobs are idempotent or protected by unique constraints / status transitions
   - [ ] Workers emit progress/status into DB so UI can show progress
 
-## Consolidate `internal/app` vs `internal/features`
-- [ ] Confirm current state: `internal/features/*` duplicates feature directories already present under `internal/app/*`
+## Consolidate `internal/app` vs legacy wrapper layer
+- [x] Confirm current state: the legacy wrapper layer duplicated feature directories already present under `internal/app/*`
 - [ ] Decide canonical convention going forward:
   - [ ] Use `internal/app/<feature>` as the only home for feature use-cases/services (recommended)
-  - [ ] Deprecate `internal/features` entirely (chosen: deprecate immediately)
+  - [x] Remove the legacy wrapper layer entirely (chosen: remove immediately)
 - [ ] Define “what goes where” rules:
   - [ ] `internal/app/<feature>`: use-cases/services, ports (interfaces), orchestration logic
   - [ ] `internal/adapters/db/<feature>`: repository implementations (DB adapter)
   - [ ] `internal/adapters/httpclient/<external>`: outbound HTTP client adapters
   - [ ] `internal/transport/httpserver/<feature>`: inbound HTTP handlers + DTOs + routing
 - [ ] Migration tasks:
-  - [ ] For each `internal/features/<feature>`:
-    - [ ] Move code into `internal/app/<feature>` (or delete if it’s a thin wrapper)
-    - [ ] Update imports throughout the repo
-    - [ ] Ensure package names remain stable/clear
-  - [ ] Add a short note to `internal/app/README.md` describing the canonical structure
-  - [ ] After migration, delete `internal/features/` directory
+  - [x] Update imports throughout the repo to use `internal/app/<feature>`
+  - [x] Update `internal/app/README.md` describing the canonical structure
+  - [x] Delete the legacy wrapper directory
 
 ## Naming + file cleanup
 - [ ] Remove `handlers_*` filename prefixes after feature subpackages exist
@@ -194,7 +274,7 @@
   - [ ] Do not create “helper” packages by default; prefer feature-local helpers unless truly shared
   - [ ] Keep handlers thin, but don’t force a "service" layer for trivial pass-through endpoints
 - [ ] Clarify package semantics to reduce confusion:
-  - [ ] Decide what `internal/app` means vs `internal/features` (pick one of: consolidate, or define the rule for each)
+  - [x] Decide what `internal/app` means vs the legacy wrapper layer (pick one of: consolidate, or define the rule for each)
   - [ ] Add a short architecture note in this doc describing the chosen rule (2-10 bullets)
 - [ ] Enforce DTO/type boundaries:
   - [ ] HTTP request/response DTOs live only in `transport/httpserver/...` packages
@@ -240,6 +320,54 @@
 ## Move map (fill in during inventory)
 - [ ] `backend/internal/transport/httpserver/<file>.go` -> `<target package/path>`
 - [ ] `backend/internal/transport/httpserver/<file>.go` -> `<target package/path>`
+
+## Move map (grouped; every current file should fit one bucket)
+- [ ] **Keep (root wiring)**
+  - [ ] `backend/internal/transport/httpserver/main.go` -> keep (may later move to `cmd/api` wiring)
+  - [ ] `backend/internal/transport/httpserver/server.go` -> keep (but remove DB/worker shims over time)
+  - [ ] `backend/internal/transport/httpserver/routes.go` -> keep until feature routers exist; later becomes a thin composition root
+- [ ] **Move (shared transport infra)**
+  - [ ] `backend/internal/transport/httpserver/middleware.go` -> `backend/internal/transport/httpserver/middleware/middleware.go`
+  - [ ] `backend/internal/transport/httpserver/middleware_auth.go` -> `backend/internal/transport/httpserver/middleware/auth.go`
+  - [ ] `backend/internal/transport/httpserver/http_helpers.go` -> `backend/internal/transport/httpserver/httperr/encode.go` (or similar)
+  - [ ] `backend/internal/transport/httpserver/params.go` -> `backend/internal/transport/httpserver/params/params.go` (or feature-local)
+  - [ ] `backend/internal/transport/httpserver/sql_params.go` -> `backend/internal/transport/httpserver/sqlparams/sqlparams.go` (or delete if unused after repo moves)
+  - [ ] `backend/internal/transport/httpserver/metrics.go` -> `backend/internal/transport/httpserver/metrics/metrics.go`
+  - [ ] `backend/internal/transport/httpserver/cognito_jwt_verifier.go` -> `backend/internal/transport/httpserver/authn/cognito_jwt_verifier.go`
+- [ ] **Keep (DTOs for now; split later by feature)**
+  - [ ] `backend/internal/transport/httpserver/dtos/*.go` -> keep in `backend/internal/transport/httpserver/dtos/` until feature packages stabilize
+- [ ] **Delete (repository shims; replace with `app` ports/services)**
+  - [ ] `backend/internal/transport/httpserver/api_keys_repository.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/auth_repository.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/authz_repository.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/user_repository.go` -> delete
+- [ ] **Delete (worker shims; keep `cmd/workers` + `internal/app/workers`)**
+  - [ ] `backend/internal/transport/httpserver/bundle_import_worker.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/entry_evaluation_worker.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/market_share_worker.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/game_outcome_worker.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/strategy_generation_worker.go` -> delete
+  - [ ] `backend/internal/transport/httpserver/calcutta_evaluation_worker.go` -> delete
+- [ ] **Move (feature handler clusters; create feature subpackages)**
+  - [ ] `backend/internal/transport/httpserver/handlers_admin_*.go` -> `backend/internal/transport/httpserver/admin/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_auth*.go` -> `backend/internal/transport/httpserver/auth/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_analytics.go` -> `backend/internal/transport/httpserver/analytics/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_ml_analytics*.go` -> `backend/internal/transport/httpserver/mlanalytics/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_model_catalogs.go` -> `backend/internal/transport/httpserver/modelcatalogs/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_tournaments*.go` + `handlers_tournament_analytics.go` -> `backend/internal/transport/httpserver/tournaments/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_bracket.go` -> `backend/internal/transport/httpserver/bracket/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_calcuttas*.go` -> `backend/internal/transport/httpserver/calcuttas/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_portfolios*.go` -> `backend/internal/transport/httpserver/portfolios/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_entry_evaluation_requests.go` -> `backend/internal/transport/httpserver/entryevaluationrequests/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_run_progress.go` -> `backend/internal/transport/httpserver/runprogress/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_entry_runs.go` -> `backend/internal/transport/httpserver/entryruns/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_strategy_generation_runs.go` -> `backend/internal/transport/httpserver/strategygenerationruns/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_lab_entries*.go` -> `backend/internal/transport/httpserver/labentries/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_synthetic_*.go` -> `backend/internal/transport/httpserver/synthetic/*`
+  - [ ] `backend/internal/transport/httpserver/handlers_suite_calcutta_evaluations*.go` -> `backend/internal/transport/httpserver/simulations/*` (rename away from “suite”)
+- [ ] **Move tests with their packages**
+  - [ ] `backend/internal/transport/httpserver/http_helpers_test.go` -> move with `httperr/*` package
+  - [ ] `backend/internal/transport/httpserver/handlers_*_test.go` -> move with feature package
 
 ## Move map (seeded from initial inventory)
 - [ ] `backend/internal/transport/httpserver/api_keys_repository.go` -> delete (replace uses by injecting an `app` service/port; construct `adapters/db` repo in wiring outside `transport/httpserver`)

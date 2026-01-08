@@ -1,8 +1,8 @@
 package httpserver
 
 import (
-	"net/http"
-
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/mlanalytics"
 	"github.com/gorilla/mux"
 )
 
@@ -23,22 +23,41 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 }
 
 func (s *Server) registerBasicRoutes(r *mux.Router) {
-	// Health & basic
-	r.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	r.HandleFunc("/healthz", s.healthHandler).Methods("GET")
-	r.HandleFunc("/readyz", s.readyHandler).Methods("GET")
-	r.HandleFunc("/health/live", s.healthHandler).Methods("GET")
-	r.HandleFunc("/health/ready", s.readyHandler).Methods("GET")
-	if s.cfg.MetricsEnabled {
-		r.HandleFunc("/metrics", s.metricsHandler).Methods("GET")
-	}
-	r.HandleFunc("/api/health", s.healthHandler).Methods("GET")
-	r.HandleFunc("/api/ready", s.readyHandler).Methods("GET")
+	basic.RegisterRoutes(r,
+		basic.Options{MetricsEnabled: s.cfg.MetricsEnabled},
+		basic.Handlers{Health: s.healthHandler, Ready: s.readyHandler, Metrics: s.metricsHandler},
+	)
 
 	// ML Analytics (public read-only endpoints)
-	s.registerMLAnalyticsRoutes(r)
+	mlanalytics.RegisterRoutes(r, mlanalytics.Handlers{
+		TournamentSimStats:                 s.handleGetTournamentSimStats,
+		TournamentSimStatsByID:             s.handleGetTournamentSimStatsByID,
+		ListTournamentSimulationBatches:    s.handleListTournamentSimulationBatches,
+		ListAlgorithms:                     s.handleListAlgorithms,
+		GetGameOutcomesAlgorithmCoverage:   s.handleGetGameOutcomesAlgorithmCoverage,
+		GetMarketShareAlgorithmCoverage:    s.handleGetMarketShareAlgorithmCoverage,
+		GetGameOutcomesCoverageDetail:      s.handleGetGameOutcomesAlgorithmCoverageDetail,
+		GetMarketShareCoverageDetail:       s.handleGetMarketShareAlgorithmCoverageDetail,
+		ListGameOutcomeRunsForTournament:   s.handleListGameOutcomeRunsForTournament,
+		GetTournamentPredictedAdvancement:  s.handleGetTournamentPredictedAdvancement,
+		GetCalcuttaPredictedReturns:        s.handleGetCalcuttaPredictedReturns,
+		GetCalcuttaPredictedInvestment:     s.handleGetCalcuttaPredictedInvestment,
+		GetCalcuttaPredictedMarketShare:    s.handleGetCalcuttaPredictedMarketShare,
+		ListMarketShareRunsForCalcutta:     s.handleListMarketShareRunsForCalcutta,
+		GetLatestPredictionRunsForCalcutta: s.handleGetLatestPredictionRunsForCalcutta,
+		GetCalcuttaSimulatedEntry:          s.handleGetCalcuttaSimulatedEntry,
+		GetCalcuttaSimulatedCalcuttas:      s.handleGetCalcuttaSimulatedCalcuttas,
+		ListCalcuttaEvaluationRuns:         s.handleListCalcuttaEvaluationRuns,
+		ListStrategyGenerationRuns:         s.handleListStrategyGenerationRuns,
+		GetTeamPerformance:                 s.handleGetTeamPerformance,
+		GetTeamPerformanceByCalcutta:       s.handleGetTeamPerformanceByCalcutta,
+		GetTeamPredictions:                 s.handleGetTeamPredictions,
+		GetOptimizationRuns:                s.handleGetOptimizationRuns,
+		GetOurEntryDetails:                 s.handleGetOurEntryDetails,
+		GetEntryRankings:                   s.handleGetEntryRankings,
+		GetEntrySimulations:                s.handleGetEntrySimulations,
+		GetEntryPortfolio:                  s.handleGetEntryPortfolio,
+	})
 }
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
@@ -53,6 +72,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	s.registerEntryArtifactRoutes(r)
 	s.registerStrategyGenerationRunRoutes(r)
 	s.registerLabEntriesRoutes(r)
+	s.registerLabCandidatesRoutes(r)
 	s.registerModelCatalogRoutes(r)
 	s.registerSyntheticCalcuttaCohortRoutes(r)
 	s.registerSyntheticCalcuttaRoutes(r)
@@ -124,38 +144,6 @@ func (s *Server) registerAnalyticsRoutes(r *mux.Router) {
 	r.HandleFunc("/api/analytics/variance", s.requirePermission("admin.analytics.read", s.seedVarianceAnalyticsHandler)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/seed-investment-distribution", s.requirePermission("admin.analytics.read", s.seedInvestmentDistributionHandler)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/analytics/best-investments", s.requirePermission("admin.analytics.read", s.bestInvestmentsHandler)).Methods("GET", "OPTIONS")
-}
-
-func (s *Server) registerMLAnalyticsRoutes(r *mux.Router) {
-	// ML Analytics (read-only)
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/simulations", s.handleGetTournamentSimStats).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/simulations", s.handleGetTournamentSimStatsByID).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/simulation-batches", s.handleListTournamentSimulationBatches).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/algorithms", s.handleListAlgorithms).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/coverage/game-outcomes", s.handleGetGameOutcomesAlgorithmCoverage).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/coverage/market-share", s.handleGetMarketShareAlgorithmCoverage).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/algorithms/{id}/coverage/game-outcomes", s.handleGetGameOutcomesAlgorithmCoverageDetail).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/algorithms/{id}/coverage/market-share", s.handleGetMarketShareAlgorithmCoverageDetail).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/game-outcome-runs", s.handleListGameOutcomeRunsForTournament).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/tournaments/{id}/predicted-advancement", s.handleGetTournamentPredictedAdvancement).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/predicted-returns", s.handleGetCalcuttaPredictedReturns).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/predicted-investment", s.handleGetCalcuttaPredictedInvestment).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/predicted-market-share", s.handleGetCalcuttaPredictedMarketShare).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/market-share-runs", s.handleListMarketShareRunsForCalcutta).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/latest-prediction-runs", s.handleGetLatestPredictionRunsForCalcutta).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/simulated-entry", s.handleGetCalcuttaSimulatedEntry).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/simulated-calcuttas", s.handleGetCalcuttaSimulatedCalcuttas).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/evaluation-runs", s.handleListCalcuttaEvaluationRuns).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/entry-runs", s.handleListStrategyGenerationRuns).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/calcuttas/{id}/strategy-generation-runs", s.handleListStrategyGenerationRuns).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/{team_id}/performance", s.handleGetTeamPerformance).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/calcuttas/{calcutta_id}/teams/{team_id}/performance", s.handleGetTeamPerformanceByCalcutta).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/teams/predictions", s.handleGetTeamPredictions).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs", s.handleGetOptimizationRuns).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/our-entry", s.handleGetOurEntryDetails).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/rankings", s.handleGetEntryRankings).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/entries/{entry_key}/simulations", s.handleGetEntrySimulations).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/analytics/tournaments/{year}/runs/{run_id}/entries/{entry_key}/portfolio", s.handleGetEntryPortfolio).Methods("GET", "OPTIONS")
 }
 
 func (s *Server) registerHallOfFameRoutes(r *mux.Router) {

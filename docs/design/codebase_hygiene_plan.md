@@ -54,23 +54,22 @@ Tasks:
 - [x] Make detailed per-simulation outcomes ephemeral by default; persist aggregates + snapshots; allow opt-in persistence via `CALCUTTA_PERSIST_SIMULATION_DETAILS=true`.
 - [x] Update ML analytics queries/sqlc so `total_simulations` does not require persisted per-simulation entry outcomes.
 
-### 3) Backend: Introduce internal/features wrappers (hybrid architecture)
+### 3) Backend: Remove legacy feature wrapper layer
 
 Targets:
 
-- `backend/internal/features/*`
 - `backend/internal/app/app.go`
 - `backend/internal/app/bootstrap/app.go`
 - `backend/cmd/*`
 
-Outcome: Feature-first import surface (`internal/features/*`) with wrapper-first migration; existing `internal/app/*` remains composition/wiring.
+Outcome: Canonical feature import surface (`internal/app/*`); remove the legacy wrapper layer.
 
 Tasks:
 
-- [x] Add thin wrapper packages under `backend/internal/features/*` for existing services.
-- [x] Update app wiring + CLI entrypoints to import from `backend/internal/features/*`.
+- [x] Remove the legacy wrapper packages.
+- [x] Update app wiring + CLI entrypoints to import from `backend/internal/app/*`.
 - [x] Verify backend build/test remains green.
-- [x] Document `internal/app` as wiring/composition only (`backend/internal/app/README.md`).
+- [x] Update `backend/internal/app/README.md` to reflect canonical imports.
 
 ### 4) Backend: Reorganize ops scripts
 
@@ -127,7 +126,7 @@ Tasks:
 
 - [x] Start with (1) `analytics.sql` split (low risk, high readability win).
 - [x] Then (2) `simulated_calcutta` decomposition.
-- [x] Then (3) `internal/features` wrapper migration.
+- [x] Then (3) legacy wrapper removal.
 - [x] Then (4) ops script re-org.
 - [x] Then (5) handler mapping extraction.
 - [x] Then (6) importer split.

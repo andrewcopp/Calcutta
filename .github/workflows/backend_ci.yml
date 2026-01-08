@@ -28,5 +28,12 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
+      - name: "Guardrail: forbid legacy internal/features"
+        run: |
+          if grep -R --line-number --fixed-strings "internal/features" .; then
+            echo "Found forbidden reference to legacy internal/features"
+            exit 1
+          fi
+
       - name: Go test
         run: go test ./...

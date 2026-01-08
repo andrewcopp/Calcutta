@@ -19,8 +19,6 @@ This package subtree is the backend **composition root**.
 - **Outside of `internal/app/**`**, code should depend directly on feature packages under:
   - `backend/internal/app/<feature>`
 
-- `backend/internal/features/*` is deprecated and should not be used.
-
 ### Examples
 
 Preferred:
@@ -30,5 +28,4 @@ Preferred:
 
 Avoid:
 
-- `github.com/andrewcopp/Calcutta/backend/internal/features/analytics`
-- `github.com/andrewcopp/Calcutta/backend/internal/features/auth`
+- Legacy wrapper imports (removed)

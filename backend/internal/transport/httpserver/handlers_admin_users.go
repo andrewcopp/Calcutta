@@ -12,6 +12,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
@@ -132,7 +133,7 @@ func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Requ
 	subject, body := buildInviteEmail(inviteURL, expiresAt)
 	err = s.emailSender.Send(r.Context(), email, subject, body)
 	if err != nil {
-		requestLogger(r.Context()).ErrorContext(r.Context(), "invite_email_send_failed", "event", "invite_email_send_failed", "user_id", userID, "email", email, "error", err.Error())
+		requestctx.Logger(r.Context()).ErrorContext(r.Context(), "invite_email_send_failed", "event", "invite_email_send_failed", "user_id", userID, "email", email, "error", err.Error())
 		writeError(w, r, http.StatusInternalServerError, "internal_error", "failed to send invite email", "")
 		return
 	}
@@ -147,7 +148,7 @@ func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	requestLogger(r.Context()).InfoContext(r.Context(), "invite_email_sent", "event", "invite_email_sent", "user_id", userID, "email", email)
+	requestctx.Logger(r.Context()).InfoContext(r.Context(), "invite_email_sent", "event", "invite_email_sent", "user_id", userID, "email", email)
 	writeJSON(w, http.StatusOK, dtos.AdminInviteUserResponse{
 		UserID:        userID,
 		Email:         email,
