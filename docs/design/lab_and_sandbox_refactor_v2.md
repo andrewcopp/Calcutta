@@ -36,12 +36,14 @@ This doc is a task checklist. Keep it updated as work lands.
     - `GET /api/lab/entries` performs no INSERT/UPDATE.
     - AUTO cohorts can still be created deterministically via a non-GET mechanism.
 
-- [ ] Remove/replace “repair snapshot on read” behavior in `handleListSyntheticEntries`.
+- [x] Remove/replace “repair snapshot on read” behavior in `handleListSyntheticEntries`.
   - **Acceptance**:
     - `GET /synthetic-calcuttas/{id}/synthetic-entries` performs no writes.
     - Missing snapshot becomes a clear 409 error OR is repaired only via an explicit endpoint/job.
+  - **Notes**:
+    - Enforced `derived.synthetic_calcuttas.calcutta_snapshot_id` invariant via `NOT NULL` migration.
 
-- [ ] Add regression tests (or at minimum integration assertions) that “read endpoints do not write”.
+- [x] Add regression tests (or at minimum integration assertions) that “read endpoints do not write”.
   - **Acceptance**: a test fails if any write query is executed during these read handlers.
 
 ## 0.2 Remove name-based correctness hacks
@@ -198,7 +200,7 @@ This doc is a task checklist. Keep it updated as work lands.
 # Appendix — Suggested PR sequence (small, safe increments)
 
 - [x] PR A: Remove AUTO cohort upsert from GET; add explicit creation path.
-- [ ] PR B: Remove snapshot repair-on-read; enforce invariant.
+- [x] PR B: Remove snapshot repair-on-read; enforce invariant.
 - [ ] PR C: Replace “Our Strategy” string matching with stable IDs.
 - [ ] PR D: Add explicit upstream run columns + backfill.
 - [ ] PR E: Introduce Candidate tables + migrate sandbox endpoints.
