@@ -87,6 +87,14 @@ func (s *Server) registerSyntheticEntryRoutes(r *mux.Router) {
 		"/api/synthetic-calcuttas/{id}/candidates/import",
 		s.requirePermission("analytics.suite_scenarios.write", s.handleImportSyntheticEntry),
 	).Methods("POST", "OPTIONS")
+	r.HandleFunc(
+		"/api/synthetic-calcuttas/{syntheticCalcuttaId}/candidates/{id}",
+		s.requirePermission("analytics.suite_scenarios.write", s.handlePatchSyntheticEntry),
+	).Methods("PATCH", "OPTIONS")
+	r.HandleFunc(
+		"/api/synthetic-calcuttas/{syntheticCalcuttaId}/candidates/{id}",
+		s.requirePermission("analytics.suite_scenarios.write", s.handleDeleteSyntheticEntry),
+	).Methods("DELETE", "OPTIONS")
 
 	// TODO: prefer nested routes long-term; keep flat resource routes for now.
 	r.HandleFunc(

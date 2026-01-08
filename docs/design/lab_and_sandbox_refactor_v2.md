@@ -127,7 +127,7 @@ This doc is a task checklist. Keep it updated as work lands.
      - UI can list candidates for a synthetic calcutta.
      - Editing a candidate updates the materialized snapshot entry or regenerates it deterministically.
 
-- [ ] Add explicit “candidate” naming in the API surface (alias routes), while keeping current endpoints for compatibility.
+- [x] Add explicit “candidate” naming in the API surface (alias routes), while keeping current endpoints for compatibility.
 
 ---
 
@@ -226,10 +226,8 @@ This doc is a task checklist. Keep it updated as work lands.
    - Worker now requires and validates upstream lineage before writing the `strategy_generation` metrics artifact.
 - [x] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
    - Restored `dataset_refs` in the `strategy_generation` `run_jobs` enqueue contract + backfilled missing `dataset_refs` rows.
-- [ ] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
-- [x] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
-   - Python worker now loads the runner module in-process and calls a callable entrypoint (no `subprocess`).
-   - Worker persists structured failure details (type + traceback + stdout/stderr capture) into `derived.run_artifacts.summary_json` while keeping `errorMessage` for compatibility.
+- [x] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
+- [ ] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
 - [ ] PR N: Standardize retry/backoff + dead-letter policy across run kinds.
 - [ ] PR O: Standardize run progress events and make progress queryable by run.
 - [ ] PR P: Artifact slices decision + implement `storage_uri` for at least one non-trivial artifact.
