@@ -49,6 +49,11 @@ export function SandboxCohortDetailPage() {
     return d.toLocaleString();
   };
 
+  const formatFloat = (v: number | null | undefined, digits: number) => {
+    if (v == null || Number.isNaN(v)) return '—';
+    return v.toFixed(digits);
+  };
+
   const seasonFromCalcuttaName = (name: string | null | undefined) => {
     if (!name) return '—';
     const m = name.match(/\b(19|20)\d{2}\b/);
@@ -199,6 +204,10 @@ export function SandboxCohortDetailPage() {
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Highlighted Entry</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our Rank</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our Mean</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our pTop1</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our pITM</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Open</th>
                     </tr>
@@ -215,6 +224,18 @@ export function SandboxCohortDetailPage() {
                             <div className="text-xs text-gray-600">{calcuttaName}</div>
                           </td>
                           <td className="px-3 py-2 text-sm text-gray-700">{highlighted}</td>
+                          <td className="px-3 py-2 text-sm text-gray-700">
+                            {sc.latest_simulation_status === 'succeeded' ? sc.our_rank ?? '—' : sc.latest_simulation_status || '—'}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-700">
+                            {sc.latest_simulation_status === 'succeeded' ? formatFloat(sc.our_mean_normalized_payout, 4) : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-700">
+                            {sc.latest_simulation_status === 'succeeded' ? formatFloat(sc.our_p_top1, 4) : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-700">
+                            {sc.latest_simulation_status === 'succeeded' ? formatFloat(sc.our_p_in_money, 4) : '—'}
+                          </td>
                           <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(sc.created_at)}</td>
                           <td className="px-3 py-2 text-sm text-right">
                             <Link to={href} className="text-blue-600 hover:text-blue-800">

@@ -7,6 +7,12 @@ export type SyntheticCalcuttaListItem = {
   calcutta_snapshot_id?: string | null;
   focus_strategy_generation_run_id?: string | null;
   focus_entry_name?: string | null;
+  latest_simulation_status?: string | null;
+  our_rank?: number | null;
+  our_mean_normalized_payout?: number | null;
+  our_p_top1?: number | null;
+  our_p_in_money?: number | null;
+  total_simulations?: number | null;
   starting_state_key?: string | null;
   excluded_entry_name?: string | null;
   created_at: string;

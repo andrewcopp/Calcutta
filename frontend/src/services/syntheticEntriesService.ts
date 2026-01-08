@@ -10,6 +10,10 @@ export type SyntheticEntryListItem = {
   entry_id?: string | null;
   display_name: string;
   is_synthetic: boolean;
+  rank: number | null;
+  mean_normalized_payout: number | null;
+  p_top1: number | null;
+  p_in_money: number | null;
   teams: SyntheticEntryTeam[];
   created_at: string;
   updated_at: string;

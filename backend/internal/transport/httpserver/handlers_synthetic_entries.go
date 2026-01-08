@@ -21,6 +21,10 @@ type syntheticEntryListItem struct {
 	EntryID     *string              `json:"entry_id,omitempty"`
 	DisplayName string               `json:"display_name"`
 	IsSynthetic bool                 `json:"is_synthetic"`
+	Rank        *int                 `json:"rank"`
+	Mean        *float64             `json:"mean_normalized_payout"`
+	PTop1       *float64             `json:"p_top1"`
+	PInMoney    *float64             `json:"p_in_money"`
 	Teams       []syntheticEntryTeam `json:"teams"`
 	CreatedAt   time.Time            `json:"created_at"`
 	UpdatedAt   time.Time            `json:"updated_at"`
@@ -141,6 +145,27 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 	}
 
 	rows, err := s.pool.Query(r.Context(), `
+		WITH latest_eval AS (
+			SELECT sr.calcutta_evaluation_run_id
+			FROM derived.simulation_runs sr
+			WHERE sr.synthetic_calcutta_id = $2::uuid
+				AND sr.deleted_at IS NULL
+				AND sr.calcutta_evaluation_run_id IS NOT NULL
+			ORDER BY sr.created_at DESC
+			LIMIT 1
+		),
+		perf AS (
+			SELECT
+				ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
+				ep.entry_name,
+				COALESCE(ep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
+				COALESCE(ep.p_top1, 0.0)::double precision AS p_top1,
+				COALESCE(ep.p_in_money, 0.0)::double precision AS p_in_money
+			FROM derived.entry_performance ep
+			JOIN latest_eval le
+				ON le.calcutta_evaluation_run_id = ep.calcutta_evaluation_run_id
+			WHERE ep.deleted_at IS NULL
+		)
 		SELECT
 			e.id::text,
 			e.entry_id::text,
@@ -149,14 +174,21 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 			e.created_at,
 			e.updated_at,
 			et.team_id::text,
-			et.bid_points
+			et.bid_points,
+			p.rank,
+			p.mean_normalized_payout,
+			p.p_top1,
+			p.p_in_money
 		FROM core.calcutta_snapshot_entries e
 		LEFT JOIN core.calcutta_snapshot_entry_teams et
 			ON et.calcutta_snapshot_entry_id = e.id
+			AND et.deleted_at IS NULL
+		LEFT JOIN perf p
+			ON p.entry_name = e.display_name
 		WHERE e.calcutta_snapshot_id = $1::uuid
 			AND e.deleted_at IS NULL
 		ORDER BY e.created_at ASC, et.bid_points DESC
-	`, *snapshotID)
+	`, *snapshotID, syntheticCalcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
@@ -174,6 +206,10 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 		var updatedAt time.Time
 		var teamID *string
 		var bidPoints *int
+		var rank *int
+		var mean *float64
+		var pTop1 *float64
+		var pInMoney *float64
 
 		if err := rows.Scan(
 			&entryID,
@@ -184,6 +220,10 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 			&updatedAt,
 			&teamID,
 			&bidPoints,
+			&rank,
+			&mean,
+			&pTop1,
+			&pInMoney,
 		); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
@@ -196,6 +236,10 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 				EntryID:     sourceEntryID,
 				DisplayName: displayName,
 				IsSynthetic: isSynthetic,
+				Rank:        rank,
+				Mean:        mean,
+				PTop1:       pTop1,
+				PInMoney:    pInMoney,
 				Teams:       make([]syntheticEntryTeam, 0),
 				CreatedAt:   createdAt,
 				UpdatedAt:   updatedAt,

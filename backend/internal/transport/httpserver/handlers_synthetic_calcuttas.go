@@ -20,6 +20,12 @@ type syntheticCalcuttaListItem struct {
 	HighlightedEntryID        *string         `json:"highlighted_entry_id,omitempty"`
 	FocusStrategyGenerationID *string         `json:"focus_strategy_generation_run_id,omitempty"`
 	FocusEntryName            *string         `json:"focus_entry_name,omitempty"`
+	LatestSimulationStatus    *string         `json:"latest_simulation_status,omitempty"`
+	OurRank                   *int            `json:"our_rank,omitempty"`
+	OurMeanNormalizedPayout   *float64        `json:"our_mean_normalized_payout,omitempty"`
+	OurPTop1                  *float64        `json:"our_p_top1,omitempty"`
+	OurPInMoney               *float64        `json:"our_p_in_money,omitempty"`
+	TotalSimulations          *int            `json:"total_simulations,omitempty"`
 	StartingStateKey          *string         `json:"starting_state_key,omitempty"`
 	ExcludedEntryName         *string         `json:"excluded_entry_name,omitempty"`
 	Notes                     *string         `json:"notes,omitempty"`
@@ -97,6 +103,12 @@ func (s *Server) handleListSyntheticCalcuttas(w http.ResponseWriter, r *http.Req
 			sc.highlighted_snapshot_entry_id::text,
 			sc.focus_strategy_generation_run_id::text,
 			sc.focus_entry_name,
+			ls.status,
+			ls.our_rank,
+			ls.our_mean_normalized_payout,
+			ls.our_p_top1,
+			ls.our_p_in_money,
+			ls.total_simulations,
 			sc.starting_state_key,
 			sc.excluded_entry_name,
 			sc.notes,
@@ -104,6 +116,20 @@ func (s *Server) handleListSyntheticCalcuttas(w http.ResponseWriter, r *http.Req
 			sc.created_at,
 			sc.updated_at
 		FROM derived.synthetic_calcuttas sc
+		LEFT JOIN LATERAL (
+			SELECT
+				sr.status,
+				sr.our_rank,
+				sr.our_mean_normalized_payout,
+				sr.our_p_top1,
+				sr.our_p_in_money,
+				sr.total_simulations
+			FROM derived.simulation_runs sr
+			WHERE sr.synthetic_calcutta_id = sc.id
+				AND sr.deleted_at IS NULL
+			ORDER BY sr.created_at DESC
+			LIMIT 1
+		) ls ON TRUE
 		WHERE sc.deleted_at IS NULL
 			AND ($1::uuid IS NULL OR sc.cohort_id = $1::uuid)
 			AND ($2::uuid IS NULL OR sc.calcutta_id = $2::uuid)
@@ -128,6 +154,12 @@ func (s *Server) handleListSyntheticCalcuttas(w http.ResponseWriter, r *http.Req
 			&it.HighlightedEntryID,
 			&it.FocusStrategyGenerationID,
 			&it.FocusEntryName,
+			&it.LatestSimulationStatus,
+			&it.OurRank,
+			&it.OurMeanNormalizedPayout,
+			&it.OurPTop1,
+			&it.OurPInMoney,
+			&it.TotalSimulations,
 			&it.StartingStateKey,
 			&it.ExcludedEntryName,
 			&it.Notes,

@@ -31,6 +31,11 @@ export function SyntheticCalcuttaDetailPage() {
     return d.toLocaleString();
   };
 
+  const formatFloat = (v: number | null | undefined, digits: number) => {
+    if (v == null || Number.isNaN(v)) return '—';
+    return v.toFixed(digits);
+  };
+
   const detailQuery = useQuery({
     queryKey: ['synthetic-calcuttas', 'get', id],
     queryFn: () => syntheticCalcuttasService.get(id || ''),
@@ -43,7 +48,17 @@ export function SyntheticCalcuttaDetailPage() {
     enabled: Boolean(id),
   });
 
-  const entries: SyntheticEntryListItem[] = useMemo(() => entriesQuery.data?.items ?? [], [entriesQuery.data?.items]);
+  const entries: SyntheticEntryListItem[] = useMemo(() => {
+    const items = entriesQuery.data?.items ?? [];
+    return items.slice().sort((a, b) => {
+      const ar = a.rank;
+      const br = b.rank;
+      if (ar == null && br == null) return 0;
+      if (ar == null) return 1;
+      if (br == null) return -1;
+      return ar - br;
+    });
+  }, [entriesQuery.data?.items]);
 
   const backUrl = cohortId ? `/sandbox/cohorts/${encodeURIComponent(cohortId)}?syntheticCalcuttaId=${encodeURIComponent(id || '')}` : '/sandbox/cohorts';
 
@@ -140,6 +155,10 @@ export function SyntheticCalcuttaDetailPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entry</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Mean</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(Top 1)</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(In Money)</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Teams</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     </tr>
@@ -151,6 +170,10 @@ export function SyntheticCalcuttaDetailPage() {
                           <div className="font-medium">{e.display_name}</div>
                           <div className="text-xs text-gray-500">{e.is_synthetic ? 'synthetic' : 'imported'} · {e.id.slice(0, 8)}</div>
                         </td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700">{e.rank ?? '—'}</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(e.mean_normalized_payout, 4)}</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(e.p_top1, 4)}</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatFloat(e.p_in_money, 4)}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-700">{e.teams?.length ?? 0}</td>
                         <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(e.created_at)}</td>
                       </tr>
