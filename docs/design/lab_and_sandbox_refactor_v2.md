@@ -90,8 +90,8 @@ This doc is a task checklist. Keep it updated as work lands.
   - **Acceptance**: artifact write fails fast (and marks run failed) if lineage is missing.
 
 ## 1.3 Dataset refs become first-class and consistent
-- [ ] Normalize dataset ref schema in `derived.run_jobs.params_json` per `run_kind` (tournament_id, calcutta_id, snapshot ids, etc.).
-- [ ] Ensure run rows also store dataset refs in columns where practical.
+- [x] Normalize dataset ref schema in `derived.run_jobs.params_json` per `run_kind` (tournament_id, calcutta_id, snapshot ids, etc.).
+- [x] Ensure run rows also store dataset refs in columns where practical.
   - **Acceptance**:
     - Given any run_id, you can answer “what dataset was this run over?” with a single query.
 
@@ -131,16 +131,16 @@ This doc is a task checklist. Keep it updated as work lands.
 
 ---
 
-# Phase 3 — Worker architecture and contracts (make ops sane)
-
-## 3.1 Move orchestration out of transport layer
-- [ ] Move simulation worker logic from `transport/httpserver` into `internal/app` (or a dedicated worker package).
+ # Phase 3 — Worker architecture and contracts (make ops sane)
+ 
+ ## 3.1 Move orchestration out of transport layer
+- [x] Move worker orchestration out of `transport/httpserver` into `internal/app` (or a dedicated worker package).
   - **Acceptance**:
     - HTTP layer only enqueues and reads.
     - Worker has explicit dependencies (DB repo interfaces, services).
 
 ## 3.2 Unify worker runtime patterns across Go and Python
-- [ ] Replace “python worker shells out to another python script” with an in-process runner.
+- [x] Replace “python worker shells out to another python script” with an in-process runner.
   - **Acceptance**:
     - Failures have structured exception info.
     - No stdout JSON parsing is required for success/failure.
