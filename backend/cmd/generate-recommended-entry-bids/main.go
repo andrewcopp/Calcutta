@@ -101,6 +101,16 @@ func run() error {
 		gitSHAParam = nil
 	}
 
+	marketShareRunID := (any)(nil)
+	if v, ok := params["market_share_run_id"]; ok {
+		if s, ok := v.(string); ok {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				marketShareRunID = s
+			}
+		}
+	}
+
 	var runID string
 	if err := pool.QueryRow(context.Background(), `
 		INSERT INTO derived.strategy_generation_runs (
@@ -113,12 +123,13 @@ func run() error {
 			returns_model_key,
 			investment_model_key,
 			optimizer_key,
+			market_share_run_id,
 			params_json,
 			git_sha
 		)
-		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::jsonb, $7)
+		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::uuid, $7::jsonb, $8)
 		RETURNING id::text
-	`, runKeyText, runKeyUUID, name, calcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+	`, runKeyText, runKeyUUID, name, calcuttaID, optimizerKey, marketShareRunID, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
 		return err
 	}
 

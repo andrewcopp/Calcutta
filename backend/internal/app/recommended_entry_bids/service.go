@@ -44,6 +44,7 @@ type GenerateFromPredictionsParams struct {
 	GameOutcomeRunID     string
 	MarketShareRunID     string
 	ExcludedEntryName    string
+	StartingStateKey     *string
 	ExpectedPointsByTeam []ExpectedTeam
 	PredictedShareByTeam map[string]float64
 	MinBidPoints         int
@@ -107,6 +108,10 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 		returnsModelKey *string
 		calcuttaID      string
 		simulatedID     *string
+		marketShareID   *string
+		gameOutcomeID   *string
+		excludedName    *string
+		startingKey     *string
 		paramsJSON      []byte
 	)
 	if err := s.pool.QueryRow(ctx, `
@@ -119,6 +124,10 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 			returns_model_key,
 			calcutta_id::text,
 			simulated_tournament_id::text,
+			market_share_run_id::text,
+			game_outcome_run_id::text,
+			excluded_entry_name,
+			starting_state_key,
 			params_json
 		FROM derived.strategy_generation_runs
 		WHERE id = $1::uuid
@@ -133,6 +142,10 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 		&returnsModelKey,
 		&calcuttaID,
 		&simulatedID,
+		&marketShareID,
+		&gameOutcomeID,
+		&excludedName,
+		&startingKey,
 		&paramsJSON,
 	); err != nil {
 		return nil, err
@@ -162,19 +175,28 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 	}
 
 	var marketShareRunID *string
-	if strings.TrimSpace(pk.MarketShareRunID) != "" {
+	if marketShareID != nil && strings.TrimSpace(*marketShareID) != "" {
+		v := strings.TrimSpace(*marketShareID)
+		marketShareRunID = &v
+	} else if strings.TrimSpace(pk.MarketShareRunID) != "" {
 		v := strings.TrimSpace(pk.MarketShareRunID)
 		marketShareRunID = &v
 	}
 
 	var gameOutcomeRunID *string
-	if strings.TrimSpace(pk.GameOutcomeRunID) != "" {
+	if gameOutcomeID != nil && strings.TrimSpace(*gameOutcomeID) != "" {
+		v := strings.TrimSpace(*gameOutcomeID)
+		gameOutcomeRunID = &v
+	} else if strings.TrimSpace(pk.GameOutcomeRunID) != "" {
 		v := strings.TrimSpace(pk.GameOutcomeRunID)
 		gameOutcomeRunID = &v
 	}
 
 	var excludedEntryName string
-	if pk.ExcludedEntryName != nil {
+	if excludedName != nil {
+		excludedEntryName = strings.TrimSpace(*excludedName)
+	}
+	if excludedEntryName == "" && pk.ExcludedEntryName != nil {
 		switch v := pk.ExcludedEntryName.(type) {
 		case string:
 			excludedEntryName = strings.TrimSpace(v)
@@ -240,6 +262,7 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 			GameOutcomeRunID:     strings.TrimSpace(*gameOutcomeRunID),
 			MarketShareRunID:     strings.TrimSpace(*msSelectedID),
 			ExcludedEntryName:    excludedEntryName,
+			StartingStateKey:     startingKey,
 			ExpectedPointsByTeam: expected,
 			PredictedShareByTeam: marketByTeam,
 			BudgetPoints:         pk.BudgetPoints,
@@ -397,6 +420,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		ReturnsModelKey:       "legacy",
 		InvestmentModelKey:    "predicted_market_share",
 		OptimizerKey:          optimizerKey,
+		MarketShareRunID:      selectedMarketShareRunID,
 		ParamsJSON:            paramsJSON,
 	})
 	if err != nil {
@@ -527,6 +551,7 @@ func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p Generat
 		"excluded_entry_name": p.ExcludedEntryName,
 		"game_outcome_run_id": p.GameOutcomeRunID,
 		"market_share_run_id": p.MarketShareRunID,
+		"starting_state_key":  p.StartingStateKey,
 	})
 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -534,6 +559,11 @@ func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p Generat
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+
+	var excludedEntryNameParam *string
+	if strings.TrimSpace(p.ExcludedEntryName) != "" {
+		excludedEntryNameParam = &p.ExcludedEntryName
+	}
 
 	strategyRunID, err := upsertStrategyGenerationRun(ctx, tx, upsertStrategyGenerationRunParams{
 		RunKey:                runKey,
@@ -544,6 +574,10 @@ func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p Generat
 		ReturnsModelKey:       "pgo_dp",
 		InvestmentModelKey:    "predicted_market_share",
 		OptimizerKey:          optimizerKey,
+		MarketShareRunID:      &p.MarketShareRunID,
+		GameOutcomeRunID:      &p.GameOutcomeRunID,
+		ExcludedEntryName:     excludedEntryNameParam,
+		StartingStateKey:      p.StartingStateKey,
 		ParamsJSON:            paramsJSON,
 	})
 	if err != nil {
@@ -744,6 +778,10 @@ type upsertStrategyGenerationRunParams struct {
 	ReturnsModelKey       string
 	InvestmentModelKey    string
 	OptimizerKey          string
+	MarketShareRunID      *string
+	GameOutcomeRunID      *string
+	ExcludedEntryName     *string
+	StartingStateKey      *string
 	ParamsJSON            []byte
 }
 
@@ -759,13 +797,17 @@ func upsertStrategyGenerationRun(ctx context.Context, tx pgx.Tx, p upsertStrateg
 			returns_model_key,
 			investment_model_key,
 			optimizer_key,
+			market_share_run_id,
+			game_outcome_run_id,
+			excluded_entry_name,
+			starting_state_key,
 			params_json,
 			git_sha,
 			created_at,
 			updated_at,
 			deleted_at
 		)
-		VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9::jsonb, NULL, NOW(), NOW(), NULL)
+		VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9::uuid, $10::uuid, $11::text, $12::text, $13::jsonb, NULL, NOW(), NOW(), NULL)
 		ON CONFLICT (run_key) DO UPDATE SET
 			name = EXCLUDED.name,
 			simulated_tournament_id = EXCLUDED.simulated_tournament_id,
@@ -774,12 +816,16 @@ func upsertStrategyGenerationRun(ctx context.Context, tx pgx.Tx, p upsertStrateg
 			returns_model_key = EXCLUDED.returns_model_key,
 			investment_model_key = EXCLUDED.investment_model_key,
 			optimizer_key = EXCLUDED.optimizer_key,
+			market_share_run_id = EXCLUDED.market_share_run_id,
+			game_outcome_run_id = EXCLUDED.game_outcome_run_id,
+			excluded_entry_name = EXCLUDED.excluded_entry_name,
+			starting_state_key = EXCLUDED.starting_state_key,
 			params_json = EXCLUDED.params_json,
 			updated_at = NOW(),
 			deleted_at = NULL
 		RETURNING id
 	`
-	err := tx.QueryRow(ctx, q, p.RunKey, p.Name, p.SimulatedTournamentID, p.CalcuttaID, p.Purpose, p.ReturnsModelKey, p.InvestmentModelKey, p.OptimizerKey, p.ParamsJSON).Scan(&id)
+	err := tx.QueryRow(ctx, q, p.RunKey, p.Name, p.SimulatedTournamentID, p.CalcuttaID, p.Purpose, p.ReturnsModelKey, p.InvestmentModelKey, p.OptimizerKey, p.MarketShareRunID, p.GameOutcomeRunID, p.ExcludedEntryName, p.StartingStateKey, p.ParamsJSON).Scan(&id)
 	if err != nil {
 		return "", err
 	}

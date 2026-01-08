@@ -147,12 +147,13 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 			returns_model_key,
 			investment_model_key,
 			optimizer_key,
+			market_share_run_id,
 			params_json,
 			git_sha
 		)
-		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::jsonb, $7)
+		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::uuid, $7::jsonb, $8)
 		RETURNING id::text
-	`, runKeyText, runKeyUUID, name, req.CalcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+	`, runKeyText, runKeyUUID, name, req.CalcuttaID, optimizerKey, marketShareRunID, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -195,6 +196,18 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		}
 		if scenarioCalcuttaID != req.CalcuttaID {
 			writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId does not match calcuttaId", "syntheticCalcuttaId")
+			return
+		}
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE derived.strategy_generation_runs
+			SET excluded_entry_name = COALESCE(excluded_entry_name, $2),
+				starting_state_key = COALESCE(starting_state_key, $3),
+				updated_at = NOW()
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+		`, runID, excludedEntryName, startingStateKey); err != nil {
+			writeErrorFromErr(w, r, err)
 			return
 		}
 

@@ -403,12 +403,16 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 				returns_model_key,
 				investment_model_key,
 				optimizer_key,
+				market_share_run_id,
+				game_outcome_run_id,
+				excluded_entry_name,
+				starting_state_key,
 				params_json,
 				git_sha
 			)
-			VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'lab_entries_generation', 'pgo_dp', 'predicted_market_share', $5, $6::jsonb, $7)
+			VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'lab_entries_generation', 'pgo_dp', 'predicted_market_share', $5, $6::uuid, $7::uuid, $8::text, $9::text, $10::jsonb, $11)
 			RETURNING id::text
-		`, runKeyText, runKeyUUID, name, sc.CalcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+		`, runKeyText, runKeyUUID, name, sc.CalcuttaID, optimizerKey, msRunID, goRunID, effExcluded, startingStateKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}

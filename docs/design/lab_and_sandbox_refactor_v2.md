@@ -64,7 +64,7 @@ This doc is a task checklist. Keep it updated as work lands.
 # Phase 1 — Provenance and lineage (make results trustworthy)
 
 ## 1.1 Pin upstream inputs for Lab Entry generation
-- [ ] Add explicit columns (or generated columns) on `derived.strategy_generation_runs` for:
+- [x] Add explicit columns (or generated columns) on `derived.strategy_generation_runs` for:
   - `market_share_run_id`
   - `game_outcome_run_id`
   - `excluded_entry_name`
@@ -73,7 +73,7 @@ This doc is a task checklist. Keep it updated as work lands.
     - For every StrategyGenerationRun, upstream run IDs are queryable without parsing JSON.
     - Backfill is provided for existing rows where possible.
 
-- [ ] Update Lab generation code to populate these fields from the selected upstream runs.
+- [x] Update Lab generation code to populate these fields from the selected upstream runs.
   - **Acceptance**: no StrategyGenerationRun is created without explicit upstream IDs.
 
 ## 1.2 Strengthen run_artifacts lineage contract
@@ -202,7 +202,7 @@ This doc is a task checklist. Keep it updated as work lands.
 - [x] PR A: Remove AUTO cohort upsert from GET; add explicit creation path.
 - [x] PR B: Remove snapshot repair-on-read; enforce invariant.
 - [ ] PR C: Replace “Our Strategy” string matching with stable IDs.
-- [ ] PR D: Add explicit upstream run columns + backfill.
+- [x] PR D: Add explicit upstream run columns + backfill.
 - [ ] PR E: Introduce Candidate tables + migrate sandbox endpoints.
 - [ ] PR F: Move worker logic out of transport layer.
 - [ ] PR G: Artifact storage expansion + retention job.
