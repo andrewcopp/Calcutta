@@ -220,7 +220,7 @@ This doc is a task checklist. Keep it updated as work lands.
    - Exported heavy outputs (`derived.entry_performance`, `derived.entry_simulation_outcomes`) to JSONL and stored `storage_uri` in `derived.run_artifacts`.
    - Added `backend/cmd/tools/retain-simulation-runs` retention sweeper (dry-run by default).
 - [ ] PR H: Delete legacy suite shims/endpoints; final naming cleanup.
-- [ ] PR I: Eliminate remaining “latest-run” heuristics in correctness-critical paths.
+- [x] PR I: Eliminate remaining “latest-run” heuristics in correctness-critical paths.
 - [x] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
    - Enforced `marketShareArtifactId` on entry/strategy run creation and persisted `market_share_artifact_id` into `run_jobs.params_json`.
    - Worker now requires and validates upstream lineage before writing the `strategy_generation` metrics artifact.
