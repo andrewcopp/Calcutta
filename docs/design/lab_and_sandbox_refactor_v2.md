@@ -215,5 +215,18 @@ This doc is a task checklist. Keep it updated as work lands.
    - Replaced `transport/httpserver/*_worker.go` implementations with thin wrappers.
    - Deleted unused `transport/httpserver/run_progress.go`.
    - Deferred: `transport/httpserver/sql_params.go` is still used by HTTP handlers.
-- [ ] PR G: Artifact storage expansion + retention job.
+- [x] PR G: Artifact storage expansion + retention job.
+   - Added `ARTIFACTS_DIR` config and plumbed into `SimulationWorker`.
+   - Exported heavy outputs (`derived.entry_performance`, `derived.entry_simulation_outcomes`) to JSONL and stored `storage_uri` in `derived.run_artifacts`.
+   - Added `backend/cmd/tools/retain-simulation-runs` retention sweeper (dry-run by default).
 - [ ] PR H: Delete legacy suite shims/endpoints; final naming cleanup.
+- [ ] PR I: Eliminate remaining “latest-run” heuristics in correctness-critical paths.
+- [ ] PR J: Enforce `strategy_generation` artifact lineage (`input_*_artifact_id`) + validation.
+- [ ] PR K: Standardize dataset refs across `run_jobs.params_json` and run tables.
+- [ ] PR L: Add explicit “candidate” naming to API surface (alias routes) while keeping compatibility.
+- [ ] PR M: Python worker: replace subprocess runner with in-process execution + structured failures.
+- [ ] PR N: Standardize retry/backoff + dead-letter policy across run kinds.
+- [ ] PR O: Standardize run progress events and make progress queryable by run.
+- [ ] PR P: Artifact slices decision + implement `storage_uri` for at least one non-trivial artifact.
+- [ ] PR Q: Implement explicit retention/cleanup job for runs/artifacts.
+- [ ] PR R: UI drill-down pages + navigation pivots (runs/artifacts/evaluations) to match canonical nouns.
