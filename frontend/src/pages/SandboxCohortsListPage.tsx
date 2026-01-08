@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
@@ -15,6 +15,14 @@ export function SandboxCohortsListPage() {
   const listQuery = useQuery({
     queryKey: ['cohorts', 'list'],
     queryFn: () => cohortsService.list({ limit: 200, offset: 0 }),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (name: string) => cohortsService.create({ name }),
+    onSuccess: async (created) => {
+      await listQuery.refetch();
+      navigate(`/sandbox/cohorts/${encodeURIComponent(created.id)}`);
+    },
   });
 
   const showError = (err: unknown) => {
@@ -36,12 +44,32 @@ export function SandboxCohortsListPage() {
 
   const cohorts: CohortListItem[] = listQuery.data?.items ?? [];
 
+  const onCreate = async () => {
+    const name = window.prompt('Cohort name');
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    createMutation.mutate(trimmed);
+  };
+
   return (
     <PageContainer>
       <PageHeader title="Sandbox" subtitle="Cohorts (collections of synthetic calcuttas)" />
 
       <Card>
-        <h2 className="text-xl font-semibold mb-4">Cohorts</h2>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="text-xl font-semibold">Cohorts</h2>
+          <Button size="sm" onClick={onCreate} disabled={createMutation.isPending}>
+            {createMutation.isPending ? 'Creating…' : 'Create Cohort'}
+          </Button>
+        </div>
+
+        {createMutation.isError ? (
+          <Alert variant="error" className="mt-3">
+            <div className="font-semibold mb-1">Failed to create cohort</div>
+            <div>{showError(createMutation.error)}</div>
+          </Alert>
+        ) : null}
 
         {listQuery.isLoading ? <LoadingState label="Loading cohorts..." layout="inline" /> : null}
 

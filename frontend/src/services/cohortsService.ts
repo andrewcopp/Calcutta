@@ -22,6 +22,11 @@ export type ListCohortsResponse = {
   items: CohortListItem[];
 };
 
+export type CreateCohortRequest = {
+  name: string;
+  description?: string | null;
+};
+
 export const cohortsService = {
   async list(params?: { limit?: number; offset?: number }): Promise<ListCohortsResponse> {
     const q = new URLSearchParams();
@@ -34,5 +39,9 @@ export const cohortsService = {
 
   async get(id: string): Promise<CohortListItem> {
     return apiClient.get<CohortListItem>(`/cohorts/${encodeURIComponent(id)}`);
+  },
+
+  async create(req: CreateCohortRequest): Promise<CohortListItem> {
+    return apiClient.post<CohortListItem>('/cohorts', req);
   },
 };

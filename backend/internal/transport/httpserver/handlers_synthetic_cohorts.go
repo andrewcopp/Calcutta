@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type cohortListItem struct {
@@ -41,6 +44,10 @@ func (s *Server) registerSyntheticCalcuttaCohortRoutes(r *mux.Router) {
 		s.requirePermission("analytics.suites.read", s.listSyntheticCalcuttaCohortsHandler),
 	).Methods("GET", "OPTIONS")
 	r.HandleFunc(
+		"/api/cohorts",
+		s.requirePermission("analytics.suites.write", s.createSyntheticCalcuttaCohortHandler),
+	).Methods("POST", "OPTIONS")
+	r.HandleFunc(
 		"/api/cohorts/{id}",
 		s.requirePermission("analytics.suites.read", s.getSyntheticCalcuttaCohortHandler),
 	).Methods("GET", "OPTIONS")
@@ -48,6 +55,197 @@ func (s *Server) registerSyntheticCalcuttaCohortRoutes(r *mux.Router) {
 		"/api/cohorts/{id}",
 		s.requirePermission("analytics.suites.write", s.patchSyntheticCalcuttaCohortHandler),
 	).Methods("PATCH", "OPTIONS")
+}
+
+func (s *Server) createSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *http.Request) {
+	type createCohortRequest struct {
+		Name        string  `json:"name"`
+		Description *string `json:"description"`
+	}
+
+	var req createCohortRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "name is required", "name")
+		return
+	}
+
+	var desc any
+	if req.Description != nil {
+		v := strings.TrimSpace(*req.Description)
+		if v == "" {
+			desc = nil
+		} else {
+			desc = v
+		}
+	} else {
+		desc = nil
+	}
+
+	ctx := r.Context()
+
+	goAlgID, err := s.getDefaultAlgorithmID(ctx, "game_outcomes", "kenpom-v1-go")
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	msAlgID, err := s.getDefaultAlgorithmID(ctx, "market_share", "naive-ev-baseline")
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	optimizerKey := "minlp_v1"
+	if s.app != nil && s.app.ModelCatalogs != nil {
+		descs := s.app.ModelCatalogs.ListEntryOptimizers()
+		for _, d := range descs {
+			if d.Deprecated {
+				continue
+			}
+			if strings.TrimSpace(d.ID) == "" {
+				continue
+			}
+			optimizerKey = strings.TrimSpace(d.ID)
+			break
+		}
+	}
+
+	var createdID string
+	if err := s.pool.QueryRow(ctx, `
+		INSERT INTO derived.synthetic_calcutta_cohorts (
+			name,
+			description,
+			game_outcomes_algorithm_id,
+			market_share_algorithm_id,
+			optimizer_key,
+			n_sims,
+			seed,
+			starting_state_key,
+			params_json
+		)
+		VALUES (
+			$1,
+			$2,
+			$3::uuid,
+			$4::uuid,
+			$5,
+			5000,
+			42,
+			'post_first_four',
+			'{"auto": false}'::jsonb
+		)
+		RETURNING id::text
+	`, req.Name, desc, goAlgID, msAlgID, optimizerKey).Scan(&createdID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			// unique violation
+			if pgErr.Code == "23505" {
+				writeError(w, r, http.StatusConflict, "conflict", "A cohort with that name already exists", "name")
+				return
+			}
+		}
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	var it cohortListItem
+	if err := s.pool.QueryRow(ctx, `
+		SELECT
+			c.id::text,
+			COALESCE(c.name, ''::text) AS name,
+			c.description,
+			c.game_outcomes_algorithm_id::text,
+			c.market_share_algorithm_id::text,
+			c.optimizer_key,
+			c.n_sims,
+			c.seed,
+			COALESCE(NULLIF(c.starting_state_key, ''), 'post_first_four') AS starting_state_key,
+			c.excluded_entry_name,
+			le.id,
+			le.name,
+			le.status,
+			le.created_at,
+			le.updated_at,
+			c.created_at,
+			c.updated_at
+		FROM derived.synthetic_calcutta_cohorts c
+		LEFT JOIN LATERAL (
+			SELECT
+				e.id::text,
+				e.name,
+				e.status,
+				e.created_at,
+				e.updated_at
+			FROM derived.simulation_run_batches e
+			WHERE e.cohort_id = c.id
+				AND e.deleted_at IS NULL
+			ORDER BY e.created_at DESC
+			LIMIT 1
+		) le ON TRUE
+		WHERE c.id = $1::uuid
+			AND c.deleted_at IS NULL
+		LIMIT 1
+	`, createdID).Scan(
+		&it.ID,
+		&it.Name,
+		&it.Description,
+		&it.GameOutcomesAlgID,
+		&it.MarketShareAlgID,
+		&it.OptimizerKey,
+		&it.NSims,
+		&it.Seed,
+		&it.StartingStateKey,
+		&it.ExcludedEntryName,
+		&it.LatestExecutionID,
+		&it.LatestExecutionName,
+		&it.LatestExecutionStatus,
+		&it.LatestExecutionCreatedAt,
+		&it.LatestExecutionUpdatedAt,
+		&it.CreatedAt,
+		&it.UpdatedAt,
+	); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, it)
+}
+
+func (s *Server) getDefaultAlgorithmID(ctx context.Context, kind string, preferredName string) (string, error) {
+	// Preferred algorithm by name.
+	var id string
+	err := s.pool.QueryRow(ctx, `
+		SELECT id::text
+		FROM derived.algorithms
+		WHERE kind = $1
+			AND name = $2
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, kind, preferredName).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if err != pgx.ErrNoRows {
+		return "", err
+	}
+
+	// Fallback: first algorithm for the kind.
+	if err := s.pool.QueryRow(ctx, `
+		SELECT id::text
+		FROM derived.algorithms
+		WHERE kind = $1
+			AND deleted_at IS NULL
+		ORDER BY name ASC
+		LIMIT 1
+	`, kind).Scan(&id); err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func (s *Server) listSyntheticCalcuttaCohortsHandler(w http.ResponseWriter, r *http.Request) {
