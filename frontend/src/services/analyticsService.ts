@@ -104,6 +104,10 @@ export const analyticsService = {
     return apiClient.get<T>('/lab/entries');
   },
 
+	async syncLabEntriesAutoCohorts<T>(): Promise<T> {
+		return apiClient.post<T>('/lab/entries/auto-cohorts/sync', {});
+	},
+
   async getLabEntriesCohortDetail<T>(cohortId: string): Promise<T> {
     return apiClient.get<T>(`/lab/entries/cohorts/${encodeURIComponent(cohortId)}`);
   },

@@ -142,11 +142,19 @@ type generateLabEntriesResponse struct {
 	Failures []generateLabEntriesFailure `json:"failures"`
 }
 
+type syncLabEntriesAutoCohortsResponse struct {
+	Upserted int `json:"upserted"`
+}
+
 func (s *Server) registerLabEntriesRoutes(r *mux.Router) {
 	r.HandleFunc(
 		"/api/lab/entries",
 		s.requirePermission("analytics.suites.read", s.listLabEntriesCoverageHandler),
 	).Methods("GET", "OPTIONS")
+	r.HandleFunc(
+		"/api/lab/entries/auto-cohorts/sync",
+		s.requirePermission("analytics.suites.write", s.syncLabEntriesAutoCohortsHandler),
+	).Methods("POST", "OPTIONS")
 	r.HandleFunc(
 		"/api/lab/entries/cohorts/{id}",
 		s.requirePermission("analytics.suites.read", s.getLabEntriesCohortDetailHandler),
@@ -739,12 +747,94 @@ func (s *Server) createLabCohortSandboxExecutionHandler(w http.ResponseWriter, r
 func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	rows, err := tx.Query(ctx, `
+		WITH scenario_counts AS (
+			SELECT
+				cohort_id,
+				COUNT(*)::int AS total,
+				COUNT(*) FILTER (WHERE focus_strategy_generation_run_id IS NOT NULL)::int AS covered
+			FROM derived.synthetic_calcuttas
+			WHERE deleted_at IS NULL
+			GROUP BY cohort_id
+		)
+		SELECT
+			s.id::text,
+			s.name,
+			goa.id::text,
+			goa.name,
+			msa.id::text,
+			msa.name,
+			s.optimizer_key,
+			COALESCE(sc.covered, 0)::int,
+			COALESCE(sc.total, 0)::int
+		FROM derived.synthetic_calcutta_cohorts s
+		JOIN derived.algorithms goa
+			ON goa.id = s.game_outcomes_algorithm_id
+			AND goa.deleted_at IS NULL
+		JOIN derived.algorithms msa
+			ON msa.id = s.market_share_algorithm_id
+			AND msa.deleted_at IS NULL
+		LEFT JOIN scenario_counts sc
+			ON sc.cohort_id = s.id
+		WHERE s.deleted_at IS NULL
+			AND COALESCE(s.params_json->>'auto', 'false') = 'true'
+		ORDER BY s.created_at DESC
+	`)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	items := make([]labEntriesCoverageItem, 0)
+	for rows.Next() {
+		var it labEntriesCoverageItem
+		if err := rows.Scan(
+			&it.CohortID,
+			&it.CohortName,
+			&it.AdvancementAlgorithmID,
+			&it.AdvancementAlgorithmName,
+			&it.InvestmentAlgorithmID,
+			&it.InvestmentAlgorithmName,
+			&it.OptimizerKey,
+			&it.Covered,
+			&it.Total,
+		); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		items = append(items, it)
+	}
+	if err := rows.Err(); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, labEntriesCoverageResponse{Items: items})
+}
+
+func (s *Server) syncLabEntriesAutoCohortsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	type alg struct {
 		ID   string
 		Name string
 	}
 
-	// Discover which algorithms currently have artifacts.
 	goAlgs := make([]alg, 0)
 	{
 		rows, err := s.pool.Query(ctx, `
@@ -888,13 +978,13 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 		optimizerKeys = append(optimizerKeys, "minlp_v1")
 	}
 
-	// Upsert deterministic auto cohorts for each combo so the UI can drill in.
+	upserted := 0
 	for _, goa := range goAlgs {
 		for _, msa := range msAlgs {
 			for _, opt := range optimizerKeys {
 				name := fmt.Sprintf("AUTO: %s + %s + %s", goa.Name, msa.Name, opt)
 				stableID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("lab_entries|go=%s|ms=%s|opt=%s", goa.ID, msa.ID, opt))).String()
-				_, err := s.pool.Exec(ctx, `
+				tag, err := s.pool.Exec(ctx, `
 					INSERT INTO derived.synthetic_calcutta_cohorts (
 						id,
 						name,
@@ -937,74 +1027,12 @@ func (s *Server) listLabEntriesCoverageHandler(w http.ResponseWriter, r *http.Re
 					writeErrorFromErr(w, r, err)
 					return
 				}
+				upserted += int(tag.RowsAffected())
 			}
 		}
 	}
 
-	rows, err := s.pool.Query(ctx, `
-		WITH scenario_counts AS (
-			SELECT
-				cohort_id,
-				COUNT(*)::int AS total,
-				COUNT(*) FILTER (WHERE focus_strategy_generation_run_id IS NOT NULL)::int AS covered
-			FROM derived.synthetic_calcuttas
-			WHERE deleted_at IS NULL
-			GROUP BY cohort_id
-		)
-		SELECT
-			s.id::text,
-			s.name,
-			goa.id::text,
-			goa.name,
-			msa.id::text,
-			msa.name,
-			s.optimizer_key,
-			COALESCE(sc.covered, 0)::int,
-			COALESCE(sc.total, 0)::int
-		FROM derived.synthetic_calcutta_cohorts s
-		JOIN derived.algorithms goa
-			ON goa.id = s.game_outcomes_algorithm_id
-			AND goa.deleted_at IS NULL
-		JOIN derived.algorithms msa
-			ON msa.id = s.market_share_algorithm_id
-			AND msa.deleted_at IS NULL
-		LEFT JOIN scenario_counts sc
-			ON sc.cohort_id = s.id
-		WHERE s.deleted_at IS NULL
-			AND COALESCE(s.params_json->>'auto', 'false') = 'true'
-		ORDER BY s.created_at DESC
-	`)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer rows.Close()
-
-	items := make([]labEntriesCoverageItem, 0)
-	for rows.Next() {
-		var it labEntriesCoverageItem
-		if err := rows.Scan(
-			&it.CohortID,
-			&it.CohortName,
-			&it.AdvancementAlgorithmID,
-			&it.AdvancementAlgorithmName,
-			&it.InvestmentAlgorithmID,
-			&it.InvestmentAlgorithmName,
-			&it.OptimizerKey,
-			&it.Covered,
-			&it.Total,
-		); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		items = append(items, it)
-	}
-	if err := rows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, labEntriesCoverageResponse{Items: items})
+	writeJSON(w, http.StatusOK, syncLabEntriesAutoCohortsResponse{Upserted: upserted})
 }
 
 func (s *Server) getLabEntriesCohortDetailHandler(w http.ResponseWriter, r *http.Request) {

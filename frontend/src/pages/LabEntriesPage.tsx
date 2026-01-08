@@ -27,6 +27,9 @@ type CoverageResponse = {
 export function LabEntriesPage() {
   const navigate = useNavigate();
 
+	const [syncError, setSyncError] = useState<string | null>(null);
+	const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
   const [sortKey, setSortKey] = useState<
     'coverage' | 'cohort_name' | 'advancement' | 'investment' | 'optimizer'
   >('coverage');
@@ -108,6 +111,27 @@ export function LabEntriesPage() {
             ← Back to Lab
           </Link>
         }
+		actions={
+			<Button
+				size="sm"
+				variant="secondary"
+				disabled={coverageQuery.isLoading || isSyncing}
+				onClick={async () => {
+					setSyncError(null);
+					setIsSyncing(true);
+					try {
+						await analyticsService.syncLabEntriesAutoCohorts();
+						await coverageQuery.refetch();
+					} catch (err) {
+						setSyncError(err instanceof Error ? err.message : 'Failed to sync AUTO cohorts');
+					} finally {
+						setIsSyncing(false);
+					}
+				}}
+			>
+				{isSyncing ? 'Syncing…' : 'Sync AUTO Cohorts'}
+			</Button>
+		}
       />
 
       <Card>
@@ -125,9 +149,21 @@ export function LabEntriesPage() {
           </Alert>
         ) : null}
 
-        {!coverageQuery.isLoading && !coverageQuery.isError && sorted.length === 0 ? (
-          <Alert variant="info">No algorithm combos found.</Alert>
-        ) : null}
+			{syncError ? (
+				<Alert variant="error" className="mt-3">
+					<div className="font-semibold mb-1">Failed to sync AUTO cohorts</div>
+					<div>{syncError}</div>
+				</Alert>
+			) : null}
+
+			{!coverageQuery.isLoading && !coverageQuery.isError && sorted.length === 0 ? (
+				<Alert variant="info">
+					<div className="font-semibold mb-1">No algorithm combos found.</div>
+					<div className="text-sm">
+						Run <span className="font-mono">Sync AUTO Cohorts</span> to create the deterministic AUTO cohorts.
+					</div>
+				</Alert>
+			) : null}
 
         {!coverageQuery.isLoading && !coverageQuery.isError && sorted.length > 0 ? (
           <div className="overflow-x-auto">
