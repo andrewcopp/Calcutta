@@ -209,6 +209,11 @@ This doc is a task checklist. Keep it updated as work lands.
 - [ ] PR C: Replace “Our Strategy” string matching with stable IDs.
 - [x] PR D: Add explicit upstream run columns + backfill.
 - [x] PR E: Introduce Candidate tables + migrate sandbox endpoints.
-- [ ] PR F: Move worker logic out of transport layer.
+- [x] PR F: Move worker logic out of transport layer.
+   - Implemented `backend/internal/app/workers` with explicit dependencies.
+   - Updated `backend/cmd/workers` to run new workers directly.
+   - Replaced `transport/httpserver/*_worker.go` implementations with thin wrappers.
+   - Deleted unused `transport/httpserver/run_progress.go`.
+   - Deferred: `transport/httpserver/sql_params.go` is still used by HTTP handlers.
 - [ ] PR G: Artifact storage expansion + retention job.
 - [ ] PR H: Delete legacy suite shims/endpoints; final naming cleanup.

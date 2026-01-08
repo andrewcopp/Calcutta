@@ -16,6 +16,7 @@ type Config struct {
 	AllowedOrigins                  []string
 	AllowedOrigin                   string
 	Port                            string
+	ArtifactsDir                    string
 	BootstrapAdminEmail             string
 	BootstrapAdminPassword          string
 	SMTPHost                        string
@@ -252,6 +253,8 @@ func LoadConfigFromEnv() (Config, error) {
 	pgxPoolMaxConnLifetimeSeconds := envInt("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", 1800, 0)
 	pgxPoolHealthCheckPeriodSeconds := envInt("PGX_POOL_HEALTH_CHECK_PERIOD_SECONDS", 30, 0)
 
+	artifactsDir := strings.TrimSpace(os.Getenv("ARTIFACTS_DIR"))
+
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		dbUser := os.Getenv("DB_USER")
@@ -287,6 +290,7 @@ func LoadConfigFromEnv() (Config, error) {
 		AllowedOrigins:                  allowedOrigins,
 		AllowedOrigin:                   os.Getenv("ALLOWED_ORIGIN"),
 		Port:                            os.Getenv("PORT"),
+		ArtifactsDir:                    artifactsDir,
 		BootstrapAdminEmail:             strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")),
 		BootstrapAdminPassword:          os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
 		SMTPHost:                        smtpHost,

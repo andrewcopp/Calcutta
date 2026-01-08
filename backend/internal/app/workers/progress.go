@@ -1,10 +1,24 @@
-package httpserver
+package workers
 
 import (
 	"context"
 	"encoding/json"
 	"log"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type ProgressWriter interface {
+	Update(ctx context.Context, runKind string, runID string, percent float64, phase string, message string)
+}
+
+type DBProgressWriter struct {
+	pool *pgxpool.Pool
+}
+
+func NewDBProgressWriter(pool *pgxpool.Pool) *DBProgressWriter {
+	return &DBProgressWriter{pool: pool}
+}
 
 type runProgressPayload struct {
 	Percent float64 `json:"percent"`
@@ -12,8 +26,8 @@ type runProgressPayload struct {
 	Message string  `json:"message"`
 }
 
-func (s *Server) updateRunJobProgress(ctx context.Context, runKind string, runID string, percent float64, phase string, message string) {
-	if s == nil || s.pool == nil {
+func (w *DBProgressWriter) Update(ctx context.Context, runKind string, runID string, percent float64, phase string, message string) {
+	if w == nil || w.pool == nil {
 		return
 	}
 	if ctx == nil {
@@ -32,7 +46,7 @@ func (s *Server) updateRunJobProgress(ctx context.Context, runKind string, runID
 		return
 	}
 
-	_, err = s.pool.Exec(ctx, `
+	_, err = w.pool.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET progress_json = $3::jsonb,
 			progress_updated_at = NOW(),

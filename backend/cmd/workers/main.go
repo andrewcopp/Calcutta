@@ -10,8 +10,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/workers"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
-	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver"
 )
 
 func main() {
@@ -50,10 +50,14 @@ func run() error {
 	}
 	defer pool.Close()
 
-	s, err := httpserver.NewServer(pool, cfg)
-	if err != nil {
-		return fmt.Errorf("server_init_failed: %w", err)
-	}
+	progress := workers.NewDBProgressWriter(pool)
+	bundleWorker := workers.NewBundleImportWorker(pool)
+	entryEvalWorker := workers.NewEntryEvaluationWorker(pool, progress)
+	marketShareWorker := workers.NewMarketShareWorker(pool, progress)
+	gameOutcomeWorker := workers.NewGameOutcomeWorker(pool, progress)
+	strategyGenWorker := workers.NewStrategyGenerationWorker(pool, progress)
+	calcuttaEvalWorker := workers.NewCalcuttaEvaluationWorker(pool, progress)
+	simulationWorker := workers.NewSimulationWorker(pool, progress, cfg.ArtifactsDir)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -64,49 +68,49 @@ func run() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunBundleImportWorker(ctx)
+			bundleWorker.Run(ctx)
 		}()
 	}
 	if *runEntryEvaluationWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunEntryEvaluationWorker(ctx)
+			entryEvalWorker.Run(ctx)
 		}()
 	}
 	if *runMarketShareWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunMarketShareWorker(ctx)
+			marketShareWorker.Run(ctx)
 		}()
 	}
 	if *runGameOutcomeWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunGameOutcomeWorker(ctx)
+			gameOutcomeWorker.Run(ctx)
 		}()
 	}
 	if *runStrategyGenWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunStrategyGenerationWorker(ctx)
+			strategyGenWorker.Run(ctx)
 		}()
 	}
 	if *runCalcuttaEvalWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunCalcuttaEvaluationWorker(ctx)
+			calcuttaEvalWorker.Run(ctx)
 		}()
 	}
 	if *runSuiteEvaluationWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			s.RunSimulationWorker(ctx)
+			simulationWorker.Run(ctx)
 		}()
 	}
 
