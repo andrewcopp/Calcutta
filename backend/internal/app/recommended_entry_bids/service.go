@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -82,12 +83,14 @@ type marketShare struct {
 }
 
 type persistedStrategyGenerationParams struct {
-	MarketShareRunID string `json:"market_share_run_id"`
-	BudgetPoints     int    `json:"budget_points"`
-	MinTeams         int    `json:"min_teams"`
-	MaxTeams         int    `json:"max_teams"`
-	MinBidPoints     int    `json:"min_bid_points"`
-	MaxBidPoints     int    `json:"max_bid_points"`
+	MarketShareRunID  string `json:"market_share_run_id"`
+	GameOutcomeRunID  string `json:"game_outcome_run_id"`
+	ExcludedEntryName any    `json:"excluded_entry_name"`
+	BudgetPoints      int    `json:"budget_points"`
+	MinTeams          int    `json:"min_teams"`
+	MaxTeams          int    `json:"max_teams"`
+	MinBidPoints      int    `json:"min_bid_points"`
+	MaxBidPoints      int    `json:"max_bid_points"`
 }
 
 func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Context, strategyGenerationRunID string) (*GenerateResult, error) {
@@ -96,13 +99,15 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 	}
 
 	var (
-		runKeyText     *string
-		runKeyUUIDText *string
-		name           *string
-		optimizerKey   *string
-		calcuttaID     string
-		simulatedID    *string
-		paramsJSON     []byte
+		runKeyText      *string
+		runKeyUUIDText  *string
+		name            *string
+		optimizerKey    *string
+		purpose         *string
+		returnsModelKey *string
+		calcuttaID      string
+		simulatedID     *string
+		paramsJSON      []byte
 	)
 	if err := s.pool.QueryRow(ctx, `
 		SELECT
@@ -110,6 +115,8 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 			COALESCE(run_key_uuid::text, ''::text) AS run_key_uuid,
 			name,
 			optimizer_key,
+			purpose,
+			returns_model_key,
 			calcutta_id::text,
 			simulated_tournament_id::text,
 			params_json
@@ -122,6 +129,8 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 		&runKeyUUIDText,
 		&name,
 		&optimizerKey,
+		&purpose,
+		&returnsModelKey,
 		&calcuttaID,
 		&simulatedID,
 		&paramsJSON,
@@ -158,10 +167,87 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 		marketShareRunID = &v
 	}
 
+	var gameOutcomeRunID *string
+	if strings.TrimSpace(pk.GameOutcomeRunID) != "" {
+		v := strings.TrimSpace(pk.GameOutcomeRunID)
+		gameOutcomeRunID = &v
+	}
+
+	var excludedEntryName string
+	if pk.ExcludedEntryName != nil {
+		switch v := pk.ExcludedEntryName.(type) {
+		case string:
+			excludedEntryName = strings.TrimSpace(v)
+		case *string:
+			if v != nil {
+				excludedEntryName = strings.TrimSpace(*v)
+			}
+		}
+	}
+
 	var simTournamentID *string
 	if simulatedID != nil && strings.TrimSpace(*simulatedID) != "" {
 		v := strings.TrimSpace(*simulatedID)
 		simTournamentID = &v
+	}
+
+	effPurpose := ""
+	if purpose != nil {
+		effPurpose = strings.TrimSpace(*purpose)
+	}
+	effReturnsModelKey := ""
+	if returnsModelKey != nil {
+		effReturnsModelKey = strings.TrimSpace(*returnsModelKey)
+	}
+
+	if effPurpose == "lab_entries_generation" && effReturnsModelKey == "pgo_dp" {
+		if gameOutcomeRunID == nil || strings.TrimSpace(*gameOutcomeRunID) == "" {
+			return nil, errors.New("game_outcome_run_id is required for pgo_dp lab entry generation")
+		}
+
+		cc, err := s.loadCalcuttaContext(ctx, calcuttaID)
+		if err != nil {
+			return nil, err
+		}
+
+		msSelectedID, marketByTeam, err := s.loadPredictedMarketShares(ctx, cc, marketShareRunID)
+		if err != nil {
+			return nil, err
+		}
+		if msSelectedID == nil || strings.TrimSpace(*msSelectedID) == "" {
+			return nil, errors.New("market_share_run_id is required for pgo_dp lab entry generation")
+		}
+
+		repo := dbadapter.NewAnalyticsRepository(s.pool)
+		_, _, returns, err := repo.GetCalcuttaPredictedReturns(ctx, calcuttaID, &strategyGenerationRunID, gameOutcomeRunID)
+		if err != nil {
+			return nil, err
+		}
+		if len(returns) == 0 {
+			return nil, errors.New("no predicted returns found")
+		}
+
+		expected := make([]ExpectedTeam, 0, len(returns))
+		for _, r := range returns {
+			expected = append(expected, ExpectedTeam{TeamID: r.TeamID, ExpectedPoints: r.ExpectedValue})
+		}
+
+		return s.GenerateFromPredictionsAndWrite(ctx, GenerateFromPredictionsParams{
+			CalcuttaID:           calcuttaID,
+			RunKey:               effRunKey,
+			Name:                 effName,
+			OptimizerKey:         effOptimizerKey,
+			GameOutcomeRunID:     strings.TrimSpace(*gameOutcomeRunID),
+			MarketShareRunID:     strings.TrimSpace(*msSelectedID),
+			ExcludedEntryName:    excludedEntryName,
+			ExpectedPointsByTeam: expected,
+			PredictedShareByTeam: marketByTeam,
+			BudgetPoints:         pk.BudgetPoints,
+			MinTeams:             pk.MinTeams,
+			MaxTeams:             pk.MaxTeams,
+			MinBidPoints:         pk.MinBidPoints,
+			MaxBidPoints:         pk.MaxBidPoints,
+		})
 	}
 
 	return s.GenerateAndWrite(ctx, GenerateParams{

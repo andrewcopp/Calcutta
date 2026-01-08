@@ -179,12 +179,14 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	var goAlgID string
 	var msAlgID string
 	var optimizerKey string
 	var startingStateKey string
 	var cohortExcludedEntryName *string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT
+			game_outcomes_algorithm_id::text,
 			market_share_algorithm_id::text,
 			COALESCE(optimizer_key, ''::text) AS optimizer_key,
 			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
@@ -193,7 +195,7 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, cohortID).Scan(&msAlgID, &optimizerKey, &startingStateKey, &cohortExcludedEntryName); err != nil {
+	`, cohortID).Scan(&goAlgID, &msAlgID, &optimizerKey, &startingStateKey, &cohortExcludedEntryName); err != nil {
 		if err == pgx.ErrNoRows {
 			writeError(w, r, http.StatusNotFound, "not_found", "Cohort not found", "id")
 			return
@@ -336,10 +338,41 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 			return
 		}
 
+		var tournamentID string
+		if err := tx.QueryRow(ctx, `
+			SELECT tournament_id::text
+			FROM core.calcuttas
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		`, sc.CalcuttaID).Scan(&tournamentID); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
+		var goRunID string
+		if err := tx.QueryRow(ctx, `
+			SELECT gor.id::text
+			FROM derived.game_outcome_runs gor
+			WHERE gor.tournament_id = $1::uuid
+				AND gor.algorithm_id = $2::uuid
+				AND gor.deleted_at IS NULL
+			ORDER BY gor.created_at DESC
+			LIMIT 1
+		`, tournamentID, goAlgID).Scan(&goRunID); err != nil {
+			if err == pgx.ErrNoRows {
+				resp.Failed++
+				resp.Failures = append(resp.Failures, generateLabEntriesFailure{ScenarioID: sc.ScenarioID, CalcuttaID: sc.CalcuttaID, Message: "Missing game-outcome run for cohort algorithm"})
+				continue
+			}
+			writeErrorFromErr(w, r, err)
+			return
+		}
+
 		runKeyUUID := uuid.NewString()
 		runKeyText := runKeyUUID
 		name := fmt.Sprintf("lab_entries_%s", optimizerKey)
-		params := map[string]any{"market_share_run_id": msRunID, "source": "lab_entries_generate"}
+		params := map[string]any{"market_share_run_id": msRunID, "game_outcome_run_id": goRunID, "excluded_entry_name": effExcluded, "source": "lab_entries_generate"}
 		paramsJSON, _ := json.Marshal(params)
 
 		gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
@@ -365,7 +398,7 @@ func (s *Server) generateLabEntriesForCohortHandler(w http.ResponseWriter, r *ht
 				params_json,
 				git_sha
 			)
-			VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'lab_entries_generation', 'legacy', 'predicted_market_share', $5, $6::jsonb, $7)
+			VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'lab_entries_generation', 'pgo_dp', 'predicted_market_share', $5, $6::jsonb, $7)
 			RETURNING id::text
 		`, runKeyText, runKeyUUID, name, sc.CalcuttaID, optimizerKey, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
 			writeErrorFromErr(w, r, err)
