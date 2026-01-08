@@ -28,7 +28,7 @@ type CohortDetailResponse = {
     calcutta_name: string;
     tournament_name: string;
     season: string;
-    team_count: number;
+    picks: string;
     entry_created_at?: string | null;
     scenario_created_at: string;
     strategy_generation_run_id?: string | null;
@@ -268,7 +268,7 @@ export function LabEntriesSuiteDetailPage() {
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Season</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teams</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Picks</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entry Created</th>
                   </tr>
                 </thead>
@@ -284,7 +284,7 @@ export function LabEntriesSuiteDetailPage() {
                         <div className="font-medium">{row.calcutta_name}</div>
                         <div className="text-xs text-gray-600">{row.tournament_name}</div>
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-700">{row.team_count}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 font-mono">{row.picks}</td>
                       <td className="px-3 py-2 text-sm text-gray-700">{fmtDateTime(row.entry_created_at)}</td>
                     </tr>
                   ))}

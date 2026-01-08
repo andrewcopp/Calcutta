@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -35,10 +37,30 @@ type labEntriesSuiteScenarioItem struct {
 	CalcuttaName            string  `json:"calcutta_name"`
 	TournamentName          string  `json:"tournament_name"`
 	Season                  string  `json:"season"`
-	TeamCount               int     `json:"team_count"`
+	Picks                   string  `json:"picks"`
 	EntryCreatedAt          *string `json:"entry_created_at,omitempty"`
 	ScenarioCreatedAt       string  `json:"scenario_created_at"`
 	StrategyGenerationRunID *string `json:"strategy_generation_run_id,omitempty"`
+}
+
+func formatLabEntryPicks(maxTeams int, seeds []int32) string {
+	if maxTeams <= 0 {
+		return ""
+	}
+
+	if len(seeds) > 1 {
+		sort.Slice(seeds, func(i, j int) bool { return seeds[i] < seeds[j] })
+	}
+
+	parts := make([]string, 0, maxTeams)
+	for i := 0; i < maxTeams; i++ {
+		if i < len(seeds) {
+			parts = append(parts, strconv.Itoa(int(seeds[i])))
+		} else {
+			parts = append(parts, "-")
+		}
+	}
+	return strings.Join(parts, ",")
 }
 
 type labEntriesSuiteDetailResponse struct {
@@ -1004,19 +1026,21 @@ func (s *Server) getLabEntriesCohortDetailHandler(w http.ResponseWriter, r *http
 	resp.Cohort.ExcludedEntryName = excl
 
 	rows, err := s.pool.Query(r.Context(), `
-		WITH team_counts AS (
-			SELECT t.tournament_id, COUNT(*)::int AS team_count
-			FROM core.teams t
-			WHERE t.deleted_at IS NULL
-			GROUP BY t.tournament_id
-		)
 		SELECT
 			sc.id::text,
 			sc.calcutta_id::text,
 			c.name,
 			t.name,
 			seas.year::text,
-			COALESCE(tc.team_count, 0)::int,
+			COALESCE(c.max_teams, 10)::int,
+			(
+				SELECT ARRAY_AGG(tt.seed ORDER BY tt.seed ASC, tt.id ASC)
+				FROM derived.recommended_entry_bids reb
+				JOIN core.teams tt ON tt.id = reb.team_id AND tt.deleted_at IS NULL
+				WHERE reb.strategy_generation_run_id = sc.focus_strategy_generation_run_id
+					AND reb.deleted_at IS NULL
+					AND reb.bid_points > 0
+			),
 			sgr.created_at::text,
 			sc.created_at::text,
 			sc.focus_strategy_generation_run_id::text
@@ -1024,7 +1048,6 @@ func (s *Server) getLabEntriesCohortDetailHandler(w http.ResponseWriter, r *http
 		JOIN core.calcuttas c ON c.id = sc.calcutta_id AND c.deleted_at IS NULL
 		JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 		JOIN core.seasons seas ON seas.id = t.season_id
-		LEFT JOIN team_counts tc ON tc.tournament_id = t.id
 		LEFT JOIN derived.strategy_generation_runs sgr
 			ON sgr.id = sc.focus_strategy_generation_run_id
 			AND sgr.deleted_at IS NULL
@@ -1041,19 +1064,28 @@ func (s *Server) getLabEntriesCohortDetailHandler(w http.ResponseWriter, r *http
 	items := make([]labEntriesSuiteScenarioItem, 0)
 	for rows.Next() {
 		var it labEntriesSuiteScenarioItem
+		var maxTeams int
+		var seeds []int32
 		if err := rows.Scan(
 			&it.ScenarioID,
 			&it.CalcuttaID,
 			&it.CalcuttaName,
 			&it.TournamentName,
 			&it.Season,
-			&it.TeamCount,
+			&maxTeams,
+			&seeds,
 			&it.EntryCreatedAt,
 			&it.ScenarioCreatedAt,
 			&it.StrategyGenerationRunID,
 		); err != nil {
 			writeErrorFromErr(w, r, err)
 			return
+		}
+
+		if it.StrategyGenerationRunID == nil || strings.TrimSpace(*it.StrategyGenerationRunID) == "" {
+			it.Picks = "—"
+		} else {
+			it.Picks = formatLabEntryPicks(maxTeams, seeds)
 		}
 		items = append(items, it)
 	}
