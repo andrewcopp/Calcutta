@@ -8,6 +8,13 @@ Phase A4 complete:
 - Legacy synthetic Sandbox UI (pages/services) removed.
 - Legacy synthetic write endpoints return 410 Gone.
 
+Phase A5 (minimal) complete:
+- Dropped legacy synthetic tables:
+  - `derived.synthetic_calcuttas`
+  - `derived.synthetic_calcutta_candidates`
+- Removed `synthetic_calcutta_id` from `derived.simulation_runs` (+ updated run job enqueue trigger).
+- Removed legacy synthetic scenario production code paths (no route registrations; handlers are inert).
+
 ## Goal
 Replace the current Sandbox persistence model (synthetic calcuttas + snapshots + candidate attachments) with a clean, self-contained Sandbox model:
 - **SimulatedCalcuttas**: evaluation fixtures (rules + payouts + entries)
@@ -293,15 +300,19 @@ Acceptance:
 - No new writes happen to synthetic/snapshot tables.
 
 ## Phase A5 — Drop old tables and code
-- Drop:
-  - `derived.synthetic_calcuttas*`
-  - `core.calcutta_snapshots*`
+- Phase A5 (minimal) drop:
+  - `derived.synthetic_calcuttas`
   - `derived.synthetic_calcutta_candidates`
+  - `derived.simulation_runs.synthetic_calcutta_id`
+- Update the `derived.simulation_runs` run-job enqueue trigger to remove `synthetic_calcutta_id`.
 - Remove legacy code paths.
+
+Explicitly deferred:
+- Dropping `core.calcutta_snapshots*` (handled elsewhere).
 
 Acceptance:
 - No production code references old tables.
-- DB schema no longer contains synthetic/snapshot tables.
+- DB schema no longer contains legacy synthetic tables.
 
 ---
 
@@ -341,5 +352,5 @@ This workstream is designed to be parallelizable.
 - [x] Phase A4: Cut over UI to simulated endpoints only.
 - [x] Phase A4: Make legacy synthetic/snapshot endpoints read-only or return 410.
 - [x] Phase A4: Remove/disable any remaining writes to legacy synthetic/snapshot tables.
-- [ ] Phase A5: Drop legacy synthetic/snapshot tables.
-- [ ] Phase A5: Remove legacy endpoints and any production code references.
+- [x] Phase A5 (minimal): Drop legacy synthetic tables and remove `synthetic_calcutta_id`.
+- [x] Phase A5 (minimal): Remove legacy endpoints and any production code references.
