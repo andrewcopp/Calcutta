@@ -1,4 +1,4 @@
-package simulated_calcutta
+package calcutta_evaluations
 
 import (
 	"context"

@@ -14,9 +14,8 @@ import (
 	"time"
 
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
-	reb "github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
+	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
-	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -47,9 +46,10 @@ type simulationRunRow struct {
 	RunKey                  string
 	SimulationBatchID       *string
 	CohortID                string
-	CalcuttaID              string
+	CalcuttaID              *string
+	SimulatedCalcuttaID     *string
 	GameOutcomeRunID        string
-	MarketShareRunID        string
+	MarketShareRunID        *string
 	StrategyGenerationRunID *string
 	OptimizerKey            *string
 	NSims                   *int
@@ -198,9 +198,10 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 			r.run_key::text,
 			r.simulation_run_batch_id::text,
 			r.cohort_id::text,
-			r.calcutta_id,
+			r.calcutta_id::text,
+			r.simulated_calcutta_id::text,
 			r.game_outcome_run_id,
-			r.market_share_run_id,
+			r.market_share_run_id::text,
 			r.strategy_generation_run_id,
 			r.optimizer_key,
 			r.n_sims,
@@ -220,6 +221,7 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		&row.SimulationBatchID,
 		&row.CohortID,
 		&row.CalcuttaID,
+		&row.SimulatedCalcuttaID,
 		&row.GameOutcomeRunID,
 		&row.MarketShareRunID,
 		&row.StrategyGenerationRunID,
@@ -255,21 +257,33 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 	if req.StrategyGenerationRunID != nil {
 		strategyGenRunID = *req.StrategyGenerationRunID
 	}
-	usingExistingStrategyGenRun := strategyGenRunID != ""
 
 	excluded := ""
 	if req.ExcludedEntry != nil {
 		excluded = *req.ExcludedEntry
 	}
 
+	calcuttaID := ""
+	if req.CalcuttaID != nil {
+		calcuttaID = *req.CalcuttaID
+	}
+	simulatedCalcuttaID := ""
+	if req.SimulatedCalcuttaID != nil {
+		simulatedCalcuttaID = *req.SimulatedCalcuttaID
+	}
+	marketShareRunID := ""
+	if req.MarketShareRunID != nil {
+		marketShareRunID = *req.MarketShareRunID
+	}
+
 	log.Printf("simulation_worker start worker_id=%s run_id=%s cohort_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s strategy_generation_run_id=%s starting_state_key=%s excluded_entry_name=%q",
 		workerID,
 		req.ID,
 		req.CohortID,
-		req.CalcuttaID,
+		calcuttaID,
 		runKey,
 		req.GameOutcomeRunID,
-		req.MarketShareRunID,
+		marketShareRunID,
 		strategyGenRunID,
 		req.StartingStateKey,
 		excluded,
@@ -277,7 +291,25 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 
 	w.updateRunJobProgress(ctx, "simulation", req.ID, 0.05, "start", "Starting simulation run")
 
-	year, err := resolveSeasonYearByCalcuttaID(ctx, w.pool, req.CalcuttaID)
+	year := 0
+	var err error
+	if strings.TrimSpace(simulatedCalcuttaID) != "" {
+		var tournamentID string
+		if err := w.pool.QueryRow(ctx, `
+			SELECT tournament_id::text
+			FROM derived.simulated_calcuttas
+			WHERE id = $1::uuid
+				AND deleted_at IS NULL
+			LIMIT 1
+		`, simulatedCalcuttaID).Scan(&tournamentID); err != nil {
+			w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
+			w.failSimulationRun(ctx, req.ID, err)
+			return false
+		}
+		year, err = resolveSeasonYearByTournamentID(ctx, w.pool, tournamentID)
+	} else {
+		year, err = resolveSeasonYearByCalcuttaID(ctx, w.pool, calcuttaID)
+	}
 	if err != nil {
 		w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
 		w.failSimulationRun(ctx, req.ID, err)
@@ -318,55 +350,21 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		return false
 	}
 
-	strategyMsg := "Generating strategy"
-	if usingExistingStrategyGenRun {
-		strategyMsg = "Using existing strategy generation run"
-	}
-	w.updateRunJobProgress(ctx, "simulation", req.ID, 0.55, "strategy", strategyMsg)
-
-	optimizerKey := ""
-	if req.OptimizerKey != nil {
-		optimizerKey = *req.OptimizerKey
-	}
-	if optimizerKey == "" {
-		optimizerKey = w.resolveCohortOptimizerKey(ctx, req.CohortID, "minlp_v1")
-	}
-
-	if !usingExistingStrategyGenRun {
-		rebSvc := reb.New(w.pool)
-		msRunID := req.MarketShareRunID
-		genRes, err := rebSvc.GenerateAndWrite(ctx, reb.GenerateParams{
-			CalcuttaID:            req.CalcuttaID,
-			RunKey:                runKey,
-			Name:                  "simulation_worker",
-			OptimizerKey:          optimizerKey,
-			MarketShareRunID:      &msRunID,
-			SimulatedTournamentID: &simRes.TournamentSimulationBatchID,
-		})
-		if err != nil {
-			w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
-			w.failSimulationRun(ctx, req.ID, err)
-			return false
-		}
-		strategyGenRunID = genRes.StrategyGenerationRunID
-	}
-
-	evalSvc := appsimulatedcalcutta.New(w.pool)
+	evalSvc := appcalcuttaevaluations.New(w.pool)
 	evalRunID := ""
 	w.updateRunJobProgress(ctx, "simulation", req.ID, 0.75, "evaluate", "Evaluating calcutta")
-	if usingExistingStrategyGenRun {
-		evalRunID, err = evalSvc.CalculateSimulatedCalcuttaForStrategyGenerationRun(
+	if strings.TrimSpace(simulatedCalcuttaID) != "" {
+		evalRunID, err = evalSvc.CalculateSimulatedCalcuttaForSimulatedCalcutta(
 			ctx,
-			req.CalcuttaID,
+			simulatedCalcuttaID,
 			runKey,
 			excluded,
 			&simRes.TournamentSimulationBatchID,
-			strategyGenRunID,
 		)
 	} else {
 		evalRunID, err = evalSvc.CalculateSimulatedCalcuttaForEvaluationRun(
 			ctx,
-			req.CalcuttaID,
+			calcuttaID,
 			runKey,
 			excluded,
 			&simRes.TournamentSimulationBatchID,
@@ -376,75 +374,6 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())
 		w.failSimulationRun(ctx, req.ID, err)
 		return false
-	}
-
-	var focusSnapshotEntryID *string
-	var focusEntryName *string
-	if evalRunID != "" && strategyGenRunID != "" {
-		var seID string
-		var name string
-		err := w.pool.QueryRow(ctx, `
-			WITH cer AS (
-				SELECT calcutta_snapshot_id
-				FROM derived.calcutta_evaluation_runs
-				WHERE id = $1::uuid
-					AND deleted_at IS NULL
-				LIMIT 1
-			),
-			target AS (
-				SELECT team_id, bid_points::int
-				FROM derived.strategy_generation_run_bids
-				WHERE strategy_generation_run_id = $2::uuid
-					AND deleted_at IS NULL
-			),
-			candidate AS (
-				SELECT cse.id::text AS id, cse.display_name
-				FROM core.calcutta_snapshot_entries cse
-				WHERE cse.calcutta_snapshot_id = (SELECT calcutta_snapshot_id FROM cer)
-					AND cse.is_synthetic = true
-					AND cse.deleted_at IS NULL
-					AND NOT EXISTS (
-						(SELECT team_id, bid_points FROM target)
-						EXCEPT
-						(SELECT cset.team_id, cset.bid_points::int
-						 FROM core.calcutta_snapshot_entry_teams cset
-						 WHERE cset.calcutta_snapshot_entry_id = cse.id
-							AND cset.deleted_at IS NULL)
-					)
-					AND NOT EXISTS (
-						(SELECT cset.team_id, cset.bid_points::int
-						 FROM core.calcutta_snapshot_entry_teams cset
-						 WHERE cset.calcutta_snapshot_entry_id = cse.id
-							AND cset.deleted_at IS NULL)
-						EXCEPT
-						(SELECT team_id, bid_points FROM target)
-					)
-				LIMIT 1
-			)
-			SELECT id, display_name
-			FROM candidate
-		`, evalRunID, strategyGenRunID).Scan(&seID, &name)
-		if err == nil {
-			focusSnapshotEntryID = &seID
-			focusEntryName = &name
-		}
-	}
-
-	if evalRunID != "" {
-		_, _ = w.pool.Exec(ctx, `
-			UPDATE derived.synthetic_calcuttas sc
-			SET calcutta_snapshot_id = cer.calcutta_snapshot_id,
-				focus_strategy_generation_run_id = $3::uuid,
-				focus_entry_name = COALESCE(NULLIF(sc.focus_entry_name, ''), $4::text),
-				updated_at = NOW()
-			FROM derived.simulation_runs sr
-			JOIN derived.calcutta_evaluation_runs cer
-				ON cer.id = $2::uuid
-				AND cer.deleted_at IS NULL
-			WHERE sr.id = $1::uuid
-				AND sr.synthetic_calcutta_id = sc.id
-				AND sc.deleted_at IS NULL
-		`, req.ID, evalRunID, nullUUIDParam(strategyGenRunID), focusEntryName)
 	}
 
 	var (
@@ -460,75 +389,8 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		realizedPayoutCents       *int
 		realizedTotalPoints       *float64
 	)
-	if evalRunID != "" {
-		var (
-			rank                   int
-			meanNormalizedPayout   float64
-			medianNormalizedPayout float64
-			pTop1                  float64
-			pInMoney               float64
-			totalSims              int
-		)
-		err := w.pool.QueryRow(ctx, `
-			WITH ranked AS (
-				SELECT
-					ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
-					ep.entry_name,
-					COALESCE(ep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
-					COALESCE(ep.median_normalized_payout, 0.0)::double precision AS median_normalized_payout,
-					COALESCE(ep.p_top1, 0.0)::double precision AS p_top1,
-					COALESCE(ep.p_in_money, 0.0)::double precision AS p_in_money
-				FROM derived.entry_performance ep
-				WHERE ep.calcutta_evaluation_run_id = $1::uuid
-					AND ep.deleted_at IS NULL
-			)
-			SELECT
-				r.rank,
-				r.mean_normalized_payout,
-				r.median_normalized_payout,
-				r.p_top1,
-				r.p_in_money,
-				COALESCE((
-					SELECT st.n_sims::int
-					FROM derived.calcutta_evaluation_runs cer
-					JOIN derived.simulated_tournaments st
-						ON st.id = cer.simulated_tournament_id
-						AND st.deleted_at IS NULL
-					WHERE cer.id = $1::uuid
-						AND cer.deleted_at IS NULL
-					LIMIT 1
-				), 0)::int as total_simulations
-			FROM ranked r
-			WHERE r.entry_name = $2::text
-			ORDER BY r.rank ASC
-			LIMIT 1
-		`, evalRunID, focusEntryName).Scan(
-			&rank,
-			&meanNormalizedPayout,
-			&medianNormalizedPayout,
-			&pTop1,
-			&pInMoney,
-			&totalSims,
-		)
-		if err == nil {
-			ourRank = &rank
-			ourMeanNormalizedPayout = &meanNormalizedPayout
-			ourMedianNormalizedPayout = &medianNormalizedPayout
-			ourPTop1 = &pTop1
-			ourPInMoney = &pInMoney
-			totalSimulations = &totalSims
-		}
-	}
 
-	if realized, ok, err := w.computeRealizedFinishForStrategyGenerationRun(ctx, req.CalcuttaID, strategyGenRunID); err != nil {
-		log.Printf("Error computing realized finish for eval_id=%s: %v", req.ID, err)
-	} else if ok {
-		realizedFinishPosition = &realized.FinishPosition
-		realizedIsTied = &realized.IsTied
-		realizedInTheMoney = &realized.InTheMoney
-		realizedPayoutCents = &realized.PayoutCents
-		realizedTotalPoints = &realized.TotalPoints
-	}
+	optimizerKey := ""
 
 	_, err = w.pool.Exec(ctx, `
 		UPDATE derived.simulation_runs
@@ -558,9 +420,9 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		optimizerKey,
 		nSims,
 		seed,
-		strategyGenRunID,
+		nullUUIDParam(strategyGenRunID),
 		evalRunID,
-		nullUUIDParamPtr(focusSnapshotEntryID),
+		nil,
 		ourRank,
 		ourMeanNormalizedPayout,
 		ourMedianNormalizedPayout,

@@ -1,9 +1,10 @@
-package simulated_calcutta
+package calcutta_evaluations
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -427,11 +428,20 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 func (s *Service) getSimulations(ctx context.Context, cc *calcuttaContext, tournamentSimulationBatchID string) (map[int][]TeamSimResult, error) {
 	// Simulations are keyed by bronze tournaments; map bronze teams to core teams in the resolved tournament.
 	// Compute points using canonical scoring rules.
+	rules, err := s.loadCoreScoringRules(ctx, cc.CalcuttaID)
+	if err != nil {
+		return nil, err
+	}
+	return s.getSimulationsWithRules(ctx, cc.TournamentID, tournamentSimulationBatchID, rules)
+}
+
+func (s *Service) getSimulationsWithRules(ctx context.Context, tournamentID string, tournamentSimulationBatchID string, rules []scoring.Rule) (map[int][]TeamSimResult, error) {
 	query := `
 		SELECT
 			sst.sim_id,
 			sst.team_id,
-			core.calcutta_points_for_progress($3, sst.wins, sst.byes) as points
+			sst.wins::int,
+			sst.byes::int
 		FROM derived.simulated_teams sst
 		WHERE sst.tournament_id = $1
 			AND sst.simulated_tournament_id = $2
@@ -439,7 +449,7 @@ func (s *Service) getSimulations(ctx context.Context, cc *calcuttaContext, tourn
 		ORDER BY sst.sim_id, sst.team_id
 	`
 
-	rows, err := s.pool.Query(ctx, query, cc.TournamentID, tournamentSimulationBatchID, cc.CalcuttaID)
+	rows, err := s.pool.Query(ctx, query, tournamentID, tournamentSimulationBatchID)
 	if err != nil {
 		return nil, err
 	}
@@ -448,11 +458,14 @@ func (s *Service) getSimulations(ctx context.Context, cc *calcuttaContext, tourn
 	simulations := make(map[int][]TeamSimResult)
 
 	for rows.Next() {
-		var simID, points int
+		var simID int
 		var teamID string
-		if err := rows.Scan(&simID, &teamID, &points); err != nil {
+		var wins int
+		var byes int
+		if err := rows.Scan(&simID, &teamID, &wins, &byes); err != nil {
 			return nil, err
 		}
+		points := scoring.PointsForProgress(rules, wins, byes)
 		simulations[simID] = append(simulations[simID], TeamSimResult{
 			TeamID: teamID,
 			Points: points,
@@ -460,6 +473,151 @@ func (s *Service) getSimulations(ctx context.Context, cc *calcuttaContext, tourn
 	}
 
 	return simulations, nil
+}
+
+func (s *Service) loadCoreScoringRules(ctx context.Context, calcuttaID string) ([]scoring.Rule, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT win_index::int, points_awarded::int
+		FROM core.calcutta_scoring_rules
+		WHERE calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY win_index ASC
+	`, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rules := make([]scoring.Rule, 0)
+	for rows.Next() {
+		var r scoring.Rule
+		if err := rows.Scan(&r.WinIndex, &r.PointsAwarded); err != nil {
+			return nil, err
+		}
+		rules = append(rules, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return rules, nil
+}
+
+func (s *Service) loadSimulatedCalcuttaScoringRules(ctx context.Context, simulatedCalcuttaID string) ([]scoring.Rule, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT win_index::int, points_awarded::int
+		FROM derived.simulated_calcutta_scoring_rules
+		WHERE simulated_calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY win_index ASC
+	`, simulatedCalcuttaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rules := make([]scoring.Rule, 0)
+	for rows.Next() {
+		var r scoring.Rule
+		if err := rows.Scan(&r.WinIndex, &r.PointsAwarded); err != nil {
+			return nil, err
+		}
+		rules = append(rules, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return rules, nil
+}
+
+func (s *Service) getPayoutStructureFromSimulatedCalcutta(ctx context.Context, simulatedCalcuttaID string) (map[int]int, int, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT position::int, amount_cents::int
+		FROM derived.simulated_calcutta_payouts
+		WHERE simulated_calcutta_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY position ASC
+	`, simulatedCalcuttaID)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	payouts := make(map[int]int)
+	firstPlace := 0
+	for rows.Next() {
+		var position int
+		var amountCents int
+		if err := rows.Scan(&position, &amountCents); err != nil {
+			return nil, 0, err
+		}
+		payouts[position] = amountCents
+		if position == 1 {
+			firstPlace = amountCents
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	if firstPlace == 0 {
+		return nil, 0, fmt.Errorf("no first place payout found")
+	}
+	return payouts, firstPlace, nil
+}
+
+func (s *Service) getEntriesFromSimulatedCalcutta(ctx context.Context, simulatedCalcuttaID string, excludedEntryName string) (map[string]*Entry, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			se.display_name,
+			set.team_id::text,
+			set.bid_points::int
+		FROM derived.simulated_entries se
+		JOIN derived.simulated_entry_teams set
+			ON set.simulated_entry_id = se.id
+			AND set.deleted_at IS NULL
+		WHERE se.simulated_calcutta_id = $1::uuid
+			AND se.deleted_at IS NULL
+			AND (se.display_name != $2 OR $2 = '')
+		ORDER BY se.created_at ASC
+	`, simulatedCalcuttaID, excludedEntryName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := make(map[string]*Entry)
+	for rows.Next() {
+		var entryName string
+		var teamID string
+		var bidPoints int
+		if err := rows.Scan(&entryName, &teamID, &bidPoints); err != nil {
+			return nil, err
+		}
+		if entries[entryName] == nil {
+			entries[entryName] = &Entry{Name: entryName, Teams: make(map[string]int)}
+		}
+		entries[entryName].Teams[teamID] = bidPoints
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func (s *Service) createCalcuttaEvaluationRunForSimulatedCalcutta(ctx context.Context, tournamentSimulationBatchID string, simulatedCalcuttaID string) (string, error) {
+	var evalID string
+	if err := s.pool.QueryRow(ctx, `
+		INSERT INTO derived.calcutta_evaluation_runs (
+			simulated_tournament_id,
+			calcutta_snapshot_id,
+			simulated_calcutta_id,
+			purpose
+		)
+		VALUES ($1::uuid, NULL, $2::uuid, 'simulated_calcutta')
+		RETURNING id
+	`, tournamentSimulationBatchID, simulatedCalcuttaID).Scan(&evalID); err != nil {
+		return "", err
+	}
+	return evalID, nil
 }
 
 func (s *Service) getPayoutStructure(ctx context.Context, calcuttaID string) (map[int]int, int, error) {

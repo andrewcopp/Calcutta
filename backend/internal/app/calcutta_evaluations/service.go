@@ -1,4 +1,4 @@
-package simulated_calcutta
+package calcutta_evaluations
 
 import (
 	"context"
@@ -45,6 +45,93 @@ func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
 	tournamentSimulationBatchID *string,
 ) (string, error) {
 	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil, nil)
+}
+
+func (s *Service) CalculateSimulatedCalcuttaForSimulatedCalcutta(
+	ctx context.Context,
+	simulatedCalcuttaID string,
+	runID string,
+	excludedEntryName string,
+	tournamentSimulationBatchID *string,
+) (string, error) {
+	if simulatedCalcuttaID == "" {
+		return "", fmt.Errorf("simulatedCalcuttaID is required")
+	}
+
+	runKey := runID
+	if runKey == "" {
+		runKey = uuid.NewString()
+	}
+
+	var tournamentID string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT tournament_id::text
+		FROM derived.simulated_calcuttas
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, simulatedCalcuttaID).Scan(&tournamentID); err != nil {
+		return "", err
+	}
+
+	batchID := ""
+	if tournamentSimulationBatchID != nil {
+		batchID = *tournamentSimulationBatchID
+	}
+	if batchID == "" {
+		var ok bool
+		batchID, ok, err := s.getLatestTournamentSimulationBatchID(ctx, tournamentID)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve latest tournament simulation batch: %w", err)
+		}
+		if !ok {
+			tournamentStateSnapshotID, err := s.createTournamentStateSnapshot(ctx, tournamentID)
+			if err != nil {
+				return "", fmt.Errorf("failed to create tournament state snapshot: %w", err)
+			}
+
+			batchID, err = s.createTournamentSimulationBatch(ctx, tournamentID, tournamentStateSnapshotID)
+			if err != nil {
+				return "", fmt.Errorf("failed to create tournament simulation batch: %w", err)
+			}
+
+			if err := s.attachSimulationBatchToSimulatedTournaments(ctx, tournamentID, batchID); err != nil {
+				return "", fmt.Errorf("failed to attach tournament_simulation_batch_id to simulated_tournaments: %w", err)
+			}
+		}
+	}
+
+	evalRunID, err := s.createCalcuttaEvaluationRunForSimulatedCalcutta(ctx, batchID, simulatedCalcuttaID)
+	if err != nil {
+		return "", err
+	}
+
+	payouts, firstPlacePayout, err := s.getPayoutStructureFromSimulatedCalcutta(ctx, simulatedCalcuttaID)
+	if err != nil {
+		return "", err
+	}
+
+	entries, err := s.getEntriesFromSimulatedCalcutta(ctx, simulatedCalcuttaID, excludedEntryName)
+	if err != nil {
+		return "", err
+	}
+
+	rules, err := s.loadSimulatedCalcuttaScoringRules(ctx, simulatedCalcuttaID)
+	if err != nil {
+		return "", err
+	}
+
+	simulations, err := s.getSimulationsWithRules(ctx, tournamentID, batchID, rules)
+	if err != nil {
+		return "", fmt.Errorf("failed to get simulations: %w", err)
+	}
+
+	_, _, err = s.calculateAndWriteCalcuttaEvaluationWithSimulations(ctx, runKey, evalRunID, simulations, entries, payouts, firstPlacePayout)
+	if err != nil {
+		return "", err
+	}
+
+	return evalRunID, nil
 }
 
 func (s *Service) EnqueueCalcuttaEvaluationRun(
@@ -378,12 +465,24 @@ func (s *Service) calculateAndWriteCalcuttaEvaluation(
 	payouts map[int]int,
 	firstPlacePayout int,
 ) (int, int, error) {
-	log.Printf("Found %d entries", len(entries))
-
 	simulations, err := s.getSimulations(ctx, cc, tournamentSimulationBatchID)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get simulations: %w", err)
 	}
+
+	return s.calculateAndWriteCalcuttaEvaluationWithSimulations(ctx, runID, calcuttaEvaluationRunID, simulations, entries, payouts, firstPlacePayout)
+}
+
+func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
+	ctx context.Context,
+	runID string,
+	calcuttaEvaluationRunID string,
+	simulations map[int][]TeamSimResult,
+	entries map[string]*Entry,
+	payouts map[int]int,
+	firstPlacePayout int,
+) (int, int, error) {
+	log.Printf("Found %d entries", len(entries))
 
 	log.Printf("Found %d simulations", len(simulations))
 

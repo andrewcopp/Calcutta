@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
+	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -185,7 +185,7 @@ func (w *CalcuttaEvaluationWorker) processCalcuttaEvaluationJob(ctx context.Cont
 	w.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 0.05, "start", "Starting calcutta evaluation job")
 	w.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 0.25, "running", "Evaluating calcutta")
 
-	svc := appsimulatedcalcutta.New(w.pool)
+	svc := appcalcuttaevaluations.New(w.pool)
 	start := time.Now()
 	res, err := svc.EvaluateExistingCalcuttaEvaluationRun(ctx, job.RunID)
 	dur := time.Since(start)

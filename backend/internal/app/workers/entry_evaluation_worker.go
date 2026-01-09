@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
+	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
-	appsimulatedcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -338,7 +338,7 @@ func (w *EntryEvaluationWorker) processEntryEvaluationRequest(ctx context.Contex
 
 	w.updateRunJobProgress(ctx, "entry_evaluation", req.ID, 0.65, "evaluate", "Evaluating entry candidate")
 
-	evalSvc := appsimulatedcalcutta.New(w.pool)
+	evalSvc := appcalcuttaevaluations.New(w.pool)
 	evalStart := time.Now()
 	evalRunID, err := evalSvc.CalculateSimulatedCalcuttaForEntryCandidate(
 		ctx,

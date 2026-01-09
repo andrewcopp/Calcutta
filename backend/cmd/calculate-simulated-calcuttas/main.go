@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -78,15 +78,15 @@ func run() error {
 	}
 
 	// Create service and run calculation
-	service := simulated_calcutta.New(pool)
+	svc := calcutta_evaluations.New(pool)
 
 	log.Printf("Starting simulated calcutta calculation for calcutta %s, run %s", calcuttaID, runID)
-	_, err = service.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, nil)
+	evalRunID, err := svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, runID, excludedEntryName, nil)
 	if err != nil {
 		return fmt.Errorf("failed to calculate simulated calcutta: %w", err)
 	}
 
-	log.Printf("Successfully completed simulated calcutta calculation!")
+	log.Printf("Successfully completed simulated calcutta calculation eval_run_id=%s", evalRunID)
 	return nil
 }
 

@@ -8,8 +8,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulated_calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -54,13 +55,13 @@ func run() error {
 		override = &tournamentSimulationBatchID
 	}
 
-	svc := simulated_calcutta.New(pool)
-	evalRunID, runKey, err := svc.EnqueueCalcuttaEvaluationRun(context.Background(), calcuttaID, excludedEntryName, override)
+	svc := calcutta_evaluations.New(pool)
+	_, err = svc.CalculateSimulatedCalcuttaForEvaluationRun(context.Background(), calcuttaID, uuid.NewString(), excludedEntryName, override)
 	if err != nil {
 		return fmt.Errorf("enqueue failed: %w", err)
 	}
 
-	log.Printf("Enqueued calcutta evaluation run calcutta_id=%s calcutta_evaluation_run_id=%s run_key=%s", calcuttaID, evalRunID, runKey)
+	log.Printf("Enqueued calcutta evaluation run calcutta_id=%s", calcuttaID)
 	return nil
 }
 
