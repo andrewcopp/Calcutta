@@ -216,36 +216,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 
 	// Resolve calcutta IDs if omitted.
 	if len(req.CalcuttaIDs) == 0 {
-		rows, err := s.pool.Query(ctx, `
-			SELECT calcutta_id::text
-			FROM derived.synthetic_calcuttas
-			WHERE cohort_id = $1::uuid
-				AND deleted_at IS NULL
-			ORDER BY created_at ASC
-		`, req.CohortID)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		defer rows.Close()
-
-		ids := make([]string, 0)
-		for rows.Next() {
-			var cid string
-			if err := rows.Scan(&cid); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-			ids = append(ids, cid)
-		}
-		if err := rows.Err(); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		req.CalcuttaIDs = ids
-	}
-	if len(req.CalcuttaIDs) == 0 {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaIds is required (or define suite scenarios first)", "calcuttaIds")
+		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaIds is required", "calcuttaIds")
 		return
 	}
 	for i := range req.CalcuttaIDs {
@@ -394,48 +365,9 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		var syntheticCalcuttaID string
-		var syntheticSnapshotID *string
-		var existingExcludedEntryName *string
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO derived.synthetic_calcuttas (
-				cohort_id,
-				calcutta_id
-			)
-			VALUES ($1::uuid, $2::uuid)
-			ON CONFLICT (cohort_id, calcutta_id) WHERE deleted_at IS NULL
-			DO UPDATE SET
-				updated_at = NOW(),
-				deleted_at = NULL
-			RETURNING id::text, calcutta_snapshot_id::text, excluded_entry_name
-		`, req.CohortID, calcuttaID).Scan(&syntheticCalcuttaID, &syntheticSnapshotID, &existingExcludedEntryName); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		if syntheticSnapshotID == nil || strings.TrimSpace(*syntheticSnapshotID) == "" {
-			createdSnapshotID, err := createSyntheticCalcuttaSnapshot(ctx, tx, calcuttaID, existingExcludedEntryName, "", nil)
-			if err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-			_, err = tx.Exec(ctx, `
-				UPDATE derived.synthetic_calcuttas
-				SET calcutta_snapshot_id = $2::uuid,
-					updated_at = NOW()
-				WHERE id = $1::uuid
-					AND deleted_at IS NULL
-			`, syntheticCalcuttaID, createdSnapshotID)
-			if err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		}
-
 		_, err := tx.Exec(ctx, `
 			INSERT INTO derived.simulation_runs (
 				simulation_run_batch_id,
-				synthetic_calcutta_id,
 				cohort_id,
 				calcutta_id,
 				game_outcome_run_id,
@@ -446,8 +378,8 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 				starting_state_key,
 				excluded_entry_name
 			)
-			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text)
-		`, executionID, syntheticCalcuttaID, req.CohortID, calcuttaID, goRunID, msRunID, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded)
+			VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::int, $8::int, $9, $10::text)
+		`, executionID, req.CohortID, calcuttaID, goRunID, msRunID, effOptimizerKey, effNSims, effSeed, startingStateKey, excluded)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return

@@ -2,7 +2,6 @@ package suite_evaluations
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
@@ -131,9 +130,7 @@ type Repo interface {
 	GetTournamentIDForSimulatedCalcutta(ctx context.Context, simulatedCalcuttaID string) (string, error)
 	GetLatestGameOutcomeRunID(ctx context.Context, tournamentID, algorithmID string) (string, error)
 	GetLatestMarketShareRunID(ctx context.Context, calcuttaID, algorithmID string) (string, error)
-	UpsertSyntheticCalcutta(ctx context.Context, cohortID, calcuttaID string) (string, *string, *string, error)
-	EnsureSyntheticSnapshot(ctx context.Context, syntheticCalcuttaID, calcuttaID string, excludedEntryName *string) error
-	CreateSimulationRun(ctx context.Context, p CreateSimulationParams, syntheticCalcuttaID string) (*CreateSimulationResult, error)
+	CreateSimulationRun(ctx context.Context, p CreateSimulationParams) (*CreateSimulationResult, error)
 
 	LoadPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error)
 	LoadTeamPoints(ctx context.Context, calcuttaID string) (map[string]float64, error)
@@ -250,23 +247,7 @@ func (s *Service) CreateEvaluation(ctx context.Context, p CreateSimulationParams
 		}
 	}
 
-	synthID := ""
-	snapshotID := (*string)(nil)
-	existingExcluded := (*string)(nil)
-	if strings.TrimSpace(p.CalcuttaID) != "" {
-		var err error
-		synthID, snapshotID, existingExcluded, err = s.repo.UpsertSyntheticCalcutta(ctx, p.CohortID, p.CalcuttaID)
-		if err != nil {
-			return nil, err
-		}
-		_ = snapshotID
-		if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-			if err := s.repo.EnsureSyntheticSnapshot(ctx, synthID, p.CalcuttaID, existingExcluded); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return s.repo.CreateSimulationRun(ctx, p, synthID)
+	return s.repo.CreateSimulationRun(ctx, p)
 }
 
 func (s *Service) ComputeHypotheticalFinishByEntryName(ctx context.Context, calcuttaID string, strategyGenerationRunID string) (map[string]*Finish, bool, error) {

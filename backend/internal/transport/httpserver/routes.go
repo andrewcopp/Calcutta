@@ -108,8 +108,6 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 
 	s.registerModelCatalogRoutes(r)
 	s.registerSyntheticCalcuttaCohortRoutes(r)
-	s.registerSyntheticCalcuttaRoutes(r)
-	s.registerSyntheticEntryRoutes(r)
 	s.registerSimulatedCalcuttaRoutes(r)
 	s.registerSimulatedEntryRoutes(r)
 	s.registerCohortSimulationRoutes(r)

@@ -1,13 +1,9 @@
 package httpserver
 
 import (
-	"errors"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/synthetic_scenarios"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -118,73 +114,21 @@ func (s *Server) registerSyntheticEntryRoutes(r *mux.Router) {
 }
 
 func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	syntheticCalcuttaID := strings.TrimSpace(vars["id"])
-	if syntheticCalcuttaID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
-		return
-	}
-	if _, err := uuid.Parse(syntheticCalcuttaID); err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
-		return
-	}
-
-	ctx := r.Context()
-	items, err := s.app.SyntheticScenarios.ListSyntheticEntries(ctx, syntheticCalcuttaID)
-	if err != nil {
-		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaNotFound) {
-			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
-			return
-		}
-		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaHasNoSnapshot) {
-			writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
-			return
-		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	resp := make([]syntheticEntryListItem, 0, len(items))
-	for _, it := range items {
-		teams := make([]syntheticEntryTeam, 0, len(it.Teams))
-		for _, t := range it.Teams {
-			teams = append(teams, syntheticEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
-		}
-		resp = append(resp, syntheticEntryListItem{
-			ID:            it.ID,
-			CandidateID:   it.CandidateID,
-			SnapshotEntry: it.SnapshotEntry,
-			EntryID:       it.EntryID,
-			DisplayName:   it.DisplayName,
-			IsSynthetic:   it.IsSynthetic,
-			Rank:          it.Rank,
-			Mean:          it.Mean,
-			PTop1:         it.PTop1,
-			PInMoney:      it.PInMoney,
-			Teams:         teams,
-			CreatedAt:     it.CreatedAt,
-			UpdatedAt:     it.UpdatedAt,
-		})
-	}
-	writeJSON(w, http.StatusOK, listSyntheticEntriesResponse{Items: resp})
+	writeError(w, r, http.StatusGone, "gone", "Synthetic entry endpoints have been removed; use simulated-calcuttas entries", "")
 }
 
 func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Request) {
 	writeError(w, r, http.StatusGone, "gone", "Synthetic entry write endpoints have been removed; use simulated-calcuttas entries", "")
-	return
 }
 
 func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Request) {
 	writeError(w, r, http.StatusGone, "gone", "Synthetic entry write endpoints have been removed; use simulated-calcuttas entries", "")
-	return
 }
 
 func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Request) {
 	writeError(w, r, http.StatusGone, "gone", "Synthetic entry write endpoints have been removed; use simulated-calcuttas entries", "")
-	return
 }
 
 func (s *Server) handleDeleteSyntheticEntry(w http.ResponseWriter, r *http.Request) {
 	writeError(w, r, http.StatusGone, "gone", "Synthetic entry write endpoints have been removed; use simulated-calcuttas entries", "")
-	return
 }

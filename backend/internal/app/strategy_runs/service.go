@@ -7,7 +7,6 @@ import (
 
 type CreateRunParams struct {
 	CalcuttaID            string
-	SyntheticCalcuttaID   *string
 	Name                  string
 	OptimizerKey          string
 	RunKey                string
@@ -20,10 +19,8 @@ type CreateRunParams struct {
 }
 
 type CreateRunResult struct {
-	RunID               string
-	RunKey              string
-	SyntheticCalcuttaID *string
-	CalcuttaSnapshotID  *string
+	RunID  string
+	RunKey string
 }
 
 type RunListItem struct {

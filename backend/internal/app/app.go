@@ -12,22 +12,20 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/strategy_runs"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_evaluations"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_scenarios"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/synthetic_scenarios"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 )
 
 type App struct {
-	Analytics          *appanalytics.Service
-	LabCandidates      *lab_candidates.Service
-	MLAnalytics        *ml_analytics.Service
-	ModelCatalogs      *model_catalogs.Service
-	Bracket            *bracket.Service
-	Calcutta           *appcalcutta.Service
-	SuiteScenarios     *suite_scenarios.Service
-	SuiteEvaluations   *suite_evaluations.Service
-	SyntheticScenarios *synthetic_scenarios.Service
-	StrategyRuns       *strategy_runs.Service
-	Auth               *appauth.Service
-	School             *appschool.Service
-	Tournament         *apptournament.Service
+	Analytics        *appanalytics.Service
+	LabCandidates    *lab_candidates.Service
+	MLAnalytics      *ml_analytics.Service
+	ModelCatalogs    *model_catalogs.Service
+	Bracket          *bracket.Service
+	Calcutta         *appcalcutta.Service
+	SuiteScenarios   *suite_scenarios.Service
+	SuiteEvaluations *suite_evaluations.Service
+	StrategyRuns     *strategy_runs.Service
+	Auth             *appauth.Service
+	School           *appschool.Service
+	Tournament       *apptournament.Service
 }

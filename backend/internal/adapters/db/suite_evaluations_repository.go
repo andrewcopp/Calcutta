@@ -593,7 +593,7 @@ func (r *SuiteEvaluationsRepository) EnsureSyntheticSnapshot(ctx context.Context
 	return nil
 }
 
-func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p suite_evaluations.CreateSimulationParams, syntheticCalcuttaID string) (*suite_evaluations.CreateSimulationResult, error) {
+func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p suite_evaluations.CreateSimulationParams) (*suite_evaluations.CreateSimulationResult, error) {
 	evalID := ""
 	status := ""
 
@@ -637,7 +637,6 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 	q := `
 		INSERT INTO derived.simulation_runs (
 			simulation_run_batch_id,
-			synthetic_calcutta_id,
 			cohort_id,
 			calcutta_id,
 			simulated_calcutta_id,
@@ -650,7 +649,7 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 			starting_state_key,
 			excluded_entry_name
 		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7::jsonb, $8::uuid, $9, $10::int, $11::int, $12, $13::text)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::jsonb, $7::uuid, $8, $9::int, $10::int, $11, $12::text)
 		RETURNING id, status
 	`
 
@@ -658,12 +657,7 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 	if strings.TrimSpace(p.CalcuttaID) != "" {
 		calcutta = p.CalcuttaID
 	}
-	var synth any
-	if strings.TrimSpace(syntheticCalcuttaID) != "" {
-		synth = syntheticCalcuttaID
-	}
-
-	if err := r.pool.QueryRow(ctx, q, execID, synth, p.CohortID, calcutta, simulatedCalcutta, goRun, goSpec, msRun, p.OptimizerKey, nSims, seed, p.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	if err := r.pool.QueryRow(ctx, q, execID, p.CohortID, calcutta, simulatedCalcutta, goRun, goSpec, msRun, p.OptimizerKey, nSims, seed, p.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		return nil, err
 	}
 	return &suite_evaluations.CreateSimulationResult{ID: evalID, Status: status}, nil

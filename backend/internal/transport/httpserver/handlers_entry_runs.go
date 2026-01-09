@@ -14,7 +14,6 @@ import (
 
 type createEntryRunRequest struct {
 	CalcuttaID            string  `json:"calcuttaId"`
-	SyntheticCalcuttaID   *string `json:"syntheticCalcuttaId"`
 	Name                  *string `json:"name"`
 	OptimizerKey          *string `json:"optimizerKey"`
 	MarketShareArtifactID *string `json:"marketShareArtifactId"`
@@ -22,10 +21,8 @@ type createEntryRunRequest struct {
 }
 
 type createEntryRunResponse struct {
-	EntryRunID          string  `json:"entry_run_id"`
-	RunKey              string  `json:"run_key"`
-	SyntheticCalcuttaID *string `json:"synthetic_calcutta_id,omitempty"`
-	CalcuttaSnapshotID  *string `json:"calcutta_snapshot_id,omitempty"`
+	EntryRunID string `json:"entry_run_id"`
+	RunKey     string `json:"run_key"`
 }
 
 type entryRunListItem struct {
@@ -110,18 +107,6 @@ func (s *Server) createEntryRunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	syntheticCalcuttaID := ""
-	if req.SyntheticCalcuttaID != nil {
-		v := strings.TrimSpace(*req.SyntheticCalcuttaID)
-		if v != "" {
-			if _, err := uuid.Parse(v); err != nil {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId must be a valid UUID", "syntheticCalcuttaId")
-				return
-			}
-			syntheticCalcuttaID = v
-		}
-	}
-
 	name := "api_entry_run"
 	if req.Name != nil {
 		v := strings.TrimSpace(*req.Name)
@@ -176,14 +161,7 @@ func (s *Server) createEntryRunHandler(w http.ResponseWriter, r *http.Request) {
 		gitSHAPtr = &gitSHA
 	}
 	createParams := strategy_runs.CreateRunParams{
-		CalcuttaID: req.CalcuttaID,
-		SyntheticCalcuttaID: func() *string {
-			if syntheticCalcuttaID == "" {
-				return nil
-			}
-			v := syntheticCalcuttaID
-			return &v
-		}(),
+		CalcuttaID:            req.CalcuttaID,
 		Name:                  name,
 		OptimizerKey:          optimizerKey,
 		RunKey:                runKeyText,
@@ -204,19 +182,11 @@ func (s *Server) createEntryRunHandler(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareRunId must refer to a market share run with an available metrics artifact; pass marketShareArtifactId instead", "marketShareRunId")
 			return
 		}
-		if errors.Is(err, strategy_runs.ErrSyntheticCalcuttaNotFound) {
-			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "syntheticCalcuttaId")
-			return
-		}
-		if errors.Is(err, strategy_runs.ErrSyntheticCalcuttaMismatch) {
-			writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId does not match calcuttaId", "syntheticCalcuttaId")
-			return
-		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	resp := createEntryRunResponse{EntryRunID: created.RunID, RunKey: created.RunKey, SyntheticCalcuttaID: created.SyntheticCalcuttaID, CalcuttaSnapshotID: created.CalcuttaSnapshotID}
+	resp := createEntryRunResponse{EntryRunID: created.RunID, RunKey: created.RunKey}
 	writeJSON(w, http.StatusCreated, resp)
 }
 
