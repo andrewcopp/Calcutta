@@ -7,10 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_scenarios"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type simulatedCalcuttaListItem struct {
@@ -172,59 +171,36 @@ func (s *Server) handleListSimulatedCalcuttas(w http.ResponseWriter, r *http.Req
 		offset = 0
 	}
 
-	rows, err := s.pool.Query(r.Context(), `
- 		SELECT
- 			id::text,
- 			name,
- 			description,
- 			tournament_id::text,
- 			base_calcutta_id::text,
- 			starting_state_key,
- 			excluded_entry_name,
- 			highlighted_simulated_entry_id::text,
- 			metadata_json,
- 			created_at,
- 			updated_at
- 		FROM derived.simulated_calcuttas
- 		WHERE deleted_at IS NULL
- 			AND ($1::uuid IS NULL OR tournament_id = $1::uuid)
- 		ORDER BY created_at DESC
- 		LIMIT $2::int
- 		OFFSET $3::int
- 	`, nullUUIDParam(tournamentID), limit, offset)
+	var tournamentIDPtr *string
+	if tournamentID != "" {
+		v := tournamentID
+		tournamentIDPtr = &v
+	}
+
+	items, err := s.app.SuiteScenarios.ListSimulatedCalcuttas(r.Context(), tournamentIDPtr, limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	defer rows.Close()
 
-	items := make([]simulatedCalcuttaListItem, 0)
-	for rows.Next() {
-		var it simulatedCalcuttaListItem
-		if err := rows.Scan(
-			&it.ID,
-			&it.Name,
-			&it.Description,
-			&it.TournamentID,
-			&it.BaseCalcuttaID,
-			&it.StartingStateKey,
-			&it.ExcludedEntryName,
-			&it.HighlightedSimulatedEntry,
-			&it.Metadata,
-			&it.CreatedAt,
-			&it.UpdatedAt,
-		); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		items = append(items, it)
-	}
-	if err := rows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	respItems := make([]simulatedCalcuttaListItem, 0, len(items))
+	for _, it := range items {
+		respItems = append(respItems, simulatedCalcuttaListItem{
+			ID:                        it.ID,
+			Name:                      it.Name,
+			Description:               it.Description,
+			TournamentID:              it.TournamentID,
+			BaseCalcuttaID:            it.BaseCalcuttaID,
+			StartingStateKey:          it.StartingStateKey,
+			ExcludedEntryName:         it.ExcludedEntryName,
+			HighlightedSimulatedEntry: it.HighlightedSimulatedEntry,
+			Metadata:                  it.Metadata,
+			CreatedAt:                 it.CreatedAt,
+			UpdatedAt:                 it.UpdatedAt,
+		})
 	}
 
-	writeJSON(w, http.StatusOK, listSimulatedCalcuttasResponse{Items: items})
+	writeJSON(w, http.StatusOK, listSimulatedCalcuttasResponse{Items: respItems})
 }
 
 func (s *Server) handleGetSimulatedCalcutta(w http.ResponseWriter, r *http.Request) {
@@ -239,48 +215,9 @@ func (s *Server) handleGetSimulatedCalcutta(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	calcutta, payouts, rules, err := s.app.SuiteScenarios.GetSimulatedCalcutta(r.Context(), id)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer func() {
-		_ = tx.Rollback(ctx)
-	}()
-
-	var it simulatedCalcuttaListItem
-	if err := tx.QueryRow(ctx, `
- 		SELECT
- 			id::text,
- 			name,
- 			description,
- 			tournament_id::text,
- 			base_calcutta_id::text,
- 			starting_state_key,
- 			excluded_entry_name,
- 			highlighted_simulated_entry_id::text,
- 			metadata_json,
- 			created_at,
- 			updated_at
- 		FROM derived.simulated_calcuttas
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 		LIMIT 1
- 	`, id).Scan(
-		&it.ID,
-		&it.Name,
-		&it.Description,
-		&it.TournamentID,
-		&it.BaseCalcuttaID,
-		&it.StartingStateKey,
-		&it.ExcludedEntryName,
-		&it.HighlightedSimulatedEntry,
-		&it.Metadata,
-		&it.CreatedAt,
-		&it.UpdatedAt,
-	); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, suite_scenarios.ErrSimulatedCalcuttaNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
 			return
 		}
@@ -288,66 +225,30 @@ func (s *Server) handleGetSimulatedCalcutta(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	payoutRows, err := tx.Query(ctx, `
- 		SELECT position::int, amount_cents::int
- 		FROM derived.simulated_calcutta_payouts
- 		WHERE simulated_calcutta_id = $1::uuid
- 			AND deleted_at IS NULL
- 		ORDER BY position ASC
- 	`, id)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer payoutRows.Close()
-
-	payouts := make([]simulatedCalcuttaPayout, 0)
-	for payoutRows.Next() {
-		var p simulatedCalcuttaPayout
-		if err := payoutRows.Scan(&p.Position, &p.AmountCents); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		payouts = append(payouts, p)
-	}
-	if err := payoutRows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	it := simulatedCalcuttaListItem{
+		ID:                        calcutta.ID,
+		Name:                      calcutta.Name,
+		Description:               calcutta.Description,
+		TournamentID:              calcutta.TournamentID,
+		BaseCalcuttaID:            calcutta.BaseCalcuttaID,
+		StartingStateKey:          calcutta.StartingStateKey,
+		ExcludedEntryName:         calcutta.ExcludedEntryName,
+		HighlightedSimulatedEntry: calcutta.HighlightedSimulatedEntry,
+		Metadata:                  calcutta.Metadata,
+		CreatedAt:                 calcutta.CreatedAt,
+		UpdatedAt:                 calcutta.UpdatedAt,
 	}
 
-	ruleRows, err := tx.Query(ctx, `
- 		SELECT win_index::int, points_awarded::int
- 		FROM derived.simulated_calcutta_scoring_rules
- 		WHERE simulated_calcutta_id = $1::uuid
- 			AND deleted_at IS NULL
- 		ORDER BY win_index ASC
- 	`, id)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	payoutResp := make([]simulatedCalcuttaPayout, 0, len(payouts))
+	for _, p := range payouts {
+		payoutResp = append(payoutResp, simulatedCalcuttaPayout{Position: p.Position, AmountCents: p.AmountCents})
 	}
-	defer ruleRows.Close()
-
-	rules := make([]simulatedCalcuttaScoringRule, 0)
-	for ruleRows.Next() {
-		var rr simulatedCalcuttaScoringRule
-		if err := ruleRows.Scan(&rr.WinIndex, &rr.PointsAwarded); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		rules = append(rules, rr)
-	}
-	if err := ruleRows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	ruleResp := make([]simulatedCalcuttaScoringRule, 0, len(rules))
+	for _, rr := range rules {
+		ruleResp = append(ruleResp, simulatedCalcuttaScoringRule{WinIndex: rr.WinIndex, PointsAwarded: rr.PointsAwarded})
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, getSimulatedCalcuttaResponse{SimulatedCalcutta: it, Payouts: payouts, ScoringRules: rules})
+	writeJSON(w, http.StatusOK, getSimulatedCalcuttaResponse{SimulatedCalcutta: it, Payouts: payoutResp, ScoringRules: ruleResp})
 }
 
 func (s *Server) handleCreateSimulatedCalcutta(w http.ResponseWriter, r *http.Request) {
@@ -429,81 +330,36 @@ func (s *Server) handleCreateSimulatedCalcutta(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	params := suite_scenarios.CreateSimulatedCalcuttaParams{
+		Name:              req.Name,
+		Description:       req.Description,
+		TournamentID:      req.TournamentID,
+		StartingStateKey:  startingStateKey,
+		ExcludedEntryName: excludedEntryName,
+		Metadata:          metadataJSON,
+		Payouts:           make([]suite_scenarios.SimulatedCalcuttaPayout, 0, len(req.Payouts)),
+		ScoringRules:      make([]suite_scenarios.SimulatedCalcuttaScoringRule, 0, len(req.ScoringRules)),
 	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	var createdID string
-	if err := tx.QueryRow(ctx, `
- 		INSERT INTO derived.simulated_calcuttas (
- 			name,
- 			description,
- 			tournament_id,
- 			base_calcutta_id,
- 			starting_state_key,
- 			excluded_entry_name,
- 			metadata_json
- 		)
- 		VALUES ($1, $2, $3::uuid, NULL, $4, $5, $6::jsonb)
- 		RETURNING id::text
- 	`, req.Name, nullUUIDParamPtr(req.Description), req.TournamentID, startingStateKey, excludedEntryName, []byte(metadataJSON)).Scan(&createdID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
 	for _, p := range req.Payouts {
-		if _, err := tx.Exec(ctx, `
- 			INSERT INTO derived.simulated_calcutta_payouts (
- 				simulated_calcutta_id,
- 				position,
- 				amount_cents
- 			)
- 			VALUES ($1::uuid, $2::int, $3::int)
- 		`, createdID, p.Position, p.AmountCents); err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				writeError(w, r, http.StatusConflict, "conflict", "Duplicate payout position", "payouts")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
+		params.Payouts = append(params.Payouts, suite_scenarios.SimulatedCalcuttaPayout{Position: p.Position, AmountCents: p.AmountCents})
 	}
-
 	for _, sr := range req.ScoringRules {
-		if _, err := tx.Exec(ctx, `
- 			INSERT INTO derived.simulated_calcutta_scoring_rules (
- 				simulated_calcutta_id,
- 				win_index,
- 				points_awarded
- 			)
- 			VALUES ($1::uuid, $2::int, $3::int)
- 		`, createdID, sr.WinIndex, sr.PointsAwarded); err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				writeError(w, r, http.StatusConflict, "conflict", "Duplicate scoring rule winIndex", "scoringRules")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
+		params.ScoringRules = append(params.ScoringRules, suite_scenarios.SimulatedCalcuttaScoringRule{WinIndex: sr.WinIndex, PointsAwarded: sr.PointsAwarded})
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	createdID, err := s.app.SuiteScenarios.CreateSimulatedCalcutta(r.Context(), params)
+	if err != nil {
+		if errors.Is(err, suite_scenarios.ErrDuplicatePayoutPosition) {
+			writeError(w, r, http.StatusConflict, "conflict", "Duplicate payout position", "payouts")
+			return
+		}
+		if errors.Is(err, suite_scenarios.ErrDuplicateScoringRuleWinIndex) {
+			writeError(w, r, http.StatusConflict, "conflict", "Duplicate scoring rule winIndex", "scoringRules")
+			return
+		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	committed = true
 
 	writeJSON(w, http.StatusCreated, createSimulatedCalcuttaResponse{ID: createdID})
 }
@@ -544,186 +400,24 @@ func (s *Server) handleCreateSimulatedCalcuttaFromCalcutta(w http.ResponseWriter
 		return
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	params := suite_scenarios.CreateSimulatedCalcuttaFromCalcuttaParams{
+		CalcuttaID:        req.CalcuttaID,
+		Name:              req.Name,
+		Description:       req.Description,
+		StartingStateKey:  startingStateKey,
+		ExcludedEntryName: excludedEntryName,
+		Metadata:          metadataJSON,
 	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
 
-	var tournamentID string
-	var calcuttaName string
-	if err := tx.QueryRow(ctx, `
- 		SELECT tournament_id::text, name
- 		FROM core.calcuttas
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 		LIMIT 1
- 	`, req.CalcuttaID).Scan(&tournamentID, &calcuttaName); err != nil {
-		if err == pgx.ErrNoRows {
+	createdID, copiedEntries, err := s.app.SuiteScenarios.CreateSimulatedCalcuttaFromCalcutta(r.Context(), params)
+	if err != nil {
+		if errors.Is(err, suite_scenarios.ErrCalcuttaNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Calcutta not found", "calcuttaId")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	name := "Simulated " + strings.TrimSpace(calcuttaName)
-	if req.Name != nil {
-		v := strings.TrimSpace(*req.Name)
-		if v != "" {
-			name = v
-		}
-	}
-	var desc any
-	if req.Description != nil {
-		v := strings.TrimSpace(*req.Description)
-		if v == "" {
-			desc = nil
-		} else {
-			desc = v
-		}
-	} else {
-		desc = nil
-	}
-
-	var createdID string
-	if err := tx.QueryRow(ctx, `
- 		INSERT INTO derived.simulated_calcuttas (
- 			name,
- 			description,
- 			tournament_id,
- 			base_calcutta_id,
- 			starting_state_key,
- 			excluded_entry_name,
- 			metadata_json
- 		)
- 		VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7::jsonb)
- 		RETURNING id::text
- 	`, name, desc, tournamentID, req.CalcuttaID, startingStateKey, excludedEntryName, []byte(metadataJSON)).Scan(&createdID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		INSERT INTO derived.simulated_calcutta_payouts (simulated_calcutta_id, position, amount_cents)
- 		SELECT $1::uuid, position, amount_cents
- 		FROM core.payouts
- 		WHERE calcutta_id = $2::uuid
- 			AND deleted_at IS NULL
- 	`, createdID, req.CalcuttaID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		INSERT INTO derived.simulated_calcutta_scoring_rules (simulated_calcutta_id, win_index, points_awarded)
- 		SELECT $1::uuid, win_index, points_awarded
- 		FROM core.calcutta_scoring_rules
- 		WHERE calcutta_id = $2::uuid
- 			AND deleted_at IS NULL
- 	`, createdID, req.CalcuttaID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	entryRows, err := tx.Query(ctx, `
- 		SELECT id::text, name
- 		FROM core.entries
- 		WHERE calcutta_id = $1::uuid
- 			AND deleted_at IS NULL
- 		ORDER BY created_at ASC
- 	`, req.CalcuttaID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer entryRows.Close()
-
-	copiedEntries := 0
-	for entryRows.Next() {
-		var entryID string
-		var entryName string
-		if err := entryRows.Scan(&entryID, &entryName); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		var simulatedEntryID string
-		if err := tx.QueryRow(ctx, `
- 			INSERT INTO derived.simulated_entries (
- 				simulated_calcutta_id,
- 				display_name,
- 				source_kind,
- 				source_entry_id,
- 				source_candidate_id
- 			)
- 			VALUES ($1::uuid, $2, 'from_real_entry', $3::uuid, NULL)
- 			RETURNING id::text
- 		`, createdID, strings.TrimSpace(entryName), entryID).Scan(&simulatedEntryID); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		teamRows, err := tx.Query(ctx, `
- 			SELECT team_id::text, bid_points::int
- 			FROM core.entry_teams
- 			WHERE entry_id = $1::uuid
- 				AND deleted_at IS NULL
- 			ORDER BY bid_points DESC
- 		`, entryID)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		for teamRows.Next() {
-			var teamID string
-			var bidPoints int
-			if err := teamRows.Scan(&teamID, &bidPoints); err != nil {
-				teamRows.Close()
-				writeErrorFromErr(w, r, err)
-				return
-			}
-			if _, err := tx.Exec(ctx, `
- 				INSERT INTO derived.simulated_entry_teams (
- 					simulated_entry_id,
- 					team_id,
- 					bid_points
- 				)
- 				VALUES ($1::uuid, $2::uuid, $3::int)
- 			`, simulatedEntryID, teamID, bidPoints); err != nil {
-				teamRows.Close()
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		}
-		if err := teamRows.Err(); err != nil {
-			teamRows.Close()
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		teamRows.Close()
-
-		copiedEntries++
-	}
-	if err := entryRows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
 
 	writeJSON(w, http.StatusCreated, createSimulatedCalcuttaFromCalcuttaResponse{ID: createdID, CopiedEntries: copiedEntries})
 }
@@ -746,104 +440,59 @@ func (s *Server) handlePatchSimulatedCalcutta(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx := r.Context()
-
-	var existingName string
-	var existingDescription *string
-	var existingHighlighted *string
-	var existingMetadata json.RawMessage
-	if err := s.pool.QueryRow(ctx, `
- 		SELECT name, description, highlighted_simulated_entry_id::text, metadata_json
- 		FROM derived.simulated_calcuttas
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 		LIMIT 1
- 	`, id).Scan(&existingName, &existingDescription, &existingHighlighted, &existingMetadata); err != nil {
-		if err == pgx.ErrNoRows {
-			writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
-			return
-		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	newName := existingName
 	if req.Name != nil {
 		v := strings.TrimSpace(*req.Name)
 		if v == "" {
 			writeError(w, r, http.StatusBadRequest, "validation_error", "name cannot be empty", "name")
 			return
 		}
-		newName = v
+		req.Name = &v
 	}
-
-	newDescription := existingDescription
 	if req.Description != nil {
-		newDescription = normalizeOptionalStringPtr(req.Description)
+		v := strings.TrimSpace(*req.Description)
+		req.Description = &v
+		if v == "" {
+			req.Description = nil
+		}
 	}
-
-	newHighlighted := existingHighlighted
 	if req.HighlightedSimulatedEntry != nil {
 		v := strings.TrimSpace(*req.HighlightedSimulatedEntry)
-		if v == "" {
-			newHighlighted = nil
-		} else {
+		if v != "" {
 			if _, err := uuid.Parse(v); err != nil {
 				writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedSimulatedEntryId must be a valid UUID", "highlightedSimulatedEntryId")
 				return
 			}
-			var ok bool
-			if err := s.pool.QueryRow(ctx, `
- 				SELECT EXISTS(
- 					SELECT 1
- 					FROM derived.simulated_entries e
- 					WHERE e.id = $1::uuid
- 						AND e.simulated_calcutta_id = $2::uuid
- 						AND e.deleted_at IS NULL
- 				)
- 			`, v, id).Scan(&ok); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-			if !ok {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedSimulatedEntryId must belong to this simulated calcutta", "highlightedSimulatedEntryId")
-				return
-			}
-			newHighlighted = &v
 		}
+		req.HighlightedSimulatedEntry = &v
 	}
 
-	newMetadata := existingMetadata
+	var metadataPtr *json.RawMessage
 	if req.Metadata != nil {
 		mj, err := normalizeOptionalJSONObj(req.Metadata)
 		if err != nil {
 			writeError(w, r, http.StatusBadRequest, "validation_error", "metadata must be valid JSON object", "metadata")
 			return
 		}
-		newMetadata = mj
-	}
-	if len(newMetadata) == 0 {
-		newMetadata = json.RawMessage([]byte("{}"))
+		mj2 := json.RawMessage(mj)
+		metadataPtr = &mj2
 	}
 
-	var highlightedParam any
-	if newHighlighted != nil && strings.TrimSpace(*newHighlighted) != "" {
-		highlightedParam = *newHighlighted
-	} else {
-		highlightedParam = nil
+	params := suite_scenarios.PatchSimulatedCalcuttaParams{
+		Name:                      req.Name,
+		Description:               req.Description,
+		HighlightedSimulatedEntry: req.HighlightedSimulatedEntry,
+		Metadata:                  metadataPtr,
 	}
 
-	_, err := s.pool.Exec(ctx, `
- 		UPDATE derived.simulated_calcuttas
- 		SET name = $2,
- 			description = $3,
- 			highlighted_simulated_entry_id = $4::uuid,
- 			metadata_json = $5::jsonb,
- 			updated_at = NOW()
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 	`, id, newName, nullUUIDParamPtr(newDescription), highlightedParam, []byte(newMetadata))
-	if err != nil {
+	if err := s.app.SuiteScenarios.PatchSimulatedCalcutta(r.Context(), id, params); err != nil {
+		if errors.Is(err, suite_scenarios.ErrSimulatedCalcuttaNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
+			return
+		}
+		if errors.Is(err, suite_scenarios.ErrHighlightedEntryDoesNotBelong) {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedSimulatedEntryId must belong to this simulated calcutta", "highlightedSimulatedEntryId")
+			return
+		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -899,103 +548,33 @@ func (s *Server) handleReplaceSimulatedCalcuttaRules(w http.ResponseWriter, r *h
 		}
 	}
 
-	ctx := r.Context()
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	params := suite_scenarios.ReplaceSimulatedCalcuttaRulesParams{
+		Payouts:      make([]suite_scenarios.SimulatedCalcuttaPayout, 0, len(req.Payouts)),
+		ScoringRules: make([]suite_scenarios.SimulatedCalcuttaScoringRule, 0, len(req.ScoringRules)),
 	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	var exists bool
-	if err := tx.QueryRow(ctx, `
- 		SELECT EXISTS(
- 			SELECT 1
- 			FROM derived.simulated_calcuttas
- 			WHERE id = $1::uuid
- 				AND deleted_at IS NULL
- 		)
- 	`, id).Scan(&exists); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if !exists {
-		writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		UPDATE derived.simulated_calcutta_payouts
- 		SET deleted_at = NOW(),
- 			updated_at = NOW()
- 		WHERE simulated_calcutta_id = $1::uuid
- 			AND deleted_at IS NULL
- 	`, id); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		UPDATE derived.simulated_calcutta_scoring_rules
- 		SET deleted_at = NOW(),
- 			updated_at = NOW()
- 		WHERE simulated_calcutta_id = $1::uuid
- 			AND deleted_at IS NULL
- 	`, id); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
 	for _, p := range req.Payouts {
-		if _, err := tx.Exec(ctx, `
- 			INSERT INTO derived.simulated_calcutta_payouts (
- 				simulated_calcutta_id,
- 				position,
- 				amount_cents
- 			)
- 			VALUES ($1::uuid, $2::int, $3::int)
- 		`, id, p.Position, p.AmountCents); err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				writeError(w, r, http.StatusConflict, "conflict", "Duplicate payout position", "payouts")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
+		params.Payouts = append(params.Payouts, suite_scenarios.SimulatedCalcuttaPayout{Position: p.Position, AmountCents: p.AmountCents})
 	}
-
 	for _, sr := range req.ScoringRules {
-		if _, err := tx.Exec(ctx, `
- 			INSERT INTO derived.simulated_calcutta_scoring_rules (
- 				simulated_calcutta_id,
- 				win_index,
- 				points_awarded
- 			)
- 			VALUES ($1::uuid, $2::int, $3::int)
- 		`, id, sr.WinIndex, sr.PointsAwarded); err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				writeError(w, r, http.StatusConflict, "conflict", "Duplicate scoring rule winIndex", "scoringRules")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
+		params.ScoringRules = append(params.ScoringRules, suite_scenarios.SimulatedCalcuttaScoringRule{WinIndex: sr.WinIndex, PointsAwarded: sr.PointsAwarded})
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err := s.app.SuiteScenarios.ReplaceSimulatedCalcuttaRules(r.Context(), id, params); err != nil {
+		if errors.Is(err, suite_scenarios.ErrSimulatedCalcuttaNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
+			return
+		}
+		if errors.Is(err, suite_scenarios.ErrDuplicatePayoutPosition) {
+			writeError(w, r, http.StatusConflict, "conflict", "Duplicate payout position", "payouts")
+			return
+		}
+		if errors.Is(err, suite_scenarios.ErrDuplicateScoringRuleWinIndex) {
+			writeError(w, r, http.StatusConflict, "conflict", "Duplicate scoring rule winIndex", "scoringRules")
+			return
+		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	committed = true
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

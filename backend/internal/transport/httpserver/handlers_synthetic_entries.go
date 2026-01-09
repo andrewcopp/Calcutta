@@ -2,13 +2,14 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/synthetic_scenarios"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 )
 
 type syntheticEntryTeam struct {
@@ -130,175 +131,43 @@ func (s *Server) handleListSyntheticEntries(w http.ResponseWriter, r *http.Reque
 	}
 
 	ctx := r.Context()
-
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	items, err := s.app.SyntheticScenarios.ListSyntheticEntries(ctx, syntheticCalcuttaID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer func() {
-		_ = tx.Rollback(ctx)
-	}()
-
-	var snapshotID *string
-	if err := tx.QueryRow(ctx, `
-		SELECT calcutta_snapshot_id::text
-		FROM derived.synthetic_calcuttas
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, syntheticCalcuttaID).Scan(&snapshotID); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
 			return
 		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
-		return
-	}
-
-	rows, err := tx.Query(ctx, `
-		WITH latest_eval AS (
-			SELECT sr.calcutta_evaluation_run_id
-			FROM derived.simulation_runs sr
-			WHERE sr.synthetic_calcutta_id = $2::uuid
-				AND sr.deleted_at IS NULL
-				AND sr.calcutta_evaluation_run_id IS NOT NULL
-			ORDER BY sr.created_at DESC
-			LIMIT 1
-		),
-		perf AS (
-			SELECT
-				ROW_NUMBER() OVER (ORDER BY COALESCE(ep.mean_normalized_payout, 0.0) DESC)::int AS rank,
-				ep.entry_name,
-				COALESCE(ep.mean_normalized_payout, 0.0)::double precision AS mean_normalized_payout,
-				COALESCE(ep.p_top1, 0.0)::double precision AS p_top1,
-				COALESCE(ep.p_in_money, 0.0)::double precision AS p_in_money
-			FROM derived.entry_performance ep
-			JOIN latest_eval le
-				ON le.calcutta_evaluation_run_id = ep.calcutta_evaluation_run_id
-			WHERE ep.deleted_at IS NULL
-		)
-		SELECT
-			scc.id::text,
-			scc.candidate_id::text,
-			scc.snapshot_entry_id::text,
-			e.entry_id::text,
-			e.display_name,
-			e.is_synthetic,
-			e.created_at,
-			e.updated_at,
-			et.team_id::text,
-			et.bid_points,
-			p.rank,
-			p.mean_normalized_payout,
-			p.p_top1,
-			p.p_in_money
-		FROM derived.synthetic_calcutta_candidates scc
-		JOIN derived.candidates c
-			ON c.id = scc.candidate_id
-			AND c.deleted_at IS NULL
-		JOIN core.calcutta_snapshot_entries e
-			ON e.id = scc.snapshot_entry_id
-			AND e.calcutta_snapshot_id = $1::uuid
-			AND e.deleted_at IS NULL
-		LEFT JOIN core.calcutta_snapshot_entry_teams et
-			ON et.calcutta_snapshot_entry_id = e.id
-			AND et.deleted_at IS NULL
-		LEFT JOIN perf p
-			ON p.entry_name = e.display_name
-		WHERE scc.synthetic_calcutta_id = $2::uuid
-			AND scc.deleted_at IS NULL
-		ORDER BY scc.created_at ASC, et.bid_points DESC
-	`, *snapshotID, syntheticCalcuttaID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer rows.Close()
-
-	byID := make(map[string]*syntheticEntryListItem)
-	order := make([]string, 0)
-	for rows.Next() {
-		var attachmentID string
-		var candidateID string
-		var snapshotEntryID string
-		var sourceEntryID *string
-		var displayName string
-		var isSynthetic bool
-		var createdAt time.Time
-		var updatedAt time.Time
-		var teamID *string
-		var bidPoints *int
-		var rank *int
-		var mean *float64
-		var pTop1 *float64
-		var pInMoney *float64
-
-		if err := rows.Scan(
-			&attachmentID,
-			&candidateID,
-			&snapshotEntryID,
-			&sourceEntryID,
-			&displayName,
-			&isSynthetic,
-			&createdAt,
-			&updatedAt,
-			&teamID,
-			&bidPoints,
-			&rank,
-			&mean,
-			&pTop1,
-			&pInMoney,
-		); err != nil {
-			writeErrorFromErr(w, r, err)
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaHasNoSnapshot) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 			return
 		}
-
-		it, ok := byID[attachmentID]
-		if !ok {
-			it = &syntheticEntryListItem{
-				ID:            attachmentID,
-				CandidateID:   candidateID,
-				SnapshotEntry: snapshotEntryID,
-				EntryID:       sourceEntryID,
-				DisplayName:   displayName,
-				IsSynthetic:   isSynthetic,
-				Rank:          rank,
-				Mean:          mean,
-				PTop1:         pTop1,
-				PInMoney:      pInMoney,
-				Teams:         make([]syntheticEntryTeam, 0),
-				CreatedAt:     createdAt,
-				UpdatedAt:     updatedAt,
-			}
-			byID[attachmentID] = it
-			order = append(order, attachmentID)
-		}
-
-		if teamID != nil && bidPoints != nil {
-			it.Teams = append(it.Teams, syntheticEntryTeam{TeamID: *teamID, BidPoints: *bidPoints})
-		}
-	}
-	if err := rows.Err(); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	items := make([]syntheticEntryListItem, 0, len(order))
-	for _, id := range order {
-		items = append(items, *byID[id])
+	resp := make([]syntheticEntryListItem, 0, len(items))
+	for _, it := range items {
+		teams := make([]syntheticEntryTeam, 0, len(it.Teams))
+		for _, t := range it.Teams {
+			teams = append(teams, syntheticEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
+		}
+		resp = append(resp, syntheticEntryListItem{
+			ID:            it.ID,
+			CandidateID:   it.CandidateID,
+			SnapshotEntry: it.SnapshotEntry,
+			EntryID:       it.EntryID,
+			DisplayName:   it.DisplayName,
+			IsSynthetic:   it.IsSynthetic,
+			Rank:          it.Rank,
+			Mean:          it.Mean,
+			PTop1:         it.PTop1,
+			PInMoney:      it.PInMoney,
+			Teams:         teams,
+			CreatedAt:     it.CreatedAt,
+			UpdatedAt:     it.UpdatedAt,
+		})
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, listSyntheticEntriesResponse{Items: items})
+	writeJSON(w, http.StatusOK, listSyntheticEntriesResponse{Items: resp})
 }
 
 func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Request) {
@@ -341,89 +210,30 @@ func (s *Server) handleCreateSyntheticEntry(w http.ResponseWriter, r *http.Reque
 	}
 
 	ctx := r.Context()
-	var snapshotID *string
-	if err := s.pool.QueryRow(ctx, `
-		SELECT calcutta_snapshot_id::text
-		FROM derived.synthetic_calcuttas
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, syntheticCalcuttaID).Scan(&snapshotID); err != nil {
-		if err == pgx.ErrNoRows {
+	teams := make([]synthetic_scenarios.SyntheticEntryTeam, 0, len(req.Teams))
+	for _, t := range req.Teams {
+		teams = append(teams, synthetic_scenarios.SyntheticEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
+	}
+
+	createdID, err := s.app.SyntheticScenarios.CreateSyntheticEntry(ctx, synthetic_scenarios.CreateSyntheticEntryParams{
+		SyntheticCalcuttaID: syntheticCalcuttaID,
+		DisplayName:         req.DisplayName,
+		Teams:               teams,
+	})
+	if err != nil {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
 			return
 		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
-		return
-	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed := false
-	defer func() {
-		if committed {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaHasNoSnapshot) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 			return
 		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	metadata := map[string]any{"teams": req.Teams}
-	metadataJSON, _ := json.Marshal(metadata)
-
-	var candidateID string
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.candidates (source_kind, source_entry_artifact_id, display_name, metadata_json)
-		VALUES ('manual', NULL, $1, $2::jsonb)
-		RETURNING id::text
-	`, req.DisplayName, string(metadataJSON)).Scan(&candidateID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	var snapshotEntryID string
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
-		VALUES ($1::uuid, NULL, $2, true)
-		RETURNING id::text
-	`, *snapshotID, req.DisplayName).Scan(&snapshotEntryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	for _, t := range req.Teams {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-			VALUES ($1::uuid, $2::uuid, $3::int)
-		`, snapshotEntryID, t.TeamID, t.BidPoints); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	var attachmentID string
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.synthetic_calcutta_candidates (synthetic_calcutta_id, candidate_id, snapshot_entry_id)
-		VALUES ($1::uuid, $2::uuid, $3::uuid)
-		RETURNING id::text
-	`, syntheticCalcuttaID, candidateID, snapshotEntryID).Scan(&attachmentID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
-
-	writeJSON(w, http.StatusCreated, createSyntheticEntryResponse{ID: attachmentID})
+	writeJSON(w, http.StatusCreated, createSyntheticEntryResponse{ID: createdID})
 }
 
 func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Request) {
@@ -456,201 +266,40 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
-	strategyGenerationRunID := ""
-	artifactKind := ""
-	if err := s.pool.QueryRow(ctx, `
-		SELECT run_id::text, artifact_kind
-		FROM derived.run_artifacts
-		WHERE id = $1::uuid
-			AND run_kind = 'strategy_generation'
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, req.EntryArtifactID).Scan(&strategyGenerationRunID, &artifactKind); err != nil {
-		if err == pgx.ErrNoRows {
+	attachmentID, nTeams, err := s.app.SyntheticScenarios.ImportSyntheticEntry(ctx, synthetic_scenarios.ImportSyntheticEntryParams{
+		SyntheticCalcuttaID: syntheticCalcuttaID,
+		EntryArtifactID:     req.EntryArtifactID,
+		DisplayName:         req.DisplayName,
+	})
+	if err != nil {
+		if errors.Is(err, synthetic_scenarios.ErrEntryArtifactNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Entry artifact not found", "entryArtifactId")
 			return
 		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	strategyGenerationRunID = strings.TrimSpace(strategyGenerationRunID)
-	if strategyGenerationRunID == "" {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Entry artifact has no run_id", "entryArtifactId")
-		return
-	}
-	if strings.TrimSpace(artifactKind) != "metrics" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "entryArtifactId must reference a metrics artifact", "entryArtifactId")
-		return
-	}
-
-	var snapshotID *string
-	if err := s.pool.QueryRow(ctx, `
-		SELECT calcutta_snapshot_id::text
-		FROM derived.synthetic_calcuttas
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, syntheticCalcuttaID).Scan(&snapshotID); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, synthetic_scenarios.ErrEntryArtifactHasNoRunID) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "Entry artifact has no run_id", "entryArtifactId")
+			return
+		}
+		if errors.Is(err, synthetic_scenarios.ErrEntryArtifactNotMetrics) {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "entryArtifactId must reference a metrics artifact", "entryArtifactId")
+			return
+		}
+		if errors.Is(err, synthetic_scenarios.ErrNoStrategyGenerationRunBids) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "No strategy_generation_run_bids found for that entryArtifactId", "entryArtifactId")
+			return
+		}
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
 			return
 		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
-		return
-	}
-
-	displayName := ""
-	if req.DisplayName != nil {
-		displayName = strings.TrimSpace(*req.DisplayName)
-	}
-	if displayName == "" {
-		var resolved string
-		_ = s.pool.QueryRow(ctx, `
-			SELECT COALESCE(name, ''::text)
-			FROM derived.strategy_generation_runs
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-			LIMIT 1
-		`, strategyGenerationRunID).Scan(&resolved)
-		resolved = strings.TrimSpace(resolved)
-		if resolved == "" {
-			displayName = "Imported Strategy"
-		} else {
-			displayName = resolved
-		}
-	}
-
-	rows, err := s.pool.Query(ctx, `
-		SELECT team_id::text, bid_points::int
-		FROM derived.strategy_generation_run_bids
-		WHERE strategy_generation_run_id = $1::uuid
-			AND deleted_at IS NULL
-		ORDER BY bid_points DESC
-	`, strategyGenerationRunID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer rows.Close()
-
-	teams := make([]syntheticEntryTeam, 0)
-	for rows.Next() {
-		var t syntheticEntryTeam
-		if err := rows.Scan(&t.TeamID, &t.BidPoints); err != nil {
-			writeErrorFromErr(w, r, err)
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaHasNoSnapshot) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
 			return
 		}
-		teams = append(teams, t)
-	}
-	if err := rows.Err(); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if len(teams) == 0 {
-		writeError(w, r, http.StatusConflict, "invalid_state", "No strategy_generation_run_bids found for that entryArtifactId", "entryArtifactId")
-		return
-	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	var candidateID string
-	if err := tx.QueryRow(ctx, `
-		SELECT id::text
-		FROM derived.candidates
-		WHERE source_kind = 'entry_artifact'
-			AND source_entry_artifact_id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, req.EntryArtifactID).Scan(&candidateID); err != nil {
-		if err == pgx.ErrNoRows {
-			if err := tx.QueryRow(ctx, `
-				INSERT INTO derived.candidates (source_kind, source_entry_artifact_id, display_name, metadata_json)
-				VALUES ('entry_artifact', $1::uuid, $2, '{}'::jsonb)
-				RETURNING id::text
-			`, req.EntryArtifactID, displayName).Scan(&candidateID); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		} else {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	// If already attached, return existing attachment.
-	var existingAttachmentID string
-	if err := tx.QueryRow(ctx, `
-		SELECT id::text
-		FROM derived.synthetic_calcutta_candidates
-		WHERE synthetic_calcutta_id = $1::uuid
-			AND candidate_id = $2::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, syntheticCalcuttaID, candidateID).Scan(&existingAttachmentID); err == nil {
-		if err := tx.Commit(ctx); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		committed = true
-		writeJSON(w, http.StatusCreated, importSyntheticEntryResponse{ID: existingAttachmentID, NTeams: len(teams)})
-		return
-	} else if err != pgx.ErrNoRows {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	var snapshotEntryID string
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
-		VALUES ($1::uuid, NULL, $2, true)
-		RETURNING id::text
-	`, *snapshotID, displayName).Scan(&snapshotEntryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	for _, t := range teams {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-			VALUES ($1::uuid, $2::uuid, $3::int)
-		`, snapshotEntryID, t.TeamID, t.BidPoints); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	var attachmentID string
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.synthetic_calcutta_candidates (synthetic_calcutta_id, candidate_id, snapshot_entry_id)
-		VALUES ($1::uuid, $2::uuid, $3::uuid)
-		RETURNING id::text
-	`, syntheticCalcuttaID, candidateID, snapshotEntryID).Scan(&attachmentID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
-
-	writeJSON(w, http.StatusCreated, importSyntheticEntryResponse{ID: attachmentID, NTeams: len(teams)})
+	writeJSON(w, http.StatusCreated, importSyntheticEntryResponse{ID: attachmentID, NTeams: nTeams})
 }
 
 func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Request) {
@@ -681,128 +330,27 @@ func (s *Server) handlePatchSyntheticEntry(w http.ResponseWriter, r *http.Reques
 		displayName = &v
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed := false
-	defer func() {
-		if committed {
-			return
+	teams := (*[]synthetic_scenarios.SyntheticEntryTeam)(nil)
+	if req.Teams != nil {
+		parsed := make([]synthetic_scenarios.SyntheticEntryTeam, 0, len(*req.Teams))
+		for _, t := range *req.Teams {
+			parsed = append(parsed, synthetic_scenarios.SyntheticEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
 		}
-		_ = tx.Rollback(ctx)
-	}()
+		teams = &parsed
+	}
 
-	var candidateID string
-	var snapshotEntryID string
-	var sourceKind string
-	if err := tx.QueryRow(ctx, `
-		SELECT
-			scc.candidate_id::text,
-			scc.snapshot_entry_id::text,
-			c.source_kind
-		FROM derived.synthetic_calcutta_candidates scc
-		JOIN derived.candidates c
-			ON c.id = scc.candidate_id
-			AND c.deleted_at IS NULL
-		WHERE scc.id = $1::uuid
-			AND scc.deleted_at IS NULL
-		LIMIT 1
-	`, id).Scan(&candidateID, &snapshotEntryID, &sourceKind); err != nil {
-		if err == pgx.ErrNoRows {
+	if err := s.app.SyntheticScenarios.PatchSyntheticEntry(r.Context(), synthetic_scenarios.PatchSyntheticEntryParams{AttachmentID: id, DisplayName: displayName, Teams: teams}); err != nil {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticEntryNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic entry not found", "id")
 			return
 		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if displayName != nil {
-		if _, err := tx.Exec(ctx, `
-			UPDATE derived.candidates
-			SET display_name = $2,
-				updated_at = NOW()
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, candidateID, *displayName); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE core.calcutta_snapshot_entries
-			SET display_name = $2,
-				updated_at = NOW()
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, snapshotEntryID, *displayName); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	if req.Teams != nil {
-		if sourceKind != "manual" {
+		if errors.Is(err, synthetic_scenarios.ErrOnlyManualCandidatesCanBeEdited) {
 			writeError(w, r, http.StatusBadRequest, "validation_error", "Only manual candidates can be edited", "teams")
 			return
 		}
-
-		teams := *req.Teams
-		for i := range teams {
-			teams[i].TeamID = strings.TrimSpace(teams[i].TeamID)
-			if teams[i].TeamID == "" {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "teams.team_id is required", "teams")
-				return
-			}
-			if _, err := uuid.Parse(teams[i].TeamID); err != nil {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "teams.team_id must be a valid UUID", "teams")
-				return
-			}
-			if teams[i].BidPoints <= 0 {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "teams.bid_points must be positive", "teams")
-				return
-			}
-		}
-
-		metadata := map[string]any{"teams": teams}
-		metadataJSON, _ := json.Marshal(metadata)
-		if _, err := tx.Exec(ctx, `
-			UPDATE derived.candidates
-			SET metadata_json = $2::jsonb,
-				updated_at = NOW()
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, candidateID, string(metadataJSON)); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		if _, err := tx.Exec(ctx, `
-			DELETE FROM core.calcutta_snapshot_entry_teams
-			WHERE calcutta_snapshot_entry_id = $1::uuid
-		`, snapshotEntryID); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		for _, t := range teams {
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-				VALUES ($1::uuid, $2::uuid, $3::int)
-			`, snapshotEntryID, t.TeamID, t.BidPoints); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	committed = true
-
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -818,76 +366,13 @@ func (s *Server) handleDeleteSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx := r.Context()
-
-	var snapshotEntryID string
-	if err := s.pool.QueryRow(ctx, `
-		SELECT snapshot_entry_id::text
-		FROM derived.synthetic_calcutta_candidates
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, id).Scan(&snapshotEntryID); err != nil {
-		if err == pgx.ErrNoRows {
+	if err := s.app.SyntheticScenarios.DeleteSyntheticEntry(r.Context(), synthetic_scenarios.DeleteSyntheticEntryParams{AttachmentID: id}); err != nil {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticEntryNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic entry not found", "id")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	if _, err := tx.Exec(ctx, `
-		UPDATE derived.synthetic_calcutta_candidates
-		SET deleted_at = NOW(),
-			updated_at = NOW()
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-	`, id); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
-		UPDATE core.calcutta_snapshot_entries
-		SET deleted_at = NOW(),
-			updated_at = NOW()
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-	`, snapshotEntryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	// If this entry is highlighted anywhere, clear the highlight.
-	if _, err := tx.Exec(ctx, `
-		UPDATE derived.synthetic_calcuttas
-		SET highlighted_snapshot_entry_id = NULL,
-			updated_at = NOW()
-		WHERE highlighted_snapshot_entry_id = $1::uuid
-			AND deleted_at IS NULL
-	`, snapshotEntryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
-
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

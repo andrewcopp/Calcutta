@@ -2,14 +2,14 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_scenarios"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 )
 
 type simulatedEntryTeam struct {
@@ -92,122 +92,33 @@ func (s *Server) handleListSimulatedEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	ok, entries, err := s.app.SuiteScenarios.ListSimulatedEntries(r.Context(), simulatedCalcuttaID)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	defer func() {
-		_ = tx.Rollback(ctx)
-	}()
-
-	var exists bool
-	if err := tx.QueryRow(ctx, `
- 		SELECT EXISTS(
- 			SELECT 1
- 			FROM derived.simulated_calcuttas
- 			WHERE id = $1::uuid
- 				AND deleted_at IS NULL
- 		)
- 	`, simulatedCalcuttaID).Scan(&exists); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if !exists {
+	if !ok {
 		writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
 		return
 	}
 
-	rows, err := tx.Query(ctx, `
- 		SELECT
- 			e.id::text,
- 			e.simulated_calcutta_id::text,
- 			e.display_name,
- 			e.source_kind,
- 			e.source_entry_id::text,
- 			e.source_candidate_id::text,
- 			e.created_at,
- 			e.updated_at,
- 			et.team_id::text,
- 			et.bid_points::int
- 		FROM derived.simulated_entries e
- 		LEFT JOIN derived.simulated_entry_teams et
- 			ON et.simulated_entry_id = e.id
- 			AND et.deleted_at IS NULL
- 		WHERE e.simulated_calcutta_id = $1::uuid
- 			AND e.deleted_at IS NULL
- 		ORDER BY e.created_at ASC, et.bid_points DESC
- 	`, simulatedCalcuttaID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	defer rows.Close()
-
-	byID := make(map[string]*simulatedEntryListItem)
-	order := make([]string, 0)
-	for rows.Next() {
-		var entryID string
-		var scID string
-		var displayName string
-		var sourceKind string
-		var sourceEntryID *string
-		var sourceCandidateID *string
-		var createdAt time.Time
-		var updatedAt time.Time
-		var teamID *string
-		var bidPoints *int
-
-		if err := rows.Scan(
-			&entryID,
-			&scID,
-			&displayName,
-			&sourceKind,
-			&sourceEntryID,
-			&sourceCandidateID,
-			&createdAt,
-			&updatedAt,
-			&teamID,
-			&bidPoints,
-		); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
+	items := make([]simulatedEntryListItem, 0, len(entries))
+	for _, e := range entries {
+		teams := make([]simulatedEntryTeam, 0, len(e.Teams))
+		for _, t := range e.Teams {
+			teams = append(teams, simulatedEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
 		}
-
-		it, ok := byID[entryID]
-		if !ok {
-			it = &simulatedEntryListItem{
-				ID:                  entryID,
-				SimulatedCalcuttaID: scID,
-				DisplayName:         displayName,
-				SourceKind:          sourceKind,
-				SourceEntryID:       sourceEntryID,
-				SourceCandidateID:   sourceCandidateID,
-				Teams:               make([]simulatedEntryTeam, 0),
-				CreatedAt:           createdAt,
-				UpdatedAt:           updatedAt,
-			}
-			byID[entryID] = it
-			order = append(order, entryID)
-		}
-		if teamID != nil && bidPoints != nil {
-			it.Teams = append(it.Teams, simulatedEntryTeam{TeamID: *teamID, BidPoints: *bidPoints})
-		}
-	}
-	if err := rows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	items := make([]simulatedEntryListItem, 0, len(order))
-	for _, id := range order {
-		items = append(items, *byID[id])
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+		items = append(items, simulatedEntryListItem{
+			ID:                  e.ID,
+			SimulatedCalcuttaID: e.SimulatedCalcuttaID,
+			DisplayName:         e.DisplayName,
+			SourceKind:          e.SourceKind,
+			SourceEntryID:       e.SourceEntryID,
+			SourceCandidateID:   e.SourceCandidateID,
+			Teams:               teams,
+			CreatedAt:           e.CreatedAt,
+			UpdatedAt:           e.UpdatedAt,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, listSimulatedEntriesResponse{Items: items})
@@ -256,72 +167,24 @@ func (s *Server) handleCreateSimulatedEntry(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	params := suite_scenarios.CreateSimulatedEntryParams{
+		SimulatedCalcuttaID: simulatedCalcuttaID,
+		DisplayName:         req.DisplayName,
+		Teams:               make([]suite_scenarios.SimulatedEntryTeam, 0, len(req.Teams)),
 	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	var exists bool
-	if err := tx.QueryRow(ctx, `
- 		SELECT EXISTS(
- 			SELECT 1
- 			FROM derived.simulated_calcuttas
- 			WHERE id = $1::uuid
- 				AND deleted_at IS NULL
- 		)
- 	`, simulatedCalcuttaID).Scan(&exists); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if !exists {
-		writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
-		return
-	}
-
-	var entryID string
-	if err := tx.QueryRow(ctx, `
- 		INSERT INTO derived.simulated_entries (
- 			simulated_calcutta_id,
- 			display_name,
- 			source_kind,
- 			source_entry_id,
- 			source_candidate_id
- 		)
- 		VALUES ($1::uuid, $2, 'manual', NULL, NULL)
- 		RETURNING id::text
- 	`, simulatedCalcuttaID, req.DisplayName).Scan(&entryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
 	for _, t := range req.Teams {
-		if _, err := tx.Exec(ctx, `
- 			INSERT INTO derived.simulated_entry_teams (
- 				simulated_entry_id,
- 				team_id,
- 				bid_points
- 			)
- 			VALUES ($1::uuid, $2::uuid, $3::int)
- 		`, entryID, t.TeamID, t.BidPoints); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
+		params.Teams = append(params.Teams, suite_scenarios.SimulatedEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	entryID, err := s.app.SuiteScenarios.CreateSimulatedEntry(r.Context(), params)
+	if err != nil {
+		if errors.Is(err, suite_scenarios.ErrSimulatedCalcuttaNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
+			return
+		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	committed = true
 
 	writeJSON(w, http.StatusCreated, createSimulatedEntryResponse{ID: entryID})
 }
@@ -384,86 +247,30 @@ func (s *Server) handlePatchSimulatedEntry(w http.ResponseWriter, r *http.Reques
 		*req.Teams = teams
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	params := suite_scenarios.PatchSimulatedEntryParams{
+		SimulatedCalcuttaID: simulatedCalcuttaID,
+		EntryID:             entryID,
+		DisplayName:         req.DisplayName,
+		Teams: func() *[]suite_scenarios.SimulatedEntryTeam {
+			if req.Teams == nil {
+				return nil
+			}
+			teams := make([]suite_scenarios.SimulatedEntryTeam, 0, len(*req.Teams))
+			for _, t := range *req.Teams {
+				teams = append(teams, suite_scenarios.SimulatedEntryTeam{TeamID: t.TeamID, BidPoints: t.BidPoints})
+			}
+			return &teams
+		}(),
 	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
 
-	var existingSimulatedCalcuttaID string
-	if err := tx.QueryRow(ctx, `
- 		SELECT simulated_calcutta_id::text
- 		FROM derived.simulated_entries
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 		LIMIT 1
- 	`, entryID).Scan(&existingSimulatedCalcuttaID); err != nil {
-		if err == pgx.ErrNoRows {
+	if err := s.app.SuiteScenarios.PatchSimulatedEntry(r.Context(), params); err != nil {
+		if errors.Is(err, suite_scenarios.ErrSimulatedEntryNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Simulated entry not found", "entryId")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if existingSimulatedCalcuttaID != simulatedCalcuttaID {
-		writeError(w, r, http.StatusNotFound, "not_found", "Simulated entry not found", "entryId")
-		return
-	}
-
-	if req.DisplayName != nil {
-		if _, err := tx.Exec(ctx, `
- 			UPDATE derived.simulated_entries
- 			SET display_name = $2,
- 				updated_at = NOW()
- 			WHERE id = $1::uuid
- 				AND deleted_at IS NULL
- 		`, entryID, *req.DisplayName); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	if req.Teams != nil {
-		teams := *req.Teams
-		sort.Slice(teams, func(i, j int) bool { return teams[i].BidPoints > teams[j].BidPoints })
-		if _, err := tx.Exec(ctx, `
- 			UPDATE derived.simulated_entry_teams
- 			SET deleted_at = NOW(),
- 				updated_at = NOW()
- 			WHERE simulated_entry_id = $1::uuid
- 				AND deleted_at IS NULL
- 		`, entryID); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		for _, t := range teams {
-			if _, err := tx.Exec(ctx, `
- 				INSERT INTO derived.simulated_entry_teams (
- 					simulated_entry_id,
- 					team_id,
- 					bid_points
- 				)
- 				VALUES ($1::uuid, $2::uuid, $3::int)
- 			`, entryID, t.TeamID, t.BidPoints); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
@@ -489,79 +296,15 @@ func (s *Server) handleDeleteSimulatedEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	var existingSimulatedCalcuttaID string
-	if err := tx.QueryRow(ctx, `
- 		SELECT simulated_calcutta_id::text
- 		FROM derived.simulated_entries
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 		LIMIT 1
- 	`, entryID).Scan(&existingSimulatedCalcuttaID); err != nil {
-		if err == pgx.ErrNoRows {
+	params := suite_scenarios.DeleteSimulatedEntryParams{SimulatedCalcuttaID: simulatedCalcuttaID, EntryID: entryID}
+	if err := s.app.SuiteScenarios.DeleteSimulatedEntry(r.Context(), params); err != nil {
+		if errors.Is(err, suite_scenarios.ErrSimulatedEntryNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Simulated entry not found", "entryId")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	if existingSimulatedCalcuttaID != simulatedCalcuttaID {
-		writeError(w, r, http.StatusNotFound, "not_found", "Simulated entry not found", "entryId")
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		UPDATE derived.simulated_entry_teams
- 		SET deleted_at = NOW(),
- 			updated_at = NOW()
- 		WHERE simulated_entry_id = $1::uuid
- 			AND deleted_at IS NULL
- 	`, entryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		UPDATE derived.simulated_entries
- 		SET deleted_at = NOW(),
- 			updated_at = NOW()
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 	`, entryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if _, err := tx.Exec(ctx, `
- 		UPDATE derived.simulated_calcuttas
- 		SET highlighted_simulated_entry_id = NULL,
- 			updated_at = NOW()
- 		WHERE id = $1::uuid
- 			AND highlighted_simulated_entry_id = $2::uuid
- 			AND deleted_at IS NULL
- 	`, simulatedCalcuttaID, entryID); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
@@ -601,158 +344,37 @@ func (s *Server) handleImportCandidateAsSimulatedEntry(w http.ResponseWriter, r 
 		}
 	}
 
-	ctx := r.Context()
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	params := suite_scenarios.ImportCandidateAsSimulatedEntryParams{
+		SimulatedCalcuttaID: simulatedCalcuttaID,
+		CandidateID:         req.CandidateID,
+		DisplayName:         req.DisplayName,
 	}
-	committed := false
-	defer func() {
-		if committed {
+
+	entryID, nTeams, err := s.app.SuiteScenarios.ImportCandidateAsSimulatedEntry(r.Context(), params)
+	if err != nil {
+		if errors.Is(err, suite_scenarios.ErrSimulatedCalcuttaNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
 			return
 		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	var exists bool
-	if err := tx.QueryRow(ctx, `
- 		SELECT EXISTS(
- 			SELECT 1
- 			FROM derived.simulated_calcuttas
- 			WHERE id = $1::uuid
- 				AND deleted_at IS NULL
- 		)
- 	`, simulatedCalcuttaID).Scan(&exists); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if !exists {
-		writeError(w, r, http.StatusNotFound, "not_found", "Simulated calcutta not found", "id")
-		return
-	}
-
-	var candidateDisplayName string
-	var strategyGenerationRunID *string
-	var metadataJSON []byte
-	if err := tx.QueryRow(ctx, `
- 		SELECT display_name, strategy_generation_run_id::text, metadata_json
- 		FROM derived.candidates
- 		WHERE id = $1::uuid
- 			AND deleted_at IS NULL
- 		LIMIT 1
- 	`, req.CandidateID).Scan(&candidateDisplayName, &strategyGenerationRunID, &metadataJSON); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, suite_scenarios.ErrCandidateNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Candidate not found", "candidateId")
 			return
 		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	name := strings.TrimSpace(candidateDisplayName)
-	if req.DisplayName != nil {
-		name = *req.DisplayName
-	}
-	if name == "" {
-		name = "Candidate"
-	}
-
-	teams := make([]simulatedEntryTeam, 0)
-	if strategyGenerationRunID != nil && strings.TrimSpace(*strategyGenerationRunID) != "" {
-		rows, err := tx.Query(ctx, `
- 			SELECT team_id::text, bid_points::int
-			FROM derived.strategy_generation_run_bids
-			WHERE strategy_generation_run_id = $1::uuid
-				AND deleted_at IS NULL
-			ORDER BY bid_points DESC
-		`, *strategyGenerationRunID)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
+		if errors.Is(err, suite_scenarios.ErrCandidateHasNoBids) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "Candidate has no bids to import", "candidateId")
 			return
 		}
-		for rows.Next() {
-			var teamID string
-			var bidPoints int
-			if err := rows.Scan(&teamID, &bidPoints); err != nil {
-				rows.Close()
-				writeErrorFromErr(w, r, err)
-				return
-			}
-			teams = append(teams, simulatedEntryTeam{TeamID: teamID, BidPoints: bidPoints})
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		rows.Close()
-	}
-
-	if len(teams) == 0 {
-		var parsed struct {
-			Teams []simulatedEntryTeam `json:"teams"`
-		}
-		_ = json.Unmarshal(metadataJSON, &parsed)
-		teams = parsed.Teams
-	}
-
-	if len(teams) == 0 {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Candidate has no bids to import", "candidateId")
-		return
-	}
-	for i := range teams {
-		teams[i].TeamID = strings.TrimSpace(teams[i].TeamID)
-		if teams[i].TeamID == "" {
+		if errors.Is(err, suite_scenarios.ErrCandidateInvalidTeamID) {
 			writeError(w, r, http.StatusConflict, "invalid_state", "Candidate has invalid team_id", "candidateId")
 			return
 		}
-		if _, err := uuid.Parse(teams[i].TeamID); err != nil {
-			writeError(w, r, http.StatusConflict, "invalid_state", "Candidate has invalid team_id", "candidateId")
-			return
-		}
-		if teams[i].BidPoints <= 0 {
+		if errors.Is(err, suite_scenarios.ErrCandidateInvalidBidPoints) {
 			writeError(w, r, http.StatusConflict, "invalid_state", "Candidate has invalid bid_points", "candidateId")
 			return
 		}
-	}
-
-	var entryID string
-	if err := tx.QueryRow(ctx, `
- 		INSERT INTO derived.simulated_entries (
- 			simulated_calcutta_id,
- 			display_name,
- 			source_kind,
- 			source_entry_id,
- 			source_candidate_id
- 		)
- 		VALUES ($1::uuid, $2, 'from_candidate', NULL, $3::uuid)
- 		RETURNING id::text
- 	`, simulatedCalcuttaID, name, req.CandidateID).Scan(&entryID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	sort.Slice(teams, func(i, j int) bool { return teams[i].BidPoints > teams[j].BidPoints })
-	for _, t := range teams {
-		if _, err := tx.Exec(ctx, `
- 			INSERT INTO derived.simulated_entry_teams (
- 				simulated_entry_id,
- 				team_id,
- 				bid_points
- 			)
- 			VALUES ($1::uuid, $2::uuid, $3::int)
- 		`, entryID, t.TeamID, t.BidPoints); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
-
-	writeJSON(w, http.StatusCreated, importCandidateAsSimulatedEntryResponse{SimulatedEntryID: entryID, NTeams: len(teams)})
+	writeJSON(w, http.StatusCreated, importCandidateAsSimulatedEntryResponse{SimulatedEntryID: entryID, NTeams: nTeams})
 }

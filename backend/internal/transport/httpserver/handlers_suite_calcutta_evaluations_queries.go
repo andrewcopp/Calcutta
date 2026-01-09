@@ -2,6 +2,11 @@ package httpserver
 
 import (
 	"context"
+	"errors"
+	"strings"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_evaluations"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *Server) loadSuiteCalcuttaEvaluations(
@@ -15,99 +20,62 @@ func (s *Server) loadSuiteCalcuttaEvaluations(
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	var calcuttaIDPtr *string
+	if strings.TrimSpace(calcuttaID) != "" {
+		v := strings.TrimSpace(calcuttaID)
+		calcuttaIDPtr = &v
+	}
+	var cohortIDPtr *string
+	if strings.TrimSpace(suiteID) != "" {
+		v := strings.TrimSpace(suiteID)
+		cohortIDPtr = &v
+	}
+	var batchIDPtr *string
+	if strings.TrimSpace(suiteExecutionID) != "" {
+		v := strings.TrimSpace(suiteExecutionID)
+		batchIDPtr = &v
+	}
 
-	rows, err := s.pool.Query(ctx, `
-		SELECT
-			r.id,
-			r.simulation_run_batch_id,
-			r.cohort_id,
-			COALESCE(c.name, '') AS cohort_name,
-			COALESCE(r.optimizer_key, c.optimizer_key, '') AS optimizer_key,
-			COALESCE(r.n_sims, c.n_sims, 0) AS n_sims,
-			COALESCE(r.seed, c.seed, 0) AS seed,
-			r.our_rank,
-			r.our_mean_normalized_payout,
-			r.our_median_normalized_payout,
-			r.our_p_top1,
-			r.our_p_in_money,
-			r.total_simulations,
-			r.calcutta_id,
-			r.game_outcome_run_id,
-			r.market_share_run_id,
-			r.strategy_generation_run_id,
-			r.calcutta_evaluation_run_id,
-			r.realized_finish_position,
-			r.realized_is_tied,
-			r.realized_in_the_money,
-			r.realized_payout_cents,
-			r.realized_total_points,
-			r.starting_state_key,
-			r.excluded_entry_name,
-			r.status,
-			r.claimed_at,
-			r.claimed_by,
-			r.error_message,
-			r.created_at,
-			r.updated_at
-		FROM derived.simulation_runs r
-		LEFT JOIN derived.synthetic_calcutta_cohorts c
-			ON c.id = r.cohort_id
-			AND c.deleted_at IS NULL
-		WHERE r.deleted_at IS NULL
-			AND ($1::uuid IS NULL OR r.calcutta_id = $1::uuid)
-			AND ($2::uuid IS NULL OR r.cohort_id = $2::uuid)
-			AND ($3::uuid IS NULL OR r.simulation_run_batch_id = $3::uuid)
-		ORDER BY r.created_at DESC
-		LIMIT $4::int
-		OFFSET $5::int
-	`, nullUUIDParam(calcuttaID), nullUUIDParam(suiteID), nullUUIDParam(suiteExecutionID), limit, offset)
+	rows, err := s.app.SuiteEvaluations.ListEvaluations(ctx, calcuttaIDPtr, cohortIDPtr, batchIDPtr, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	items := make([]suiteCalcuttaEvaluationListItem, 0)
-	for rows.Next() {
-		var it suiteCalcuttaEvaluationListItem
-		if err := rows.Scan(
-			&it.ID,
-			&it.SimulationBatchID,
-			&it.CohortID,
-			&it.CohortName,
-			&it.OptimizerKey,
-			&it.NSims,
-			&it.Seed,
-			&it.OurRank,
-			&it.OurMeanNormalizedPayout,
-			&it.OurMedianNormalizedPayout,
-			&it.OurPTop1,
-			&it.OurPInMoney,
-			&it.TotalSimulations,
-			&it.CalcuttaID,
-			&it.GameOutcomeRunID,
-			&it.MarketShareRunID,
-			&it.StrategyGenerationRunID,
-			&it.CalcuttaEvaluationRunID,
-			&it.RealizedFinishPosition,
-			&it.RealizedIsTied,
-			&it.RealizedInTheMoney,
-			&it.RealizedPayoutCents,
-			&it.RealizedTotalPoints,
-			&it.StartingStateKey,
-			&it.ExcludedEntryName,
-			&it.Status,
-			&it.ClaimedAt,
-			&it.ClaimedBy,
-			&it.ErrorMessage,
-			&it.CreatedAt,
-			&it.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, it)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	items := make([]suiteCalcuttaEvaluationListItem, 0, len(rows))
+	for _, it := range rows {
+		items = append(items, suiteCalcuttaEvaluationListItem{
+			ID:                        it.ID,
+			SimulationBatchID:         it.SimulationBatchID,
+			CohortID:                  it.CohortID,
+			CohortName:                it.CohortName,
+			OptimizerKey:              it.OptimizerKey,
+			NSims:                     it.NSims,
+			Seed:                      it.Seed,
+			OurRank:                   it.OurRank,
+			OurMeanNormalizedPayout:   it.OurMeanNormalizedPayout,
+			OurMedianNormalizedPayout: it.OurMedianNormalizedPayout,
+			OurPTop1:                  it.OurPTop1,
+			OurPInMoney:               it.OurPInMoney,
+			TotalSimulations:          it.TotalSimulations,
+			CalcuttaID:                it.CalcuttaID,
+			GameOutcomeRunID:          it.GameOutcomeRunID,
+			MarketShareRunID:          it.MarketShareRunID,
+			StrategyGenerationRunID:   it.StrategyGenerationRunID,
+			CalcuttaEvaluationRunID:   it.CalcuttaEvaluationRunID,
+			RealizedFinishPosition:    it.RealizedFinishPosition,
+			RealizedIsTied:            it.RealizedIsTied,
+			RealizedInTheMoney:        it.RealizedInTheMoney,
+			RealizedPayoutCents:       it.RealizedPayoutCents,
+			RealizedTotalPoints:       it.RealizedTotalPoints,
+			StartingStateKey:          it.StartingStateKey,
+			ExcludedEntryName:         it.ExcludedEntryName,
+			Status:                    it.Status,
+			ClaimedAt:                 it.ClaimedAt,
+			ClaimedBy:                 it.ClaimedBy,
+			ErrorMessage:              it.ErrorMessage,
+			CreatedAt:                 it.CreatedAt,
+			UpdatedAt:                 it.UpdatedAt,
+		})
 	}
 
 	return items, nil
@@ -117,83 +85,45 @@ func (s *Server) loadSuiteCalcuttaEvaluationByID(ctx context.Context, id string)
 	if ctx == nil {
 		ctx = context.Background()
 	}
-
-	var it suiteCalcuttaEvaluationListItem
-	err := s.pool.QueryRow(ctx, `
-		SELECT
-			r.id,
-			r.simulation_run_batch_id,
-			r.cohort_id,
-			COALESCE(c.name, '') AS cohort_name,
-			COALESCE(r.optimizer_key, c.optimizer_key, '') AS optimizer_key,
-			COALESCE(r.n_sims, c.n_sims, 0) AS n_sims,
-			COALESCE(r.seed, c.seed, 0) AS seed,
-			r.our_rank,
-			r.our_mean_normalized_payout,
-			r.our_median_normalized_payout,
-			r.our_p_top1,
-			r.our_p_in_money,
-			r.total_simulations,
-			r.calcutta_id,
-			r.game_outcome_run_id,
-			r.market_share_run_id,
-			r.strategy_generation_run_id,
-			r.calcutta_evaluation_run_id,
-			r.realized_finish_position,
-			r.realized_is_tied,
-			r.realized_in_the_money,
-			r.realized_payout_cents,
-			r.realized_total_points,
-			r.starting_state_key,
-			r.excluded_entry_name,
-			r.status,
-			r.claimed_at,
-			r.claimed_by,
-			r.error_message,
-			r.created_at,
-			r.updated_at
-		FROM derived.simulation_runs r
-		LEFT JOIN derived.synthetic_calcutta_cohorts c
-			ON c.id = r.cohort_id
-			AND c.deleted_at IS NULL
-		WHERE r.id = $1::uuid
-			AND r.deleted_at IS NULL
-		LIMIT 1
-	`, id).Scan(
-		&it.ID,
-		&it.SimulationBatchID,
-		&it.CohortID,
-		&it.CohortName,
-		&it.OptimizerKey,
-		&it.NSims,
-		&it.Seed,
-		&it.OurRank,
-		&it.OurMeanNormalizedPayout,
-		&it.OurMedianNormalizedPayout,
-		&it.OurPTop1,
-		&it.OurPInMoney,
-		&it.TotalSimulations,
-		&it.CalcuttaID,
-		&it.GameOutcomeRunID,
-		&it.MarketShareRunID,
-		&it.StrategyGenerationRunID,
-		&it.CalcuttaEvaluationRunID,
-		&it.RealizedFinishPosition,
-		&it.RealizedIsTied,
-		&it.RealizedInTheMoney,
-		&it.RealizedPayoutCents,
-		&it.RealizedTotalPoints,
-		&it.StartingStateKey,
-		&it.ExcludedEntryName,
-		&it.Status,
-		&it.ClaimedAt,
-		&it.ClaimedBy,
-		&it.ErrorMessage,
-		&it.CreatedAt,
-		&it.UpdatedAt,
-	)
+	it, err := s.app.SuiteEvaluations.GetEvaluation(ctx, id)
 	if err != nil {
+		if errors.Is(err, suite_evaluations.ErrSimulationNotFound) {
+			return nil, pgx.ErrNoRows
+		}
 		return nil, err
 	}
-	return &it, nil
+	out := &suiteCalcuttaEvaluationListItem{
+		ID:                        it.ID,
+		SimulationBatchID:         it.SimulationBatchID,
+		CohortID:                  it.CohortID,
+		CohortName:                it.CohortName,
+		OptimizerKey:              it.OptimizerKey,
+		NSims:                     it.NSims,
+		Seed:                      it.Seed,
+		OurRank:                   it.OurRank,
+		OurMeanNormalizedPayout:   it.OurMeanNormalizedPayout,
+		OurMedianNormalizedPayout: it.OurMedianNormalizedPayout,
+		OurPTop1:                  it.OurPTop1,
+		OurPInMoney:               it.OurPInMoney,
+		TotalSimulations:          it.TotalSimulations,
+		CalcuttaID:                it.CalcuttaID,
+		GameOutcomeRunID:          it.GameOutcomeRunID,
+		MarketShareRunID:          it.MarketShareRunID,
+		StrategyGenerationRunID:   it.StrategyGenerationRunID,
+		CalcuttaEvaluationRunID:   it.CalcuttaEvaluationRunID,
+		RealizedFinishPosition:    it.RealizedFinishPosition,
+		RealizedIsTied:            it.RealizedIsTied,
+		RealizedInTheMoney:        it.RealizedInTheMoney,
+		RealizedPayoutCents:       it.RealizedPayoutCents,
+		RealizedTotalPoints:       it.RealizedTotalPoints,
+		StartingStateKey:          it.StartingStateKey,
+		ExcludedEntryName:         it.ExcludedEntryName,
+		Status:                    it.Status,
+		ClaimedAt:                 it.ClaimedAt,
+		ClaimedBy:                 it.ClaimedBy,
+		ErrorMessage:              it.ErrorMessage,
+		CreatedAt:                 it.CreatedAt,
+		UpdatedAt:                 it.UpdatedAt,
+	}
+	return out, nil
 }

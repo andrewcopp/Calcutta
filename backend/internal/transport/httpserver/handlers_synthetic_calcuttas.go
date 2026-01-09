@@ -3,10 +3,12 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/synthetic_scenarios"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
@@ -94,90 +96,48 @@ func (s *Server) handleListSyntheticCalcuttas(w http.ResponseWriter, r *http.Req
 		offset = 0
 	}
 
-	rows, err := s.pool.Query(r.Context(), `
-		SELECT
-			sc.id::text,
-			sc.cohort_id::text,
-			sc.calcutta_id::text,
-			sc.calcutta_snapshot_id::text,
-			sc.highlighted_snapshot_entry_id::text,
-			sc.focus_strategy_generation_run_id::text,
-			sc.focus_entry_name,
-			ls.status,
-			ls.our_rank,
-			ls.our_mean_normalized_payout,
-			ls.our_p_top1,
-			ls.our_p_in_money,
-			ls.total_simulations,
-			sc.starting_state_key,
-			sc.excluded_entry_name,
-			sc.notes,
-			sc.metadata_json,
-			sc.created_at,
-			sc.updated_at
-		FROM derived.synthetic_calcuttas sc
-		LEFT JOIN LATERAL (
-			SELECT
-				sr.status,
-				sr.our_rank,
-				sr.our_mean_normalized_payout,
-				sr.our_p_top1,
-				sr.our_p_in_money,
-				sr.total_simulations
-			FROM derived.simulation_runs sr
-			WHERE sr.synthetic_calcutta_id = sc.id
-				AND sr.deleted_at IS NULL
-			ORDER BY sr.created_at DESC
-			LIMIT 1
-		) ls ON TRUE
-		WHERE sc.deleted_at IS NULL
-			AND ($1::uuid IS NULL OR sc.cohort_id = $1::uuid)
-			AND ($2::uuid IS NULL OR sc.calcutta_id = $2::uuid)
-		ORDER BY sc.created_at DESC
-		LIMIT $3::int
-		OFFSET $4::int
-	`, nullUUIDParam(cohortID), nullUUIDParam(calcuttaID), limit, offset)
+	var cohortIDPtr *string
+	if cohortID != "" {
+		v := cohortID
+		cohortIDPtr = &v
+	}
+	var calcuttaIDPtr *string
+	if calcuttaID != "" {
+		v := calcuttaID
+		calcuttaIDPtr = &v
+	}
+
+	items, err := s.app.SyntheticScenarios.ListSyntheticCalcuttas(r.Context(), cohortIDPtr, calcuttaIDPtr, limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	defer rows.Close()
 
-	items := make([]syntheticCalcuttaListItem, 0)
-	for rows.Next() {
-		var it syntheticCalcuttaListItem
-		if err := rows.Scan(
-			&it.ID,
-			&it.CohortID,
-			&it.CalcuttaID,
-			&it.CalcuttaSnapshotID,
-			&it.HighlightedEntryID,
-			&it.FocusStrategyGenerationID,
-			&it.FocusEntryName,
-			&it.LatestSimulationStatus,
-			&it.OurRank,
-			&it.OurMeanNormalizedPayout,
-			&it.OurPTop1,
-			&it.OurPInMoney,
-			&it.TotalSimulations,
-			&it.StartingStateKey,
-			&it.ExcludedEntryName,
-			&it.Notes,
-			&it.Metadata,
-			&it.CreatedAt,
-			&it.UpdatedAt,
-		); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		items = append(items, it)
+	resp := make([]syntheticCalcuttaListItem, 0, len(items))
+	for _, it := range items {
+		resp = append(resp, syntheticCalcuttaListItem{
+			ID:                        it.ID,
+			CohortID:                  it.CohortID,
+			CalcuttaID:                it.CalcuttaID,
+			CalcuttaSnapshotID:        it.CalcuttaSnapshotID,
+			HighlightedEntryID:        it.HighlightedEntryID,
+			FocusStrategyGenerationID: it.FocusStrategyGenerationID,
+			FocusEntryName:            it.FocusEntryName,
+			LatestSimulationStatus:    it.LatestSimulationStatus,
+			OurRank:                   it.OurRank,
+			OurMeanNormalizedPayout:   it.OurMeanNormalizedPayout,
+			OurPTop1:                  it.OurPTop1,
+			OurPInMoney:               it.OurPInMoney,
+			TotalSimulations:          it.TotalSimulations,
+			StartingStateKey:          it.StartingStateKey,
+			ExcludedEntryName:         it.ExcludedEntryName,
+			Notes:                     it.Notes,
+			Metadata:                  it.Metadata,
+			CreatedAt:                 it.CreatedAt,
+			UpdatedAt:                 it.UpdatedAt,
+		})
 	}
-	if err := rows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, listSyntheticCalcuttasResponse{Items: items})
+	writeJSON(w, http.StatusOK, listSyntheticCalcuttasResponse{Items: resp})
 }
 
 func (s *Server) handleGetSyntheticCalcutta(w http.ResponseWriter, r *http.Request) {
@@ -192,50 +152,30 @@ func (s *Server) handleGetSyntheticCalcutta(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var it syntheticCalcuttaListItem
-	if err := s.pool.QueryRow(r.Context(), `
-		SELECT
-			sc.id::text,
-			sc.cohort_id::text,
-			sc.calcutta_id::text,
-			sc.calcutta_snapshot_id::text,
-			sc.highlighted_snapshot_entry_id::text,
-			sc.focus_strategy_generation_run_id::text,
-			sc.focus_entry_name,
-			sc.starting_state_key,
-			sc.excluded_entry_name,
-			sc.notes,
-			sc.metadata_json,
-			sc.created_at,
-			sc.updated_at
-		FROM derived.synthetic_calcuttas sc
-		WHERE sc.id = $1::uuid
-			AND sc.deleted_at IS NULL
-		LIMIT 1
-	`, id).Scan(
-		&it.ID,
-		&it.CohortID,
-		&it.CalcuttaID,
-		&it.CalcuttaSnapshotID,
-		&it.HighlightedEntryID,
-		&it.FocusStrategyGenerationID,
-		&it.FocusEntryName,
-		&it.StartingStateKey,
-		&it.ExcludedEntryName,
-		&it.Notes,
-		&it.Metadata,
-		&it.CreatedAt,
-		&it.UpdatedAt,
-	); err != nil {
-		if err == pgx.ErrNoRows {
+	it, err := s.app.SyntheticScenarios.GetSyntheticCalcutta(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	writeJSON(w, http.StatusOK, it)
+	writeJSON(w, http.StatusOK, syntheticCalcuttaListItem{
+		ID:                        it.ID,
+		CohortID:                  it.CohortID,
+		CalcuttaID:                it.CalcuttaID,
+		CalcuttaSnapshotID:        it.CalcuttaSnapshotID,
+		HighlightedEntryID:        it.HighlightedEntryID,
+		FocusStrategyGenerationID: it.FocusStrategyGenerationID,
+		FocusEntryName:            it.FocusEntryName,
+		StartingStateKey:          it.StartingStateKey,
+		ExcludedEntryName:         it.ExcludedEntryName,
+		Notes:                     it.Notes,
+		Metadata:                  it.Metadata,
+		CreatedAt:                 it.CreatedAt,
+		UpdatedAt:                 it.UpdatedAt,
+	})
 }
 
 func (s *Server) handlePatchSyntheticCalcutta(w http.ResponseWriter, r *http.Request) {
@@ -256,82 +196,9 @@ func (s *Server) handlePatchSyntheticCalcutta(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx := r.Context()
-
-	var snapshotID *string
-	var existingHighlighted *string
-	var existingNotes *string
-	var existingMetadata json.RawMessage
-	if err := s.pool.QueryRow(ctx, `
-		SELECT
-			calcutta_snapshot_id::text,
-			highlighted_snapshot_entry_id::text,
-			notes,
-			metadata_json
-		FROM derived.synthetic_calcuttas
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, id).Scan(&snapshotID, &existingHighlighted, &existingNotes, &existingMetadata); err != nil {
-		if err == pgx.ErrNoRows {
-			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
-			return
-		}
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
-		return
-	}
-
-	newHighlighted := existingHighlighted
-	if req.HighlightedEntryID != nil {
-		v := strings.TrimSpace(*req.HighlightedEntryID)
-		if v == "" {
-			newHighlighted = nil
-		} else {
-			if _, err := uuid.Parse(v); err != nil {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedEntryId must be a valid UUID", "highlightedEntryId")
-				return
-			}
-			var exists bool
-			if err := s.pool.QueryRow(ctx, `
-				SELECT EXISTS(
-					SELECT 1
-					FROM core.calcutta_snapshot_entries
-					WHERE id = $1::uuid
-						AND calcutta_snapshot_id = $2::uuid
-						AND deleted_at IS NULL
-				)
-			`, v, *snapshotID).Scan(&exists); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-			if !exists {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedEntryId must belong to this synthetic calcutta snapshot", "highlightedEntryId")
-				return
-			}
-			newHighlighted = &v
-		}
-	}
-
-	newNotes := existingNotes
-	if req.Notes != nil {
-		v := strings.TrimSpace(*req.Notes)
-		if v == "" {
-			newNotes = nil
-		} else {
-			newNotes = &v
-		}
-	}
-
-	newMetadata := existingMetadata
 	if req.Metadata != nil {
 		b := []byte(*req.Metadata)
-		if len(b) == 0 {
-			newMetadata = json.RawMessage([]byte("{}"))
-		} else {
+		if len(b) != 0 {
 			var parsed any
 			if err := json.Unmarshal(b, &parsed); err != nil {
 				writeError(w, r, http.StatusBadRequest, "validation_error", "metadata must be valid JSON", "metadata")
@@ -341,36 +208,37 @@ func (s *Server) handlePatchSyntheticCalcutta(w http.ResponseWriter, r *http.Req
 				writeError(w, r, http.StatusBadRequest, "validation_error", "metadata must be a JSON object", "metadata")
 				return
 			}
-			newMetadata = json.RawMessage(b)
 		}
 	}
-	if len(newMetadata) == 0 {
-		newMetadata = json.RawMessage([]byte("{}"))
+
+	if req.HighlightedEntryID != nil {
+		v := strings.TrimSpace(*req.HighlightedEntryID)
+		if v != "" {
+			if _, err := uuid.Parse(v); err != nil {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedEntryId must be a valid UUID", "highlightedEntryId")
+				return
+			}
+		}
 	}
 
-	var highlightedParam any
-	if newHighlighted != nil && strings.TrimSpace(*newHighlighted) != "" {
-		highlightedParam = *newHighlighted
-	} else {
-		highlightedParam = nil
-	}
-	var notesParam any
-	if newNotes != nil {
-		notesParam = *newNotes
-	} else {
-		notesParam = nil
-	}
-
-	_, err := s.pool.Exec(ctx, `
-		UPDATE derived.synthetic_calcuttas
-		SET highlighted_snapshot_entry_id = $2::uuid,
-			notes = $3,
-			metadata_json = $4::jsonb,
-			updated_at = NOW()
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-	`, id, highlightedParam, notesParam, []byte(newMetadata))
-	if err != nil {
+	ctx := r.Context()
+	if err := s.app.SyntheticScenarios.PatchSyntheticCalcutta(ctx, id, synthetic_scenarios.PatchSyntheticCalcuttaParams{
+		HighlightedEntryID: req.HighlightedEntryID,
+		Notes:              req.Notes,
+		Metadata:           req.Metadata,
+	}); err != nil {
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "id")
+			return
+		}
+		if errors.Is(err, synthetic_scenarios.ErrSyntheticCalcuttaHasNoSnapshot) {
+			writeError(w, r, http.StatusConflict, "invalid_state", "Synthetic calcutta has no snapshot", "id")
+			return
+		}
+		if errors.Is(err, synthetic_scenarios.ErrHighlightedEntryDoesNotBelong) {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "highlightedEntryId must belong to this synthetic calcutta snapshot", "highlightedEntryId")
+			return
+		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -475,76 +343,31 @@ func (s *Server) handleCreateSyntheticCalcutta(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	tx, err := s.pool.Begin(ctx)
+	var focusRunIDPtr *string
+	if focusStrategyRunID != "" {
+		v := focusStrategyRunID
+		focusRunIDPtr = &v
+	}
+	var snapshotIDPtr *string
+	if providedSnapshotID != "" {
+		v := providedSnapshotID
+		snapshotIDPtr = &v
+	}
+
+	createdID, err := s.app.SyntheticScenarios.CreateSyntheticCalcutta(ctx, synthetic_scenarios.CreateSyntheticCalcuttaParams{
+		CohortID:                  req.CohortID,
+		CalcuttaID:                resolvedCalcuttaID,
+		CalcuttaSnapshotID:        snapshotIDPtr,
+		FocusStrategyGenerationID: focusRunIDPtr,
+		FocusEntryName:            focusEntryName,
+		StartingStateKey:          startingStateKey,
+		ExcludedEntryName:         excludedEntry,
+	})
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		_ = tx.Rollback(ctx)
-	}()
-
-	snapshotID := (*string)(nil)
-	if providedSnapshotID != "" {
-		snapshotID = &providedSnapshotID
-	} else {
-		created, err := createSyntheticCalcuttaSnapshot(ctx, tx, resolvedCalcuttaID, excludedEntry, focusStrategyRunID, focusEntryName)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		snapshotID = &created
-	}
-
-	var syntheticID string
-	if err := tx.QueryRow(ctx, `
-		UPDATE derived.synthetic_calcuttas
-		SET calcutta_snapshot_id = $3::uuid,
-			focus_strategy_generation_run_id = $4::uuid,
-			focus_entry_name = $5,
-			starting_state_key = $6,
-			excluded_entry_name = $7,
-			updated_at = NOW(),
-			deleted_at = NULL
-		WHERE cohort_id = $1::uuid
-			AND calcutta_id = $2::uuid
-			AND deleted_at IS NULL
-		RETURNING id::text
-	`, req.CohortID, resolvedCalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&syntheticID); err != nil {
-		if err == pgx.ErrNoRows {
-			if err := tx.QueryRow(ctx, `
-				INSERT INTO derived.synthetic_calcuttas (
-					cohort_id,
-					calcutta_id,
-					calcutta_snapshot_id,
-					focus_strategy_generation_run_id,
-					focus_entry_name,
-					starting_state_key,
-					excluded_entry_name
-				)
-				VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6, $7)
-				RETURNING id::text
-			`, req.CohortID, resolvedCalcuttaID, snapshotID, nullUUIDParam(focusStrategyRunID), focusEntryName, startingStateKey, excludedEntry).Scan(&syntheticID); err != nil {
-				writeErrorFromErr(w, r, err)
-				return
-			}
-		} else {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	committed = true
-
-	writeJSON(w, http.StatusCreated, createSyntheticCalcuttaResponse{ID: syntheticID})
+	writeJSON(w, http.StatusCreated, createSyntheticCalcuttaResponse{ID: createdID})
 }
 
 func createSyntheticCalcuttaSnapshot(

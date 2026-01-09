@@ -15,6 +15,10 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/ml_analytics"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/model_catalogs"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/strategy_runs"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_evaluations"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_scenarios"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/synthetic_scenarios"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
@@ -60,12 +64,28 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	labCandidatesRepo := dbadapters.NewLabCandidatesRepository(pool)
 	labCandidatesService := lab_candidates.New(labCandidatesRepo)
 
+	suiteScenariosRepo := dbadapters.NewSuiteScenariosRepository(pool)
+	suiteScenariosService := suite_scenarios.New(suiteScenariosRepo)
+
+	suiteEvaluationsRepo := dbadapters.NewSuiteEvaluationsRepository(pool)
+	suiteEvaluationsService := suite_evaluations.New(suiteEvaluationsRepo)
+
+	syntheticScenariosRepo := dbadapters.NewSyntheticScenariosRepository(pool)
+	syntheticScenariosService := synthetic_scenarios.New(syntheticScenariosRepo)
+
+	strategyRunsRepo := dbadapters.NewStrategyRunsRepository(pool)
+	strategyRunsService := strategy_runs.New(strategyRunsRepo)
+
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService
 	a.Analytics = analyticsService
 	a.LabCandidates = labCandidatesService
 	a.MLAnalytics = mlAnalyticsService
 	a.ModelCatalogs = model_catalogs.New()
+	a.SuiteScenarios = suiteScenariosService
+	a.SuiteEvaluations = suiteEvaluationsService
+	a.SyntheticScenarios = syntheticScenariosService
+	a.StrategyRuns = strategyRunsService
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)

@@ -2,13 +2,14 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/strategy_runs"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 )
 
 type createStrategyGenerationRunRequest struct {
@@ -126,60 +127,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
-
-	var inputMarketShareArtifactID *string
-	if marketShareArtifactID != nil {
-		var runIDFromArtifact string
-		if err := s.pool.QueryRow(ctx, `
-			SELECT r.id::text
-			FROM derived.run_artifacts a
-			JOIN derived.market_share_runs r
-				ON r.id = a.run_id
-				AND r.deleted_at IS NULL
-			WHERE a.id = $1::uuid
-				AND a.run_kind = 'market_share'
-				AND a.run_id = r.id
-				AND r.calcutta_id = $2::uuid
-				AND a.artifact_kind = 'metrics'
-				AND a.deleted_at IS NULL
-			LIMIT 1
-		`, *marketShareArtifactID, req.CalcuttaID).Scan(&runIDFromArtifact); err != nil {
-			if err == pgx.ErrNoRows {
-				writeError(w, r, http.StatusNotFound, "not_found", "Market share artifact not found", "marketShareArtifactId")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		marketShareRunID = &runIDFromArtifact
-		inputMarketShareArtifactID = marketShareArtifactID
-	} else if marketShareRunID != nil {
-		var artifactID string
-		if err := s.pool.QueryRow(ctx, `
-			SELECT a.id::text
-			FROM derived.market_share_runs r
-			JOIN derived.run_artifacts a
-				ON a.run_kind = 'market_share'
-				AND a.run_id = r.id
-				AND a.artifact_kind = 'metrics'
-				AND a.deleted_at IS NULL
-			WHERE r.id = $1::uuid
-				AND r.calcutta_id = $2::uuid
-				AND r.deleted_at IS NULL
-			LIMIT 1
-		`, *marketShareRunID, req.CalcuttaID).Scan(&artifactID); err != nil {
-			if err == pgx.ErrNoRows {
-				writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareRunId must refer to a market share run with an available metrics artifact; pass marketShareArtifactId instead", "marketShareRunId")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		artifactID = strings.TrimSpace(artifactID)
-		if artifactID != "" {
-			inputMarketShareArtifactID = &artifactID
-		}
-	} else {
+	if marketShareArtifactID == nil && marketShareRunID == nil {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareArtifactId is required", "marketShareArtifactId")
 		return
 	}
@@ -191,130 +139,53 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 		optimizerKey = "minlp_v1"
 	}
 
-	params := map[string]any{}
-	if marketShareRunID != nil {
-		params["market_share_run_id"] = *marketShareRunID
-	}
-	if inputMarketShareArtifactID != nil {
-		params["market_share_artifact_id"] = *inputMarketShareArtifactID
-	}
-	params["source"] = "api_strategy_generation"
-	paramsJSON, _ := json.Marshal(params)
-
 	gitSHA := strings.TrimSpace(os.Getenv("GIT_SHA"))
-	var gitSHAParam any
+	var gitSHAPtr *string
 	if gitSHA != "" {
-		gitSHAParam = gitSHA
-	} else {
-		gitSHAParam = nil
+		gitSHAPtr = &gitSHA
+	}
+	createParams := strategy_runs.CreateRunParams{
+		CalcuttaID: req.CalcuttaID,
+		SyntheticCalcuttaID: func() *string {
+			if syntheticCalcuttaID == "" {
+				return nil
+			}
+			v := syntheticCalcuttaID
+			return &v
+		}(),
+		Name:                  name,
+		OptimizerKey:          optimizerKey,
+		RunKey:                runKeyText,
+		RunKeyUUID:            runKeyUUID,
+		MarketShareArtifactID: marketShareArtifactID,
+		MarketShareRunID:      marketShareRunID,
+		GitSHA:                gitSHAPtr,
+		Source:                "api_strategy_generation",
 	}
 
-	var runID string
-	if err := s.pool.QueryRow(ctx, `
-		INSERT INTO derived.strategy_generation_runs (
-			run_key,
-			run_key_uuid,
-			name,
-			simulated_tournament_id,
-			calcutta_id,
-			purpose,
-			returns_model_key,
-			investment_model_key,
-			optimizer_key,
-			market_share_run_id,
-			params_json,
-			git_sha
-		)
-		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_strategy_generation_run_bids', 'legacy', 'predicted_market_share', $5, $6::uuid, $7::jsonb, $8)
-		RETURNING id::text
-	`, runKeyText, runKeyUUID, name, req.CalcuttaID, optimizerKey, marketShareRunID, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
+	created, err := s.app.StrategyRuns.CreateStrategyGenerationRun(ctx, createParams)
+	if err != nil {
+		if errors.Is(err, strategy_runs.ErrMarketShareArtifactNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Market share artifact not found", "marketShareArtifactId")
+			return
+		}
+		if errors.Is(err, strategy_runs.ErrMarketShareRunMissingMetrics) {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareRunId must refer to a market share run with an available metrics artifact; pass marketShareArtifactId instead", "marketShareRunId")
+			return
+		}
+		if errors.Is(err, strategy_runs.ErrSyntheticCalcuttaNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "syntheticCalcuttaId")
+			return
+		}
+		if errors.Is(err, strategy_runs.ErrSyntheticCalcuttaMismatch) {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId does not match calcuttaId", "syntheticCalcuttaId")
+			return
+		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	resp := createStrategyGenerationRunResponse{
-		StrategyGenerationRunID: runID,
-		RunKey:                  runKeyText,
-	}
-
-	if syntheticCalcuttaID != "" {
-		tx, err := s.pool.Begin(ctx)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		committed := false
-		defer func() {
-			if committed {
-				return
-			}
-			_ = tx.Rollback(ctx)
-		}()
-
-		var scenarioCalcuttaID string
-		var excludedEntryName *string
-		var startingStateKey *string
-		if err := tx.QueryRow(ctx, `
-			SELECT calcutta_id::text, excluded_entry_name, starting_state_key
-			FROM derived.synthetic_calcuttas
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-			LIMIT 1
-		`, syntheticCalcuttaID).Scan(&scenarioCalcuttaID, &excludedEntryName, &startingStateKey); err != nil {
-			if err == pgx.ErrNoRows {
-				writeError(w, r, http.StatusNotFound, "not_found", "Synthetic calcutta not found", "syntheticCalcuttaId")
-				return
-			}
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		if scenarioCalcuttaID != req.CalcuttaID {
-			writeError(w, r, http.StatusBadRequest, "validation_error", "syntheticCalcuttaId does not match calcuttaId", "syntheticCalcuttaId")
-			return
-		}
-
-		if _, err := tx.Exec(ctx, `
-			UPDATE derived.strategy_generation_runs
-			SET excluded_entry_name = COALESCE(excluded_entry_name, $2),
-				starting_state_key = COALESCE(starting_state_key, $3),
-				updated_at = NOW()
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, runID, excludedEntryName, startingStateKey); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		snapshotID, err := createSyntheticCalcuttaSnapshot(ctx, tx, scenarioCalcuttaID, excludedEntryName, runID, nil)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		_, err = tx.Exec(ctx, `
-			UPDATE derived.synthetic_calcuttas
-			SET focus_strategy_generation_run_id = $2::uuid,
-				calcutta_snapshot_id = $3::uuid,
-				focus_entry_name = COALESCE(focus_entry_name, 'Our Strategy'),
-				updated_at = NOW()
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-		`, syntheticCalcuttaID, runID, snapshotID)
-		if err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-
-		if err := tx.Commit(ctx); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		committed = true
-
-		resp.SyntheticCalcuttaID = &syntheticCalcuttaID
-		resp.CalcuttaSnapshotID = &snapshotID
-	}
-
+	resp := createStrategyGenerationRunResponse{StrategyGenerationRunID: created.RunID, RunKey: created.RunKey, SyntheticCalcuttaID: created.SyntheticCalcuttaID, CalcuttaSnapshotID: created.CalcuttaSnapshotID}
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -339,56 +210,31 @@ func (s *Server) listStrategyGenerationRunsHandler(w http.ResponseWriter, r *htt
 		offset = 0
 	}
 
-	rows, err := s.pool.Query(r.Context(), `
-		SELECT
-			id::text,
-			run_key,
-			name,
-			calcutta_id::text,
-			simulated_tournament_id::text,
-			purpose,
-			returns_model_key,
-			investment_model_key,
-			optimizer_key,
-			created_at::text
-		FROM derived.strategy_generation_runs
-		WHERE deleted_at IS NULL
-			AND ($1::uuid IS NULL OR calcutta_id = $1::uuid)
-		ORDER BY created_at DESC
-		LIMIT $2::int
-		OFFSET $3::int
-	`, nullUUIDParam(calcuttaID), limit, offset)
+	var calcuttaIDPtr *string
+	if calcuttaID != "" {
+		v := calcuttaID
+		calcuttaIDPtr = &v
+	}
+	runs, err := s.app.StrategyRuns.ListRuns(r.Context(), calcuttaIDPtr, limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	defer rows.Close()
-
-	items := make([]strategyGenerationRunListItem, 0)
-	for rows.Next() {
-		var it strategyGenerationRunListItem
-		if err := rows.Scan(
-			&it.ID,
-			&it.RunKey,
-			&it.Name,
-			&it.CalcuttaID,
-			&it.SimulatedTournamentID,
-			&it.Purpose,
-			&it.ReturnsModelKey,
-			&it.InvestmentModelKey,
-			&it.OptimizerKey,
-			&it.CreatedAt,
-		); err != nil {
-			writeErrorFromErr(w, r, err)
-			return
-		}
-		items = append(items, it)
+	items := make([]strategyGenerationRunListItem, 0, len(runs))
+	for _, it := range runs {
+		items = append(items, strategyGenerationRunListItem{
+			ID:                    it.ID,
+			RunKey:                it.RunKey,
+			Name:                  it.Name,
+			CalcuttaID:            it.CalcuttaID,
+			SimulatedTournamentID: it.SimulatedTournamentID,
+			Purpose:               it.Purpose,
+			ReturnsModelKey:       it.ReturnsModelKey,
+			InvestmentModelKey:    it.InvestmentModelKey,
+			OptimizerKey:          it.OptimizerKey,
+			CreatedAt:             it.CreatedAt,
+		})
 	}
-	if err := rows.Err(); err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
 	writeJSON(w, http.StatusOK, listStrategyGenerationRunsResponse{Items: items})
 }
 
@@ -404,42 +250,25 @@ func (s *Server) getStrategyGenerationRunHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var it strategyGenerationRunListItem
-	if err := s.pool.QueryRow(r.Context(), `
-		SELECT
-			id::text,
-			run_key,
-			name,
-			calcutta_id::text,
-			simulated_tournament_id::text,
-			purpose,
-			returns_model_key,
-			investment_model_key,
-			optimizer_key,
-			created_at::text
-		FROM derived.strategy_generation_runs
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, id).Scan(
-		&it.ID,
-		&it.RunKey,
-		&it.Name,
-		&it.CalcuttaID,
-		&it.SimulatedTournamentID,
-		&it.Purpose,
-		&it.ReturnsModelKey,
-		&it.InvestmentModelKey,
-		&it.OptimizerKey,
-		&it.CreatedAt,
-	); err != nil {
-		if err == pgx.ErrNoRows {
+	it, err := s.app.StrategyRuns.GetRun(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, strategy_runs.ErrEntryRunNotFound) || errors.Is(err, strategy_runs.ErrStrategyGenerationRunNotFound) {
 			writeError(w, r, http.StatusNotFound, "not_found", "Strategy generation run not found", "id")
 			return
 		}
 		writeErrorFromErr(w, r, err)
 		return
 	}
-
-	writeJSON(w, http.StatusOK, it)
+	writeJSON(w, http.StatusOK, strategyGenerationRunListItem{
+		ID:                    it.ID,
+		RunKey:                it.RunKey,
+		Name:                  it.Name,
+		CalcuttaID:            it.CalcuttaID,
+		SimulatedTournamentID: it.SimulatedTournamentID,
+		Purpose:               it.Purpose,
+		ReturnsModelKey:       it.ReturnsModelKey,
+		InvestmentModelKey:    it.InvestmentModelKey,
+		OptimizerKey:          it.OptimizerKey,
+		CreatedAt:             it.CreatedAt,
+	})
 }
