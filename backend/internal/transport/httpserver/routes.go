@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/labcandidates"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/mlanalytics"
 	"github.com/gorilla/mux"
 )
@@ -71,11 +72,21 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	s.registerEntryRunRoutes(r)
 	s.registerEntryArtifactRoutes(r)
 	s.registerStrategyGenerationRunRoutes(r)
-	s.registerLabCandidatesRoutes(r)
+
+	labHandler := labcandidates.NewHandlerWithAuthUserID(s.app, authUserID)
+	labcandidates.RegisterRoutes(r, labcandidates.Handlers{
+		ListCandidates:      s.requirePermission("analytics.suites.read", labHandler.HandleListLabCandidates),
+		CreateCandidates:    s.requirePermission("analytics.suites.write", labHandler.HandleCreateLabCandidates),
+		GetCandidateDetails: s.requirePermission("analytics.suites.read", labHandler.HandleGetLabCandidateDetail),
+		DeleteCandidate:     s.requirePermission("analytics.suites.write", labHandler.HandleDeleteLabCandidate),
+	})
+
 	s.registerModelCatalogRoutes(r)
 	s.registerSyntheticCalcuttaCohortRoutes(r)
 	s.registerSyntheticCalcuttaRoutes(r)
 	s.registerSyntheticEntryRoutes(r)
+	s.registerSimulatedCalcuttaRoutes(r)
+	s.registerSimulatedEntryRoutes(r)
 	s.registerCohortSimulationRoutes(r)
 	s.registerCohortSimulationBatchRoutes(r)
 	s.registerAnalyticsRoutes(r)

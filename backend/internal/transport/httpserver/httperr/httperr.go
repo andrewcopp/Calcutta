@@ -60,6 +60,12 @@ func WriteFromErr(w http.ResponseWriter, r *http.Request, err error, authUserID 
 		return
 	}
 
+	var appValidationErr *apperrors.ValidationError
+	if errors.As(err, &appValidationErr) {
+		Write(w, r, http.StatusBadRequest, "validation_error", appValidationErr.Message, appValidationErr.Field)
+		return
+	}
+
 	var invalidArgErr *apperrors.InvalidArgumentError
 	if errors.As(err, &invalidArgErr) {
 		Write(w, r, http.StatusBadRequest, "invalid_argument", invalidArgErr.Error(), invalidArgErr.Field)

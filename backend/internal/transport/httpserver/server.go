@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
 	appbootstrap "github.com/andrewcopp/Calcutta/backend/internal/app/bootstrap"
 	"github.com/andrewcopp/Calcutta/backend/internal/auth"
@@ -17,10 +18,10 @@ import (
 
 type Server struct {
 	app          *app.App
-	authRepo     *AuthRepository
-	authzRepo    *AuthorizationRepository
-	userRepo     *UserRepository
-	apiKeysRepo  *APIKeysRepository
+	authRepo     *dbadapters.AuthRepository
+	authzRepo    *dbadapters.AuthorizationRepository
+	userRepo     *dbadapters.UserRepository
+	apiKeysRepo  *dbadapters.APIKeysRepository
 	tokenManager *auth.TokenManager
 	cognitoJWT   *cognitoJWTVerifier
 	pool         *pgxpool.Pool
@@ -29,10 +30,10 @@ type Server struct {
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
-	authRepo := NewAuthRepository(pool)
-	authzRepo := NewAuthorizationRepository(pool)
-	userRepo := NewUserRepository(pool)
-	apiKeysRepo := NewAPIKeysRepository(pool)
+	authRepo := dbadapters.NewAuthRepository(pool)
+	authzRepo := dbadapters.NewAuthorizationRepository(pool)
+	userRepo := dbadapters.NewUserRepository(pool)
+	apiKeysRepo := dbadapters.NewAPIKeysRepository(pool)
 
 	a, tm, err := appbootstrap.NewApp(pool, cfg, authRepo, authzRepo)
 	if err != nil {

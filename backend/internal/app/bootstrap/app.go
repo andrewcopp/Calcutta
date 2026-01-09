@@ -11,6 +11,7 @@ import (
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/lab_candidates"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/ml_analytics"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/model_catalogs"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
@@ -56,9 +57,13 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	mlAnalyticsRepo := dbadapters.NewMLAnalyticsRepository(pool)
 	mlAnalyticsService := ml_analytics.New(mlAnalyticsRepo)
 
+	labCandidatesRepo := dbadapters.NewLabCandidatesRepository(pool)
+	labCandidatesService := lab_candidates.New(labCandidatesRepo)
+
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService
 	a.Analytics = analyticsService
+	a.LabCandidates = labCandidatesService
 	a.MLAnalytics = mlAnalyticsService
 	a.ModelCatalogs = model_catalogs.New()
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
