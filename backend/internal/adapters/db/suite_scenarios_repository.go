@@ -336,6 +336,10 @@ func (r *SuiteScenariosRepository) CreateSimulatedCalcuttaFromCalcutta(ctx conte
 		return "", 0, err
 	}
 
+	type entryRow struct {
+		id   string
+		name string
+	}
 	entryRows, err := tx.Query(ctx, `
 		SELECT id::text, name
 		FROM core.entries
@@ -346,16 +350,24 @@ func (r *SuiteScenariosRepository) CreateSimulatedCalcuttaFromCalcutta(ctx conte
 	if err != nil {
 		return "", 0, err
 	}
-	defer entryRows.Close()
 
-	copiedEntries := 0
+	entries := make([]entryRow, 0)
 	for entryRows.Next() {
-		var entryID string
-		var entryName string
-		if err := entryRows.Scan(&entryID, &entryName); err != nil {
+		var er entryRow
+		if err := entryRows.Scan(&er.id, &er.name); err != nil {
+			entryRows.Close()
 			return "", 0, err
 		}
+		entries = append(entries, er)
+	}
+	if err := entryRows.Err(); err != nil {
+		entryRows.Close()
+		return "", 0, err
+	}
+	entryRows.Close()
 
+	copiedEntries := 0
+	for _, e := range entries {
 		var simulatedEntryID string
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO derived.simulated_entries (
@@ -367,50 +379,30 @@ func (r *SuiteScenariosRepository) CreateSimulatedCalcuttaFromCalcutta(ctx conte
 			)
 			VALUES ($1::uuid, $2, 'from_real_entry', $3::uuid, NULL)
 			RETURNING id::text
-		`, createdID, strings.TrimSpace(entryName), entryID).Scan(&simulatedEntryID); err != nil {
+		`, createdID, strings.TrimSpace(e.name), e.id).Scan(&simulatedEntryID); err != nil {
 			return "", 0, err
 		}
 
-		teamRows, err := tx.Query(ctx, `
-			SELECT team_id::text, bid_points::int
-			FROM core.entry_teams
-			WHERE entry_id = $1::uuid
-				AND deleted_at IS NULL
-			ORDER BY bid_points DESC
-		`, entryID)
-		if err != nil {
+		// Bulk insert entry teams; de-dupe team_id by taking the max bid_points.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO derived.simulated_entry_teams (
+				simulated_entry_id,
+				team_id,
+				bid_points
+			)
+			SELECT
+				$1::uuid,
+				et.team_id,
+				MAX(et.bid_points)::int
+			FROM core.entry_teams et
+			WHERE et.entry_id = $2::uuid
+				AND et.deleted_at IS NULL
+			GROUP BY et.team_id
+		`, simulatedEntryID, e.id); err != nil {
 			return "", 0, err
 		}
-
-		for teamRows.Next() {
-			var teamID string
-			var bidPoints int
-			if err := teamRows.Scan(&teamID, &bidPoints); err != nil {
-				teamRows.Close()
-				return "", 0, err
-			}
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO derived.simulated_entry_teams (
-					simulated_entry_id,
-					team_id,
-					bid_points
-				)
-				VALUES ($1::uuid, $2::uuid, $3::int)
-			`, simulatedEntryID, teamID, bidPoints); err != nil {
-				teamRows.Close()
-				return "", 0, err
-			}
-		}
-		if err := teamRows.Err(); err != nil {
-			teamRows.Close()
-			return "", 0, err
-		}
-		teamRows.Close()
 
 		copiedEntries++
-	}
-	if err := entryRows.Err(); err != nil {
-		return "", 0, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {

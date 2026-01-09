@@ -1,7 +1,7 @@
 # WS-A: Sandbox model — SimulatedCalcuttas + SimulatedEntries (v1)
 
 ## Status
-Draft
+Implemented (v1)
 
 ## Goal
 Replace the current Sandbox persistence model (synthetic calcuttas + snapshots + candidate attachments) with a clean, self-contained Sandbox model:
@@ -158,6 +158,10 @@ Contract:
 - Sets `base_calcutta_id = calcuttaId`.
 - Copied entries are normal `simulated_entries` and remain editable.
 
+Implementation notes:
+- Copying bids from real entries de-dupes duplicate `(entry_id, team_id)` rows by taking `MAX(bid_points)` per `team_id`.
+- Copy implementation avoids nested queries while streaming `Rows` on the same connection (prevents pgx `conn busy`).
+
 ## Read/list simulated calcuttas
 - `GET /api/simulated-calcuttas` (paginated)
 - `GET /api/simulated-calcuttas/{id}`
@@ -173,12 +177,14 @@ Two acceptable designs (pick one during implementation):
 - **Option 2**: granular CRUD endpoints for payouts/rules
 
 v1 recommendation: **full replace** (simpler, fewer partial states).
+ 
+Implemented (v1): **Option 1**.
 
 ## SimulatedEntries
 - `GET /api/simulated-calcuttas/{id}/entries`
 - `POST /api/simulated-calcuttas/{id}/entries` (manual create)
-- `PATCH /api/simulated-calcuttas/{id}/entries/{entryId}` (rename / replace teams)
-- `DELETE /api/simulated-calcuttas/{id}/entries/{entryId}`
+- `PATCH /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}` (rename / replace teams)
+- `DELETE /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}`
 
 ### Import Candidate as SimulatedEntry
 `POST /api/simulated-calcuttas/{id}/entries/import-candidate`
@@ -270,22 +276,22 @@ This workstream is designed to be parallelizable.
 
 # Open tasks
 - [ ] Confirm whether scoring rules/payouts are editable after evaluations exist; if yes, decide on revisioning/versioning approach.
-- [ ] Add `derived.simulated_*` schema (tables + indexes + constraints).
-- [ ] Implement `POST /api/simulated-calcuttas` (create from scratch: rules+payouts only).
-- [ ] Implement `POST /api/simulated-calcuttas/from-calcutta` (instantiate from real calcutta).
-- [ ] Implement read endpoints:
-  - [ ] `GET /api/simulated-calcuttas`
-  - [ ] `GET /api/simulated-calcuttas/{id}`
-- [ ] Implement simulated calcutta updates:
-  - [ ] `PATCH /api/simulated-calcuttas/{id}` (name/description/metadata/highlight)
-  - [ ] Rules/payouts update endpoint (choose full replace vs granular CRUD; v1 recommends full replace)
-- [ ] Implement SimulatedEntry endpoints:
-  - [ ] `GET /api/simulated-calcuttas/{id}/entries`
-  - [ ] `POST /api/simulated-calcuttas/{id}/entries` (manual create)
-  - [ ] `PATCH /api/simulated-calcuttas/{id}/entries/{entryId}` (rename/replace teams)
-  - [ ] `DELETE /api/simulated-calcuttas/{id}/entries/{entryId}`
-- [ ] Implement Candidate import endpoint:
-  - [ ] `POST /api/simulated-calcuttas/{id}/entries/import-candidate`
+- [x] Add `derived.simulated_*` schema (tables + indexes + constraints).
+- [x] Implement `POST /api/simulated-calcuttas` (create from scratch: rules+payouts only).
+- [x] Implement `POST /api/simulated-calcuttas/from-calcutta` (instantiate from real calcutta).
+- [x] Implement read endpoints:
+  - [x] `GET /api/simulated-calcuttas`
+  - [x] `GET /api/simulated-calcuttas/{id}`
+- [x] Implement simulated calcutta updates:
+  - [x] `PATCH /api/simulated-calcuttas/{id}` (name/description/metadata/highlight)
+  - [x] Rules/payouts update endpoint (full replace: `PUT /api/simulated-calcuttas/{id}/rules`)
+- [x] Implement SimulatedEntry endpoints:
+  - [x] `GET /api/simulated-calcuttas/{id}/entries`
+  - [x] `POST /api/simulated-calcuttas/{id}/entries` (manual create)
+  - [x] `PATCH /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}` (rename/replace teams)
+  - [x] `DELETE /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}`
+- [x] Implement Candidate import endpoint:
+  - [x] `POST /api/simulated-calcuttas/{id}/entries/import-candidate`
 - [ ] Add invariant test/assertion: SimulatedCalcutta read endpoints must not write (no implicit repair/create).
 - [ ] Update simulation creation + worker read paths to use `derived.simulated_*` as the source of truth (Phase A2).
 - [ ] Implement one-way backfill of existing synthetic/snapshot scenarios into simulated calcuttas (Phase A3).
