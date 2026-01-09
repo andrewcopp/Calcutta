@@ -37,7 +37,7 @@ import { SimulationRunDetailPage } from './pages/SimulationRunDetailPage';
 import { SimulationRunEntryDetailPage } from './pages/SimulationRunEntryDetailPage';
 import { EntryRunDetailPage } from './pages/EntryRunDetailPage';
 import { EntryArtifactDetailPage } from './pages/EntryArtifactDetailPage';
-import { SyntheticCalcuttaDetailPage } from './pages/SyntheticCalcuttaDetailPage';
+import { SimulatedCalcuttaDetailPage } from './pages/SimulatedCalcuttaDetailPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 
@@ -61,6 +61,12 @@ const SandboxEvaluationEntryRedirect: React.FC = () => {
       replace
     />
   );
+};
+
+const SandboxSyntheticCalcuttaRedirect: React.FC = () => {
+  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/sandbox/simulated-calcuttas/${encodeURIComponent(id || '')}${location.search || ''}`} replace />;
 };
 
 const AppLayout: React.FC = () => {
@@ -97,7 +103,8 @@ const AppLayout: React.FC = () => {
         <Route path="/sandbox" element={<Navigate to="/sandbox/cohorts" replace />} />
         <Route path="/sandbox/cohorts" element={<SandboxCohortsListPage />} />
         <Route path="/sandbox/cohorts/:cohortId" element={<SandboxCohortDetailPage />} />
-        <Route path="/sandbox/synthetic-calcuttas/:id" element={<SyntheticCalcuttaDetailPage />} />
+        <Route path="/sandbox/synthetic-calcuttas/:id" element={<SandboxSyntheticCalcuttaRedirect />} />
+        <Route path="/sandbox/simulated-calcuttas/:id" element={<SimulatedCalcuttaDetailPage />} />
         <Route path="/sandbox/simulation-runs/:id" element={<SimulationRunDetailPage />} />
         <Route path="/sandbox/simulation-runs/:id/entries/:snapshotEntryId" element={<SimulationRunEntryDetailPage />} />
         <Route path="/sandbox/evaluations/:id" element={<SandboxEvaluationRedirect />} />

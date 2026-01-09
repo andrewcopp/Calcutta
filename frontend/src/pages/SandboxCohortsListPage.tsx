@@ -54,7 +54,7 @@ export function SandboxCohortsListPage() {
 
   return (
     <PageContainer>
-      <PageHeader title="Sandbox" subtitle="Cohorts (collections of synthetic calcuttas)" />
+      <PageHeader title="Sandbox" subtitle="Cohorts (collections of simulated calcuttas)" />
 
       <Card>
         <div className="flex items-center justify-between gap-3 mb-4">

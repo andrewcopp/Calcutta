@@ -11,7 +11,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
 import { cohortsService } from '../services/cohortsService';
-import { syntheticCalcuttasService, type SyntheticCalcuttaListItem } from '../services/syntheticCalcuttasService';
+import { simulatedCalcuttasService, type SimulatedCalcuttaListItem } from '../services/simulatedCalcuttasService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxCohortDetailPage() {
@@ -23,14 +23,6 @@ export function SandboxCohortDetailPage() {
     queryKey: ['calcuttas', 'all'],
     queryFn: calcuttaService.getAllCalcuttas,
   });
-
-  const calcuttaNameById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of calcuttas) {
-      m.set(c.id, c.name);
-    }
-    return m;
-  }, [calcuttas]);
 
   const showError = (err: unknown) => {
     if (err instanceof ApiError) {
@@ -49,11 +41,6 @@ export function SandboxCohortDetailPage() {
     return d.toLocaleString();
   };
 
-  const formatFloat = (v: number | null | undefined, digits: number) => {
-    if (v == null || Number.isNaN(v)) return '—';
-    return v.toFixed(digits);
-  };
-
   const seasonFromCalcuttaName = (name: string | null | undefined) => {
     if (!name) return '—';
     const m = name.match(/\b(19|20)\d{2}\b/);
@@ -61,6 +48,11 @@ export function SandboxCohortDetailPage() {
   };
 
   const effectiveCohortId = cohortId || '';
+
+  const effectiveSourceCalcuttaId = useMemo(() => {
+    if (sourceCalcuttaId) return sourceCalcuttaId;
+    return calcuttas.length > 0 ? calcuttas[0].id : '';
+  }, [calcuttas, sourceCalcuttaId]);
 
   const cohortQuery = useQuery({
     queryKey: ['cohorts', 'get', effectiveCohortId],
@@ -70,31 +62,32 @@ export function SandboxCohortDetailPage() {
 
   const cohortTitle = cohortQuery.data?.name ? `${cohortQuery.data.name}` : effectiveCohortId ? `Cohort ${effectiveCohortId}` : 'Cohort';
 
-  const syntheticCalcuttasQuery = useQuery({
-    queryKey: ['synthetic-calcuttas', 'list', effectiveCohortId],
-    queryFn: () => syntheticCalcuttasService.list({ cohortId: effectiveCohortId, limit: 200, offset: 0 }),
-    enabled: Boolean(effectiveCohortId),
+  const simulatedCalcuttasQuery = useQuery({
+    queryKey: ['simulated-calcuttas', 'list', effectiveCohortId, effectiveSourceCalcuttaId],
+    queryFn: async () => {
+      // Simulated calcuttas are tournament-scoped. We list by tournament derived from the selected source calcutta.
+      const src = calcuttas.find((c) => c.id === effectiveSourceCalcuttaId);
+      const tournamentId = src?.tournamentId || '';
+      if (!tournamentId) return { items: [] as SimulatedCalcuttaListItem[] };
+      return simulatedCalcuttasService.list({ tournamentId, limit: 200, offset: 0 });
+    },
+    enabled: Boolean(effectiveCohortId) && Boolean(effectiveSourceCalcuttaId) && calcuttas.length > 0,
   });
 
-  const syntheticCalcuttas: SyntheticCalcuttaListItem[] = useMemo(
-    () => syntheticCalcuttasQuery.data?.items ?? [],
-    [syntheticCalcuttasQuery.data?.items]
+  const simulatedCalcuttas: SimulatedCalcuttaListItem[] = useMemo(
+    () => simulatedCalcuttasQuery.data?.items ?? [],
+    [simulatedCalcuttasQuery.data?.items]
   );
 
-  const effectiveSourceCalcuttaId = useMemo(() => {
-    if (sourceCalcuttaId) return sourceCalcuttaId;
-    return calcuttas.length > 0 ? calcuttas[0].id : '';
-  }, [calcuttas, sourceCalcuttaId]);
-
-  const createSyntheticCalcuttaMutation = useMutation({
+  const createSimulatedCalcuttaMutation = useMutation({
     mutationFn: async () => {
       if (!effectiveCohortId) throw new Error('Missing cohort ID');
       const src = effectiveSourceCalcuttaId;
       if (!src) throw new Error('Missing source calcutta');
-      return syntheticCalcuttasService.create({ cohortId: effectiveCohortId, sourceCalcuttaId: src });
+      return simulatedCalcuttasService.createFromCalcutta({ calcuttaId: src, startingStateKey: 'post_first_four', metadata: {} });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['synthetic-calcuttas', 'list', effectiveCohortId] });
+      await queryClient.invalidateQueries({ queryKey: ['simulated-calcuttas', 'list', effectiveCohortId, effectiveSourceCalcuttaId] });
     },
   });
 
@@ -153,7 +146,7 @@ export function SandboxCohortDetailPage() {
 
           <Card>
             <div className="flex items-end justify-between gap-4 mb-4">
-              <h2 className="text-xl font-semibold">Synthetic Calcuttas</h2>
+              <h2 className="text-xl font-semibold">Simulated Calcuttas</h2>
 
               <div className="flex items-center gap-3">
                 <div className="text-sm text-gray-500 whitespace-nowrap">Source Calcutta</div>
@@ -166,76 +159,61 @@ export function SandboxCohortDetailPage() {
                 </Select>
                 <Button
                   size="sm"
-                  disabled={createSyntheticCalcuttaMutation.isPending || !effectiveCohortId || !effectiveSourceCalcuttaId}
-                  onClick={() => createSyntheticCalcuttaMutation.mutate()}
+                  disabled={createSimulatedCalcuttaMutation.isPending || !effectiveCohortId || !effectiveSourceCalcuttaId}
+                  onClick={() => createSimulatedCalcuttaMutation.mutate()}
                 >
                   Create
                 </Button>
               </div>
             </div>
 
-            {syntheticCalcuttasQuery.isLoading ? <LoadingState label="Loading synthetic calcuttas..." layout="inline" /> : null}
-            {syntheticCalcuttasQuery.isError ? (
+            {simulatedCalcuttasQuery.isLoading ? <LoadingState label="Loading simulated calcuttas..." layout="inline" /> : null}
+
+            {simulatedCalcuttasQuery.isError ? (
               <Alert variant="error" className="mt-3">
-                <div className="font-semibold mb-1">Failed to load synthetic calcuttas</div>
-                <div className="mb-3">{showError(syntheticCalcuttasQuery.error)}</div>
-                <Button size="sm" onClick={() => syntheticCalcuttasQuery.refetch()}>
+                <div className="font-semibold mb-1">Failed to load simulated calcuttas</div>
+                <div className="mb-3">{showError(simulatedCalcuttasQuery.error)}</div>
+                <Button size="sm" onClick={() => simulatedCalcuttasQuery.refetch()}>
                   Retry
                 </Button>
               </Alert>
             ) : null}
 
-            {!syntheticCalcuttasQuery.isLoading && !syntheticCalcuttasQuery.isError && syntheticCalcuttas.length === 0 ? (
+            {!simulatedCalcuttasQuery.isLoading && !simulatedCalcuttasQuery.isError && simulatedCalcuttas.length === 0 ? (
               <Alert variant="info" className="mt-3">
-                No synthetic calcuttas found for this cohort.
+                No simulated calcuttas found for this tournament.
               </Alert>
             ) : null}
 
-            {createSyntheticCalcuttaMutation.isError ? (
+            {createSimulatedCalcuttaMutation.isError ? (
               <Alert variant="error" className="mt-3">
-                {showError(createSyntheticCalcuttaMutation.error)}
+                {showError(createSimulatedCalcuttaMutation.error)}
               </Alert>
             ) : null}
 
-            {!syntheticCalcuttasQuery.isLoading && !syntheticCalcuttasQuery.isError && syntheticCalcuttas.length > 0 ? (
+            {!simulatedCalcuttasQuery.isLoading && !simulatedCalcuttasQuery.isError && simulatedCalcuttas.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Highlighted Entry</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our Rank</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our Mean</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our pTop1</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Our pITM</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tournament</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting state</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Open</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {syntheticCalcuttas.map((sc) => {
-                      const calcuttaName = calcuttaNameById.get(sc.calcutta_id) || sc.calcutta_id;
-                      const highlighted = sc.focus_entry_name || '—';
-                      const href = `/sandbox/synthetic-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
+                    {simulatedCalcuttas.map((sc) => {
+                      const href = `/sandbox/simulated-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
                       return (
                         <tr key={sc.id} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 text-sm text-gray-900" title={calcuttaName}>
-                            <div className="font-medium">{seasonFromCalcuttaName(calcuttaName)}</div>
-                            <div className="text-xs text-gray-600">{calcuttaName}</div>
+                          <td className="px-3 py-2 text-sm text-gray-900" title={sc.name}>
+                            <div className="font-medium">{sc.name}</div>
+                            {sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700">{highlighted}</td>
-                          <td className="px-3 py-2 text-sm text-gray-700">
-                            {sc.latest_simulation_status === 'succeeded' ? sc.our_rank ?? '—' : sc.latest_simulation_status || '—'}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-700">
-                            {sc.latest_simulation_status === 'succeeded' ? formatFloat(sc.our_mean_normalized_payout, 4) : '—'}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-700">
-                            {sc.latest_simulation_status === 'succeeded' ? formatFloat(sc.our_p_top1, 4) : '—'}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-700">
-                            {sc.latest_simulation_status === 'succeeded' ? formatFloat(sc.our_p_in_money, 4) : '—'}
-                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-700">{sc.tournament_id.slice(0, 8)}</td>
+                          <td className="px-3 py-2 text-sm text-gray-700">{sc.starting_state_key}</td>
                           <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(sc.created_at)}</td>
                           <td className="px-3 py-2 text-sm text-right">
                             <Link to={href} className="text-blue-600 hover:text-blue-800">

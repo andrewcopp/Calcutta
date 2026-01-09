@@ -15,6 +15,9 @@ This workstream is specifically about the **Sandbox data model + API**.
 - Worker decomposition or run schema changes (see WS-C), beyond updating references.
 - transport/httpserver package cleanup (tracked separately).
 
+Note:
+- Simulation runs can now be driven directly from a `simulated_calcutta_id` without requiring a lab `game_outcome_run_id`.
+
 ---
 
 # Core definitions
@@ -186,6 +189,26 @@ Implemented (v1): **Option 1**.
 - `PATCH /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}` (rename / replace teams)
 - `DELETE /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}`
 
+---
+
+## Cohort simulations (evaluate-only)
+Simulations are created under a Cohort and may target either a real Calcutta or a SimulatedCalcutta.
+
+`POST /api/cohorts/{cohortId}/simulations`
+
+Request (relevant fields):
+- `calcuttaId?: string`
+- `simulatedCalcuttaId?: string`
+- `gameOutcomeRunId?: string` (optional; legacy/lab compatibility)
+- `gameOutcomeSpec?: { kind: 'kenpom', sigma: number }` (preferred for sandbox)
+- `nSims: number`
+- `seed: number`
+- `startingStateKey: 'post_first_four' | 'current'`
+
+Contract:
+- If `gameOutcomeSpec` is provided, simulations generate matchup probabilities on-the-fly using KenPom net ratings and the provided sigma.
+- If `gameOutcomeSpec` is omitted, the system falls back to legacy behavior using `gameOutcomeRunId` (or latest run for the tournament).
+
 ### Import Candidate as SimulatedEntry
 `POST /api/simulated-calcuttas/{id}/entries/import-candidate`
 
@@ -231,20 +254,26 @@ Acceptance:
 ## Phase A2 — Simulation integration uses `simulated_calcuttas`
 - Update new simulation creation flow to point at `simulated_calcutta_id`.
 - Worker reads rules/payouts/entries from simulated tables.
+- Sandbox simulations may omit `game_outcome_run_id` by providing a sandbox-owned `gameOutcomeSpec`.
+- Persist the sandbox spec on `derived.simulation_runs.game_outcome_spec_json` and include it in the run job trigger payload.
 
 Acceptance:
 - Simulations can run against simulated calcuttas without referencing synthetic/snapshot tables.
+- Simulations can run without a lab `game_outcome_run_id`.
 
 ## Phase A3 — Backfill legacy data (one-way)
-- Backfill existing synthetic/snapshot scenarios into new simulated calcuttas.
-- Provide a mapping table if needed during cutover (e.g., `derived.legacy_simulated_id_map`), but do not keep it long-term.
+Skipped.
+
+Rationale:
+- Sandbox simulations and scenarios are ephemeral; we do not need to preserve historical synthetic/snapshot scenarios.
 
 Acceptance:
-- Existing Sandbox scenarios appear as simulated calcuttas.
+- No backfill is required.
 
 ## Phase A4 — Cutover + freeze legacy writes
 - UI uses only simulated endpoints.
 - Legacy synthetic/snapshot endpoints become read-only or return 410.
+- Any remaining write paths to legacy synthetic/snapshot tables are blocked.
 
 Acceptance:
 - No new writes happen to synthetic/snapshot tables.
@@ -293,7 +322,10 @@ This workstream is designed to be parallelizable.
 - [x] Implement Candidate import endpoint:
   - [x] `POST /api/simulated-calcuttas/{id}/entries/import-candidate`
 - [ ] Add invariant test/assertion: SimulatedCalcutta read endpoints must not write (no implicit repair/create).
-- [ ] Update simulation creation + worker read paths to use `derived.simulated_*` as the source of truth (Phase A2).
-- [ ] Implement one-way backfill of existing synthetic/snapshot scenarios into simulated calcuttas (Phase A3).
-- [ ] Cut over UI and freeze legacy writes to synthetic/snapshot tables (Phase A4).
-- [ ] Drop legacy tables and remove legacy endpoints/code paths (Phase A5).
+- [x] Update simulation creation + worker read paths to use `derived.simulated_*` as the source of truth (Phase A2).
+- [x] Allow sandbox simulations to omit `game_outcome_run_id` by using sandbox-owned `gameOutcomeSpec`.
+- [ ] Phase A4: Cut over UI to simulated endpoints only.
+- [ ] Phase A4: Make legacy synthetic/snapshot endpoints read-only or return 410.
+- [ ] Phase A4: Remove/disable any remaining writes to legacy synthetic/snapshot tables.
+- [ ] Phase A5: Drop legacy synthetic/snapshot tables.
+- [ ] Phase A5: Remove legacy endpoints and any production code references.
