@@ -3,21 +3,23 @@ package dtos
 import (
 	"strings"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	"github.com/google/uuid"
 )
 
 type CreateSimulationRunRequest struct {
-	CalcuttaID           string  `json:"calcuttaId"`
-	SimulatedCalcuttaID  *string `json:"simulatedCalcuttaId"`
-	CohortID             *string `json:"cohortId"`
-	SimulationRunBatchID *string `json:"simulationRunBatchId"`
-	OptimizerKey         *string `json:"optimizerKey"`
-	GameOutcomeRunID     *string `json:"gameOutcomeRunId"`
-	MarketShareRunID     *string `json:"marketShareRunId"`
-	NSims                int     `json:"nSims"`
-	Seed                 int     `json:"seed"`
-	StartingStateKey     string  `json:"startingStateKey"`
-	ExcludedEntryName    *string `json:"excludedEntryName"`
+	CalcuttaID           string                         `json:"calcuttaId"`
+	SimulatedCalcuttaID  *string                        `json:"simulatedCalcuttaId"`
+	CohortID             *string                        `json:"cohortId"`
+	SimulationRunBatchID *string                        `json:"simulationRunBatchId"`
+	OptimizerKey         *string                        `json:"optimizerKey"`
+	GameOutcomeRunID     *string                        `json:"gameOutcomeRunId"`
+	GameOutcomeSpec      *simulation_game_outcomes.Spec `json:"gameOutcomeSpec"`
+	MarketShareRunID     *string                        `json:"marketShareRunId"`
+	NSims                int                            `json:"nSims"`
+	Seed                 int                            `json:"seed"`
+	StartingStateKey     string                         `json:"startingStateKey"`
+	ExcludedEntryName    *string                        `json:"excludedEntryName"`
 }
 
 func (r *CreateSimulationRunRequest) Validate() error {
@@ -90,6 +92,13 @@ func (r *CreateSimulationRunRequest) Validate() error {
 		}
 	}
 
+	if r.GameOutcomeSpec != nil {
+		r.GameOutcomeSpec.Normalize()
+		if err := r.GameOutcomeSpec.Validate(); err != nil {
+			return ErrFieldInvalid("gameOutcomeSpec", err.Error())
+		}
+	}
+
 	if r.MarketShareRunID != nil {
 		trimmed := strings.TrimSpace(*r.MarketShareRunID)
 		if trimmed == "" {
@@ -99,12 +108,6 @@ func (r *CreateSimulationRunRequest) Validate() error {
 				return ErrFieldInvalid("marketShareRunId", "must be a valid UUID")
 			}
 			r.MarketShareRunID = &trimmed
-		}
-	}
-
-	if r.SimulationRunBatchID == nil {
-		if r.GameOutcomeRunID == nil {
-			return ErrFieldRequired("gameOutcomeRunId")
 		}
 	}
 

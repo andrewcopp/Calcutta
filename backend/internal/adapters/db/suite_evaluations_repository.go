@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -37,7 +38,7 @@ func (r *SuiteEvaluationsRepository) ListEvaluations(ctx context.Context, calcut
 			r.total_simulations,
 			COALESCE(r.calcutta_id::text, '') AS calcutta_id,
 			r.simulated_calcutta_id::text,
-			r.game_outcome_run_id,
+			r.game_outcome_run_id::text,
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
 			r.calcutta_evaluation_run_id,
@@ -137,7 +138,7 @@ func (r *SuiteEvaluationsRepository) GetEvaluation(ctx context.Context, id strin
 			r.total_simulations,
 			COALESCE(r.calcutta_id::text, '') AS calcutta_id,
 			r.simulated_calcutta_id::text,
-			r.game_outcome_run_id,
+			r.game_outcome_run_id::text,
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
 			r.calcutta_evaluation_run_id,
@@ -604,6 +605,14 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 	if p.GameOutcomeRunID != nil {
 		goRun = *p.GameOutcomeRunID
 	}
+	var goSpec any
+	if p.GameOutcomeSpec != nil {
+		b, err := json.Marshal(p.GameOutcomeSpec)
+		if err != nil {
+			return nil, err
+		}
+		goSpec = b
+	}
 	var msRun any
 	if p.MarketShareRunID != nil {
 		msRun = *p.MarketShareRunID
@@ -633,6 +642,7 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 			calcutta_id,
 			simulated_calcutta_id,
 			game_outcome_run_id,
+			game_outcome_spec_json,
 			market_share_run_id,
 			optimizer_key,
 			n_sims,
@@ -640,7 +650,7 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 			starting_state_key,
 			excluded_entry_name
 		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7::uuid, $8, $9::int, $10::int, $11, $12::text)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7::jsonb, $8::uuid, $9, $10::int, $11::int, $12, $13::text)
 		RETURNING id, status
 	`
 
@@ -653,7 +663,7 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 		synth = syntheticCalcuttaID
 	}
 
-	if err := r.pool.QueryRow(ctx, q, execID, synth, p.CohortID, calcutta, simulatedCalcutta, goRun, msRun, p.OptimizerKey, nSims, seed, p.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	if err := r.pool.QueryRow(ctx, q, execID, synth, p.CohortID, calcutta, simulatedCalcutta, goRun, goSpec, msRun, p.OptimizerKey, nSims, seed, p.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		return nil, err
 	}
 	return &suite_evaluations.CreateSimulationResult{ID: evalID, Status: status}, nil

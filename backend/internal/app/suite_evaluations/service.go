@@ -6,6 +6,7 @@ import (
 	"time"
 
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 )
 
@@ -101,6 +102,7 @@ type CreateSimulationParams struct {
 	CalcuttaID           string
 	SimulatedCalcuttaID  *string
 	GameOutcomeRunID     *string
+	GameOutcomeSpec      *simulation_game_outcomes.Spec
 	MarketShareRunID     *string
 	OptimizerKey         string
 	NSims                *int
@@ -194,6 +196,15 @@ func (s *Service) ListEntryPerformance(ctx context.Context, calcuttaEvaluationRu
 }
 
 func (s *Service) CreateEvaluation(ctx context.Context, p CreateSimulationParams) (*CreateSimulationResult, error) {
+	if p.GameOutcomeSpec == nil {
+		tmp := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+		tmp.Normalize()
+		p.GameOutcomeSpec = tmp
+	}
+	if err := p.GameOutcomeSpec.Validate(); err != nil {
+		return nil, err
+	}
+
 	cfg := (*SimulationBatchConfig)(nil)
 	if p.SimulationRunBatchID != nil && *p.SimulationRunBatchID != "" {
 		loaded, err := s.repo.GetSimulationBatchConfig(ctx, *p.SimulationRunBatchID)
@@ -232,35 +243,6 @@ func (s *Service) CreateEvaluation(ctx context.Context, p CreateSimulationParams
 			p.ExcludedEntryName = cfg.ExcludedEntryName
 		}
 
-		if p.GameOutcomeRunID == nil {
-			tournamentID := ""
-			if strings.TrimSpace(p.CalcuttaID) != "" {
-				loaded, err := s.repo.GetTournamentIDForCalcutta(ctx, p.CalcuttaID)
-				if err != nil {
-					return nil, err
-				}
-				tournamentID = loaded
-			} else if p.SimulatedCalcuttaID != nil && strings.TrimSpace(*p.SimulatedCalcuttaID) != "" {
-				loaded, err := s.repo.GetTournamentIDForSimulatedCalcutta(ctx, strings.TrimSpace(*p.SimulatedCalcuttaID))
-				if err != nil {
-					return nil, err
-				}
-				tournamentID = loaded
-			}
-			if strings.TrimSpace(tournamentID) == "" {
-				return nil, ErrMissingGameOutcomeRunForBatch
-			}
-			if p.GameOutcomeRunID == nil {
-				resolved, err := s.repo.GetLatestGameOutcomeRunID(ctx, tournamentID, cfg.GameOutcomesAlgID)
-				if err != nil {
-					return nil, err
-				}
-				if strings.TrimSpace(resolved) == "" {
-					return nil, ErrMissingGameOutcomeRunForBatch
-				}
-				p.GameOutcomeRunID = &resolved
-			}
-		}
 	} else {
 		if p.OptimizerKey == "" {
 			k, _ := s.repo.GetCohortOptimizerKey(ctx, p.CohortID)

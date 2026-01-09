@@ -27,9 +27,38 @@ type Options struct {
 	Workers int
 }
 
+type ProbabilityProvider interface {
+	Prob(gameID string, team1ID string, team2ID string) float64
+}
+
+type mapProbabilityProvider struct {
+	probs map[MatchupKey]float64
+}
+
+func (p mapProbabilityProvider) Prob(gameID string, team1ID string, team2ID string) float64 {
+	_ = gameID
+	if p.probs == nil {
+		return 0.5
+	}
+	if v, ok := p.probs[MatchupKey{GameID: gameID, Team1ID: team1ID, Team2ID: team2ID}]; ok {
+		return v
+	}
+	return 0.5
+}
+
 func Simulate(
 	bracket *models.BracketStructure,
 	probs map[MatchupKey]float64,
+	nSims int,
+	seed int64,
+	opts Options,
+) ([]TeamSimulationResult, error) {
+	return SimulateWithProvider(bracket, mapProbabilityProvider{probs: probs}, nSims, seed, opts)
+}
+
+func SimulateWithProvider(
+	bracket *models.BracketStructure,
+	provider ProbabilityProvider,
 	nSims int,
 	seed int64,
 	opts Options,
@@ -71,7 +100,7 @@ func Simulate(
 					prevByNext,
 					teams,
 					baseByes,
-					probs,
+					provider,
 					results,
 				); err != nil {
 					errCh <- err
@@ -186,7 +215,7 @@ func runOneSimulation(
 	prevByNext map[string]map[int]string,
 	teams []string,
 	baseByes map[string]int,
-	probs map[MatchupKey]float64,
+	provider ProbabilityProvider,
 	out []TeamSimulationResult,
 ) error {
 	if simID < 0 {
@@ -234,10 +263,8 @@ func runOneSimulation(
 		}
 
 		p1 := 0.5
-		if probs != nil {
-			if p, ok := probs[MatchupKey{GameID: g.GameID, Team1ID: team1, Team2ID: team2}]; ok {
-				p1 = p
-			}
+		if provider != nil {
+			p1 = provider.Prob(g.GameID, team1, team2)
 		}
 
 		roll := rng.Float64()

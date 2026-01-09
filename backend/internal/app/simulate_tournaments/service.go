@@ -9,6 +9,7 @@ import (
 	"time"
 
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,61 @@ import (
 
 type Service struct {
 	pool *pgxpool.Pool
+}
+
+type kenPomProvider struct {
+	spec        *simulation_game_outcomes.Spec
+	netByTeamID map[string]float64
+	overrides   map[tsim.MatchupKey]float64
+}
+
+func (p kenPomProvider) Prob(gameID string, team1ID string, team2ID string) float64 {
+	if p.overrides != nil {
+		if v, ok := p.overrides[tsim.MatchupKey{GameID: gameID, Team1ID: team1ID, Team2ID: team2ID}]; ok {
+			return v
+		}
+	}
+	if p.spec == nil {
+		return 0.5
+	}
+	n1, ok1 := p.netByTeamID[team1ID]
+	n2, ok2 := p.netByTeamID[team2ID]
+	if !ok1 || !ok2 {
+		return 0.5
+	}
+	return p.spec.WinProb(n1, n2)
+}
+
+func (s *Service) loadKenPomNetByTeamID(ctx context.Context, coreTournamentID string) (map[string]float64, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT t.id, ks.net_rtg
+		FROM core.teams t
+		LEFT JOIN core.team_kenpom_stats ks
+			ON ks.team_id = t.id
+			AND ks.deleted_at IS NULL
+		WHERE t.tournament_id = $1::uuid
+			AND t.deleted_at IS NULL
+	`, coreTournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[string]float64)
+	for rows.Next() {
+		var teamID string
+		var net *float64
+		if err := rows.Scan(&teamID, &net); err != nil {
+			return nil, err
+		}
+		if net != nil {
+			out[teamID] = *net
+		}
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return out, nil
 }
 
 func New(pool *pgxpool.Pool) *Service {
@@ -32,6 +88,7 @@ type RunParams struct {
 	ProbabilitySourceKey string
 	StartingStateKey     string
 	GameOutcomeRunID     *string
+	GameOutcomeSpec      *simulation_game_outcomes.Spec
 }
 
 type RunResult struct {
@@ -98,21 +155,45 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}
 
-	selectedGameOutcomeRunID, probs, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
-	if err != nil {
-		return nil, err
-	}
-	if nPredRows == 0 {
-		if selectedGameOutcomeRunID != nil {
-			return nil, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *selectedGameOutcomeRunID)
-		}
-		return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
-	}
-
-	if p.StartingStateKey == "post_first_four" {
-		if err := s.lockInFirstFourResults(ctx, br, probs); err != nil {
+	var provider tsim.ProbabilityProvider
+	var probs map[tsim.MatchupKey]float64
+	if p.GameOutcomeSpec != nil {
+		p.GameOutcomeSpec.Normalize()
+		if err := p.GameOutcomeSpec.Validate(); err != nil {
 			return nil, err
 		}
+		netByTeamID, err := s.loadKenPomNetByTeamID(ctx, coreTournamentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(netByTeamID) == 0 {
+			return nil, errors.New("no kenpom ratings available for tournament")
+		}
+		overrides := make(map[tsim.MatchupKey]float64)
+		if p.StartingStateKey == "post_first_four" {
+			if err := s.lockInFirstFourResults(ctx, br, overrides); err != nil {
+				return nil, err
+			}
+		}
+		provider = kenPomProvider{spec: p.GameOutcomeSpec, netByTeamID: netByTeamID, overrides: overrides}
+	} else {
+		selectedGameOutcomeRunID, loaded, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
+		if err != nil {
+			return nil, err
+		}
+		if nPredRows == 0 {
+			if selectedGameOutcomeRunID != nil {
+				return nil, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *selectedGameOutcomeRunID)
+			}
+			return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
+		}
+		probs = loaded
+		if p.StartingStateKey == "post_first_four" {
+			if err := s.lockInFirstFourResults(ctx, br, probs); err != nil {
+				return nil, err
+			}
+		}
+		provider = nil
 	}
 
 	loadDur := time.Since(loadStart)
@@ -146,7 +227,12 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		}
 
 		batchSeed := int64(p.Seed) + int64(offset)*1_000_003
-		results, err := tsim.Simulate(br, probs, n, batchSeed, tsim.Options{Workers: p.Workers})
+		var results []tsim.TeamSimulationResult
+		if provider != nil {
+			results, err = tsim.SimulateWithProvider(br, provider, n, batchSeed, tsim.Options{Workers: p.Workers})
+		} else {
+			results, err = tsim.Simulate(br, probs, n, batchSeed, tsim.Options{Workers: p.Workers})
+		}
 		if err != nil {
 			return nil, err
 		}

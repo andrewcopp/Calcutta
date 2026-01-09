@@ -16,6 +16,7 @@ import (
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -48,7 +49,8 @@ type simulationRunRow struct {
 	CohortID                string
 	CalcuttaID              *string
 	SimulatedCalcuttaID     *string
-	GameOutcomeRunID        string
+	GameOutcomeRunID        *string
+	GameOutcomeSpec         *simulation_game_outcomes.Spec
 	MarketShareRunID        *string
 	StrategyGenerationRunID *string
 	OptimizerKey            *string
@@ -200,7 +202,8 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 			r.cohort_id::text,
 			r.calcutta_id::text,
 			r.simulated_calcutta_id::text,
-			r.game_outcome_run_id,
+			r.game_outcome_run_id::text,
+			r.game_outcome_spec_json,
 			r.market_share_run_id::text,
 			r.strategy_generation_run_id,
 			r.optimizer_key,
@@ -211,6 +214,7 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 	`
 
 	var excluded *string
+	var specRaw []byte
 	if err := tx.QueryRow(ctx, q2,
 		pgtype.Timestamptz{Time: now, Valid: true},
 		runID,
@@ -223,6 +227,7 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		&row.CalcuttaID,
 		&row.SimulatedCalcuttaID,
 		&row.GameOutcomeRunID,
+		&specRaw,
 		&row.MarketShareRunID,
 		&row.StrategyGenerationRunID,
 		&row.OptimizerKey,
@@ -234,6 +239,14 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		return nil, false, err
 	}
 	row.ExcludedEntry = excluded
+	if len(specRaw) > 0 {
+		var spec simulation_game_outcomes.Spec
+		if err := json.Unmarshal(specRaw, &spec); err != nil {
+			return nil, false, err
+		}
+		spec.Normalize()
+		row.GameOutcomeSpec = &spec
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, false, err
@@ -276,13 +289,17 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		marketShareRunID = *req.MarketShareRunID
 	}
 
+	goRunID := ""
+	if req.GameOutcomeRunID != nil {
+		goRunID = *req.GameOutcomeRunID
+	}
 	log.Printf("simulation_worker start worker_id=%s run_id=%s cohort_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s strategy_generation_run_id=%s starting_state_key=%s excluded_entry_name=%q",
 		workerID,
 		req.ID,
 		req.CohortID,
 		calcuttaID,
 		runKey,
-		req.GameOutcomeRunID,
+		goRunID,
 		marketShareRunID,
 		strategyGenRunID,
 		req.StartingStateKey,
@@ -319,7 +336,12 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 	w.updateRunJobProgress(ctx, "simulation", req.ID, 0.15, "simulate", "Simulating tournaments")
 
 	simSvc := appsimulatetournaments.New(w.pool)
-	goRunID := req.GameOutcomeRunID
+	spec := req.GameOutcomeSpec
+	if spec == nil {
+		tmp := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+		tmp.Normalize()
+		spec = tmp
+	}
 	nSims := 0
 	if req.NSims != nil {
 		nSims = *req.NSims
@@ -342,7 +364,8 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		BatchSize:            500,
 		ProbabilitySourceKey: "simulation_worker",
 		StartingStateKey:     req.StartingStateKey,
-		GameOutcomeRunID:     &goRunID,
+		GameOutcomeRunID:     req.GameOutcomeRunID,
+		GameOutcomeSpec:      spec,
 	})
 	if err != nil {
 		w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "failed", err.Error())

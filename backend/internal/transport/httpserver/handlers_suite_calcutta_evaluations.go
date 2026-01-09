@@ -228,6 +228,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 		CalcuttaID:           req.CalcuttaID,
 		SimulatedCalcuttaID:  req.SimulatedCalcuttaID,
 		GameOutcomeRunID:     req.GameOutcomeRunID,
+		GameOutcomeSpec:      req.GameOutcomeSpec,
 		MarketShareRunID:     req.MarketShareRunID,
 		OptimizerKey:         optimizerKey,
 		NSims:                nSimsPtr,
@@ -236,10 +237,6 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 		ExcludedEntryName:    req.ExcludedEntryName,
 	})
 	if err != nil {
-		if errors.Is(err, suite_evaluations.ErrMissingGameOutcomeRunForBatch) {
-			writeError(w, r, http.StatusConflict, "missing_run", "Missing game-outcome run for simulation batch", "gameOutcomeRunId")
-			return
-		}
 		if errors.Is(err, suite_evaluations.ErrMissingMarketShareRunForBatch) {
 			writeError(w, r, http.StatusConflict, "missing_run", "Missing market-share run for simulation batch", "marketShareRunId")
 			return
