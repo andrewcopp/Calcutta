@@ -225,7 +225,7 @@ func (s *Server) createStrategyGenerationRunHandler(w http.ResponseWriter, r *ht
 			params_json,
 			git_sha
 		)
-		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_recommended_entry_bids', 'legacy', 'predicted_market_share', $5, $6::uuid, $7::jsonb, $8)
+		VALUES ($1, $2::uuid, $3, NULL, $4::uuid, 'go_strategy_generation_run_bids', 'legacy', 'predicted_market_share', $5, $6::uuid, $7::jsonb, $8)
 		RETURNING id::text
 	`, runKeyText, runKeyUUID, name, req.CalcuttaID, optimizerKey, marketShareRunID, string(paramsJSON), gitSHAParam).Scan(&runID); err != nil {
 		writeErrorFromErr(w, r, err)

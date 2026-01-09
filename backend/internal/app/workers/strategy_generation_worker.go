@@ -374,6 +374,20 @@ func (w *StrategyGenerationWorker) processStrategyGenerationJob(ctx context.Cont
 
 		if candidateID != "" && artifactID != "" {
 			if _, err := uuid.Parse(candidateID); err == nil {
+				// Candidate owns bids: copy run output into candidate_bids for stable access.
+				_, _ = w.pool.Exec(ctx, `
+					INSERT INTO derived.candidate_bids (candidate_id, team_id, bid_points)
+					SELECT $1::uuid, team_id, bid_points
+					FROM derived.strategy_generation_run_bids
+					WHERE strategy_generation_run_id = $2::uuid
+						AND deleted_at IS NULL
+					ON CONFLICT (candidate_id, team_id) WHERE deleted_at IS NULL
+					DO UPDATE
+					SET bid_points = EXCLUDED.bid_points,
+						updated_at = NOW(),
+						deleted_at = NULL
+				`, candidateID, job.RunID)
+
 				_, _ = w.pool.Exec(ctx, `
 					UPDATE derived.candidates
 					SET source_entry_artifact_id = $2::uuid,

@@ -615,7 +615,7 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 			COALESCE(t.region, ''::text) as region,
 			reb.bid_points::int as bid_points,
 			COALESCE(reb.expected_roi, 0.0)::double precision as expected_roi
-		FROM derived.recommended_entry_bids reb
+		FROM derived.strategy_generation_run_bids reb
 		JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
 		JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 		WHERE reb.strategy_generation_run_id = $1::uuid

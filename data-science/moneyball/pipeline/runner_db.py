@@ -398,7 +398,7 @@ def stage_recommended_entry_bids(
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT sgr.run_key
-                    FROM lab_gold.strategy_generation_runs sgr
+                    FROM derived.strategy_generation_runs sgr
                     JOIN core.calcuttas c
                       ON c.id = sgr.calcutta_id
                      AND c.deleted_at IS NULL
@@ -483,33 +483,37 @@ def stage_recommended_entry_bids(
         write_recommended_entry_bids,
     )
 
-    # Attach latest simulation batch id so "by strategy run" analytics can filter
-    # simulated_tournaments deterministically.
-    tournament_simulation_batch_id = None
+    # Attach latest simulated_tournament_id so "by strategy run" analytics can filter
+    # derived.simulated_teams deterministically.
+    simulated_tournament_id = None
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT b.id
-                FROM lab_bronze.tournaments tour
-                JOIN analytics.tournament_simulation_batches b
-                  ON b.tournament_id = tour.core_tournament_id
-                 AND b.deleted_at IS NULL
-                WHERE tour.season = %s
-                ORDER BY b.created_at DESC
+                SELECT st.id
+                FROM derived.simulated_tournaments st
+                JOIN core.tournaments t
+                  ON t.id = st.tournament_id
+                 AND t.deleted_at IS NULL
+                JOIN core.seasons seas
+                  ON seas.id = t.season_id
+                 AND seas.deleted_at IS NULL
+                WHERE st.deleted_at IS NULL
+                  AND seas.year = %s
+                ORDER BY st.created_at DESC
                 LIMIT 1
                 """,
                 (year,),
             )
             row = cur.fetchone()
             if row and row[0]:
-                tournament_simulation_batch_id = str(row[0])
+                simulated_tournament_id = str(row[0])
     
     # Write optimization run
     write_optimization_run(
         run_id=run_id,
         calcutta_id=db_calcutta_id,
-        tournament_simulation_batch_id=tournament_simulation_batch_id,
+        simulated_tournament_id=simulated_tournament_id,
         strategy=strategy,
         n_sims=int(simulations_df['sim_id'].nunique()),
         seed=42,

@@ -253,7 +253,7 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 			_, err := tx.Exec(ctx, `
 				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
 				SELECT $1, greb.team_id, greb.bid_points
-				FROM derived.recommended_entry_bids greb
+				FROM derived.strategy_generation_run_bids greb
 				WHERE greb.strategy_generation_run_id = $2::uuid
 					AND greb.deleted_at IS NULL
 			`, snapshotEntryID, *strategyGenerationRunID)
@@ -265,7 +265,7 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 				_, err := tx.Exec(ctx, `
 					INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
 					SELECT $1, greb.team_id, greb.bid_points
-					FROM derived.recommended_entry_bids greb
+					FROM derived.strategy_generation_run_bids greb
 					WHERE greb.run_id = $2::text
 						AND greb.deleted_at IS NULL
 				`, snapshotEntryID, runID)
@@ -360,14 +360,14 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
 		ourRows, err = s.pool.Query(ctx, `
 			SELECT team_id, bid_points
-			FROM derived.recommended_entry_bids greb
+			FROM derived.strategy_generation_run_bids greb
 			WHERE greb.strategy_generation_run_id = $1::uuid
 				AND greb.deleted_at IS NULL
 		`, *strategyGenerationRunID)
 	} else {
 		ourRows, err = s.pool.Query(ctx, `
 			SELECT team_id, bid_points
-			FROM derived.recommended_entry_bids greb
+			FROM derived.strategy_generation_run_bids greb
 			WHERE greb.run_id = $1::text
 				AND greb.deleted_at IS NULL
 		`, runID)

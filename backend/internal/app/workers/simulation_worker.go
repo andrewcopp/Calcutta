@@ -393,7 +393,7 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 			),
 			target AS (
 				SELECT team_id, bid_points::int
-				FROM derived.recommended_entry_bids
+				FROM derived.strategy_generation_run_bids
 				WHERE strategy_generation_run_id = $2::uuid
 					AND deleted_at IS NULL
 			),
@@ -985,7 +985,7 @@ func (w *SimulationWorker) computeRealizedFinishForStrategyGenerationRun(ctx con
 	ourBids := make(map[string]float64)
 	ourRows, err := w.pool.Query(ctx, `
 		SELECT team_id::text, bid_points::int
-		FROM derived.recommended_entry_bids
+		FROM derived.strategy_generation_run_bids
 		WHERE strategy_generation_run_id = $1::uuid
 			AND deleted_at IS NULL
 	`, strategyGenerationRunID)

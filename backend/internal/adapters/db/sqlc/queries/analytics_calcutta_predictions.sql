@@ -325,7 +325,7 @@ JOIN derived.predicted_market_share spms_t
   AND spms_t.team_id = t.id
   AND spms_t.deleted_at IS NULL
 LEFT JOIN latest_strategy_generation lsg ON true
-LEFT JOIN derived.recommended_entry_bids reb
+LEFT JOIN derived.strategy_generation_run_bids reb
   ON reb.strategy_generation_run_id = lsg.strategy_generation_run_id
   AND reb.team_id = t.id
 WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
@@ -399,7 +399,7 @@ JOIN derived.predicted_market_share spms_t
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
   AND spms_t.deleted_at IS NULL
-LEFT JOIN derived.recommended_entry_bids reb
+LEFT JOIN derived.strategy_generation_run_bids reb
   ON reb.strategy_generation_run_id = sqlc.arg(strategy_generation_run_id)::uuid
   AND reb.team_id = t.id
 WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)

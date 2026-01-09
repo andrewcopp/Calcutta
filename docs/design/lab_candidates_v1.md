@@ -119,6 +119,13 @@ Response:
 - provenance: calcutta_id, upstream run/artifact ids, optimizer key, params
 - output: link to the entry bid set artifact / rows
 
+## Delete candidate
+`DELETE /api/lab/candidates/{candidateId}`
+
+Notes:
+- Used for client-driven reruns: client deletes the old candidate then creates a new one.
+- Server performs a soft delete (`deleted_at`) for both candidate + bids.
+
 ---
 
 # Execution model
@@ -173,9 +180,11 @@ Acceptance:
 ---
 
 # Open questions
-- Is a Candidate just a pointer to a `strategy_generation` metrics artifact, or does it need its own “bids artifact” as first-class?
-- Should we allow multiple candidates per calcutta for the same config (versioning), or enforce a strict unique mapping?
-- Do we want listing to support per tournament year (subset) later, or stay global?
+
+Decisions (v1):
+- Candidate owns bids via `derived.candidate_bids` (not a first-class “bids artifact”).
+- Versioning/reruns are client-driven: `DELETE` then `POST` (server uses soft delete).
+- Listing remains global scope for now.
 
 # Open tasks
 - [x] Choose the implementation option for v1 (Option B1 vs Option B2) and record the decision here.

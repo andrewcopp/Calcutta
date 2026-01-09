@@ -175,7 +175,7 @@ with_bids AS (
 		SELECT
 			COUNT(*)::int AS n_teams,
 			COALESCE(SUM(bid_points), 0)::int AS total_bid_points
-		FROM derived.recommended_entry_bids reb
+		FROM derived.strategy_generation_run_bids reb
 		JOIN strategy_run sr ON sr.strategy_generation_run_id = reb.strategy_generation_run_id
 		WHERE reb.deleted_at IS NULL
 	) os ON wp.is_our_strategy

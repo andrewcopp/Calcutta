@@ -117,7 +117,7 @@ func (s *Server) computeHypotheticalFinishByEntryNameForStrategyRun(ctx context.
 	ourBids := make(map[string]float64)
 	ourRows, err := s.pool.Query(ctx, `
 		SELECT team_id::text, bid_points::int
-		FROM derived.recommended_entry_bids
+		FROM derived.strategy_generation_run_bids
 		WHERE strategy_generation_run_id = $1::uuid
 			AND deleted_at IS NULL
 	`, strategyGenerationRunID)

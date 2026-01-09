@@ -526,7 +526,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT team_id::text, bid_points::int
-		FROM derived.recommended_entry_bids
+		FROM derived.strategy_generation_run_bids
 		WHERE strategy_generation_run_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY bid_points DESC
@@ -551,7 +551,7 @@ func (s *Server) handleImportSyntheticEntry(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if len(teams) == 0 {
-		writeError(w, r, http.StatusConflict, "invalid_state", "No recommended_entry_bids found for that entryArtifactId", "entryArtifactId")
+		writeError(w, r, http.StatusConflict, "invalid_state", "No strategy_generation_run_bids found for that entryArtifactId", "entryArtifactId")
 		return
 	}
 

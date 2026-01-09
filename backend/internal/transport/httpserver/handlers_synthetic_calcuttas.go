@@ -661,7 +661,7 @@ func createSyntheticCalcuttaSnapshot(
 		ct, err := tx.Exec(ctx, `
 			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
 			SELECT $1::uuid, reb.team_id, reb.bid_points
-			FROM derived.recommended_entry_bids reb
+			FROM derived.strategy_generation_run_bids reb
 			WHERE reb.strategy_generation_run_id = $2::uuid
 				AND reb.deleted_at IS NULL
 		`, snapshotEntryID, focusStrategyGenerationRunID)

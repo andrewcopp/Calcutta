@@ -19,11 +19,11 @@ def write_optimization_run(
     seed: int = 0,
     budget_points: int = 100,
     calcutta_id: Optional[str] = None,
-    tournament_simulation_batch_id: Optional[str] = None,
+    simulated_tournament_id: Optional[str] = None,
 ) -> None:
     """
     Write optimization run metadata.
-    
+
     Args:
         calcutta_id: Calcutta ID
         run_id: Unique run identifier
@@ -36,10 +36,10 @@ def write_optimization_run(
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO lab_gold.strategy_generation_runs (
+                INSERT INTO derived.strategy_generation_runs (
                     run_key,
                     name,
-                    tournament_simulation_batch_id,
+                    simulated_tournament_id,
                     calcutta_id,
                     purpose,
                     returns_model_key,
@@ -50,7 +50,8 @@ def write_optimization_run(
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, '{}'::jsonb, NULL)
                 ON CONFLICT (run_key) DO UPDATE SET
-                    tournament_simulation_batch_id = EXCLUDED.tournament_simulation_batch_id,
+                    simulated_tournament_id =
+                        EXCLUDED.simulated_tournament_id,
                     calcutta_id = EXCLUDED.calcutta_id,
                     optimizer_key = EXCLUDED.optimizer_key,
                     name = EXCLUDED.name,
@@ -59,7 +60,7 @@ def write_optimization_run(
                 (
                     run_id,
                     strategy,
-                    tournament_simulation_batch_id,
+                    simulated_tournament_id,
                     calcutta_id,
                     'moneyball_pipeline',
                     'legacy',
@@ -67,7 +68,6 @@ def write_optimization_run(
                     strategy,
                 ),
             )
-            
             conn.commit()
             logger.info(f"Wrote optimization run: {run_id}")
 
@@ -79,13 +79,13 @@ def write_recommended_entry_bids(
 ) -> int:
     """
     Write recommended entry bids.
-    
+
     Args:
         run_id: Optimization run ID
         bids_df: DataFrame with columns:
             - team_key, bid_amount_points, score (expected_roi)
         team_id_map: Dict mapping school_slug to team_id
-    
+
     Returns:
         Number of rows inserted
     """
@@ -94,7 +94,7 @@ def write_recommended_entry_bids(
             cur.execute(
                 """
                 SELECT id
-                FROM lab_gold.strategy_generation_runs
+                FROM derived.strategy_generation_runs
                 WHERE run_key = %s
                   AND deleted_at IS NULL
                 ORDER BY created_at DESC
@@ -104,18 +104,20 @@ def write_recommended_entry_bids(
             )
             row = cur.fetchone()
             if not row or not row[0]:
-                raise ValueError(f"No strategy_generation_run found for run_key={run_id}")
+                raise ValueError(
+                    f"No strategy_generation_run found for run_key={run_id}"
+                )
             strategy_generation_run_id = str(row[0])
 
             # Clear existing bids for this run
             cur.execute("""
-                DELETE FROM lab_gold.recommended_entry_bids
+                DELETE FROM derived.strategy_generation_run_bids
                 WHERE run_id = %s
             """, (run_id,))
-            
+
             # Extract school slugs from team keys and map to IDs
             df = bids_df.copy()
-            
+
             # Handle different column formats
             if 'team_key' in df.columns:
                 df['school_slug'] = df['team_key'].str.split(':').str[-1]
@@ -127,12 +129,12 @@ def write_recommended_entry_bids(
                     "DataFrame must have team_key, school_slug, or "
                     "team_id column"
                 )
-            
+
             # Check for unmapped teams
             if df['team_id'].isna().any():
                 unmapped = df[df['team_id'].isna()]['school_slug'].unique()
                 raise ValueError(f"Unmapped teams: {list(unmapped)}")
-            
+
             values = [
                 (
                     run_id,
@@ -143,13 +145,19 @@ def write_recommended_entry_bids(
                 )
                 for _, row in df.iterrows()
             ]
-            
+
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO lab_gold.recommended_entry_bids
-                (run_id, strategy_generation_run_id, team_id, bid_points, expected_roi)
+                INSERT INTO derived.strategy_generation_run_bids
+                (
+                    run_id,
+                    strategy_generation_run_id,
+                    team_id,
+                    bid_points,
+                    expected_roi
+                )
                 VALUES (%s, %s, %s, %s, %s)
             """, values)
-            
+
             conn.commit()
             logger.info(f"Inserted {len(values)} recommended bids")
             return len(values)

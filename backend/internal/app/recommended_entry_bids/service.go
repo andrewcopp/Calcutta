@@ -827,7 +827,7 @@ func mapTeamMarketPoints(teams []Team) map[string]float64 {
 
 func writeRecommendedEntryBids(ctx context.Context, tx pgx.Tx, p writeRecommendedEntryBidsParams) error {
 	_, err := tx.Exec(ctx, `
-		DELETE FROM derived.recommended_entry_bids
+		DELETE FROM derived.strategy_generation_run_bids
 		WHERE strategy_generation_run_id = $1::uuid
 	`, p.StrategyGenerationRunID)
 	if err != nil {
@@ -854,7 +854,7 @@ func writeRecommendedEntryBids(ctx context.Context, tx pgx.Tx, p writeRecommende
 
 	copyFrom, err := tx.CopyFrom(
 		ctx,
-		pgx.Identifier{"derived", "recommended_entry_bids"},
+		pgx.Identifier{"derived", "strategy_generation_run_bids"},
 		[]string{"run_id", "strategy_generation_run_id", "team_id", "bid_points", "expected_roi", "created_at"},
 		pgx.CopyFromRows(rows),
 	)

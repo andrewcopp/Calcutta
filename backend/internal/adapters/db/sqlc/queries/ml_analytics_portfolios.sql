@@ -6,7 +6,7 @@ SELECT
     t.region,
     reb.bid_points,
     reb.expected_roi
-FROM derived.recommended_entry_bids reb
+FROM derived.strategy_generation_run_bids reb
 JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.run_id = $1::text
@@ -21,7 +21,7 @@ SELECT
 	t.region,
 	reb.bid_points,
 	reb.expected_roi
-FROM derived.recommended_entry_bids reb
+FROM derived.strategy_generation_run_bids reb
 JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.strategy_generation_run_id = $1::uuid
@@ -36,7 +36,7 @@ SELECT
     t.seed,
     t.region,
     reb.bid_points as bid_points
-FROM derived.recommended_entry_bids reb
+FROM derived.strategy_generation_run_bids reb
 JOIN core.teams t ON reb.team_id = t.id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.run_id = sqlc.arg(run_id)
@@ -51,7 +51,7 @@ SELECT
 	t.seed,
 	t.region,
 	reb.bid_points as bid_points
-FROM derived.recommended_entry_bids reb
+FROM derived.strategy_generation_run_bids reb
 JOIN core.teams t ON reb.team_id = t.id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE reb.strategy_generation_run_id = sqlc.arg(strategy_generation_run_id)::uuid
