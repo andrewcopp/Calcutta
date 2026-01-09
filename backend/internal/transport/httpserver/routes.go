@@ -2,8 +2,10 @@ package httpserver
 
 import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/calcuttas"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/labcandidates"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/mlanalytics"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/tournaments"
 	"github.com/gorilla/mux"
 )
 
@@ -63,10 +65,33 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	r.HandleFunc("/api/schools", s.schoolsHandler).Methods("GET")
-	s.registerTournamentRoutes(r)
+
+	tHandler := tournaments.NewHandlerWithAuthUserID(s.app, authUserID)
+	tournaments.RegisterRoutes(r, tournaments.Handlers{
+		ListTournaments:      tHandler.HandleListTournaments,
+		GetTournament:        tHandler.HandleGetTournament,
+		CreateTournament:     s.requirePermission("tournament.game.write", tHandler.HandleCreateTournament),
+		UpdateTournament:     s.requirePermission("tournament.game.write", tHandler.HandleUpdateTournament),
+		ListTournamentTeams:  tHandler.HandleListTournamentTeams,
+		CreateTournamentTeam: s.requirePermission("tournament.game.write", tHandler.HandleCreateTournamentTeam),
+		UpdateTeam:           s.requirePermission("tournament.game.write", tHandler.HandleUpdateTeam),
+	})
+
 	s.registerBracketRoutes(r)
 	s.registerPortfolioRoutes(r)
-	s.registerCalcuttaRoutes(r)
+
+	cHandler := calcuttas.NewHandlerWithAuthUserID(s.app, s.authzRepo, authUserID)
+	calcuttas.RegisterRoutes(r, calcuttas.Handlers{
+		ListCalcuttas:       cHandler.HandleListCalcuttas,
+		CreateCalcutta:      cHandler.HandleCreateCalcutta,
+		GetCalcutta:         cHandler.HandleGetCalcutta,
+		UpdateCalcutta:      cHandler.HandleUpdateCalcutta,
+		ListCalcuttaEntries: cHandler.HandleListCalcuttaEntries,
+		ListEntryTeams:      cHandler.HandleListEntryTeams,
+		ListEntryPortfolios: cHandler.HandleListEntryPortfolios,
+		UpdateEntry:         cHandler.HandleUpdateEntry,
+	})
+
 	s.registerEntryEvaluationRequestRoutes(r)
 	s.registerRunProgressRoutes(r)
 	s.registerEntryRunRoutes(r)
@@ -110,17 +135,6 @@ func (s *Server) registerAuthRoutes(r *mux.Router) {
 	r.HandleFunc("/api/auth/logout", s.logoutHandler).Methods("POST", "OPTIONS")
 }
 
-func (s *Server) registerTournamentRoutes(r *mux.Router) {
-	// Tournaments
-	r.HandleFunc("/api/tournaments", s.tournamentsHandler).Methods("GET")
-	r.HandleFunc("/api/tournaments/{id}", s.tournamentHandler).Methods("GET")
-	r.HandleFunc("/api/tournaments", s.requirePermission("tournament.game.write", s.createTournamentHandler)).Methods("POST")
-	r.HandleFunc("/api/tournaments/{id}", s.requirePermission("tournament.game.write", s.updateTournamentHandler)).Methods("PATCH")
-	r.HandleFunc("/api/tournaments/{id}/teams", s.tournamentTeamsHandler).Methods("GET")
-	r.HandleFunc("/api/tournaments/{id}/teams", s.requirePermission("tournament.game.write", s.createTournamentTeamHandler)).Methods("POST")
-	r.HandleFunc("/api/tournaments/{tournamentId}/teams/{teamId}", s.requirePermission("tournament.game.write", s.updateTeamHandler)).Methods("PATCH", "OPTIONS")
-}
-
 func (s *Server) registerBracketRoutes(r *mux.Router) {
 	// Bracket management
 	r.HandleFunc("/api/tournaments/{id}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
@@ -131,18 +145,6 @@ func (s *Server) registerBracketRoutes(r *mux.Router) {
 
 func (s *Server) registerPortfolioRoutes(r *mux.Router) {
 	r.HandleFunc("/api/portfolios/{id}/teams", s.portfolioTeamsHandler).Methods("GET")
-}
-
-func (s *Server) registerCalcuttaRoutes(r *mux.Router) {
-	// Calcutta
-	r.HandleFunc("/api/calcuttas", s.calcuttasHandler).Methods("GET")
-	r.HandleFunc("/api/calcuttas", s.calcuttasHandler).Methods("POST")
-	r.HandleFunc("/api/calcuttas/{id}", s.calcuttaHandler).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}", s.updateCalcuttaHandler).Methods("PATCH")
-	r.HandleFunc("/api/calcuttas/{id}/entries", s.calcuttaEntriesHandler).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", s.calcuttaEntryTeamsHandler).Methods("GET")
-	r.HandleFunc("/api/entries/{id}/portfolios", s.portfoliosHandler).Methods("GET")
-	r.HandleFunc("/api/entries/{id}", s.updateEntryHandler).Methods("PATCH")
 }
 
 func (s *Server) registerAnalyticsRoutes(r *mux.Router) {

@@ -8,54 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Server) portfoliosHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	entryID := vars["id"]
-	if entryID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "id")
-		return
-	}
-
-	userID := authUserID(r.Context())
-	if userID == "" {
-		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
-		return
-	}
-
-	entry, err := s.app.Calcutta.GetEntry(r.Context(), entryID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if entry == nil {
-		writeError(w, r, http.StatusNotFound, "not_found", "entry not found", "")
-		return
-	}
-
-	calcutta, err := s.app.Calcutta.GetCalcuttaByID(r.Context(), entry.CalcuttaID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-
-	decision, err := policy.CanViewEntryData(r.Context(), s.authzRepo, userID, entry, calcutta)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	if !decision.Allowed {
-		writeError(w, r, decision.Status, decision.Code, decision.Message, "")
-		return
-	}
-
-	portfolios, err := s.app.Calcutta.GetPortfoliosByEntry(r.Context(), entryID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, dtos.NewPortfolioListResponse(portfolios))
-}
-
 func (s *Server) portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]

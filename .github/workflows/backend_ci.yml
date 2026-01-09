@@ -35,5 +35,13 @@ jobs:
             exit 1
           fi
 
+      - name: "Guardrail: forbid httpserver repo/worker shims"
+        run: |
+          if find internal/transport/httpserver -maxdepth 1 -type f \( -name '*_repository.go' -o -name '*_worker.go' \) | grep -q .; then
+            echo "Found forbidden *_repository.go or *_worker.go under internal/transport/httpserver"
+            find internal/transport/httpserver -maxdepth 1 -type f \( -name '*_repository.go' -o -name '*_worker.go' \) -print
+            exit 1
+          fi
+
       - name: Go test
         run: go test ./...

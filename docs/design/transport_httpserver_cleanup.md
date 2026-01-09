@@ -10,6 +10,10 @@
 - [x] Decide worker runtime model: long-running workers deployed as a separate ECS service; UI actions enqueue jobs
 - [x] Remove legacy wrapper packages by migrating all Go imports to `backend/internal/app/*`
 - [x] Update `backend/internal/app/README.md` to reflect `internal/app/<feature>` as the canonical import path
+- [x] Carve out ML analytics routes into `transport/httpserver/mlanalytics` feature package and compose via `routes.go`
+- [x] Evict `transport/httpserver/*_repository.go` shims by wiring DB adapters directly and keeping handlers on `app` services/ports
+- [x] Implement Lab Candidates vertical slice behind `internal/app/lab_candidates` + `internal/adapters/db` and expose via `transport/httpserver/labcandidates`
+- [x] Delete empty placeholder files left behind by migrations (package-only `handlers_*` / `*_repository.go` stubs)
 
 ## Plan of attack (milestones)
 - [ ] Milestone 0: hygiene + guardrails
@@ -30,15 +34,15 @@
   - [x] Extract shared response helper (`httpserver/response.WriteJSON`) to avoid feature-package import cycles
   - [x] Extract request context helpers (`httpserver/requestctx`) and update call sites/tests
   - [x] Introduce additional feature subpackages under `httpserver/` and migrate one feature end-to-end without changing logic (see: [Proposed `httpserver/` layout (feature-first)](#proposed-httpserver-layout-feature-first))
-- [ ] Milestone 3: handler cleanup (feature-first)
-  - [ ] Carve out 1 feature (recommended: `mlanalytics`) into `transport/httpserver/<feature>` with `routes.go`, `handlers.go`, `types.go`, `params.go`
-  - [ ] Update top-level routing to compose feature route registrars (see: [Routing + wiring](#routing--wiring))
-- [ ] Milestone 4: repositories eviction
-  - [ ] Remove repository shims and ensure handlers call `app` services/ports (see: [Repositories: eviction plan](#repositories-eviction-plan))
-  - [ ] Ensure DB adapter construction happens in wiring outside `transport/httpserver`
-- [ ] Milestone 5: workers eviction
-  - [ ] Move `*_worker.go` out of `transport/httpserver` into a worker layer and make dependencies explicit (see: [Workers: eviction plan](#workers-eviction-plan))
-  - [ ] Align the worker entrypoint with the ECS service model (see: [Worker runtime model (app-triggered, not CLI)](#worker-runtime-model-app-triggered-not-cli))
+- [x] Milestone 3: handler cleanup (feature-first)
+  - [x] Carve out 1 feature (`mlanalytics`) into `transport/httpserver/<feature>` with `routes.go`, `handlers.go`, `types.go`, `params.go`
+  - [x] Update top-level routing to compose feature route registrars (see: [Routing + wiring](#routing--wiring))
+- [x] Milestone 4: repositories eviction
+  - [x] Remove repository shims and ensure handlers call `app` services/ports (see: [Repositories: eviction plan](#repositories-eviction-plan))
+  - [x] Ensure DB access lives behind `internal/app` services + `internal/adapters/db` repositories (no handler SQL)
+- [x] Milestone 5: workers eviction
+  - [x] Move `*_worker.go` out of `transport/httpserver` into a worker layer and make dependencies explicit (see: [Workers: eviction plan](#workers-eviction-plan))
+  - [x] Align the worker entrypoint with the ECS service model (see: [Worker runtime model (app-triggered, not CLI)](#worker-runtime-model-app-triggered-not-cli))
 - [ ] Milestone 6: naming + cleanup
   - [ ] Remove `handlers_*` filename prefixes once feature packages exist (see: [Naming + file cleanup](#naming--file-cleanup))
   - [ ] Align backend resource naming (remove “suite” where it no longer matches API resources)
@@ -125,22 +129,22 @@
     - [ ] `cognito_jwt_verifier.go`
   - [ ] **DTOs (currently centralized under `httpserver/dtos/`)**
     - [ ] `dtos/*.go` (14 files)
-  - [ ] **Repository shims (delete in Milestone 4; redundant wrappers over `adapters/db`)**
-    - [ ] `api_keys_repository.go`, `auth_repository.go`, `authz_repository.go`, `user_repository.go`
-  - [ ] **Worker shims (delete in Milestone 5; workers already exist under `internal/app/workers`)**
-    - [ ] `bundle_import_worker.go`, `entry_evaluation_worker.go`, `market_share_worker.go`, `game_outcome_worker.go`, `strategy_generation_worker.go`, `calcutta_evaluation_worker.go`
+  - [x] **Repository shims (deleted in Milestone 4; redundant wrappers over `adapters/db`)**
+    - [x] `api_keys_repository.go`, `auth_repository.go`, `authz_repository.go`, `user_repository.go`
+  - [x] **Worker shims (deleted in Milestone 5; workers already exist under `internal/app/workers`)**
+    - [x] `bundle_import_worker.go`, `entry_evaluation_worker.go`, `market_share_worker.go`, `game_outcome_worker.go`, `strategy_generation_worker.go`, `calcutta_evaluation_worker.go`
   - [ ] **Feature handlers (largest set; to be moved into `httpserver/<feature>/...`)**
     - [ ] Admin: `handlers_admin_*`
     - [ ] Auth: `handlers_auth*`
     - [ ] Analytics read endpoints: `handlers_analytics.go`, `handlers_hall_of_fame*` (if present)
-    - [ ] ML analytics endpoints: `handlers_ml_analytics*`
+    - [x] ML analytics endpoints: `httpserver/mlanalytics/*` (feature package)
     - [ ] Tournaments: `handlers_tournaments*`, `handlers_tournament_analytics.go`
     - [ ] Bracket: `handlers_bracket.go`
     - [ ] Calcuttas/entries/portfolios: `handlers_calcuttas*`, `handlers_portfolios*`
     - [ ] Runs/progress/artifacts: `handlers_run_progress.go`, `handlers_entry_runs.go`
     - [ ] Entry eval requests: `handlers_entry_evaluation_requests.go`
     - [ ] Strategy generation runs: `handlers_strategy_generation_runs.go`
-    - [ ] Lab + synthetic data: `handlers_lab_entries*`, `handlers_synthetic_*`
+    - [ ] Lab + synthetic data: `handlers_lab_entries*`, `handlers_synthetic_*`, `httpserver/labcandidates/*` (feature package)
     - [ ] Cohorts/simulations: `handlers_suite_calcutta_evaluations*` (to be renamed away from “suite”)
     - [ ] Model catalogs: `handlers_model_catalogs.go`
   - [ ] **Tests to relocate alongside moved packages**
