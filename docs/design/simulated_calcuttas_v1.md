@@ -3,6 +3,11 @@
 ## Status
 Implemented (v1)
 
+Phase A4 complete:
+- Sandbox UI uses simulated endpoints only.
+- Legacy synthetic Sandbox UI (pages/services) removed.
+- Legacy synthetic write endpoints return 410 Gone.
+
 ## Goal
 Replace the current Sandbox persistence model (synthetic calcuttas + snapshots + candidate attachments) with a clean, self-contained Sandbox model:
 - **SimulatedCalcuttas**: evaluation fixtures (rules + payouts + entries)
@@ -116,7 +121,7 @@ Constraints:
 ---
 
 # API surface (v1)
-Routes shown with a proposed prefix; naming finalization is tracked in WS-D.
+Routes are under `/api/*`.
 
 ## Create SimulatedCalcutta (from scratch)
 `POST /api/simulated-calcuttas`
@@ -167,7 +172,11 @@ Implementation notes:
 
 ## Read/list simulated calcuttas
 - `GET /api/simulated-calcuttas` (paginated)
+  - Optional filter: `?tournament_id={uuid}`
 - `GET /api/simulated-calcuttas/{id}`
+
+Notes:
+- `metadata` is required to be a JSON object (the server normalizes missing/empty to `{}`).
 
 ## Edit simulated calcutta
 `PATCH /api/simulated-calcuttas/{id}`
@@ -188,6 +197,10 @@ Implemented (v1): **Option 1**.
 - `POST /api/simulated-calcuttas/{id}/entries` (manual create)
 - `PATCH /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}` (rename / replace teams)
 - `DELETE /api/simulated-calcuttas/{simulatedCalcuttaId}/entries/{entryId}`
+
+Notes:
+- Entry `teams` use snake_case fields: `{ team_id: string, bid_points: number }`.
+- Entry payload fields use camelCase at the top-level (ex: `displayName`).
 
 ---
 
@@ -272,6 +285,7 @@ Acceptance:
 
 ## Phase A4 — Cutover + freeze legacy writes
 - UI uses only simulated endpoints.
+- Legacy synthetic Sandbox UI removed.
 - Legacy synthetic/snapshot endpoints become read-only or return 410.
 - Any remaining write paths to legacy synthetic/snapshot tables are blocked.
 
@@ -324,8 +338,8 @@ This workstream is designed to be parallelizable.
 - [ ] Add invariant test/assertion: SimulatedCalcutta read endpoints must not write (no implicit repair/create).
 - [x] Update simulation creation + worker read paths to use `derived.simulated_*` as the source of truth (Phase A2).
 - [x] Allow sandbox simulations to omit `game_outcome_run_id` by using sandbox-owned `gameOutcomeSpec`.
-- [ ] Phase A4: Cut over UI to simulated endpoints only.
-- [ ] Phase A4: Make legacy synthetic/snapshot endpoints read-only or return 410.
-- [ ] Phase A4: Remove/disable any remaining writes to legacy synthetic/snapshot tables.
+- [x] Phase A4: Cut over UI to simulated endpoints only.
+- [x] Phase A4: Make legacy synthetic/snapshot endpoints read-only or return 410.
+- [x] Phase A4: Remove/disable any remaining writes to legacy synthetic/snapshot tables.
 - [ ] Phase A5: Drop legacy synthetic/snapshot tables.
 - [ ] Phase A5: Remove legacy endpoints and any production code references.
