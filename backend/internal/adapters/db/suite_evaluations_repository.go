@@ -35,7 +35,8 @@ func (r *SuiteEvaluationsRepository) ListEvaluations(ctx context.Context, calcut
 			r.our_p_top1,
 			r.our_p_in_money,
 			r.total_simulations,
-			r.calcutta_id,
+			COALESCE(r.calcutta_id::text, '') AS calcutta_id,
+			r.simulated_calcutta_id::text,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
@@ -88,6 +89,7 @@ func (r *SuiteEvaluationsRepository) ListEvaluations(ctx context.Context, calcut
 			&it.OurPInMoney,
 			&it.TotalSimulations,
 			&it.CalcuttaID,
+			&it.SimulatedCalcuttaID,
 			&it.GameOutcomeRunID,
 			&it.MarketShareRunID,
 			&it.StrategyGenerationRunID,
@@ -133,7 +135,8 @@ func (r *SuiteEvaluationsRepository) GetEvaluation(ctx context.Context, id strin
 			r.our_p_top1,
 			r.our_p_in_money,
 			r.total_simulations,
-			r.calcutta_id,
+			COALESCE(r.calcutta_id::text, '') AS calcutta_id,
+			r.simulated_calcutta_id::text,
 			r.game_outcome_run_id,
 			r.market_share_run_id,
 			r.strategy_generation_run_id,
@@ -173,6 +176,7 @@ func (r *SuiteEvaluationsRepository) GetEvaluation(ctx context.Context, id strin
 		&it.OurPInMoney,
 		&it.TotalSimulations,
 		&it.CalcuttaID,
+		&it.SimulatedCalcuttaID,
 		&it.GameOutcomeRunID,
 		&it.MarketShareRunID,
 		&it.StrategyGenerationRunID,
@@ -479,7 +483,7 @@ func (r *SuiteEvaluationsRepository) GetCohortOptimizerKey(ctx context.Context, 
 }
 
 func (r *SuiteEvaluationsRepository) GetTournamentIDForCalcutta(ctx context.Context, calcuttaID string) (string, error) {
-	var tournamentID string
+	tournamentID := ""
 	if err := r.pool.QueryRow(ctx, `
 		SELECT tournament_id::text
 		FROM core.calcuttas
@@ -487,6 +491,20 @@ func (r *SuiteEvaluationsRepository) GetTournamentIDForCalcutta(ctx context.Cont
 			AND deleted_at IS NULL
 		LIMIT 1
 	`, calcuttaID).Scan(&tournamentID); err != nil {
+		return "", err
+	}
+	return tournamentID, nil
+}
+
+func (r *SuiteEvaluationsRepository) GetTournamentIDForSimulatedCalcutta(ctx context.Context, simulatedCalcuttaID string) (string, error) {
+	tournamentID := ""
+	if err := r.pool.QueryRow(ctx, `
+		SELECT tournament_id::text
+		FROM derived.simulated_calcuttas
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+		LIMIT 1
+	`, simulatedCalcuttaID).Scan(&tournamentID); err != nil {
 		return "", err
 	}
 	return tournamentID, nil
@@ -590,6 +608,10 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 	if p.MarketShareRunID != nil {
 		msRun = *p.MarketShareRunID
 	}
+	var simulatedCalcutta any
+	if p.SimulatedCalcuttaID != nil {
+		simulatedCalcutta = *p.SimulatedCalcuttaID
+	}
 	var excluded any
 	if p.ExcludedEntryName != nil {
 		excluded = *p.ExcludedEntryName
@@ -609,6 +631,7 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 			synthetic_calcutta_id,
 			cohort_id,
 			calcutta_id,
+			simulated_calcutta_id,
 			game_outcome_run_id,
 			market_share_run_id,
 			optimizer_key,
@@ -617,11 +640,20 @@ func (r *SuiteEvaluationsRepository) CreateSimulationRun(ctx context.Context, p 
 			starting_state_key,
 			excluded_entry_name
 		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::int, $9::int, $10, $11::text)
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7::uuid, $8, $9::int, $10::int, $11, $12::text)
 		RETURNING id, status
 	`
 
-	if err := r.pool.QueryRow(ctx, q, execID, syntheticCalcuttaID, p.CohortID, p.CalcuttaID, goRun, msRun, p.OptimizerKey, nSims, seed, p.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
+	var calcutta any
+	if strings.TrimSpace(p.CalcuttaID) != "" {
+		calcutta = p.CalcuttaID
+	}
+	var synth any
+	if strings.TrimSpace(syntheticCalcuttaID) != "" {
+		synth = syntheticCalcuttaID
+	}
+
+	if err := r.pool.QueryRow(ctx, q, execID, synth, p.CohortID, calcutta, simulatedCalcutta, goRun, msRun, p.OptimizerKey, nSims, seed, p.StartingStateKey, excluded).Scan(&evalID, &status); err != nil {
 		return nil, err
 	}
 	return &suite_evaluations.CreateSimulationResult{ID: evalID, Status: status}, nil

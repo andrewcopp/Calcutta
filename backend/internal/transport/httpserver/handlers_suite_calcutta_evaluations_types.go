@@ -22,6 +22,7 @@ type suiteCalcuttaEvaluationListItem struct {
 	OurPInMoney               *float64   `json:"our_p_in_money,omitempty"`
 	TotalSimulations          *int       `json:"total_simulations,omitempty"`
 	CalcuttaID                string     `json:"calcutta_id"`
+	SimulatedCalcuttaID       *string    `json:"simulated_calcutta_id,omitempty"`
 	GameOutcomeRunID          *string    `json:"game_outcome_run_id,omitempty"`
 	MarketShareRunID          *string    `json:"market_share_run_id,omitempty"`
 	StrategyGenerationRunID   *string    `json:"strategy_generation_run_id,omitempty"`

@@ -8,6 +8,7 @@ import (
 
 type CreateSimulationRunRequest struct {
 	CalcuttaID           string  `json:"calcuttaId"`
+	SimulatedCalcuttaID  *string `json:"simulatedCalcuttaId"`
 	CohortID             *string `json:"cohortId"`
 	SimulationRunBatchID *string `json:"simulationRunBatchId"`
 	OptimizerKey         *string `json:"optimizerKey"`
@@ -20,11 +21,28 @@ type CreateSimulationRunRequest struct {
 }
 
 func (r *CreateSimulationRunRequest) Validate() error {
-	if strings.TrimSpace(r.CalcuttaID) == "" {
-		return ErrFieldRequired("calcuttaId")
+	if r.SimulatedCalcuttaID != nil {
+		trimmed := strings.TrimSpace(*r.SimulatedCalcuttaID)
+		if trimmed == "" {
+			r.SimulatedCalcuttaID = nil
+		} else {
+			if _, err := uuid.Parse(trimmed); err != nil {
+				return ErrFieldInvalid("simulatedCalcuttaId", "must be a valid UUID")
+			}
+			r.SimulatedCalcuttaID = &trimmed
+		}
 	}
-	if _, err := uuid.Parse(strings.TrimSpace(r.CalcuttaID)); err != nil {
-		return ErrFieldInvalid("calcuttaId", "must be a valid UUID")
+
+	calcuttaID := strings.TrimSpace(r.CalcuttaID)
+	if calcuttaID != "" {
+		if _, err := uuid.Parse(calcuttaID); err != nil {
+			return ErrFieldInvalid("calcuttaId", "must be a valid UUID")
+		}
+		r.CalcuttaID = calcuttaID
+	}
+
+	if calcuttaID == "" && r.SimulatedCalcuttaID == nil {
+		return ErrFieldRequired("calcuttaId")
 	}
 
 	if r.SimulationRunBatchID != nil {
@@ -87,9 +105,6 @@ func (r *CreateSimulationRunRequest) Validate() error {
 	if r.SimulationRunBatchID == nil {
 		if r.GameOutcomeRunID == nil {
 			return ErrFieldRequired("gameOutcomeRunId")
-		}
-		if r.MarketShareRunID == nil {
-			return ErrFieldRequired("marketShareRunId")
 		}
 	}
 

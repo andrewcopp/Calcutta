@@ -226,6 +226,7 @@ func (s *Server) createSuiteCalcuttaEvaluationHandler(w http.ResponseWriter, r *
 		SimulationRunBatchID: req.SimulationRunBatchID,
 		CohortID:             cohortID,
 		CalcuttaID:           req.CalcuttaID,
+		SimulatedCalcuttaID:  req.SimulatedCalcuttaID,
 		GameOutcomeRunID:     req.GameOutcomeRunID,
 		MarketShareRunID:     req.MarketShareRunID,
 		OptimizerKey:         optimizerKey,
@@ -308,38 +309,37 @@ func (s *Server) getSuiteCalcuttaEvaluationResultHandler(w http.ResponseWriter, 
 		return
 	}
 
-	if eval.StrategyGenerationRunID == nil || *eval.StrategyGenerationRunID == "" {
-		writeError(w, r, http.StatusConflict, "invalid_state", "Evaluation has no generated entry yet", "strategy_generation_run_id")
-		return
-	}
-	portfolioRows, err := s.app.SuiteEvaluations.ListPortfolioBids(ctx, *eval.StrategyGenerationRunID)
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
-	}
-	portfolio := make([]suiteCalcuttaEvaluationPortfolioBid, 0, len(portfolioRows))
-	for _, b := range portfolioRows {
-		portfolio = append(portfolio, suiteCalcuttaEvaluationPortfolioBid{TeamID: b.TeamID, SchoolName: b.SchoolName, Seed: b.Seed, Region: b.Region, BidPoints: b.BidPoints, ExpectedROI: b.ExpectedROI})
-	}
-
+	portfolio := make([]suiteCalcuttaEvaluationPortfolioBid, 0)
 	var our *suiteCalcuttaEvaluationOurStrategyPerformance
-	if eval.CalcuttaEvaluationRunID != nil && *eval.CalcuttaEvaluationRunID != "" {
-		it, err := s.app.SuiteEvaluations.GetOurStrategyPerformance(ctx, *eval.CalcuttaEvaluationRunID, eval.ID)
+	if eval.StrategyGenerationRunID != nil && strings.TrimSpace(*eval.StrategyGenerationRunID) != "" {
+		portfolioRows, err := s.app.SuiteEvaluations.ListPortfolioBids(ctx, *eval.StrategyGenerationRunID)
 		if err != nil {
 			writeErrorFromErr(w, r, err)
 			return
 		}
-		if it != nil {
-			tmp := suiteCalcuttaEvaluationOurStrategyPerformance{
-				Rank:                   it.Rank,
-				EntryName:              it.EntryName,
-				MeanNormalizedPayout:   it.MeanNormalizedPayout,
-				MedianNormalizedPayout: it.MedianNormalizedPayout,
-				PTop1:                  it.PTop1,
-				PInMoney:               it.PInMoney,
-				TotalSimulations:       it.TotalSimulations,
+		portfolio = make([]suiteCalcuttaEvaluationPortfolioBid, 0, len(portfolioRows))
+		for _, b := range portfolioRows {
+			portfolio = append(portfolio, suiteCalcuttaEvaluationPortfolioBid{TeamID: b.TeamID, SchoolName: b.SchoolName, Seed: b.Seed, Region: b.Region, BidPoints: b.BidPoints, ExpectedROI: b.ExpectedROI})
+		}
+
+		if eval.CalcuttaEvaluationRunID != nil && *eval.CalcuttaEvaluationRunID != "" {
+			it, err := s.app.SuiteEvaluations.GetOurStrategyPerformance(ctx, *eval.CalcuttaEvaluationRunID, eval.ID)
+			if err != nil {
+				writeErrorFromErr(w, r, err)
+				return
 			}
-			our = &tmp
+			if it != nil {
+				tmp := suiteCalcuttaEvaluationOurStrategyPerformance{
+					Rank:                   it.Rank,
+					EntryName:              it.EntryName,
+					MeanNormalizedPayout:   it.MeanNormalizedPayout,
+					MedianNormalizedPayout: it.MedianNormalizedPayout,
+					PTop1:                  it.PTop1,
+					PInMoney:               it.PInMoney,
+					TotalSimulations:       it.TotalSimulations,
+				}
+				our = &tmp
+			}
 		}
 	}
 

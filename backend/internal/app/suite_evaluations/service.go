@@ -24,6 +24,7 @@ type EvaluationListItem struct {
 	OurPInMoney               *float64
 	TotalSimulations          *int
 	CalcuttaID                string
+	SimulatedCalcuttaID       *string
 	GameOutcomeRunID          *string
 	MarketShareRunID          *string
 	StrategyGenerationRunID   *string
@@ -98,6 +99,7 @@ type CreateSimulationParams struct {
 	SimulationRunBatchID *string
 	CohortID             string
 	CalcuttaID           string
+	SimulatedCalcuttaID  *string
 	GameOutcomeRunID     *string
 	MarketShareRunID     *string
 	OptimizerKey         string
@@ -124,6 +126,7 @@ type Repo interface {
 	GetSimulationBatchConfig(ctx context.Context, simulationBatchID string) (*SimulationBatchConfig, error)
 	GetCohortOptimizerKey(ctx context.Context, cohortID string) (string, error)
 	GetTournamentIDForCalcutta(ctx context.Context, calcuttaID string) (string, error)
+	GetTournamentIDForSimulatedCalcutta(ctx context.Context, simulatedCalcuttaID string) (string, error)
 	GetLatestGameOutcomeRunID(ctx context.Context, tournamentID, algorithmID string) (string, error)
 	GetLatestMarketShareRunID(ctx context.Context, calcuttaID, algorithmID string) (string, error)
 	UpsertSyntheticCalcutta(ctx context.Context, cohortID, calcuttaID string) (string, *string, *string, error)
@@ -229,10 +232,23 @@ func (s *Service) CreateEvaluation(ctx context.Context, p CreateSimulationParams
 			p.ExcludedEntryName = cfg.ExcludedEntryName
 		}
 
-		if p.GameOutcomeRunID == nil || p.MarketShareRunID == nil {
-			tournamentID, err := s.repo.GetTournamentIDForCalcutta(ctx, p.CalcuttaID)
-			if err != nil {
-				return nil, err
+		if p.GameOutcomeRunID == nil {
+			tournamentID := ""
+			if strings.TrimSpace(p.CalcuttaID) != "" {
+				loaded, err := s.repo.GetTournamentIDForCalcutta(ctx, p.CalcuttaID)
+				if err != nil {
+					return nil, err
+				}
+				tournamentID = loaded
+			} else if p.SimulatedCalcuttaID != nil && strings.TrimSpace(*p.SimulatedCalcuttaID) != "" {
+				loaded, err := s.repo.GetTournamentIDForSimulatedCalcutta(ctx, strings.TrimSpace(*p.SimulatedCalcuttaID))
+				if err != nil {
+					return nil, err
+				}
+				tournamentID = loaded
+			}
+			if strings.TrimSpace(tournamentID) == "" {
+				return nil, ErrMissingGameOutcomeRunForBatch
 			}
 			if p.GameOutcomeRunID == nil {
 				resolved, err := s.repo.GetLatestGameOutcomeRunID(ctx, tournamentID, cfg.GameOutcomesAlgID)
@@ -244,16 +260,6 @@ func (s *Service) CreateEvaluation(ctx context.Context, p CreateSimulationParams
 				}
 				p.GameOutcomeRunID = &resolved
 			}
-			if p.MarketShareRunID == nil {
-				resolved, err := s.repo.GetLatestMarketShareRunID(ctx, p.CalcuttaID, cfg.MarketShareAlgID)
-				if err != nil {
-					return nil, err
-				}
-				if strings.TrimSpace(resolved) == "" {
-					return nil, ErrMissingMarketShareRunForBatch
-				}
-				p.MarketShareRunID = &resolved
-			}
 		}
 	} else {
 		if p.OptimizerKey == "" {
@@ -262,17 +268,22 @@ func (s *Service) CreateEvaluation(ctx context.Context, p CreateSimulationParams
 		}
 	}
 
-	synthID, snapshotID, existingExcluded, err := s.repo.UpsertSyntheticCalcutta(ctx, p.CohortID, p.CalcuttaID)
-	if err != nil {
-		return nil, err
-	}
-	_ = snapshotID
-	if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
-		if err := s.repo.EnsureSyntheticSnapshot(ctx, synthID, p.CalcuttaID, existingExcluded); err != nil {
+	synthID := ""
+	snapshotID := (*string)(nil)
+	existingExcluded := (*string)(nil)
+	if strings.TrimSpace(p.CalcuttaID) != "" {
+		var err error
+		synthID, snapshotID, existingExcluded, err = s.repo.UpsertSyntheticCalcutta(ctx, p.CohortID, p.CalcuttaID)
+		if err != nil {
 			return nil, err
 		}
+		_ = snapshotID
+		if snapshotID == nil || strings.TrimSpace(*snapshotID) == "" {
+			if err := s.repo.EnsureSyntheticSnapshot(ctx, synthID, p.CalcuttaID, existingExcluded); err != nil {
+				return nil, err
+			}
+		}
 	}
-
 	return s.repo.CreateSimulationRun(ctx, p, synthID)
 }
 
