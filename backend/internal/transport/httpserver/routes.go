@@ -101,6 +101,8 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	labHandler := labcandidates.NewHandlerWithAuthUserID(s.app, authUserID)
 	labcandidates.RegisterRoutes(r, labcandidates.Handlers{
 		ListCandidates:      s.requirePermission("analytics.suites.read", labHandler.HandleListLabCandidates),
+		ListCandidateCombos: s.requirePermission("analytics.suites.read", labHandler.HandleListCandidateCombos),
+		GenerateCandidates:  s.requirePermission("analytics.suites.write", labHandler.HandleGenerateCandidates),
 		CreateCandidates:    s.requirePermission("analytics.suites.write", labHandler.HandleCreateLabCandidates),
 		GetCandidateDetails: s.requirePermission("analytics.suites.read", labHandler.HandleGetLabCandidateDetail),
 		DeleteCandidate:     s.requirePermission("analytics.suites.write", labHandler.HandleDeleteLabCandidate),

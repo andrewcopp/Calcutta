@@ -127,6 +127,8 @@ export const analyticsService = {
 		strategyGenerationRunId?: string;
 		marketShareArtifactId?: string;
 		advancementRunId?: string;
+		gameOutcomesAlgorithmId?: string;
+		marketShareAlgorithmId?: string;
 		optimizerKey?: string;
 		startingStateKey?: string;
 		excludedEntryName?: string;
@@ -140,6 +142,8 @@ export const analyticsService = {
 		if (params?.strategyGenerationRunId) q.set('strategy_generation_run_id', params.strategyGenerationRunId);
 		if (params?.marketShareArtifactId) q.set('market_share_artifact_id', params.marketShareArtifactId);
 		if (params?.advancementRunId) q.set('advancement_run_id', params.advancementRunId);
+		if (params?.gameOutcomesAlgorithmId) q.set('game_outcomes_algorithm_id', params.gameOutcomesAlgorithmId);
+		if (params?.marketShareAlgorithmId) q.set('market_share_algorithm_id', params.marketShareAlgorithmId);
 		if (params?.optimizerKey) q.set('optimizer_key', params.optimizerKey);
 		if (params?.startingStateKey) q.set('starting_state_key', params.startingStateKey);
 		if (params?.excludedEntryName) q.set('excluded_entry_name', params.excludedEntryName);
@@ -152,6 +156,25 @@ export const analyticsService = {
 
 	async getLabCandidate<T>(candidateId: string): Promise<T> {
 		return apiClient.get<T>(`/lab/candidates/${encodeURIComponent(candidateId)}`);
+	},
+
+	async listLabCandidateCombos<T>(params?: { startingStateKey?: string; excludedEntryName?: string }): Promise<T> {
+		const q = new URLSearchParams();
+		if (params?.startingStateKey) q.set('starting_state_key', params.startingStateKey);
+		if (params?.excludedEntryName) q.set('excluded_entry_name', params.excludedEntryName);
+		const suffix = q.toString() ? `?${q.toString()}` : '';
+		return apiClient.get<T>(`/lab/candidates/combos${suffix}`);
+	},
+
+	async generateLabCandidates<T>(payload: {
+		gameOutcomesAlgorithmId: string;
+		marketShareAlgorithmId: string;
+		optimizerKey: string;
+		startingStateKey?: string;
+		excludedEntryName?: string;
+		displayName?: string;
+	}): Promise<T> {
+		return apiClient.post<T>('/lab/candidates/generate', payload || {});
 	},
 
   async exportAnalyticsSnapshot(tournamentId: string, calcuttaId: string): Promise<{ blob: Blob; filename: string }> {

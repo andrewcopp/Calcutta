@@ -7,16 +7,47 @@ import (
 	"github.com/google/uuid"
 )
 
+type GenerateCandidatesFromAlgorithmsRequest struct {
+	GameOutcomesAlgorithmID string
+	MarketShareAlgorithmID  string
+	OptimizerKey            string
+	StartingStateKey        string
+	ExcludedEntryName       *string
+	DisplayName             string
+}
+
+type GenerateCandidatesFromAlgorithmsResult struct {
+	TotalCalcuttas         int
+	EligibleCalcuttas      int
+	CreatedCandidates      int
+	SkippedExisting        int
+	SkippedMissingUpstream int
+}
+
 type ListCandidatesFilter struct {
 	CalcuttaID              *string
 	TournamentID            *string
 	StrategyGenerationRunID *string
 	MarketShareArtifactID   *string
 	AdvancementRunID        *string
+	GameOutcomesAlgorithmID *string
+	MarketShareAlgorithmID  *string
 	OptimizerKey            *string
 	StartingStateKey        *string
 	ExcludedEntryName       *string
 	SourceKind              *string
+}
+
+type CandidateComboCoverage struct {
+	GameOutcomesAlgorithmID string
+	MarketShareAlgorithmID  string
+	OptimizerKey            string
+	ExistingCandidates      int
+}
+
+type CandidateComboCoverageSummary struct {
+	TotalCalcuttas int
+	Items          []CandidateComboCoverage
 }
 
 type ListCandidatesPagination struct {
@@ -50,6 +81,7 @@ type CandidateDetail struct {
 	SourceKind              string
 	SourceEntryArtifactID   *string
 	CalcuttaID              string
+	CalcuttaName            string
 	TournamentID            string
 	StrategyGenerationRunID string
 	MarketShareRunID        string
@@ -65,7 +97,9 @@ type CandidateDetail struct {
 type Repository interface {
 	GetCandidateDetail(ctx context.Context, candidateID string) (*CandidateDetail, error)
 	ListCandidates(ctx context.Context, filter ListCandidatesFilter, page ListCandidatesPagination) ([]CandidateDetail, error)
+	ListCandidateComboCoverage(ctx context.Context, startingStateKey string, excludedEntryName *string) (*CandidateComboCoverageSummary, error)
 	CreateCandidatesBulk(ctx context.Context, items []CreateCandidateRequest) ([]CreateCandidateResult, error)
+	GenerateCandidatesFromAlgorithms(ctx context.Context, req GenerateCandidatesFromAlgorithmsRequest) (*GenerateCandidatesFromAlgorithmsResult, error)
 	DeleteCandidate(ctx context.Context, candidateID string) error
 }
 
@@ -114,6 +148,16 @@ func (s *Service) ListCandidates(ctx context.Context, filter ListCandidatesFilte
 			return nil, apperrors.FieldInvalid("advancement_run_id", "advancement_run_id must be a valid UUID")
 		}
 	}
+	if filter.GameOutcomesAlgorithmID != nil && *filter.GameOutcomesAlgorithmID != "" {
+		if _, err := uuid.Parse(*filter.GameOutcomesAlgorithmID); err != nil {
+			return nil, apperrors.FieldInvalid("game_outcomes_algorithm_id", "game_outcomes_algorithm_id must be a valid UUID")
+		}
+	}
+	if filter.MarketShareAlgorithmID != nil && *filter.MarketShareAlgorithmID != "" {
+		if _, err := uuid.Parse(*filter.MarketShareAlgorithmID); err != nil {
+			return nil, apperrors.FieldInvalid("market_share_algorithm_id", "market_share_algorithm_id must be a valid UUID")
+		}
+	}
 
 	limit := page.Limit
 	if limit <= 0 {
@@ -128,6 +172,13 @@ func (s *Service) ListCandidates(ctx context.Context, filter ListCandidatesFilte
 	}
 
 	return s.repo.ListCandidates(ctx, filter, ListCandidatesPagination{Limit: limit, Offset: offset})
+}
+
+func (s *Service) ListCandidateComboCoverage(ctx context.Context, startingStateKey string, excludedEntryName *string) (*CandidateComboCoverageSummary, error) {
+	if startingStateKey == "" {
+		startingStateKey = "post_first_four"
+	}
+	return s.repo.ListCandidateComboCoverage(ctx, startingStateKey, excludedEntryName)
 }
 
 func (s *Service) CreateCandidatesBulk(ctx context.Context, items []CreateCandidateRequest) ([]CreateCandidateResult, error) {
@@ -164,6 +215,31 @@ func (s *Service) CreateCandidatesBulk(ctx context.Context, items []CreateCandid
 	}
 
 	return s.repo.CreateCandidatesBulk(ctx, items)
+}
+
+func (s *Service) GenerateCandidatesFromAlgorithms(ctx context.Context, req GenerateCandidatesFromAlgorithmsRequest) (*GenerateCandidatesFromAlgorithmsResult, error) {
+	if req.GameOutcomesAlgorithmID == "" {
+		return nil, apperrors.FieldRequired("gameOutcomesAlgorithmId")
+	}
+	if _, err := uuid.Parse(req.GameOutcomesAlgorithmID); err != nil {
+		return nil, apperrors.FieldInvalid("gameOutcomesAlgorithmId", "must be a valid UUID")
+	}
+	if req.MarketShareAlgorithmID == "" {
+		return nil, apperrors.FieldRequired("marketShareAlgorithmId")
+	}
+	if _, err := uuid.Parse(req.MarketShareAlgorithmID); err != nil {
+		return nil, apperrors.FieldInvalid("marketShareAlgorithmId", "must be a valid UUID")
+	}
+	if req.OptimizerKey == "" {
+		return nil, apperrors.FieldRequired("optimizerKey")
+	}
+	if req.StartingStateKey == "" {
+		return nil, apperrors.FieldRequired("startingStateKey")
+	}
+	if req.DisplayName == "" {
+		req.DisplayName = "Lab Candidate"
+	}
+	return s.repo.GenerateCandidatesFromAlgorithms(ctx, req)
 }
 
 func (s *Service) DeleteCandidate(ctx context.Context, candidateID string) error {

@@ -30,6 +30,7 @@ import { LabAdvancementTournamentDetailPage } from './pages/LabAdvancementTourna
 import { LabInvestmentAlgorithmDetailPage } from './pages/LabInvestmentAlgorithmDetailPage';
 import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDetailPage';
 import { LabCandidatesPage } from './pages/LabCandidatesPage';
+import { LabCandidateCohortPage } from './pages/LabCandidateCohortPage';
 import { LabCandidateDetailPage } from './pages/LabCandidateDetailPage';
 import { SandboxCohortsListPage } from './pages/SandboxCohortsListPage';
 import { SandboxCohortDetailPage } from './pages/SandboxCohortDetailPage';
@@ -81,6 +82,7 @@ const AppLayout: React.FC = () => {
         <Route path="/lab/entries/cohorts/:cohortId" element={<Navigate to="/lab/candidates" replace />} />
         <Route path="/lab/entries/scenarios/:scenarioId" element={<Navigate to="/lab/candidates" replace />} />
         <Route path="/lab/candidates" element={<LabCandidatesPage />} />
+        <Route path="/lab/candidates/cohorts" element={<LabCandidateCohortPage />} />
         <Route path="/lab/candidates/:candidateId" element={<LabCandidateDetailPage />} />
         <Route path="/lab/entry-runs/:runId" element={<EntryRunDetailPage />} />
         <Route path="/lab/entry-artifacts/:artifactId" element={<EntryArtifactDetailPage />} />

@@ -213,16 +213,12 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 		simTournamentID = &v
 	}
 
-	effPurpose := ""
-	if purpose != nil {
-		effPurpose = strings.TrimSpace(*purpose)
-	}
 	effReturnsModelKey := ""
 	if returnsModelKey != nil {
 		effReturnsModelKey = strings.TrimSpace(*returnsModelKey)
 	}
 
-	if effPurpose == "lab_entries_generation" && effReturnsModelKey == "pgo_dp" {
+	if effReturnsModelKey == "pgo_dp" {
 		if gameOutcomeRunID == nil || strings.TrimSpace(*gameOutcomeRunID) == "" {
 			return nil, errors.New("game_outcome_run_id is required for pgo_dp lab entry generation")
 		}

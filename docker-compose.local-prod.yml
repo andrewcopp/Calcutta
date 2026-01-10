@@ -41,7 +41,7 @@ services:
       "-entry-eval-worker=false",
       "-market-share-worker=false",
       "-game-outcome-worker=false",
-      "-strategy-generation-worker=false",
+      "-strategy-generation-worker=true",
       "-calcutta-eval-worker=false",
       "-suite-eval-worker=true"
     ]
