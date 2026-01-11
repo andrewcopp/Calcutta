@@ -49,9 +49,17 @@ export type GetSimulatedCalcuttaResponse = {
 };
 
 export const simulatedCalcuttasService = {
-  async list(params?: { tournamentId?: string; limit?: number; offset?: number }): Promise<ListSimulatedCalcuttasResponse> {
+  async list(params?: {
+    tournamentId?: string;
+    baseCalcuttaId?: string;
+    cohortId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ListSimulatedCalcuttasResponse> {
     const q = new URLSearchParams();
     if (params?.tournamentId) q.set('tournament_id', params.tournamentId);
+    if (params?.baseCalcuttaId) q.set('base_calcutta_id', params.baseCalcuttaId);
+    if (params?.cohortId) q.set('cohort_id', params.cohortId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
 

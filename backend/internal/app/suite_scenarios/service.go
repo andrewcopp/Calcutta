@@ -106,7 +106,7 @@ type ImportCandidateAsSimulatedEntryParams struct {
 }
 
 type Repository interface {
-	ListSimulatedCalcuttas(ctx context.Context, tournamentID *string, limit, offset int) ([]SimulatedCalcutta, error)
+	ListSimulatedCalcuttas(ctx context.Context, tournamentID *string, baseCalcuttaID *string, cohortID *string, limit, offset int) ([]SimulatedCalcutta, error)
 	GetSimulatedCalcutta(ctx context.Context, id string) (*SimulatedCalcutta, []SimulatedCalcuttaPayout, []SimulatedCalcuttaScoringRule, error)
 	CreateSimulatedCalcutta(ctx context.Context, p CreateSimulatedCalcuttaParams) (string, error)
 	CreateSimulatedCalcuttaFromCalcutta(ctx context.Context, p CreateSimulatedCalcuttaFromCalcuttaParams) (string, int, error)
@@ -129,7 +129,11 @@ func New(repo Repository) *Service {
 }
 
 func (s *Service) ListSimulatedCalcuttas(ctx context.Context, tournamentID *string, limit, offset int) ([]SimulatedCalcutta, error) {
-	return s.repo.ListSimulatedCalcuttas(ctx, tournamentID, limit, offset)
+	return s.repo.ListSimulatedCalcuttas(ctx, tournamentID, nil, nil, limit, offset)
+}
+
+func (s *Service) ListSimulatedCalcuttasWithFilters(ctx context.Context, tournamentID *string, baseCalcuttaID *string, cohortID *string, limit, offset int) ([]SimulatedCalcutta, error) {
+	return s.repo.ListSimulatedCalcuttas(ctx, tournamentID, baseCalcuttaID, cohortID, limit, offset)
 }
 
 func (s *Service) GetSimulatedCalcutta(ctx context.Context, id string) (*SimulatedCalcutta, []SimulatedCalcuttaPayout, []SimulatedCalcuttaScoringRule, error) {

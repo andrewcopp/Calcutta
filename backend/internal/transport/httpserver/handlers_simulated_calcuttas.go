@@ -158,6 +158,20 @@ func (s *Server) handleListSimulatedCalcuttas(w http.ResponseWriter, r *http.Req
 			return
 		}
 	}
+	baseCalcuttaID := strings.TrimSpace(r.URL.Query().Get("base_calcutta_id"))
+	if baseCalcuttaID != "" {
+		if _, err := uuid.Parse(baseCalcuttaID); err != nil {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "base_calcutta_id must be a valid UUID", "base_calcutta_id")
+			return
+		}
+	}
+	cohortID := strings.TrimSpace(r.URL.Query().Get("cohort_id"))
+	if cohortID != "" {
+		if _, err := uuid.Parse(cohortID); err != nil {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "cohort_id must be a valid UUID", "cohort_id")
+			return
+		}
+	}
 
 	limit := getLimit(r, 50)
 	if limit <= 0 {
@@ -176,8 +190,18 @@ func (s *Server) handleListSimulatedCalcuttas(w http.ResponseWriter, r *http.Req
 		v := tournamentID
 		tournamentIDPtr = &v
 	}
+	var baseCalcuttaIDPtr *string
+	if baseCalcuttaID != "" {
+		v := baseCalcuttaID
+		baseCalcuttaIDPtr = &v
+	}
+	var cohortIDPtr *string
+	if cohortID != "" {
+		v := cohortID
+		cohortIDPtr = &v
+	}
 
-	items, err := s.app.SuiteScenarios.ListSimulatedCalcuttas(r.Context(), tournamentIDPtr, limit, offset)
+	items, err := s.app.SuiteScenarios.ListSimulatedCalcuttasWithFilters(r.Context(), tournamentIDPtr, baseCalcuttaIDPtr, cohortIDPtr, limit, offset)
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return

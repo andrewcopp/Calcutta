@@ -22,12 +22,24 @@ func NewSuiteScenariosRepository(pool *pgxpool.Pool) *SuiteScenariosRepository {
 	return &SuiteScenariosRepository{pool: pool}
 }
 
-func (r *SuiteScenariosRepository) ListSimulatedCalcuttas(ctx context.Context, tournamentID *string, limit, offset int) ([]suite_scenarios.SimulatedCalcutta, error) {
+func (r *SuiteScenariosRepository) ListSimulatedCalcuttas(ctx context.Context, tournamentID *string, baseCalcuttaID *string, cohortID *string, limit, offset int) ([]suite_scenarios.SimulatedCalcutta, error) {
 	var tournamentParam any
 	if tournamentID != nil && strings.TrimSpace(*tournamentID) != "" {
 		tournamentParam = strings.TrimSpace(*tournamentID)
 	} else {
 		tournamentParam = nil
+	}
+	var baseCalcuttaParam any
+	if baseCalcuttaID != nil && strings.TrimSpace(*baseCalcuttaID) != "" {
+		baseCalcuttaParam = strings.TrimSpace(*baseCalcuttaID)
+	} else {
+		baseCalcuttaParam = nil
+	}
+	var cohortParam any
+	if cohortID != nil && strings.TrimSpace(*cohortID) != "" {
+		cohortParam = strings.TrimSpace(*cohortID)
+	} else {
+		cohortParam = nil
 	}
 
 	rows, err := r.pool.Query(ctx, `
@@ -46,10 +58,22 @@ func (r *SuiteScenariosRepository) ListSimulatedCalcuttas(ctx context.Context, t
 		FROM derived.simulated_calcuttas
 		WHERE deleted_at IS NULL
 			AND ($1::uuid IS NULL OR tournament_id = $1::uuid)
+			AND ($2::uuid IS NULL OR base_calcutta_id = $2::uuid)
+			AND (
+				$3::uuid IS NULL
+				OR EXISTS (
+					SELECT 1
+					FROM derived.simulation_runs r
+					WHERE r.simulated_calcutta_id = derived.simulated_calcuttas.id
+						AND r.cohort_id = $3::uuid
+						AND r.deleted_at IS NULL
+				)
+				OR (metadata_json->>'cohort_id') = $3::text
+			)
 		ORDER BY created_at DESC
-		LIMIT $2::int
-		OFFSET $3::int
-	`, tournamentParam, limit, offset)
+		LIMIT $4::int
+		OFFSET $5::int
+	`, tournamentParam, baseCalcuttaParam, cohortParam, limit, offset)
 	if err != nil {
 		return nil, err
 	}

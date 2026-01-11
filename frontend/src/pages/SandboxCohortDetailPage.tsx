@@ -17,7 +17,7 @@ import type { Calcutta } from '../types/calcutta';
 export function SandboxCohortDetailPage() {
   const { cohortId } = useParams<{ cohortId?: string }>();
   const queryClient = useQueryClient();
-  const [sourceCalcuttaId, setSourceCalcuttaId] = useState<string>('');
+  const [createFromCalcuttaId, setCreateFromCalcuttaId] = useState<string>('');
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
     queryKey: ['calcuttas', 'all'],
@@ -49,10 +49,16 @@ export function SandboxCohortDetailPage() {
 
   const effectiveCohortId = cohortId || '';
 
-  const effectiveSourceCalcuttaId = useMemo(() => {
-    if (sourceCalcuttaId) return sourceCalcuttaId;
+  const effectiveCreateFromCalcuttaId = useMemo(() => {
+    if (createFromCalcuttaId) return createFromCalcuttaId;
     return calcuttas.length > 0 ? calcuttas[0].id : '';
-  }, [calcuttas, sourceCalcuttaId]);
+  }, [calcuttas, createFromCalcuttaId]);
+
+  const calcuttaById = useMemo(() => {
+    const m = new Map<string, Calcutta>();
+    for (const c of calcuttas) m.set(c.id, c);
+    return m;
+  }, [calcuttas]);
 
   const cohortQuery = useQuery({
     queryKey: ['cohorts', 'get', effectiveCohortId],
@@ -63,15 +69,16 @@ export function SandboxCohortDetailPage() {
   const cohortTitle = cohortQuery.data?.name ? `${cohortQuery.data.name}` : effectiveCohortId ? `Cohort ${effectiveCohortId}` : 'Cohort';
 
   const simulatedCalcuttasQuery = useQuery({
-    queryKey: ['simulated-calcuttas', 'list', effectiveCohortId, effectiveSourceCalcuttaId],
+    queryKey: ['simulated-calcuttas', 'list', effectiveCohortId],
     queryFn: async () => {
-      // Simulated calcuttas are tournament-scoped. We list by tournament derived from the selected source calcutta.
-      const src = calcuttas.find((c) => c.id === effectiveSourceCalcuttaId);
-      const tournamentId = src?.tournamentId || '';
-      if (!tournamentId) return { items: [] as SimulatedCalcuttaListItem[] };
-      return simulatedCalcuttasService.list({ tournamentId, limit: 200, offset: 0 });
+      if (!effectiveCohortId) return { items: [] as SimulatedCalcuttaListItem[] };
+      return simulatedCalcuttasService.list({
+        cohortId: effectiveCohortId,
+        limit: 200,
+        offset: 0,
+      });
     },
-    enabled: Boolean(effectiveCohortId) && Boolean(effectiveSourceCalcuttaId) && calcuttas.length > 0,
+    enabled: Boolean(effectiveCohortId),
   });
 
   const simulatedCalcuttas: SimulatedCalcuttaListItem[] = useMemo(
@@ -82,12 +89,16 @@ export function SandboxCohortDetailPage() {
   const createSimulatedCalcuttaMutation = useMutation({
     mutationFn: async () => {
       if (!effectiveCohortId) throw new Error('Missing cohort ID');
-      const src = effectiveSourceCalcuttaId;
+      const src = effectiveCreateFromCalcuttaId;
       if (!src) throw new Error('Missing source calcutta');
-      return simulatedCalcuttasService.createFromCalcutta({ calcuttaId: src, startingStateKey: 'post_first_four', metadata: {} });
+      return simulatedCalcuttasService.createFromCalcutta({
+        calcuttaId: src,
+        startingStateKey: 'post_first_four',
+        metadata: { cohort_id: effectiveCohortId },
+      });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['simulated-calcuttas', 'list', effectiveCohortId, effectiveSourceCalcuttaId] });
+      await queryClient.invalidateQueries({ queryKey: ['simulated-calcuttas', 'list', effectiveCohortId] });
     },
   });
 
@@ -149,8 +160,12 @@ export function SandboxCohortDetailPage() {
               <h2 className="text-xl font-semibold">Simulated Calcuttas</h2>
 
               <div className="flex items-center gap-3">
-                <div className="text-sm text-gray-500 whitespace-nowrap">Source Calcutta</div>
-                <Select value={effectiveSourceCalcuttaId} onChange={(e) => setSourceCalcuttaId(e.target.value)} disabled={calcuttas.length === 0}>
+                <div className="text-sm text-gray-500 whitespace-nowrap">Create from</div>
+                <Select
+                  value={effectiveCreateFromCalcuttaId}
+                  onChange={(e) => setCreateFromCalcuttaId(e.target.value)}
+                  disabled={calcuttas.length === 0}
+                >
                   {calcuttas.map((c) => (
                     <option key={c.id} value={c.id}>
                       {seasonFromCalcuttaName(c.name)} · {c.name}
@@ -159,7 +174,7 @@ export function SandboxCohortDetailPage() {
                 </Select>
                 <Button
                   size="sm"
-                  disabled={createSimulatedCalcuttaMutation.isPending || !effectiveCohortId || !effectiveSourceCalcuttaId}
+                  disabled={createSimulatedCalcuttaMutation.isPending || !effectiveCohortId || !effectiveCreateFromCalcuttaId}
                   onClick={() => createSimulatedCalcuttaMutation.mutate()}
                 >
                   Create
@@ -181,7 +196,7 @@ export function SandboxCohortDetailPage() {
 
             {!simulatedCalcuttasQuery.isLoading && !simulatedCalcuttasQuery.isError && simulatedCalcuttas.length === 0 ? (
               <Alert variant="info" className="mt-3">
-                No simulated calcuttas found for this tournament.
+                No simulated calcuttas found for this cohort.
               </Alert>
             ) : null}
 
@@ -206,11 +221,12 @@ export function SandboxCohortDetailPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {simulatedCalcuttas.map((sc) => {
                       const href = `/sandbox/simulated-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
+                      const base = sc.base_calcutta_id ? calcuttaById.get(sc.base_calcutta_id) : null;
                       return (
                         <tr key={sc.id} className="hover:bg-gray-50">
                           <td className="px-3 py-2 text-sm text-gray-900" title={sc.name}>
                             <div className="font-medium">{sc.name}</div>
-                            {sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
+                            {base ? <div className="text-xs text-gray-600">base {base.name}</div> : sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
                           </td>
                           <td className="px-3 py-2 text-sm text-gray-700">{sc.tournament_id.slice(0, 8)}</td>
                           <td className="px-3 py-2 text-sm text-gray-700">{sc.starting_state_key}</td>
