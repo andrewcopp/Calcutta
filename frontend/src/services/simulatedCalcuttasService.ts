@@ -32,6 +32,13 @@ export type CreateSimulatedCalcuttaFromCalcuttaResponse = {
   copiedEntries: number;
 };
 
+export type PatchSimulatedCalcuttaRequest = {
+  name?: string;
+  description?: string | null;
+  highlightedSimulatedEntryId?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
 export type SimulatedCalcuttaPayout = {
   position: number;
   amountCents: number;
@@ -75,5 +82,9 @@ export const simulatedCalcuttasService = {
     req: CreateSimulatedCalcuttaFromCalcuttaRequest
   ): Promise<CreateSimulatedCalcuttaFromCalcuttaResponse> {
     return apiClient.post<CreateSimulatedCalcuttaFromCalcuttaResponse>('/simulated-calcuttas/from-calcutta', req);
+  },
+
+  async patch(id: string, req: PatchSimulatedCalcuttaRequest): Promise<{ ok: boolean }> {
+    return apiClient.patch<{ ok: boolean }>(`/simulated-calcuttas/${encodeURIComponent(id)}`, req);
   },
 };

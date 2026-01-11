@@ -197,9 +197,13 @@ export function LabCandidateCohortPage() {
 					},
 				});
 
-				await simulatedEntriesService.importCandidate(createdSim.id, {
+				const imported = await simulatedEntriesService.importCandidate(createdSim.id, {
 					candidateId: c.candidate_id,
 					displayName: c.display_name,
+				});
+
+				await simulatedCalcuttasService.patch(createdSim.id, {
+					highlightedSimulatedEntryId: imported.simulatedEntryId,
 				});
 
 				await simulationRunsService.create({
