@@ -137,8 +137,15 @@ export function SimulatedCalcuttaDetailPage() {
                     {entries.map((e) => (
                       <tr key={e.id} className="hover:bg-gray-50">
                         <td className="px-3 py-2 text-sm text-gray-900">
-                          <div className="font-medium">{e.display_name}</div>
-                          <div className="text-xs text-gray-500">{e.id.slice(0, 8)}</div>
+                          <Link
+                            to={`/sandbox/simulated-calcuttas/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(e.id)}${
+                              cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
+                            }`}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <div className="font-medium">{e.display_name}</div>
+                            <div className="text-xs text-gray-500">{e.id.slice(0, 8)}</div>
+                          </Link>
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-700">{e.source_kind}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-700">{e.teams?.length ?? 0}</td>

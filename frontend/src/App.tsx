@@ -39,6 +39,7 @@ import { SimulationRunEntryDetailPage } from './pages/SimulationRunEntryDetailPa
 import { EntryRunDetailPage } from './pages/EntryRunDetailPage';
 import { EntryArtifactDetailPage } from './pages/EntryArtifactDetailPage';
 import { SimulatedCalcuttaDetailPage } from './pages/SimulatedCalcuttaDetailPage';
+import { SimulatedCalcuttaEntryDetailPage } from './pages/SimulatedCalcuttaEntryDetailPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
 
@@ -100,6 +101,7 @@ const AppLayout: React.FC = () => {
         <Route path="/sandbox/cohorts" element={<SandboxCohortsListPage />} />
         <Route path="/sandbox/cohorts/:cohortId" element={<SandboxCohortDetailPage />} />
         <Route path="/sandbox/simulated-calcuttas/:id" element={<SimulatedCalcuttaDetailPage />} />
+        <Route path="/sandbox/simulated-calcuttas/:id/entries/:entryId" element={<SimulatedCalcuttaEntryDetailPage />} />
         <Route path="/sandbox/simulation-runs/:id" element={<SimulationRunDetailPage />} />
         <Route path="/sandbox/simulation-runs/:id/entries/:snapshotEntryId" element={<SimulationRunEntryDetailPage />} />
         <Route path="/sandbox/evaluations/:id" element={<SandboxEvaluationRedirect />} />
