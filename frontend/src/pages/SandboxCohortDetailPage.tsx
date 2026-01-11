@@ -11,8 +11,15 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
 import { cohortsService } from '../services/cohortsService';
-import { simulationRunsService, type ListSimulationRunsResponse, type SimulationRun } from '../services/simulationRunsService';
+import {
+  simulationRunsService,
+  type ListSimulationRunsResponse,
+  type SimulationRun,
+  type SimulationRunEntryPerformance,
+  type SimulationRunResult,
+} from '../services/simulationRunsService';
 import { simulatedCalcuttasService, type SimulatedCalcuttaListItem } from '../services/simulatedCalcuttasService';
+import { simulatedEntriesService } from '../services/simulatedEntriesService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxCohortDetailPage() {
@@ -112,6 +119,23 @@ export function SandboxCohortDetailPage() {
     [simulatedCalcuttasQuery.data?.items]
   );
 
+  const highlightedEntryNameBySimulatedCalcuttaId = useQuery({
+    queryKey: ['simulated-entries', 'highlighted-name', effectiveCohortId, simulatedCalcuttas.map((s) => s.id).join(',')],
+    queryFn: async () => {
+      const m = new Map<string, string>();
+      const tasks = simulatedCalcuttas
+        .filter((sc) => Boolean(sc.highlighted_simulated_entry_id))
+        .map(async (sc) => {
+          const resp = await simulatedEntriesService.list(sc.id);
+          const match = resp.items.find((e) => e.id === sc.highlighted_simulated_entry_id);
+          if (match) m.set(sc.id, match.display_name);
+        });
+      await Promise.all(tasks);
+      return m;
+    },
+    enabled: Boolean(effectiveCohortId) && simulatedCalcuttas.length > 0,
+  });
+
   const latestRunBySimulatedCalcuttaId = useMemo(() => {
     const m = new Map<string, SimulationRun>();
     const items = runsQuery.data?.items ?? [];
@@ -123,6 +147,37 @@ export function SandboxCohortDetailPage() {
     }
     return m;
   }, [runsQuery.data?.items]);
+
+  const highlightedPerfBySimulatedCalcuttaId = useQuery({
+    queryKey: [
+      'simulation-runs',
+      'highlighted-entry-performance',
+      effectiveCohortId,
+      simulatedCalcuttas.map((s) => s.id).join(','),
+      (runsQuery.data?.items ?? []).map((r) => r.id).slice(0, 50).join(','),
+    ],
+    queryFn: async () => {
+      const byID = new Map<string, SimulationRunEntryPerformance>();
+      const nameByID = highlightedEntryNameBySimulatedCalcuttaId.data ?? new Map<string, string>();
+
+      const tasks = simulatedCalcuttas.map(async (sc) => {
+        const run = latestRunBySimulatedCalcuttaId.get(sc.id);
+        if (!run || run.status !== 'succeeded') return;
+        const targetName = nameByID.get(sc.id);
+        if (!targetName) return;
+        const result: SimulationRunResult = await simulationRunsService.getResult({ cohortId: effectiveCohortId, id: run.id });
+        const perf = result.entries.find((e) => e.entry_name === targetName);
+        if (perf) byID.set(sc.id, perf);
+      });
+
+      await Promise.all(tasks);
+      return byID;
+    },
+    enabled:
+      Boolean(effectiveCohortId) &&
+      simulatedCalcuttas.length > 0 &&
+      !highlightedEntryNameBySimulatedCalcuttaId.isLoading,
+  });
 
   const createSimulatedCalcuttaMutation = useMutation({
     mutationFn: async () => {
@@ -260,7 +315,7 @@ export function SandboxCohortDetailPage() {
                     {simulatedCalcuttas.map((sc) => {
                       const href = `/sandbox/simulated-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
                       const base = sc.base_calcutta_id ? calcuttaById.get(sc.base_calcutta_id) : null;
-                      const run = latestRunBySimulatedCalcuttaId.get(sc.id);
+                      const perf = highlightedPerfBySimulatedCalcuttaId.data?.get(sc.id);
                       return (
                         <tr
                           key={sc.id}
@@ -271,10 +326,10 @@ export function SandboxCohortDetailPage() {
                             <div className="font-medium">{sc.name}</div>
                             {base ? <div className="text-xs text-gray-600">base {base.name}</div> : sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
                           </td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">{fmtFloat(run?.our_mean_normalized_payout, 4)}</td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(run?.our_p_top1)}</td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(run?.our_p_in_money)}</td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtFinish(run?.realized_finish_position, run?.realized_is_tied)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">{fmtFloat(perf?.mean_normalized_payout, 4)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(perf?.p_top1)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(perf?.p_in_money)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtFinish(perf?.finish_position, perf?.is_tied)}</td>
                         </tr>
                       );
                     })}
