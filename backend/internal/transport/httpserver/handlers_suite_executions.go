@@ -108,7 +108,7 @@ func (s *Server) getCohortSimulationBatchHandler(w http.ResponseWriter, r *http.
 			e.created_at,
 			e.updated_at
 		FROM derived.simulation_run_batches e
-		LEFT JOIN derived.synthetic_calcutta_cohorts s
+		LEFT JOIN derived.simulation_cohorts s
 			ON s.id = e.cohort_id
 			AND s.deleted_at IS NULL
 		WHERE e.id = $1::uuid
@@ -201,7 +201,7 @@ func (s *Server) createSuiteExecutionHandler(w http.ResponseWriter, r *http.Requ
 			seed,
 			COALESCE(NULLIF(starting_state_key, ''), 'post_first_four') AS starting_state_key,
 			excluded_entry_name
-		FROM derived.synthetic_calcutta_cohorts
+		FROM derived.simulation_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -425,7 +425,7 @@ func (s *Server) listSuiteExecutionsHandler(w http.ResponseWriter, r *http.Reque
 			e.created_at,
 			e.updated_at
 		FROM derived.simulation_run_batches e
-		LEFT JOIN derived.synthetic_calcutta_cohorts s
+		LEFT JOIN derived.simulation_cohorts s
 			ON s.id = e.cohort_id
 			AND s.deleted_at IS NULL
 		WHERE e.deleted_at IS NULL
@@ -496,7 +496,7 @@ func (s *Server) getSuiteExecutionHandler(w http.ResponseWriter, r *http.Request
 			e.created_at,
 			e.updated_at
 		FROM derived.simulation_run_batches e
-		LEFT JOIN derived.synthetic_calcutta_cohorts s
+		LEFT JOIN derived.simulation_cohorts s
 			ON s.id = e.cohort_id
 			AND s.deleted_at IS NULL
 		WHERE e.id = $1::uuid

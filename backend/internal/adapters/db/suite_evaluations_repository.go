@@ -56,7 +56,7 @@ func (r *SuiteEvaluationsRepository) ListEvaluations(ctx context.Context, calcut
 			r.created_at,
 			r.updated_at
 		FROM derived.simulation_runs r
-		LEFT JOIN derived.synthetic_calcutta_cohorts c
+		LEFT JOIN derived.simulation_cohorts c
 			ON c.id = r.cohort_id
 			AND c.deleted_at IS NULL
 		WHERE r.deleted_at IS NULL
@@ -156,7 +156,7 @@ func (r *SuiteEvaluationsRepository) GetEvaluation(ctx context.Context, id strin
 			r.created_at,
 			r.updated_at
 		FROM derived.simulation_runs r
-		LEFT JOIN derived.synthetic_calcutta_cohorts c
+		LEFT JOIN derived.simulation_cohorts c
 			ON c.id = r.cohort_id
 			AND c.deleted_at IS NULL
 		WHERE r.id = $1::uuid
@@ -449,7 +449,7 @@ func (r *SuiteEvaluationsRepository) GetSimulationBatchConfig(ctx context.Contex
 			COALESCE(s.n_sims, 0)::int,
 			COALESCE(s.seed, 0)::int
 		FROM derived.simulation_run_batches e
-		JOIN derived.synthetic_calcutta_cohorts s ON s.id = e.cohort_id AND s.deleted_at IS NULL
+		JOIN derived.simulation_cohorts s ON s.id = e.cohort_id AND s.deleted_at IS NULL
 		WHERE e.id = $1::uuid
 			AND e.deleted_at IS NULL
 		LIMIT 1
@@ -475,7 +475,7 @@ func (r *SuiteEvaluationsRepository) GetCohortOptimizerKey(ctx context.Context, 
 	v := ""
 	_ = r.pool.QueryRow(ctx, `
 		SELECT COALESCE(optimizer_key, '')
-		FROM derived.synthetic_calcutta_cohorts
+		FROM derived.simulation_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1

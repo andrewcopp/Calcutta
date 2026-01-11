@@ -59,8 +59,15 @@ func (s *Server) registerSyntheticCalcuttaCohortRoutes(r *mux.Router) {
 
 func (s *Server) createSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *http.Request) {
 	type createCohortRequest struct {
-		Name        string  `json:"name"`
-		Description *string `json:"description"`
+		Name                  string  `json:"name"`
+		Description           *string `json:"description"`
+		GameOutcomesAlgorithm *string `json:"gameOutcomesAlgorithmId"`
+		MarketShareAlgorithm  *string `json:"marketShareAlgorithmId"`
+		OptimizerKey          *string `json:"optimizerKey"`
+		NSims                 *int    `json:"nSims"`
+		Seed                  *int    `json:"seed"`
+		StartingStateKey      *string `json:"startingStateKey"`
+		ExcludedEntryName     *string `json:"excludedEntryName"`
 	}
 
 	var req createCohortRequest
@@ -89,35 +96,153 @@ func (s *Server) createSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	goAlgID, err := s.getDefaultAlgorithmID(ctx, "game_outcomes", "kenpom-v1-go")
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	goAlgID := ""
+	if req.GameOutcomesAlgorithm != nil {
+		v := strings.TrimSpace(*req.GameOutcomesAlgorithm)
+		if v != "" {
+			if _, err := uuid.Parse(v); err != nil {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "gameOutcomesAlgorithmId must be a valid UUID", "gameOutcomesAlgorithmId")
+				return
+			}
+			goAlgID = v
+		}
 	}
-	msAlgID, err := s.getDefaultAlgorithmID(ctx, "market_share", "naive-ev-baseline")
-	if err != nil {
-		writeErrorFromErr(w, r, err)
-		return
+	if goAlgID == "" {
+		id, err := s.getDefaultAlgorithmID(ctx, "game_outcomes", "kenpom-v1-go")
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		goAlgID = id
 	}
 
+	msAlgID := ""
+	if req.MarketShareAlgorithm != nil {
+		v := strings.TrimSpace(*req.MarketShareAlgorithm)
+		if v != "" {
+			if _, err := uuid.Parse(v); err != nil {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareAlgorithmId must be a valid UUID", "marketShareAlgorithmId")
+				return
+			}
+			msAlgID = v
+		}
+	}
+	if msAlgID == "" {
+		id, err := s.getDefaultAlgorithmID(ctx, "market_share", "naive-ev-baseline")
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		msAlgID = id
+	}
+
+	// Validate algorithm IDs exist and match expected kind.
+	{
+		var ok bool
+		if err := s.pool.QueryRow(ctx, `
+			SELECT EXISTS(
+				SELECT 1
+				FROM derived.algorithms
+				WHERE id = $1::uuid
+					AND kind = 'game_outcomes'
+					AND deleted_at IS NULL
+			)
+		`, goAlgID).Scan(&ok); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		if !ok {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "gameOutcomesAlgorithmId not found", "gameOutcomesAlgorithmId")
+			return
+		}
+	}
+	{
+		var ok bool
+		if err := s.pool.QueryRow(ctx, `
+			SELECT EXISTS(
+				SELECT 1
+				FROM derived.algorithms
+				WHERE id = $1::uuid
+					AND kind = 'market_share'
+					AND deleted_at IS NULL
+			)
+		`, msAlgID).Scan(&ok); err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		if !ok {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "marketShareAlgorithmId not found", "marketShareAlgorithmId")
+			return
+		}
+	}
+
+	// Default algorithm IDs already resolved above.
+
 	optimizerKey := "minlp_v1"
-	if s.app != nil && s.app.ModelCatalogs != nil {
-		descs := s.app.ModelCatalogs.ListEntryOptimizers()
-		for _, d := range descs {
-			if d.Deprecated {
-				continue
+	if req.OptimizerKey != nil {
+		v := strings.TrimSpace(*req.OptimizerKey)
+		if v != "" {
+			optimizerKey = v
+		}
+	}
+	// If optimizer key wasn't explicitly provided, default to first non-deprecated optimizer.
+	if req.OptimizerKey == nil || strings.TrimSpace(*req.OptimizerKey) == "" {
+		if s.app != nil && s.app.ModelCatalogs != nil {
+			descs := s.app.ModelCatalogs.ListEntryOptimizers()
+			for _, d := range descs {
+				if d.Deprecated {
+					continue
+				}
+				if strings.TrimSpace(d.ID) == "" {
+					continue
+				}
+				optimizerKey = strings.TrimSpace(d.ID)
+				break
 			}
-			if strings.TrimSpace(d.ID) == "" {
-				continue
+		}
+	}
+
+	nSims := 5000
+	if req.NSims != nil {
+		if *req.NSims <= 0 {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "nSims must be positive", "nSims")
+			return
+		}
+		nSims = *req.NSims
+	}
+
+	seed := 42
+	if req.Seed != nil {
+		if *req.Seed == 0 {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "seed cannot be 0", "seed")
+			return
+		}
+		seed = *req.Seed
+	}
+
+	startingStateKey := "post_first_four"
+	if req.StartingStateKey != nil {
+		v := strings.TrimSpace(*req.StartingStateKey)
+		if v != "" {
+			if v != "post_first_four" && v != "current" {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "startingStateKey must be 'current' or 'post_first_four'", "startingStateKey")
+				return
 			}
-			optimizerKey = strings.TrimSpace(d.ID)
-			break
+			startingStateKey = v
+		}
+	}
+
+	excludedEntryName := (*string)(nil)
+	if req.ExcludedEntryName != nil {
+		v := strings.TrimSpace(*req.ExcludedEntryName)
+		if v != "" {
+			excludedEntryName = &v
 		}
 	}
 
 	var createdID string
 	if err := s.pool.QueryRow(ctx, `
-		INSERT INTO derived.synthetic_calcutta_cohorts (
+		INSERT INTO derived.simulation_cohorts (
 			name,
 			description,
 			game_outcomes_algorithm_id,
@@ -126,6 +251,7 @@ func (s *Server) createSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *
 			n_sims,
 			seed,
 			starting_state_key,
+			excluded_entry_name,
 			params_json
 		)
 		VALUES (
@@ -134,18 +260,24 @@ func (s *Server) createSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *
 			$3::uuid,
 			$4::uuid,
 			$5,
-			5000,
-			42,
-			'post_first_four',
+			$6::int,
+			$7::int,
+			$8,
+			$9,
 			'{"auto": false}'::jsonb
 		)
 		RETURNING id::text
-	`, req.Name, desc, goAlgID, msAlgID, optimizerKey).Scan(&createdID); err != nil {
+	`, req.Name, desc, goAlgID, msAlgID, optimizerKey, nSims, seed, startingStateKey, excludedEntryName).Scan(&createdID); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			// unique violation
 			if pgErr.Code == "23505" {
 				writeError(w, r, http.StatusConflict, "conflict", "A cohort with that name already exists", "name")
+				return
+			}
+			// foreign key violation
+			if pgErr.Code == "23503" {
+				writeError(w, r, http.StatusBadRequest, "validation_error", "Invalid algorithm ID(s)", "")
 				return
 			}
 		}
@@ -173,7 +305,7 @@ func (s *Server) createSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *
 			le.updated_at,
 			c.created_at,
 			c.updated_at
-		FROM derived.synthetic_calcutta_cohorts c
+		FROM derived.simulation_cohorts c
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -280,7 +412,7 @@ func (s *Server) listSyntheticCalcuttaCohortsHandler(w http.ResponseWriter, r *h
 			le.updated_at,
 			c.created_at,
 			c.updated_at
-		FROM derived.synthetic_calcutta_cohorts c
+		FROM derived.simulation_cohorts c
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -372,7 +504,7 @@ func (s *Server) getSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *htt
 			le.updated_at,
 			c.created_at,
 			c.updated_at
-		FROM derived.synthetic_calcutta_cohorts c
+		FROM derived.simulation_cohorts c
 		LEFT JOIN LATERAL (
 			SELECT
 				e.id::text,
@@ -504,7 +636,7 @@ func (s *Server) patchSyntheticCalcuttaCohortHandler(w http.ResponseWriter, r *h
 	}
 
 	ct, err := s.pool.Exec(r.Context(), `
-		UPDATE derived.synthetic_calcutta_cohorts
+		UPDATE derived.simulation_cohorts
 		SET optimizer_key = COALESCE($2::text, optimizer_key),
 			n_sims = COALESCE($3::int, n_sims),
 			seed = COALESCE($4::int, seed),

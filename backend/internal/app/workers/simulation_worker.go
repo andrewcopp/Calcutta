@@ -985,7 +985,7 @@ func (w *SimulationWorker) resolveCohortNSims(ctx context.Context, cohortID stri
 	var n int
 	if err := w.pool.QueryRow(ctx, `
 		SELECT n_sims
-		FROM derived.synthetic_calcutta_cohorts
+		FROM derived.simulation_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -1002,7 +1002,7 @@ func (w *SimulationWorker) resolveCohortSeed(ctx context.Context, cohortID strin
 	var seed int
 	if err := w.pool.QueryRow(ctx, `
 		SELECT seed
-		FROM derived.synthetic_calcutta_cohorts
+		FROM derived.simulation_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -1019,7 +1019,7 @@ func (w *SimulationWorker) resolveCohortOptimizerKey(ctx context.Context, cohort
 	var key string
 	if err := w.pool.QueryRow(ctx, `
 		SELECT optimizer_key
-		FROM derived.synthetic_calcutta_cohorts
+		FROM derived.simulation_cohorts
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1

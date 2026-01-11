@@ -52,7 +52,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "go run ./cmd/workers -suite-eval-worker=true -game-outcome-worker=true -market-share-worker=false"
+    command: sh -c "go run ./cmd/workers -suite-eval-worker=true -game-outcome-worker=true -market-share-worker=false -strategy-generation-worker=true"
 
   market_share_worker:
     image: python:3.11-slim

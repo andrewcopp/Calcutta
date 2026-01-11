@@ -336,6 +336,11 @@ func (r *SuiteScenariosRepository) CreateSimulatedCalcuttaFromCalcutta(ctx conte
 		return "", 0, err
 	}
 
+	excluded := ""
+	if p.ExcludedEntryName != nil {
+		excluded = strings.TrimSpace(*p.ExcludedEntryName)
+	}
+
 	type entryRow struct {
 		id   string
 		name string
@@ -345,8 +350,9 @@ func (r *SuiteScenariosRepository) CreateSimulatedCalcuttaFromCalcutta(ctx conte
 		FROM core.entries
 		WHERE calcutta_id = $1::uuid
 			AND deleted_at IS NULL
+			AND (name != $2 OR $2 = '')
 		ORDER BY created_at ASC
-	`, p.CalcuttaID)
+	`, p.CalcuttaID, excluded)
 	if err != nil {
 		return "", 0, err
 	}
