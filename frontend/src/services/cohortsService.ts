@@ -9,6 +9,8 @@ export type CohortListItem = {
   optimizer_key: string;
   n_sims: number;
   seed: number;
+  starting_state_key?: string;
+  excluded_entry_name?: string | null;
   latest_execution_id?: string | null;
   latest_execution_name?: string | null;
   latest_execution_status?: string | null;
@@ -25,6 +27,21 @@ export type ListCohortsResponse = {
 export type CreateCohortRequest = {
   name: string;
   description?: string | null;
+	gameOutcomesAlgorithmId?: string;
+	marketShareAlgorithmId?: string;
+	optimizerKey?: string;
+	nSims?: number;
+	seed?: number;
+	startingStateKey?: string;
+	excludedEntryName?: string;
+};
+
+export type PatchCohortRequest = {
+	optimizerKey?: string | null;
+	nSims?: number | null;
+	seed?: number | null;
+	startingStateKey?: string | null;
+	excludedEntryName?: string | null;
 };
 
 export const cohortsService = {
@@ -44,4 +61,8 @@ export const cohortsService = {
   async create(req: CreateCohortRequest): Promise<CohortListItem> {
     return apiClient.post<CohortListItem>('/cohorts', req);
   },
+
+	async patch(id: string, req: PatchCohortRequest): Promise<CohortListItem> {
+		return apiClient.patch<CohortListItem>(`/cohorts/${encodeURIComponent(id)}`, req);
+	},
 };

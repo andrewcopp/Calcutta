@@ -95,10 +95,11 @@ export type SimulationRunSnapshotEntryResponse = {
 
 export type CreateSimulationRunRequest = {
   calcuttaId: string;
+  simulatedCalcuttaId?: string;
   simulationRunBatchId?: string;
   optimizerKey?: string;
-  gameOutcomeRunId: string;
-  marketShareRunId: string;
+  gameOutcomeRunId?: string;
+  marketShareRunId?: string;
   nSims: number;
   seed: number;
   startingStateKey?: string;
