@@ -86,6 +86,10 @@ export function LabInvestmentAlgorithmDetailPage() {
     return items.find((a) => a.id === algorithmId) ?? null;
   }, [algorithmsQuery.data?.items, algorithmId]);
 
+	const canBulkRun = Boolean(
+		algorithm?.name && (algorithm.name.startsWith('ridge') || algorithm.name === 'oracle_actual_market')
+	);
+
   const coverageDetailQuery = useQuery<AlgorithmCoverageDetailResponse | null>({
     queryKey: ['analytics', 'coverage-detail', 'market-share', algorithmId],
     queryFn: async () => {
@@ -134,12 +138,14 @@ export function LabInvestmentAlgorithmDetailPage() {
 	const runAll = async () => {
 		if (!algorithmId) return;
 		setRunAllError(null);
-		if (algorithm?.name !== 'ridge') {
-			setRunAllError("Bulk execution is only supported for the 'ridge' algorithm.");
+		if (!canBulkRun) {
+			setRunAllError(
+				"Bulk execution is only supported for market share algorithms prefixed with 'ridge' or named 'oracle_actual_market'."
+			);
 			return;
 		}
 
-		const excluded = window.prompt('excluded_entry_name (required for ridge training):', '');
+		const excluded = window.prompt('excluded_entry_name (required):', '');
 		if (excluded === null) return;
 		const excludedEntryName = excluded.trim();
 		if (!excludedEntryName) {
@@ -173,7 +179,7 @@ export function LabInvestmentAlgorithmDetailPage() {
 				<Button
 					onClick={runAll}
 					loading={runAllLoading}
-					disabled={!algorithmId || algorithmsQuery.isLoading || algorithm?.name !== 'ridge'}
+					disabled={!algorithmId || algorithmsQuery.isLoading || !canBulkRun}
 				>
 					Run for all calcuttas
 				</Button>

@@ -134,13 +134,14 @@ func (h *Handler) HandleBulkCreateMarketShareRunsForAlgorithm(w http.ResponseWri
 	ctx := r.Context()
 
 	var kind, name string
+	var algoParamsStr string
 	if err := h.pool.QueryRow(ctx, `
-		SELECT kind, name
+		SELECT kind, name, COALESCE(params_json::text, '{}')
 		FROM derived.algorithms
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, algorithmID).Scan(&kind, &name); err != nil {
+	`, algorithmID).Scan(&kind, &name, &algoParamsStr); err != nil {
 		if err == pgx.ErrNoRows {
 			httperr.Write(w, r, http.StatusNotFound, "not_found", "Algorithm not found", "id")
 			return
@@ -154,13 +155,18 @@ func (h *Handler) HandleBulkCreateMarketShareRunsForAlgorithm(w http.ResponseWri
 	}
 
 	// For now, only the ridge Python runner is supported for bulk execution.
-	if name != "ridge" {
-		httperr.Write(w, r, http.StatusBadRequest, "unsupported_algorithm", "Bulk execution is only supported for market_share algorithm 'ridge'", "id")
+	// Allow registered ridge variants (e.g. ridge-v1, ridge-v2, ridge-v2-log).
+	if !(strings.HasPrefix(name, "ridge") || name == "oracle_actual_market") {
+		httperr.Write(w, r, http.StatusBadRequest, "unsupported_algorithm", "Bulk execution is only supported for market_share algorithms prefixed with 'ridge' or named 'oracle_actual_market'", "id")
 		return
 	}
 
-	// Merge any JSON body params into the market_share_runs.params_json.
-	params := map[string]any{"source": "api_bulk"}
+	// Start with algorithm default params_json, then merge any JSON body params.
+	params := map[string]any{}
+	if strings.TrimSpace(algoParamsStr) != "" {
+		_ = json.Unmarshal([]byte(algoParamsStr), &params)
+	}
+	params["source"] = "api_bulk"
 	if r.Body != nil {
 		defer r.Body.Close()
 		var payload map[string]any

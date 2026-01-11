@@ -17,19 +17,38 @@ from moneyball.utils import points
 
 def get_db_connection():
     """Get a database connection using environment variables."""
-    password = os.environ.get("DB_PASSWORD", "").strip()
-    if not password:
-        raise RuntimeError(
-            "DB_PASSWORD must be set (or use DATABASE_URL where supported)"
-        )
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    try:
+        if database_url:
+            return psycopg2.connect(database_url)
 
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        port=int(os.environ.get("DB_PORT", "5432")),
-        dbname=os.environ.get("DB_NAME", "calcutta"),
-        user=os.environ.get("DB_USER", "calcutta"),
-        password=password,
-    )
+        password = os.environ.get("DB_PASSWORD", "").strip()
+        if not password:
+            raise RuntimeError(
+                "DB_PASSWORD must be set (or use DATABASE_URL where supported)"
+            )
+
+        return psycopg2.connect(
+            host=os.environ.get("DB_HOST", "localhost"),
+            port=int(os.environ.get("DB_PORT", "5432")),
+            dbname=os.environ.get("DB_NAME", "calcutta"),
+            user=os.environ.get("DB_USER", "calcutta"),
+            password=password,
+        )
+    except psycopg2.OperationalError as e:
+        msg = str(e)
+        if 'could not translate host name "db"' in msg:
+            raise psycopg2.OperationalError(
+                msg
+                + "\n\n"
+                + (
+                    "It looks like DB_HOST is set to 'db' (docker-compose "
+                    "hostname). When running locally outside docker, set "
+                    "DB_HOST=localhost (and DB_PORT/DB_NAME/DB_USER as "
+                    "needed) or set DATABASE_URL."
+                )
+            )
+        raise
 
 
 def read_tournament(year: int) -> Optional[Dict[str, Any]]:

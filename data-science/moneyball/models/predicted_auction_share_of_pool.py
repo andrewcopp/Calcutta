@@ -22,6 +22,7 @@ FEATURE_SETS = [
     "enhanced",
     "expanded_last_year_expected_with_market_features",
     "optimal",
+    "optimal_v2",
 ]
 
 DEFAULT_FEATURE_SET = "optimal"
@@ -376,7 +377,14 @@ def _load_team_dataset(snapshot_dir: Path) -> pd.DataFrame:
     return df
 
 
-def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
+def _prepare_features_set(
+    df: pd.DataFrame,
+    feature_set: str,
+    *,
+    seed_prior_by_seed: Optional[Dict[int, float]] = None,
+    program_share_mean_by_slug: Optional[Dict[str, float]] = None,
+    program_share_count_by_slug: Optional[Dict[str, int]] = None,
+) -> pd.DataFrame:
     fs = str(feature_set)
     if fs not in FEATURE_SETS:
         raise ValueError(f"unknown feature_set: {fs}")
@@ -506,6 +514,68 @@ def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
             base["expected_points"] / (base["champ_equity"] + 0.001)
         )
 
+    if fs == "optimal_v2":
+        seed_expected_points = {
+            1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
+            9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3,
+            15: 0.2, 16: 0.1
+        }
+        base["expected_points"] = base["seed"].map(seed_expected_points)
+
+        if seed_prior_by_seed:
+            base["seed_market_prior"] = base["seed"].apply(
+                lambda s: float(seed_prior_by_seed.get(int(s), 0.0))
+                if pd.notna(s)
+                else 0.0
+            )
+        else:
+            base["seed_market_prior"] = 0.0
+
+        kenpom_mean = base["kenpom_net"].mean()
+        kenpom_std = base["kenpom_net"].std()
+        base["kenpom_net_zscore"] = (
+            (base["kenpom_net"] - kenpom_mean) / kenpom_std
+        )
+        base["kenpom_net_zscore_sq"] = base["kenpom_net_zscore"] ** 2
+        base["kenpom_net_zscore_cubed"] = base["kenpom_net_zscore"] ** 3
+
+        ko = pd.to_numeric(base["kenpom_o"], errors="coerce").fillna(0.0)
+        kd = pd.to_numeric(base["kenpom_d"], errors="coerce").fillna(0.0)
+        ko_std = float(ko.std() or 0.0)
+        ko_z = (ko - float(ko.mean() or 0.0)) / (
+            ko_std if ko_std > 0 else 1.0
+        )
+        kd_inv = -kd
+        kd_inv_std = float(kd_inv.std() or 0.0)
+        kd_z = (kd_inv - float(kd_inv.mean() or 0.0)) / (
+            kd_inv_std if kd_inv_std > 0 else 1.0
+        )
+        base["kenpom_balance"] = np.abs(ko_z - kd_z)
+
+        base["points_per_seed_market_prior"] = (
+            base["expected_points"] / (base["seed_market_prior"] + 0.001)
+        )
+
+        slug = (
+            df.get("school_slug")
+            if "school_slug" in df.columns
+            else pd.Series([""] * len(df), index=df.index)
+        )
+        slug = slug.astype(str).str.lower()
+        if program_share_mean_by_slug:
+            base["program_share_mean"] = slug.apply(
+                lambda s: float(program_share_mean_by_slug.get(str(s), 0.0))
+            )
+        else:
+            base["program_share_mean"] = 0.0
+
+        if program_share_count_by_slug:
+            base["program_share_count"] = slug.apply(
+                lambda s: float(program_share_count_by_slug.get(str(s), 0))
+            )
+        else:
+            base["program_share_count"] = 0.0
+
     if fs != "basic" and fs != "optimal":
         base["seed_sq"] = base["seed"] ** 2
         base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
@@ -562,6 +632,7 @@ def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
     if fs in (
         "expanded_last_year_expected_with_market_features",
         "optimal",
+        "optimal_v2",
     ):
         # Add KenPom interaction features (27.7% improvement)
         base["seed_sq"] = base["seed"] ** 2
@@ -569,15 +640,24 @@ def _prepare_features_set(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
 
         # Add market behavior features
 
-        # 1. Brand tax: blue-bloods systematically overbid (+3.2%)
-        blue_bloods = {
-            "duke", "north-carolina", "kentucky", "kansas", "villanova",
-            "michigan-state", "louisville", "connecticut", "ucla",
-            "indiana", "gonzaga", "arizona"
-        }
-        base["is_blue_blood"] = df["school_slug"].apply(
-            lambda x: 1 if str(x).lower() in blue_bloods else 0
-        )
+        if fs != "optimal_v2":
+            blue_bloods = {
+                "duke",
+                "north-carolina",
+                "kentucky",
+                "kansas",
+                "villanova",
+                "michigan-state",
+                "louisville",
+                "connecticut",
+                "ucla",
+                "indiana",
+                "gonzaga",
+                "arizona",
+            }
+            base["is_blue_blood"] = df["school_slug"].apply(
+                lambda x: 1 if str(x).lower() in blue_bloods else 0
+            )
 
         # 2. Upset chic: seeds 10-12 systematically overbid (+1.6%)
         base["is_upset_seed"] = base["seed"].apply(
@@ -657,6 +737,10 @@ def predict_auction_share_of_pool(
     predict_team_dataset: pd.DataFrame,
     ridge_alpha: float = 1.0,
     feature_set: str = DEFAULT_FEATURE_SET,
+    target_transform: str = "none",
+    seed_prior_monotone: Optional[bool] = None,
+    seed_prior_k: float = 0.0,
+    program_prior_k: float = 0.0,
 ) -> pd.DataFrame:
     if train_team_dataset.empty:
         raise ValueError("train_team_dataset must not be empty")
@@ -666,14 +750,108 @@ def predict_auction_share_of_pool(
     if "team_share_of_pool" not in train_team_dataset.columns:
         raise ValueError("train team_dataset missing team_share_of_pool")
 
-    X_train = _prepare_features_set(train_team_dataset, str(feature_set))
+    fs = str(feature_set)
+    tt = str(target_transform or "none").strip().lower()
+
+    if tt not in ("none", "log"):
+        raise ValueError(f"unknown target_transform: {tt}")
+
+    seed_prior_by_seed: Optional[Dict[int, float]] = None
+    program_share_mean_by_slug: Optional[Dict[str, float]] = None
+    program_share_count_by_slug: Optional[Dict[str, int]] = None
+
+    if fs == "optimal_v2":
+        y_train_raw = pd.to_numeric(
+            train_team_dataset["team_share_of_pool"],
+            errors="coerce",
+        )
+        tmp_y = train_team_dataset.assign(_y=y_train_raw).dropna(
+            subset=["seed", "_y"]
+        )
+        y_global_mean = float(tmp_y["_y"].mean() or 0.0)
+
+        seed_agg = tmp_y.groupby("seed")["_y"].agg(["sum", "count"])
+        seed_prior_k_f = float(seed_prior_k or 0.0)
+        vals: List[float] = []
+        for i in range(1, 17):
+            if i in seed_agg.index:
+                s = float(seed_agg.loc[i, "sum"])
+                c = float(seed_agg.loc[i, "count"])
+            else:
+                s = 0.0
+                c = 0.0
+
+            if seed_prior_k_f > 0.0:
+                denom = c + seed_prior_k_f
+                vals.append(
+                    float((s + seed_prior_k_f * y_global_mean) / denom)
+                    if denom > 0.0
+                    else 0.0
+                )
+            else:
+                vals.append(float(s / c) if c > 0.0 else 0.0)
+
+        use_monotone = (
+            bool(seed_prior_monotone)
+            if seed_prior_monotone is not None
+            else True
+        )
+        if use_monotone and vals:
+            vals = list(np.minimum.accumulate(np.asarray(vals, dtype=float)))
+        seed_prior_by_seed = {i: float(vals[i - 1]) for i in range(1, 17)}
+
+        if "school_slug" in train_team_dataset.columns:
+            tmp = train_team_dataset.copy()
+            tmp["_y"] = y_train_raw
+            tmp["school_slug"] = tmp["school_slug"].astype(str).str.lower()
+            tmp = tmp.dropna(subset=["_y"])
+            grp = tmp.groupby("school_slug")["_y"]
+            program_share_count_by_slug = grp.size().to_dict()
+
+            program_prior_k_f = float(program_prior_k or 0.0)
+            if program_prior_k_f > 0.0:
+                program_sum_by_slug = grp.sum().to_dict()
+                program_share_mean_by_slug = {
+                    str(slug): float(
+                        (
+                            float(program_sum_by_slug.get(slug, 0.0))
+                            + program_prior_k_f * y_global_mean
+                        )
+                        / (
+                            float(program_share_count_by_slug.get(slug, 0))
+                            + program_prior_k_f
+                        )
+                    )
+                    for slug in program_share_count_by_slug.keys()
+                }
+            else:
+                program_share_mean_by_slug = grp.mean().to_dict()
+
+    X_train = _prepare_features_set(
+        train_team_dataset,
+        fs,
+        seed_prior_by_seed=seed_prior_by_seed,
+        program_share_mean_by_slug=program_share_mean_by_slug,
+        program_share_count_by_slug=program_share_count_by_slug,
+    )
     y_train = pd.to_numeric(
         train_team_dataset["team_share_of_pool"],
         errors="coerce",
     )
 
-    X_pred = _prepare_features_set(predict_team_dataset, str(feature_set))
+    X_pred = _prepare_features_set(
+        predict_team_dataset,
+        fs,
+        seed_prior_by_seed=seed_prior_by_seed,
+        program_share_mean_by_slug=program_share_mean_by_slug,
+        program_share_count_by_slug=program_share_count_by_slug,
+    )
     X_train, X_pred = _align_columns(X_train, X_pred)
+
+    if tt == "log":
+        y_train = np.log(
+            pd.to_numeric(y_train, errors="coerce").fillna(0.0) + 1e-9
+        )
 
     coef = _fit_ridge(X_train, y_train, alpha=float(ridge_alpha))
     if coef is None:
@@ -682,6 +860,10 @@ def predict_auction_share_of_pool(
     yhat = _predict_ridge(X_pred, coef)
     yhat = np.asarray(yhat, dtype=float)
     yhat = np.where(np.isfinite(yhat), yhat, 0.0)
+
+    if tt == "log":
+        yhat = np.exp(np.clip(yhat, -20.0, 20.0))
+
     yhat = np.maximum(yhat, 0.0)
 
     s = float(yhat.sum())
@@ -719,6 +901,10 @@ def predict_auction_share_of_pool_from_out_root(
     train_snapshots: Optional[List[str]] = None,
     ridge_alpha: float = 1.0,
     feature_set: str = DEFAULT_FEATURE_SET,
+    target_transform: str = "none",
+    seed_prior_monotone: Optional[bool] = None,
+    seed_prior_k: float = 0.0,
+    program_prior_k: float = 0.0,
     exclude_entry_names: Optional[List[str]] = None,
 ) -> pd.DataFrame:
     snapshot_dirs_by_name = _find_snapshot_dirs(Path(out_root))
@@ -850,4 +1036,8 @@ def predict_auction_share_of_pool_from_out_root(
         predict_team_dataset=pred_df,
         ridge_alpha=float(ridge_alpha),
         feature_set=str(feature_set),
+        target_transform=str(target_transform),
+        seed_prior_monotone=seed_prior_monotone,
+        seed_prior_k=float(seed_prior_k),
+        program_prior_k=float(program_prior_k),
     )

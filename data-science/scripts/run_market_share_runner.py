@@ -1,9 +1,29 @@
+from __future__ import annotations
+
 import argparse
 import json
 import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+
+def _split_entry_names(v: object) -> List[str]:
+    if v is None:
+        return []
+    if isinstance(v, list):
+        out: List[str] = []
+        for x in v:
+            s = str(x).strip()
+            if s:
+                out.append(s)
+        return out
+    s = str(v).strip()
+    if not s:
+        return []
+    if "," in s:
+        return [p.strip() for p in s.split(",") if p.strip()]
+    return [s]
 
 
 def _ensure_project_root_on_path() -> Path:
@@ -72,6 +92,22 @@ def _default_train_years(*, target_year: int) -> List[int]:
     return [y for y in all_years if int(y) != int(target_year)]
 
 
+def _apply_train_years_window(
+    *,
+    train_years: List[int],
+    train_years_window: int,
+) -> List[int]:
+    w = int(train_years_window)
+    if w <= 0:
+        return list(train_years)
+    ys = sorted({int(y) for y in train_years})
+    if not ys:
+        return []
+    if w >= len(ys):
+        return ys
+    return ys[-w:]
+
+
 def _parse_train_years(v: Any) -> Optional[List[int]]:
     if v is None:
         return None
@@ -133,7 +169,101 @@ def _read_market_share_run(*, run_id: str) -> Dict[str, Any]:
             }
 
 
-def run_market_share_runner(*, run_id: str) -> Dict[str, Any]:
+def _compute_oracle_market_share(
+    *,
+    calcutta_id: str,
+    tournament_id: str,
+    excluded_entry_names: Optional[List[str]],
+) -> Any:
+    import pandas as pd
+    from moneyball.db.connection import get_db_connection
+
+    exclude = [
+        str(n).strip()
+        for n in (excluded_entry_names or [])
+        if str(n).strip()
+    ]
+    exclude_clause = ""
+    params: List[Any] = [calcutta_id]
+    if exclude:
+        exclude_clause = " AND ce.name <> ALL(%s::text[]) "
+        params.append(exclude)
+
+    query = f"""
+    WITH team_totals AS (
+        SELECT
+            s.slug AS team_key,
+            SUM(cet.bid_points)::float8 AS team_total
+        FROM core.entry_teams cet
+        JOIN core.entries ce
+          ON ce.id = cet.entry_id
+         AND ce.deleted_at IS NULL
+        JOIN core.teams tt
+          ON tt.id = cet.team_id
+         AND tt.deleted_at IS NULL
+        JOIN core.schools s
+          ON s.id = tt.school_id
+         AND s.deleted_at IS NULL
+        WHERE ce.calcutta_id = %s::uuid
+          AND cet.deleted_at IS NULL
+          {exclude_clause}
+        GROUP BY s.slug
+    ),
+    denom AS (
+        SELECT COALESCE(SUM(team_total), 0)::float8 AS total
+        FROM team_totals
+    )
+    SELECT
+        s.slug AS team_key,
+        CASE
+            WHEN (SELECT total FROM denom) > 0 THEN
+                COALESCE(ttt.team_total, 0)::float8 / (SELECT total FROM denom)
+            ELSE 0::float8
+        END AS predicted_auction_share_of_pool
+    FROM core.teams tt
+    JOIN core.schools s
+      ON s.id = tt.school_id
+     AND s.deleted_at IS NULL
+    LEFT JOIN team_totals ttt ON ttt.team_key = s.slug
+    WHERE tt.tournament_id = %s::uuid
+      AND tt.deleted_at IS NULL
+    ORDER BY tt.seed ASC, s.name ASC
+    """
+
+    params = [*params, tournament_id]
+    with get_db_connection() as conn:
+        df = pd.read_sql_query(query, conn, params=tuple(params))
+
+    df["predicted_auction_share_of_pool"] = pd.to_numeric(
+        df["predicted_auction_share_of_pool"], errors="coerce"
+    ).fillna(0.0)
+
+    ssum = float(df["predicted_auction_share_of_pool"].sum() or 0.0)
+    if ssum <= 0 and len(df) > 0:
+        df["predicted_auction_share_of_pool"] = 1.0 / float(len(df))
+    elif ssum > 0:
+        df["predicted_auction_share_of_pool"] = (
+            df["predicted_auction_share_of_pool"] / ssum
+        )
+
+    return df[["team_key", "predicted_auction_share_of_pool"]].copy()
+
+
+def run_market_share_for_calcutta(
+    *,
+    calcutta_id: str,
+    algorithm_name: str,
+    excluded_entry_name: str,
+    train_years: Optional[List[int]] = None,
+    train_years_window: int = 0,
+    ridge_alpha: float = 1.0,
+    feature_set: str = "optimal",
+    target_transform: str = "none",
+    seed_prior_monotone: Optional[bool] = None,
+    seed_prior_k: float = 0.0,
+    program_prior_k: float = 0.0,
+    run_id: Optional[str] = None,
+) -> Dict[str, Any]:
     _ensure_project_root_on_path()
 
     from moneyball.db.readers import read_ridge_team_dataset_for_year
@@ -144,76 +274,193 @@ def run_market_share_runner(*, run_id: str) -> Dict[str, Any]:
         write_predicted_market_share_with_run,
     )
 
-    run = _read_market_share_run(run_id=str(run_id))
-    params = run.get("params_json") or {}
-
-    excluded_entry_name = str(params.get("excluded_entry_name") or "")
-    if not excluded_entry_name:
-        raise ValueError("excluded_entry_name is required in params_json")
-
-    ctx = _read_calcutta_context(calcutta_id=str(run["calcutta_id"]))
+    ctx = _read_calcutta_context(calcutta_id=str(calcutta_id))
     tournament_id = ctx["tournament_id"]
     season_year = int(ctx["season_year"])
     team_id_map = _read_team_id_map(tournament_id=tournament_id)
 
-    train_years = _parse_train_years(params.get("train_years"))
-    if not train_years:
-        train_years = _default_train_years(target_year=season_year)
+    excluded_entry_name = str(excluded_entry_name or "").strip()
+    if not excluded_entry_name:
+        raise ValueError("excluded_entry_name is required")
 
-    exclude_entry_names: Optional[List[str]] = (
-        [excluded_entry_name] if excluded_entry_name else None
-    )
+    excluded_entry_names = _split_entry_names(excluded_entry_name)
 
-    train_frames = []
-    for y in train_years:
-        try:
-            df = read_ridge_team_dataset_for_year(
-                y,
-                exclude_entry_names=exclude_entry_names,
-                include_target=True,
-            )
-        except Exception:
-            continue
-        train_frames.append(df)
+    algorithm_name = str(algorithm_name or "").strip()
+    if not algorithm_name:
+        raise ValueError("algorithm_name is required")
 
-    if not train_frames:
-        raise ValueError("no training frames loaded")
+    if algorithm_name == "oracle_actual_market":
+        predictions = _compute_oracle_market_share(
+            calcutta_id=str(calcutta_id),
+            tournament_id=str(tournament_id),
+            excluded_entry_names=excluded_entry_names,
+        )
+        params_out: Dict[str, Any] = {
+            "excluded_entry_name": excluded_entry_name,
+        }
+    else:
+        is_underbid_1sigma = str(algorithm_name) == "ridge-v2-underbid-1sigma"
 
-    import pandas as pd
+        train_years_eff = train_years
+        if not train_years_eff:
+            train_years_eff = _default_train_years(target_year=season_year)
+            if int(train_years_window or 0) > 0:
+                train_years_eff = _apply_train_years_window(
+                    train_years=train_years_eff,
+                    train_years_window=int(train_years_window),
+                )
 
-    train_ds = pd.concat(train_frames, ignore_index=True)
-    if "team_share_of_pool" in train_ds.columns:
-        train_ds = train_ds[train_ds["team_share_of_pool"].notna()].copy()
-    if train_ds.empty:
-        raise ValueError("no training rows (team_share_of_pool all NULL)")
+        train_frames = []
+        for y in train_years_eff:
+            try:
+                df = read_ridge_team_dataset_for_year(
+                    int(y),
+                    exclude_entry_names=excluded_entry_names,
+                    include_target=True,
+                )
+            except Exception:
+                continue
+            train_frames.append(df)
 
-    predict_ds = read_ridge_team_dataset_for_year(
-        season_year,
-        exclude_entry_names=None,
-        include_target=False,
-    )
+        if not train_frames:
+            raise ValueError("no training frames loaded")
 
-    predictions = predict_auction_share_of_pool(
-        train_team_dataset=train_ds,
-        predict_team_dataset=predict_ds,
-        ridge_alpha=float(params.get("ridge_alpha") or 1.0),
-        feature_set=str(params.get("feature_set") or "optimal"),
-    )
+        import pandas as pd
+        import numpy as np
 
-    predictions["team_key"] = (
-        predictions["team_key"].astype(str).str.split(":").str[-1]
-    )
+        train_ds = pd.concat(train_frames, ignore_index=True)
+        if "team_share_of_pool" in train_ds.columns:
+            train_ds = train_ds[train_ds["team_share_of_pool"].notna()].copy()
+        if train_ds.empty:
+            raise ValueError("no training rows (team_share_of_pool all NULL)")
+
+        predict_ds = read_ridge_team_dataset_for_year(
+            season_year,
+            exclude_entry_names=None,
+            include_target=False,
+        )
+
+        predictions = predict_auction_share_of_pool(
+            train_team_dataset=train_ds,
+            predict_team_dataset=predict_ds,
+            ridge_alpha=float(ridge_alpha),
+            feature_set=str(feature_set or "optimal"),
+            target_transform=str(target_transform or "none"),
+            seed_prior_monotone=seed_prior_monotone,
+            seed_prior_k=float(seed_prior_k or 0.0),
+            program_prior_k=float(program_prior_k or 0.0),
+        )
+        predictions["team_key"] = (
+            predictions["team_key"].astype(str).str.split(":").str[-1]
+        )
+
+        underbid_sigma: Optional[float] = None
+        if is_underbid_1sigma:
+            residuals: List[float] = []
+
+            for i, df_y in enumerate(train_frames):
+                if df_y is None or df_y.empty:
+                    continue
+                df_y = df_y.copy()
+
+                oof_frames = [f for j, f in enumerate(train_frames) if j != i]
+                if not oof_frames:
+                    continue
+                oof_train = pd.concat(oof_frames, ignore_index=True)
+                if "team_share_of_pool" in oof_train.columns:
+                    oof_train = oof_train[
+                        oof_train["team_share_of_pool"].notna()
+                    ].copy()
+                if oof_train.empty:
+                    continue
+
+                pred_y = predict_auction_share_of_pool(
+                    train_team_dataset=oof_train,
+                    predict_team_dataset=df_y,
+                    ridge_alpha=float(ridge_alpha),
+                    feature_set=str(feature_set or "optimal"),
+                    target_transform=str(target_transform or "none"),
+                    seed_prior_monotone=seed_prior_monotone,
+                    seed_prior_k=float(seed_prior_k or 0.0),
+                    program_prior_k=float(program_prior_k or 0.0),
+                )
+                if "team_key" in pred_y.columns:
+                    pred_y["team_key"] = (
+                        pred_y["team_key"].astype(str).str.split(":").str[-1]
+                    )
+                if "team_key" not in df_y.columns:
+                    continue
+                df_y["team_key"] = (
+                    df_y["team_key"].astype(str).str.split(":").str[-1]
+                )
+
+                merged = df_y[["team_key", "team_share_of_pool"]].merge(
+                    pred_y[["team_key", "predicted_auction_share_of_pool"]],
+                    on="team_key",
+                    how="inner",
+                )
+                if merged.empty:
+                    continue
+                a = pd.to_numeric(
+                    merged["team_share_of_pool"],
+                    errors="coerce",
+                )
+                p = pd.to_numeric(
+                    merged["predicted_auction_share_of_pool"], errors="coerce"
+                )
+                d = (a - p).astype(float)
+                d = d[np.isfinite(d)]
+                residuals.extend(d.tolist())
+
+            if residuals:
+                underbid_sigma = float(
+                    np.std(np.asarray(residuals, dtype=float), ddof=1)
+                )
+                if not np.isfinite(underbid_sigma) or underbid_sigma <= 0:
+                    underbid_sigma = None
+
+        if is_underbid_1sigma and underbid_sigma is not None:
+            v = pd.to_numeric(
+                predictions["predicted_auction_share_of_pool"], errors="coerce"
+            ).fillna(0.0)
+            v = (v - float(underbid_sigma)).clip(lower=0.0)
+            ssum = float(v.sum() or 0.0)
+            if ssum > 0:
+                v = v / ssum
+            else:
+                v = pd.Series(
+                    [1.0 / float(len(predictions))] * int(len(predictions)),
+                    index=predictions.index,
+                    dtype=float,
+                )
+            predictions["predicted_auction_share_of_pool"] = v.astype(float)
+
+        params_out = {
+            "excluded_entry_name": excluded_entry_name,
+            "train_years": train_years_eff,
+            "train_years_window": int(train_years_window or 0),
+            "ridge_alpha": float(ridge_alpha),
+            "feature_set": str(feature_set or "optimal"),
+            "target_transform": str(target_transform or "none"),
+            "seed_prior_monotone": seed_prior_monotone,
+            "seed_prior_k": float(seed_prior_k or 0.0),
+            "program_prior_k": float(program_prior_k or 0.0),
+        }
+
+        if is_underbid_1sigma:
+            params_out["underbid_mode"] = "global_1sigma"
+            params_out["underbid_sigma"] = underbid_sigma
 
     git_sha = os.getenv("GIT_SHA")
 
     run_id_out, inserted = write_predicted_market_share_with_run(
         predictions_df=predictions,
         team_id_map=team_id_map,
-        calcutta_id=str(run["calcutta_id"]),
+        calcutta_id=str(calcutta_id),
         tournament_id=None,
-        algorithm_name=str(run["algorithm_name"]),
-        run_id=str(run["run_id"]),
-        params=None,
+        algorithm_name=str(algorithm_name),
+        run_id=str(run_id) if run_id else None,
+        params=params_out,
         git_sha=git_sha,
     )
 
@@ -221,12 +468,45 @@ def run_market_share_runner(*, run_id: str) -> Dict[str, Any]:
         "ok": True,
         "run_id": run_id_out,
         "rows_inserted": inserted,
-        "calcutta_id": str(run["calcutta_id"]),
+        "calcutta_id": str(calcutta_id),
         "tournament_id": tournament_id,
         "season_year": season_year,
         "excluded_entry_name": excluded_entry_name,
-        "algorithm_name": str(run["algorithm_name"]),
+        "algorithm_name": str(algorithm_name),
     }
+
+
+def run_market_share_runner(*, run_id: str) -> Dict[str, Any]:
+    _ensure_project_root_on_path()
+
+    run = _read_market_share_run(run_id=str(run_id))
+    params = run.get("params_json") or {}
+
+    excluded_entry_name = str(params.get("excluded_entry_name") or "").strip()
+    if not excluded_entry_name:
+        raise ValueError("excluded_entry_name is required in params_json")
+
+    train_years = _parse_train_years(params.get("train_years"))
+    train_years_window = int(params.get("train_years_window") or 0)
+
+    return run_market_share_for_calcutta(
+        calcutta_id=str(run["calcutta_id"]),
+        algorithm_name=str(run["algorithm_name"]),
+        excluded_entry_name=excluded_entry_name,
+        train_years=train_years,
+        train_years_window=train_years_window,
+        ridge_alpha=float(params.get("ridge_alpha") or 1.0),
+        feature_set=str(params.get("feature_set") or "optimal"),
+        target_transform=str(params.get("target_transform") or "none"),
+        seed_prior_monotone=(
+            None
+            if params.get("seed_prior_monotone") is None
+            else bool(params.get("seed_prior_monotone"))
+        ),
+        seed_prior_k=float(params.get("seed_prior_k") or 0.0),
+        program_prior_k=float(params.get("program_prior_k") or 0.0),
+        run_id=str(run["run_id"]),
+    )
 
 
 def main() -> int:
@@ -236,12 +516,40 @@ def main() -> int:
             "artifacts."
         )
     )
-    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--run-id")
+    parser.add_argument("--calcutta-id")
+    parser.add_argument("--excluded-entry-name")
+    parser.add_argument("--algorithm-name")
 
     args = parser.parse_args()
 
     try:
-        out = run_market_share_runner(run_id=str(args.run_id))
+        if args.run_id:
+            out = run_market_share_runner(run_id=str(args.run_id))
+        else:
+            calcutta_id = str(args.calcutta_id or "").strip()
+            excluded = str(args.excluded_entry_name or "").strip()
+            algorithm_name = str(args.algorithm_name or "").strip()
+            if not calcutta_id:
+                raise ValueError(
+                    "--calcutta-id is required when --run-id is not provided"
+                )
+            if not excluded:
+                raise ValueError(
+                    "--excluded-entry-name is required when --run-id is not "
+                    "provided"
+                )
+            if not algorithm_name:
+                raise ValueError(
+                    "--algorithm-name is required when --run-id is not "
+                    "provided"
+                )
+
+            out = run_market_share_for_calcutta(
+                calcutta_id=calcutta_id,
+                algorithm_name=algorithm_name,
+                excluded_entry_name=excluded,
+            )
         sys.stdout.write(json.dumps(out) + "\n")
         return 0
 

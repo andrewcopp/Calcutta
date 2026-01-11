@@ -30,7 +30,32 @@ func RegisteredAlgorithms() []Algorithm {
 	})
 
 	msRidgeParams, _ := json.Marshal(map[string]any{})
+	msRidgeV1Params, _ := json.Marshal(map[string]any{
+		"feature_set": "optimal",
+	})
+	msRidgeV1RecentParams, _ := json.Marshal(map[string]any{
+		"feature_set":        "optimal",
+		"train_years_window": 3,
+	})
+	msRidgeV2Params, _ := json.Marshal(map[string]any{
+		"feature_set": "optimal_v2",
+	})
+	msRidgeV2ShrunkParams, _ := json.Marshal(map[string]any{
+		"feature_set":         "optimal_v2",
+		"seed_prior_monotone": true,
+		"seed_prior_k":        20.0,
+		"program_prior_k":     50.0,
+	})
+	msRidgeV2Underbid1SigmaParams, _ := json.Marshal(map[string]any{
+		"feature_set": "optimal_v2",
+	})
+	msRidgeV2LogParams, _ := json.Marshal(map[string]any{
+		"feature_set":         "optimal_v2",
+		"target_transform":    "log",
+		"seed_prior_monotone": true,
+	})
 	msNaiveEVParams, _ := json.Marshal(map[string]any{})
+	msOracleParams, _ := json.Marshal(map[string]any{})
 
 	return []Algorithm{
 		{
@@ -53,9 +78,51 @@ func RegisteredAlgorithms() []Algorithm {
 		},
 		{
 			Kind:        "market_share",
+			Name:        "ridge-v1",
+			Description: "Ridge Regression V1 (optimal)",
+			ParamsJSON:  msRidgeV1Params,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "ridge-v1-recent",
+			Description: "Ridge Regression V1 (recent training window)",
+			ParamsJSON:  msRidgeV1RecentParams,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "ridge-v2",
+			Description: "Ridge Regression V2 (optimal_v2)",
+			ParamsJSON:  msRidgeV2Params,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "ridge-v2-shrunk",
+			Description: "Ridge Regression V2 (shrunk priors)",
+			ParamsJSON:  msRidgeV2ShrunkParams,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "ridge-v2-underbid-1sigma",
+			Description: "Ridge Regression V2 (underbid 1-sigma, global)",
+			ParamsJSON:  msRidgeV2Underbid1SigmaParams,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "ridge-v2-log",
+			Description: "Ridge Regression V2 (log target)",
+			ParamsJSON:  msRidgeV2LogParams,
+		},
+		{
+			Kind:        "market_share",
 			Name:        "naive-ev-baseline",
 			Description: "Naive EV Baseline",
 			ParamsJSON:  msNaiveEVParams,
+		},
+		{
+			Kind:        "market_share",
+			Name:        "oracle_actual_market",
+			Description: "Oracle Actual Market (Python runner)",
+			ParamsJSON:  msOracleParams,
 		},
 	}
 }
