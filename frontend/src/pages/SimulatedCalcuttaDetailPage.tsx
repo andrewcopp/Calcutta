@@ -106,6 +106,7 @@ export function SimulatedCalcuttaDetailPage() {
 			return {
 				id: e.id,
 				displayName: e.display_name,
+				rank: perf?.rank ?? null,
 				mean: perf?.mean_normalized_payout ?? null,
 				pTop1: perf?.p_top1 ?? null,
 				pInMoney: perf?.p_in_money ?? null,
@@ -237,6 +238,7 @@ export function SimulatedCalcuttaDetailPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entry</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
 									<button type="button" className="hover:text-gray-900" onClick={() => toggleSort('mean')}>
 										Normalized Mean Payout
@@ -273,6 +275,7 @@ export function SimulatedCalcuttaDetailPage() {
                             <div className="text-xs text-gray-500">{r.id.slice(0, 8)}</div>
                           </Link>
                         </td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700">{r.rank ?? '—'}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">{fmtFloat(r.mean, 4)}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(r.pTop1)}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(r.pInMoney)}</td>

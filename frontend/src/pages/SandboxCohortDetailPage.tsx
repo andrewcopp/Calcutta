@@ -305,6 +305,7 @@ export function SandboxCohortDetailPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Normalized Mean Payout</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(1st)</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(In Money)</th>
@@ -326,6 +327,7 @@ export function SandboxCohortDetailPage() {
                             <div className="font-medium">{sc.name}</div>
                             {base ? <div className="text-xs text-gray-600">base {base.name}</div> : sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
                           </td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{perf?.rank ?? '—'}</td>
                           <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">{fmtFloat(perf?.mean_normalized_payout, 4)}</td>
                           <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(perf?.p_top1)}</td>
                           <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(perf?.p_in_money)}</td>
