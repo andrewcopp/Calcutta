@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -11,12 +11,14 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 import { calcuttaService } from '../services/calcuttaService';
 import { cohortsService } from '../services/cohortsService';
+import { simulationRunsService, type ListSimulationRunsResponse, type SimulationRun } from '../services/simulationRunsService';
 import { simulatedCalcuttasService, type SimulatedCalcuttaListItem } from '../services/simulatedCalcuttasService';
 import type { Calcutta } from '../types/calcutta';
 
 export function SandboxCohortDetailPage() {
   const { cohortId } = useParams<{ cohortId?: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createFromCalcuttaId, setCreateFromCalcuttaId] = useState<string>('');
 
   const { data: calcuttas = [] } = useQuery<Calcutta[]>({
@@ -39,6 +41,21 @@ export function SandboxCohortDetailPage() {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return v;
     return d.toLocaleString();
+  };
+
+  const fmtFloat = (v: number | null | undefined, digits: number) => {
+    if (v == null || !Number.isFinite(v)) return '—';
+    return v.toFixed(digits);
+  };
+
+  const fmtPct = (v: number | null | undefined) => {
+    if (v == null || !Number.isFinite(v)) return '—';
+    return `${(v * 100).toFixed(1)}%`;
+  };
+
+  const fmtFinish = (pos?: number | null, tied?: boolean | null) => {
+    if (pos == null) return '—';
+    return `${pos}${tied ? ' (tied)' : ''}`;
   };
 
   const seasonFromCalcuttaName = (name: string | null | undefined) => {
@@ -81,10 +98,31 @@ export function SandboxCohortDetailPage() {
     enabled: Boolean(effectiveCohortId),
   });
 
+  const runsQuery = useQuery<ListSimulationRunsResponse>({
+    queryKey: ['simulation-runs', 'list', effectiveCohortId],
+    queryFn: async () => {
+      if (!effectiveCohortId) return { items: [] };
+      return simulationRunsService.list({ cohortId: effectiveCohortId, limit: 200, offset: 0 });
+    },
+    enabled: Boolean(effectiveCohortId),
+  });
+
   const simulatedCalcuttas: SimulatedCalcuttaListItem[] = useMemo(
     () => simulatedCalcuttasQuery.data?.items ?? [],
     [simulatedCalcuttasQuery.data?.items]
   );
+
+  const latestRunBySimulatedCalcuttaId = useMemo(() => {
+    const m = new Map<string, SimulationRun>();
+    const items = runsQuery.data?.items ?? [];
+    // items are ordered newest-first by the API, so first occurrence wins
+    for (const r of items) {
+      const scID = (r.simulated_calcutta_id || '').trim();
+      if (!scID) continue;
+      if (!m.has(scID)) m.set(scID, r);
+    }
+    return m;
+  }, [runsQuery.data?.items]);
 
   const createSimulatedCalcuttaMutation = useMutation({
     mutationFn: async () => {
@@ -212,30 +250,31 @@ export function SandboxCohortDetailPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tournament</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting state</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Open</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Normalized Mean Payout</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(1st)</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(In Money)</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Real Finish</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {simulatedCalcuttas.map((sc) => {
                       const href = `/sandbox/simulated-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
                       const base = sc.base_calcutta_id ? calcuttaById.get(sc.base_calcutta_id) : null;
+                      const run = latestRunBySimulatedCalcuttaId.get(sc.id);
                       return (
-                        <tr key={sc.id} className="hover:bg-gray-50">
+                        <tr
+                          key={sc.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => navigate(href)}
+                        >
                           <td className="px-3 py-2 text-sm text-gray-900" title={sc.name}>
                             <div className="font-medium">{sc.name}</div>
                             {base ? <div className="text-xs text-gray-600">base {base.name}</div> : sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700">{sc.tournament_id.slice(0, 8)}</td>
-                          <td className="px-3 py-2 text-sm text-gray-700">{sc.starting_state_key}</td>
-                          <td className="px-3 py-2 text-sm text-gray-700">{formatDateTime(sc.created_at)}</td>
-                          <td className="px-3 py-2 text-sm text-right">
-                            <Link to={href} className="text-blue-600 hover:text-blue-800">
-                              View
-                            </Link>
-                          </td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">{fmtFloat(run?.our_mean_normalized_payout, 4)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(run?.our_p_top1)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtPct(run?.our_p_in_money)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{fmtFinish(run?.realized_finish_position, run?.realized_is_tied)}</td>
                         </tr>
                       );
                     })}

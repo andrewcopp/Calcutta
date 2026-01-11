@@ -15,6 +15,7 @@ export type SimulationRun = {
   our_p_in_money?: number | null;
   total_simulations?: number | null;
   calcutta_id: string;
+  simulated_calcutta_id?: string | null;
   game_outcome_run_id?: string | null;
   market_share_run_id?: string | null;
   strategy_generation_run_id?: string | null;
@@ -116,12 +117,14 @@ export const simulationRunsService = {
     cohortId: string;
     simulationBatchId?: string;
     calcuttaId?: string;
+    simulatedCalcuttaId?: string;
     limit?: number;
     offset?: number;
   }): Promise<ListSimulationRunsResponse> {
     const q = new URLSearchParams();
     if (params?.simulationBatchId) q.set('simulation_batch_id', params.simulationBatchId);
     if (params?.calcuttaId) q.set('calcutta_id', params.calcuttaId);
+    if (params?.simulatedCalcuttaId) q.set('simulated_calcutta_id', params.simulatedCalcuttaId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
 
