@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -58,6 +58,13 @@ type SortKey =
 
 export function LabCandidateDetailPage() {
   const { candidateId } = useParams<{ candidateId: string }>();
+	const location = useLocation();
+	const backTo = useMemo(() => {
+		const st = location.state as { backTo?: string } | null;
+		const v = st?.backTo;
+		if (typeof v === 'string' && v.trim() !== '') return v;
+		return '/lab/candidates';
+	}, [location.state]);
 
 	const [sortKey, setSortKey] = useState<SortKey>('predictedROI');
 	const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -292,7 +299,7 @@ export function LabCandidateDetailPage() {
         title="Candidate"
         subtitle={candidateId}
         leftActions={
-          <Link to="/lab/candidates" className="text-blue-600 hover:text-blue-800">
+          <Link to={backTo} className="text-blue-600 hover:text-blue-800">
             ← Back to Candidates
           </Link>
         }

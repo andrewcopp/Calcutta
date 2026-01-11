@@ -89,6 +89,7 @@ type CandidateDetail struct {
 	AdvancementRunID        string
 	OptimizerKey            string
 	StartingStateKey        string
+	SeedPreview             string
 	ExcludedEntryName       *string
 	GitSHA                  *string
 	Teams                   []CandidateDetailTeam

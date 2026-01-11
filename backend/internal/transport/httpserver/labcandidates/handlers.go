@@ -54,6 +54,7 @@ type labCandidateDetailResponse struct {
 	AdvancementRunID        string                   `json:"advancement_run_id"`
 	OptimizerKey            string                   `json:"optimizer_key"`
 	StartingStateKey        string                   `json:"starting_state_key"`
+	SeedPreview             string                   `json:"seed_preview"`
 	ExcludedEntryName       *string                  `json:"excluded_entry_name,omitempty"`
 	GitSHA                  *string                  `json:"git_sha,omitempty"`
 	Teams                   []labCandidateDetailTeam `json:"teams"`
@@ -244,6 +245,7 @@ func (h *Handler) HandleListLabCandidates(w http.ResponseWriter, r *http.Request
 			AdvancementRunID:        it.AdvancementRunID,
 			OptimizerKey:            it.OptimizerKey,
 			StartingStateKey:        it.StartingStateKey,
+			SeedPreview:             it.SeedPreview,
 			ExcludedEntryName:       it.ExcludedEntryName,
 			GitSHA:                  it.GitSHA,
 			Teams:                   nil,

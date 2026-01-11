@@ -180,6 +180,15 @@ func (r *LabCandidatesRepository) DeleteCandidate(ctx context.Context, candidate
 
 func (r *LabCandidatesRepository) ListCandidates(ctx context.Context, filter applabcandidates.ListCandidatesFilter, page applabcandidates.ListCandidatesPagination) ([]applabcandidates.CandidateDetail, error) {
 	rows, err := r.pool.Query(ctx, `
+		WITH seed_list AS (
+			SELECT
+				cb.candidate_id,
+				array_agg(t.seed::text ORDER BY t.seed ASC) FILTER (WHERE cb.bid_points > 0) AS seeds
+			FROM derived.candidate_bids cb
+			JOIN core.teams t ON t.id = cb.team_id AND t.deleted_at IS NULL
+			WHERE cb.deleted_at IS NULL
+			GROUP BY cb.candidate_id
+		)
 		SELECT
 			c.id::text,
 			c.display_name,
@@ -194,10 +203,22 @@ func (r *LabCandidatesRepository) ListCandidates(ctx context.Context, filter app
 			c.advancement_run_id::text,
 			c.optimizer_key,
 			c.starting_state_key,
+			array_to_string(
+				COALESCE(sl.seeds, ARRAY[]::text[])
+				|| COALESCE(
+					array_fill(
+						'-'::text,
+						ARRAY[GREATEST(cc.max_teams - COALESCE(array_length(sl.seeds, 1), 0), 0)]
+					),
+					ARRAY[]::text[]
+				),
+				','
+			) AS seed_preview,
 			c.excluded_entry_name,
 			c.git_sha
 		FROM derived.candidates c
 		LEFT JOIN core.calcuttas cc ON cc.id = c.calcutta_id AND cc.deleted_at IS NULL
+		LEFT JOIN seed_list sl ON sl.candidate_id = c.id
 		LEFT JOIN derived.game_outcome_runs gor ON gor.id = c.advancement_run_id AND gor.deleted_at IS NULL
 		LEFT JOIN derived.market_share_runs msr ON msr.id = c.market_share_run_id AND msr.deleted_at IS NULL
 		WHERE c.deleted_at IS NULL
@@ -252,6 +273,7 @@ func (r *LabCandidatesRepository) ListCandidates(ctx context.Context, filter app
 			&it.AdvancementRunID,
 			&it.OptimizerKey,
 			&it.StartingStateKey,
+			&it.SeedPreview,
 			&it.ExcludedEntryName,
 			&it.GitSHA,
 		); err != nil {

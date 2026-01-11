@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -28,6 +28,7 @@ type CandidateListItem = {
 	advancement_run_id: string;
 	optimizer_key: string;
 	starting_state_key: string;
+	seed_preview?: string;
 	excluded_entry_name?: string | null;
 	git_sha?: string | null;
 };
@@ -59,6 +60,7 @@ type ListCombosResponse = {
 };
 
 export function LabCandidateCohortPage() {
+	const location = useLocation();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const [isEvaluating, setIsEvaluating] = useState(false);
@@ -294,7 +296,7 @@ export function LabCandidateCohortPage() {
 								<tr>
 									<th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate</th>
 									<th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calcutta</th>
-									<th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting</th>
+									<th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seeds</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -302,7 +304,11 @@ export function LabCandidateCohortPage() {
 									<tr
 										key={c.candidate_id}
 										className="hover:bg-gray-50 cursor-pointer"
-										onClick={() => navigate(`/lab/candidates/${encodeURIComponent(c.candidate_id)}`)}
+										onClick={() =>
+											navigate(`/lab/candidates/${encodeURIComponent(c.candidate_id)}`, {
+												state: { backTo: `${location.pathname}${location.search}` },
+											})
+										}
 									>
 										<td className="px-3 py-2 text-sm text-gray-900">
 											<div className="font-medium">{c.display_name}</div>
@@ -312,7 +318,7 @@ export function LabCandidateCohortPage() {
 											<div className="font-medium">{c.calcutta_name || c.calcutta_id || '—'}</div>
 											{c.calcutta_name ? <div className="text-xs text-gray-500 break-words">{c.calcutta_id}</div> : null}
 										</td>
-										<td className="px-3 py-2 text-sm text-gray-700">{c.starting_state_key || '—'}</td>
+										<td className="px-3 py-2 text-sm text-gray-700 break-words">{c.seed_preview || '—'}</td>
 									</tr>
 								))}
 							</tbody>
