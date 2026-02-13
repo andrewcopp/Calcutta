@@ -1,5 +1,5 @@
 """
-Unit tests for GEKKO MINLP portfolio optimizer.
+Unit tests for lab portfolio research module (GEKKO optimizer).
 
 Following testing guidelines:
 - GIVEN / WHEN / THEN structure
@@ -32,7 +32,7 @@ class TestThatGekkoOptimizerRespectsBudgetConstraint(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
         budget = 100
@@ -60,7 +60,7 @@ class TestThatGekkoOptimizerRespectsMinTeamsConstraint(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
         min_teams = 5
@@ -88,7 +88,7 @@ class TestThatGekkoOptimizerRespectsMaxTeamsConstraint(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
         max_teams = 4
@@ -116,7 +116,7 @@ class TestThatGekkoOptimizerProducesIntegerBids(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
 
@@ -144,7 +144,7 @@ class TestThatGekkoOptimizerRespectsMaxPerTeam(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
         max_per_team = 30
@@ -172,7 +172,7 @@ class TestThatGekkoOptimizerRespectsMinBid(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
         min_bid = 2
@@ -200,7 +200,7 @@ class TestThatGekkoOptimizerIsDeterministic(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
 
@@ -238,7 +238,7 @@ class TestThatGekkoOptimizerReturnsPortfolioRows(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
 
@@ -265,7 +265,7 @@ class TestThatGekkoOptimizerHandlesSmallBudget(unittest.TestCase):
 
     def test(self):
         # GIVEN
-        from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
         teams_df = _create_teams_df(10)
 
@@ -283,29 +283,3 @@ class TestThatGekkoOptimizerHandlesSmallBudget(unittest.TestCase):
         self.assertGreaterEqual(len(result), 3)
 
 
-class TestThatMinlpFallbackWorksWhenGekkoFails(unittest.TestCase):
-    """
-    GIVEN the MINLP optimizer with use_gekko=False
-    WHEN we run it
-    THEN it should use scipy fallback and return valid results
-    """
-
-    def test(self):
-        # GIVEN
-        from moneyball.models.portfolio_optimizer_minlp import optimize_portfolio_minlp
-
-        teams_df = _create_teams_df(10)
-
-        # WHEN
-        result, _ = optimize_portfolio_minlp(
-            teams_df=teams_df,
-            budget_points=100,
-            min_teams=3,
-            max_teams=10,
-            max_per_team_points=50,
-            min_bid_points=1,
-            use_gekko=False,
-        )
-
-        # THEN
-        self.assertEqual(int(result["bid_amount_points"].sum()), 100)
