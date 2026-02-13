@@ -9,7 +9,7 @@ DC_AIRFLOW = docker compose -f data-science/docker-compose.airflow.yml
 .PHONY: env-init bootstrap dev dev-up dev-down up-d logs ps
 .PHONY: prod-up prod-down prod-reset prod-ops-migrate
 .PHONY: up down reset ops-migrate backend-test sqlc-generate
-.PHONY: reset-derived
+.PHONY: reset-derived db-shell db-query
 .PHONY: airflow-up airflow-down airflow-logs airflow-reset
 
 env-init:
@@ -70,6 +70,14 @@ ops-migrate:
 
 reset-derived:
 	$(ENV) psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" -v ON_ERROR_STOP=1 -f backend/ops/db/maintenance/reset_derived_data.sql
+
+# Database access (via docker exec - works regardless of host psql)
+db-shell:
+	$(ENV_DOCKER) docker exec -it $$($(DC) ps -q db) psql -U $${DB_USER} -d $${DB_NAME}
+
+db-query:
+	@if [ -z "$(SQL)" ]; then echo "Usage: make db-query SQL=\"SELECT ...\""; exit 1; fi
+	$(ENV_DOCKER) docker exec $$($(DC) ps -q db) psql -U $${DB_USER} -d $${DB_NAME} -c "$(SQL)"
 
 # Airflow (full stack - heavyweight)
 airflow-up:
