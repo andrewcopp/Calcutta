@@ -126,6 +126,72 @@ export type GenerateEntriesResponse = {
   errors?: string[];
 };
 
+// Types for pipeline
+export type StartPipelineRequest = {
+  calcutta_ids?: string[];
+  budget_points?: number;
+  optimizer_kind?: string;
+  n_sims?: number;
+  seed?: number;
+  excluded_entry_name?: string;
+};
+
+export type StartPipelineResponse = {
+  pipeline_run_id: string;
+  n_calcuttas: number;
+  status: string;
+};
+
+export type CalcuttaPipelineStatus = {
+  calcutta_id: string;
+  calcutta_name: string;
+  calcutta_year: number;
+  stage: string;
+  status: string;
+  progress: number;
+  progress_message?: string | null;
+  has_predictions: boolean;
+  has_entry: boolean;
+  has_evaluation: boolean;
+  entry_id?: string | null;
+  evaluation_id?: string | null;
+  mean_payout?: number | null;
+  error_message?: string | null;
+};
+
+export type PipelineProgressSummary = {
+  total_calcuttas: number;
+  predictions_count: number;
+  entries_count: number;
+  evaluations_count: number;
+  failed_count: number;
+  avg_mean_payout?: number | null;
+};
+
+export type PipelineProgressResponse = {
+  id: string;
+  investment_model_id: string;
+  model_name: string;
+  status: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  error_message?: string | null;
+  summary: PipelineProgressSummary;
+  calcuttas: CalcuttaPipelineStatus[];
+};
+
+export type ModelPipelineProgress = {
+  model_id: string;
+  model_name: string;
+  active_pipeline_run_id?: string | null;
+  total_calcuttas: number;
+  predictions_count: number;
+  entries_count: number;
+  evaluations_count: number;
+  avg_mean_payout?: number | null;
+  calcuttas: CalcuttaPipelineStatus[];
+};
+
 // Service
 export const labService = {
   async listModels(params?: {
@@ -211,6 +277,35 @@ export const labService = {
     return apiClient.post<GenerateEntriesResponse>(
       `/lab/models/${encodeURIComponent(modelId)}/generate-entries`,
       request ?? {}
+    );
+  },
+
+  async startPipeline(
+    modelId: string,
+    request?: StartPipelineRequest
+  ): Promise<StartPipelineResponse> {
+    return apiClient.post<StartPipelineResponse>(
+      `/lab/models/${encodeURIComponent(modelId)}/pipeline/start`,
+      request ?? {}
+    );
+  },
+
+  async getModelPipelineProgress(modelId: string): Promise<ModelPipelineProgress> {
+    return apiClient.get<ModelPipelineProgress>(
+      `/lab/models/${encodeURIComponent(modelId)}/pipeline/progress`
+    );
+  },
+
+  async getPipelineRunProgress(pipelineRunId: string): Promise<PipelineProgressResponse> {
+    return apiClient.get<PipelineProgressResponse>(
+      `/lab/pipeline-runs/${encodeURIComponent(pipelineRunId)}`
+    );
+  },
+
+  async cancelPipeline(pipelineRunId: string): Promise<void> {
+    await apiClient.post<{ status: string }>(
+      `/lab/pipeline-runs/${encodeURIComponent(pipelineRunId)}/cancel`,
+      {}
     );
   },
 };

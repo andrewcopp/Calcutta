@@ -30,9 +30,10 @@ func run() error {
 	runGameOutcomeWorker := flag.Bool("game-outcome-worker", true, "Run the predicted game outcomes worker")
 	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", true, "Run the calcutta evaluation worker")
 	runSimulationWorker := flag.Bool("simulation-worker", true, "Run the simulation worker")
+	runLabPipelineWorker := flag.Bool("lab-pipeline-worker", true, "Run the lab pipeline worker")
 	flag.Parse()
 
-	if !*runBundleImportWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runCalcuttaEvalWorker && !*runSimulationWorker {
+	if !*runBundleImportWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runCalcuttaEvalWorker && !*runSimulationWorker && !*runLabPipelineWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -54,6 +55,7 @@ func run() error {
 	gameOutcomeWorker := workers.NewGameOutcomeWorker(pool, progress)
 	calcuttaEvalWorker := workers.NewCalcuttaEvaluationWorker(pool, progress)
 	simulationWorker := workers.NewSimulationWorker(pool, progress, cfg.ArtifactsDir)
+	labPipelineWorker := workers.NewLabPipelineWorker(pool, progress)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -93,6 +95,13 @@ func run() error {
 		go func() {
 			defer wg.Done()
 			simulationWorker.Run(ctx)
+		}()
+	}
+	if *runLabPipelineWorker {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			labPipelineWorker.Run(ctx)
 		}()
 	}
 

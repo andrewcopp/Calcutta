@@ -8,15 +8,19 @@ import (
 
 // Handlers contains all lab-related HTTP handlers.
 type Handlers struct {
-	ListModels                  http.HandlerFunc
-	GetModel                    http.HandlerFunc
-	GetLeaderboard              http.HandlerFunc
-	GenerateEntries             http.HandlerFunc
-	ListEntries                 http.HandlerFunc
-	GetEntry                    http.HandlerFunc
-	GetEntryByModelAndCalcutta  http.HandlerFunc
-	ListEvaluations             http.HandlerFunc
-	GetEvaluation               http.HandlerFunc
+	ListModels                   http.HandlerFunc
+	GetModel                     http.HandlerFunc
+	GetLeaderboard               http.HandlerFunc
+	GenerateEntries              http.HandlerFunc
+	StartPipeline                http.HandlerFunc
+	GetModelPipelineProgress     http.HandlerFunc
+	GetPipelineRun               http.HandlerFunc
+	CancelPipeline               http.HandlerFunc
+	ListEntries                  http.HandlerFunc
+	GetEntry                     http.HandlerFunc
+	GetEntryByModelAndCalcutta   http.HandlerFunc
+	ListEvaluations              http.HandlerFunc
+	GetEvaluation                http.HandlerFunc
 }
 
 // RegisterRoutes registers lab routes on the given router.
@@ -26,7 +30,13 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/lab/models/leaderboard", h.GetLeaderboard).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{modelName}/calcutta/{calcuttaId}/entry", h.GetEntryByModelAndCalcutta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{id}/generate-entries", h.GenerateEntries).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/lab/models/{id}/pipeline/start", h.StartPipeline).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/lab/models/{id}/pipeline/progress", h.GetModelPipelineProgress).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{id}", h.GetModel).Methods("GET", "OPTIONS")
+
+	// Pipeline runs
+	r.HandleFunc("/api/lab/pipeline-runs/{id}", h.GetPipelineRun).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/lab/pipeline-runs/{id}/cancel", h.CancelPipeline).Methods("POST", "OPTIONS")
 
 	// Entries
 	r.HandleFunc("/api/lab/entries", h.ListEntries).Methods("GET", "OPTIONS")

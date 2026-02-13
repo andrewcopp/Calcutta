@@ -4,12 +4,18 @@ import "context"
 
 // Service provides lab-related business logic.
 type Service struct {
-	repo Repository
+	repo         Repository
+	pipelineRepo PipelineRepository
 }
 
 // New creates a new lab service.
 func New(repo Repository) *Service {
 	return &Service{repo: repo}
+}
+
+// NewWithPipelineRepo creates a new lab service with pipeline repository support.
+func NewWithPipelineRepo(repo PipelineRepository) *Service {
+	return &Service{repo: repo, pipelineRepo: repo}
 }
 
 // ListInvestmentModels returns investment models matching the filter.
@@ -87,4 +93,158 @@ func (s *Service) GetEvaluation(ctx context.Context, id string) (*EvaluationDeta
 // GenerateEntries runs the Python script to generate entries for a model.
 func (s *Service) GenerateEntries(ctx context.Context, modelID string, req GenerateEntriesRequest) (*GenerateEntriesResponse, error) {
 	return RunGenerateEntriesScript(ctx, modelID, req)
+}
+
+// StartPipeline starts a new pipeline run for a model.
+func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPipelineRequest) (*StartPipelineResponse, error) {
+	if s.pipelineRepo == nil {
+		return nil, &PipelineNotAvailableError{}
+	}
+
+	// Check if there's already an active pipeline
+	active, err := s.pipelineRepo.GetActivePipelineRun(modelID)
+	if err != nil {
+		return nil, err
+	}
+	if active != nil {
+		return nil, &PipelineAlreadyRunningError{PipelineRunID: active.ID}
+	}
+
+	// Get target calcutta IDs
+	calcuttaIDs := req.CalcuttaIDs
+	if len(calcuttaIDs) == 0 {
+		calcuttaIDs, err = s.pipelineRepo.GetHistoricalCalcuttaIDs()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(calcuttaIDs) == 0 {
+		return nil, &NoCalcuttasAvailableError{}
+	}
+
+	// Set defaults
+	budgetPoints := req.BudgetPoints
+	if budgetPoints <= 0 {
+		budgetPoints = 10000
+	}
+	optimizerKind := req.OptimizerKind
+	if optimizerKind == "" {
+		optimizerKind = "predicted_market_share"
+	}
+	nSims := req.NSims
+	if nSims <= 0 {
+		nSims = 10000
+	}
+	seed := req.Seed
+	if seed == 0 {
+		seed = 42
+	}
+
+	// Create pipeline run
+	run := &PipelineRun{
+		InvestmentModelID: modelID,
+		TargetCalcuttaIDs: calcuttaIDs,
+		BudgetPoints:      budgetPoints,
+		OptimizerKind:     optimizerKind,
+		NSims:             nSims,
+		Seed:              seed,
+		Status:            "pending",
+	}
+	if req.ExcludedEntryName != "" {
+		run.ExcludedEntryName = &req.ExcludedEntryName
+	}
+
+	created, err := s.pipelineRepo.CreatePipelineRun(run)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create calcutta runs
+	err = s.pipelineRepo.CreatePipelineCalcuttaRuns(created.ID, calcuttaIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &StartPipelineResponse{
+		PipelineRunID: created.ID,
+		NCalcuttas:    len(calcuttaIDs),
+		Status:        "pending",
+	}, nil
+}
+
+// GetPipelineProgress returns the progress for a specific pipeline run.
+func (s *Service) GetPipelineProgress(ctx context.Context, pipelineRunID string) (*PipelineProgressResponse, error) {
+	if s.pipelineRepo == nil {
+		return nil, &PipelineNotAvailableError{}
+	}
+	return s.pipelineRepo.GetPipelineProgress(pipelineRunID)
+}
+
+// GetModelPipelineProgress returns the pipeline progress for a model.
+func (s *Service) GetModelPipelineProgress(ctx context.Context, modelID string) (*ModelPipelineProgress, error) {
+	if s.pipelineRepo == nil {
+		return nil, &PipelineNotAvailableError{}
+	}
+	return s.pipelineRepo.GetModelPipelineProgress(modelID)
+}
+
+// GetPipelineRun returns a pipeline run by ID.
+func (s *Service) GetPipelineRun(ctx context.Context, id string) (*PipelineRun, error) {
+	if s.pipelineRepo == nil {
+		return nil, &PipelineNotAvailableError{}
+	}
+	return s.pipelineRepo.GetPipelineRun(id)
+}
+
+// CancelPipeline cancels a running pipeline.
+func (s *Service) CancelPipeline(ctx context.Context, pipelineRunID string) error {
+	if s.pipelineRepo == nil {
+		return &PipelineNotAvailableError{}
+	}
+
+	run, err := s.pipelineRepo.GetPipelineRun(pipelineRunID)
+	if err != nil {
+		return err
+	}
+
+	if run.Status != "pending" && run.Status != "running" {
+		return &PipelineNotCancellableError{Status: run.Status}
+	}
+
+	msg := "cancelled by user"
+	return s.pipelineRepo.UpdatePipelineRunStatus(pipelineRunID, "cancelled", &msg)
+}
+
+// Pipeline errors
+
+// PipelineNotAvailableError indicates pipeline functionality is not available.
+type PipelineNotAvailableError struct{}
+
+func (e *PipelineNotAvailableError) Error() string {
+	return "pipeline functionality not available"
+}
+
+// PipelineAlreadyRunningError indicates a pipeline is already running for the model.
+type PipelineAlreadyRunningError struct {
+	PipelineRunID string
+}
+
+func (e *PipelineAlreadyRunningError) Error() string {
+	return "pipeline already running: " + e.PipelineRunID
+}
+
+// NoCalcuttasAvailableError indicates no historical calcuttas are available.
+type NoCalcuttasAvailableError struct{}
+
+func (e *NoCalcuttasAvailableError) Error() string {
+	return "no historical calcuttas available"
+}
+
+// PipelineNotCancellableError indicates the pipeline cannot be cancelled.
+type PipelineNotCancellableError struct {
+	Status string
+}
+
+func (e *PipelineNotCancellableError) Error() string {
+	return "pipeline cannot be cancelled: status is " + e.Status
 }

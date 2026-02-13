@@ -1,18 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
-import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
-import { labService, InvestmentModel, ListEntriesResponse, ListEvaluationsResponse } from '../../services/labService';
+import { PipelineSummary } from '../../components/Lab/PipelineSummary';
+import { PipelineStatusTable } from '../../components/Lab/PipelineStatusTable';
+import { labService, InvestmentModel, ModelPipelineProgress } from '../../services/labService';
 
 export function ModelDetailPage() {
   const { modelId } = useParams<{ modelId: string }>();
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [isPipelineRunning, setIsPipelineRunning] = useState(false);
 
   const modelQuery = useQuery<InvestmentModel | null>({
     queryKey: ['lab', 'models', modelId],
@@ -20,44 +23,48 @@ export function ModelDetailPage() {
     enabled: Boolean(modelId),
   });
 
-  const entriesQuery = useQuery<ListEntriesResponse | null>({
-    queryKey: ['lab', 'entries', { investment_model_id: modelId }],
-    queryFn: () => (modelId ? labService.listEntries({ investment_model_id: modelId, limit: 50 }) : Promise.resolve(null)),
+  const pipelineProgressQuery = useQuery<ModelPipelineProgress | null>({
+    queryKey: ['lab', 'models', modelId, 'pipeline-progress'],
+    queryFn: () => (modelId ? labService.getModelPipelineProgress(modelId) : Promise.resolve(null)),
     enabled: Boolean(modelId),
+    refetchInterval: isPipelineRunning ? 2000 : false,
   });
 
-  const evaluationsQuery = useQuery<ListEvaluationsResponse | null>({
-    queryKey: ['lab', 'evaluations', { investment_model_id: modelId }],
-    queryFn: () => (modelId ? labService.listEvaluations({ investment_model_id: modelId, limit: 50 }) : Promise.resolve(null)),
-    enabled: Boolean(modelId),
-  });
+  // Update pipeline running state based on query data
+  useEffect(() => {
+    if (pipelineProgressQuery.data?.active_pipeline_run_id) {
+      setIsPipelineRunning(true);
+    } else {
+      setIsPipelineRunning(false);
+    }
+  }, [pipelineProgressQuery.data?.active_pipeline_run_id]);
 
-  const queryClient = useQueryClient();
-  const generateMutation = useMutation({
-    mutationFn: () => labService.generateEntries(modelId!),
+  const startPipelineMutation = useMutation({
+    mutationFn: () => labService.startPipeline(modelId!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lab', 'entries', { investment_model_id: modelId }] });
-      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId] });
+      setIsPipelineRunning(true);
+      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId, 'pipeline-progress'] });
+    },
+  });
+
+  const cancelPipelineMutation = useMutation({
+    mutationFn: () => {
+      const runId = pipelineProgressQuery.data?.active_pipeline_run_id;
+      if (!runId) throw new Error('No active pipeline to cancel');
+      return labService.cancelPipeline(runId);
+    },
+    onSuccess: () => {
+      setIsPipelineRunning(false);
+      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId, 'pipeline-progress'] });
     },
   });
 
   const model = modelQuery.data;
-  const entries = entriesQuery.data?.items ?? [];
-  const evaluations = evaluationsQuery.data?.items ?? [];
+  const pipelineProgress = pipelineProgressQuery.data;
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const formatPayoutX = (val?: number | null) => {
-    if (val == null) return '-';
-    return `${val.toFixed(3)}x`;
-  };
-
-  const formatPct = (val?: number | null) => {
-    if (val == null) return '-';
-    return `${(val * 100).toFixed(1)}%`;
   };
 
   if (modelQuery.isLoading) {
@@ -89,29 +96,7 @@ export function ModelDetailPage() {
       <PageHeader title={model.name} subtitle={`Kind: ${model.kind}`} />
 
       <Card className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Model Details</h2>
-          <Button
-            size="sm"
-            onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending}
-          >
-            {generateMutation.isPending ? 'Generating...' : 'Generate Entries'}
-          </Button>
-        </div>
-        {generateMutation.isError ? (
-          <Alert variant="error" className="mb-3">
-            Failed to generate entries: {(generateMutation.error as Error)?.message || 'Unknown error'}
-          </Alert>
-        ) : null}
-        {generateMutation.isSuccess ? (
-          <Alert variant="success" className="mb-3">
-            Created {generateMutation.data.entries_created} entries
-            {generateMutation.data.errors && generateMutation.data.errors.length > 0 ? (
-              <> (with {generateMutation.data.errors.length} warnings)</>
-            ) : null}
-          </Alert>
-        ) : null}
+        <h2 className="text-lg font-semibold mb-3">Model Details</h2>
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="text-gray-500">Kind</dt>
@@ -138,83 +123,34 @@ export function ModelDetailPage() {
         </dl>
       </Card>
 
-      <Card className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Entries ({entries.length})</h2>
-        {entriesQuery.isLoading ? <LoadingState label="Loading entries..." layout="inline" /> : null}
-        {!entriesQuery.isLoading && entries.length === 0 ? (
-          <Alert variant="info">No entries for this model.</Alert>
-        ) : null}
-        {!entriesQuery.isLoading && entries.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Calcutta</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">State</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Optimizer</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Evaluations</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {entries.map((e) => (
-                  <tr
-                    key={e.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/models/${encodeURIComponent(e.model_name)}/calcutta/${encodeURIComponent(e.calcutta_id)}`)}
-                  >
-                    <td className="px-3 py-2 text-sm text-gray-900">{e.calcutta_name}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{e.starting_state_key}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{e.optimizer_kind}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{e.n_evaluations}</td>
-                    <td className="px-3 py-2 text-sm text-gray-500">{formatDate(e.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </Card>
+      {startPipelineMutation.isError && (
+        <Alert variant="error" className="mb-4">
+          Failed to start pipeline: {(startPipelineMutation.error as Error)?.message || 'Unknown error'}
+        </Alert>
+      )}
 
-      <Card>
-        <h2 className="text-lg font-semibold mb-3">Evaluations ({evaluations.length})</h2>
-        {evaluationsQuery.isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
-        {!evaluationsQuery.isLoading && evaluations.length === 0 ? (
-          <Alert variant="info">No evaluations for this model.</Alert>
-        ) : null}
-        {!evaluationsQuery.isLoading && evaluations.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Calcutta</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sims</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mean Payout</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(Top 1)</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(In Money)</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {evaluations.map((ev) => (
-                  <tr
-                    key={ev.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/evaluations/${encodeURIComponent(ev.id)}`)}
-                  >
-                    <td className="px-3 py-2 text-sm text-gray-900">{ev.calcutta_name}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600 text-right">{ev.n_sims.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium">
-                      {formatPayoutX(ev.mean_normalized_payout)}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(ev.p_top1)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(ev.p_in_money)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </Card>
+      {cancelPipelineMutation.isError && (
+        <Alert variant="error" className="mb-4">
+          Failed to cancel pipeline: {(cancelPipelineMutation.error as Error)?.message || 'Unknown error'}
+        </Alert>
+      )}
+
+      <PipelineSummary
+        progress={pipelineProgress ?? null}
+        isLoading={pipelineProgressQuery.isLoading}
+        isPipelineRunning={isPipelineRunning}
+        onStartPipeline={() => startPipelineMutation.mutate()}
+        onCancelPipeline={() => cancelPipelineMutation.mutate()}
+        isStarting={startPipelineMutation.isPending}
+        isCancelling={cancelPipelineMutation.isPending}
+      />
+
+      <h2 className="text-lg font-semibold mb-3">Historical Calcuttas</h2>
+      <PipelineStatusTable
+        calcuttas={pipelineProgress?.calcuttas ?? []}
+        modelName={model.name}
+        isLoading={pipelineProgressQuery.isLoading}
+      />
     </PageContainer>
   );
 }
