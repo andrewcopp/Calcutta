@@ -4,6 +4,7 @@ This folder contains the canonical project documentation, organized by intent.
 
 ## Start here
 
+- `docs/reference/partitions.md` - Core, Sandbox, and Lab architecture
 - `docs/standards/engineering.md`
 - `docs/standards/bracket_testing_guidelines.md`
 - `docs/reference/rules.md`
