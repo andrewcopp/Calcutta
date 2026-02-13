@@ -9,6 +9,8 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { calcuttaService } from '../services/calcuttaService';
 import {
   simulationRunsService,
@@ -91,6 +93,46 @@ export function SimulationRunDetailPage() {
     retry: false,
   });
 
+  // Check if run is in progress
+  const isInProgress = useMemo(() => {
+    const status = detailQuery.data?.status;
+    return status === 'pending' || status === 'claimed' || status === 'running';
+  }, [detailQuery.data?.status]);
+
+  // Auto-refresh when in progress
+  useQuery({
+    queryKey: ['simulation-runs', 'get', id, 'auto-refresh'],
+    queryFn: async () => {
+      await detailQuery.refetch();
+      await progressQuery.refetch();
+      return null;
+    },
+    enabled: isInProgress,
+    refetchInterval: 3000, // Refresh every 3 seconds
+  });
+
+  // Get latest progress percentage from events
+  const latestProgress = useMemo(() => {
+    const events = progressQuery.data?.events ?? [];
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i].percent != null) {
+        return events[i].percent;
+      }
+    }
+    return null;
+  }, [progressQuery.data?.events]);
+
+  // Get latest phase/message
+  const latestPhase = useMemo(() => {
+    const events = progressQuery.data?.events ?? [];
+    if (events.length === 0) return null;
+    const last = events[events.length - 1];
+    return {
+      phase: last.phase || 'Processing',
+      message: last.message || '',
+    };
+  }, [progressQuery.data?.events]);
+
   const progressEvents: RunProgressEvent[] = useMemo(() => {
     const items = progressQuery.data?.events ?? [];
     return items.slice();
@@ -166,6 +208,31 @@ export function SimulationRunDetailPage() {
             Retry
           </Button>
         </Alert>
+      ) : null}
+
+      {detailQuery.data && isInProgress ? (
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <StatusBadge status={detailQuery.data.status} />
+              <span className="text-sm font-medium text-gray-900">
+                {latestPhase?.phase || 'Processing'}
+              </span>
+              {latestPhase?.message && (
+                <span className="text-sm text-gray-600">— {latestPhase.message}</span>
+              )}
+            </div>
+            <span className="text-sm text-blue-600 flex items-center gap-1">
+              <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              Auto-refreshing...
+            </span>
+          </div>
+          <ProgressBar
+            value={latestProgress ?? 0.1}
+            showLabel
+            size="md"
+          />
+        </Card>
       ) : null}
 
       {detailQuery.data ? (
@@ -246,7 +313,9 @@ export function SimulationRunDetailPage() {
               </div>
               <div>
                 <div className="text-gray-500">Status</div>
-                <div className="text-gray-900">{detailQuery.data.status}</div>
+                <div className="mt-1">
+                  <StatusBadge status={detailQuery.data.status} />
+                </div>
               </div>
               <div>
                 <div className="text-gray-500">Optimizer</div>

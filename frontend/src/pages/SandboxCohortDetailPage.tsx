@@ -9,7 +9,9 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { ProgressBar } from '../components/ui/ProgressBar';
 import { Select } from '../components/ui/Select';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { calcuttaService } from '../services/calcuttaService';
 import { cohortsService } from '../services/cohortsService';
 import {
@@ -113,6 +115,24 @@ export function SandboxCohortDetailPage() {
       return simulationRunsService.list({ cohortId: effectiveCohortId, limit: 200, offset: 0 });
     },
     enabled: Boolean(effectiveCohortId),
+  });
+
+  // Check if any runs are in progress to enable auto-refresh
+  const hasInProgressRuns = useMemo(() => {
+    const items = runsQuery.data?.items ?? [];
+    return items.some((r) => r.status === 'pending' || r.status === 'claimed' || r.status === 'running');
+  }, [runsQuery.data?.items]);
+
+  // Auto-refresh runs when there are in-progress simulations
+  useQuery({
+    queryKey: ['simulation-runs', 'list', effectiveCohortId, 'auto-refresh'],
+    queryFn: async () => {
+      await runsQuery.refetch();
+      await simulatedCalcuttasQuery.refetch();
+      return null;
+    },
+    enabled: hasInProgressRuns,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   const simulatedCalcuttas: SimulatedCalcuttaListItem[] = useMemo(
@@ -252,7 +272,15 @@ export function SandboxCohortDetailPage() {
 
           <Card>
             <div className="flex items-end justify-between gap-4 mb-4">
-              <h2 className="text-xl font-semibold">Simulated Calcuttas</h2>
+              <div>
+                <h2 className="text-xl font-semibold">Simulated Calcuttas</h2>
+                {hasInProgressRuns && (
+                  <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                    Auto-refreshing every 5 seconds...
+                  </p>
+                )}
+              </div>
 
               <div className="flex items-center gap-3">
                 <div className="text-sm text-gray-500 whitespace-nowrap">Create from</div>
@@ -307,6 +335,7 @@ export function SandboxCohortDetailPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Normalized Mean Payout</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">P(1st)</th>
@@ -319,6 +348,8 @@ export function SandboxCohortDetailPage() {
                       const href = `/sandbox/simulated-calcuttas/${encodeURIComponent(sc.id)}?cohortId=${encodeURIComponent(effectiveCohortId)}`;
                       const base = sc.base_calcutta_id ? calcuttaById.get(sc.base_calcutta_id) : null;
                       const perf = highlightedPerfBySimulatedCalcuttaId.data?.get(sc.id);
+                      const latestRun = latestRunBySimulatedCalcuttaId.get(sc.id);
+                      const isRunning = latestRun?.status === 'pending' || latestRun?.status === 'claimed' || latestRun?.status === 'running';
                       return (
                         <tr
                           key={sc.id}
@@ -328,6 +359,18 @@ export function SandboxCohortDetailPage() {
                           <td className="px-3 py-2 text-sm text-gray-900" title={sc.name}>
                             <div className="font-medium">{sc.name}</div>
                             {base ? <div className="text-xs text-gray-600">base {base.name}</div> : sc.base_calcutta_id ? <div className="text-xs text-gray-600">base {sc.base_calcutta_id.slice(0, 8)}</div> : null}
+                          </td>
+                          <td className="px-3 py-2 text-sm">
+                            {latestRun ? (
+                              <div className="space-y-1">
+                                <StatusBadge status={latestRun.status} />
+                                {isRunning && (
+                                  <ProgressBar value={0.5} size="sm" className="w-20" />
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">No runs</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-sm text-right text-gray-700">{perf?.rank ?? '—'}</td>
                           <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">{fmtFloat(perf?.mean_normalized_payout, 4)}</td>
