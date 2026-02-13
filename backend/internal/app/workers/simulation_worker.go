@@ -1,23 +1,18 @@
 package workers
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
-	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	appsimulatetournaments "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_artifacts"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -30,16 +25,20 @@ const (
 )
 
 type SimulationWorker struct {
-	pool         *pgxpool.Pool
-	progress     ProgressWriter
-	artifactsDir string
+	pool        *pgxpool.Pool
+	progress    ProgressWriter
+	artifactSvc *simulation_artifacts.Service
 }
 
 func NewSimulationWorker(pool *pgxpool.Pool, progress ProgressWriter, artifactsDir string) *SimulationWorker {
 	if progress == nil {
 		progress = NewDBProgressWriter(pool)
 	}
-	return &SimulationWorker{pool: pool, progress: progress, artifactsDir: strings.TrimSpace(artifactsDir)}
+	return &SimulationWorker{
+		pool:        pool,
+		progress:    progress,
+		artifactSvc: simulation_artifacts.New(pool, artifactsDir),
+	}
 }
 
 type simulationRunRow struct {
@@ -347,14 +346,14 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		nSims = *req.NSims
 	}
 	if nSims <= 0 {
-		nSims = w.resolveCohortNSims(ctx, req.CohortID, 10000)
+		nSims = resolveCohortNSims(ctx, w.pool, req.CohortID, 10000)
 	}
 	seed := 0
 	if req.Seed != nil {
 		seed = *req.Seed
 	}
 	if seed == 0 {
-		seed = w.resolveCohortSeed(ctx, req.CohortID, 42)
+		seed = resolveCohortSeed(ctx, w.pool, req.CohortID, 42)
 	}
 	simRes, err := simSvc.Run(ctx, appsimulatetournaments.RunParams{
 		Season:               year,
@@ -399,20 +398,6 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		return false
 	}
 
-	var (
-		ourRank                   *int
-		ourMeanNormalizedPayout   *float64
-		ourMedianNormalizedPayout *float64
-		ourPTop1                  *float64
-		ourPInMoney               *float64
-		totalSimulations          *int
-		realizedFinishPosition    *int
-		realizedIsTied            *bool
-		realizedInTheMoney        *bool
-		realizedPayoutCents       *int
-		realizedTotalPoints       *float64
-	)
-
 	optimizerKey := ""
 
 	_, err = w.pool.Exec(ctx, `
@@ -423,18 +408,6 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 			seed = $4,
 			strategy_generation_run_id = $5::uuid,
 			calcutta_evaluation_run_id = $6::uuid,
-			focus_snapshot_entry_id = $7::uuid,
-			our_rank = $8,
-			our_mean_normalized_payout = $9,
-			our_median_normalized_payout = $10,
-			our_p_top1 = $11,
-			our_p_in_money = $12,
-			total_simulations = $13,
-			realized_finish_position = $14,
-			realized_is_tied = $15,
-			realized_in_the_money = $16,
-			realized_payout_cents = $17,
-			realized_total_points = $18,
 			error_message = NULL,
 			updated_at = NOW()
 		WHERE id = $1::uuid
@@ -445,18 +418,6 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		seed,
 		nullUUIDParam(strategyGenRunID),
 		evalRunID,
-		nil,
-		ourRank,
-		ourMeanNormalizedPayout,
-		ourMedianNormalizedPayout,
-		ourPTop1,
-		ourPInMoney,
-		totalSimulations,
-		realizedFinishPosition,
-		realizedIsTied,
-		realizedInTheMoney,
-		realizedPayoutCents,
-		realizedTotalPoints,
 	)
 	if err != nil {
 		log.Printf("Error updating simulation run %s to succeeded: %v", req.ID, err)
@@ -474,32 +435,21 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 	`, req.ID)
 
 	w.updateRunJobProgress(ctx, "simulation", req.ID, 0.95, "artifacts", "Writing artifacts")
-	if err := w.exportSimulationArtifactsToRunArtifacts(ctx, req.ID, runKey, evalRunID); err != nil {
+	if err := w.artifactSvc.ExportArtifacts(ctx, req.ID, runKey, evalRunID); err != nil {
 		log.Printf("simulation_worker artifact_export_failed run_id=%s run_key=%s err=%v", req.ID, runKey, err)
 	}
 
 	w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "succeeded", "Completed")
 
 	summary := map[string]any{
-		"status":                    "succeeded",
-		"evaluationId":              req.ID,
-		"runKey":                    runKey,
-		"optimizerKey":              optimizerKey,
-		"nSims":                     nSims,
-		"seed":                      seed,
-		"strategyGenerationRunId":   strategyGenRunID,
-		"calcuttaEvaluationRunId":   evalRunID,
-		"ourRank":                   ourRank,
-		"ourMeanNormalizedPayout":   ourMeanNormalizedPayout,
-		"ourMedianNormalizedPayout": ourMedianNormalizedPayout,
-		"ourPTop1":                  ourPTop1,
-		"ourPInMoney":               ourPInMoney,
-		"totalSimulations":          totalSimulations,
-		"realizedFinishPosition":    realizedFinishPosition,
-		"realizedIsTied":            realizedIsTied,
-		"realizedInTheMoney":        realizedInTheMoney,
-		"realizedPayoutCents":       realizedPayoutCents,
-		"realizedTotalPoints":       realizedTotalPoints,
+		"status":                  "succeeded",
+		"evaluationId":            req.ID,
+		"runKey":                  runKey,
+		"optimizerKey":            optimizerKey,
+		"nSims":                   nSims,
+		"seed":                    seed,
+		"strategyGenerationRunId": strategyGenRunID,
+		"calcuttaEvaluationRunId": evalRunID,
 	}
 	summaryJSON, err := json.Marshal(summary)
 	if err == nil {
@@ -540,496 +490,9 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 	)
 
 	if req.SimulationBatchID != nil && *req.SimulationBatchID != "" {
-		w.updateSimulationBatchStatus(ctx, *req.SimulationBatchID)
+		w.artifactSvc.UpdateBatchStatus(ctx, *req.SimulationBatchID)
 	}
 	return true
-}
-
-type simulationArtifactExportResult struct {
-	ArtifactKind  string
-	SchemaVersion string
-	StorageURI    string
-	RowCount      int
-}
-
-func (w *SimulationWorker) exportSimulationArtifactsToRunArtifacts(ctx context.Context, simulationRunID string, runKey string, calcuttaEvaluationRunID string) error {
-	if w == nil || w.pool == nil {
-		return nil
-	}
-	if strings.TrimSpace(w.artifactsDir) == "" {
-		return nil
-	}
-	if strings.TrimSpace(simulationRunID) == "" {
-		return nil
-	}
-	if strings.TrimSpace(calcuttaEvaluationRunID) == "" {
-		return nil
-	}
-
-	baseDir := filepath.Join(w.artifactsDir, "simulation", simulationRunID)
-	if err := os.MkdirAll(baseDir, 0o755); err != nil {
-		return fmt.Errorf("create_artifacts_dir_failed: %w", err)
-	}
-
-	results := make([]simulationArtifactExportResult, 0, 2)
-
-	perfPath := filepath.Join(baseDir, "entry_performance.v1.jsonl")
-	if res, ok, err := w.exportEntryPerformanceJSONL(ctx, calcuttaEvaluationRunID, perfPath); err != nil {
-		return fmt.Errorf("export_entry_performance_failed: %w", err)
-	} else if ok {
-		results = append(results, res)
-	}
-
-	outcomesPath := filepath.Join(baseDir, "entry_simulation_outcomes.v1.jsonl")
-	if res, ok, err := w.exportEntrySimulationOutcomesJSONL(ctx, calcuttaEvaluationRunID, outcomesPath); err != nil {
-		return fmt.Errorf("export_entry_simulation_outcomes_failed: %w", err)
-	} else if ok {
-		results = append(results, res)
-	}
-
-	var runKeyParam any
-	if strings.TrimSpace(runKey) != "" {
-		runKeyParam = runKey
-	} else {
-		runKeyParam = nil
-	}
-
-	for _, res := range results {
-		summary := map[string]any{
-			"rowCount": res.RowCount,
-		}
-		summaryJSON, _ := json.Marshal(summary)
-		_, err := w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('simulation', $1::uuid, $2::uuid, $3, $4, $5, $6::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, simulationRunID, runKeyParam, res.ArtifactKind, res.SchemaVersion, res.StorageURI, summaryJSON)
-		if err != nil {
-			return fmt.Errorf("upsert_run_artifact_failed kind=%s: %w", res.ArtifactKind, err)
-		}
-	}
-
-	return nil
-}
-
-func (w *SimulationWorker) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvaluationRunID string, outPath string) (simulationArtifactExportResult, bool, error) {
-	rows, err := w.pool.Query(ctx, `
-		SELECT
-			ep.entry_name,
-			COALESCE(ep.mean_normalized_payout, 0.0)::double precision,
-			COALESCE(ep.median_normalized_payout, 0.0)::double precision,
-			COALESCE(ep.p_top1, 0.0)::double precision,
-			COALESCE(ep.p_in_money, 0.0)::double precision
-		FROM derived.entry_performance ep
-		WHERE ep.calcutta_evaluation_run_id = $1::uuid
-			AND ep.deleted_at IS NULL
-		ORDER BY ep.entry_name ASC
-	`, calcuttaEvaluationRunID)
-	if err != nil {
-		return simulationArtifactExportResult{}, false, err
-	}
-	defer rows.Close()
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return simulationArtifactExportResult{}, false, err
-	}
-	defer func() { _ = f.Close() }()
-
-	bw := bufio.NewWriter(f)
-	defer func() { _ = bw.Flush() }()
-
-	count := 0
-	for rows.Next() {
-		var entryName string
-		var mean float64
-		var median float64
-		var pTop1 float64
-		var pInMoney float64
-		if err := rows.Scan(&entryName, &mean, &median, &pTop1, &pInMoney); err != nil {
-			return simulationArtifactExportResult{}, false, err
-		}
-		b, err := json.Marshal(map[string]any{
-			"entry_name":               entryName,
-			"mean_normalized_payout":   mean,
-			"median_normalized_payout": median,
-			"p_top1":                   pTop1,
-			"p_in_money":               pInMoney,
-		})
-		if err != nil {
-			return simulationArtifactExportResult{}, false, err
-		}
-		if _, err := bw.Write(append(b, '\n')); err != nil {
-			return simulationArtifactExportResult{}, false, err
-		}
-		count++
-	}
-	if err := rows.Err(); err != nil {
-		return simulationArtifactExportResult{}, false, err
-	}
-
-	if count == 0 {
-		return simulationArtifactExportResult{}, false, nil
-	}
-
-	abs, _ := filepath.Abs(outPath)
-	u := (&url.URL{Scheme: "file", Path: abs}).String()
-	return simulationArtifactExportResult{ArtifactKind: "entry_performance_jsonl", SchemaVersion: "v1", StorageURI: u, RowCount: count}, true, nil
-}
-
-func (w *SimulationWorker) exportEntrySimulationOutcomesJSONL(ctx context.Context, calcuttaEvaluationRunID string, outPath string) (simulationArtifactExportResult, bool, error) {
-	rows, err := w.pool.Query(ctx, `
-		SELECT
-			eo.entry_name,
-			eo.sim_id::int,
-			COALESCE(eo.points_scored, 0.0)::double precision,
-			COALESCE(eo.payout_cents, 0)::int,
-			COALESCE(eo.rank, 0)::int
-		FROM derived.entry_simulation_outcomes eo
-		WHERE eo.calcutta_evaluation_run_id = $1::uuid
-			AND eo.deleted_at IS NULL
-		ORDER BY eo.entry_name ASC, eo.sim_id ASC
-	`, calcuttaEvaluationRunID)
-	if err != nil {
-		return simulationArtifactExportResult{}, false, err
-	}
-	defer rows.Close()
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return simulationArtifactExportResult{}, false, err
-	}
-	defer func() { _ = f.Close() }()
-
-	bw := bufio.NewWriter(f)
-	defer func() { _ = bw.Flush() }()
-
-	count := 0
-	for rows.Next() {
-		var entryName string
-		var simID int
-		var pointsScored float64
-		var payoutCents int
-		var rank int
-		if err := rows.Scan(&entryName, &simID, &pointsScored, &payoutCents, &rank); err != nil {
-			return simulationArtifactExportResult{}, false, err
-		}
-		b, err := json.Marshal(map[string]any{
-			"entry_name":    entryName,
-			"sim_id":        simID,
-			"points_scored": pointsScored,
-			"payout_cents":  payoutCents,
-			"rank":          rank,
-		})
-		if err != nil {
-			return simulationArtifactExportResult{}, false, err
-		}
-		if _, err := bw.Write(append(b, '\n')); err != nil {
-			return simulationArtifactExportResult{}, false, err
-		}
-		count++
-	}
-	if err := rows.Err(); err != nil {
-		return simulationArtifactExportResult{}, false, err
-	}
-
-	if count == 0 {
-		return simulationArtifactExportResult{}, false, nil
-	}
-
-	abs, _ := filepath.Abs(outPath)
-	u := (&url.URL{Scheme: "file", Path: abs}).String()
-	return simulationArtifactExportResult{ArtifactKind: "entry_simulation_outcomes_jsonl", SchemaVersion: "v1", StorageURI: u, RowCount: count}, true, nil
-}
-
-type realizedFinishResult struct {
-	FinishPosition int
-	IsTied         bool
-	InTheMoney     bool
-	PayoutCents    int
-	TotalPoints    float64
-}
-
-func (w *SimulationWorker) computeRealizedFinishForStrategyGenerationRun(ctx context.Context, calcuttaID string, strategyGenerationRunID string) (*realizedFinishResult, bool, error) {
-	if calcuttaID == "" || strategyGenerationRunID == "" {
-		return nil, false, nil
-	}
-
-	payoutRows, err := w.pool.Query(ctx, `
-		SELECT position::int, amount_cents::int
-		FROM core.payouts
-		WHERE calcutta_id = $1::uuid
-			AND deleted_at IS NULL
-		ORDER BY position ASC
-	`, calcuttaID)
-	if err != nil {
-		return nil, false, err
-	}
-	defer payoutRows.Close()
-
-	payouts := make([]*models.CalcuttaPayout, 0)
-	for payoutRows.Next() {
-		var pos int
-		var cents int
-		if err := payoutRows.Scan(&pos, &cents); err != nil {
-			return nil, false, err
-		}
-		payouts = append(payouts, &models.CalcuttaPayout{CalcuttaID: calcuttaID, Position: pos, AmountCents: cents})
-	}
-	if err := payoutRows.Err(); err != nil {
-		return nil, false, err
-	}
-
-	teamRows, err := w.pool.Query(ctx, `
-		WITH t AS (
-			SELECT tournament_id
-			FROM core.calcuttas
-			WHERE id = $1::uuid
-				AND deleted_at IS NULL
-			LIMIT 1
-		)
-		SELECT
-			team.id::text,
-			core.calcutta_points_for_progress($1::uuid, team.wins, team.byes)::float8
-		FROM core.teams team
-		JOIN t ON t.tournament_id = team.tournament_id
-		WHERE team.deleted_at IS NULL
-	`, calcuttaID)
-	if err != nil {
-		return nil, false, err
-	}
-	defer teamRows.Close()
-
-	teamPoints := make(map[string]float64)
-	for teamRows.Next() {
-		var teamID string
-		var pts float64
-		if err := teamRows.Scan(&teamID, &pts); err != nil {
-			return nil, false, err
-		}
-		teamPoints[teamID] = pts
-	}
-	if err := teamRows.Err(); err != nil {
-		return nil, false, err
-	}
-
-	rows, err := w.pool.Query(ctx, `
-		SELECT
-			e.id::text,
-			e.name,
-			e.created_at,
-			et.team_id::text,
-			et.bid_points::int
-		FROM core.entries e
-		JOIN core.entry_teams et ON et.entry_id = e.id AND et.deleted_at IS NULL
-		WHERE e.calcutta_id = $1::uuid
-			AND e.deleted_at IS NULL
-		ORDER BY e.created_at ASC
-	`, calcuttaID)
-	if err != nil {
-		return nil, false, err
-	}
-	defer rows.Close()
-
-	entryByID := make(map[string]*models.CalcuttaEntry)
-	entryBids := make(map[string]map[string]float64)
-	existingTotalBid := make(map[string]float64)
-	for rows.Next() {
-		var entryID, name, teamID string
-		var createdAt time.Time
-		var bid int
-		if err := rows.Scan(&entryID, &name, &createdAt, &teamID, &bid); err != nil {
-			return nil, false, err
-		}
-		if _, ok := entryByID[entryID]; !ok {
-			entryByID[entryID] = &models.CalcuttaEntry{ID: entryID, Name: name, CalcuttaID: calcuttaID, Created: createdAt}
-			entryBids[entryID] = make(map[string]float64)
-		}
-		entryBids[entryID][teamID] += float64(bid)
-		existingTotalBid[teamID] += float64(bid)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, false, err
-	}
-
-	ourBids := make(map[string]float64)
-	ourRows, err := w.pool.Query(ctx, `
-		SELECT team_id::text, bid_points::int
-		FROM derived.strategy_generation_run_bids
-		WHERE strategy_generation_run_id = $1::uuid
-			AND deleted_at IS NULL
-	`, strategyGenerationRunID)
-	if err != nil {
-		return nil, false, err
-	}
-	defer ourRows.Close()
-	for ourRows.Next() {
-		var teamID string
-		var bid int
-		if err := ourRows.Scan(&teamID, &bid); err != nil {
-			return nil, false, err
-		}
-		ourBids[teamID] += float64(bid)
-	}
-	if err := ourRows.Err(); err != nil {
-		return nil, false, err
-	}
-	if len(ourBids) == 0 {
-		return nil, false, nil
-	}
-
-	entries := make([]*models.CalcuttaEntry, 0, len(entryByID)+1)
-	for entryID, e := range entryByID {
-		total := 0.0
-		for teamID, bid := range entryBids[entryID] {
-			pts, ok := teamPoints[teamID]
-			if !ok {
-				continue
-			}
-			den := existingTotalBid[teamID] + ourBids[teamID]
-			if den <= 0 {
-				continue
-			}
-			total += pts * (bid / den)
-		}
-		e.TotalPoints = total
-		entries = append(entries, e)
-	}
-
-	ourID := "our_strategy"
-	ourCreated := time.Now()
-	ourTotal := 0.0
-	for teamID, bid := range ourBids {
-		pts, ok := teamPoints[teamID]
-		if !ok {
-			continue
-		}
-		den := existingTotalBid[teamID] + bid
-		if den <= 0 {
-			continue
-		}
-		ourTotal += pts * (bid / den)
-	}
-	entries = append(entries, &models.CalcuttaEntry{ID: ourID, Name: "Our Strategy", CalcuttaID: calcuttaID, TotalPoints: ourTotal, Created: ourCreated})
-
-	_, results := appcalcutta.ComputeEntryPlacementsAndPayouts(entries, payouts)
-	res, ok := results[ourID]
-	if !ok {
-		return nil, false, nil
-	}
-
-	out := &realizedFinishResult{
-		FinishPosition: res.FinishPosition,
-		IsTied:         res.IsTied,
-		InTheMoney:     res.InTheMoney,
-		PayoutCents:    res.PayoutCents,
-		TotalPoints:    ourTotal,
-	}
-	return out, true, nil
-}
-
-func (w *SimulationWorker) updateSimulationBatchStatus(ctx context.Context, simulationBatchID string) {
-	if simulationBatchID == "" {
-		return
-	}
-	_, _ = w.pool.Exec(ctx, `
-		WITH agg AS (
-			SELECT
-				SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)::int AS failed,
-				SUM(CASE WHEN status IN ('queued', 'running') THEN 1 ELSE 0 END)::int AS pending
-			FROM derived.simulation_runs
-			WHERE simulation_run_batch_id = $1::uuid
-				AND deleted_at IS NULL
-		)
-		UPDATE derived.simulation_run_batches e
-		SET status = CASE
-			WHEN a.failed > 0 THEN 'failed'
-			WHEN a.pending > 0 THEN 'running'
-			ELSE 'succeeded'
-		END,
-			error_message = CASE
-			WHEN a.failed > 0 THEN COALESCE((
-				SELECT error_message
-				FROM derived.simulation_runs
-				WHERE simulation_run_batch_id = $1::uuid
-					AND status = 'failed'
-					AND error_message IS NOT NULL
-					AND deleted_at IS NULL
-				LIMIT 1
-			), e.error_message)
-			ELSE NULL
-		END,
-			updated_at = NOW()
-		FROM agg a
-		WHERE e.id = $1::uuid
-			AND e.deleted_at IS NULL
-	`, simulationBatchID)
-}
-
-func (w *SimulationWorker) resolveCohortNSims(ctx context.Context, cohortID string, fallback int) int {
-	var n int
-	if err := w.pool.QueryRow(ctx, `
-		SELECT n_sims
-		FROM derived.simulation_cohorts
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, cohortID).Scan(&n); err != nil {
-		return fallback
-	}
-	if n <= 0 {
-		return fallback
-	}
-	return n
-}
-
-func (w *SimulationWorker) resolveCohortSeed(ctx context.Context, cohortID string, fallback int) int {
-	var seed int
-	if err := w.pool.QueryRow(ctx, `
-		SELECT seed
-		FROM derived.simulation_cohorts
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, cohortID).Scan(&seed); err != nil {
-		return fallback
-	}
-	if seed == 0 {
-		return fallback
-	}
-	return seed
-}
-
-func (w *SimulationWorker) resolveCohortOptimizerKey(ctx context.Context, cohortID string, fallback string) string {
-	var key string
-	if err := w.pool.QueryRow(ctx, `
-		SELECT optimizer_key
-		FROM derived.simulation_cohorts
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, cohortID).Scan(&key); err != nil {
-		return fallback
-	}
-	if key == "" {
-		return fallback
-	}
-	return key
 }
 
 func (w *SimulationWorker) failSimulationRun(ctx context.Context, evaluationID string, err error) {
@@ -1100,7 +563,7 @@ func (w *SimulationWorker) failSimulationRun(ctx context.Context, evaluationID s
 	}
 
 	if simulationBatchID != nil && *simulationBatchID != "" {
-		w.updateSimulationBatchStatus(ctx, *simulationBatchID)
+		w.artifactSvc.UpdateBatchStatus(ctx, *simulationBatchID)
 	}
 }
 
