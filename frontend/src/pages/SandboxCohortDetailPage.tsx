@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -197,14 +198,15 @@ export function SandboxCohortDetailPage() {
 
   return (
     <PageContainer className="max-w-none">
+      <Breadcrumb
+        items={[
+          { label: 'Sandbox', href: '/sandbox/cohorts' },
+          { label: cohortQuery.data?.name || 'Cohort' },
+        ]}
+      />
       <PageHeader
         title="Sandbox"
         subtitle={cohortTitle}
-        leftActions={
-          <Link to="/sandbox/cohorts" className="text-blue-600 hover:text-blue-800">
-            ← Back to Cohorts
-          </Link>
-        }
       />
 
       {!effectiveCohortId ? <Alert variant="error">Missing cohort ID.</Alert> : null}

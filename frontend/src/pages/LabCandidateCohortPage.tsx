@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
+import { Modal, ModalActions } from '../components/ui/Modal';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { analyticsService } from '../services/analyticsService';
 import { cohortsService } from '../services/cohortsService';
@@ -66,6 +69,10 @@ export function LabCandidateCohortPage() {
 	const [isEvaluating, setIsEvaluating] = useState(false);
 	const [evaluateError, setEvaluateError] = useState<string | null>(null);
 	const [evaluateProgress, setEvaluateProgress] = useState<{ current: number; total: number; message: string } | null>(null);
+
+	const [showEvaluateModal, setShowEvaluateModal] = useState(false);
+	const [formNSims, setFormNSims] = useState('5000');
+	const [formExcludedEntry, setFormExcludedEntry] = useState('');
 
 	const gameOutcomesAlgorithmId = searchParams.get('gameOutcomesAlgorithmId') || '';
 	const marketShareAlgorithmId = searchParams.get('marketShareAlgorithmId') || '';
@@ -130,7 +137,7 @@ export function LabCandidateCohortPage() {
 
 	const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data?.items]);
 
-	const handleEvaluateCohort = async () => {
+	const openEvaluateModal = () => {
 		setEvaluateError(null);
 		if (isEvaluating) return;
 		if (!gameOutcomesAlgorithmId || !marketShareAlgorithmId || !optimizerKey) {
@@ -141,18 +148,23 @@ export function LabCandidateCohortPage() {
 			setEvaluateError('No candidates to evaluate.');
 			return;
 		}
+		setFormNSims('5000');
+		setFormExcludedEntry(excludedEntryName || '');
+		setShowEvaluateModal(true);
+	};
 
-		const nSimsRaw = window.prompt('Number of simulations (nSims):', '5000');
-		if (nSimsRaw == null) return;
-		const nSims = Number(nSimsRaw);
+	const handleEvaluateSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setEvaluateError(null);
+
+		const nSims = Number(formNSims);
 		if (!Number.isFinite(nSims) || nSims <= 0) {
-			setEvaluateError('nSims must be a positive number.');
+			setEvaluateError('Number of simulations must be a positive number.');
 			return;
 		}
 
-		const excludedRaw = window.prompt('Excluded entry name (optional):', excludedEntryName || '');
-		if (excludedRaw == null) return;
-		const excluded = excludedRaw.trim();
+		const excluded = formExcludedEntry.trim();
+		setShowEvaluateModal(false);
 
 		const cohortDisplayName = combo?.display_name || `${gameOutcomesAlgorithmId} - ${marketShareAlgorithmId} - ${optimizerKey}`;
 		const ts = new Date().toISOString().replace(/[:.]/g, '-');
@@ -240,14 +252,16 @@ export function LabCandidateCohortPage() {
 
 	return (
 		<PageContainer className="max-w-none">
+			<Breadcrumb
+				items={[
+					{ label: 'Lab', href: '/lab' },
+					{ label: 'Candidates', href: backLink },
+					{ label: combo?.display_name || 'Cohort' },
+				]}
+			/>
 			<PageHeader
 				title="Candidate Cohort"
 				subtitle={combo?.display_name || `${gameOutcomesAlgorithmId} - ${marketShareAlgorithmId} - ${optimizerKey}`}
-				leftActions={
-					<Link to={backLink} className="text-blue-600 hover:text-blue-800">
-						← Back to Candidates
-					</Link>
-				}
 			/>
 
 			{!gameOutcomesAlgorithmId || !marketShareAlgorithmId || !optimizerKey ? (
@@ -258,7 +272,7 @@ export function LabCandidateCohortPage() {
 				<div className="flex items-center justify-between mb-4">
 					<h2 className="text-xl font-semibold">Candidates</h2>
 					<div className="flex items-center gap-2">
-						<Button size="sm" variant="ghost" onClick={handleEvaluateCohort} disabled={isEvaluating || listQuery.isLoading}>
+						<Button size="sm" variant="ghost" onClick={openEvaluateModal} disabled={isEvaluating || listQuery.isLoading}>
 							Evaluate cohort
 						</Button>
 						<Button size="sm" onClick={() => listQuery.refetch()} disabled={listQuery.isLoading || !listQuery.isFetched || isEvaluating}>
@@ -330,6 +344,61 @@ export function LabCandidateCohortPage() {
 					</div>
 				) : null}
 			</Card>
+
+			<Modal
+				open={showEvaluateModal}
+				onClose={() => setShowEvaluateModal(false)}
+				title="Evaluate Cohort"
+			>
+				<form onSubmit={handleEvaluateSubmit}>
+					<p className="mb-4 text-sm text-gray-600">
+						This will create a sandbox cohort with {items.length} simulated calcutta{items.length !== 1 ? 's' : ''} and run simulations for each.
+					</p>
+
+					<div className="mb-4">
+						<label htmlFor="nSims" className="block text-sm font-medium text-gray-700 mb-1">
+							Number of simulations
+						</label>
+						<Input
+							id="nSims"
+							type="number"
+							min="1"
+							value={formNSims}
+							onChange={(e) => setFormNSims(e.target.value)}
+							placeholder="5000"
+						/>
+						<p className="mt-1 text-xs text-gray-500">
+							Higher values give more accurate results but take longer to run.
+						</p>
+					</div>
+
+					<div className="mb-4">
+						<label htmlFor="excludedEntry" className="block text-sm font-medium text-gray-700 mb-1">
+							Excluded entry name (optional)
+						</label>
+						<Input
+							id="excludedEntry"
+							type="text"
+							value={formExcludedEntry}
+							onChange={(e) => setFormExcludedEntry(e.target.value)}
+							placeholder="Leave blank to use market_share_run default"
+						/>
+					</div>
+
+					<ModalActions>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setShowEvaluateModal(false)}
+						>
+							Cancel
+						</Button>
+						<Button type="submit">
+							Run Evaluation
+						</Button>
+					</ModalActions>
+				</form>
+			</Modal>
 		</PageContainer>
 	);
 }

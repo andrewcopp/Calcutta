@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { TabsNav } from '../components/TabsNav';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
-import { Input } from '../components/ui/Input';
 import { analyticsService } from '../services/analyticsService';
 import { calcuttaService } from '../services/calcuttaService';
 
@@ -127,14 +128,15 @@ export function LabCandidatesPage() {
 
   return (
     <PageContainer className="max-w-none">
+      <Breadcrumb
+        items={[
+          { label: 'Lab', href: '/lab' },
+          { label: 'Candidates' },
+        ]}
+      />
       <PageHeader
         title="Candidates"
         subtitle="Candidate combos (algorithm choices) and cohort generation."
-        leftActions={
-          <Link to="/lab" className="text-blue-600 hover:text-blue-800">
-            ← Back to Lab
-          </Link>
-        }
       />
 
 		<Card className="mb-6">

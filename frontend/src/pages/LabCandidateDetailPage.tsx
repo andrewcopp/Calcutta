@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -295,14 +296,16 @@ export function LabCandidateDetailPage() {
 
   return (
     <PageContainer className="max-w-none">
+      <Breadcrumb
+        items={[
+          { label: 'Lab', href: '/lab' },
+          { label: 'Candidates', href: backTo },
+          { label: candidateQuery.data?.display_name || 'Candidate' },
+        ]}
+      />
       <PageHeader
         title="Candidate"
-        subtitle={candidateId}
-        leftActions={
-          <Link to={backTo} className="text-blue-600 hover:text-blue-800">
-            ← Back to Candidates
-          </Link>
-        }
+        subtitle={candidateQuery.data?.display_name || candidateId}
       />
 
       {!candidateId ? <Alert variant="error">Missing candidateId.</Alert> : null}

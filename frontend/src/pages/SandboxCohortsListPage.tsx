@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,12 +6,17 @@ import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
+import { Modal, ModalActions } from '../components/ui/Modal';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { cohortsService, type CohortListItem } from '../services/cohortsService';
 
 export function SandboxCohortsListPage() {
   const navigate = useNavigate();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [cohortName, setCohortName] = useState('');
+
   const listQuery = useQuery({
     queryKey: ['cohorts', 'list'],
     queryFn: () => cohortsService.list({ limit: 200, offset: 0 }),
@@ -20,6 +25,8 @@ export function SandboxCohortsListPage() {
   const createMutation = useMutation({
     mutationFn: (name: string) => cohortsService.create({ name }),
     onSuccess: async (created) => {
+      setShowCreateModal(false);
+      setCohortName('');
       await listQuery.refetch();
       navigate(`/sandbox/cohorts/${encodeURIComponent(created.id)}`);
     },
@@ -44,10 +51,14 @@ export function SandboxCohortsListPage() {
 
   const cohorts: CohortListItem[] = listQuery.data?.items ?? [];
 
-  const onCreate = async () => {
-    const name = window.prompt('Cohort name');
-    if (name == null) return;
-    const trimmed = name.trim();
+  const openCreateModal = () => {
+    setCohortName('');
+    setShowCreateModal(true);
+  };
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = cohortName.trim();
     if (!trimmed) return;
     createMutation.mutate(trimmed);
   };
@@ -59,8 +70,8 @@ export function SandboxCohortsListPage() {
       <Card>
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="text-xl font-semibold">Cohorts</h2>
-          <Button size="sm" onClick={onCreate} disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Creating…' : 'Create Cohort'}
+          <Button size="sm" onClick={openCreateModal} disabled={createMutation.isPending}>
+            Create Cohort
           </Button>
         </div>
 
@@ -143,6 +154,47 @@ export function SandboxCohortsListPage() {
           </div>
         ) : null}
       </Card>
+
+      <Modal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create Cohort"
+      >
+        <form onSubmit={handleCreateSubmit}>
+          <div className="mb-4">
+            <label htmlFor="cohortName" className="block text-sm font-medium text-gray-700 mb-1">
+              Cohort name
+            </label>
+            <Input
+              id="cohortName"
+              type="text"
+              value={cohortName}
+              onChange={(e) => setCohortName(e.target.value)}
+              placeholder="Enter a name for the cohort"
+              autoFocus
+            />
+          </div>
+
+          {createMutation.isError ? (
+            <Alert variant="error" className="mb-4">
+              {showError(createMutation.error)}
+            </Alert>
+          ) : null}
+
+          <ModalActions>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowCreateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending || !cohortName.trim()}>
+              {createMutation.isPending ? 'Creating…' : 'Create'}
+            </Button>
+          </ModalActions>
+        </form>
+      </Modal>
     </PageContainer>
   );
 }
