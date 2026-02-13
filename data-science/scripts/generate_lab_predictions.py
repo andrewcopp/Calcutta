@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
-Generate lab entries for a model across all historical calcuttas.
+Generate market predictions for a model across all historical calcuttas.
 
-This is a convenience wrapper that runs the full pipeline:
-1. Generate predictions (generate_lab_predictions.py)
-2. Optimize entries (optimize_lab_entries.py)
+This is stage 2 of the lab pipeline:
+1. Register model (lab.investment_models)
+2. Generate predictions (this script) -> predictions_json
+3. Optimize entry (optimize_lab_entries.py) -> bids_json
+4. Evaluate (evaluate_lab_entries.py) -> lab.evaluations
 
-For more control, run the scripts separately:
-    python generate_lab_predictions.py --model-name ridge-v1
-    python optimize_lab_entries.py --model-name ridge-v1 --optimizer edge_weighted
+The script predicts what THE MARKET will bid on each team based on
+the investment model. It stores:
+- predicted_market_share: fraction of pool the market will spend on this team
+- expected_points: expected tournament points from KenPom simulation
 
 Usage:
-    python generate_lab_entries.py --model-name ridge-v1
-    python generate_lab_entries.py --model-id <uuid> --optimizer edge_weighted
+    python generate_lab_predictions.py --model-name ridge-v1
+    python generate_lab_predictions.py --model-id <uuid> --years 2023,2024
 """
 import argparse
 import json
@@ -61,45 +64,56 @@ def get_team_id_map(tournament_id: str):
 
 
 def get_expected_points_map(year: int):
-    """Get expected tournament points for each team in a year."""
+    """
+    Get expected tournament points for each team in a year.
+
+    This uses tournament_value from KenPom-based simulation.
+    """
     from moneyball.db.connection import get_db_connection
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Simple fallback: use seed-based expected points
+            # Get tournament values from derived.tournament_value or similar
+            # For now, use a simple query based on seed expectations
             cur.execute("""
                 SELECT
                     s.slug as team_slug,
-                    CASE t.seed
-                        WHEN 1 THEN 25.0
-                        WHEN 2 THEN 18.0
-                        WHEN 3 THEN 14.0
-                        WHEN 4 THEN 12.0
-                        WHEN 5 THEN 9.0
-                        WHEN 6 THEN 8.0
-                        WHEN 7 THEN 7.0
-                        WHEN 8 THEN 6.0
-                        WHEN 9 THEN 5.5
-                        WHEN 10 THEN 5.0
-                        WHEN 11 THEN 4.5
-                        WHEN 12 THEN 4.0
-                        WHEN 13 THEN 2.5
-                        WHEN 14 THEN 2.0
-                        WHEN 15 THEN 1.5
-                        WHEN 16 THEN 1.0
-                        ELSE 5.0
-                    END as expected_points
+                    COALESCE(tv.expected_points, seed_exp.expected_points) as expected_points
                 FROM core.teams t
                 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
                 JOIN core.tournaments tour ON tour.id = t.tournament_id AND tour.deleted_at IS NULL
                 JOIN core.seasons sea ON sea.id = tour.season_id AND sea.deleted_at IS NULL
+                LEFT JOIN derived.tournament_value tv ON tv.team_id = t.id
+                LEFT JOIN (
+                    -- Fallback: average expected points by seed
+                    SELECT seed, AVG(expected_points) as expected_points
+                    FROM (
+                        SELECT t2.seed, SUM(CASE
+                            WHEN g.winner_id = t2.id THEN sr.points ELSE 0
+                        END)::float / COUNT(DISTINCT tour2.id) as expected_points
+                        FROM core.teams t2
+                        JOIN core.tournaments tour2 ON tour2.id = t2.tournament_id
+                        JOIN core.seasons s2 ON s2.id = tour2.season_id
+                        JOIN core.games g ON (g.top_team_id = t2.id OR g.bottom_team_id = t2.id)
+                        JOIN core.scoring_rules sr ON sr.calcutta_id = (
+                            SELECT id FROM core.calcuttas WHERE tournament_id = tour2.id LIMIT 1
+                        ) AND sr.round_number = g.round_number
+                        WHERE s2.year < %s AND t2.deleted_at IS NULL
+                        GROUP BY t2.id, t2.seed, tour2.id
+                    ) sub
+                    GROUP BY seed
+                ) seed_exp ON seed_exp.seed = t.seed
                 WHERE sea.year = %s AND t.deleted_at IS NULL
-            """, (year,))
-            return {row[0]: float(row[1]) for row in cur.fetchall()}
+            """, (year, year))
+            return {row[0]: float(row[1]) if row[1] else 10.0 for row in cur.fetchall()}
 
 
-def generate_predictions(model_name: str, year: int, excluded_entry_name: str = "Andrew Copp"):
-    """Generate market predictions for a model against a specific year."""
+def generate_market_predictions(model_name: str, year: int, excluded_entry_name: str = "Andrew Copp"):
+    """
+    Generate market predictions for a model against a specific year.
+
+    Returns DataFrame with columns: team_slug, predicted_auction_share_of_pool
+    """
     from moneyball.db.readers import (
         initialize_default_scoring_rules_for_year,
         read_ridge_team_dataset_for_year,
@@ -156,7 +170,7 @@ def generate_predictions(model_name: str, year: int, excluded_entry_name: str = 
     except Exception as e:
         return None, f"Cannot load data for year {year}: {e}"
 
-    # Run ridge regression
+    # Run ridge regression to predict market share
     predictions_df = predict_auction_share_of_pool(
         train_team_dataset=train_ds,
         predict_team_dataset=predict_ds,
@@ -169,19 +183,16 @@ def generate_predictions(model_name: str, year: int, excluded_entry_name: str = 
     return predictions_df, None
 
 
-def create_entry_for_calcutta(
+def create_predictions_for_calcutta(
     model_id: str,
     calcutta_id: str,
     predictions_df,
     team_id_map: dict,
     expected_points_map: dict,
-    budget_points: int = 10000,
-    optimizer_kind: str = "predicted_market_share",
 ):
-    """Create a lab entry with predictions and optimized bids."""
-    from moneyball.lab.models import Bid, Prediction, create_entry
+    """Create a lab entry with market predictions."""
+    from moneyball.lab.models import Prediction, create_entry_with_predictions
 
-    # Build predictions
     predictions = []
     for _, row in predictions_df.iterrows():
         team_slug = row["team_slug"]
@@ -202,54 +213,12 @@ def create_entry_for_calcutta(
     if not predictions:
         return None
 
-    # Generate optimized bids based on predictions
-    bids = []
-    for pred in predictions:
-        if optimizer_kind == "predicted_market_share":
-            # Baseline: bid proportionally to predicted market share
-            bid_points = int(round(pred.predicted_market_share * budget_points))
-        elif optimizer_kind == "edge_weighted":
-            # Edge-weighted: adjust by expected ROI
-            predicted_cost = pred.predicted_market_share * budget_points
-            expected_roi = pred.expected_points / predicted_cost if predicted_cost > 0 else 0.0
-            edge = expected_roi - 1.0
-            edge_factor = max(0.0, 1.0 + edge * 2.0)
-            bid_points = int(round(pred.predicted_market_share * edge_factor * budget_points))
-        else:
-            bid_points = int(round(pred.predicted_market_share * budget_points))
-
-        if bid_points <= 0:
-            continue
-
-        predicted_cost = pred.predicted_market_share * budget_points
-        expected_roi = pred.expected_points / predicted_cost if predicted_cost > 0 else 0.0
-
-        bids.append(Bid(
-            team_id=pred.team_id,
-            bid_points=bid_points,
-            expected_roi=expected_roi,
-        ))
-
-    # Normalize bids to budget if edge_weighted caused drift
-    if optimizer_kind == "edge_weighted" and bids:
-        total = sum(b.bid_points for b in bids)
-        if total > 0:
-            scale = budget_points / total
-            for b in bids:
-                b.bid_points = int(round(b.bid_points * scale))
-
-    if not bids:
-        return None
-
-    entry = create_entry(
+    entry = create_entry_with_predictions(
         investment_model_id=model_id,
         calcutta_id=calcutta_id,
-        bids=bids,
         predictions=predictions,
         game_outcome_kind="kenpom",
         game_outcome_params={},
-        optimizer_kind=optimizer_kind,
-        optimizer_params={"budget_points": budget_points},
         starting_state_key="post_first_four",
     )
 
@@ -257,14 +226,10 @@ def create_entry_for_calcutta(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate lab entries for a model")
+    parser = argparse.ArgumentParser(description="Generate market predictions for a model")
     parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
     parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
     parser.add_argument("--excluded-entry", default="Andrew Copp", help="Entry name to exclude from training")
-    parser.add_argument("--budget", type=int, default=10000, help="Budget points for bids")
-    parser.add_argument("--optimizer", default="predicted_market_share",
-                       choices=["predicted_market_share", "edge_weighted"],
-                       help="Optimizer to use for bid generation")
     parser.add_argument("--years", type=str, help="Comma-separated years to process (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
     parser.add_argument("--json-output", action="store_true", help="Output machine-readable JSON result")
@@ -298,8 +263,6 @@ def main():
     log(f"Model: {model.name} ({model.kind})")
     log(f"Params: {model.params}")
     log(f"Excluded entry: {args.excluded_entry}")
-    log(f"Budget: {args.budget} points")
-    log(f"Optimizer: {args.optimizer}")
     log("")
 
     calcuttas = get_historical_calcuttas()
@@ -320,7 +283,7 @@ def main():
         year = calcutta["year"]
         log(f"Processing {calcutta['name']} ({year})...")
 
-        predictions_df, error = generate_predictions(
+        predictions_df, error = generate_market_predictions(
             model.name, year, args.excluded_entry
         )
 
@@ -338,6 +301,7 @@ def main():
             log(f"  Skipping: No teams found")
             continue
 
+        # Get expected points for each team
         expected_points_map = get_expected_points_map(year)
 
         if args.dry_run:
@@ -345,25 +309,25 @@ def main():
                 1 for _, row in predictions_df.iterrows()
                 if team_id_map.get(row["team_slug"])
             ])
-            log(f"  Would create entry with {pred_count} predictions/bids")
+            log(f"  Would create entry with {pred_count} predictions")
         else:
-            entry = create_entry_for_calcutta(
+            entry = create_predictions_for_calcutta(
                 model.id,
                 calcutta["id"],
                 predictions_df,
                 team_id_map,
                 expected_points_map,
-                args.budget,
-                args.optimizer,
             )
             if entry:
-                log(f"  Created entry {entry.id} with {len(entry.predictions)} predictions and {len(entry.bids)} bids")
+                log(f"  Created entry {entry.id} with {len(entry.predictions)} predictions")
                 entries_created += 1
             else:
                 log(f"  No entry created (no valid predictions)")
 
     log("")
     log("Done!")
+    log(f"Created {entries_created} entries with predictions")
+    log("Run optimize_lab_entries.py to generate optimized bids")
 
     if args.json_output:
         result = {

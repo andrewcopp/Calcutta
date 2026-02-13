@@ -113,6 +113,7 @@ func (r *LabRepository) GetModelLeaderboard() ([]lab.LeaderboardEntry, error) {
 			model_name,
 			model_kind,
 			n_entries::int,
+			n_entries_with_predictions::int,
 			n_evaluations::int,
 			n_calcuttas_with_entries::int,
 			n_calcuttas_with_evaluations::int,
@@ -140,6 +141,7 @@ func (r *LabRepository) GetModelLeaderboard() ([]lab.LeaderboardEntry, error) {
 			&e.ModelName,
 			&e.ModelKind,
 			&e.NEntries,
+			&e.NEntriesWithPredictions,
 			&e.NEvaluations,
 			&e.NCalcuttasWithEntries,
 			&e.NCalcuttasWithEvaluations,
@@ -462,6 +464,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 			e.optimizer_kind,
 			e.optimizer_params_json::text,
 			e.starting_state_key,
+			e.predictions_json::text,
 			e.bids_json::text,
 			e.created_at,
 			e.updated_at,
@@ -478,14 +481,15 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 
 	var result lab.EntryDetailEnriched
 	var (
-		tournamentID                                      string
+		tournamentID                                     string
 		gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
+		predictionsStr                                   *string
 	)
 
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&result.ID, &result.InvestmentModelID, &result.CalcuttaID,
 		&result.GameOutcomeKind, &gameOutcomeParamsStr, &result.OptimizerKind, &optimizerParamsStr,
-		&result.StartingStateKey, &bidsStr, &result.CreatedAt, &result.UpdatedAt,
+		&result.StartingStateKey, &predictionsStr, &bidsStr, &result.CreatedAt, &result.UpdatedAt,
 		&result.ModelName, &result.ModelKind, &result.CalcuttaName, &tournamentID, &result.NEvaluations,
 	)
 	if err == pgx.ErrNoRows {
@@ -493,6 +497,15 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	// Parse the raw predictions (if present)
+	var rawPredictions []lab.Prediction
+	result.HasPredictions = predictionsStr != nil && *predictionsStr != ""
+	if result.HasPredictions {
+		if err := json.Unmarshal([]byte(*predictionsStr), &rawPredictions); err != nil {
+			return nil, err
+		}
 	}
 
 	// Parse the raw bids
@@ -643,6 +656,50 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 			EdgePercent: edgePercent,
 			ExpectedROI: expectedROIByTeam[tid],
 		})
+	}
+
+	// Build enriched predictions (if present)
+	if result.HasPredictions {
+		enrichedPredictions := make([]lab.EnrichedPrediction, 0, len(rawPredictions))
+		for _, p := range rawPredictions {
+			ti, ok := teamMap[p.TeamID]
+			if !ok {
+				continue
+			}
+
+			// Convert market share to bid points (using total budget)
+			predictedBidPoints := int(p.PredictedMarketShare * float64(totalBudget))
+
+			// Expected ROI = expected points / predicted market bid
+			expectedROI := 0.0
+			if predictedBidPoints > 0 {
+				expectedROI = p.ExpectedPoints / float64(predictedBidPoints)
+			}
+
+			// Naive allocation for comparison
+			naiveShare := teamExpectedPoints[p.TeamID] / totalExpectedPoints
+			naivePoints := int(naiveShare * float64(totalBudget))
+
+			// Edge: (naive - predicted) / naive * 100
+			edgePercent := 0.0
+			if naivePoints > 0 {
+				edgePercent = float64(naivePoints-predictedBidPoints) / float64(naivePoints) * 100
+			}
+
+			enrichedPredictions = append(enrichedPredictions, lab.EnrichedPrediction{
+				TeamID:               p.TeamID,
+				SchoolName:           ti.Name,
+				Seed:                 ti.Seed,
+				Region:               ti.Region,
+				PredictedMarketShare: p.PredictedMarketShare,
+				PredictedBidPoints:   predictedBidPoints,
+				ExpectedPoints:       p.ExpectedPoints,
+				ExpectedROI:          expectedROI,
+				NaivePoints:          naivePoints,
+				EdgePercent:          edgePercent,
+			})
+		}
+		result.Predictions = enrichedPredictions
 	}
 
 	// Set the remaining fields

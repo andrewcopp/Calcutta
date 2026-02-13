@@ -78,6 +78,9 @@ export function EntriesTab() {
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Optimizer
                 </th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stage
+                </th>
                 <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Evaluations
                 </th>
@@ -100,6 +103,15 @@ export function EntriesTab() {
                   <td className="px-3 py-2 text-sm text-gray-700">{row.calcutta_name}</td>
                   <td className="px-3 py-2 text-sm text-gray-600">{row.starting_state_key}</td>
                   <td className="px-3 py-2 text-sm text-gray-600">{row.optimizer_kind}</td>
+                  <td className="px-3 py-2 text-sm text-center">
+                    {row.n_evaluations > 0 ? (
+                      <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">Evaluated</span>
+                    ) : row.has_predictions ? (
+                      <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">Optimized</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Pending</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-sm text-gray-700 text-right">{row.n_evaluations}</td>
                   <td className="px-3 py-2 text-sm text-gray-500">{formatDate(row.created_at)}</td>
                 </tr>

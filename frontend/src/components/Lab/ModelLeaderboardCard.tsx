@@ -30,6 +30,7 @@ function getPayoutColorClass(payout?: number | null): string {
 export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeaderboardCardProps) {
   const navigate = useNavigate();
 
+  const hasPredictions = entry.n_entries_with_predictions > 0;
   const hasEntries = entry.n_calcuttas_with_entries > 0;
   const hasEvaluations = entry.n_calcuttas_with_evaluations > 0;
 
@@ -63,8 +64,8 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
         </div>
 
         {/* Progress bar */}
-        <div className="flex-shrink-0 w-36">
-          <PipelineProgressBar hasEntries={hasEntries} hasEvaluations={hasEvaluations} />
+        <div className="flex-shrink-0 w-48">
+          <PipelineProgressBar hasPredictions={hasPredictions} hasEntries={hasEntries} hasEvaluations={hasEvaluations} />
         </div>
 
         {/* Coverage */}

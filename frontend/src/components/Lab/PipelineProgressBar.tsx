@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '../../lib/cn';
 
 type PipelineProgressBarProps = {
+  hasPredictions: boolean;
   hasEntries: boolean;
   hasEvaluations: boolean;
   className?: string;
@@ -86,22 +87,26 @@ function ConnectingLine({ status }: { status: StageStatus }) {
   return <div className={cn('flex-1 h-0.5 mx-1', config.lineColor)} />;
 }
 
-export function PipelineProgressBar({ hasEntries, hasEvaluations, className }: PipelineProgressBarProps) {
+export function PipelineProgressBar({ hasPredictions, hasEntries, hasEvaluations, className }: PipelineProgressBarProps) {
   // Stage 1: Model Registered - always true (model exists)
   const stage1Status: StageStatus = 'complete';
 
-  // Stage 2: Entries Generated - pending if no entries, complete if has entries
-  const stage2Status = getStageStatus(hasEntries, !hasEntries);
+  // Stage 2: Predicted - pending if no predictions, complete if has predictions
+  const stage2Status = getStageStatus(hasPredictions, !hasPredictions);
 
-  // Stage 3: Evaluated - pending if has entries but no evaluations, complete if has evaluations
-  const stage3Status = getStageStatus(hasEvaluations, hasEntries && !hasEvaluations);
+  // Stage 3: Optimized - pending if has predictions but no entries, complete if has entries
+  const stage3Status = getStageStatus(hasEntries, hasPredictions && !hasEntries);
+
+  // Stage 4: Evaluated - pending if has entries but no evaluations, complete if has evaluations
+  const stage4Status = getStageStatus(hasEvaluations, hasEntries && !hasEvaluations);
 
   // Line statuses - line is complete only if the next stage is complete
-  const line1Status: StageStatus = hasEntries ? 'complete' : 'inactive';
-  const line2Status: StageStatus = hasEvaluations ? 'complete' : 'inactive';
+  const line1Status: StageStatus = hasPredictions ? 'complete' : 'inactive';
+  const line2Status: StageStatus = hasEntries ? 'complete' : 'inactive';
+  const line3Status: StageStatus = hasEvaluations ? 'complete' : 'inactive';
 
   // Calculate progress for aria
-  const stagesCompleted = 1 + (hasEntries ? 1 : 0) + (hasEvaluations ? 1 : 0);
+  const stagesCompleted = 1 + (hasPredictions ? 1 : 0) + (hasEntries ? 1 : 0) + (hasEvaluations ? 1 : 0);
 
   return (
     <div
@@ -109,14 +114,16 @@ export function PipelineProgressBar({ hasEntries, hasEvaluations, className }: P
       role="progressbar"
       aria-valuenow={stagesCompleted}
       aria-valuemin={0}
-      aria-valuemax={3}
-      aria-label={`Pipeline progress: ${stagesCompleted} of 3 stages complete`}
+      aria-valuemax={4}
+      aria-label={`Pipeline progress: ${stagesCompleted} of 4 stages complete`}
     >
-      <StageNode status={stage1Status} label="Registered" ariaLabel="Model registered: complete" />
+      <StageNode status={stage1Status} label="Reg" ariaLabel="Model registered: complete" />
       <ConnectingLine status={line1Status} />
-      <StageNode status={stage2Status} label="Entries" ariaLabel={`Entries generated: ${stage2Status}`} />
+      <StageNode status={stage2Status} label="Pred" ariaLabel={`Market predictions: ${stage2Status}`} />
       <ConnectingLine status={line2Status} />
-      <StageNode status={stage3Status} label="Evaluated" ariaLabel={`Performance evaluated: ${stage3Status}`} />
+      <StageNode status={stage3Status} label="Opt" ariaLabel={`Entry optimized: ${stage3Status}`} />
+      <ConnectingLine status={line3Status} />
+      <StageNode status={stage4Status} label="Eval" ariaLabel={`Performance evaluated: ${stage4Status}`} />
     </div>
   );
 }

@@ -6,10 +6,11 @@ import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
-import { labService, EntryDetail, EnrichedBid, ListEvaluationsResponse } from '../../services/labService';
+import { labService, EntryDetail, EnrichedBid, EnrichedPrediction, ListEvaluationsResponse } from '../../services/labService';
 import { cn } from '../../lib/cn';
 
-type SortKey = 'edge' | 'seed' | 'model' | 'rational' | 'team';
+type BidSortKey = 'edge' | 'seed' | 'investment' | 'rational' | 'team';
+type PredSortKey = 'seed' | 'team' | 'predicted' | 'expected_roi' | 'edge';
 type SortDir = 'asc' | 'desc';
 
 function getEdgeColor(edge: number): string {
@@ -36,8 +37,11 @@ export function EntryDetailPage() {
     calcuttaId?: string;
   }>();
   const navigate = useNavigate();
-  const [sortKey, setSortKey] = useState<SortKey>('edge');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [bidSortKey, setBidSortKey] = useState<BidSortKey>('investment');
+  const [bidSortDir, setBidSortDir] = useState<SortDir>('desc');
+  const [predSortKey, setPredSortKey] = useState<PredSortKey>('expected_roi');
+  const [predSortDir, setPredSortDir] = useState<SortDir>('desc');
+  const [showOnlyInvested, setShowOnlyInvested] = useState(false);
 
   // Determine which API to call based on URL params
   const useNewEndpoint = Boolean(modelName && calcuttaId);
@@ -67,20 +71,48 @@ export function EntryDetailPage() {
   const entry = entryQuery.data;
   const evaluations = evaluationsQuery.data?.items ?? [];
 
-  // Sort bids based on current sort settings
+  // Sort predictions based on current sort settings
+  const sortedPredictions = useMemo(() => {
+    const predictions = entry?.predictions ?? [];
+    return [...predictions].sort((a, b) => {
+      let cmp = 0;
+      switch (predSortKey) {
+        case 'seed':
+          cmp = a.seed - b.seed;
+          break;
+        case 'team':
+          cmp = a.school_name.localeCompare(b.school_name);
+          break;
+        case 'predicted':
+          cmp = b.predicted_bid_points - a.predicted_bid_points;
+          break;
+        case 'expected_roi':
+          cmp = b.expected_roi - a.expected_roi;
+          break;
+        case 'edge':
+          cmp = b.edge_percent - a.edge_percent;
+          break;
+      }
+      return predSortDir === 'asc' ? -cmp : cmp;
+    });
+  }, [entry?.predictions, predSortKey, predSortDir]);
+
+  // Sort and filter bids based on current settings
   const sortedBids = useMemo(() => {
-    const bids = entry?.bids ?? [];
+    let bids = entry?.bids ?? [];
+    if (showOnlyInvested) {
+      bids = bids.filter(b => b.bid_points > 0);
+    }
     return [...bids].sort((a, b) => {
       let cmp = 0;
-      switch (sortKey) {
+      switch (bidSortKey) {
         case 'edge':
-          // Sort by actual value: desc shows best opportunities first, asc shows worst first
           cmp = b.edge_percent - a.edge_percent;
           break;
         case 'seed':
           cmp = a.seed - b.seed;
           break;
-        case 'model':
+        case 'investment':
           cmp = b.bid_points - a.bid_points;
           break;
         case 'rational':
@@ -90,16 +122,25 @@ export function EntryDetailPage() {
           cmp = a.school_name.localeCompare(b.school_name);
           break;
       }
-      return sortDir === 'asc' ? -cmp : cmp;
+      return bidSortDir === 'asc' ? -cmp : cmp;
     });
-  }, [entry?.bids, sortKey, sortDir]);
+  }, [entry?.bids, bidSortKey, bidSortDir, showOnlyInvested]);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+  const handleBidSort = (key: BidSortKey) => {
+    if (bidSortKey === key) {
+      setBidSortDir(bidSortDir === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortKey(key);
-      setSortDir('desc');
+      setBidSortKey(key);
+      setBidSortDir('desc');
+    }
+  };
+
+  const handlePredSort = (key: PredSortKey) => {
+    if (predSortKey === key) {
+      setPredSortDir(predSortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPredSortKey(key);
+      setPredSortDir('desc');
     }
   };
 
@@ -146,19 +187,38 @@ export function EntryDetailPage() {
   const topOpportunity = [...bids].sort((a, b) => b.edge_percent - a.edge_percent)[0];
   const topAvoid = [...bids].sort((a, b) => a.edge_percent - b.edge_percent)[0];
 
-  const SortHeader = ({ label, sortKeyValue }: { label: string; sortKeyValue: SortKey }) => (
+  const BidSortHeader = ({ label, sortKeyValue }: { label: string; sortKeyValue: BidSortKey }) => (
     <button
       type="button"
-      onClick={() => handleSort(sortKeyValue)}
+      onClick={() => handleBidSort(sortKeyValue)}
       className={cn(
         'flex items-center gap-1 text-xs font-medium uppercase tracking-wider',
-        sortKey === sortKeyValue ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+        bidSortKey === sortKeyValue ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
       )}
     >
       {label}
-      {sortKey === sortKeyValue ? (sortDir === 'desc' ? ' ▼' : ' ▲') : ''}
+      {bidSortKey === sortKeyValue ? (bidSortDir === 'desc' ? ' ▼' : ' ▲') : ''}
     </button>
   );
+
+  const PredSortHeader = ({ label, sortKeyValue }: { label: string; sortKeyValue: PredSortKey }) => (
+    <button
+      type="button"
+      onClick={() => handlePredSort(sortKeyValue)}
+      className={cn(
+        'flex items-center gap-1 text-xs font-medium uppercase tracking-wider',
+        predSortKey === sortKeyValue ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+      )}
+    >
+      {label}
+      {predSortKey === sortKeyValue ? (predSortDir === 'desc' ? ' ▼' : ' ▲') : ''}
+    </button>
+  );
+
+  // Compute investment stats
+  const investedBids = (entry?.bids ?? []).filter(b => b.bid_points > 0);
+  const investedCount = investedBids.length;
+  const totalTeams = entry?.bids?.length ?? 0;
 
   return (
     <div className="container mx-auto px-4 py-4">
@@ -172,9 +232,35 @@ export function EntryDetailPage() {
 
       {/* Compact header */}
       <div className="flex items-baseline gap-3 mb-4">
-        <h1 className="text-xl font-bold text-gray-900">Model Predictions</h1>
+        <h1 className="text-xl font-bold text-gray-900">Entry Detail</h1>
         <span className="text-gray-500">
           {entry.model_name} ({entry.model_kind}) → {entry.calcutta_name}
+        </span>
+      </div>
+
+      {/* Pipeline stage indicator */}
+      <div className="flex items-center gap-2 mb-4 text-sm">
+        <span className="px-2 py-1 rounded bg-green-100 text-green-800">✓ Registered</span>
+        <span className="text-gray-400">→</span>
+        <span className={cn(
+          'px-2 py-1 rounded',
+          entry.has_predictions ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+        )}>
+          {entry.has_predictions ? '✓' : '○'} Predicted
+        </span>
+        <span className="text-gray-400">→</span>
+        <span className={cn(
+          'px-2 py-1 rounded',
+          bids.length > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+        )}>
+          {bids.length > 0 ? '✓' : '○'} Optimized
+        </span>
+        <span className="text-gray-400">→</span>
+        <span className={cn(
+          'px-2 py-1 rounded',
+          evaluations.length > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+        )}>
+          {evaluations.length > 0 ? '✓' : '○'} Evaluated
         </span>
       </div>
 
@@ -182,10 +268,10 @@ export function EntryDetailPage() {
       <div className="grid grid-cols-4 gap-4 mb-4">
         <div className="bg-white rounded-lg border border-gray-200 p-3">
           <div className="text-xs text-gray-500 uppercase">Teams</div>
-          <div className="text-lg font-semibold">{bids.length}</div>
+          <div className="text-lg font-semibold">{totalTeams} total | {investedCount} invested</div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-3">
-          <div className="text-xs text-gray-500 uppercase">Budget</div>
+          <div className="text-xs text-gray-500 uppercase">Budget Allocated</div>
           <div className="text-lg font-semibold">{totalBudget.toLocaleString()} pts</div>
         </div>
         {topOpportunity && topOpportunity.edge_percent > 0 ? (
@@ -216,13 +302,80 @@ export function EntryDetailPage() {
         )}
       </div>
 
-      {/* Predictions table */}
+      {/* Market Predictions table (if predictions exist) */}
+      {entry.has_predictions && entry.predictions && entry.predictions.length > 0 && (
+        <Card className="mb-4">
+          <h2 className="text-lg font-semibold mb-3">Market Predictions</h2>
+          <p className="text-sm text-gray-600 mb-3">
+            What the model predicts THE MARKET will bid on each team.
+            <strong className="ml-2">Predicted</strong> = model's prediction of market bid.
+            <strong className="ml-2">Expected ROI</strong> = expected points ÷ predicted bid.
+            <strong className="ml-2">Edge</strong> = opportunity vs rational baseline.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-3 py-2 text-left">
+                    <PredSortHeader label="Team" sortKeyValue="team" />
+                  </th>
+                  <th className="px-3 py-2 text-center">
+                    <PredSortHeader label="Seed" sortKeyValue="seed" />
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
+                  <th className="px-3 py-2 text-right">
+                    <PredSortHeader label="Predicted" sortKeyValue="predicted" />
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Expected Pts</th>
+                  <th className="px-3 py-2 text-right">
+                    <PredSortHeader label="Exp. ROI" sortKeyValue="expected_roi" />
+                  </th>
+                  <th className="px-3 py-2 text-right">
+                    <PredSortHeader label="Edge" sortKeyValue="edge" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sortedPredictions.map((pred) => (
+                  <tr key={pred.team_id} className={cn('hover:bg-gray-50', getEdgeColor(pred.edge_percent))}>
+                    <td className="px-3 py-2 text-sm font-medium text-gray-900">{pred.school_name}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700 text-center">{pred.seed}</td>
+                    <td className="px-3 py-2 text-sm text-gray-500">{pred.region}</td>
+                    <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.predicted_bid_points}</td>
+                    <td className="px-3 py-2 text-sm text-gray-600 text-right tabular-nums">{pred.expected_points.toFixed(1)}</td>
+                    <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">
+                      {pred.expected_roi > 0 ? `${pred.expected_roi.toFixed(2)}x` : '—'}
+                    </td>
+                    <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getEdgeTextColor(pred.edge_percent))}>
+                      {formatEdge(pred.edge_percent)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Optimized Entry table */}
       <Card className="mb-4">
-        <h2 className="text-lg font-semibold mb-3">Predicted Bids</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Optimized Entry</h2>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={showOnlyInvested}
+              onChange={(e) => setShowOnlyInvested(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Show only invested ({investedCount} of {totalTeams})
+          </label>
+        </div>
         <p className="text-sm text-gray-600 mb-3">
-          <strong>Rational</strong> = expected allocation if everyone bid proportional to expected value.
-          <strong className="ml-2">Model</strong> = what this model predicts the market will bid.
-          <strong className="ml-2">Edge</strong> = rational minus model (positive = undervalued opportunity, negative = overvalued avoid).
+          Our optimized bid allocation to maximize ROI.
+          <strong className="ml-2">Investment</strong> = our bid points.
+          <strong className="ml-2">Rational</strong> = bid if everyone bid proportionally.
+          <strong className="ml-2">Edge</strong> = our allocation vs rational.
         </p>
         {bids.length === 0 ? (
           <Alert variant="info">No bids in this entry.</Alert>
@@ -232,31 +385,43 @@ export function EntryDetailPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-3 py-2 text-left">
-                    <SortHeader label="Team" sortKeyValue="team" />
+                    <BidSortHeader label="Team" sortKeyValue="team" />
                   </th>
                   <th className="px-3 py-2 text-center">
-                    <SortHeader label="Seed" sortKeyValue="seed" />
+                    <BidSortHeader label="Seed" sortKeyValue="seed" />
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
                   <th className="px-3 py-2 text-right">
-                    <SortHeader label="Rational" sortKeyValue="rational" />
+                    <BidSortHeader label="Investment" sortKeyValue="investment" />
                   </th>
                   <th className="px-3 py-2 text-right">
-                    <SortHeader label="Model" sortKeyValue="model" />
+                    <BidSortHeader label="Rational" sortKeyValue="rational" />
                   </th>
                   <th className="px-3 py-2 text-right">
-                    <SortHeader label="Edge" sortKeyValue="edge" />
+                    <BidSortHeader label="Edge" sortKeyValue="edge" />
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {sortedBids.map((bid) => (
-                  <tr key={bid.team_id} className={cn('hover:bg-gray-50', getEdgeColor(bid.edge_percent))}>
+                  <tr
+                    key={bid.team_id}
+                    className={cn(
+                      'hover:bg-gray-50',
+                      bid.bid_points > 0 ? 'bg-blue-50' : ''
+                    )}
+                  >
                     <td className="px-3 py-2 text-sm font-medium text-gray-900">{bid.school_name}</td>
                     <td className="px-3 py-2 text-sm text-gray-700 text-center">{bid.seed}</td>
                     <td className="px-3 py-2 text-sm text-gray-500">{bid.region}</td>
+                    <td className="px-3 py-2 text-sm text-right font-medium tabular-nums">
+                      {bid.bid_points > 0 ? (
+                        <span className="text-blue-700">{bid.bid_points}</span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-sm text-gray-600 text-right tabular-nums">{bid.naive_points}</td>
-                    <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{bid.bid_points}</td>
                     <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getEdgeTextColor(bid.edge_percent))}>
                       {formatEdge(bid.edge_percent)}
                     </td>

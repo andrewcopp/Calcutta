@@ -17,7 +17,21 @@ export type ListModelsResponse = {
   items: InvestmentModel[];
 };
 
-// Types for lab.entries (enriched with team data and naive allocation)
+// Types for lab.entries - market predictions (what model thinks market will bid)
+export type EnrichedPrediction = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  predicted_market_share: number;
+  predicted_bid_points: number;
+  expected_points: number;
+  expected_roi: number;
+  naive_points: number;
+  edge_percent: number;
+};
+
+// Types for lab.entries - optimized bids (our response to predictions)
 export type EnrichedBid = {
   team_id: string;
   school_name: string;
@@ -38,6 +52,8 @@ export type EntryDetail = {
   optimizer_kind: string;
   optimizer_params_json: Record<string, unknown>;
   starting_state_key: string;
+  has_predictions: boolean;
+  predictions?: EnrichedPrediction[];
   bids: EnrichedBid[];
   created_at: string;
   updated_at: string;
@@ -82,6 +98,7 @@ export type LeaderboardEntry = {
   model_name: string;
   model_kind: string;
   n_entries: number;
+  n_entries_with_predictions: number;
   n_evaluations: number;
   n_calcuttas_with_entries: number;
   n_calcuttas_with_evaluations: number;
