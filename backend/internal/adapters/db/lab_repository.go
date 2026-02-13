@@ -514,12 +514,11 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 		return nil, err
 	}
 
-	// Get team info with KenPom ratings for all teams in this tournament
+	// Get team info for all teams in this tournament
 	teamQuery := `
-		SELECT t.id::text, s.name, t.seed, t.region, ks.net_rtg
+		SELECT t.id::text, s.name, t.seed, t.region
 		FROM core.teams t
 		JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-		LEFT JOIN core.team_kenpom_stats ks ON ks.team_id = t.id AND ks.deleted_at IS NULL
 		WHERE t.tournament_id = $1::uuid AND t.deleted_at IS NULL
 	`
 	teamRows, err := r.pool.Query(ctx, teamQuery, tournamentID)
@@ -529,91 +528,60 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 	defer teamRows.Close()
 
 	type teamInfo struct {
-		Name      string
-		Seed      int
-		Region    string
-		KenPomNet *float64
+		Name   string
+		Seed   int
+		Region string
 	}
 	teamMap := make(map[string]teamInfo)
 	for teamRows.Next() {
 		var tid, name, region string
 		var seed int
-		var kenpomNet *float64
-		if err := teamRows.Scan(&tid, &name, &seed, &region, &kenpomNet); err != nil {
+		if err := teamRows.Scan(&tid, &name, &seed, &region); err != nil {
 			return nil, err
 		}
-		teamMap[tid] = teamInfo{Name: name, Seed: seed, Region: region, KenPomNet: kenpomNet}
+		teamMap[tid] = teamInfo{Name: name, Seed: seed, Region: region}
 	}
 	if err := teamRows.Err(); err != nil {
 		return nil, err
 	}
 
-	// Baseline expected points by seed (used as multiplier base)
-	seedExpectedPoints := map[int]float64{
-		1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
-		9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3, 15: 0.2, 16: 0.1,
+	// Get total pool budget (number of entries × budget per entry)
+	// This is needed for predictions because predicted_market_share is a fraction of the TOTAL pool
+	var totalPoolBudget int
+	poolBudgetQuery := `
+		SELECT c.budget_points * COUNT(e.id)::int
+		FROM core.calcuttas c
+		LEFT JOIN core.entries e ON e.calcutta_id = c.id AND e.deleted_at IS NULL
+		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
+		GROUP BY c.budget_points
+	`
+	if err := r.pool.QueryRow(ctx, poolBudgetQuery, result.CalcuttaID).Scan(&totalPoolBudget); err != nil || totalPoolBudget <= 0 {
+		// Fallback: reasonable default
+		totalPoolBudget = 4200
 	}
 
-	// Calculate total budget
+	// Calculate total budget from our bids (for naive allocation comparison)
 	totalBudget := 0
 	for _, b := range rawBids {
 		totalBudget += b.BidPoints
 	}
 
-	// Compute team-specific expected points using KenPom adjustment
-	// Formula: base_seed_ev * (1 + kenpom_adjustment)
-	// KenPom adjustment: (team_net - median_net) / scale_factor
-	// This differentiates same-seed teams based on KenPom strength
-
-	// First, gather all KenPom ratings to compute median for scaling
-	kenpomRatings := make([]float64, 0, len(teamMap))
-	for _, ti := range teamMap {
-		if ti.KenPomNet != nil {
-			kenpomRatings = append(kenpomRatings, *ti.KenPomNet)
-		}
-	}
-
-	// Compute median KenPom rating
-	medianKenpom := 0.0
-	if len(kenpomRatings) > 0 {
-		// Simple median: sort and take middle
-		sortedRatings := make([]float64, len(kenpomRatings))
-		copy(sortedRatings, kenpomRatings)
-		for i := 0; i < len(sortedRatings)-1; i++ {
-			for j := i + 1; j < len(sortedRatings); j++ {
-				if sortedRatings[i] > sortedRatings[j] {
-					sortedRatings[i], sortedRatings[j] = sortedRatings[j], sortedRatings[i]
-				}
-			}
-		}
-		mid := len(sortedRatings) / 2
-		if len(sortedRatings)%2 == 0 {
-			medianKenpom = (sortedRatings[mid-1] + sortedRatings[mid]) / 2
-		} else {
-			medianKenpom = sortedRatings[mid]
-		}
-	}
-
-	// Scale factor for KenPom adjustment (a 10-point difference = ~20% adjustment)
-	kenpomScale := 50.0
-
-	// Compute per-team expected points
+	// Build teamExpectedPoints from predictions (single source of truth from Python)
+	// This ensures consistency between predictions tab and bids tab
 	teamExpectedPoints := make(map[string]float64)
-	for tid, ti := range teamMap {
-		baseEV := seedExpectedPoints[ti.Seed]
-		if ti.KenPomNet != nil {
-			// Adjust based on KenPom deviation from median
-			adjustment := (*ti.KenPomNet - medianKenpom) / kenpomScale
-			// Clamp adjustment to reasonable range (-50% to +100%)
-			if adjustment < -0.5 {
-				adjustment = -0.5
-			}
-			if adjustment > 1.0 {
-				adjustment = 1.0
-			}
-			baseEV = baseEV * (1.0 + adjustment)
+	if result.HasPredictions {
+		for _, p := range rawPredictions {
+			teamExpectedPoints[p.TeamID] = p.ExpectedPoints
 		}
-		teamExpectedPoints[tid] = baseEV
+	} else {
+		// Fallback: seed-based estimates (only used when no predictions exist)
+		seedExpectedPoints := map[int]float64{
+			1: 320, 2: 240, 3: 160, 4: 120, 5: 80, 6: 64, 7: 48, 8: 40,
+			9: 32, 10: 24, 11: 20, 12: 16, 13: 8, 14: 4, 15: 2, 16: 1,
+		}
+		for tid, ti := range teamMap {
+			teamExpectedPoints[tid] = seedExpectedPoints[ti.Seed]
+		}
 	}
 
 	// Calculate total expected points for normalization
@@ -636,7 +604,6 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 		bidPoints := bidPointsByTeam[tid] // 0 if not in map
 
 		// Naive allocation: team's expected points / total expected points * budget
-		// This uses KenPom-adjusted expected points so same-seed teams differ
 		naiveShare := teamExpectedPoints[tid] / totalExpectedPoints
 		naivePoints := int(naiveShare * float64(totalBudget))
 
@@ -667,8 +634,8 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 				continue
 			}
 
-			// Convert market share to bid points (using total budget)
-			predictedBidPoints := int(p.PredictedMarketShare * float64(totalBudget))
+			// Convert market share to bid points (using total POOL budget, not our single entry budget)
+			predictedBidPoints := int(p.PredictedMarketShare * float64(totalPoolBudget))
 
 			// Expected ROI = expected points / predicted market bid
 			expectedROI := 0.0
@@ -676,9 +643,9 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 				expectedROI = p.ExpectedPoints / float64(predictedBidPoints)
 			}
 
-			// Naive allocation for comparison
+			// Naive allocation for comparison (also uses total pool budget for predictions)
 			naiveShare := teamExpectedPoints[p.TeamID] / totalExpectedPoints
-			naivePoints := int(naiveShare * float64(totalBudget))
+			naivePoints := int(naiveShare * float64(totalPoolBudget))
 
 			// Edge: (naive - predicted) / naive * 100
 			edgePercent := 0.0
