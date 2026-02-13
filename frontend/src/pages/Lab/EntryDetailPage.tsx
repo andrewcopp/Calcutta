@@ -9,7 +9,7 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { labService, EntryDetail, EnrichedBid, ListEvaluationsResponse } from '../../services/labService';
 import { cn } from '../../lib/cn';
 
-type SortKey = 'edge' | 'seed' | 'model' | 'naive' | 'team';
+type SortKey = 'edge' | 'seed' | 'model' | 'rational' | 'team';
 type SortDir = 'asc' | 'desc';
 
 function getEdgeColor(edge: number): string {
@@ -74,9 +74,8 @@ export function EntryDetailPage() {
       let cmp = 0;
       switch (sortKey) {
         case 'edge':
-          cmp = Math.abs(b.edge_percent) - Math.abs(a.edge_percent);
-          // Secondary sort by direction (positive first)
-          if (cmp === 0) cmp = b.edge_percent - a.edge_percent;
+          // Sort by actual value: desc shows best opportunities first, asc shows worst first
+          cmp = b.edge_percent - a.edge_percent;
           break;
         case 'seed':
           cmp = a.seed - b.seed;
@@ -84,7 +83,7 @@ export function EntryDetailPage() {
         case 'model':
           cmp = b.bid_points - a.bid_points;
           break;
-        case 'naive':
+        case 'rational':
           cmp = b.naive_points - a.naive_points;
           break;
         case 'team':
@@ -221,9 +220,9 @@ export function EntryDetailPage() {
       <Card className="mb-4">
         <h2 className="text-lg font-semibold mb-3">Predicted Bids</h2>
         <p className="text-sm text-gray-600 mb-3">
-          <strong>Naive</strong> = expected allocation if everyone bid proportional to seed value.
+          <strong>Rational</strong> = expected allocation if everyone bid proportional to expected value.
           <strong className="ml-2">Model</strong> = what this model predicts the market will bid.
-          <strong className="ml-2">Edge</strong> = naive minus model (positive = undervalued opportunity, negative = overvalued avoid).
+          <strong className="ml-2">Edge</strong> = rational minus model (positive = undervalued opportunity, negative = overvalued avoid).
         </p>
         {bids.length === 0 ? (
           <Alert variant="info">No bids in this entry.</Alert>
@@ -240,7 +239,7 @@ export function EntryDetailPage() {
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
                   <th className="px-3 py-2 text-right">
-                    <SortHeader label="Naive" sortKeyValue="naive" />
+                    <SortHeader label="Rational" sortKeyValue="rational" />
                   </th>
                   <th className="px-3 py-2 text-right">
                     <SortHeader label="Model" sortKeyValue="model" />
