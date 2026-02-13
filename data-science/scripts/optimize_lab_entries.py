@@ -14,9 +14,7 @@ this script runs an optimizer to determine our optimal bid allocation.
 Currently supports:
 - predicted_market_share: Bid proportionally to predicted market share (baseline)
 - edge_weighted: Bid more on teams with positive edge (expected ROI > 1)
-
-Future:
-- minlp: Mixed-integer nonlinear programming optimizer
+- minlp: Mixed-integer nonlinear programming optimizer using GEKKO/APOPT
 
 Usage:
     python optimize_lab_entries.py --model-name ridge-v1
@@ -25,15 +23,19 @@ Usage:
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+
+import pandas as pd
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[1]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 from moneyball.lab.models import (
     Bid,
     Entry,
@@ -48,7 +50,8 @@ from moneyball.lab.models import (
 
 def optimize_predicted_market_share(
     predictions: List[Prediction],
-    budget_points: int = 10000,
+    budget_points: int = 100,
+    max_per_team: int = 50,
 ) -> List[Bid]:
     """
     Baseline optimizer: bid proportionally to predicted market share.
@@ -59,6 +62,8 @@ def optimize_predicted_market_share(
     bids = []
     for pred in predictions:
         bid_points = int(round(pred.predicted_market_share * budget_points))
+        # Enforce max per team constraint
+        bid_points = min(bid_points, max_per_team)
         if bid_points <= 0:
             continue
 
@@ -75,12 +80,20 @@ def optimize_predicted_market_share(
             expected_roi=expected_roi,
         ))
 
+    # Normalize to budget if max_per_team caused under-allocation
+    total = sum(b.bid_points for b in bids)
+    if total < budget_points and total > 0:
+        scale = budget_points / total
+        for b in bids:
+            b.bid_points = min(int(round(b.bid_points * scale)), max_per_team)
+
     return bids
 
 
 def optimize_edge_weighted(
     predictions: List[Prediction],
-    budget_points: int = 10000,
+    budget_points: int = 100,
+    max_per_team: int = 50,
     edge_multiplier: float = 2.0,
 ) -> List[Bid]:
     """
@@ -88,6 +101,7 @@ def optimize_edge_weighted(
 
     Edge = expected_roi - 1.0 (positive means undervalued by market)
     Teams with positive edge get more allocation, negative edge get less.
+    Respects max_per_team constraint and redistributes excess.
     """
     # First compute expected ROI for each team
     team_data = []
@@ -119,10 +133,31 @@ def optimize_edge_weighted(
         for td in team_data:
             td["final_share"] = 1.0 / len(team_data)
 
+    # Convert to bids with max constraint - iteratively redistribute overflow
+    max_share = max_per_team / budget_points
+    for _ in range(10):  # Max iterations to redistribute
+        overflow = 0.0
+        uncapped_share = 0.0
+        for td in team_data:
+            if td["final_share"] > max_share:
+                overflow += td["final_share"] - max_share
+                td["final_share"] = max_share
+            else:
+                uncapped_share += td["final_share"]
+
+        if overflow == 0 or uncapped_share == 0:
+            break
+
+        # Redistribute overflow proportionally to uncapped teams
+        for td in team_data:
+            if td["final_share"] < max_share:
+                td["final_share"] += overflow * (td["final_share"] / uncapped_share)
+
     # Convert to bids
     bids = []
     for td in team_data:
         bid_points = int(round(td["final_share"] * budget_points))
+        bid_points = min(bid_points, max_per_team)  # Final safety check
         if bid_points <= 0:
             continue
 
@@ -138,7 +173,8 @@ def optimize_edge_weighted(
 def optimize_entry(
     entry: Entry,
     optimizer_kind: str = "predicted_market_share",
-    budget_points: int = 10000,
+    budget_points: int = 100,
+    max_per_team: int = 50,
     **optimizer_params,
 ) -> List[Bid]:
     """
@@ -148,21 +184,76 @@ def optimize_entry(
         return []
 
     if optimizer_kind == "predicted_market_share":
-        return optimize_predicted_market_share(entry.predictions, budget_points)
+        return optimize_predicted_market_share(entry.predictions, budget_points, max_per_team)
     elif optimizer_kind == "edge_weighted":
         edge_multiplier = optimizer_params.get("edge_multiplier", 2.0)
-        return optimize_edge_weighted(entry.predictions, budget_points, edge_multiplier)
+        return optimize_edge_weighted(entry.predictions, budget_points, max_per_team, edge_multiplier)
     elif optimizer_kind == "minlp":
-        # TODO: Implement MINLP optimizer
-        # For now, fall back to edge_weighted
-        print(f"  Warning: MINLP optimizer not yet implemented, using edge_weighted")
-        return optimize_edge_weighted(entry.predictions, budget_points)
+        # Build teams_df from predictions for GEKKO optimizer
+        teams_df = pd.DataFrame([
+            {
+                "team_key": p.team_id,
+                "expected_team_points": p.expected_points,
+                "predicted_team_total_bids": p.predicted_market_share * budget_points,
+            }
+            for p in entry.predictions
+        ])
+
+        min_teams = optimizer_params.get("min_teams", 3)
+        max_teams = optimizer_params.get("max_teams", 10)
+        min_bid = optimizer_params.get("min_bid", 1)
+
+        chosen_df, portfolio_rows = optimize_portfolio_gekko(
+            teams_df=teams_df,
+            budget_points=budget_points,
+            min_teams=min_teams,
+            max_teams=max_teams,
+            max_per_team_points=max_per_team,
+            min_bid_points=min_bid,
+        )
+
+        # Convert portfolio_rows back to Bid objects
+        bids = []
+        for row in portfolio_rows:
+            team_id = row["team_key"]
+            pred = next((p for p in entry.predictions if p.team_id == team_id), None)
+            if pred:
+                predicted_cost = pred.predicted_market_share * budget_points
+                expected_roi = pred.expected_points / (predicted_cost + row["bid_amount_points"]) if (predicted_cost + row["bid_amount_points"]) > 0 else 0.0
+                bids.append(Bid(
+                    team_id=team_id,
+                    bid_points=row["bid_amount_points"],
+                    expected_roi=expected_roi,
+                ))
+        return bids
     else:
         raise ValueError(f"Unknown optimizer kind: {optimizer_kind}")
 
 
+def get_entry_constraints(entry: Entry, cli_args) -> dict:
+    """
+    Get optimization constraints, preferring entry's stored params over CLI defaults.
+    CLI args override entry params when explicitly provided.
+    """
+    stored = entry.optimizer_params or {}
+
+    return {
+        "budget_points": cli_args.budget if cli_args.budget is not None else stored.get("budget_points", 100),
+        "max_per_team": cli_args.max_per_team if cli_args.max_per_team is not None else stored.get("max_per_team", 50),
+        "min_teams": cli_args.min_teams if cli_args.min_teams is not None else stored.get("min_teams", 3),
+        "max_teams": cli_args.max_teams if cli_args.max_teams is not None else stored.get("max_teams", 10),
+        "min_bid": cli_args.min_bid if cli_args.min_bid is not None else stored.get("min_bid", 1),
+        "edge_multiplier": cli_args.edge_multiplier if cli_args.edge_multiplier is not None else stored.get("edge_multiplier", 2.0),
+        "estimated_participants": stored.get("estimated_participants"),
+        "excluded_entry_name": stored.get("excluded_entry_name"),
+    }
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Optimize lab entries with predictions")
+    parser = argparse.ArgumentParser(
+        description="Optimize lab entries with predictions. "
+                    "Constraints default to values stored in entry's optimizer_params (from calcutta rules)."
+    )
     parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
     parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
     parser.add_argument("--entry-id", help="Specific entry ID to optimize")
@@ -170,9 +261,19 @@ def main():
     parser.add_argument("--optimizer", default="predicted_market_share",
                        choices=["predicted_market_share", "edge_weighted", "minlp"],
                        help="Optimizer to use")
-    parser.add_argument("--budget", type=int, default=10000, help="Budget points for bids")
-    parser.add_argument("--edge-multiplier", type=float, default=2.0,
-                       help="Edge multiplier for edge_weighted optimizer")
+    # These args are optional - if not provided, use entry's stored params
+    parser.add_argument("--budget", type=int, default=None,
+                       help="Override budget points (default: from entry/calcutta rules)")
+    parser.add_argument("--max-per-team", type=int, default=None,
+                       help="Override maximum bid per team (default: from entry/calcutta rules)")
+    parser.add_argument("--edge-multiplier", type=float, default=None,
+                       help="Edge multiplier for edge_weighted optimizer (default: 2.0)")
+    parser.add_argument("--min-teams", type=int, default=None,
+                       help="Override minimum teams for minlp optimizer (default: from entry/calcutta rules)")
+    parser.add_argument("--max-teams", type=int, default=None,
+                       help="Override maximum teams for minlp optimizer (default: from entry/calcutta rules)")
+    parser.add_argument("--min-bid", type=int, default=None,
+                       help="Override minimum bid per team for minlp optimizer (default: 1)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done")
     parser.add_argument("--json-output", action="store_true", help="Output JSON result")
 
@@ -225,7 +326,10 @@ def main():
         return
 
     log(f"Optimizer: {args.optimizer}")
-    log(f"Budget: {args.budget} points")
+    log(f"Note: Constraints default to values from entry's optimizer_params (calcutta rules)")
+    if args.budget or args.max_per_team or args.min_teams or args.max_teams or args.min_bid:
+        log(f"CLI overrides: budget={args.budget}, max_per_team={args.max_per_team}, "
+            f"min_teams={args.min_teams}, max_teams={args.max_teams}, min_bid={args.min_bid}")
     log("")
 
     entries_optimized = 0
@@ -239,12 +343,21 @@ def main():
             errors.append(f"{entry.id}: No predictions")
             continue
 
+        # Get constraints from entry's stored params, with CLI overrides
+        constraints = get_entry_constraints(entry, args)
+        log(f"  Constraints: budget={constraints['budget_points']}, max_per_team={constraints['max_per_team']}, "
+            f"min_teams={constraints['min_teams']}, max_teams={constraints['max_teams']}")
+
         try:
             bids = optimize_entry(
                 entry,
                 optimizer_kind=args.optimizer,
-                budget_points=args.budget,
-                edge_multiplier=args.edge_multiplier,
+                budget_points=constraints["budget_points"],
+                max_per_team=constraints["max_per_team"],
+                edge_multiplier=constraints["edge_multiplier"],
+                min_teams=constraints["min_teams"],
+                max_teams=constraints["max_teams"],
+                min_bid=constraints["min_bid"],
             )
         except Exception as e:
             log(f"  Error: {e}")
@@ -261,14 +374,29 @@ def main():
         if args.dry_run:
             log(f"  (dry run - not saving)")
         else:
+            # Build optimizer_params, preserving stored values and adding optimizer-specific ones
+            optimizer_params = {
+                "budget_points": constraints["budget_points"],
+                "max_per_team": constraints["max_per_team"],
+                "min_teams": constraints["min_teams"],
+                "max_teams": constraints["max_teams"],
+            }
+            # Preserve prediction inputs from original entry
+            if constraints.get("estimated_participants"):
+                optimizer_params["estimated_participants"] = constraints["estimated_participants"]
+            if constraints.get("excluded_entry_name"):
+                optimizer_params["excluded_entry_name"] = constraints["excluded_entry_name"]
+            # Add optimizer-specific params
+            if args.optimizer == "edge_weighted":
+                optimizer_params["edge_multiplier"] = constraints["edge_multiplier"]
+            elif args.optimizer == "minlp":
+                optimizer_params["min_bid"] = constraints["min_bid"]
+
             update_entry_with_bids(
                 entry.id,
                 bids,
                 optimizer_kind=args.optimizer,
-                optimizer_params={
-                    "budget_points": args.budget,
-                    "edge_multiplier": args.edge_multiplier if args.optimizer == "edge_weighted" else None,
-                },
+                optimizer_params=optimizer_params,
             )
             log(f"  Saved")
             entries_optimized += 1

@@ -16,6 +16,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -26,13 +27,22 @@ if str(project_root) not in sys.path:
 
 
 def get_historical_calcuttas():
-    """Get all historical calcuttas from the database."""
+    """Get all historical calcuttas from the database with their rules and entry counts."""
     from moneyball.db.connection import get_db_connection
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT c.id, c.name, s.year, t.id as tournament_id
+                SELECT
+                    c.id,
+                    c.name,
+                    s.year,
+                    t.id as tournament_id,
+                    c.budget_points,
+                    c.min_teams,
+                    c.max_teams,
+                    c.max_bid,
+                    (SELECT COUNT(*) FROM core.entries e WHERE e.calcutta_id = c.id AND e.deleted_at IS NULL) as entry_count
                 FROM core.calcuttas c
                 JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
                 JOIN core.seasons s ON s.id = t.season_id AND s.deleted_at IS NULL
@@ -40,7 +50,17 @@ def get_historical_calcuttas():
                 ORDER BY s.year DESC
             """)
             return [
-                {"id": str(row[0]), "name": row[1], "year": row[2], "tournament_id": str(row[3])}
+                {
+                    "id": str(row[0]),
+                    "name": row[1],
+                    "year": row[2],
+                    "tournament_id": str(row[3]),
+                    "budget_points": row[4],
+                    "min_teams": row[5],
+                    "max_teams": row[6],
+                    "max_bid": row[7],
+                    "entry_count": row[8],
+                }
                 for row in cur.fetchall()
             ]
 
@@ -175,8 +195,13 @@ def create_entry_for_calcutta(
     predictions_df,
     team_id_map: dict,
     expected_points_map: dict,
-    budget_points: int = 10000,
-    optimizer_kind: str = "predicted_market_share",
+    budget_points: int,
+    max_per_team: int,
+    min_teams: int,
+    max_teams: int,
+    optimizer_kind: str,
+    estimated_participants: int,
+    excluded_entry_name: str,
 ):
     """Create a lab entry with predictions and optimized bids."""
     from moneyball.lab.models import Bid, Prediction, create_entry
@@ -218,6 +243,9 @@ def create_entry_for_calcutta(
         else:
             bid_points = int(round(pred.predicted_market_share * budget_points))
 
+        # Enforce max per team constraint
+        bid_points = min(bid_points, max_per_team)
+
         if bid_points <= 0:
             continue
 
@@ -230,13 +258,13 @@ def create_entry_for_calcutta(
             expected_roi=expected_roi,
         ))
 
-    # Normalize bids to budget if edge_weighted caused drift
+    # Normalize bids to budget if edge_weighted caused drift, respecting max constraint
     if optimizer_kind == "edge_weighted" and bids:
         total = sum(b.bid_points for b in bids)
         if total > 0:
             scale = budget_points / total
             for b in bids:
-                b.bid_points = int(round(b.bid_points * scale))
+                b.bid_points = min(int(round(b.bid_points * scale)), max_per_team)
 
     if not bids:
         return None
@@ -249,7 +277,14 @@ def create_entry_for_calcutta(
         game_outcome_kind="kenpom",
         game_outcome_params={},
         optimizer_kind=optimizer_kind,
-        optimizer_params={"budget_points": budget_points},
+        optimizer_params={
+            "budget_points": budget_points,
+            "max_per_team": max_per_team,
+            "min_teams": min_teams,
+            "max_teams": max_teams,
+            "estimated_participants": estimated_participants,
+            "excluded_entry_name": excluded_entry_name,
+        },
         starting_state_key="post_first_four",
     )
 
@@ -257,14 +292,21 @@ def create_entry_for_calcutta(
 
 
 def main():
+    # Read defaults from environment variables
+    default_excluded_entry = os.environ.get("EXCLUDED_ENTRY_NAME", "Andrew Copp")
+    default_estimated_participants = int(os.environ.get("DEFAULT_ESTIMATED_PARTICIPANTS", "42"))
+
     parser = argparse.ArgumentParser(description="Generate lab entries for a model")
     parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
     parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
-    parser.add_argument("--excluded-entry", default="Andrew Copp", help="Entry name to exclude from training")
-    parser.add_argument("--budget", type=int, default=10000, help="Budget points for bids")
+    parser.add_argument("--excluded-entry", default=default_excluded_entry,
+                       help=f"Entry name to exclude from training (env: EXCLUDED_ENTRY_NAME, default: {default_excluded_entry})")
     parser.add_argument("--optimizer", default="predicted_market_share",
-                       choices=["predicted_market_share", "edge_weighted"],
+                       choices=["predicted_market_share", "edge_weighted", "minlp"],
                        help="Optimizer to use for bid generation")
+    parser.add_argument("--estimated-participants-override", type=int,
+                       help=f"Override estimated participants (env: DEFAULT_ESTIMATED_PARTICIPANTS={default_estimated_participants}). "
+                            "If not set, uses actual entry count from calcutta or env default.")
     parser.add_argument("--years", type=str, help="Comma-separated years to process (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
     parser.add_argument("--json-output", action="store_true", help="Output machine-readable JSON result")
@@ -298,8 +340,9 @@ def main():
     log(f"Model: {model.name} ({model.kind})")
     log(f"Params: {model.params}")
     log(f"Excluded entry: {args.excluded_entry}")
-    log(f"Budget: {args.budget} points")
     log(f"Optimizer: {args.optimizer}")
+    log(f"Note: Budget, min/max teams, and max bid come from each calcutta's rules")
+    log(f"Note: Estimated participants uses actual entry count (fallback: {default_estimated_participants})")
     log("")
 
     calcuttas = get_historical_calcuttas()
@@ -319,6 +362,23 @@ def main():
     for calcutta in calcuttas:
         year = calcutta["year"]
         log(f"Processing {calcutta['name']} ({year})...")
+
+        # Get calcutta rules from database
+        budget_points = calcutta["budget_points"]
+        min_teams = calcutta["min_teams"]
+        max_teams = calcutta["max_teams"]
+        max_per_team = calcutta["max_bid"]
+
+        # Use actual entry count, or override, or env default
+        if args.estimated_participants_override:
+            estimated_participants = args.estimated_participants_override
+        elif calcutta["entry_count"] > 0:
+            estimated_participants = calcutta["entry_count"]
+        else:
+            estimated_participants = default_estimated_participants
+
+        log(f"  Rules: budget={budget_points}, min_teams={min_teams}, max_teams={max_teams}, max_bid={max_per_team}")
+        log(f"  Estimated participants: {estimated_participants} (actual entries: {calcutta['entry_count']})")
 
         predictions_df, error = generate_predictions(
             model.name, year, args.excluded_entry
@@ -353,8 +413,13 @@ def main():
                 predictions_df,
                 team_id_map,
                 expected_points_map,
-                args.budget,
+                budget_points,
+                max_per_team,
+                min_teams,
+                max_teams,
                 args.optimizer,
+                estimated_participants,
+                args.excluded_entry,
             )
             if entry:
                 log(f"  Created entry {entry.id} with {len(entry.predictions)} predictions and {len(entry.bids)} bids")
