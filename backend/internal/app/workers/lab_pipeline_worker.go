@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
 )
 
@@ -652,38 +653,72 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID string, job *labPipelineJob, params labPipelineJobParams) bool {
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.7, "evaluation", "Running simulation")
 
-	// For evaluation, we use Go-based simulation
-	// Create a simulated calcutta and run evaluation
 	start := time.Now()
 
-	// Get entry bids
+	// Get entry bids and calcutta_id
 	var bidsJSON []byte
+	var calcuttaID string
 	err := w.pool.QueryRow(ctx, `
-		SELECT bids_json FROM lab.entries WHERE id = $1::uuid AND deleted_at IS NULL
-	`, params.EntryID).Scan(&bidsJSON)
+		SELECT bids_json, calcutta_id::text FROM lab.entries WHERE id = $1::uuid AND deleted_at IS NULL
+	`, params.EntryID).Scan(&bidsJSON, &calcuttaID)
 	if err != nil {
 		w.failLabPipelineJob(ctx, job, errors.New("failed to get entry bids: "+err.Error()))
 		return false
 	}
 
-	// Create lab.evaluations row using simulation infrastructure
-	// This is a simplified version - in production you'd call the full simulation service
-	var evaluationID string
-	err = w.pool.QueryRow(ctx, `
-		INSERT INTO lab.evaluations (entry_id, n_sims, seed)
-		VALUES ($1::uuid, $2, $3)
-		ON CONFLICT (entry_id, n_sims, seed) WHERE deleted_at IS NULL
-		DO UPDATE SET updated_at = NOW()
-		RETURNING id::text
-	`, params.EntryID, params.NSims, params.Seed).Scan(&evaluationID)
-	if err != nil {
-		w.failLabPipelineJob(ctx, job, errors.New("failed to create evaluation: "+err.Error()))
+	// Parse bids into map for evaluation
+	type bidEntry struct {
+		TeamID    string `json:"team_id"`
+		BidPoints int    `json:"bid_points"`
+	}
+	var bids []bidEntry
+	if err := json.Unmarshal(bidsJSON, &bids); err != nil {
+		w.failLabPipelineJob(ctx, job, errors.New("failed to parse bids: "+err.Error()))
 		return false
 	}
 
-	// TODO: Run actual simulation and update evaluation with results
-	// For now, we mark it as needing simulation
-	// The actual simulation would be run by the calcutta_evaluation infrastructure
+	labEntryBids := make(map[string]int)
+	for _, b := range bids {
+		if b.BidPoints > 0 {
+			labEntryBids[b.TeamID] = b.BidPoints
+		}
+	}
+
+	if len(labEntryBids) == 0 {
+		w.failLabPipelineJob(ctx, job, errors.New("entry has no bids to evaluate"))
+		return false
+	}
+
+	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.75, "evaluation", "Running "+fmt.Sprintf("%d", params.NSims)+" simulations")
+
+	// Run evaluation using calcutta_evaluations service
+	evalService := appcalcuttaevaluations.New(w.pool)
+	result, err := evalService.EvaluateLabEntry(ctx, calcuttaID, labEntryBids, params.ExcludedEntryName)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("evaluation failed: %w", err))
+		return false
+	}
+
+	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.95, "evaluation", "Saving results")
+
+	// Create or update lab.evaluations row with results
+	var evaluationID string
+	err = w.pool.QueryRow(ctx, `
+		INSERT INTO lab.evaluations (entry_id, n_sims, seed, mean_normalized_payout, median_normalized_payout, p_top1, p_in_money)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (entry_id, n_sims, seed) WHERE deleted_at IS NULL
+		DO UPDATE SET
+			mean_normalized_payout = EXCLUDED.mean_normalized_payout,
+			median_normalized_payout = EXCLUDED.median_normalized_payout,
+			p_top1 = EXCLUDED.p_top1,
+			p_in_money = EXCLUDED.p_in_money,
+			updated_at = NOW()
+		RETURNING id::text
+	`, params.EntryID, result.NSims, params.Seed, result.MeanNormalizedPayout, result.MedianNormalizedPayout, result.PTop1, result.PInMoney).Scan(&evaluationID)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, errors.New("failed to save evaluation: "+err.Error()))
+		return false
+	}
 
 	dur := time.Since(start)
 
@@ -694,16 +729,17 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 	_, _ = w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_calcutta_runs
 		SET stage = 'completed', status = 'succeeded', progress = 1.0,
-		    evaluation_id = $2::uuid, finished_at = NOW(), updated_at = NOW()
+		    evaluation_id = $2::uuid, mean_payout = $3, finished_at = NOW(), updated_at = NOW()
 		WHERE id = $1::uuid
-	`, params.PipelineCalcuttaRunID, evaluationID)
+	`, params.PipelineCalcuttaRunID, evaluationID, result.MeanNormalizedPayout)
 
 	// Update entry state to complete
 	_, _ = w.pool.Exec(ctx, `
 		UPDATE lab.entries SET state = 'complete', updated_at = NOW() WHERE id = $1::uuid
 	`, params.EntryID)
 
-	log.Printf("lab_pipeline_worker evaluation_success worker_id=%s run_id=%s evaluation_id=%s dur_ms=%d", workerID, job.RunID, evaluationID, dur.Milliseconds())
+	log.Printf("lab_pipeline_worker evaluation_success worker_id=%s run_id=%s evaluation_id=%s n_sims=%d mean_payout=%.4f p_top1=%.4f dur_ms=%d",
+		workerID, job.RunID, evaluationID, result.NSims, result.MeanNormalizedPayout, result.PTop1, dur.Milliseconds())
 	return true
 }
 
