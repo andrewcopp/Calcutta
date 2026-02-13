@@ -4,49 +4,51 @@ MINLP-based portfolio optimizer for Calcutta entry construction.
 This module implements a Mixed Integer Nonlinear Programming approach to
 portfolio optimization that avoids the local maximum trap of the greedy algorithm.
 
+Primary solver: GEKKO (true MINLP with integer constraints)
+Fallback solver: scipy SLSQP (continuous relaxation + post-processing)
+
 The optimization problem:
-    Maximize: Σ expected_points_i × (bid_i / (predicted_market_i + bid_i))
-    
+    Maximize: sum_i( expected_points[i] * bid[i] / (predicted_market[i] + bid[i]) )
+
     Subject to:
-        - Σ bid_i = budget
-        - min_teams ≤ Σ(bid_i > 0) ≤ max_teams
-        - min_bid ≤ bid_i ≤ max_per_team (for selected teams)
-        - bid_i = 0 (for unselected teams)
+        - sum(bid[i]) = budget
+        - min_teams <= num_selected <= max_teams
+        - min_bid <= bid[i] <= max_per_team (for selected teams)
+        - bid[i] = 0 (for unselected teams)
 """
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize, NonlinearConstraint, LinearConstraint
 from typing import Tuple, List, Dict, Any
 
 
 def _objective(bids: np.ndarray, exp_pts: np.ndarray, pred_markets: np.ndarray) -> float:
     """
     Objective function: negative total expected return (for minimization).
-    
-    Total return = Σ expected_points_i × ownership_i
-    where ownership_i = bid_i / (predicted_market_i + bid_i)
-    
+
+    Total return = sum( expected_points[i] * ownership[i] )
+    where ownership[i] = bid[i] / (predicted_market[i] + bid[i])
+
     We return negative because scipy.optimize.minimize minimizes.
     """
-    ownership = bids / (pred_markets + bids + 1e-9)  # Add epsilon to avoid division by zero
+    ownership = bids / (pred_markets + bids + 1e-9)
     total_return = np.sum(exp_pts * ownership)
-    return -total_return  # Negative for minimization
+    return -total_return
 
 
 def _objective_gradient(bids: np.ndarray, exp_pts: np.ndarray, pred_markets: np.ndarray) -> np.ndarray:
     """
     Gradient of objective function with respect to bids.
-    
-    d/d(bid_i) [exp_pts_i × bid_i / (pred_market_i + bid_i)]
-    = exp_pts_i × pred_market_i / (pred_market_i + bid_i)^2
-    
+
+    d/d(bid[i]) [exp_pts[i] * bid[i] / (pred_market[i] + bid[i])]
+    = exp_pts[i] * pred_market[i] / (pred_market[i] + bid[i])^2
+
     Return negative gradient for minimization.
     """
     denom = (pred_markets + bids + 1e-9) ** 2
     gradient = exp_pts * pred_markets / denom
-    return -gradient  # Negative for minimization
+    return -gradient
 
 
 def optimize_portfolio_minlp(
@@ -59,10 +61,13 @@ def optimize_portfolio_minlp(
     min_bid_points: int,
     initial_solution: str = "greedy",
     max_iterations: int = 1000,
+    use_gekko: bool = True,
 ) -> Tuple[pd.DataFrame, List[Dict[str, Any]]]:
     """
     Optimize portfolio using MINLP approach.
-    
+
+    Uses GEKKO (true MINLP solver) by default, with scipy SLSQP as fallback.
+
     Args:
         teams_df: DataFrame with columns: team_key, expected_team_points, predicted_team_total_bids
         budget_points: Total budget (typically 100)
@@ -70,18 +75,64 @@ def optimize_portfolio_minlp(
         max_teams: Maximum number of teams (typically 10)
         max_per_team_points: Maximum bid per team (typically 50)
         min_bid_points: Minimum bid per team (typically 1)
-        initial_solution: How to initialize ("greedy", "uniform", or "random")
-        max_iterations: Maximum solver iterations
-        
+        initial_solution: How to initialize scipy solver ("greedy", "uniform", or "random")
+        max_iterations: Maximum solver iterations (scipy only)
+        use_gekko: If True, try GEKKO first; if False, use scipy directly
+
     Returns:
         Tuple of (chosen_df, portfolio_rows) matching the interface of _optimize_portfolio_greedy
     """
-    # Validate inputs
+    if use_gekko:
+        try:
+            from moneyball.models.portfolio_optimizer_gekko import optimize_portfolio_gekko
+            return optimize_portfolio_gekko(
+                teams_df=teams_df,
+                budget_points=budget_points,
+                min_teams=min_teams,
+                max_teams=max_teams,
+                max_per_team_points=max_per_team_points,
+                min_bid_points=min_bid_points,
+            )
+        except ImportError:
+            pass  # GEKKO not installed, fall through to scipy
+        except Exception as e:
+            print(f"Warning: GEKKO failed ({e}), falling back to scipy")
+
+    return _optimize_scipy(
+        teams_df=teams_df,
+        budget_points=budget_points,
+        min_teams=min_teams,
+        max_teams=max_teams,
+        max_per_team_points=max_per_team_points,
+        min_bid_points=min_bid_points,
+        initial_solution=initial_solution,
+        max_iterations=max_iterations,
+    )
+
+
+def _optimize_scipy(
+    *,
+    teams_df: pd.DataFrame,
+    budget_points: int,
+    min_teams: int,
+    max_teams: int,
+    max_per_team_points: int,
+    min_bid_points: int,
+    initial_solution: str = "greedy",
+    max_iterations: int = 1000,
+) -> Tuple[pd.DataFrame, List[Dict[str, Any]]]:
+    """
+    Scipy SLSQP optimizer (continuous relaxation + post-processing).
+
+    This is the fallback when GEKKO is unavailable.
+    """
+    from scipy.optimize import minimize, LinearConstraint
+
     required_cols = ["team_key", "expected_team_points", "predicted_team_total_bids"]
     missing = [c for c in required_cols if c not in teams_df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(missing)}")
-    
+
     if budget_points <= 0:
         raise ValueError("budget_points must be positive")
     if min_teams <= 0 or max_teams <= 0:
@@ -90,16 +141,14 @@ def optimize_portfolio_minlp(
         raise ValueError("min_teams cannot exceed max_teams")
     if min_bid_points <= 0:
         raise ValueError("min_bid_points must be positive")
-    
-    # Extract data
+
     n_teams = len(teams_df)
     exp_pts = teams_df["expected_team_points"].fillna(0.0).values.astype(float)
     pred_markets = teams_df["predicted_team_total_bids"].fillna(0.0).values.astype(float)
-    pred_markets = np.maximum(pred_markets, 0.0)  # Ensure non-negative
-    
+    pred_markets = np.maximum(pred_markets, 0.0)
+
     # Generate initial solution
     if initial_solution == "greedy":
-        # Use current greedy algorithm as starting point
         from moneyball.models.recommended_entry_bids import _optimize_portfolio_greedy
         try:
             greedy_result, _ = _optimize_portfolio_greedy(
@@ -112,42 +161,33 @@ def optimize_portfolio_minlp(
                 min_bid=float(min_bid_points),
             )
             x0 = np.zeros(n_teams)
-            for idx, row in greedy_result.iterrows():
+            for _, row in greedy_result.iterrows():
                 team_key = row["team_key"]
                 bid = row["bid_amount_points"]
                 team_idx = teams_df[teams_df["team_key"] == team_key].index[0]
                 x0[team_idx] = float(bid)
         except Exception:
-            # Fallback to uniform if greedy fails
             x0 = np.zeros(n_teams)
             teams_to_select = min(max_teams, n_teams)
             bid_per_team = budget_points / teams_to_select
             x0[:teams_to_select] = bid_per_team
     elif initial_solution == "uniform":
-        # Distribute budget uniformly across max_teams
         x0 = np.zeros(n_teams)
         teams_to_select = min(max_teams, n_teams)
         bid_per_team = budget_points / teams_to_select
         x0[:teams_to_select] = bid_per_team
     else:  # random
         x0 = np.random.uniform(0, max_per_team_points, n_teams)
-        x0 = x0 * (budget_points / np.sum(x0))  # Normalize to budget
-    
-    # Define constraints
-    # 1. Budget constraint: Σ bid_i = budget
+        x0 = x0 * (budget_points / np.sum(x0))
+
     budget_constraint = LinearConstraint(
         A=np.ones(n_teams),
         lb=budget_points,
         ub=budget_points
     )
-    
-    # 2. Bounds: 0 ≤ bid_i ≤ max_per_team
+
     bounds = [(0, max_per_team_points) for _ in range(n_teams)]
-    
-    # 3. Team count constraint: min_teams ≤ Σ(bid_i > 0) ≤ max_teams
-    # This is tricky because it's discrete. We'll handle it in post-processing.
-    
-    # Run optimization
+
     result = minimize(
         fun=lambda x: _objective(x, exp_pts, pred_markets),
         x0=x0,
@@ -157,15 +197,13 @@ def optimize_portfolio_minlp(
         bounds=bounds,
         options={'maxiter': max_iterations, 'ftol': 1e-9}
     )
-    
+
     if not result.success:
-        # If optimization failed, fall back to initial solution
-        print(f"Warning: MINLP optimization did not converge: {result.message}")
+        print(f"Warning: scipy optimization did not converge: {result.message}")
         bids = x0
     else:
         bids = result.x
-    
-    # Post-processing: enforce discrete constraints
+
     bids = _enforce_discrete_constraints(
         bids=bids,
         budget=budget_points,
@@ -176,21 +214,18 @@ def optimize_portfolio_minlp(
         exp_pts=exp_pts,
         pred_markets=pred_markets,
     )
-    
-    # Build output DataFrame
+
     selected_indices = np.where(bids >= min_bid_points)[0]
     chosen = teams_df.iloc[selected_indices].copy().reset_index(drop=True)
     chosen["bid_amount_points"] = bids[selected_indices].astype(int)
-    
-    # Calculate score (expected return per dollar at final bid)
+
     chosen_bids = bids[selected_indices]
     chosen_exp_pts = exp_pts[selected_indices]
     chosen_pred_markets = pred_markets[selected_indices]
     chosen_ownership = chosen_bids / (chosen_pred_markets + chosen_bids + 1e-9)
     chosen_return = chosen_exp_pts * chosen_ownership
     chosen["score"] = chosen_return / (chosen_bids + 1e-9)
-    
-    # Build portfolio rows
+
     portfolio_rows = []
     for _, row in chosen.iterrows():
         portfolio_rows.append({
@@ -198,7 +233,7 @@ def optimize_portfolio_minlp(
             "bid_amount_points": int(row["bid_amount_points"]),
             "score": float(row.get("score", 0.0) or 0.0),
         })
-    
+
     return chosen, portfolio_rows
 
 

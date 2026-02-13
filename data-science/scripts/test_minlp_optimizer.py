@@ -7,6 +7,18 @@ from pathlib import Path
 import pandas as pd
 from moneyball.models.portfolio_optimizer_minlp import optimize_portfolio_minlp
 from moneyball.models.recommended_entry_bids import _optimize_portfolio_greedy
+from moneyball.utils import points
+
+# Configure points scoring
+points.set_default_points_by_win_index({
+    1: 0,    # First Four loss
+    2: 10,   # Round of 64
+    3: 20,   # Round of 32
+    4: 40,   # Sweet 16
+    5: 80,   # Elite 8
+    6: 160,  # Final Four
+    7: 320,  # Championship
+})
 
 # Load 2024 data
 year = "2024"
