@@ -146,6 +146,19 @@ type Pagination struct {
 	Offset int
 }
 
+// GenerateEntriesRequest for triggering entry generation via Python.
+type GenerateEntriesRequest struct {
+	Years         []int  `json:"years,omitempty"`
+	BudgetPoints  int    `json:"budget_points,omitempty"`
+	ExcludedEntry string `json:"excluded_entry,omitempty"`
+}
+
+// GenerateEntriesResponse from the Python entry generation script.
+type GenerateEntriesResponse struct {
+	EntriesCreated int      `json:"entries_created"`
+	Errors         []string `json:"errors,omitempty"`
+}
+
 // Repository defines the interface for lab data access.
 type Repository interface {
 	ListInvestmentModels(filter ListModelsFilter, page Pagination) ([]InvestmentModel, error)

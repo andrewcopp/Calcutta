@@ -83,3 +83,8 @@ func (s *Service) ListEvaluations(ctx context.Context, filter ListEvaluationsFil
 func (s *Service) GetEvaluation(ctx context.Context, id string) (*EvaluationDetail, error) {
 	return s.repo.GetEvaluation(id)
 }
+
+// GenerateEntries runs the Python script to generate entries for a model.
+func (s *Service) GenerateEntries(ctx context.Context, modelID string, req GenerateEntriesRequest) (*GenerateEntriesResponse, error) {
+	return RunGenerateEntriesScript(ctx, modelID, req)
+}

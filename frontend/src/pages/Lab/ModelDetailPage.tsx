@@ -1,9 +1,10 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
+import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
@@ -29,6 +30,15 @@ export function ModelDetailPage() {
     queryKey: ['lab', 'evaluations', { investment_model_id: modelId }],
     queryFn: () => (modelId ? labService.listEvaluations({ investment_model_id: modelId, limit: 50 }) : Promise.resolve(null)),
     enabled: Boolean(modelId),
+  });
+
+  const queryClient = useQueryClient();
+  const generateMutation = useMutation({
+    mutationFn: () => labService.generateEntries(modelId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab', 'entries', { investment_model_id: modelId }] });
+      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId] });
+    },
   });
 
   const model = modelQuery.data;
@@ -79,7 +89,29 @@ export function ModelDetailPage() {
       <PageHeader title={model.name} subtitle={`Kind: ${model.kind}`} />
 
       <Card className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Model Details</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Model Details</h2>
+          <Button
+            size="sm"
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+          >
+            {generateMutation.isPending ? 'Generating...' : 'Generate Entries'}
+          </Button>
+        </div>
+        {generateMutation.isError ? (
+          <Alert variant="error" className="mb-3">
+            Failed to generate entries: {(generateMutation.error as Error)?.message || 'Unknown error'}
+          </Alert>
+        ) : null}
+        {generateMutation.isSuccess ? (
+          <Alert variant="success" className="mb-3">
+            Created {generateMutation.data.entries_created} entries
+            {generateMutation.data.errors && generateMutation.data.errors.length > 0 ? (
+              <> (with {generateMutation.data.errors.length} warnings)</>
+            ) : null}
+          </Alert>
+        ) : null}
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="text-gray-500">Kind</dt>

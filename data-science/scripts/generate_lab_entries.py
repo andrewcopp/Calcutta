@@ -180,57 +180,80 @@ def create_entry_for_calcutta(
 
 def main():
     parser = argparse.ArgumentParser(description="Generate lab entries for a model")
-    parser.add_argument("--model-name", required=True, help="Lab model name (e.g., ridge-v1)")
+    parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
+    parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
     parser.add_argument("--excluded-entry", default="Andrew Copp", help="Entry name to exclude from training")
     parser.add_argument("--budget", type=int, default=10000, help="Budget points for bids")
     parser.add_argument("--years", type=str, help="Comma-separated years to process (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
+    parser.add_argument("--json-output", action="store_true", help="Output machine-readable JSON result")
 
     args = parser.parse_args()
 
-    from moneyball.lab.models import get_investment_model
+    if not args.model_name and not args.model_id:
+        parser.error("Either --model-name or --model-id is required")
 
-    model = get_investment_model(args.model_name)
+    # Helper for logging (suppressed when --json-output)
+    def log(msg):
+        if not args.json_output:
+            print(msg)
+
+    from moneyball.lab.models import get_investment_model, get_investment_model_by_id
+
+    # Load model by ID or name
+    if args.model_id:
+        model = get_investment_model_by_id(args.model_id)
+    else:
+        model = get_investment_model(args.model_name)
+
     if not model:
-        print(f"Error: Model '{args.model_name}' not found")
-        sys.exit(1)
+        if args.json_output:
+            print(json.dumps({"ok": False, "entries_created": 0, "errors": [f"Model not found"]}))
+            sys.exit(1)
+        else:
+            print(f"Error: Model not found")
+            sys.exit(1)
 
-    print(f"Model: {model.name} ({model.kind})")
-    print(f"Params: {model.params}")
-    print(f"Excluded entry: {args.excluded_entry}")
-    print(f"Budget: {args.budget} points")
-    print()
+    log(f"Model: {model.name} ({model.kind})")
+    log(f"Params: {model.params}")
+    log(f"Excluded entry: {args.excluded_entry}")
+    log(f"Budget: {args.budget} points")
+    log("")
 
     calcuttas = get_historical_calcuttas()
-    print(f"Found {len(calcuttas)} historical calcuttas")
+    log(f"Found {len(calcuttas)} historical calcuttas")
 
     # Filter by years if specified
     if args.years:
         target_years = [int(y.strip()) for y in args.years.split(",")]
         calcuttas = [c for c in calcuttas if c["year"] in target_years]
-        print(f"Filtered to {len(calcuttas)} calcuttas for years: {target_years}")
+        log(f"Filtered to {len(calcuttas)} calcuttas for years: {target_years}")
 
-    print()
+    log("")
+
+    entries_created = 0
+    errors = []
 
     for calcutta in calcuttas:
         year = calcutta["year"]
-        print(f"Processing {calcutta['name']} ({year})...")
+        log(f"Processing {calcutta['name']} ({year})...")
 
         predictions_df, error = generate_predictions(
-            args.model_name, year, args.excluded_entry
+            model.name, year, args.excluded_entry
         )
 
         if error:
-            print(f"  Skipping: {error}")
+            log(f"  Skipping: {error}")
+            errors.append(f"{calcutta['name']}: {error}")
             continue
 
         if predictions_df is None or predictions_df.empty:
-            print(f"  Skipping: No predictions generated")
+            log(f"  Skipping: No predictions generated")
             continue
 
         team_id_map = get_team_id_map(calcutta["tournament_id"])
         if not team_id_map:
-            print(f"  Skipping: No teams found")
+            log(f"  Skipping: No teams found")
             continue
 
         if args.dry_run:
@@ -239,7 +262,7 @@ def main():
                 if team_id_map.get(row["team_slug"])
                 and int(round(row["predicted_auction_share_of_pool"] * args.budget)) > 0
             ])
-            print(f"  Would create entry with {bid_count} bids")
+            log(f"  Would create entry with {bid_count} bids")
         else:
             entry = create_entry_for_calcutta(
                 model.id,
@@ -249,12 +272,21 @@ def main():
                 args.budget,
             )
             if entry:
-                print(f"  Created entry {entry.id} with {len(entry.bids)} bids")
+                log(f"  Created entry {entry.id} with {len(entry.bids)} bids")
+                entries_created += 1
             else:
-                print(f"  No entry created (no valid bids)")
+                log(f"  No entry created (no valid bids)")
 
-    print()
-    print("Done!")
+    log("")
+    log("Done!")
+
+    if args.json_output:
+        result = {
+            "ok": True,
+            "entries_created": entries_created,
+            "errors": errors if errors else [],
+        }
+        print(json.dumps(result))
 
 
 if __name__ == "__main__":

@@ -95,6 +95,18 @@ export type LeaderboardResponse = {
   items: LeaderboardEntry[];
 };
 
+// Types for generate entries
+export type GenerateEntriesRequest = {
+  years?: number[];
+  budget_points?: number;
+  excluded_entry?: string;
+};
+
+export type GenerateEntriesResponse = {
+  entries_created: number;
+  errors?: string[];
+};
+
 // Service
 export const labService = {
   async listModels(params?: {
@@ -171,5 +183,15 @@ export const labService = {
 
   async getEvaluation(id: string): Promise<EvaluationDetail> {
     return apiClient.get<EvaluationDetail>(`/lab/evaluations/${encodeURIComponent(id)}`);
+  },
+
+  async generateEntries(
+    modelId: string,
+    request?: GenerateEntriesRequest
+  ): Promise<GenerateEntriesResponse> {
+    return apiClient.post<GenerateEntriesResponse>(
+      `/lab/models/${encodeURIComponent(modelId)}/generate-entries`,
+      request ?? {}
+    );
   },
 };

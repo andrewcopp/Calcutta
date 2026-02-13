@@ -66,6 +66,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		ListModels:                 s.requirePermission("analytics.suites.read", labHandler.HandleListModels),
 		GetModel:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetModel),
 		GetLeaderboard:             s.requirePermission("analytics.suites.read", labHandler.HandleGetLeaderboard),
+		GenerateEntries:            s.requirePermission("analytics.suites.write", labHandler.HandleGenerateEntries),
 		ListEntries:                s.requirePermission("analytics.suites.read", labHandler.HandleListEntries),
 		GetEntry:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetEntry),
 		GetEntryByModelAndCalcutta: s.requirePermission("analytics.suites.read", labHandler.HandleGetEntryByModelAndCalcutta),

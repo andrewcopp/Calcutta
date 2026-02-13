@@ -153,6 +153,41 @@ def get_investment_model(name: str) -> Optional[InvestmentModel]:
     )
 
 
+def get_investment_model_by_id(model_id: str) -> Optional[InvestmentModel]:
+    """
+    Get an investment model by ID.
+
+    Args:
+        model_id: Model UUID to look up
+
+    Returns:
+        InvestmentModel if found, None otherwise
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, name, kind, params_json, notes, created_at
+                FROM lab.investment_models
+                WHERE id = %s AND deleted_at IS NULL
+                """,
+                (model_id,),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return None
+
+    return InvestmentModel(
+        id=str(row[0]),
+        name=row[1],
+        kind=row[2],
+        params=row[3] if row[3] else {},
+        notes=row[4],
+        created_at=row[5],
+    )
+
+
 def get_or_create_investment_model(
     name: str,
     kind: str,
