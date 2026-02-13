@@ -134,7 +134,7 @@ func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) 
 	if kind != nil && *kind != "" {
 		rows, err = r.pool.Query(ctx, `
 			SELECT id::text, kind, name, description, params_json::text, created_at
-			FROM derived.algorithms
+			FROM derived.prediction_models
 			WHERE kind = $1::text
 				AND deleted_at IS NULL
 			ORDER BY created_at DESC
@@ -142,7 +142,7 @@ func (r *AnalyticsRepository) ListAlgorithms(ctx context.Context, kind *string) 
 	} else {
 		rows, err = r.pool.Query(ctx, `
 			SELECT id::text, kind, name, description, params_json::text, created_at
-			FROM derived.algorithms
+			FROM derived.prediction_models
 			WHERE deleted_at IS NULL
 			ORDER BY created_at DESC
 		`)
@@ -365,9 +365,9 @@ func (r *AnalyticsRepository) GetCalcuttaSimulatedEntry(ctx context.Context, cal
 	}
 
 	runID := *runIDPtr
-	rows, err := r.q.GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx, sqlc.GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams{
-		StrategyGenerationRunID: runID,
-		CalcuttaID:              calcuttaID,
+	rows, err := r.q.GetCalcuttaSimulatedEntryByOptimizedEntryID(ctx, sqlc.GetCalcuttaSimulatedEntryByOptimizedEntryIDParams{
+		OptimizedEntryID: runID,
+		CalcuttaID:       calcuttaID,
 	})
 	if err != nil {
 		return nil, nil, err

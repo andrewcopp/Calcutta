@@ -13,42 +13,42 @@ WHERE cs.base_calcutta_id = $1::uuid
 	AND cer.deleted_at IS NULL
 ORDER BY cer.created_at DESC;
 
--- name: ListStrategyGenerationRunsByCoreCalcuttaID :many
+-- name: ListOptimizedEntriesByCoreCalcuttaID :many
 SELECT
-	sgr.id,
-	sgr.run_key,
-	sgr.simulated_tournament_id,
-	sgr.calcutta_id,
-	sgr.purpose,
-	sgr.returns_model_key,
-	sgr.investment_model_key,
-	sgr.optimizer_key,
-	sgr.params_json,
-	sgr.git_sha,
-	sgr.created_at
-FROM derived.strategy_generation_runs sgr
-WHERE sgr.calcutta_id = $1::uuid
-	AND sgr.deleted_at IS NULL
-ORDER BY sgr.created_at DESC;
+	oe.id,
+	oe.run_key,
+	oe.simulated_tournament_id,
+	oe.calcutta_id,
+	oe.purpose,
+	oe.returns_model_key,
+	oe.investment_model_key,
+	oe.optimizer_kind,
+	oe.optimizer_params_json AS params_json,
+	oe.git_sha,
+	oe.created_at
+FROM derived.optimized_entries oe
+WHERE oe.calcutta_id = $1::uuid
+	AND oe.deleted_at IS NULL
+ORDER BY oe.created_at DESC;
 
--- name: GetStrategyGenerationRunByRunKey :one
+-- name: GetOptimizedEntryByRunKey :one
 SELECT
-	sgr.id,
-	COALESCE(sgr.run_key, ''::text) AS run_id,
-	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
-	sgr.calcutta_id,
-	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
+	oe.id,
+	COALESCE(oe.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(oe.name, ''::text), COALESCE(oe.run_key, ''::text)) AS name,
+	oe.calcutta_id,
+	COALESCE(NULLIF(oe.optimizer_kind::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
 	COALESCE(tsb.seed, 0)::int AS seed,
 	COALESCE(c.budget_points, 100)::int AS budget_points,
-	sgr.created_at
-FROM derived.strategy_generation_runs sgr
+	oe.created_at
+FROM derived.optimized_entries oe
 LEFT JOIN core.calcuttas c
-	ON c.id = sgr.calcutta_id
+	ON c.id = oe.calcutta_id
 	AND c.deleted_at IS NULL
 LEFT JOIN derived.simulated_tournaments tsb
-	ON tsb.id = sgr.simulated_tournament_id
+	ON tsb.id = oe.simulated_tournament_id
 	AND tsb.deleted_at IS NULL
-WHERE sgr.run_key = $1::text
-	AND sgr.deleted_at IS NULL
+WHERE oe.run_key = $1::text
+	AND oe.deleted_at IS NULL
 LIMIT 1;

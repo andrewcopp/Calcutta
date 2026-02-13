@@ -135,13 +135,14 @@ func (q *Queries) GetEntryPerformanceByRunID(ctx context.Context, dollar_1 strin
 }
 
 const getEntryRankingsByRunKey = `-- name: GetEntryRankingsByRunKey :many
-WITH strategy_run AS (
+WITH optimized_entry AS (
 	SELECT
-		sgr.id AS strategy_generation_run_id,
-		sgr.calcutta_id AS core_calcutta_id
-	FROM derived.strategy_generation_runs sgr
-	WHERE sgr.run_key = $3::text
-		AND sgr.deleted_at IS NULL
+		oe.id AS optimized_entry_id,
+		oe.calcutta_id AS core_calcutta_id,
+		oe.bids_json
+	FROM derived.optimized_entries oe
+	WHERE oe.run_key = $3::text
+		AND oe.deleted_at IS NULL
 	LIMIT 1
 ),
 focus AS (
@@ -150,7 +151,7 @@ focus AS (
 	JOIN core.calcutta_snapshot_entries se
 		ON se.id = sr.focus_snapshot_entry_id
 		AND se.deleted_at IS NULL
-	JOIN strategy_run r ON r.strategy_generation_run_id = sr.strategy_generation_run_id
+	JOIN optimized_entry r ON r.optimized_entry_id = sr.strategy_generation_run_id
 	WHERE sr.deleted_at IS NULL
 		AND sr.focus_snapshot_entry_id IS NOT NULL
 	ORDER BY sr.created_at DESC
@@ -186,6 +187,15 @@ with_percentile AS (
 		END AS percentile_rank
 	FROM with_totals wt
 ),
+our_bids AS (
+	SELECT
+		jsonb_array_length(oe.bids_json)::int AS n_teams,
+		COALESCE((
+			SELECT SUM((bid->>'bid_points')::int)
+			FROM jsonb_array_elements(oe.bids_json) AS bid
+		), 0)::int AS total_bid_points
+	FROM optimized_entry oe
+),
 with_bids AS (
 	SELECT
 		wp.rank,
@@ -205,21 +215,14 @@ with_bids AS (
 		wp.p_in_money,
 		wp.total_entries
 	FROM with_percentile wp
-	LEFT JOIN (
-		SELECT
-			COUNT(*)::int AS n_teams,
-			COALESCE(SUM(bid_points), 0)::int AS total_bid_points
-		FROM derived.strategy_generation_run_bids reb
-		JOIN strategy_run sr ON sr.strategy_generation_run_id = reb.strategy_generation_run_id
-		WHERE reb.deleted_at IS NULL
-	) os ON wp.is_our_strategy
+	LEFT JOIN our_bids os ON wp.is_our_strategy
 	LEFT JOIN (
 		SELECT
 			eb.entry_name,
 			COUNT(*)::int AS n_teams,
 			COALESCE(SUM(eb.bid_points), 0)::int AS total_bid_points
 		FROM derived.entry_bids eb
-		JOIN strategy_run sr ON sr.core_calcutta_id = eb.calcutta_id
+		JOIN optimized_entry oe ON oe.core_calcutta_id = eb.calcutta_id
 		WHERE eb.deleted_at IS NULL
 		GROUP BY eb.entry_name
 	) ab ON (NOT wp.is_our_strategy AND ab.entry_name = wp.entry_name)
@@ -480,21 +483,21 @@ func (q *Queries) GetLatestCalcuttaEvaluationRunIDByCoreCalcuttaID(ctx context.C
 	return id, err
 }
 
-const getLatestStrategyGenerationRunKeyByCoreCalcuttaID = `-- name: GetLatestStrategyGenerationRunKeyByCoreCalcuttaID :one
-WITH srg AS (
+const getLatestOptimizedEntryRunKeyByCoreCalcuttaID = `-- name: GetLatestOptimizedEntryRunKeyByCoreCalcuttaID :one
+WITH oe_keys AS (
 	SELECT
-		sgr.run_key
-	FROM derived.strategy_generation_runs sgr
-	WHERE sgr.calcutta_id = $1::uuid
-		AND sgr.run_key IS NOT NULL
-		AND sgr.deleted_at IS NULL
+		oe.run_key
+	FROM derived.optimized_entries oe
+	WHERE oe.calcutta_id = $1::uuid
+		AND oe.run_key IS NOT NULL
+		AND oe.deleted_at IS NULL
 ),
 perf AS (
 	SELECT
 		ep.run_id,
 		MAX(ep.created_at) AS created_at
 	FROM derived.entry_performance ep
-	JOIN srg ON srg.run_key = ep.run_id
+	JOIN oe_keys ON oe_keys.run_key = ep.run_id
 	WHERE ep.deleted_at IS NULL
 	GROUP BY ep.run_id
 )
@@ -504,8 +507,8 @@ ORDER BY created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestStrategyGenerationRunKeyByCoreCalcuttaID(ctx context.Context, dollar_1 string) (string, error) {
-	row := q.db.QueryRow(ctx, getLatestStrategyGenerationRunKeyByCoreCalcuttaID, dollar_1)
+func (q *Queries) GetLatestOptimizedEntryRunKeyByCoreCalcuttaID(ctx context.Context, dollar_1 string) (string, error) {
+	row := q.db.QueryRow(ctx, getLatestOptimizedEntryRunKeyByCoreCalcuttaID, dollar_1)
 	var run_id string
 	err := row.Scan(&run_id)
 	return run_id, err
@@ -513,31 +516,31 @@ func (q *Queries) GetLatestStrategyGenerationRunKeyByCoreCalcuttaID(ctx context.
 
 const getOptimizationRunsByYear = `-- name: GetOptimizationRunsByYear :many
 SELECT
-	COALESCE(sgr.run_key, ''::text) AS run_id,
-	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
-	sgr.calcutta_id,
-	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
+	COALESCE(oe.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(oe.name, ''::text), COALESCE(oe.run_key, ''::text)) AS name,
+	oe.calcutta_id,
+	COALESCE(NULLIF(oe.optimizer_kind::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
 	COALESCE(tsb.seed, 0)::int AS seed,
 	COALESCE(c.budget_points, 100)::int AS budget_points,
-	sgr.created_at
-FROM derived.strategy_generation_runs sgr
-JOIN core.calcuttas c ON c.id = sgr.calcutta_id AND c.deleted_at IS NULL
+	oe.created_at
+FROM derived.optimized_entries oe
+JOIN core.calcuttas c ON c.id = oe.calcutta_id AND c.deleted_at IS NULL
 JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 JOIN core.seasons seas ON seas.id = t.season_id
 LEFT JOIN derived.simulated_tournaments tsb
-	ON tsb.id = sgr.simulated_tournament_id
+	ON tsb.id = oe.simulated_tournament_id
 	AND tsb.deleted_at IS NULL
-WHERE sgr.deleted_at IS NULL
-	AND sgr.run_key IS NOT NULL
+WHERE oe.deleted_at IS NULL
+	AND oe.run_key IS NOT NULL
 	AND seas.year = $1::int
-ORDER BY sgr.created_at DESC
+ORDER BY oe.created_at DESC
 `
 
 type GetOptimizationRunsByYearRow struct {
 	RunID        *string
 	Name         interface{}
-	CalcuttaID   pgtype.UUID
+	CalcuttaID   string
 	Strategy     interface{}
 	NSims        int32
 	Seed         int32
@@ -585,11 +588,11 @@ WITH base AS (
 	WHERE gep.run_id = $1::text
 		AND gep.deleted_at IS NULL
 ),
-strategy_run AS (
-	SELECT sgr.id AS strategy_generation_run_id
-	FROM derived.strategy_generation_runs sgr
-	WHERE sgr.run_key = $1::text
-		AND sgr.deleted_at IS NULL
+optimized_entry AS (
+	SELECT oe.id AS optimized_entry_id
+	FROM derived.optimized_entries oe
+	WHERE oe.run_key = $1::text
+		AND oe.deleted_at IS NULL
 	LIMIT 1
 ),
 focus AS (
@@ -598,7 +601,7 @@ focus AS (
 	JOIN core.calcutta_snapshot_entries se
 		ON se.id = sr.focus_snapshot_entry_id
 		AND se.deleted_at IS NULL
-	JOIN strategy_run r ON r.strategy_generation_run_id = sr.strategy_generation_run_id
+	JOIN optimized_entry r ON r.optimized_entry_id = sr.strategy_generation_run_id
 	WHERE sr.deleted_at IS NULL
 		AND sr.focus_snapshot_entry_id IS NOT NULL
 	ORDER BY sr.created_at DESC

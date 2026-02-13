@@ -253,10 +253,11 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 		if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
 			_, err := tx.Exec(ctx, `
 				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-				SELECT $1, greb.team_id, greb.bid_points
-				FROM derived.strategy_generation_run_bids greb
-				WHERE greb.strategy_generation_run_id = $2::uuid
-					AND greb.deleted_at IS NULL
+				SELECT $1, (bid->>'team_id')::uuid, (bid->>'bid_points')::int
+				FROM derived.optimized_entries oe,
+				     jsonb_array_elements(oe.bids_json) AS bid
+				WHERE oe.id = $2::uuid
+					AND oe.deleted_at IS NULL
 			`, snapshotEntryID, *strategyGenerationRunID)
 			if err != nil {
 				return "", err
@@ -265,10 +266,11 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 			if _, parseErr := uuid.Parse(runID); parseErr == nil {
 				_, err := tx.Exec(ctx, `
 					INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-					SELECT $1, greb.team_id, greb.bid_points
-					FROM derived.strategy_generation_run_bids greb
-					WHERE greb.run_id = $2::text
-						AND greb.deleted_at IS NULL
+					SELECT $1, (bid->>'team_id')::uuid, (bid->>'bid_points')::int
+					FROM derived.optimized_entries oe,
+					     jsonb_array_elements(oe.bids_json) AS bid
+					WHERE oe.run_key = $2::text
+						AND oe.deleted_at IS NULL
 				`, snapshotEntryID, runID)
 				if err != nil {
 					return "", err
@@ -356,21 +358,23 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 	}
 
 	// Add our simulated entry.
-	// Prefer using the strategy_generation_run_id when provided (Lab / deterministic entries).
+	// Prefer using the optimized_entry_id when provided (Lab / deterministic entries).
 	var ourRows pgx.Rows
 	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
 		ourRows, err = s.pool.Query(ctx, `
-			SELECT team_id, bid_points
-			FROM derived.strategy_generation_run_bids greb
-			WHERE greb.strategy_generation_run_id = $1::uuid
-				AND greb.deleted_at IS NULL
+			SELECT (bid->>'team_id')::uuid AS team_id, (bid->>'bid_points')::int AS bid_points
+			FROM derived.optimized_entries oe,
+			     jsonb_array_elements(oe.bids_json) AS bid
+			WHERE oe.id = $1::uuid
+				AND oe.deleted_at IS NULL
 		`, *strategyGenerationRunID)
 	} else {
 		ourRows, err = s.pool.Query(ctx, `
-			SELECT team_id, bid_points
-			FROM derived.strategy_generation_run_bids greb
-			WHERE greb.run_id = $1::text
-				AND greb.deleted_at IS NULL
+			SELECT (bid->>'team_id')::uuid AS team_id, (bid->>'bid_points')::int AS bid_points
+			FROM derived.optimized_entries oe,
+			     jsonb_array_elements(oe.bids_json) AS bid
+			WHERE oe.run_key = $1::text
+				AND oe.deleted_at IS NULL
 		`, runID)
 	}
 	if err != nil {
