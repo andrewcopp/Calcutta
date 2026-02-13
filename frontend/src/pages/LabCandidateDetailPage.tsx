@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -59,13 +59,36 @@ type SortKey =
 
 export function LabCandidateDetailPage() {
   const { candidateId } = useParams<{ candidateId: string }>();
-	const location = useLocation();
-	const backTo = useMemo(() => {
-		const st = location.state as { backTo?: string } | null;
-		const v = st?.backTo;
-		if (typeof v === 'string' && v.trim() !== '') return v;
-		return '/lab/candidates';
-	}, [location.state]);
+	const [searchParams] = useSearchParams();
+
+	// Read filter context from URL params
+	const gameOutcomesAlgorithmId = searchParams.get('gameOutcomesAlgorithmId') || '';
+	const marketShareAlgorithmId = searchParams.get('marketShareAlgorithmId') || '';
+	const optimizerKey = searchParams.get('optimizerKey') || '';
+	const startingStateKey = searchParams.get('startingStateKey') || '';
+	const excludedEntryName = searchParams.get('excludedEntryName') || '';
+
+	// Build back links preserving filter context
+	const candidatesBackLink = useMemo(() => {
+		const params = new URLSearchParams();
+		if (startingStateKey) params.set('startingStateKey', startingStateKey);
+		if (excludedEntryName) params.set('excludedEntryName', excludedEntryName);
+		const suffix = params.toString() ? `?${params.toString()}` : '';
+		return `/lab/candidates${suffix}`;
+	}, [startingStateKey, excludedEntryName]);
+
+	const cohortBackLink = useMemo(() => {
+		if (!gameOutcomesAlgorithmId || !marketShareAlgorithmId || !optimizerKey) {
+			return null; // No cohort context available
+		}
+		const params = new URLSearchParams();
+		params.set('gameOutcomesAlgorithmId', gameOutcomesAlgorithmId);
+		params.set('marketShareAlgorithmId', marketShareAlgorithmId);
+		params.set('optimizerKey', optimizerKey);
+		if (startingStateKey) params.set('startingStateKey', startingStateKey);
+		if (excludedEntryName) params.set('excludedEntryName', excludedEntryName);
+		return `/lab/candidates/cohorts?${params.toString()}`;
+	}, [gameOutcomesAlgorithmId, marketShareAlgorithmId, optimizerKey, startingStateKey, excludedEntryName]);
 
 	const [sortKey, setSortKey] = useState<SortKey>('predictedROI');
 	const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -299,7 +322,8 @@ export function LabCandidateDetailPage() {
       <Breadcrumb
         items={[
           { label: 'Lab', href: '/lab' },
-          { label: 'Candidates', href: backTo },
+          { label: 'Candidates', href: candidatesBackLink },
+          ...(cohortBackLink ? [{ label: 'Cohort', href: cohortBackLink }] : []),
           { label: candidateQuery.data?.display_name || 'Candidate' },
         ]}
       />

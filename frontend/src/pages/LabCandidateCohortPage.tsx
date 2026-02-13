@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
@@ -63,7 +63,6 @@ type ListCombosResponse = {
 };
 
 export function LabCandidateCohortPage() {
-	const location = useLocation();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const [isEvaluating, setIsEvaluating] = useState(false);
@@ -318,15 +317,20 @@ export function LabCandidateCohortPage() {
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
-								{items.map((c) => (
+								{items.map((c) => {
+								const detailParams = new URLSearchParams();
+								detailParams.set('gameOutcomesAlgorithmId', gameOutcomesAlgorithmId);
+								detailParams.set('marketShareAlgorithmId', marketShareAlgorithmId);
+								detailParams.set('optimizerKey', optimizerKey);
+								detailParams.set('startingStateKey', startingStateKey);
+								if (excludedEntryName) detailParams.set('excludedEntryName', excludedEntryName);
+								const detailUrl = `/lab/candidates/${encodeURIComponent(c.candidate_id)}?${detailParams.toString()}`;
+
+								return (
 									<tr
 										key={c.candidate_id}
 										className="hover:bg-gray-50 cursor-pointer"
-										onClick={() =>
-											navigate(`/lab/candidates/${encodeURIComponent(c.candidate_id)}`, {
-												state: { backTo: `${location.pathname}${location.search}` },
-											})
-										}
+										onClick={() => navigate(detailUrl)}
 									>
 										<td className="px-3 py-2 text-sm text-gray-900">
 											<div className="font-medium">{c.display_name}</div>
@@ -338,7 +342,8 @@ export function LabCandidateCohortPage() {
 										</td>
 										<td className="px-3 py-2 text-sm text-gray-700 break-words">{c.seed_preview || '—'}</td>
 									</tr>
-								))}
+								);
+							})}
 							</tbody>
 						</table>
 					</div>
