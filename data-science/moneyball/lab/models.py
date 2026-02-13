@@ -227,7 +227,8 @@ def create_entry(
                     starting_state_key, bids_json
                 )
                 VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, %s, %s::jsonb)
-                ON CONFLICT ON CONSTRAINT uq_lab_entries_model_calcutta_state
+                ON CONFLICT (investment_model_id, calcutta_id, starting_state_key)
+                WHERE deleted_at IS NULL
                 DO UPDATE SET
                     game_outcome_kind = EXCLUDED.game_outcome_kind,
                     game_outcome_params_json = EXCLUDED.game_outcome_params_json,
@@ -359,7 +360,8 @@ def create_evaluation(
                     p_top1, p_in_money, our_rank, simulated_calcutta_id
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT ON CONSTRAINT uq_lab_evaluations_entry_sims_seed
+                ON CONFLICT (entry_id, n_sims, seed)
+                WHERE deleted_at IS NULL
                 DO UPDATE SET
                     mean_normalized_payout = EXCLUDED.mean_normalized_payout,
                     median_normalized_payout = EXCLUDED.median_normalized_payout,

@@ -1,24 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { TabsNav } from '../components/TabsNav';
-import { Card } from '../components/ui/Card';
-import { PageContainer, PageHeader } from '../components/ui/Page';
+import { useSearchParams } from 'react-router-dom';
 
+import { PipelineByModel } from './Lab/PipelineByModel';
+import { PipelineByCalcutta } from './Lab/PipelineByCalcutta';
 import { ModelsTab } from './Lab/ModelsTab';
-import { EntriesTab } from './Lab/EntriesTab';
-import { EvaluationsTab } from './Lab/EvaluationsTab';
+import { cn } from '../lib/cn';
 
-type TabType = 'models' | 'entries' | 'evaluations';
+type TabType = 'by-model' | 'by-calcutta' | 'leaderboard';
 
 export function LabPage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'entries') return 'entries';
-    if (tab === 'evaluations') return 'evaluations';
-    return 'models';
+    if (tab === 'by-calcutta') return 'by-calcutta';
+    if (tab === 'leaderboard') return 'leaderboard';
+    // Handle legacy tab values
+    if (tab === 'models') return 'leaderboard';
+    if (tab === 'entries' || tab === 'evaluations') return 'by-model';
+    return 'by-model';
   });
 
   useEffect(() => {
@@ -33,27 +33,42 @@ export function LabPage() {
   const tabs = useMemo(
     () =>
       [
-        { id: 'models' as const, label: 'Models' },
-        { id: 'entries' as const, label: 'Entries' },
-        { id: 'evaluations' as const, label: 'Evaluations' },
+        { id: 'by-model' as const, label: 'By Model' },
+        { id: 'by-calcutta' as const, label: 'By Calcutta' },
+        { id: 'leaderboard' as const, label: 'Leaderboard' },
       ] as const,
     []
   );
 
   return (
-    <PageContainer>
-      <PageHeader
-        title="Lab"
-        subtitle="Experiment with investment models and evaluate their performance via simulation."
-      />
+    <div className="container mx-auto px-4 py-4">
+      {/* Compact inline header */}
+      <div className="flex items-center gap-6 mb-4 border-b border-gray-200 pb-3">
+        <h1 className="text-xl font-bold text-gray-900">Lab</h1>
+        <nav className="flex gap-1" role="tablist">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                activeTab === tab.id
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-      <Card className="mb-6">
-        <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-      </Card>
-
-      {activeTab === 'models' ? <ModelsTab /> : null}
-      {activeTab === 'entries' ? <EntriesTab /> : null}
-      {activeTab === 'evaluations' ? <EvaluationsTab /> : null}
-    </PageContainer>
+      {activeTab === 'by-model' ? <PipelineByModel /> : null}
+      {activeTab === 'by-calcutta' ? <PipelineByCalcutta /> : null}
+      {activeTab === 'leaderboard' ? <ModelsTab /> : null}
+    </div>
   );
 }
