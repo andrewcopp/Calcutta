@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
 import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
@@ -19,51 +19,12 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
-import { RunsPage } from './pages/RunsPage';
-import { RunRankingsPage } from './pages/RunRankingsPage';
-import { RunReturnsPage } from './pages/RunReturnsPage';
-import { RunInvestmentsPage } from './pages/RunInvestmentsPage';
-import { EntryPortfolioPage } from './pages/EntryPortfolioPage';
 import { LabPage } from './pages/LabPage';
-import { LabAdvancementAlgorithmDetailPage } from './pages/LabAdvancementAlgorithmDetailPage';
-import { LabAdvancementTournamentDetailPage } from './pages/LabAdvancementTournamentDetailPage';
-import { LabInvestmentAlgorithmDetailPage } from './pages/LabInvestmentAlgorithmDetailPage';
-import { LabInvestmentCalcuttaDetailPage } from './pages/LabInvestmentCalcuttaDetailPage';
-import { LabCandidatesPage } from './pages/LabCandidatesPage';
-import { LabCandidateCohortPage } from './pages/LabCandidateCohortPage';
-import { LabCandidateDetailPage } from './pages/LabCandidateDetailPage';
-import { SandboxCohortsListPage } from './pages/SandboxCohortsListPage';
-import { SandboxCohortDetailPage } from './pages/SandboxCohortDetailPage';
-import { SimulationRunDetailPage } from './pages/SimulationRunDetailPage';
-import { SimulationRunEntryDetailPage } from './pages/SimulationRunEntryDetailPage';
-import { EntryRunDetailPage } from './pages/EntryRunDetailPage';
-import { EntryArtifactDetailPage } from './pages/EntryArtifactDetailPage';
-import { SimulatedCalcuttaDetailPage } from './pages/SimulatedCalcuttaDetailPage';
-import { SimulatedCalcuttaEntryDetailPage } from './pages/SimulatedCalcuttaEntryDetailPage';
+import { ModelDetailPage } from './pages/Lab/ModelDetailPage';
+import { EntryDetailPage } from './pages/Lab/EntryDetailPage';
+import { EvaluationDetailPage } from './pages/Lab/EvaluationDetailPage';
 import { Header } from './components/Header';
 import { UserProvider } from './contexts/UserContext';
-
-const RunsRedirect: React.FC = () => {
-  const year = new Date().getFullYear();
-  return <Navigate to={`/runs/${year}`} replace />;
-};
-
-const SandboxEvaluationRedirect: React.FC = () => {
-  const location = useLocation();
-  const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/sandbox/simulation-runs/${encodeURIComponent(id || '')}${location.search || ''}`} replace />;
-};
-
-const SandboxEvaluationEntryRedirect: React.FC = () => {
-  const location = useLocation();
-  const { id, snapshotEntryId } = useParams<{ id: string; snapshotEntryId: string }>();
-  return (
-    <Navigate
-      to={`/sandbox/simulation-runs/${encodeURIComponent(id || '')}/entries/${encodeURIComponent(snapshotEntryId || '')}${location.search || ''}`}
-      replace
-    />
-  );
-};
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
@@ -79,39 +40,19 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
         <Route path="/lab" element={<LabPage />} />
-        <Route path="/lab/entries" element={<Navigate to="/lab/candidates" replace />} />
-        <Route path="/lab/entries/cohorts/:cohortId" element={<Navigate to="/lab/candidates" replace />} />
-        <Route path="/lab/entries/scenarios/:scenarioId" element={<Navigate to="/lab/candidates" replace />} />
-        <Route path="/lab/candidates" element={<LabCandidatesPage />} />
-        <Route path="/lab/candidates/cohorts" element={<LabCandidateCohortPage />} />
-        <Route path="/lab/candidates/:candidateId" element={<LabCandidateDetailPage />} />
-        <Route path="/lab/entry-runs/:runId" element={<EntryRunDetailPage />} />
-        <Route path="/lab/entry-artifacts/:artifactId" element={<EntryArtifactDetailPage />} />
-        <Route path="/lab/advancements/algorithms/:algorithmId" element={<LabAdvancementAlgorithmDetailPage />} />
-        <Route
-          path="/lab/advancements/algorithms/:algorithmId/tournaments/:tournamentId"
-          element={<LabAdvancementTournamentDetailPage />}
-        />
-        <Route path="/lab/investments/algorithms/:algorithmId" element={<LabInvestmentAlgorithmDetailPage />} />
-        <Route
-          path="/lab/investments/algorithms/:algorithmId/calcuttas/:calcuttaId"
-          element={<LabInvestmentCalcuttaDetailPage />}
-        />
-        <Route path="/sandbox" element={<Navigate to="/sandbox/cohorts" replace />} />
-        <Route path="/sandbox/cohorts" element={<SandboxCohortsListPage />} />
-        <Route path="/sandbox/cohorts/:cohortId" element={<SandboxCohortDetailPage />} />
-        <Route path="/sandbox/simulated-calcuttas/:id" element={<SimulatedCalcuttaDetailPage />} />
-        <Route path="/sandbox/simulated-calcuttas/:id/entries/:entryId" element={<SimulatedCalcuttaEntryDetailPage />} />
-        <Route path="/sandbox/simulation-runs/:id" element={<SimulationRunDetailPage />} />
-        <Route path="/sandbox/simulation-runs/:id/entries/:snapshotEntryId" element={<SimulationRunEntryDetailPage />} />
-        <Route path="/sandbox/evaluations/:id" element={<SandboxEvaluationRedirect />} />
-        <Route path="/sandbox/evaluations/:id/entries/:snapshotEntryId" element={<SandboxEvaluationEntryRedirect />} />
-        <Route path="/runs" element={<RunsRedirect />} />
-        <Route path="/runs/:year" element={<RunsPage />} />
-        <Route path="/runs/:year/:runId" element={<RunRankingsPage />} />
-        <Route path="/runs/:year/:runId/returns" element={<RunReturnsPage />} />
-        <Route path="/runs/:year/:runId/investments" element={<RunInvestmentsPage />} />
-        <Route path="/runs/:year/:runId/entries/:entryKey" element={<EntryPortfolioPage />} />
+        <Route path="/lab/models/:modelId" element={<ModelDetailPage />} />
+        <Route path="/lab/entries/:entryId" element={<EntryDetailPage />} />
+        <Route path="/lab/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
+        {/* Legacy lab routes redirect to new lab tabs */}
+        <Route path="/lab/candidates/*" element={<Navigate to="/lab?tab=entries" replace />} />
+        <Route path="/lab/advancements/*" element={<Navigate to="/lab?tab=models" replace />} />
+        <Route path="/lab/investments/*" element={<Navigate to="/lab?tab=models" replace />} />
+        <Route path="/lab/entry-runs/*" element={<Navigate to="/lab?tab=entries" replace />} />
+        <Route path="/lab/entry-artifacts/*" element={<Navigate to="/lab?tab=entries" replace />} />
+        {/* Legacy sandbox routes redirect to lab */}
+        <Route path="/sandbox/*" element={<Navigate to="/lab?tab=evaluations" replace />} />
+        {/* Legacy runs routes redirect to lab */}
+        <Route path="/runs/*" element={<Navigate to="/lab?tab=evaluations" replace />} />
         <Route path="/analytics" element={<Navigate to="/lab" replace />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/api-keys" element={<AdminApiKeysPage />} />

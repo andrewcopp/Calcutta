@@ -354,9 +354,12 @@ def run_market_share_for_calcutta(
             predictions["team_key"].astype(str).str.split(":").str[-1]
         )
 
-        underbid_sigma: Optional[float] = None
+        underbid_sigma_global: Optional[float] = None
+        underbid_sigma_by_seed: Dict[int, float] = {}
         if is_underbid_1sigma:
-            residuals: List[float] = []
+            eps = 1e-12
+            residuals_all: List[float] = []
+            residuals_by_seed: Dict[int, List[float]] = {}
 
             for i, df_y in enumerate(train_frames):
                 if df_y is None or df_y.empty:
@@ -394,7 +397,9 @@ def run_market_share_for_calcutta(
                     df_y["team_key"].astype(str).str.split(":").str[-1]
                 )
 
-                merged = df_y[["team_key", "team_share_of_pool"]].merge(
+                merged = df_y[
+                    ["team_key", "team_share_of_pool", "seed"]
+                ].merge(
                     pred_y[["team_key", "predicted_auction_share_of_pool"]],
                     on="team_key",
                     how="inner",
@@ -404,36 +409,75 @@ def run_market_share_for_calcutta(
                 a = pd.to_numeric(
                     merged["team_share_of_pool"],
                     errors="coerce",
-                )
+                ).fillna(0.0)
                 p = pd.to_numeric(
-                    merged["predicted_auction_share_of_pool"], errors="coerce"
-                )
-                d = (a - p).astype(float)
-                d = d[np.isfinite(d)]
-                residuals.extend(d.tolist())
+                    merged["predicted_auction_share_of_pool"],
+                    errors="coerce",
+                ).fillna(0.0)
+                s = pd.to_numeric(merged["seed"], errors="coerce")
+                res = np.log(a + eps) - np.log(p + eps)
+                valid = np.isfinite(res)
+                res = res[valid]
+                s = s[valid]
+                if len(res) == 0:
+                    continue
+                residuals_all.extend(res.astype(float).tolist())
+                for seed_val, rv in zip(s.tolist(), res.tolist()):
+                    try:
+                        seed_i = int(seed_val)
+                    except Exception:
+                        continue
+                    if seed_i < 1 or seed_i > 16:
+                        continue
+                    residuals_by_seed.setdefault(seed_i, []).append(float(rv))
 
-            if residuals:
-                underbid_sigma = float(
-                    np.std(np.asarray(residuals, dtype=float), ddof=1)
+            if len(residuals_all) >= 2:
+                underbid_sigma_global = float(
+                    np.std(np.asarray(residuals_all, dtype=float), ddof=1)
                 )
-                if not np.isfinite(underbid_sigma) or underbid_sigma <= 0:
-                    underbid_sigma = None
+                if (
+                    not np.isfinite(underbid_sigma_global)
+                    or underbid_sigma_global <= 0
+                ):
+                    underbid_sigma_global = None
 
-        if is_underbid_1sigma and underbid_sigma is not None:
+            for seed_i, vals in residuals_by_seed.items():
+                if len(vals) < 2:
+                    continue
+                sig = float(np.std(np.asarray(vals, dtype=float), ddof=1))
+                if np.isfinite(sig) and sig > 0:
+                    underbid_sigma_by_seed[int(seed_i)] = sig
+
+        if is_underbid_1sigma:
             v = pd.to_numeric(
-                predictions["predicted_auction_share_of_pool"], errors="coerce"
+                predictions["predicted_auction_share_of_pool"],
+                errors="coerce",
             ).fillna(0.0)
-            v = (v - float(underbid_sigma)).clip(lower=0.0)
-            ssum = float(v.sum() or 0.0)
-            if ssum > 0:
-                v = v / ssum
+            if "seed" in predictions.columns:
+                seed_series = pd.to_numeric(
+                    predictions["seed"],
+                    errors="coerce",
+                )
             else:
-                v = pd.Series(
-                    [1.0 / float(len(predictions))] * int(len(predictions)),
+                seed_series = pd.Series(
+                    [np.nan] * int(len(predictions)),
                     index=predictions.index,
                     dtype=float,
                 )
-            predictions["predicted_auction_share_of_pool"] = v.astype(float)
+            base_sigma = float(underbid_sigma_global or 0.0)
+            adj: List[float] = []
+            for mu, seed_val in zip(v.tolist(), seed_series.tolist()):
+                try:
+                    seed_i = int(seed_val)
+                except Exception:
+                    seed_i = 0
+                sig = float(underbid_sigma_by_seed.get(seed_i, base_sigma))
+                adj.append(float(mu) * float(np.exp(-sig)))
+            predictions["predicted_auction_share_of_pool"] = pd.Series(
+                adj,
+                index=predictions.index,
+                dtype=float,
+            )
 
         params_out = {
             "excluded_entry_name": excluded_entry_name,
@@ -448,8 +492,12 @@ def run_market_share_for_calcutta(
         }
 
         if is_underbid_1sigma:
-            params_out["underbid_mode"] = "global_1sigma"
-            params_out["underbid_sigma"] = underbid_sigma
+            params_out["underbid_mode"] = "seed_log_1sigma_unscaled"
+            params_out["underbid_sigma_global"] = underbid_sigma_global
+            params_out["underbid_sigma_by_seed"] = {
+                str(k): float(v)
+                for k, v in sorted(underbid_sigma_by_seed.items())
+            }
 
     git_sha = os.getenv("GIT_SHA")
 
