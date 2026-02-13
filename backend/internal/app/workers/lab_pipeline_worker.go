@@ -490,6 +490,22 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		log.Printf("lab_pipeline_worker optimization_warn using default constraints: %v", err)
 	}
 
+	// Get total pool budget (number of entries × budget per entry)
+	// This is needed because predicted_market_share is a fraction of the TOTAL pool
+	var totalPoolBudget int
+	err = w.pool.QueryRow(ctx, `
+		SELECT c.budget_points * COUNT(e.id)::int
+		FROM core.calcuttas c
+		LEFT JOIN core.entries e ON e.calcutta_id = c.id AND e.deleted_at IS NULL
+		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
+		GROUP BY c.budget_points
+	`, params.CalcuttaID).Scan(&totalPoolBudget)
+	if err != nil || totalPoolBudget <= 0 {
+		// Fallback: estimate from number of entries * budget_points
+		totalPoolBudget = 4200 // reasonable default for ~42 entries * 100 budget
+		log.Printf("lab_pipeline_worker optimization_warn using default total pool budget: %v", err)
+	}
+
 	// Build teams for allocator
 	budgetPoints := params.BudgetPoints
 	if budgetPoints <= 0 {
@@ -501,7 +517,7 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		teams[i] = recommended_entry_bids.Team{
 			ID:             pred.TeamID,
 			ExpectedPoints: pred.ExpectedPoints,
-			MarketPoints:   pred.PredictedMarketShare * float64(budgetPoints),
+			MarketPoints:   pred.PredictedMarketShare * float64(totalPoolBudget),
 		}
 	}
 
