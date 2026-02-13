@@ -52,15 +52,22 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
+      - ./data-science:/data-science
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
       - NODE_ENV=${NODE_ENV}
       - DOTENV_ENABLED=false
+      - PYTHON_BIN=python3
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "go run ./cmd/workers -suite-eval-worker=true -game-outcome-worker=true -market-share-worker=false -strategy-generation-worker=true"
+    command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/workers -lab-pipeline-worker=true"
 
   market_share_worker:
     image: python:3.11-slim

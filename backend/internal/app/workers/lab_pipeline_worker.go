@@ -196,8 +196,8 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 			// Enqueue prediction job
 			var jobID string
 			err := w.pool.QueryRow(ctx, `
-				INSERT INTO derived.run_jobs (run_kind, run_key, params_json, status)
-				VALUES ('lab_predictions', $1::uuid, $2::jsonb, 'queued')
+				INSERT INTO derived.run_jobs (run_kind, run_id, run_key, params_json, status)
+				VALUES ('lab_predictions', uuid_generate_v4(), $1::uuid, $2::jsonb, 'queued')
 				RETURNING run_id::text
 			`, pcrID, paramsJSON).Scan(&jobID)
 			if err != nil {
@@ -421,8 +421,8 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 
 	var nextJobID string
 	err = w.pool.QueryRow(ctx, `
-		INSERT INTO derived.run_jobs (run_kind, run_key, params_json, status)
-		VALUES ('lab_optimization', $1::uuid, $2::jsonb, 'queued')
+		INSERT INTO derived.run_jobs (run_kind, run_id, run_key, params_json, status)
+		VALUES ('lab_optimization', uuid_generate_v4(), $1::uuid, $2::jsonb, 'queued')
 		RETURNING run_id::text
 	`, params.PipelineCalcuttaRunID, nextParamsJSON).Scan(&nextJobID)
 	if err != nil {
@@ -511,8 +511,8 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 	nextParamsJSON, _ := json.Marshal(params)
 	var nextJobID string
 	err = w.pool.QueryRow(ctx, `
-		INSERT INTO derived.run_jobs (run_kind, run_key, params_json, status)
-		VALUES ('lab_evaluation', $1::uuid, $2::jsonb, 'queued')
+		INSERT INTO derived.run_jobs (run_kind, run_id, run_key, params_json, status)
+		VALUES ('lab_evaluation', uuid_generate_v4(), $1::uuid, $2::jsonb, 'queued')
 		RETURNING run_id::text
 	`, params.PipelineCalcuttaRunID, nextParamsJSON).Scan(&nextJobID)
 	if err != nil {

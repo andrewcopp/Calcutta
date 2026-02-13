@@ -67,45 +67,36 @@ def get_expected_points_map(year: int):
     """
     Get expected tournament points for each team in a year.
 
-    This uses tournament_value from KenPom-based simulation.
+    Uses seed-based expected points estimates (approximate values from
+    historical tournament performance).
     """
+    # Approximate expected points by seed from historical data
+    # These are rough estimates based on average tournament performance
+    seed_expected_points = {
+        1: 80.0, 2: 55.0, 3: 42.0, 4: 35.0,
+        5: 28.0, 6: 23.0, 7: 19.0, 8: 16.0,
+        9: 14.0, 10: 12.0, 11: 10.0, 12: 9.0,
+        13: 5.0, 14: 4.0, 15: 2.5, 16: 1.0,
+    }
+
     from moneyball.db.connection import get_db_connection
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Get tournament values from derived.tournament_value or similar
-            # For now, use a simple query based on seed expectations
             cur.execute("""
                 SELECT
                     s.slug as team_slug,
-                    COALESCE(tv.expected_points, seed_exp.expected_points) as expected_points
+                    t.seed
                 FROM core.teams t
                 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
                 JOIN core.tournaments tour ON tour.id = t.tournament_id AND tour.deleted_at IS NULL
                 JOIN core.seasons sea ON sea.id = tour.season_id AND sea.deleted_at IS NULL
-                LEFT JOIN derived.tournament_value tv ON tv.team_id = t.id
-                LEFT JOIN (
-                    -- Fallback: average expected points by seed
-                    SELECT seed, AVG(expected_points) as expected_points
-                    FROM (
-                        SELECT t2.seed, SUM(CASE
-                            WHEN g.winner_id = t2.id THEN sr.points ELSE 0
-                        END)::float / COUNT(DISTINCT tour2.id) as expected_points
-                        FROM core.teams t2
-                        JOIN core.tournaments tour2 ON tour2.id = t2.tournament_id
-                        JOIN core.seasons s2 ON s2.id = tour2.season_id
-                        JOIN core.games g ON (g.top_team_id = t2.id OR g.bottom_team_id = t2.id)
-                        JOIN core.scoring_rules sr ON sr.calcutta_id = (
-                            SELECT id FROM core.calcuttas WHERE tournament_id = tour2.id LIMIT 1
-                        ) AND sr.round_number = g.round_number
-                        WHERE s2.year < %s AND t2.deleted_at IS NULL
-                        GROUP BY t2.id, t2.seed, tour2.id
-                    ) sub
-                    GROUP BY seed
-                ) seed_exp ON seed_exp.seed = t.seed
                 WHERE sea.year = %s AND t.deleted_at IS NULL
-            """, (year, year))
-            return {row[0]: float(row[1]) if row[1] else 10.0 for row in cur.fetchall()}
+            """, (year,))
+            return {
+                row[0]: seed_expected_points.get(row[1], 10.0)
+                for row in cur.fetchall()
+            }
 
 
 def generate_market_predictions(model_name: str, year: int, excluded_entry_name: str = "Andrew Copp"):
@@ -229,6 +220,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate market predictions for a model")
     parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
     parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
+    parser.add_argument("--calcutta-id", help="Process only this specific calcutta (for pipeline worker)")
     parser.add_argument("--excluded-entry", default="Andrew Copp", help="Entry name to exclude from training")
     parser.add_argument("--years", type=str, help="Comma-separated years to process (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
@@ -268,6 +260,18 @@ def main():
     calcuttas = get_historical_calcuttas()
     log(f"Found {len(calcuttas)} historical calcuttas")
 
+    # Filter by calcutta_id if specified (for pipeline worker)
+    if args.calcutta_id:
+        calcuttas = [c for c in calcuttas if c["id"] == args.calcutta_id]
+        if not calcuttas:
+            if args.json_output:
+                print(json.dumps({"ok": False, "entry_id": None, "error": f"Calcutta {args.calcutta_id} not found"}))
+                sys.exit(1)
+            else:
+                print(f"Error: Calcutta {args.calcutta_id} not found")
+                sys.exit(1)
+        log(f"Processing single calcutta: {calcuttas[0]['name']}")
+
     # Filter by years if specified
     if args.years:
         target_years = [int(y.strip()) for y in args.years.split(",")]
@@ -278,6 +282,7 @@ def main():
 
     entries_created = 0
     errors = []
+    last_entry_id = None
 
     for calcutta in calcuttas:
         year = calcutta["year"]
@@ -321,6 +326,7 @@ def main():
             if entry:
                 log(f"  Created entry {entry.id} with {len(entry.predictions)} predictions")
                 entries_created += 1
+                last_entry_id = entry.id
             else:
                 log(f"  No entry created (no valid predictions)")
 
@@ -330,11 +336,19 @@ def main():
     log("Run optimize_lab_entries.py to generate optimized bids")
 
     if args.json_output:
-        result = {
-            "ok": True,
-            "entries_created": entries_created,
-            "errors": errors if errors else [],
-        }
+        # For single calcutta mode (pipeline worker), return entry_id
+        if args.calcutta_id and entries_created == 1:
+            result = {
+                "ok": True,
+                "entry_id": last_entry_id,
+                "errors": errors if errors else [],
+            }
+        else:
+            result = {
+                "ok": True,
+                "entries_created": entries_created,
+                "errors": errors if errors else [],
+            }
         print(json.dumps(result))
 
 
