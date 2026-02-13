@@ -23,7 +23,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id
@@ -91,7 +91,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)
@@ -141,7 +141,7 @@ WITH calcutta_ctx AS (
 team_win_counts AS (
   SELECT
     st.team_id,
-    (st.wins + st.byes + 1)::int AS progress,
+    (st.wins + st.byes)::int AS progress,
     COUNT(*) as sim_count
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
@@ -163,7 +163,7 @@ team_probabilities AS (
 team_expected_value AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_value
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id
@@ -211,7 +211,7 @@ calcutta_ctx AS (
 team_win_counts AS (
   SELECT
     st.team_id,
-    (st.wins + st.byes + 1)::int AS progress,
+    (st.wins + st.byes)::int AS progress,
     COUNT(*) as sim_count
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
@@ -234,7 +234,7 @@ team_probabilities AS (
 team_expected_value AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_value
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)
@@ -299,7 +299,7 @@ latest_optimized_entry AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM latest_optimized_entry)
@@ -378,7 +378,7 @@ optimized_entry AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
     AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)

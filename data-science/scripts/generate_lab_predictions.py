@@ -69,7 +69,7 @@ def get_expected_points_map(calcutta_id: str):
 
     Uses pre-computed simulations from derived.simulated_teams and the calcutta's
     scoring rules via core.calcutta_points_for_progress() to calculate:
-        expected_points = AVG(calcutta_points_for_progress(wins + 1, byes))
+        expected_points = AVG(calcutta_points_for_progress(wins, byes))
 
     Optimized to pre-aggregate win distributions first, reducing function calls
     from millions to ~1000.
@@ -110,7 +110,7 @@ def get_expected_points_map(calcutta_id: str):
                         SUM(
                             wd.sim_count * core.calcutta_points_for_progress(
                                 (SELECT calcutta_id FROM calcutta_ctx),
-                                wd.wins + 1,
+                                wd.wins,
                                 wd.byes
                             )
                         ) / tt.total_sims AS expected_points

@@ -651,7 +651,7 @@ func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaCont
 	q := `
 		SELECT
 			st.team_id,
-			AVG(core.calcutta_points_for_progress($3::uuid, st.wins + 1, st.byes))::float AS expected_points
+			AVG(core.calcutta_points_for_progress($3::uuid, st.wins, st.byes))::float AS expected_points
 		FROM derived.simulated_teams st
 		WHERE st.tournament_id = $1
 			AND st.simulated_tournament_id = $2::uuid
