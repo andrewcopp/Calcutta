@@ -17,7 +17,18 @@ export type ListModelsResponse = {
   items: InvestmentModel[];
 };
 
-// Types for lab.entries
+// Types for lab.entries (enriched with team data and naive allocation)
+export type EnrichedBid = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  bid_points: number;
+  naive_points: number;
+  edge_percent: number;
+  expected_roi?: number | null;
+};
+
 export type EntryDetail = {
   id: string;
   investment_model_id: string;
@@ -27,11 +38,7 @@ export type EntryDetail = {
   optimizer_kind: string;
   optimizer_params_json: Record<string, unknown>;
   starting_state_key: string;
-  bids_json: Array<{
-    team_id: string;
-    bid_points: number;
-    expected_roi?: number | null;
-  }>;
+  bids: EnrichedBid[];
   created_at: string;
   updated_at: string;
   model_name: string;
@@ -60,6 +67,7 @@ export type EvaluationDetail = {
   updated_at: string;
   model_name: string;
   model_kind: string;
+  calcutta_id: string;
   calcutta_name: string;
   starting_state_key: string;
 };
@@ -129,6 +137,19 @@ export const labService = {
 
   async getEntry(id: string): Promise<EntryDetail> {
     return apiClient.get<EntryDetail>(`/lab/entries/${encodeURIComponent(id)}`);
+  },
+
+  async getEntryByModelAndCalcutta(
+    modelName: string,
+    calcuttaId: string,
+    startingStateKey?: string
+  ): Promise<EntryDetail> {
+    const q = new URLSearchParams();
+    if (startingStateKey) q.set('starting_state_key', startingStateKey);
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return apiClient.get<EntryDetail>(
+      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry${suffix}`
+    );
   },
 
   async listEvaluations(params?: {

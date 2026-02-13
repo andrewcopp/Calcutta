@@ -41,6 +41,7 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
         <Route path="/lab" element={<LabPage />} />
         <Route path="/lab/models/:modelId" element={<ModelDetailPage />} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<EntryDetailPage />} />
         <Route path="/lab/entries/:entryId" element={<EntryDetailPage />} />
         <Route path="/lab/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
         {/* Legacy lab routes redirect to new lab tabs */}

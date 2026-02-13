@@ -317,6 +317,7 @@ func (r *LabRepository) ListEvaluations(filter lab.ListEvaluationsFilter, page l
 			ev.updated_at,
 			im.name AS model_name,
 			im.kind AS model_kind,
+			c.id::text AS calcutta_id,
 			c.name AS calcutta_name,
 			e.starting_state_key
 		FROM lab.evaluations ev
@@ -372,6 +373,7 @@ func (r *LabRepository) ListEvaluations(filter lab.ListEvaluationsFilter, page l
 			&ev.UpdatedAt,
 			&ev.ModelName,
 			&ev.ModelKind,
+			&ev.CalcuttaID,
 			&ev.CalcuttaName,
 			&ev.StartingStateKey,
 		); err != nil {
@@ -402,6 +404,7 @@ func (r *LabRepository) GetEvaluation(id string) (*lab.EvaluationDetail, error) 
 			ev.updated_at,
 			im.name AS model_name,
 			im.kind AS model_kind,
+			c.id::text AS calcutta_id,
 			c.name AS calcutta_name,
 			e.starting_state_key
 		FROM lab.evaluations ev
@@ -427,6 +430,7 @@ func (r *LabRepository) GetEvaluation(id string) (*lab.EvaluationDetail, error) 
 		&ev.UpdatedAt,
 		&ev.ModelName,
 		&ev.ModelKind,
+		&ev.CalcuttaID,
 		&ev.CalcuttaName,
 		&ev.StartingStateKey,
 	)
@@ -437,6 +441,245 @@ func (r *LabRepository) GetEvaluation(id string) (*lab.EvaluationDetail, error) 
 		return nil, err
 	}
 	return &ev, nil
+}
+
+// GetEntryEnriched returns a single entry with enriched bid data (team names, seeds, naive allocation).
+func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, error) {
+	ctx := context.Background()
+
+	// First get the basic entry details
+	query := `
+		SELECT
+			e.id::text,
+			e.investment_model_id::text,
+			e.calcutta_id::text,
+			e.game_outcome_kind,
+			e.game_outcome_params_json::text,
+			e.optimizer_kind,
+			e.optimizer_params_json::text,
+			e.starting_state_key,
+			e.bids_json::text,
+			e.created_at,
+			e.updated_at,
+			im.name AS model_name,
+			im.kind AS model_kind,
+			c.name AS calcutta_name,
+			c.tournament_id::text,
+			(SELECT COUNT(*) FROM lab.evaluations ev WHERE ev.entry_id = e.id AND ev.deleted_at IS NULL)::int AS n_evaluations
+		FROM lab.entries e
+		JOIN lab.investment_models im ON im.id = e.investment_model_id
+		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		WHERE e.id = $1::uuid AND e.deleted_at IS NULL
+	`
+
+	var result lab.EntryDetailEnriched
+	var (
+		tournamentID                                      string
+		gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
+	)
+
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&result.ID, &result.InvestmentModelID, &result.CalcuttaID,
+		&result.GameOutcomeKind, &gameOutcomeParamsStr, &result.OptimizerKind, &optimizerParamsStr,
+		&result.StartingStateKey, &bidsStr, &result.CreatedAt, &result.UpdatedAt,
+		&result.ModelName, &result.ModelKind, &result.CalcuttaName, &tournamentID, &result.NEvaluations,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, &apperrors.NotFoundError{Resource: "entry", ID: id}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the raw bids
+	var rawBids []lab.EntryBid
+	if err := json.Unmarshal([]byte(bidsStr), &rawBids); err != nil {
+		return nil, err
+	}
+
+	// Get team info with KenPom ratings for all teams in this tournament
+	teamQuery := `
+		SELECT t.id::text, s.name, t.seed, t.region, ks.net_rtg
+		FROM core.teams t
+		JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+		LEFT JOIN core.team_kenpom_stats ks ON ks.team_id = t.id AND ks.deleted_at IS NULL
+		WHERE t.tournament_id = $1::uuid AND t.deleted_at IS NULL
+	`
+	teamRows, err := r.pool.Query(ctx, teamQuery, tournamentID)
+	if err != nil {
+		return nil, err
+	}
+	defer teamRows.Close()
+
+	type teamInfo struct {
+		Name      string
+		Seed      int
+		Region    string
+		KenPomNet *float64
+	}
+	teamMap := make(map[string]teamInfo)
+	for teamRows.Next() {
+		var tid, name, region string
+		var seed int
+		var kenpomNet *float64
+		if err := teamRows.Scan(&tid, &name, &seed, &region, &kenpomNet); err != nil {
+			return nil, err
+		}
+		teamMap[tid] = teamInfo{Name: name, Seed: seed, Region: region, KenPomNet: kenpomNet}
+	}
+	if err := teamRows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Baseline expected points by seed (used as multiplier base)
+	seedExpectedPoints := map[int]float64{
+		1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
+		9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3, 15: 0.2, 16: 0.1,
+	}
+
+	// Calculate total budget
+	totalBudget := 0
+	for _, b := range rawBids {
+		totalBudget += b.BidPoints
+	}
+
+	// Compute team-specific expected points using KenPom adjustment
+	// Formula: base_seed_ev * (1 + kenpom_adjustment)
+	// KenPom adjustment: (team_net - median_net) / scale_factor
+	// This differentiates same-seed teams based on KenPom strength
+
+	// First, gather all KenPom ratings to compute median for scaling
+	kenpomRatings := make([]float64, 0, len(teamMap))
+	for _, ti := range teamMap {
+		if ti.KenPomNet != nil {
+			kenpomRatings = append(kenpomRatings, *ti.KenPomNet)
+		}
+	}
+
+	// Compute median KenPom rating
+	medianKenpom := 0.0
+	if len(kenpomRatings) > 0 {
+		// Simple median: sort and take middle
+		sortedRatings := make([]float64, len(kenpomRatings))
+		copy(sortedRatings, kenpomRatings)
+		for i := 0; i < len(sortedRatings)-1; i++ {
+			for j := i + 1; j < len(sortedRatings); j++ {
+				if sortedRatings[i] > sortedRatings[j] {
+					sortedRatings[i], sortedRatings[j] = sortedRatings[j], sortedRatings[i]
+				}
+			}
+		}
+		mid := len(sortedRatings) / 2
+		if len(sortedRatings)%2 == 0 {
+			medianKenpom = (sortedRatings[mid-1] + sortedRatings[mid]) / 2
+		} else {
+			medianKenpom = sortedRatings[mid]
+		}
+	}
+
+	// Scale factor for KenPom adjustment (a 10-point difference = ~20% adjustment)
+	kenpomScale := 50.0
+
+	// Compute per-team expected points
+	teamExpectedPoints := make(map[string]float64)
+	for tid, ti := range teamMap {
+		baseEV := seedExpectedPoints[ti.Seed]
+		if ti.KenPomNet != nil {
+			// Adjust based on KenPom deviation from median
+			adjustment := (*ti.KenPomNet - medianKenpom) / kenpomScale
+			// Clamp adjustment to reasonable range (-50% to +100%)
+			if adjustment < -0.5 {
+				adjustment = -0.5
+			}
+			if adjustment > 1.0 {
+				adjustment = 1.0
+			}
+			baseEV = baseEV * (1.0 + adjustment)
+		}
+		teamExpectedPoints[tid] = baseEV
+	}
+
+	// Calculate total expected points for normalization
+	totalExpectedPoints := 0.0
+	for _, ev := range teamExpectedPoints {
+		totalExpectedPoints += ev
+	}
+
+	// Build a map of bid points and expected ROI by team ID for quick lookup
+	bidPointsByTeam := make(map[string]int)
+	expectedROIByTeam := make(map[string]*float64)
+	for _, b := range rawBids {
+		bidPointsByTeam[b.TeamID] = b.BidPoints
+		expectedROIByTeam[b.TeamID] = b.ExpectedROI
+	}
+
+	// Build enriched bids for ALL teams (not just those with bids > 0)
+	enrichedBids := make([]lab.EnrichedBid, 0, len(teamMap))
+	for tid, ti := range teamMap {
+		bidPoints := bidPointsByTeam[tid] // 0 if not in map
+
+		// Naive allocation: team's expected points / total expected points * budget
+		// This uses KenPom-adjusted expected points so same-seed teams differ
+		naiveShare := teamExpectedPoints[tid] / totalExpectedPoints
+		naivePoints := int(naiveShare * float64(totalBudget))
+
+		// Edge: (naive - bid) / naive * 100 (positive = undervalued opportunity)
+		edgePercent := 0.0
+		if naivePoints > 0 {
+			edgePercent = float64(naivePoints-bidPoints) / float64(naivePoints) * 100
+		}
+
+		enrichedBids = append(enrichedBids, lab.EnrichedBid{
+			TeamID:      tid,
+			SchoolName:  ti.Name,
+			Seed:        ti.Seed,
+			Region:      ti.Region,
+			BidPoints:   bidPoints,
+			NaivePoints: naivePoints,
+			EdgePercent: edgePercent,
+			ExpectedROI: expectedROIByTeam[tid],
+		})
+	}
+
+	// Set the remaining fields
+	result.GameOutcomeParamsJSON = json.RawMessage(gameOutcomeParamsStr)
+	result.OptimizerParamsJSON = json.RawMessage(optimizerParamsStr)
+	result.Bids = enrichedBids
+
+	return &result, nil
+}
+
+// GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
+// Defaults to starting_state_key='post_first_four' if not specified.
+func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*lab.EntryDetailEnriched, error) {
+	ctx := context.Background()
+
+	if startingStateKey == "" {
+		startingStateKey = "post_first_four"
+	}
+
+	// Find the entry ID by model name, calcutta ID, and starting state key
+	var entryID string
+	err := r.pool.QueryRow(ctx, `
+		SELECT e.id::text
+		FROM lab.entries e
+		JOIN lab.investment_models im ON im.id = e.investment_model_id AND im.deleted_at IS NULL
+		WHERE im.name = $1
+			AND e.calcutta_id = $2::uuid
+			AND e.starting_state_key = $3
+			AND e.deleted_at IS NULL
+		ORDER BY e.created_at DESC
+		LIMIT 1
+	`, modelName, calcuttaID, startingStateKey).Scan(&entryID)
+	if err == pgx.ErrNoRows {
+		return nil, &apperrors.NotFoundError{Resource: "entry", ID: modelName + "/" + calcuttaID}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Delegate to GetEntryEnriched
+	return r.GetEntryEnriched(entryID)
 }
 
 // labItoa converts int to string for building parameterized queries.

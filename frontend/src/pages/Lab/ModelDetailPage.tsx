@@ -129,7 +129,7 @@ export function ModelDetailPage() {
                   <tr
                     key={e.id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/entries/${encodeURIComponent(e.id)}`)}
+                    onClick={() => navigate(`/lab/models/${encodeURIComponent(e.model_name)}/calcutta/${encodeURIComponent(e.calcutta_id)}`)}
                   >
                     <td className="px-3 py-2 text-sm text-gray-900">{e.calcutta_name}</td>
                     <td className="px-3 py-2 text-sm text-gray-600">{e.starting_state_key}</td>

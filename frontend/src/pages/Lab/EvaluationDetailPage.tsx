@@ -76,7 +76,7 @@ export function EvaluationDetailPage() {
               <button
                 type="button"
                 className="text-blue-600 hover:underline"
-                onClick={() => navigate(`/lab/entries/${encodeURIComponent(evaluation.entry_id)}`)}
+                onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.model_name)}/calcutta/${encodeURIComponent(evaluation.calcutta_id)}`)}
               >
                 {evaluation.model_name}
               </button>
@@ -152,7 +152,7 @@ export function EvaluationDetailPage() {
           <button
             type="button"
             className="text-blue-600 hover:underline text-sm"
-            onClick={() => navigate(`/lab/entries/${encodeURIComponent(evaluation.entry_id)}`)}
+            onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.model_name)}/calcutta/${encodeURIComponent(evaluation.calcutta_id)}`)}
           >
             View Entry Details
           </button>

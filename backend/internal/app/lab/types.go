@@ -49,6 +49,37 @@ type EntryBid struct {
 	ExpectedROI *float64 `json:"expected_roi,omitempty"`
 }
 
+// EnrichedBid is EntryBid with team details and naive allocation for display.
+type EnrichedBid struct {
+	TeamID       string   `json:"team_id"`
+	SchoolName   string   `json:"school_name"`
+	Seed         int      `json:"seed"`
+	Region       string   `json:"region"`
+	BidPoints    int      `json:"bid_points"`
+	NaivePoints  int      `json:"naive_points"`
+	EdgePercent  float64  `json:"edge_percent"`
+	ExpectedROI  *float64 `json:"expected_roi,omitempty"`
+}
+
+// EntryDetailEnriched is EntryDetail with enriched bids for display.
+type EntryDetailEnriched struct {
+	ID                    string          `json:"id"`
+	InvestmentModelID     string          `json:"investment_model_id"`
+	CalcuttaID            string          `json:"calcutta_id"`
+	GameOutcomeKind       string          `json:"game_outcome_kind"`
+	GameOutcomeParamsJSON json.RawMessage `json:"game_outcome_params_json"`
+	OptimizerKind         string          `json:"optimizer_kind"`
+	OptimizerParamsJSON   json.RawMessage `json:"optimizer_params_json"`
+	StartingStateKey      string          `json:"starting_state_key"`
+	CreatedAt             time.Time       `json:"created_at"`
+	UpdatedAt             time.Time       `json:"updated_at"`
+	ModelName             string          `json:"model_name"`
+	ModelKind             string          `json:"model_kind"`
+	CalcuttaName          string          `json:"calcutta_name"`
+	NEvaluations          int             `json:"n_evaluations"`
+	Bids                  []EnrichedBid   `json:"bids"`
+}
+
 // Evaluation represents a lab.evaluations row.
 type Evaluation struct {
 	ID                     string    `json:"id"`
@@ -70,6 +101,7 @@ type EvaluationDetail struct {
 	Evaluation
 	ModelName        string `json:"model_name"`
 	ModelKind        string `json:"model_kind"`
+	CalcuttaID       string `json:"calcutta_id"`
 	CalcuttaName     string `json:"calcutta_name"`
 	StartingStateKey string `json:"starting_state_key"`
 }
@@ -121,6 +153,8 @@ type Repository interface {
 	GetModelLeaderboard() ([]LeaderboardEntry, error)
 	ListEntries(filter ListEntriesFilter, page Pagination) ([]EntryDetail, error)
 	GetEntry(id string) (*EntryDetail, error)
+	GetEntryEnriched(id string) (*EntryDetailEnriched, error)
+	GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*EntryDetailEnriched, error)
 	ListEvaluations(filter ListEvaluationsFilter, page Pagination) ([]EvaluationDetail, error)
 	GetEvaluation(id string) (*EvaluationDetail, error)
 }

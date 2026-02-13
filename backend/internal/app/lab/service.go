@@ -55,6 +55,16 @@ func (s *Service) GetEntry(ctx context.Context, id string) (*EntryDetail, error)
 	return s.repo.GetEntry(id)
 }
 
+// GetEntryEnriched returns a single entry with enriched bids (team names, seeds, naive allocation).
+func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*EntryDetailEnriched, error) {
+	return s.repo.GetEntryEnriched(id)
+}
+
+// GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
+func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*EntryDetailEnriched, error) {
+	return s.repo.GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey)
+}
+
 // ListEvaluations returns evaluations matching the filter.
 func (s *Service) ListEvaluations(ctx context.Context, filter ListEvaluationsFilter, page Pagination) ([]EvaluationDetail, error) {
 	if page.Limit <= 0 {

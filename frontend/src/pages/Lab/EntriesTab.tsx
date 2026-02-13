@@ -91,7 +91,7 @@ export function EntriesTab() {
                 <tr
                   key={row.id}
                   className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/lab/entries/${encodeURIComponent(row.id)}`)}
+                  onClick={() => navigate(`/lab/models/${encodeURIComponent(row.model_name)}/calcutta/${encodeURIComponent(row.calcutta_id)}`)}
                 >
                   <td className="px-3 py-2 text-sm text-gray-900">
                     <div className="font-medium">{row.model_name}</div>

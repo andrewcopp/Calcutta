@@ -149,6 +149,7 @@ func (h *Handler) HandleListEntries(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGetEntry handles GET /api/lab/entries/:id
+// Returns enriched entry data with team names, seeds, regions, and naive allocation.
 func (h *Handler) HandleGetEntry(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := strings.TrimSpace(vars["id"])
@@ -165,7 +166,42 @@ func (h *Handler) HandleGetEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entry, err := h.app.Lab.GetEntry(r.Context(), id)
+	entry, err := h.app.Lab.GetEntryEnriched(r.Context(), id)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, entry)
+}
+
+// HandleGetEntryByModelAndCalcutta handles GET /api/lab/models/:modelName/calcutta/:calcuttaId/entry
+// Returns enriched entry data for the model/calcutta pair.
+func (h *Handler) HandleGetEntryByModelAndCalcutta(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	modelName := strings.TrimSpace(vars["modelName"])
+	calcuttaID := strings.TrimSpace(vars["calcuttaId"])
+
+	if modelName == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "modelName is required", "modelName")
+		return
+	}
+	if calcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "calcuttaId is required", "calcuttaId")
+		return
+	}
+	if _, err := uuid.Parse(calcuttaID); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "calcuttaId must be a valid UUID", "calcuttaId")
+		return
+	}
+	if h.app == nil || h.app.Lab == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
+		return
+	}
+
+	startingStateKey := strings.TrimSpace(r.URL.Query().Get("starting_state_key"))
+
+	entry, err := h.app.Lab.GetEntryEnrichedByModelAndCalcutta(r.Context(), modelName, calcuttaID, startingStateKey)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return

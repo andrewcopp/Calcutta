@@ -63,13 +63,14 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	// Lab endpoints (lab.* schema)
 	labHandler := lab.NewHandlerWithAuthUserID(s.app, authUserID)
 	lab.RegisterRoutes(r, lab.Handlers{
-		ListModels:      s.requirePermission("analytics.suites.read", labHandler.HandleListModels),
-		GetModel:        s.requirePermission("analytics.suites.read", labHandler.HandleGetModel),
-		GetLeaderboard:  s.requirePermission("analytics.suites.read", labHandler.HandleGetLeaderboard),
-		ListEntries:     s.requirePermission("analytics.suites.read", labHandler.HandleListEntries),
-		GetEntry:        s.requirePermission("analytics.suites.read", labHandler.HandleGetEntry),
-		ListEvaluations: s.requirePermission("analytics.suites.read", labHandler.HandleListEvaluations),
-		GetEvaluation:   s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluation),
+		ListModels:                 s.requirePermission("analytics.suites.read", labHandler.HandleListModels),
+		GetModel:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetModel),
+		GetLeaderboard:             s.requirePermission("analytics.suites.read", labHandler.HandleGetLeaderboard),
+		ListEntries:                s.requirePermission("analytics.suites.read", labHandler.HandleListEntries),
+		GetEntry:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetEntry),
+		GetEntryByModelAndCalcutta: s.requirePermission("analytics.suites.read", labHandler.HandleGetEntryByModelAndCalcutta),
+		ListEvaluations:            s.requirePermission("analytics.suites.read", labHandler.HandleListEvaluations),
+		GetEvaluation:              s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluation),
 	})
 
 	s.registerAnalyticsRoutes(r)
