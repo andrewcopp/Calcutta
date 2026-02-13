@@ -53,8 +53,8 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
 
     return bids.map(bid => {
       const pred = predByTeam.get(bid.team_id);
-      // Use naive_points as pred_performance (budget-normalized expected value, same as Rational)
-      const predPerf = bid.naive_points;
+      // Use expected_points from predictions as pred_performance (actual expected tournament points)
+      const predPerf = pred?.expected_points ?? 0;
       const predInv = pred?.predicted_bid_points ?? 0;
       const ourInv = bid.bid_points;
 
@@ -301,7 +301,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
                     <td className="px-3 py-2 text-sm text-gray-700 text-center">{row.seed}</td>
                     <td className="px-3 py-2 text-sm text-gray-500">{row.region}</td>
                     <td className="px-3 py-2 text-sm text-gray-900 text-right tabular-nums">
-                      {row.pred_performance}
+                      {row.pred_performance.toFixed(0)}
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-900 text-right tabular-nums">
                       {row.pred_investment}

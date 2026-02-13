@@ -35,7 +35,6 @@ from moneyball.lab.queries import (
     compare_models,
 )
 from moneyball.lab.portfolio_research import (
-    optimize_portfolio_gekko,
     optimize_portfolio_maxmin,
 )
 
@@ -55,6 +54,5 @@ __all__ = [
     "get_entry_evaluations",
     "compare_models",
     # Portfolio research
-    "optimize_portfolio_gekko",
     "optimize_portfolio_maxmin",
 ]
