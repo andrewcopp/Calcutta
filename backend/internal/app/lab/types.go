@@ -108,17 +108,19 @@ type EvaluationDetail struct {
 
 // LeaderboardEntry represents a row from lab.model_leaderboard view.
 type LeaderboardEntry struct {
-	InvestmentModelID   string    `json:"investment_model_id"`
-	ModelName           string    `json:"model_name"`
-	ModelKind           string    `json:"model_kind"`
-	NEntries            int       `json:"n_entries"`
-	NEvaluations        int       `json:"n_evaluations"`
-	AvgMeanPayout       *float64  `json:"avg_mean_payout,omitempty"`
-	AvgMedianPayout     *float64  `json:"avg_median_payout,omitempty"`
-	AvgPTop1            *float64  `json:"avg_p_top1,omitempty"`
-	AvgPInMoney         *float64  `json:"avg_p_in_money,omitempty"`
-	FirstEvalAt         *time.Time `json:"first_eval_at,omitempty"`
-	LastEvalAt          *time.Time `json:"last_eval_at,omitempty"`
+	InvestmentModelID         string     `json:"investment_model_id"`
+	ModelName                 string     `json:"model_name"`
+	ModelKind                 string     `json:"model_kind"`
+	NEntries                  int        `json:"n_entries"`
+	NEvaluations              int        `json:"n_evaluations"`
+	NCalcuttasWithEntries     int        `json:"n_calcuttas_with_entries"`
+	NCalcuttasWithEvaluations int        `json:"n_calcuttas_with_evaluations"`
+	AvgMeanPayout             *float64   `json:"avg_mean_payout,omitempty"`
+	AvgMedianPayout           *float64   `json:"avg_median_payout,omitempty"`
+	AvgPTop1                  *float64   `json:"avg_p_top1,omitempty"`
+	AvgPInMoney               *float64   `json:"avg_p_in_money,omitempty"`
+	FirstEvalAt               *time.Time `json:"first_eval_at,omitempty"`
+	LastEvalAt                *time.Time `json:"last_eval_at,omitempty"`
 }
 
 // ListModelsFilter for filtering investment models list.

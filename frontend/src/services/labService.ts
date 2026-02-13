@@ -83,6 +83,8 @@ export type LeaderboardEntry = {
   model_kind: string;
   n_entries: number;
   n_evaluations: number;
+  n_calcuttas_with_entries: number;
+  n_calcuttas_with_evaluations: number;
   avg_mean_payout?: number | null;
   avg_median_payout?: number | null;
   avg_p_top1?: number | null;

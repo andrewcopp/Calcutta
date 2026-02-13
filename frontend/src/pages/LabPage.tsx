@@ -1,74 +1,64 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-import { PipelineByModel } from './Lab/PipelineByModel';
-import { PipelineByCalcutta } from './Lab/PipelineByCalcutta';
-import { ModelsTab } from './Lab/ModelsTab';
-import { cn } from '../lib/cn';
-
-type TabType = 'by-model' | 'by-calcutta' | 'leaderboard';
+import { Alert } from '../components/ui/Alert';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ModelLeaderboardCard } from '../components/Lab/ModelLeaderboardCard';
+import { labService, LeaderboardResponse } from '../services/labService';
+import { calcuttaService } from '../services/calcuttaService';
+import { Calcutta } from '../types/calcutta';
 
 export function LabPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'by-calcutta') return 'by-calcutta';
-    if (tab === 'leaderboard') return 'leaderboard';
-    // Handle legacy tab values
-    if (tab === 'models') return 'leaderboard';
-    if (tab === 'entries' || tab === 'evaluations') return 'by-model';
-    return 'by-model';
+  const leaderboardQuery = useQuery<LeaderboardResponse | null>({
+    queryKey: ['lab', 'models', 'leaderboard'],
+    queryFn: () => labService.getLeaderboard(),
   });
 
-  useEffect(() => {
-    const next = new URLSearchParams();
-    next.set('tab', activeTab);
+  const calcuttasQuery = useQuery<Calcutta[]>({
+    queryKey: ['calcuttas'],
+    queryFn: () => calcuttaService.getAllCalcuttas(),
+  });
 
-    if (next.toString() !== searchParams.toString()) {
-      setSearchParams(next, { replace: true });
-    }
-  }, [activeTab, searchParams, setSearchParams]);
+  const items = leaderboardQuery.data?.items ?? [];
+  const totalCalcuttas = calcuttasQuery.data?.length ?? 0;
 
-  const tabs = useMemo(
-    () =>
-      [
-        { id: 'by-model' as const, label: 'By Model' },
-        { id: 'by-calcutta' as const, label: 'By Calcutta' },
-        { id: 'leaderboard' as const, label: 'Leaderboard' },
-      ] as const,
-    []
-  );
+  const isLoading = leaderboardQuery.isLoading || calcuttasQuery.isLoading;
+  const isError = leaderboardQuery.isError || calcuttasQuery.isError;
 
   return (
     <div className="container mx-auto px-4 py-4">
-      {/* Compact inline header */}
-      <div className="flex items-center gap-6 mb-4 border-b border-gray-200 pb-3">
-        <h1 className="text-xl font-bold text-gray-900">Lab</h1>
-        <nav className="flex gap-1" role="tablist">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                activeTab === tab.id
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+      <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Lab</h1>
+          <p className="text-sm text-gray-500">
+            {items.length} model{items.length !== 1 ? 's' : ''} registered
+            {totalCalcuttas > 0 ? ` across ${totalCalcuttas} calcutta${totalCalcuttas !== 1 ? 's' : ''}` : ''}
+          </p>
+        </div>
       </div>
 
-      {activeTab === 'by-model' ? <PipelineByModel /> : null}
-      {activeTab === 'by-calcutta' ? <PipelineByCalcutta /> : null}
-      {activeTab === 'leaderboard' ? <ModelsTab /> : null}
+      {isLoading ? <LoadingState label="Loading leaderboard..." layout="inline" /> : null}
+
+      {isError ? <Alert variant="error">Failed to load leaderboard.</Alert> : null}
+
+      {!isLoading && !isError && items.length === 0 ? (
+        <Alert variant="info">
+          No models found. Register investment models via Python to see them here.
+        </Alert>
+      ) : null}
+
+      {!isLoading && !isError && items.length > 0 ? (
+        <div className="space-y-3">
+          {items.map((entry, index) => (
+            <ModelLeaderboardCard
+              key={entry.investment_model_id}
+              entry={entry}
+              rank={index + 1}
+              totalCalcuttas={totalCalcuttas}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
