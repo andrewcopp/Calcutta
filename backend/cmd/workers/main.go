@@ -26,15 +26,13 @@ func run() error {
 	slog.Info("workers_starting")
 
 	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
-	runEntryEvaluationWorker := flag.Bool("entry-eval-worker", true, "Run the entry evaluation worker")
 	runMarketShareWorker := flag.Bool("market-share-worker", false, "Run the market share worker (normally run via data-science/scripts/market_share_job_worker.py)")
 	runGameOutcomeWorker := flag.Bool("game-outcome-worker", true, "Run the predicted game outcomes worker")
-	runStrategyGenWorker := flag.Bool("strategy-generation-worker", true, "Run the strategy generation worker")
 	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", true, "Run the calcutta evaluation worker")
-	runSuiteEvaluationWorker := flag.Bool("suite-eval-worker", true, "Run the suite calcutta evaluation worker")
+	runSimulationWorker := flag.Bool("simulation-worker", true, "Run the simulation worker")
 	flag.Parse()
 
-	if !*runBundleImportWorker && !*runEntryEvaluationWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runStrategyGenWorker && !*runCalcuttaEvalWorker && !*runSuiteEvaluationWorker {
+	if !*runBundleImportWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runCalcuttaEvalWorker && !*runSimulationWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -52,10 +50,8 @@ func run() error {
 
 	progress := workers.NewDBProgressWriter(pool)
 	bundleWorker := workers.NewBundleImportWorker(pool)
-	entryEvalWorker := workers.NewEntryEvaluationWorker(pool, progress)
 	marketShareWorker := workers.NewMarketShareWorker(pool, progress)
 	gameOutcomeWorker := workers.NewGameOutcomeWorker(pool, progress)
-	strategyGenWorker := workers.NewStrategyGenerationWorker(pool, progress)
 	calcuttaEvalWorker := workers.NewCalcuttaEvaluationWorker(pool, progress)
 	simulationWorker := workers.NewSimulationWorker(pool, progress, cfg.ArtifactsDir)
 
@@ -69,13 +65,6 @@ func run() error {
 		go func() {
 			defer wg.Done()
 			bundleWorker.Run(ctx)
-		}()
-	}
-	if *runEntryEvaluationWorker {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			entryEvalWorker.Run(ctx)
 		}()
 	}
 	if *runMarketShareWorker {
@@ -92,13 +81,6 @@ func run() error {
 			gameOutcomeWorker.Run(ctx)
 		}()
 	}
-	if *runStrategyGenWorker {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			strategyGenWorker.Run(ctx)
-		}()
-	}
 	if *runCalcuttaEvalWorker {
 		wg.Add(1)
 		go func() {
@@ -106,7 +88,7 @@ func run() error {
 			calcuttaEvalWorker.Run(ctx)
 		}()
 	}
-	if *runSuiteEvaluationWorker {
+	if *runSimulationWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
