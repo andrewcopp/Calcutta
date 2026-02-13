@@ -21,6 +21,7 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/app
+      - ./data-science:/data-science
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
@@ -35,10 +36,17 @@ services:
       - SMTP_STARTTLS=${SMTP_STARTTLS}
       - INVITE_BASE_URL=${INVITE_BASE_URL}
       - INVITE_RESEND_MIN_SECONDS=${INVITE_RESEND_MIN_SECONDS}
+      - PYTHON_BIN=python3
+      - PYTHON_GENERATE_LAB_ENTRIES=/data-science/scripts/generate_lab_entries.py
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "go run ./cmd/api"
+    command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/api"
 
   worker:
     build: ./backend
