@@ -125,7 +125,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 	// Set defaults
 	budgetPoints := req.BudgetPoints
 	if budgetPoints <= 0 {
-		budgetPoints = 10000
+		budgetPoints = 100
 	}
 	optimizerKind := req.OptimizerKind
 	if optimizerKind == "" {

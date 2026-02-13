@@ -16,6 +16,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
 )
 
 const (
@@ -440,62 +442,164 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 }
 
 func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID string, job *labPipelineJob, params labPipelineJobParams) bool {
-	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.4, "optimization", "Optimizing bids")
-
-	pythonBin := strings.TrimSpace(os.Getenv("PYTHON_BIN"))
-	if pythonBin == "" {
-		pythonBin = "python3"
-	}
-
-	scriptPath := w.resolvePythonScript("data-science/scripts/optimize_lab_entries.py")
-	if scriptPath == "" {
-		w.failLabPipelineJob(ctx, job, errors.New("optimization script not found"))
-		return false
-	}
-
-	args := []string{scriptPath,
-		"--entry-id", params.EntryID,
-		"--optimizer", params.OptimizerKind,
-		"--budget", fmt.Sprintf("%d", params.BudgetPoints),
-		"--json-output",
-	}
-	if params.ExcludedEntryName != "" {
-		args = append(args, "--excluded-entry", params.ExcludedEntryName)
-	}
-
-	cmd := exec.CommandContext(ctx, pythonBin, args...)
-	cmd.Env = os.Environ()
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.4, "optimization", "Optimizing bids with DP allocator")
 
 	start := time.Now()
-	err := cmd.Run()
-	dur := time.Since(start)
 
+	// Fetch predictions from database
+	var predictionsJSON []byte
+	err := w.pool.QueryRow(ctx, `
+		SELECT predictions_json FROM lab.entries
+		WHERE id = $1::uuid AND deleted_at IS NULL
+	`, params.EntryID).Scan(&predictionsJSON)
 	if err != nil {
-		errMsg := strings.TrimSpace(stderr.String())
-		if errMsg == "" {
-			errMsg = err.Error()
-		}
-		w.failLabPipelineJob(ctx, job, errors.New(errMsg))
-		log.Printf("lab_pipeline_worker optimization_fail worker_id=%s run_id=%s dur_ms=%d err=%s", workerID, job.RunID, dur.Milliseconds(), errMsg)
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to fetch predictions: %w", err))
+		return false
+	}
+	if len(predictionsJSON) == 0 {
+		w.failLabPipelineJob(ctx, job, errors.New("entry has no predictions - cannot optimize"))
 		return false
 	}
 
-	var result struct {
-		OK    bool   `json:"ok"`
-		Error string `json:"error"`
+	// Parse predictions
+	type prediction struct {
+		TeamID               string  `json:"team_id"`
+		PredictedMarketShare float64 `json:"predicted_market_share"`
+		ExpectedPoints       float64 `json:"expected_points"`
 	}
-	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil || !result.OK {
-		errMsg := result.Error
-		if errMsg == "" {
-			errMsg = "optimization script returned error"
-		}
-		w.failLabPipelineJob(ctx, job, errors.New(errMsg))
+	var predictions []prediction
+	if err := json.Unmarshal(predictionsJSON, &predictions); err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to parse predictions: %w", err))
 		return false
 	}
+	if len(predictions) == 0 {
+		w.failLabPipelineJob(ctx, job, errors.New("predictions array is empty - cannot optimize"))
+		return false
+	}
+
+	// Get calcutta rules for constraints
+	var minTeams, maxTeams, maxPerTeam int32
+	err = w.pool.QueryRow(ctx, `
+		SELECT min_teams, max_teams, max_bid_per_team
+		FROM core.calcuttas
+		WHERE id = $1::uuid AND deleted_at IS NULL
+	`, params.CalcuttaID).Scan(&minTeams, &maxTeams, &maxPerTeam)
+	if err != nil {
+		// Use sensible defaults if calcutta not found
+		minTeams, maxTeams, maxPerTeam = 3, 10, 50
+		log.Printf("lab_pipeline_worker optimization_warn using default constraints: %v", err)
+	}
+
+	// Build teams for allocator
+	budgetPoints := params.BudgetPoints
+	if budgetPoints <= 0 {
+		budgetPoints = 100
+	}
+
+	teams := make([]recommended_entry_bids.Team, len(predictions))
+	for i, pred := range predictions {
+		teams[i] = recommended_entry_bids.Team{
+			ID:             pred.TeamID,
+			ExpectedPoints: pred.ExpectedPoints,
+			MarketPoints:   pred.PredictedMarketShare * float64(budgetPoints),
+		}
+	}
+
+	// Run the Go DP allocator
+	allocParams := recommended_entry_bids.AllocationParams{
+		BudgetPoints: budgetPoints,
+		MinTeams:     int(minTeams),
+		MaxTeams:     int(maxTeams),
+		MinBidPoints: 1,
+		MaxBidPoints: int(maxPerTeam),
+	}
+	result, err := recommended_entry_bids.AllocateBids(teams, allocParams)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("allocator failed: %w", err))
+		return false
+	}
+
+	// FAIL FAST: Validate the allocation
+	totalBid := 0
+	for _, bid := range result.Bids {
+		totalBid += bid
+	}
+	numTeams := len(result.Bids)
+
+	// Strict validation - no silent fallbacks
+	if totalBid > budgetPoints {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated budget constraint: total=%d > budget=%d", totalBid, budgetPoints))
+		return false
+	}
+	if numTeams > 0 && numTeams < int(minTeams) {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated min_teams constraint: count=%d < min=%d", numTeams, minTeams))
+		return false
+	}
+	if numTeams > int(maxTeams) {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated max_teams constraint: count=%d > max=%d", numTeams, maxTeams))
+		return false
+	}
+	for teamID, bid := range result.Bids {
+		if bid > int(maxPerTeam) {
+			w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated max_per_team constraint: team=%s bid=%d > max=%d", teamID, bid, maxPerTeam))
+			return false
+		}
+	}
+
+	// Build bids JSON with expected ROI
+	type bidRow struct {
+		TeamID      string  `json:"team_id"`
+		BidPoints   int     `json:"bid_points"`
+		ExpectedROI float64 `json:"expected_roi"`
+	}
+	bids := make([]bidRow, 0, len(result.Bids))
+	for _, pred := range predictions {
+		bid, ok := result.Bids[pred.TeamID]
+		if !ok || bid == 0 {
+			continue
+		}
+		marketCost := pred.PredictedMarketShare * float64(budgetPoints)
+		expectedROI := 0.0
+		if (marketCost + float64(bid)) > 0 {
+			expectedROI = pred.ExpectedPoints / (marketCost + float64(bid))
+		}
+		bids = append(bids, bidRow{
+			TeamID:      pred.TeamID,
+			BidPoints:   bid,
+			ExpectedROI: expectedROI,
+		})
+	}
+
+	bidsJSON, err := json.Marshal(bids)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to marshal bids: %w", err))
+		return false
+	}
+
+	// Save bids to database
+	optimizerParams := map[string]interface{}{
+		"budget_points": budgetPoints,
+		"min_teams":     minTeams,
+		"max_teams":     maxTeams,
+		"max_per_team":  maxPerTeam,
+		"min_bid":       1,
+	}
+	optimizerParamsJSON, _ := json.Marshal(optimizerParams)
+
+	_, err = w.pool.Exec(ctx, `
+		UPDATE lab.entries
+		SET bids_json = $2::jsonb,
+			optimizer_kind = 'dp',
+			optimizer_params_json = $3::jsonb,
+			updated_at = NOW()
+		WHERE id = $1::uuid
+	`, params.EntryID, bidsJSON, optimizerParamsJSON)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to save bids: %w", err))
+		return false
+	}
+
+	dur := time.Since(start)
 
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 1.0, "optimization", "Optimization complete")
 	w.succeedLabPipelineJob(ctx, job)
@@ -525,7 +629,7 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		`, params.PipelineCalcuttaRunID, nextJobID)
 	}
 
-	log.Printf("lab_pipeline_worker optimization_success worker_id=%s run_id=%s dur_ms=%d", workerID, job.RunID, dur.Milliseconds())
+	log.Printf("lab_pipeline_worker optimization_success worker_id=%s run_id=%s teams=%d total_bid=%d dur_ms=%d", workerID, job.RunID, numTeams, totalBid, dur.Milliseconds())
 	return true
 }
 

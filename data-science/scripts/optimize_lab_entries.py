@@ -2,19 +2,23 @@
 """
 Optimize lab entries that have predictions but no bids yet.
 
+NOTE: This script is deprecated for production use. The lab pipeline worker
+now calls the Go DP allocator directly, which is provably optimal and faster.
+This script remains for manual testing and research experiments only.
+
 This is stage 3 of the lab pipeline:
 1. Register model (lab.investment_models)
 2. Generate predictions (generate_lab_predictions.py) -> predictions_json
-3. Optimize entry (this script) -> bids_json
+3. Optimize entry (Go DP allocator via lab_pipeline_worker) -> bids_json
 4. Evaluate (evaluate_lab_entries.py) -> lab.evaluations
 
-Given market predictions (what others will bid) and expected points (from KenPom),
-this script runs an optimizer to determine our optimal bid allocation.
-
-Currently supports:
+Currently supports (for research only):
 - predicted_market_share: Bid proportionally to predicted market share (baseline)
 - edge_weighted: Bid more on teams with positive edge (expected ROI > 1)
-- minlp: Mixed-integer nonlinear programming optimizer using GEKKO/APOPT
+
+REMOVED (2026-02-13):
+- minlp: Removed because the Go DP allocator is provably optimal and the MINLP
+  implementation had silent fallbacks that produced invalid results.
 
 Usage:
     python optimize_lab_entries.py --model-name ridge-v1
@@ -35,7 +39,6 @@ project_root = Path(__file__).resolve().parents[1]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 from moneyball.lab.models import (
     Bid,
     Entry,
@@ -189,43 +192,10 @@ def optimize_entry(
         edge_multiplier = optimizer_params.get("edge_multiplier", 2.0)
         return optimize_edge_weighted(entry.predictions, budget_points, max_per_team, edge_multiplier)
     elif optimizer_kind == "minlp":
-        # Build teams_df from predictions for GEKKO optimizer
-        teams_df = pd.DataFrame([
-            {
-                "team_key": p.team_id,
-                "expected_team_points": p.expected_points,
-                "predicted_team_total_bids": p.predicted_market_share * budget_points,
-            }
-            for p in entry.predictions
-        ])
-
-        min_teams = optimizer_params.get("min_teams", 3)
-        max_teams = optimizer_params.get("max_teams", 10)
-        min_bid = optimizer_params.get("min_bid", 1)
-
-        chosen_df, portfolio_rows = optimize_portfolio_gekko(
-            teams_df=teams_df,
-            budget_points=budget_points,
-            min_teams=min_teams,
-            max_teams=max_teams,
-            max_per_team_points=max_per_team,
-            min_bid_points=min_bid,
+        raise ValueError(
+            "MINLP optimizer was removed. Use the Go DP allocator via lab_pipeline_worker "
+            "or use 'predicted_market_share' or 'edge_weighted' for research."
         )
-
-        # Convert portfolio_rows back to Bid objects
-        bids = []
-        for row in portfolio_rows:
-            team_id = row["team_key"]
-            pred = next((p for p in entry.predictions if p.team_id == team_id), None)
-            if pred:
-                predicted_cost = pred.predicted_market_share * budget_points
-                expected_roi = pred.expected_points / (predicted_cost + row["bid_amount_points"]) if (predicted_cost + row["bid_amount_points"]) > 0 else 0.0
-                bids.append(Bid(
-                    team_id=team_id,
-                    bid_points=row["bid_amount_points"],
-                    expected_roi=expected_roi,
-                ))
-        return bids
     else:
         raise ValueError(f"Unknown optimizer kind: {optimizer_kind}")
 
@@ -259,8 +229,8 @@ def main():
     parser.add_argument("--entry-id", help="Specific entry ID to optimize")
     parser.add_argument("--all-pending", action="store_true", help="Optimize all pending entries")
     parser.add_argument("--optimizer", default="predicted_market_share",
-                       choices=["predicted_market_share", "edge_weighted", "minlp"],
-                       help="Optimizer to use")
+                       choices=["predicted_market_share", "edge_weighted"],
+                       help="Optimizer to use (minlp removed - use Go DP allocator)")
     # These args are optional - if not provided, use entry's stored params
     parser.add_argument("--budget", type=int, default=None,
                        help="Override budget points (default: from entry/calcutta rules)")
