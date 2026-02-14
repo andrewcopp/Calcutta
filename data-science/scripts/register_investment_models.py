@@ -98,6 +98,15 @@ INVESTMENT_MODELS: List[ModelSpec] = [
         notes="Ridge Regression V2 with log target transform and stabilized priors",
     ),
     ModelSpec(
+        name="ridge-v3",
+        kind="ridge",
+        params={
+            "feature_set": "optimal_v3",
+            "kenpom_scale": 10.0,
+        },
+        notes="Ridge Regression V3 with analytical KenPom championship probabilities",
+    ),
+    ModelSpec(
         name="naive-ev-baseline",
         kind="naive_ev",
         params={},
