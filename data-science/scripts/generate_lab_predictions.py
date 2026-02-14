@@ -166,6 +166,10 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
 
     ridge_alpha = model.params.get("alpha", 1.0)
     feature_set = model.params.get("feature_set", "optimal")
+    target_transform = model.params.get("target_transform", "none")
+    seed_prior_monotone = model.params.get("seed_prior_monotone", None)
+    seed_prior_k = model.params.get("seed_prior_k", 0.0)
+    program_prior_k = model.params.get("program_prior_k", 0.0)
 
     initialize_default_scoring_rules_for_year(year)
 
@@ -212,6 +216,10 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
         predict_team_dataset=predict_ds,
         ridge_alpha=ridge_alpha,
         feature_set=feature_set,
+        target_transform=target_transform,
+        seed_prior_monotone=seed_prior_monotone,
+        seed_prior_k=seed_prior_k,
+        program_prior_k=program_prior_k,
     )
 
     predictions_df["team_slug"] = predictions_df["team_key"].str.split(":").str[-1]
