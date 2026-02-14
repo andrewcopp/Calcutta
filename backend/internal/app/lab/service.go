@@ -3,6 +3,7 @@ package lab
 import (
 	"context"
 	"os"
+	"strconv"
 )
 
 // Service provides lab-related business logic.
@@ -141,7 +142,12 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 	}
 	nSims := req.NSims
 	if nSims <= 0 {
-		nSims = 10000
+		nSims = 10000 // fallback default
+		if envNSims := os.Getenv("DEFAULT_N_SIMS"); envNSims != "" {
+			if parsed, err := strconv.Atoi(envNSims); err == nil && parsed > 0 {
+				nSims = parsed
+			}
+		}
 	}
 	seed := req.Seed
 	if seed == 0 {
