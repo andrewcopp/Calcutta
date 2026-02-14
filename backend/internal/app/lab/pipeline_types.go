@@ -49,6 +49,7 @@ type StartPipelineRequest struct {
 	NSims             int      `json:"n_sims,omitempty"`
 	Seed              int      `json:"seed,omitempty"`
 	ExcludedEntryName string   `json:"excluded_entry_name,omitempty"`
+	ForceRerun        bool     `json:"force_rerun,omitempty"`
 }
 
 // StartPipelineResponse is returned when a pipeline is started.

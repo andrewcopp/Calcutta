@@ -47,6 +47,14 @@ export function ModelDetailPage() {
     },
   });
 
+  const rerunAllMutation = useMutation({
+    mutationFn: () => labService.startPipeline(modelId!, { force_rerun: true }),
+    onSuccess: () => {
+      setIsPipelineRunning(true);
+      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId, 'pipeline-progress'] });
+    },
+  });
+
   const cancelPipelineMutation = useMutation({
     mutationFn: () => {
       const runId = pipelineProgressQuery.data?.active_pipeline_run_id;
@@ -135,13 +143,21 @@ export function ModelDetailPage() {
         </Alert>
       )}
 
+      {rerunAllMutation.isError && (
+        <Alert variant="error" className="mb-4">
+          Failed to re-run pipeline: {(rerunAllMutation.error as Error)?.message || 'Unknown error'}
+        </Alert>
+      )}
+
       <PipelineSummary
         progress={pipelineProgress ?? null}
         isLoading={pipelineProgressQuery.isLoading}
         isPipelineRunning={isPipelineRunning}
         onStartPipeline={() => startPipelineMutation.mutate()}
+        onRerunAll={() => rerunAllMutation.mutate()}
         onCancelPipeline={() => cancelPipelineMutation.mutate()}
         isStarting={startPipelineMutation.isPending}
+        isRerunning={rerunAllMutation.isPending}
         isCancelling={cancelPipelineMutation.isPending}
       />
 

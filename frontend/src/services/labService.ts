@@ -143,6 +143,7 @@ export type StartPipelineRequest = {
   n_sims?: number;
   seed?: number;
   excluded_entry_name?: string;
+  force_rerun?: boolean;
 };
 
 export type StartPipelineResponse = {

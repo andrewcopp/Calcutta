@@ -7,8 +7,10 @@ type PipelineSummaryProps = {
   isLoading: boolean;
   isPipelineRunning: boolean;
   onStartPipeline: () => void;
+  onRerunAll: () => void;
   onCancelPipeline: () => void;
   isStarting: boolean;
+  isRerunning: boolean;
   isCancelling: boolean;
 };
 
@@ -17,8 +19,10 @@ export function PipelineSummary({
   isLoading,
   isPipelineRunning,
   onStartPipeline,
+  onRerunAll,
   onCancelPipeline,
   isStarting,
+  isRerunning,
   isCancelling,
 }: PipelineSummaryProps) {
   if (isLoading || !progress) {
@@ -55,13 +59,23 @@ export function PipelineSummary({
             {isCancelling ? 'Cancelling...' : 'Cancel Pipeline'}
           </Button>
         ) : (
-          <Button
-            size="sm"
-            onClick={onStartPipeline}
-            disabled={isStarting || completedCount === totalCount}
-          >
-            {isStarting ? 'Starting...' : completedCount === totalCount ? 'All Complete' : 'Run All Missing'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={onStartPipeline}
+              disabled={isStarting || isRerunning || completedCount === totalCount}
+            >
+              {isStarting ? 'Starting...' : completedCount === totalCount ? 'All Complete' : 'Run Missing'}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={onRerunAll}
+              disabled={isStarting || isRerunning || totalCount === 0}
+            >
+              {isRerunning ? 'Re-running...' : 'Re-run All'}
+            </Button>
+          </div>
         )}
       </div>
 
