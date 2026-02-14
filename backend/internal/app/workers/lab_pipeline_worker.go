@@ -729,9 +729,9 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 	_, _ = w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_calcutta_runs
 		SET stage = 'completed', status = 'succeeded', progress = 1.0,
-		    evaluation_id = $2::uuid, mean_payout = $3, finished_at = NOW(), updated_at = NOW()
+		    evaluation_id = $2::uuid, finished_at = NOW(), updated_at = NOW()
 		WHERE id = $1::uuid
-	`, params.PipelineCalcuttaRunID, evaluationID, result.MeanNormalizedPayout)
+	`, params.PipelineCalcuttaRunID, evaluationID)
 
 	// Update entry state to complete
 	_, _ = w.pool.Exec(ctx, `
