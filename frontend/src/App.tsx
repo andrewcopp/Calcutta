@@ -45,10 +45,10 @@ const AppLayout: React.FC = () => {
         <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<EntryDetailPage />} />
         <Route path="/lab/entries/:entryId" element={<EntryDetailPage />} />
         <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/evaluations/:evaluationId/entries/:entryName" element={<EntryProfilePage />} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<EntryProfilePage />} />
         {/* Legacy evaluation route redirect */}
         <Route path="/lab/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
-        <Route path="/lab/evaluations/:evaluationId/entries/:entryName" element={<EntryProfilePage />} />
+        <Route path="/lab/entry-results/:entryResultId" element={<EntryProfilePage />} />
         {/* Legacy lab routes redirect to new lab tabs */}
         <Route path="/lab/candidates/*" element={<Navigate to="/lab?tab=entries" replace />} />
         <Route path="/lab/advancements/*" element={<Navigate to="/lab?tab=models" replace />} />

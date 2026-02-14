@@ -94,6 +94,7 @@ export type ListEvaluationsResponse = {
 
 // Types for evaluation entry results
 export type EvaluationEntryResult = {
+  id: string;
   entry_name: string;
   mean_normalized_payout?: number | null;
   p_top1?: number | null;
@@ -308,9 +309,9 @@ export const labService = {
     return response.items;
   },
 
-  async getEvaluationEntryProfile(evaluationId: string, entryName: string): Promise<EvaluationEntryProfile> {
+  async getEvaluationEntryProfile(entryResultId: string): Promise<EvaluationEntryProfile> {
     return apiClient.get<EvaluationEntryProfile>(
-      `/lab/evaluations/${encodeURIComponent(evaluationId)}/entries/${encodeURIComponent(entryName)}`
+      `/lab/entry-results/${encodeURIComponent(entryResultId)}`
     );
   },
 

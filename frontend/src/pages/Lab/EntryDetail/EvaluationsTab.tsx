@@ -58,10 +58,9 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
 
   const entryResults = entryResultsQuery.data ?? [];
 
-  const handleEntryClick = (entryName: string) => {
-    if (!evaluation?.id) return;
+  const handleEntryClick = (entryResultId: string) => {
     navigate(
-      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/evaluations/${encodeURIComponent(evaluation.id)}/entries/${encodeURIComponent(entryName)}`
+      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry-results/${encodeURIComponent(entryResultId)}`
     );
   };
 
@@ -131,7 +130,7 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
                         'hover:bg-gray-50 cursor-pointer',
                         isOurStrategy && 'bg-blue-50 font-semibold hover:bg-blue-100'
                       )}
-                      onClick={() => handleEntryClick(entry.entry_name)}
+                      onClick={() => handleEntryClick(entry.id)}
                     >
                       <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
                       <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>

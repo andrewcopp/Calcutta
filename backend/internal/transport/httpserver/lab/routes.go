@@ -46,7 +46,9 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 
 	// Evaluations
 	r.HandleFunc("/api/lab/evaluations", h.ListEvaluations).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/lab/evaluations/{id}/entries/{entryName}", h.GetEvaluationEntryProfile).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/evaluations/{id}/entries", h.GetEvaluationEntryResults).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/evaluations/{id}", h.GetEvaluation).Methods("GET", "OPTIONS")
+
+	// Entry Results (individual entry profile from an evaluation)
+	r.HandleFunc("/api/lab/entry-results/{id}", h.GetEvaluationEntryProfile).Methods("GET", "OPTIONS")
 }

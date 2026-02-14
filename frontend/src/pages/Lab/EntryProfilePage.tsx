@@ -27,20 +27,19 @@ function getPayoutColor(payout?: number | null): string {
 }
 
 export function EntryProfilePage() {
-  const { evaluationId, entryName, modelName, calcuttaId } = useParams<{
-    evaluationId: string;
-    entryName: string;
+  const { entryResultId, modelName, calcuttaId } = useParams<{
+    entryResultId: string;
     modelName?: string;
     calcuttaId?: string;
   }>();
 
   const profileQuery = useQuery<EvaluationEntryProfile | null>({
-    queryKey: ['lab', 'evaluations', evaluationId, 'entries', entryName],
+    queryKey: ['lab', 'entry-results', entryResultId],
     queryFn: () =>
-      evaluationId && entryName
-        ? labService.getEvaluationEntryProfile(evaluationId, decodeURIComponent(entryName))
+      entryResultId
+        ? labService.getEvaluationEntryProfile(entryResultId)
         : Promise.resolve(null),
-    enabled: Boolean(evaluationId && entryName),
+    enabled: Boolean(entryResultId),
   });
 
   const profile = profileQuery.data;

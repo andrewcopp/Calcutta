@@ -716,6 +716,7 @@ func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.Ev
 
 	query := `
 		SELECT
+			id,
 			entry_name,
 			mean_normalized_payout,
 			p_top1,
@@ -736,6 +737,7 @@ func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.Ev
 	for rows.Next() {
 		var e lab.EvaluationEntryResult
 		if err := rows.Scan(
+			&e.ID,
 			&e.EntryName,
 			&e.MeanNormalizedPayout,
 			&e.PTop1,
@@ -750,30 +752,32 @@ func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.Ev
 }
 
 // GetEvaluationEntryProfile returns detailed profile for an entry in an evaluation.
-func (r *LabRepository) GetEvaluationEntryProfile(evaluationID, entryName string) (*lab.EvaluationEntryProfile, error) {
+func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*lab.EvaluationEntryProfile, error) {
 	ctx := context.Background()
 
-	// First, get the entry result from lab.evaluation_entry_results
+	// First, get the entry result and evaluation_id from lab.evaluation_entry_results
 	var profile lab.EvaluationEntryProfile
+	var evaluationID string
 	err := r.pool.QueryRow(ctx, `
 		SELECT
 			entry_name,
 			mean_normalized_payout,
 			p_top1,
 			p_in_money,
-			rank
+			rank,
+			evaluation_id
 		FROM lab.evaluation_entry_results
-		WHERE evaluation_id = $1::uuid
-			AND entry_name = $2
-	`, evaluationID, entryName).Scan(
+		WHERE id = $1::uuid
+	`, entryResultID).Scan(
 		&profile.EntryName,
 		&profile.MeanNormalizedPayout,
 		&profile.PTop1,
 		&profile.PInMoney,
 		&profile.Rank,
+		&evaluationID,
 	)
 	if err == pgx.ErrNoRows {
-		return nil, &apperrors.NotFoundError{Resource: "evaluation_entry", ID: evaluationID + "/" + entryName}
+		return nil, &apperrors.NotFoundError{Resource: "evaluation_entry_result", ID: entryResultID}
 	}
 	if err != nil {
 		return nil, err
@@ -835,7 +839,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(evaluationID, entryName string
 		ORDER BY t.seed ASC, s.name ASC
 	`
 
-	rows, err := r.pool.Query(ctx, query, *simulatedCalcuttaID, entryName)
+	rows, err := r.pool.Query(ctx, query, *simulatedCalcuttaID, profile.EntryName)
 	if err != nil {
 		return nil, err
 	}

@@ -134,6 +134,7 @@ type EvaluationDetail struct {
 
 // EvaluationEntryResult represents a single entry's result in an evaluation.
 type EvaluationEntryResult struct {
+	ID                   string   `json:"id"`
 	EntryName            string   `json:"entry_name"`
 	MeanNormalizedPayout *float64 `json:"mean_normalized_payout,omitempty"`
 	PTop1                *float64 `json:"p_top1,omitempty"`
@@ -230,5 +231,5 @@ type Repository interface {
 	ListEvaluations(filter ListEvaluationsFilter, page Pagination) ([]EvaluationDetail, error)
 	GetEvaluation(id string) (*EvaluationDetail, error)
 	GetEvaluationEntryResults(evaluationID string) ([]EvaluationEntryResult, error)
-	GetEvaluationEntryProfile(evaluationID, entryName string) (*EvaluationEntryProfile, error)
+	GetEvaluationEntryProfile(entryResultID string) (*EvaluationEntryProfile, error)
 }
