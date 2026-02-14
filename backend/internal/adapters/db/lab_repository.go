@@ -783,63 +783,101 @@ func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*lab.Ev
 		return nil, err
 	}
 
-	// Get the simulated_calcutta_id from the evaluation
-	var simulatedCalcuttaID *string
+	// Get the lab entry_id and calcutta_id from the evaluation
+	var labEntryID string
+	var calcuttaID string
 	err = r.pool.QueryRow(ctx, `
-		SELECT simulated_calcutta_id
-		FROM lab.evaluations
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-	`, evaluationID).Scan(&simulatedCalcuttaID)
+		SELECT ev.entry_id, e.calcutta_id
+		FROM lab.evaluations ev
+		JOIN lab.entries e ON e.id = ev.entry_id
+		WHERE ev.id = $1::uuid
+			AND ev.deleted_at IS NULL
+	`, evaluationID).Scan(&labEntryID, &calcuttaID)
 	if err != nil {
 		return nil, err
 	}
 
-	if simulatedCalcuttaID == nil {
-		// No simulated calcutta - return profile without bids
-		profile.Bids = []lab.EvaluationEntryBid{}
-		return &profile, nil
+	profile.Bids = make([]lab.EvaluationEntryBid, 0)
+	profile.TotalBidPoints = 0
+
+	var rows pgx.Rows
+
+	if profile.EntryName == "Our Strategy" {
+		// Get bids from lab.entries.bids_json
+		query := `
+			WITH entry_bids AS (
+				SELECT
+					(bid->>'team_id')::uuid AS team_id,
+					(bid->>'bid_points')::int AS bid_points
+				FROM lab.entries e,
+					jsonb_array_elements(e.bids_json) AS bid
+				WHERE e.id = $1::uuid
+					AND e.deleted_at IS NULL
+			),
+			total_pool AS (
+				SELECT
+					cet.team_id,
+					SUM(cet.bid_points)::float AS total_bid
+				FROM core.entry_teams cet
+				JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+				WHERE ce.calcutta_id = $2::uuid
+					AND cet.deleted_at IS NULL
+				GROUP BY cet.team_id
+			)
+			SELECT
+				eb.team_id,
+				s.name AS school_name,
+				t.seed,
+				t.region,
+				eb.bid_points,
+				COALESCE(eb.bid_points::float / NULLIF(COALESCE(tp.total_bid, 0) + eb.bid_points, 0), 0) AS ownership
+			FROM entry_bids eb
+			JOIN core.teams t ON t.id = eb.team_id AND t.deleted_at IS NULL
+			JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+			LEFT JOIN total_pool tp ON tp.team_id = eb.team_id
+			WHERE eb.bid_points > 0
+			ORDER BY t.seed ASC, s.name ASC
+		`
+		rows, err = r.pool.Query(ctx, query, labEntryID, calcuttaID)
+	} else {
+		// Get bids from core.entries + core.entry_teams
+		query := `
+			WITH entry_bids AS (
+				SELECT
+					cet.team_id,
+					cet.bid_points
+				FROM core.entry_teams cet
+				JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+				WHERE ce.calcutta_id = $1::uuid
+					AND ce.name = $2
+					AND cet.deleted_at IS NULL
+			),
+			total_pool AS (
+				SELECT
+					cet.team_id,
+					SUM(cet.bid_points)::float AS total_bid
+				FROM core.entry_teams cet
+				JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
+				WHERE ce.calcutta_id = $1::uuid
+					AND cet.deleted_at IS NULL
+				GROUP BY cet.team_id
+			)
+			SELECT
+				eb.team_id,
+				s.name AS school_name,
+				t.seed,
+				t.region,
+				eb.bid_points,
+				COALESCE(eb.bid_points::float / NULLIF(tp.total_bid, 0), 0) AS ownership
+			FROM entry_bids eb
+			JOIN core.teams t ON t.id = eb.team_id AND t.deleted_at IS NULL
+			JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+			LEFT JOIN total_pool tp ON tp.team_id = eb.team_id
+			WHERE eb.bid_points > 0
+			ORDER BY t.seed ASC, s.name ASC
+		`
+		rows, err = r.pool.Query(ctx, query, calcuttaID, profile.EntryName)
 	}
-
-	// Get bids from derived.simulated_entries + derived.simulated_entry_teams
-	// Also compute ownership percentage
-	query := `
-		WITH entry_bids AS (
-			SELECT
-				set.team_id,
-				set.bid_points
-			FROM derived.simulated_entries se
-			JOIN derived.simulated_entry_teams set ON set.simulated_entry_id = se.id AND set.deleted_at IS NULL
-			WHERE se.simulated_calcutta_id = $1::uuid
-				AND se.display_name = $2
-				AND se.deleted_at IS NULL
-		),
-		total_pool AS (
-			SELECT
-				set.team_id,
-				SUM(set.bid_points)::float AS total_bid
-			FROM derived.simulated_entries se
-			JOIN derived.simulated_entry_teams set ON set.simulated_entry_id = se.id AND set.deleted_at IS NULL
-			WHERE se.simulated_calcutta_id = $1::uuid
-				AND se.deleted_at IS NULL
-			GROUP BY set.team_id
-		)
-		SELECT
-			eb.team_id,
-			s.name AS school_name,
-			t.seed,
-			t.region,
-			eb.bid_points,
-			COALESCE(eb.bid_points::float / NULLIF(tp.total_bid, 0), 0) AS ownership
-		FROM entry_bids eb
-		JOIN core.teams t ON t.id = eb.team_id AND t.deleted_at IS NULL
-		JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-		LEFT JOIN total_pool tp ON tp.team_id = eb.team_id
-		WHERE eb.bid_points > 0
-		ORDER BY t.seed ASC, s.name ASC
-	`
-
-	rows, err := r.pool.Query(ctx, query, *simulatedCalcuttaID, profile.EntryName)
 	if err != nil {
 		return nil, err
 	}
