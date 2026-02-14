@@ -1,6 +1,9 @@
 package lab
 
-import "context"
+import (
+	"context"
+	"os"
+)
 
 // Service provides lab-related business logic.
 type Service struct {
@@ -145,6 +148,12 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 		seed = 42
 	}
 
+	// Determine excluded entry name (request value takes precedence over env var)
+	excludedEntryName := req.ExcludedEntryName
+	if excludedEntryName == "" {
+		excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
+	}
+
 	// Create pipeline run
 	run := &PipelineRun{
 		InvestmentModelID: modelID,
@@ -155,8 +164,8 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 		Seed:              seed,
 		Status:            "pending",
 	}
-	if req.ExcludedEntryName != "" {
-		run.ExcludedEntryName = &req.ExcludedEntryName
+	if excludedEntryName != "" {
+		run.ExcludedEntryName = &excludedEntryName
 	}
 
 	created, err := s.pipelineRepo.CreatePipelineRun(run)
