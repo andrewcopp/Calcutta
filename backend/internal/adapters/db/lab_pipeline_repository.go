@@ -581,6 +581,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipe
 			CASE WHEN e.id IS NOT NULL THEN true ELSE false END AS has_entry,
 			CASE WHEN ev.id IS NOT NULL THEN true ELSE false END AS has_evaluation,
 			ev.mean_normalized_payout,
+			ev.our_rank,
 			pcr.stage,
 			pcr.status,
 			pcr.progress,
@@ -625,7 +626,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipe
 			&c.CalcuttaID, &c.CalcuttaName, &c.CalcuttaYear,
 			&c.EntryID, &c.EvaluationID,
 			&c.HasPredictions, &c.HasEntry, &c.HasEvaluation,
-			&c.MeanPayout,
+			&c.MeanPayout, &c.OurRank,
 			&stage, &status, &progress, &c.ProgressMessage, &c.ErrorMessage,
 		); err != nil {
 			return nil, err

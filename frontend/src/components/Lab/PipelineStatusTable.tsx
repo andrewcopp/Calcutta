@@ -103,6 +103,9 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Result
               </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Rank
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -166,6 +169,15 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
                         }`}
                       >
                         {formatPayout(c.mean_payout)}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {c.has_evaluation && c.our_rank != null ? (
+                      <span className="text-sm font-medium text-gray-900">
+                        #{c.our_rank}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>

@@ -74,6 +74,7 @@ type CalcuttaProgressResponse struct {
 	EntryID          *string  `json:"entry_id,omitempty"`
 	EvaluationID     *string  `json:"evaluation_id,omitempty"`
 	MeanPayout       *float64 `json:"mean_payout,omitempty"`
+	OurRank          *int     `json:"our_rank,omitempty"`
 	ErrorMessage     *string  `json:"error_message,omitempty"`
 }
 

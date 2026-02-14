@@ -188,6 +188,7 @@ export type CalcuttaPipelineStatus = {
   entry_id?: string | null;
   evaluation_id?: string | null;
   mean_payout?: number | null;
+  our_rank?: number | null;
   error_message?: string | null;
 };
 
