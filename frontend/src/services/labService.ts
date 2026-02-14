@@ -101,6 +101,27 @@ export type EvaluationEntryResult = {
   rank: number;
 };
 
+// Types for evaluation entry bid
+export type EvaluationEntryBid = {
+  team_id: string;
+  school_name: string;
+  seed: number;
+  region: string;
+  bid_points: number;
+  ownership: number;
+};
+
+// Types for evaluation entry profile
+export type EvaluationEntryProfile = {
+  entry_name: string;
+  mean_normalized_payout?: number | null;
+  p_top1?: number | null;
+  p_in_money?: number | null;
+  rank: number;
+  total_bid_points: number;
+  bids: EvaluationEntryBid[];
+};
+
 // Types for leaderboard
 export type LeaderboardEntry = {
   investment_model_id: string;
@@ -285,6 +306,12 @@ export const labService = {
       `/lab/evaluations/${encodeURIComponent(id)}/entries`
     );
     return response.items;
+  },
+
+  async getEvaluationEntryProfile(evaluationId: string, entryName: string): Promise<EvaluationEntryProfile> {
+    return apiClient.get<EvaluationEntryProfile>(
+      `/lab/evaluations/${encodeURIComponent(evaluationId)}/entries/${encodeURIComponent(entryName)}`
+    );
   },
 
   async generateEntries(

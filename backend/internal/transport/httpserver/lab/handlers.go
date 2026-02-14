@@ -299,6 +299,38 @@ func (h *Handler) HandleGetEvaluationEntryResults(w http.ResponseWriter, r *http
 	response.WriteJSON(w, http.StatusOK, evaluationEntryResultsResponse{Items: results})
 }
 
+// HandleGetEvaluationEntryProfile handles GET /api/lab/evaluations/:id/entries/:entryName
+func (h *Handler) HandleGetEvaluationEntryProfile(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := strings.TrimSpace(vars["id"])
+	entryName := strings.TrimSpace(vars["entryName"])
+
+	if id == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+	if entryName == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "entryName is required", "entryName")
+		return
+	}
+	if h.app == nil || h.app.Lab == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
+		return
+	}
+
+	profile, err := h.app.Lab.GetEvaluationEntryProfile(r.Context(), id, entryName)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, profile)
+}
+
 // HandleGenerateEntries handles POST /api/lab/models/:id/generate-entries
 func (h *Handler) HandleGenerateEntries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

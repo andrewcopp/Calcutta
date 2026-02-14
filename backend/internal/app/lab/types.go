@@ -141,6 +141,27 @@ type EvaluationEntryResult struct {
 	Rank                 int      `json:"rank"`
 }
 
+// EvaluationEntryBid represents a single team bid within an evaluation entry.
+type EvaluationEntryBid struct {
+	TeamID     string  `json:"team_id"`
+	SchoolName string  `json:"school_name"`
+	Seed       int     `json:"seed"`
+	Region     string  `json:"region"`
+	BidPoints  int     `json:"bid_points"`
+	Ownership  float64 `json:"ownership"` // Percentage of total pool invested in this team
+}
+
+// EvaluationEntryProfile represents a full entry profile with result and bids.
+type EvaluationEntryProfile struct {
+	EntryName            string               `json:"entry_name"`
+	MeanNormalizedPayout *float64             `json:"mean_normalized_payout,omitempty"`
+	PTop1                *float64             `json:"p_top1,omitempty"`
+	PInMoney             *float64             `json:"p_in_money,omitempty"`
+	Rank                 int                  `json:"rank"`
+	TotalBidPoints       int                  `json:"total_bid_points"`
+	Bids                 []EvaluationEntryBid `json:"bids"`
+}
+
 // LeaderboardEntry represents a row from lab.model_leaderboard view.
 type LeaderboardEntry struct {
 	InvestmentModelID         string     `json:"investment_model_id"`
@@ -209,4 +230,5 @@ type Repository interface {
 	ListEvaluations(filter ListEvaluationsFilter, page Pagination) ([]EvaluationDetail, error)
 	GetEvaluation(id string) (*EvaluationDetail, error)
 	GetEvaluationEntryResults(evaluationID string) ([]EvaluationEntryResult, error)
+	GetEvaluationEntryProfile(evaluationID, entryName string) (*EvaluationEntryProfile, error)
 }

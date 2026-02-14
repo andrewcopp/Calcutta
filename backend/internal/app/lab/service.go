@@ -100,6 +100,11 @@ func (s *Service) GetEvaluationEntryResults(ctx context.Context, evaluationID st
 	return s.repo.GetEvaluationEntryResults(evaluationID)
 }
 
+// GetEvaluationEntryProfile returns detailed profile for an entry in an evaluation.
+func (s *Service) GetEvaluationEntryProfile(ctx context.Context, evaluationID, entryName string) (*EvaluationEntryProfile, error) {
+	return s.repo.GetEvaluationEntryProfile(evaluationID, entryName)
+}
+
 // GenerateEntries runs the Python script to generate entries for a model.
 func (s *Service) GenerateEntries(ctx context.Context, modelID string, req GenerateEntriesRequest) (*GenerateEntriesResponse, error) {
 	return RunGenerateEntriesScript(ctx, modelID, req)

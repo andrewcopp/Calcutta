@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '../../../components/ui/Alert';
@@ -19,6 +20,8 @@ interface Evaluation {
 interface EvaluationsTabProps {
   evaluation: Evaluation | null;
   isLoading: boolean;
+  modelName: string;
+  calcuttaId: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -43,7 +46,9 @@ function getPayoutColor(payout?: number | null): string {
   return 'text-red-700';
 }
 
-export function EvaluationsTab({ evaluation, isLoading }: EvaluationsTabProps) {
+export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }: EvaluationsTabProps) {
+  const navigate = useNavigate();
+
   // Fetch entry results when we have an evaluation
   const entryResultsQuery = useQuery<EvaluationEntryResult[]>({
     queryKey: ['lab', 'evaluations', evaluation?.id, 'entries'],
@@ -52,6 +57,13 @@ export function EvaluationsTab({ evaluation, isLoading }: EvaluationsTabProps) {
   });
 
   const entryResults = entryResultsQuery.data ?? [];
+
+  const handleEntryClick = (entryName: string) => {
+    if (!evaluation?.id) return;
+    navigate(
+      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/evaluations/${encodeURIComponent(evaluation.id)}/entries/${encodeURIComponent(entryName)}`
+    );
+  };
 
   if (isLoading) {
     return <LoadingState label="Loading evaluations..." layout="inline" />;
@@ -115,7 +127,11 @@ export function EvaluationsTab({ evaluation, isLoading }: EvaluationsTabProps) {
                   return (
                     <tr
                       key={entry.entry_name}
-                      className={cn(isOurStrategy && 'bg-blue-50 font-semibold')}
+                      className={cn(
+                        'hover:bg-gray-50 cursor-pointer',
+                        isOurStrategy && 'bg-blue-50 font-semibold hover:bg-blue-100'
+                      )}
+                      onClick={() => handleEntryClick(entry.entry_name)}
                     >
                       <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
                       <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
