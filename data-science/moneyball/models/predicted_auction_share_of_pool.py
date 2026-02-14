@@ -756,6 +756,15 @@ def predict_auction_share_of_pool(
     if tt not in ("none", "log"):
         raise ValueError(f"unknown target_transform: {tt}")
 
+    # Validate hyperparameters for optimal_v2 feature set
+    if fs == "optimal_v2" and seed_prior_k <= 0:
+        raise ValueError(
+            "optimal_v2 feature set requires seed_prior_k > 0 to stabilize "
+            "market prior estimates for low seeds. Without shrinkage priors, "
+            "the model produces unstable predictions that may not sum to 1.0. "
+            "Recommended: seed_prior_k=20, program_prior_k=50."
+        )
+
     seed_prior_by_seed: Optional[Dict[int, float]] = None
     program_share_mean_by_slug: Optional[Dict[str, float]] = None
     program_share_count_by_slug: Optional[Dict[str, int]] = None

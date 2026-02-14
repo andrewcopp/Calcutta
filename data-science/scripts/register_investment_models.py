@@ -57,8 +57,12 @@ INVESTMENT_MODELS: List[ModelSpec] = [
     ModelSpec(
         name="ridge-v2",
         kind="ridge",
-        params={"feature_set": "optimal_v2"},
-        notes="Ridge Regression V2 with optimal_v2 feature set",
+        params={
+            "feature_set": "optimal_v2",
+            "seed_prior_k": 20.0,
+            "program_prior_k": 50.0,
+        },
+        notes="Ridge Regression V2 with optimal_v2 feature set and stabilized priors",
     ),
     ModelSpec(
         name="ridge-v2-shrunk",
@@ -74,7 +78,11 @@ INVESTMENT_MODELS: List[ModelSpec] = [
     ModelSpec(
         name="ridge-v2-underbid-1sigma",
         kind="ridge",
-        params={"feature_set": "optimal_v2"},
+        params={
+            "feature_set": "optimal_v2",
+            "seed_prior_k": 20.0,
+            "program_prior_k": 50.0,
+        },
         notes="Ridge Regression V2 for underbid detection (1-sigma, seed/log, unscaled)",
     ),
     ModelSpec(
@@ -84,8 +92,10 @@ INVESTMENT_MODELS: List[ModelSpec] = [
             "feature_set": "optimal_v2",
             "target_transform": "log",
             "seed_prior_monotone": True,
+            "seed_prior_k": 20.0,
+            "program_prior_k": 50.0,
         },
-        notes="Ridge Regression V2 with log target transform",
+        notes="Ridge Regression V2 with log target transform and stabilized priors",
     ),
     ModelSpec(
         name="naive-ev-baseline",
