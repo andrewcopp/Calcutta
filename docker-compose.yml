@@ -43,6 +43,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
     depends_on:
       db:
         condition: service_healthy
