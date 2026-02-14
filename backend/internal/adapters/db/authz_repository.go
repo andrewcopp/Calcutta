@@ -10,15 +10,15 @@ import (
 )
 
 const grantGlobalAdminSQL = `
-INSERT INTO grants (user_id, scope_type, scope_id, label_id)
+INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
 SELECT $1, 'global', NULL, l.id
-FROM labels l
+FROM core.labels l
 WHERE l.key = 'global_admin'
   AND l.deleted_at IS NULL
   AND NOT EXISTS (
     SELECT 1
-    FROM grants g
-    JOIN labels l2 ON g.label_id = l2.id
+    FROM core.grants g
+    JOIN core.labels l2 ON g.label_id = l2.id
     WHERE g.user_id = $1
       AND g.scope_type = 'global'
       AND g.revoked_at IS NULL

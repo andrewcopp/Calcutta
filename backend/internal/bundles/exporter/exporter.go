@@ -201,7 +201,7 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 			COALESCE(u.last_name, '')
 		FROM core.calcuttas c
 		JOIN core.tournaments t ON t.id = c.tournament_id
-		JOIN public.users u ON u.id = c.owner_id
+		JOIN core.users u ON u.id = c.owner_id
 		WHERE c.deleted_at IS NULL AND t.deleted_at IS NULL AND u.deleted_at IS NULL
 		ORDER BY t.name ASC, c.created_at ASC
 	`)
@@ -319,7 +319,7 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
 		FROM core.entries e
-		LEFT JOIN public.users u ON u.id = e.user_id
+		LEFT JOIN core.users u ON u.id = e.user_id
 		WHERE e.calcutta_id = $1 AND e.deleted_at IS NULL
 		ORDER BY e.created_at ASC
 	`, calcuttaID)

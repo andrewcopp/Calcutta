@@ -1,4 +1,0 @@
-DROP TABLE IF EXISTS models.entry_candidate_bids CASCADE;
-DROP TABLE IF EXISTS models.entry_candidates CASCADE;
-DROP TABLE IF EXISTS models.runs CASCADE;
-DROP SCHEMA IF EXISTS models CASCADE;

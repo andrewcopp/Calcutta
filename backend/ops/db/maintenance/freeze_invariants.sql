@@ -31,7 +31,7 @@ WHERE c.deleted_at IS NULL AND t.id IS NULL;
 
 SELECT 'orphan_calcuttas_owner' AS check, COUNT(*) AS n
 FROM core.calcuttas c
-LEFT JOIN public.users u ON u.id = c.owner_id
+LEFT JOIN core.users u ON u.id = c.owner_id
 WHERE c.deleted_at IS NULL AND u.id IS NULL;
 
 SELECT 'orphan_entries' AS check, COUNT(*) AS n

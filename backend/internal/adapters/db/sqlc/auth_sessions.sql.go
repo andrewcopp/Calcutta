@@ -12,7 +12,7 @@ import (
 )
 
 const createAuthSession = `-- name: CreateAuthSession :one
-INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip_address)
+INSERT INTO core.auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip_address)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id
 `
@@ -40,7 +40,7 @@ func (q *Queries) CreateAuthSession(ctx context.Context, arg CreateAuthSessionPa
 
 const getAuthSessionByID = `-- name: GetAuthSessionByID :one
 SELECT id, user_id, refresh_token_hash, expires_at, revoked_at
-FROM auth_sessions
+FROM core.auth_sessions
 WHERE id = $1
 `
 
@@ -67,7 +67,7 @@ func (q *Queries) GetAuthSessionByID(ctx context.Context, id string) (GetAuthSes
 
 const getAuthSessionByRefreshTokenHash = `-- name: GetAuthSessionByRefreshTokenHash :one
 SELECT id, user_id, refresh_token_hash, expires_at, revoked_at
-FROM auth_sessions
+FROM core.auth_sessions
 WHERE refresh_token_hash = $1
 `
 
@@ -93,7 +93,7 @@ func (q *Queries) GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshT
 }
 
 const revokeAuthSession = `-- name: RevokeAuthSession :exec
-UPDATE auth_sessions
+UPDATE core.auth_sessions
 SET revoked_at = NOW(),
     updated_at = NOW()
 WHERE id = $1
@@ -106,7 +106,7 @@ func (q *Queries) RevokeAuthSession(ctx context.Context, id string) error {
 }
 
 const rotateAuthSessionRefreshToken = `-- name: RotateAuthSessionRefreshToken :exec
-UPDATE auth_sessions
+UPDATE core.auth_sessions
 SET refresh_token_hash = $2,
     expires_at = $3,
     updated_at = NOW(),

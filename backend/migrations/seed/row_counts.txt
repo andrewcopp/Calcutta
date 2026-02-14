@@ -1,0 +1,23 @@
+Row counts for jubilee verification (2026-02-14)
+
+core.calcutta_scoring_rules          |    56
+core.calcutta_snapshot_entries       |  3458
+core.calcutta_snapshot_entry_teams   | 29970
+core.calcutta_snapshot_payouts       |   487
+core.calcutta_snapshot_scoring_rules |   581
+core.calcutta_snapshots              |    83
+core.calcuttas                       |     8
+core.competitions                    |     1
+core.entries                         |   334
+core.entry_teams                     |  2911
+core.payouts                         |    47
+core.schools                         |   367
+core.seasons                         |     9
+core.team_kenpom_stats               |   544
+core.teams                           |   612
+core.tournaments                     |     9
+core.grants (was public)             |     3
+core.label_permissions (was public)  |    32
+core.labels (was public)             |     4
+core.permissions (was public)        |    26
+core.users (was public)              |     2

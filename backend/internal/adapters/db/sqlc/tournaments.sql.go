@@ -51,7 +51,7 @@ SELECT
   competition.id,
   season.id,
   $2,
-  public.calcutta_slugify($2) || '-' || left(md5($1), 6),
+  core.calcutta_slugify($2) || '-' || left(md5($1), 6),
   $3,
   $4,
   $5,

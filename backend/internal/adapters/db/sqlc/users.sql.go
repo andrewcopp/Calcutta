@@ -12,7 +12,7 @@ import (
 )
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO users (id, email, first_name, last_name, password_hash, created_at, updated_at)
+INSERT INTO core.users (id, email, first_name, last_name, password_hash, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
@@ -41,7 +41,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, first_name, last_name, password_hash, created_at, updated_at, deleted_at
-FROM users
+FROM core.users
 WHERE email = $1 AND deleted_at IS NULL
 `
 
@@ -74,7 +74,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, email, first_name, last_name, password_hash, created_at, updated_at, deleted_at
-FROM users
+FROM core.users
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -106,7 +106,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 }
 
 const updateUser = `-- name: UpdateUser :exec
-UPDATE users
+UPDATE core.users
 SET
   email = $2,
   first_name = $3,

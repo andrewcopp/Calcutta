@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type ApiKey struct {
+type CoreApiKey struct {
 	ID         string
 	UserID     string
 	KeyHash    string
@@ -20,117 +20,7 @@ type ApiKey struct {
 	DeletedAt  pgtype.Timestamptz
 }
 
-type ArchiveAlgorithm struct {
-	ID          string
-	Kind        string
-	Name        string
-	Description *string
-	ParamsJson  []byte
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	DeletedAt   pgtype.Timestamptz
-}
-
-type ArchiveCandidate struct {
-	ID                      string
-	SourceKind              string
-	SourceEntryArtifactID   pgtype.UUID
-	DisplayName             string
-	MetadataJson            []byte
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	CalcuttaID              pgtype.UUID
-	TournamentID            pgtype.UUID
-	StrategyGenerationRunID pgtype.UUID
-	MarketShareRunID        pgtype.UUID
-	MarketShareArtifactID   pgtype.UUID
-	AdvancementRunID        pgtype.UUID
-	OptimizerKey            *string
-	StartingStateKey        *string
-	ExcludedEntryName       *string
-	GitSha                  *string
-}
-
-type ArchiveCandidateBid struct {
-	ID          string
-	CandidateID string
-	TeamID      string
-	BidPoints   int32
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	DeletedAt   pgtype.Timestamptz
-}
-
-type ArchiveEntryEvaluationRequest struct {
-	ID                string
-	CalcuttaID        string
-	EntryCandidateID  string
-	ExcludedEntryName *string
-	StartingStateKey  string
-	NSims             int32
-	Seed              int32
-	ExperimentKey     *string
-	RequestSource     *string
-	Status            string
-	ClaimedAt         pgtype.Timestamptz
-	ClaimedBy         *string
-	EvaluationRunID   pgtype.UUID
-	ErrorMessage      *string
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
-	DeletedAt         pgtype.Timestamptz
-	RunKey            string
-}
-
-type ArchiveMarketShareRun struct {
-	ID              string
-	AlgorithmID     string
-	CalcuttaID      string
-	CalcuttaGroupID pgtype.UUID
-	ParamsJson      []byte
-	GitSha          *string
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	DeletedAt       pgtype.Timestamptz
-	RunKey          string
-}
-
-type ArchiveStrategyGenerationRun struct {
-	ID                    string
-	SimulatedTournamentID pgtype.UUID
-	CalcuttaID            pgtype.UUID
-	Purpose               string
-	ReturnsModelKey       string
-	InvestmentModelKey    string
-	OptimizerKey          string
-	ParamsJson            []byte
-	GitSha                *string
-	CreatedAt             pgtype.Timestamptz
-	UpdatedAt             pgtype.Timestamptz
-	DeletedAt             pgtype.Timestamptz
-	RunKey                *string
-	Name                  *string
-	RunKeyUuid            string
-	MarketShareRunID      pgtype.UUID
-	GameOutcomeRunID      pgtype.UUID
-	ExcludedEntryName     *string
-	StartingStateKey      *string
-}
-
-type ArchiveStrategyGenerationRunBid struct {
-	ID                      string
-	RunID                   string
-	TeamID                  string
-	BidPoints               int32
-	ExpectedRoi             float64
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	StrategyGenerationRunID pgtype.UUID
-}
-
-type AuthSession struct {
+type CoreAuthSession struct {
 	ID               string
 	UserID           string
 	RefreshTokenHash string
@@ -144,67 +34,7 @@ type AuthSession struct {
 	DeletedAt        pgtype.Timestamptz
 }
 
-type BronzeCalcutta struct {
-	ID             string
-	TournamentID   string
-	Name           string
-	MinTeams       int32
-	MaxTeams       int32
-	MaxBidPoints   int32
-	CreatedAt      pgtype.Timestamptz
-	CoreCalcuttaID pgtype.UUID
-	UpdatedAt      pgtype.Timestamptz
-	DeletedAt      pgtype.Timestamptz
-}
-
-type BronzeEntryBid struct {
-	ID              string
-	CalcuttaID      string
-	EntryName       string
-	TeamID          string
-	BidAmountPoints int32
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	DeletedAt       pgtype.Timestamptz
-}
-
-type BronzePayout struct {
-	ID         string
-	CalcuttaID string
-	Round      int32
-	Points     int32
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-	DeletedAt  pgtype.Timestamptz
-}
-
-type BronzeTeam struct {
-	ID           string
-	TournamentID string
-	SchoolSlug   string
-	SchoolName   string
-	Seed         *int32
-	Region       *string
-	KenpomNet    *float64
-	KenpomAdjEm  *float64
-	KenpomAdjO   *float64
-	KenpomAdjD   *float64
-	KenpomAdjT   *float64
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-type BronzeTournament struct {
-	ID               string
-	Season           int32
-	CreatedAt        pgtype.Timestamptz
-	CoreTournamentID pgtype.UUID
-	UpdatedAt        pgtype.Timestamptz
-	DeletedAt        pgtype.Timestamptz
-}
-
-type BundleUpload struct {
+type CoreBundleUpload struct {
 	ID           string
 	Filename     string
 	Sha256       string
@@ -307,7 +137,7 @@ type CoreCompetition struct {
 type CoreDerivedPortfolio struct {
 	ID            string
 	EntryID       string
-	MaximumPoints float64
+	MaximumPoints int64
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     interface{}
 	DeletedAt     pgtype.Timestamptz
@@ -318,9 +148,9 @@ type CoreDerivedPortfolioTeam struct {
 	PortfolioID         string
 	TeamID              string
 	OwnershipPercentage float64
-	ActualPoints        float64
-	ExpectedPoints      float64
-	PredictedPoints     float64
+	ActualPoints        int32
+	ExpectedPoints      interface{}
+	PredictedPoints     interface{}
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           interface{}
 	DeletedAt           pgtype.Timestamptz
@@ -357,11 +187,51 @@ type CoreEntryTeam struct {
 	DeletedAt pgtype.Timestamptz
 }
 
+type CoreGrant struct {
+	ID           string
+	UserID       string
+	ScopeType    string
+	ScopeID      pgtype.UUID
+	LabelID      pgtype.UUID
+	PermissionID pgtype.UUID
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	ExpiresAt    pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type CoreLabel struct {
+	ID          string
+	Key         string
+	Description *string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
+type CoreLabelPermission struct {
+	LabelID      string
+	PermissionID string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
 type CorePayout struct {
 	ID          string
 	CalcuttaID  string
 	Position    int32
 	AmountCents int32
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
+type CorePermission struct {
+	ID          string
+	Key         string
+	Description *string
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	DeletedAt   pgtype.Timestamptz
@@ -424,6 +294,23 @@ type CoreTournament struct {
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 	DeletedAt            pgtype.Timestamptz
+}
+
+type CoreUser struct {
+	ID               string
+	Email            string
+	FirstName        string
+	LastName         string
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
+	PasswordHash     *string
+	Status           string
+	InviteTokenHash  *string
+	InviteExpiresAt  pgtype.Timestamptz
+	InviteConsumedAt pgtype.Timestamptz
+	InvitedAt        pgtype.Timestamptz
+	LastInviteSentAt pgtype.Timestamptz
 }
 
 type DerivedCalcutta struct {
@@ -731,6 +618,23 @@ type DerivedSimulatedTournament struct {
 	DeletedAt            pgtype.Timestamptz
 }
 
+type DerivedSimulationCohort struct {
+	ID                      string
+	Name                    string
+	Description             *string
+	GameOutcomesAlgorithmID string
+	MarketShareAlgorithmID  string
+	OptimizerKey            string
+	NSims                   int32
+	Seed                    int32
+	StartingStateKey        string
+	ExcludedEntryName       *string
+	ParamsJson              []byte
+	CreatedAt               pgtype.Timestamptz
+	UpdatedAt               pgtype.Timestamptz
+	DeletedAt               pgtype.Timestamptz
+}
+
 type DerivedSimulationRun struct {
 	ID                        string
 	RunKey                    string
@@ -807,23 +711,6 @@ type DerivedSimulationStateTeam struct {
 	DeletedAt         pgtype.Timestamptz
 }
 
-type DerivedSyntheticCalcuttaCohort struct {
-	ID                      string
-	Name                    string
-	Description             *string
-	GameOutcomesAlgorithmID string
-	MarketShareAlgorithmID  string
-	OptimizerKey            string
-	NSims                   int32
-	Seed                    int32
-	StartingStateKey        string
-	ExcludedEntryName       *string
-	ParamsJson              []byte
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-}
-
 type DerivedTeam struct {
 	ID               string
 	CoreTeamID       string
@@ -874,89 +761,6 @@ type DerivedVStrategyGenerationRunBid struct {
 	ExpectedRoi             interface{}
 	CreatedAt               pgtype.Timestamptz
 	DeletedAt               pgtype.Timestamptz
-}
-
-type GoldDetailedInvestmentReport struct {
-	ID                      string
-	RunID                   string
-	TeamID                  string
-	ExpectedPoints          float64
-	PredictedMarketPoints   float64
-	ActualMarketPoints      *float64
-	OurBidPoints            *int32
-	ExpectedRoi             float64
-	OurRoi                  *float64
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	StrategyGenerationRunID pgtype.UUID
-}
-
-type GoldEntryPerformance struct {
-	ID                      string
-	RunID                   string
-	EntryName               string
-	MeanPayout              float64
-	MedianPayout            float64
-	PTop1                   float64
-	PInMoney                float64
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	CalcuttaEvaluationRunID pgtype.UUID
-}
-
-type GoldEntrySimulationOutcome struct {
-	ID                      string
-	RunID                   string
-	EntryName               string
-	SimID                   int32
-	PayoutPoints            int32
-	Rank                    int32
-	CreatedAt               pgtype.Timestamptz
-	PointsScored            float64
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	CalcuttaEvaluationRunID pgtype.UUID
-}
-
-type GoldOptimizationRun struct {
-	RunID                   string
-	CalcuttaID              pgtype.UUID
-	Strategy                string
-	NSims                   int32
-	Seed                    int32
-	BudgetPoints            int32
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	StrategyGenerationRunID pgtype.UUID
-}
-
-type GoldRecommendedEntryBid struct {
-	ID                      string
-	RunID                   string
-	TeamID                  string
-	RecommendedBidPoints    int32
-	ExpectedRoi             float64
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	StrategyGenerationRunID pgtype.UUID
-}
-
-type Grant struct {
-	ID           string
-	UserID       string
-	ScopeType    string
-	ScopeID      pgtype.UUID
-	LabelID      pgtype.UUID
-	PermissionID pgtype.UUID
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	ExpiresAt    pgtype.Timestamptz
-	RevokedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
 }
 
 type LabEntry struct {
@@ -1012,6 +816,17 @@ type LabEvaluation struct {
 	DeletedAt              pgtype.Timestamptz
 }
 
+type LabEvaluationEntryResult struct {
+	ID                   string
+	EvaluationID         string
+	EntryName            string
+	MeanNormalizedPayout *float64
+	PTop1                *float64
+	PInMoney             *float64
+	Rank                 *int32
+	CreatedAt            pgtype.Timestamptz
+}
+
 type LabInvestmentModel struct {
 	ID         string
 	Name       string
@@ -1021,6 +836,8 @@ type LabInvestmentModel struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
+	// True for oracle/baseline models that should be excluded from training data
+	IsBenchmark bool
 }
 
 type LabModelLeaderboard struct {
@@ -1075,126 +892,4 @@ type LabPipelineRun struct {
 	ErrorMessage      *string
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
-}
-
-type Label struct {
-	ID          string
-	Key         string
-	Description *string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	DeletedAt   pgtype.Timestamptz
-}
-
-type LabelPermission struct {
-	LabelID      string
-	PermissionID string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-type ModelsEntryCandidate struct {
-	ID           string
-	RunID        string
-	CalcuttaID   pgtype.UUID
-	BudgetPoints int32
-	MinTeams     int32
-	MaxTeams     int32
-	MinBidPoints int32
-	MaxBidPoints int32
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-type ModelsEntryCandidateBid struct {
-	ID               string
-	EntryCandidateID string
-	TeamID           string
-	BidPoints        int32
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	DeletedAt        pgtype.Timestamptz
-}
-
-type ModelsRun struct {
-	ID                 string
-	Name               *string
-	SeasonYear         *int32
-	ExperimentKey      *string
-	ReturnsModelKey    string
-	InvestmentModelKey string
-	AllocatorKey       string
-	ParamsJson         []byte
-	CreatedAt          pgtype.Timestamptz
-	UpdatedAt          pgtype.Timestamptz
-	DeletedAt          pgtype.Timestamptz
-}
-
-type Permission struct {
-	ID          string
-	Key         string
-	Description *string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	DeletedAt   pgtype.Timestamptz
-}
-
-type SilverPredictedGameOutcome struct {
-	ID           string
-	TournamentID string
-	GameID       string
-	Round        int32
-	Team1ID      string
-	Team2ID      string
-	PTeam1Wins   float64
-	PMatchup     float64
-	ModelVersion *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-type SilverPredictedMarketShare struct {
-	ID              string
-	CalcuttaID      pgtype.UUID
-	TeamID          string
-	PredictedShare  float64
-	PredictedPoints float64
-	CreatedAt       pgtype.Timestamptz
-	TournamentID    pgtype.UUID
-	UpdatedAt       pgtype.Timestamptz
-	DeletedAt       pgtype.Timestamptz
-}
-
-type SilverSimulatedTournament struct {
-	ID                          string
-	TournamentID                string
-	SimID                       int32
-	TeamID                      string
-	Wins                        int32
-	Byes                        int32
-	Eliminated                  bool
-	CreatedAt                   pgtype.Timestamptz
-	UpdatedAt                   pgtype.Timestamptz
-	DeletedAt                   pgtype.Timestamptz
-	TournamentSimulationBatchID pgtype.UUID
-}
-
-type User struct {
-	ID               string
-	Email            string
-	FirstName        string
-	LastName         string
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	DeletedAt        pgtype.Timestamptz
-	PasswordHash     *string
-	Status           string
-	InviteTokenHash  *string
-	InviteExpiresAt  pgtype.Timestamptz
-	InviteConsumedAt pgtype.Timestamptz
-	InvitedAt        pgtype.Timestamptz
-	LastInviteSentAt pgtype.Timestamptz
 }

@@ -14,18 +14,18 @@ import (
 const claimNextBundleUpload = `-- name: ClaimNextBundleUpload :one
 WITH candidate AS (
 	SELECT id
-	FROM bundle_uploads
+	FROM core.bundle_uploads
 	WHERE deleted_at IS NULL
-	  AND bundle_uploads.finished_at IS NULL
+	  AND core.bundle_uploads.finished_at IS NULL
 	  AND (
-		bundle_uploads.status = 'pending'
-		OR (bundle_uploads.status = 'running' AND bundle_uploads.started_at IS NOT NULL AND bundle_uploads.started_at < $2)
+		core.bundle_uploads.status = 'pending'
+		OR (core.bundle_uploads.status = 'running' AND core.bundle_uploads.started_at IS NOT NULL AND core.bundle_uploads.started_at < $2)
 	  )
 	ORDER BY created_at ASC
 	LIMIT 1
 	FOR UPDATE SKIP LOCKED
 )
-UPDATE bundle_uploads bu
+UPDATE core.bundle_uploads bu
 SET status = 'running',
 	started_at = $1,
 	finished_at = NULL,
@@ -52,7 +52,7 @@ func (q *Queries) ClaimNextBundleUpload(ctx context.Context, arg ClaimNextBundle
 
 const getBundleUploadArchive = `-- name: GetBundleUploadArchive :one
 SELECT archive
-FROM bundle_uploads
+FROM core.bundle_uploads
 WHERE id = $1::uuid AND deleted_at IS NULL
 `
 
@@ -74,7 +74,7 @@ SELECT
 	error_message,
 	COALESCE(import_report, '{}'::jsonb)::jsonb AS import_report,
 	COALESCE(verify_report, '{}'::jsonb)::jsonb AS verify_report
-FROM bundle_uploads
+FROM core.bundle_uploads
 WHERE id = $1::uuid AND deleted_at IS NULL
 `
 
@@ -108,7 +108,7 @@ func (q *Queries) GetBundleUploadStatus(ctx context.Context, uploadID string) (G
 }
 
 const markBundleUploadFailed = `-- name: MarkBundleUploadFailed :exec
-UPDATE bundle_uploads
+UPDATE core.bundle_uploads
 SET status = 'failed',
 	finished_at = NOW(),
 	error_message = $1,
@@ -127,7 +127,7 @@ func (q *Queries) MarkBundleUploadFailed(ctx context.Context, arg MarkBundleUplo
 }
 
 const markBundleUploadSucceeded = `-- name: MarkBundleUploadSucceeded :exec
-UPDATE bundle_uploads
+UPDATE core.bundle_uploads
 SET status = 'succeeded',
 	finished_at = NOW(),
 	import_report = $1,
@@ -149,7 +149,7 @@ func (q *Queries) MarkBundleUploadSucceeded(ctx context.Context, arg MarkBundleU
 
 const upsertBundleUpload = `-- name: UpsertBundleUpload :one
 
-INSERT INTO bundle_uploads (filename, sha256, size_bytes, archive, status)
+INSERT INTO core.bundle_uploads (filename, sha256, size_bytes, archive, status)
 VALUES ($1, $2, $3, $4, 'pending')
 ON CONFLICT (sha256) WHERE deleted_at IS NULL
 DO UPDATE SET
