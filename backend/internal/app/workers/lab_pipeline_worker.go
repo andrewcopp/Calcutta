@@ -502,7 +502,7 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 	// Get calcutta rules for constraints
 	var minTeams, maxTeams, maxPerTeam int32
 	err = w.pool.QueryRow(ctx, `
-		SELECT min_teams, max_teams, max_bid_per_team
+		SELECT min_teams, max_teams, max_bid
 		FROM core.calcuttas
 		WHERE id = $1::uuid AND deleted_at IS NULL
 	`, params.CalcuttaID).Scan(&minTeams, &maxTeams, &maxPerTeam)
@@ -722,27 +722,41 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.95, "evaluation", "Saving results")
 
+	// Extract "Our Strategy" rank from results
+	var ourRank int
+	for _, entry := range result.AllEntryResults {
+		if entry.EntryName == "Our Strategy" {
+			ourRank = entry.Rank
+			break
+		}
+	}
+
 	// Create or update lab.evaluations row with results
 	var evaluationID string
 	err = w.pool.QueryRow(ctx, `
-		INSERT INTO lab.evaluations (entry_id, n_sims, seed, mean_normalized_payout, median_normalized_payout, p_top1, p_in_money)
-		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
+		INSERT INTO lab.evaluations (entry_id, n_sims, seed, mean_normalized_payout, median_normalized_payout, p_top1, p_in_money, our_rank)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (entry_id, n_sims, seed) WHERE deleted_at IS NULL
 		DO UPDATE SET
 			mean_normalized_payout = EXCLUDED.mean_normalized_payout,
 			median_normalized_payout = EXCLUDED.median_normalized_payout,
 			p_top1 = EXCLUDED.p_top1,
 			p_in_money = EXCLUDED.p_in_money,
+			our_rank = EXCLUDED.our_rank,
 			updated_at = NOW()
 		RETURNING id::text
-	`, params.EntryID, result.NSims, params.Seed, result.MeanNormalizedPayout, result.MedianNormalizedPayout, result.PTop1, result.PInMoney).Scan(&evaluationID)
+	`, params.EntryID, result.NSims, params.Seed, result.MeanNormalizedPayout, result.MedianNormalizedPayout, result.PTop1, result.PInMoney, ourRank).Scan(&evaluationID)
 	if err != nil {
 		w.failLabPipelineJob(ctx, job, errors.New("failed to save evaluation: "+err.Error()))
 		return false
 	}
 
 	// Save per-entry results
-	if len(result.AllEntryResults) > 0 {
+	if len(result.AllEntryResults) == 0 {
+		w.failLabPipelineJob(ctx, job, errors.New("evaluation produced no entry results"))
+		return false
+	}
+	{
 		// Delete existing results for this evaluation (in case of re-run)
 		_, _ = w.pool.Exec(ctx, `
 			DELETE FROM lab.evaluation_entry_results WHERE evaluation_id = $1::uuid
@@ -755,7 +769,8 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 				VALUES ($1::uuid, $2, $3, $4, $5, $6)
 			`, evaluationID, entry.EntryName, entry.MeanPayout, entry.PTop1, entry.PInMoney, entry.Rank)
 			if err != nil {
-				log.Printf("lab_pipeline_worker save_entry_result_warn evaluation_id=%s entry=%s err=%v", evaluationID, entry.EntryName, err)
+				w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to save entry result for %s: %w", entry.EntryName, err))
+				return false
 			}
 		}
 	}
