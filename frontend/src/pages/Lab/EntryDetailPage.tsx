@@ -76,12 +76,12 @@ export function EntryDetailPage() {
   const loadedEntryId = entryQuery.data?.id;
   const evaluationsQuery = useQuery<ListEvaluationsResponse | null>({
     queryKey: ['lab', 'evaluations', { entry_id: loadedEntryId }],
-    queryFn: () => (loadedEntryId ? labService.listEvaluations({ entry_id: loadedEntryId, limit: 50 }) : Promise.resolve(null)),
+    queryFn: () => (loadedEntryId ? labService.listEvaluations({ entry_id: loadedEntryId, limit: 1 }) : Promise.resolve(null)),
     enabled: Boolean(loadedEntryId),
   });
 
   const entry = entryQuery.data;
-  const evaluations = evaluationsQuery.data?.items ?? [];
+  const evaluation = evaluationsQuery.data?.items[0] ?? null;
   const predictions = entry?.predictions ?? [];
   const bids = entry?.bids ?? [];
 
@@ -147,7 +147,7 @@ export function EntryDetailPage() {
   // Compute stage completion status
   const hasPredictions = entry.has_predictions && predictions.length > 0;
   const hasBids = bids.length > 0;
-  const hasEvaluations = evaluations.length > 0;
+  const hasEvaluations = evaluation !== null;
 
   return (
     <div className="container mx-auto px-4 py-4">
@@ -245,10 +245,8 @@ export function EntryDetailPage() {
 
       {activeTab === 'evaluations' && (
         <EvaluationsTab
-          evaluations={evaluations}
+          evaluation={evaluation}
           isLoading={evaluationsQuery.isLoading}
-          modelName={entry.model_name}
-          calcuttaId={entry.calcutta_id}
         />
       )}
     </div>

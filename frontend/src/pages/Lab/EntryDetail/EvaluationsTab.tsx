@@ -1,9 +1,10 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '../../../components/ui/Alert';
 import { Card } from '../../../components/ui/Card';
 import { LoadingState } from '../../../components/ui/LoadingState';
+import { labService, EvaluationEntryResult } from '../../../services/labService';
 import { cn } from '../../../lib/cn';
 
 interface Evaluation {
@@ -16,10 +17,8 @@ interface Evaluation {
 }
 
 interface EvaluationsTabProps {
-  evaluations: Evaluation[];
+  evaluation: Evaluation | null;
   isLoading: boolean;
-  modelName: string;
-  calcuttaId: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -44,79 +43,94 @@ function getPayoutColor(payout?: number | null): string {
   return 'text-red-700';
 }
 
-export function EvaluationsTab({ evaluations, isLoading, modelName, calcuttaId }: EvaluationsTabProps) {
-  const navigate = useNavigate();
+export function EvaluationsTab({ evaluation, isLoading }: EvaluationsTabProps) {
+  // Fetch entry results when we have an evaluation
+  const entryResultsQuery = useQuery<EvaluationEntryResult[]>({
+    queryKey: ['lab', 'evaluations', evaluation?.id, 'entries'],
+    queryFn: () => (evaluation?.id ? labService.getEvaluationEntryResults(evaluation.id) : Promise.resolve([])),
+    enabled: Boolean(evaluation?.id),
+  });
 
-  // Calculate summary stats
-  const latestEval = evaluations.length > 0 ? evaluations[0] : null;
-  const bestEval = evaluations.length > 0
-    ? [...evaluations].sort((a, b) => (b.mean_normalized_payout ?? 0) - (a.mean_normalized_payout ?? 0))[0]
-    : null;
+  const entryResults = entryResultsQuery.data ?? [];
+
+  if (isLoading) {
+    return <LoadingState label="Loading evaluations..." layout="inline" />;
+  }
+
+  if (!evaluation) {
+    return <Alert variant="info">No evaluations yet. Run simulations to see how this entry would perform.</Alert>;
+  }
 
   return (
     <div className="space-y-4">
-      {/* Evaluation-specific stats */}
-      {!isLoading && evaluations.length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-xs text-gray-500 uppercase">Latest Run</div>
-            <div className={cn('text-lg font-semibold', getPayoutColor(latestEval?.mean_normalized_payout))}>
-              {formatPayoutX(latestEval?.mean_normalized_payout)}
-            </div>
-            <div className="text-xs text-gray-400">
-              {latestEval ? formatDate(latestEval.created_at) : '-'}
-            </div>
+      {/* Compact evaluation metrics header */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          <div>
+            <span className="text-xs text-gray-500 uppercase mr-2">Sims:</span>
+            <span className="font-medium">{evaluation.n_sims.toLocaleString()}</span>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-xs text-gray-500 uppercase">Best Run</div>
-            <div className={cn('text-lg font-semibold', getPayoutColor(bestEval?.mean_normalized_payout))}>
-              {formatPayoutX(bestEval?.mean_normalized_payout)}
-            </div>
-            <div className="text-xs text-gray-400">
-              {bestEval?.n_sims.toLocaleString()} sims
-            </div>
+          <div>
+            <span className="text-xs text-gray-500 uppercase mr-2">Mean Payout:</span>
+            <span className={cn('font-semibold', getPayoutColor(evaluation.mean_normalized_payout))}>
+              {formatPayoutX(evaluation.mean_normalized_payout)}
+            </span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 uppercase mr-2">P(Top 1):</span>
+            <span className="font-medium">{formatPct(evaluation.p_top1)}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 uppercase mr-2">P(In Money):</span>
+            <span className="font-medium">{formatPct(evaluation.p_in_money)}</span>
+          </div>
+          <div className="text-gray-400 text-sm">
+            Created: {formatDate(evaluation.created_at)}
           </div>
         </div>
-      )}
+      </div>
 
+      {/* All Entries Ranked by Mean Payout */}
       <Card>
-        <h2 className="text-lg font-semibold mb-3">Evaluations ({evaluations.length})</h2>
-        {isLoading ? <LoadingState label="Loading evaluations..." layout="inline" /> : null}
-        {!isLoading && evaluations.length === 0 ? (
-          <Alert variant="info">No evaluations yet. Run simulations to see how this entry would perform.</Alert>
-        ) : null}
-        {!isLoading && evaluations.length > 0 ? (
+        <h2 className="text-lg font-semibold mb-3">All Entries Ranked by Mean Payout</h2>
+        {entryResultsQuery.isLoading ? (
+          <LoadingState label="Loading entry results..." layout="inline" />
+        ) : entryResults.length === 0 ? (
+          <p className="text-gray-500 text-sm">No entry results available for this evaluation.</p>
+        ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sims</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entry Name</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mean Payout</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(Top 1)</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(In Money)</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {evaluations.map((ev) => (
-                  <tr
-                    key={ev.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/models/${encodeURIComponent(modelName)}/calcuttas/${encodeURIComponent(calcuttaId)}/evaluations/${encodeURIComponent(ev.id)}`)}
-                  >
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{ev.n_sims.toLocaleString()}</td>
-                    <td className={cn('px-3 py-2 text-sm text-right', getPayoutColor(ev.mean_normalized_payout))}>
-                      {formatPayoutX(ev.mean_normalized_payout)}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(ev.p_top1)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(ev.p_in_money)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-500">{formatDate(ev.created_at)}</td>
-                  </tr>
-                ))}
+                {entryResults.map((entry) => {
+                  const isOurStrategy = entry.entry_name === 'Our Strategy';
+                  return (
+                    <tr
+                      key={entry.entry_name}
+                      className={cn(isOurStrategy && 'bg-blue-50 font-semibold')}
+                    >
+                      <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
+                      <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
+                        {entry.entry_name}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.mean_normalized_payout)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_top1)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_in_money)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        ) : null}
+        )}
       </Card>
     </div>
   );
