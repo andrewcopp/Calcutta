@@ -581,7 +581,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipe
 			CASE WHEN e.id IS NOT NULL THEN true ELSE false END AS has_entry,
 			CASE WHEN ev.id IS NOT NULL THEN true ELSE false END AS has_evaluation,
 			ev.mean_normalized_payout,
-			ev.our_rank,
+			eer.rank AS our_rank,
 			pcr.stage,
 			pcr.status,
 			pcr.progress,
@@ -595,6 +595,8 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipe
 			AND e.starting_state_key = 'post_first_four'
 			AND e.deleted_at IS NULL
 		LEFT JOIN lab.evaluations ev ON ev.entry_id = e.id AND ev.deleted_at IS NULL
+		LEFT JOIN lab.evaluation_entry_results eer ON eer.evaluation_id = ev.id
+			AND eer.entry_name = 'Our Strategy'
 		LEFT JOIN lab.pipeline_calcutta_runs pcr ON pcr.calcutta_id = c.id
 			AND pcr.pipeline_run_id = (
 				SELECT id FROM lab.pipeline_runs
