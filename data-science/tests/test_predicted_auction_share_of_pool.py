@@ -344,3 +344,61 @@ class TestThatOptimalV3WorksWithRealisticMarketShares(unittest.TestCase):
         ].mean()
 
         self.assertGreater(avg_by_seed[1], avg_by_seed[16])
+
+
+class TestThatOptimalV3WorksWithMultiYearTrainingData(unittest.TestCase):
+    """optimal_v3 must process each year separately to avoid broken analytics."""
+
+    def test_that_optimal_v3_produces_non_uniform_predictions_with_multi_year_data(
+        self,
+    ) -> None:
+        # GIVEN multi-year training data (simulating concatenated snapshots)
+        train_2023 = _create_68_team_field_for_auction()
+        train_2023["snapshot"] = "2023"
+        train_2024 = _create_68_team_field_for_auction()
+        train_2024["snapshot"] = "2024"
+
+        # Concatenate years (this is what triggered the original bug)
+        train = pd.concat([train_2023, train_2024], ignore_index=True)
+
+        # Higher seeds get larger market share
+        seed_shares = {
+            1: 0.08, 2: 0.06, 3: 0.05, 4: 0.04, 5: 0.03, 6: 0.025,
+            7: 0.02, 8: 0.018, 9: 0.015, 10: 0.012, 11: 0.01,
+            12: 0.008, 13: 0.005, 14: 0.003, 15: 0.002, 16: 0.001,
+        }
+        train["team_share_of_pool"] = train["seed"].map(seed_shares)
+        train["team_share_of_pool"] = (
+            train["team_share_of_pool"] / train["team_share_of_pool"].sum()
+        )
+
+        pred = _create_68_team_field_for_auction()
+        pred["snapshot"] = "2025"
+
+        # WHEN using optimal_v3 with multi-year training data
+        out = predict_auction_share_of_pool(
+            train_team_dataset=train,
+            predict_team_dataset=pred,
+            ridge_alpha=1.0,
+            feature_set="optimal_v3",
+            kenpom_scale=10.0,
+        )
+
+        # THEN predictions should NOT be uniform (the original bug produced 1/68)
+        uniform_share = 1.0 / 68
+        predictions = out["predicted_auction_share_of_pool"].values
+
+        # Check that at least some predictions deviate significantly from uniform
+        max_deviation = max(abs(p - uniform_share) for p in predictions)
+        self.assertGreater(
+            max_deviation,
+            0.005,
+            "Predictions are nearly uniform - analytical enrichment likely failed",
+        )
+
+        # THEN predictions should still sum to 1.0
+        self.assertAlmostEqual(
+            float(out["predicted_auction_share_of_pool"].sum()),
+            1.0,
+            places=8,
+        )

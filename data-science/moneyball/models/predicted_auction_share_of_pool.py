@@ -979,10 +979,23 @@ def predict_auction_share_of_pool(
                 program_share_mean_by_slug = grp.mean().to_dict()
 
     # Enrich with analytical probabilities for optimal_v3
+    # IMPORTANT: Must process each year/snapshot separately since the analytical
+    # calculation expects a single 68-team tournament, not concatenated multi-year data
     if fs == "optimal_v3":
-        train_team_dataset = _enrich_with_analytical_probabilities(
-            train_team_dataset, kenpom_scale=kenpom_scale
-        )
+        if "snapshot" in train_team_dataset.columns:
+            # Process each year separately, then concatenate
+            enriched_frames = []
+            for snapshot, group in train_team_dataset.groupby("snapshot"):
+                enriched = _enrich_with_analytical_probabilities(
+                    group.copy(), kenpom_scale=kenpom_scale
+                )
+                enriched_frames.append(enriched)
+            train_team_dataset = pd.concat(enriched_frames, ignore_index=True)
+        else:
+            # Single tournament - process directly
+            train_team_dataset = _enrich_with_analytical_probabilities(
+                train_team_dataset, kenpom_scale=kenpom_scale
+            )
         predict_team_dataset = _enrich_with_analytical_probabilities(
             predict_team_dataset, kenpom_scale=kenpom_scale
         )
