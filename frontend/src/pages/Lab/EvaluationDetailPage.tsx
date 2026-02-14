@@ -7,10 +7,15 @@ import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
-import { labService, EvaluationDetail } from '../../services/labService';
+import { labService, EvaluationDetail, EvaluationEntryResult } from '../../services/labService';
+import { cn } from '../../lib/cn';
 
 export function EvaluationDetailPage() {
-  const { evaluationId } = useParams<{ evaluationId: string }>();
+  const { evaluationId, modelName, calcuttaId } = useParams<{
+    evaluationId: string;
+    modelName?: string;
+    calcuttaId?: string;
+  }>();
   const navigate = useNavigate();
 
   const evaluationQuery = useQuery<EvaluationDetail | null>({
@@ -19,7 +24,14 @@ export function EvaluationDetailPage() {
     enabled: Boolean(evaluationId),
   });
 
+  const entryResultsQuery = useQuery<EvaluationEntryResult[]>({
+    queryKey: ['lab', 'evaluations', evaluationId, 'entries'],
+    queryFn: () => (evaluationId ? labService.getEvaluationEntryResults(evaluationId) : Promise.resolve([])),
+    enabled: Boolean(evaluationId),
+  });
+
   const evaluation = evaluationQuery.data;
+  const entryResults = entryResultsQuery.data ?? [];
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -144,6 +156,50 @@ export function EvaluationDetailPage() {
             <div className="text-2xl font-bold text-blue-900">#{evaluation.our_rank}</div>
           </div>
         ) : null}
+      </Card>
+
+      <Card className="mb-6">
+        <h2 className="text-lg font-semibold mb-3">All Entries Ranked by Mean Payout</h2>
+        {entryResultsQuery.isLoading ? (
+          <LoadingState label="Loading entry results..." />
+        ) : entryResults.length === 0 ? (
+          <p className="text-gray-500 text-sm">No entry results available for this evaluation.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entry Name</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mean Payout</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(Top 1)</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(In Money)</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {entryResults.map((entry) => {
+                  const isOurStrategy = entry.entry_name === 'Our Strategy';
+                  return (
+                    <tr
+                      key={entry.entry_name}
+                      className={cn(
+                        isOurStrategy && 'bg-blue-50 font-semibold'
+                      )}
+                    >
+                      <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
+                      <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
+                        {entry.entry_name}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.mean_normalized_payout)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_top1)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_in_money)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       <Card>

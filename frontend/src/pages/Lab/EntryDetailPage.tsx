@@ -247,6 +247,8 @@ export function EntryDetailPage() {
         <EvaluationsTab
           evaluations={evaluations}
           isLoading={evaluationsQuery.isLoading}
+          modelName={entry.model_name}
+          calcuttaId={entry.calcutta_id}
         />
       )}
     </div>

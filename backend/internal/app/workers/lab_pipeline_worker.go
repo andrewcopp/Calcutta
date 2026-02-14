@@ -741,6 +741,25 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 		return false
 	}
 
+	// Save per-entry results
+	if len(result.AllEntryResults) > 0 {
+		// Delete existing results for this evaluation (in case of re-run)
+		_, _ = w.pool.Exec(ctx, `
+			DELETE FROM lab.evaluation_entry_results WHERE evaluation_id = $1::uuid
+		`, evaluationID)
+
+		// Insert all entry results
+		for _, entry := range result.AllEntryResults {
+			_, err := w.pool.Exec(ctx, `
+				INSERT INTO lab.evaluation_entry_results (evaluation_id, entry_name, mean_normalized_payout, p_top1, p_in_money, rank)
+				VALUES ($1::uuid, $2, $3, $4, $5, $6)
+			`, evaluationID, entry.EntryName, entry.MeanPayout, entry.PTop1, entry.PInMoney, entry.Rank)
+			if err != nil {
+				log.Printf("lab_pipeline_worker save_entry_result_warn evaluation_id=%s entry=%s err=%v", evaluationID, entry.EntryName, err)
+			}
+		}
+	}
+
 	dur := time.Since(start)
 
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 1.0, "evaluation", "Evaluation complete")

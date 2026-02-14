@@ -3,6 +3,7 @@ package calcutta_evaluations
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/google/uuid"
@@ -660,6 +661,15 @@ func (s *Service) getPayoutStructure(ctx context.Context, calcuttaID string) (ma
 	return payouts, firstPlacePayout, nil
 }
 
+// LabEntryPerformance contains performance metrics for a single entry in an evaluation.
+type LabEntryPerformance struct {
+	EntryName  string
+	MeanPayout float64
+	PTop1      float64
+	PInMoney   float64
+	Rank       int
+}
+
 // LabEvaluationResult contains the performance metrics for a lab entry evaluation.
 type LabEvaluationResult struct {
 	MeanNormalizedPayout   float64
@@ -667,6 +677,7 @@ type LabEvaluationResult struct {
 	PTop1                  float64
 	PInMoney               float64
 	NSims                  int
+	AllEntryResults        []LabEntryPerformance
 }
 
 // EvaluateLabEntry evaluates a lab entry against all other entries in a calcutta.
@@ -744,12 +755,32 @@ func (s *Service) EvaluateLabEntry(
 		return nil, fmt.Errorf("failed to find performance for lab entry")
 	}
 
+	// Build sorted list of all entry results
+	allEntryResults := make([]LabEntryPerformance, 0, len(performance))
+	for _, perf := range performance {
+		allEntryResults = append(allEntryResults, LabEntryPerformance{
+			EntryName:  perf.EntryName,
+			MeanPayout: perf.MeanPayout,
+			PTop1:      perf.PTop1,
+			PInMoney:   perf.PInMoney,
+		})
+	}
+	// Sort by MeanPayout descending
+	sort.Slice(allEntryResults, func(i, j int) bool {
+		return allEntryResults[i].MeanPayout > allEntryResults[j].MeanPayout
+	})
+	// Assign ranks
+	for i := range allEntryResults {
+		allEntryResults[i].Rank = i + 1
+	}
+
 	return &LabEvaluationResult{
 		MeanNormalizedPayout:   ourPerformance.MeanPayout,
 		MedianNormalizedPayout: ourPerformance.MedianPayout,
 		PTop1:                  ourPerformance.PTop1,
 		PInMoney:               ourPerformance.PInMoney,
 		NSims:                  len(simulations),
+		AllEntryResults:        allEntryResults,
 	}, nil
 }
 

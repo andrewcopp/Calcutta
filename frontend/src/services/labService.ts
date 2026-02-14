@@ -92,6 +92,15 @@ export type ListEvaluationsResponse = {
   items: EvaluationDetail[];
 };
 
+// Types for evaluation entry results
+export type EvaluationEntryResult = {
+  entry_name: string;
+  mean_normalized_payout?: number | null;
+  p_top1?: number | null;
+  p_in_money?: number | null;
+  rank: number;
+};
+
 // Types for leaderboard
 export type LeaderboardEntry = {
   investment_model_id: string;
@@ -268,6 +277,13 @@ export const labService = {
 
   async getEvaluation(id: string): Promise<EvaluationDetail> {
     return apiClient.get<EvaluationDetail>(`/lab/evaluations/${encodeURIComponent(id)}`);
+  },
+
+  async getEvaluationEntryResults(id: string): Promise<EvaluationEntryResult[]> {
+    const response = await apiClient.get<{ items: EvaluationEntryResult[] }>(
+      `/lab/evaluations/${encodeURIComponent(id)}/entries`
+    );
+    return response.items;
   },
 
   async generateEntries(

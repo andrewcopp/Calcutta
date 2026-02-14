@@ -710,6 +710,45 @@ func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID
 	return r.GetEntryEnriched(entryID)
 }
 
+// GetEvaluationEntryResults returns per-entry results for an evaluation.
+func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.EvaluationEntryResult, error) {
+	ctx := context.Background()
+
+	query := `
+		SELECT
+			entry_name,
+			mean_normalized_payout,
+			p_top1,
+			p_in_money,
+			rank
+		FROM lab.evaluation_entry_results
+		WHERE evaluation_id = $1::uuid
+		ORDER BY rank ASC
+	`
+
+	rows, err := r.pool.Query(ctx, query, evaluationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]lab.EvaluationEntryResult, 0)
+	for rows.Next() {
+		var e lab.EvaluationEntryResult
+		if err := rows.Scan(
+			&e.EntryName,
+			&e.MeanNormalizedPayout,
+			&e.PTop1,
+			&e.PInMoney,
+			&e.Rank,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
 // labItoa converts int to string for building parameterized queries.
 func labItoa(i int) string {
 	return strconv.Itoa(i)

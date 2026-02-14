@@ -18,6 +18,8 @@ interface Evaluation {
 interface EvaluationsTabProps {
   evaluations: Evaluation[];
   isLoading: boolean;
+  modelName: string;
+  calcuttaId: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -42,7 +44,7 @@ function getPayoutColor(payout?: number | null): string {
   return 'text-red-700';
 }
 
-export function EvaluationsTab({ evaluations, isLoading }: EvaluationsTabProps) {
+export function EvaluationsTab({ evaluations, isLoading, modelName, calcuttaId }: EvaluationsTabProps) {
   const navigate = useNavigate();
 
   // Calculate summary stats
@@ -100,7 +102,7 @@ export function EvaluationsTab({ evaluations, isLoading }: EvaluationsTabProps) 
                   <tr
                     key={ev.id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/lab/evaluations/${encodeURIComponent(ev.id)}`)}
+                    onClick={() => navigate(`/lab/models/${encodeURIComponent(modelName)}/calcuttas/${encodeURIComponent(calcuttaId)}/evaluations/${encodeURIComponent(ev.id)}`)}
                   >
                     <td className="px-3 py-2 text-sm text-gray-700 text-right">{ev.n_sims.toLocaleString()}</td>
                     <td className={cn('px-3 py-2 text-sm text-right', getPayoutColor(ev.mean_normalized_payout))}>

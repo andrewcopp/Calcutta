@@ -132,6 +132,15 @@ type EvaluationDetail struct {
 	StartingStateKey string `json:"starting_state_key"`
 }
 
+// EvaluationEntryResult represents a single entry's result in an evaluation.
+type EvaluationEntryResult struct {
+	EntryName            string   `json:"entry_name"`
+	MeanNormalizedPayout *float64 `json:"mean_normalized_payout,omitempty"`
+	PTop1                *float64 `json:"p_top1,omitempty"`
+	PInMoney             *float64 `json:"p_in_money,omitempty"`
+	Rank                 int      `json:"rank"`
+}
+
 // LeaderboardEntry represents a row from lab.model_leaderboard view.
 type LeaderboardEntry struct {
 	InvestmentModelID         string     `json:"investment_model_id"`
@@ -199,4 +208,5 @@ type Repository interface {
 	GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*EntryDetailEnriched, error)
 	ListEvaluations(filter ListEvaluationsFilter, page Pagination) ([]EvaluationDetail, error)
 	GetEvaluation(id string) (*EvaluationDetail, error)
+	GetEvaluationEntryResults(evaluationID string) ([]EvaluationEntryResult, error)
 }

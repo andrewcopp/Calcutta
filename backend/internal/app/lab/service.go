@@ -90,6 +90,11 @@ func (s *Service) GetEvaluation(ctx context.Context, id string) (*EvaluationDeta
 	return s.repo.GetEvaluation(id)
 }
 
+// GetEvaluationEntryResults returns per-entry results for an evaluation.
+func (s *Service) GetEvaluationEntryResults(ctx context.Context, evaluationID string) ([]EvaluationEntryResult, error) {
+	return s.repo.GetEvaluationEntryResults(evaluationID)
+}
+
 // GenerateEntries runs the Python script to generate entries for a model.
 func (s *Service) GenerateEntries(ctx context.Context, modelID string, req GenerateEntriesRequest) (*GenerateEntriesResponse, error) {
 	return RunGenerateEntriesScript(ctx, modelID, req)

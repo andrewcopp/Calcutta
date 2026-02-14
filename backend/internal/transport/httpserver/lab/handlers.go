@@ -273,6 +273,32 @@ func (h *Handler) HandleGetEvaluation(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, evaluation)
 }
 
+// HandleGetEvaluationEntryResults handles GET /api/lab/evaluations/:id/entries
+func (h *Handler) HandleGetEvaluationEntryResults(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := strings.TrimSpace(vars["id"])
+	if id == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+	if h.app == nil || h.app.Lab == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
+		return
+	}
+
+	results, err := h.app.Lab.GetEvaluationEntryResults(r.Context(), id)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, evaluationEntryResultsResponse{Items: results})
+}
+
 // HandleGenerateEntries handles POST /api/lab/models/:id/generate-entries
 func (h *Handler) HandleGenerateEntries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -465,4 +491,8 @@ type listEntriesResponse struct {
 
 type listEvaluationsResponse struct {
 	Items []applab.EvaluationDetail `json:"items"`
+}
+
+type evaluationEntryResultsResponse struct {
+	Items []applab.EvaluationEntryResult `json:"items"`
 }

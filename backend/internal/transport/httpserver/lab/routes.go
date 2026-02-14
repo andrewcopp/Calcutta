@@ -21,6 +21,7 @@ type Handlers struct {
 	GetEntryByModelAndCalcutta   http.HandlerFunc
 	ListEvaluations              http.HandlerFunc
 	GetEvaluation                http.HandlerFunc
+	GetEvaluationEntryResults    http.HandlerFunc
 }
 
 // RegisterRoutes registers lab routes on the given router.
@@ -44,5 +45,6 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 
 	// Evaluations
 	r.HandleFunc("/api/lab/evaluations", h.ListEvaluations).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/lab/evaluations/{id}/entries", h.GetEvaluationEntryResults).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/evaluations/{id}", h.GetEvaluation).Methods("GET", "OPTIONS")
 }
