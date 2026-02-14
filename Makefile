@@ -14,6 +14,7 @@ DC_AIRFLOW = docker compose -f data-science/docker-compose.airflow.yml
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test curl
 .PHONY: airflow-up airflow-down airflow-logs airflow-reset
+.PHONY: register-models
 
 env-init:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -202,3 +203,12 @@ airflow-logs:
 airflow-reset:
 	$(DC_AIRFLOW) down -v
 	@echo "Airflow data volumes removed. Run 'make airflow-up' to reinitialize."
+
+# Data science
+register-models:
+	@echo "Registering investment models..."
+	@cd data-science && \
+		. .venv/bin/activate && \
+		DB_HOST=localhost DB_USER=$${DB_USER:-calcutta} DB_PASSWORD=$${DB_PASSWORD:-calcutta} \
+		DB_NAME=$${DB_NAME:-calcutta} DB_PORT=$${DB_PORT:-5432} \
+		python scripts/register_investment_models.py
