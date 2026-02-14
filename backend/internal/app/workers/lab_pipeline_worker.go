@@ -374,6 +374,8 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 	switch modelKind {
 	case "oracle":
 		scriptName = "data-science/scripts/generate_oracle_predictions.py"
+	case "naive_ev":
+		scriptName = "data-science/scripts/generate_naive_ev_predictions.py"
 	default:
 		scriptName = "data-science/scripts/generate_lab_predictions.py"
 	}
