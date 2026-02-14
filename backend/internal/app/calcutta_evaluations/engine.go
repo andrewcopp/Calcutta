@@ -76,8 +76,12 @@ func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, en
 	}
 
 	// Sort by points descending to determine ranks
+	// Use stable tie-breaking by name to ensure deterministic results
 	sort.Slice(scores, func(i, j int) bool {
-		return scores[i].points > scores[j].points
+		if scores[i].points != scores[j].points {
+			return scores[i].points > scores[j].points
+		}
+		return scores[i].name < scores[j].name
 	})
 
 	// Assign ranks and payouts

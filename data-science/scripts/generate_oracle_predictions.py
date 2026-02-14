@@ -284,6 +284,10 @@ def main():
         help="Lab model name (default: oracle-actual-market)",
     )
     parser.add_argument(
+        "--model-id",
+        help="Lab model ID (alternative to --model-name, used by pipeline worker)",
+    )
+    parser.add_argument(
         "--calcutta-id",
         help="Process only this specific calcutta (for pipeline worker)",
     )
@@ -314,15 +318,20 @@ def main():
         if not args.json_output:
             print(msg)
 
-    from moneyball.lab.models import get_investment_model
+    from moneyball.lab.models import get_investment_model, get_investment_model_by_id
 
-    model = get_investment_model(args.model_name)
+    # Load model by ID or name
+    if args.model_id:
+        model = get_investment_model_by_id(args.model_id)
+    else:
+        model = get_investment_model(args.model_name)
+
     if not model:
         if args.json_output:
             print(json.dumps({"ok": False, "entries_created": 0, "errors": ["Model not found"]}))
             sys.exit(1)
         else:
-            print(f"Error: Model '{args.model_name}' not found")
+            print(f"Error: Model not found")
             print("Run: python scripts/register_investment_models.py")
             sys.exit(1)
 

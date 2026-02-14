@@ -353,15 +353,34 @@ func (w *LabPipelineWorker) processLabPipelineJob(ctx context.Context, workerID 
 func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID string, job *labPipelineJob, params labPipelineJobParams) bool {
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.1, "predictions", "Generating market predictions")
 
+	// Get model kind to determine which script to use
+	var modelKind string
+	err := w.pool.QueryRow(ctx, `
+		SELECT kind FROM lab.investment_models WHERE id = $1::uuid AND deleted_at IS NULL
+	`, params.InvestmentModelID).Scan(&modelKind)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to get model kind: %w", err))
+		return false
+	}
+
 	// Run Python script
 	pythonBin := strings.TrimSpace(os.Getenv("PYTHON_BIN"))
 	if pythonBin == "" {
 		pythonBin = "python3"
 	}
 
-	scriptPath := w.resolvePythonScript("data-science/scripts/generate_lab_predictions.py")
+	// Choose script based on model kind
+	var scriptName string
+	switch modelKind {
+	case "oracle":
+		scriptName = "data-science/scripts/generate_oracle_predictions.py"
+	default:
+		scriptName = "data-science/scripts/generate_lab_predictions.py"
+	}
+
+	scriptPath := w.resolvePythonScript(scriptName)
 	if scriptPath == "" {
-		w.failLabPipelineJob(ctx, job, errors.New("predictions script not found"))
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("predictions script not found: %s", scriptName))
 		return false
 	}
 
@@ -377,7 +396,7 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 	cmd.Stderr = &stderr
 
 	start := time.Now()
-	err := cmd.Run()
+	err = cmd.Run()
 	dur := time.Since(start)
 
 	if err != nil {
