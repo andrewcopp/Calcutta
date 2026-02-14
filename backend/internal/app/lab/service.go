@@ -2,6 +2,7 @@ package lab
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -110,18 +111,26 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 		return nil, &PipelineNotAvailableError{}
 	}
 
-	// Check if there's already an active pipeline
-	active, err := s.pipelineRepo.GetActivePipelineRun(modelID)
-	if err != nil {
-		return nil, err
-	}
-	if active != nil {
-		return nil, &PipelineAlreadyRunningError{PipelineRunID: active.ID}
+	// If force_rerun, delete existing artifacts first (this also cancels active pipelines)
+	if req.ForceRerun {
+		if err := s.pipelineRepo.SoftDeleteModelArtifacts(modelID); err != nil {
+			return nil, fmt.Errorf("failed to clear existing artifacts: %w", err)
+		}
+	} else {
+		// Only check for active pipeline if not force re-running
+		active, err := s.pipelineRepo.GetActivePipelineRun(modelID)
+		if err != nil {
+			return nil, err
+		}
+		if active != nil {
+			return nil, &PipelineAlreadyRunningError{PipelineRunID: active.ID}
+		}
 	}
 
 	// Get target calcutta IDs
 	calcuttaIDs := req.CalcuttaIDs
 	if len(calcuttaIDs) == 0 {
+		var err error
 		calcuttaIDs, err = s.pipelineRepo.GetHistoricalCalcuttaIDs()
 		if err != nil {
 			return nil, err

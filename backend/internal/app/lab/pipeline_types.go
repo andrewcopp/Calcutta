@@ -136,4 +136,7 @@ type PipelineRepository interface {
 
 	// Historical calcuttas for pipeline
 	GetHistoricalCalcuttaIDs() ([]string, error)
+
+	// Cleanup for force re-run
+	SoftDeleteModelArtifacts(modelID string) error
 }

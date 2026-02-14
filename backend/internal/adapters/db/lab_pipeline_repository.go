@@ -759,3 +759,74 @@ func (r *LabRepository) EnqueuePipelineJob(runKind string, pipelineCalcuttaRunID
 	}
 	return jobID, nil
 }
+
+// SoftDeleteModelArtifacts soft-deletes all entries and evaluations for a model.
+// This is used when force_rerun=true to ensure fresh results.
+func (r *LabRepository) SoftDeleteModelArtifacts(modelID string) error {
+	ctx := context.Background()
+
+	// Use a transaction to ensure atomicity
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Hard-delete evaluation_entry_results (no deleted_at column)
+	// These are linked to evaluations which are linked to entries
+	_, err = tx.Exec(ctx, `
+		DELETE FROM lab.evaluation_entry_results
+		WHERE evaluation_id IN (
+			SELECT ev.id FROM lab.evaluations ev
+			JOIN lab.entries e ON e.id = ev.entry_id
+			WHERE e.investment_model_id = $1::uuid
+				AND e.deleted_at IS NULL
+				AND ev.deleted_at IS NULL
+		)
+	`, modelID)
+	if err != nil {
+		return fmt.Errorf("failed to delete evaluation_entry_results: %w", err)
+	}
+
+	// 2. Soft-delete evaluations
+	_, err = tx.Exec(ctx, `
+		UPDATE lab.evaluations
+		SET deleted_at = NOW()
+		WHERE entry_id IN (
+			SELECT id FROM lab.entries
+			WHERE investment_model_id = $1::uuid
+				AND deleted_at IS NULL
+		)
+		AND deleted_at IS NULL
+	`, modelID)
+	if err != nil {
+		return fmt.Errorf("failed to soft-delete evaluations: %w", err)
+	}
+
+	// 3. Soft-delete entries
+	_, err = tx.Exec(ctx, `
+		UPDATE lab.entries
+		SET deleted_at = NOW()
+		WHERE investment_model_id = $1::uuid
+			AND deleted_at IS NULL
+	`, modelID)
+	if err != nil {
+		return fmt.Errorf("failed to soft-delete entries: %w", err)
+	}
+
+	// 4. Cancel any active pipeline runs for this model
+	_, err = tx.Exec(ctx, `
+		UPDATE lab.pipeline_runs
+		SET status = 'cancelled',
+			error_message = 'Superseded by force re-run',
+			finished_at = NOW(),
+			updated_at = NOW()
+		WHERE investment_model_id = $1::uuid
+			AND status IN ('pending', 'running')
+	`, modelID)
+	if err != nil {
+		return fmt.Errorf("failed to cancel active pipeline runs: %w", err)
+	}
+
+	return tx.Commit(ctx)
+}
