@@ -1,4 +1,4 @@
-import { Tournament, TournamentTeam } from '../types/calcutta';
+import { Tournament, TournamentTeam, TournamentModerator } from '../types/calcutta';
 import { apiClient } from '../api/apiClient';
 
 export const tournamentService = {
@@ -33,5 +33,19 @@ export const tournamentService = {
     updates: Partial<TournamentTeam>
   ): Promise<TournamentTeam> {
     return apiClient.patch<TournamentTeam>(`/tournaments/${tournamentId}/teams/${teamId}`, updates);
-  }
+  },
+
+  async getTournamentModerators(tournamentId: string): Promise<TournamentModerator[]> {
+    const res = await apiClient.get<{ moderators: TournamentModerator[] }>(`/tournaments/${tournamentId}/moderators`);
+    return res.moderators;
+  },
+
+  async grantTournamentModerator(tournamentId: string, email: string): Promise<TournamentModerator> {
+    const res = await apiClient.post<{ moderator: TournamentModerator }>(`/tournaments/${tournamentId}/moderators`, { email });
+    return res.moderator;
+  },
+
+  async revokeTournamentModerator(tournamentId: string, userId: string): Promise<void> {
+    await apiClient.delete(`/tournaments/${tournamentId}/moderators/${userId}`);
+  },
 }; 

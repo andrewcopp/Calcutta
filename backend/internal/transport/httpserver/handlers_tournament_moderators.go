@@ -7,8 +7,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type moderatorResponse struct {
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
 type grantModeratorRequest struct {
-	UserID string `json:"userId"`
+	Email string `json:"email"`
 }
 
 func (s *Server) listTournamentModeratorsHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +31,25 @@ func (s *Server) listTournamentModeratorsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"moderators": userIDs})
+	moderators := make([]moderatorResponse, 0, len(userIDs))
+	for _, uid := range userIDs {
+		user, err := s.userRepo.GetByID(r.Context(), uid)
+		if err != nil {
+			continue
+		}
+		email := ""
+		if user.Email != nil {
+			email = *user.Email
+		}
+		moderators = append(moderators, moderatorResponse{
+			ID:        user.ID,
+			Email:     email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"moderators": moderators})
 }
 
 func (s *Server) grantTournamentModeratorHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,17 +64,34 @@ func (s *Server) grantTournamentModeratorHandler(w http.ResponseWriter, r *http.
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
-	if req.UserID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "userId is required", "userId")
+	if req.Email == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "email is required", "email")
 		return
 	}
 
-	if err := s.authzRepo.GrantLabel(r.Context(), req.UserID, "tournament_operator", "tournament", tournamentID); err != nil {
+	user, err := s.userRepo.GetByEmail(r.Context(), req.Email)
+	if err != nil || user == nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "No user found with that email", "email")
+		return
+	}
+
+	if err := s.authzRepo.GrantLabel(r.Context(), user.ID, "tournament_operator", "tournament", tournamentID); err != nil {
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, map[string]string{"status": "granted"})
+	email := ""
+	if user.Email != nil {
+		email = *user.Email
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"moderator": moderatorResponse{
+			ID:        user.ID,
+			Email:     email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+		},
+	})
 }
 
 func (s *Server) revokeTournamentModeratorHandler(w http.ResponseWriter, r *http.Request) {

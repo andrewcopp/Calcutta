@@ -104,4 +104,11 @@ export interface TournamentTeam {
   eliminated: boolean;
   created: string;
   updated: string;
+}
+
+export interface TournamentModerator {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
 } 
