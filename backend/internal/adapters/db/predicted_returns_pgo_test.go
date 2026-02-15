@@ -7,7 +7,16 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
+
+// newTestBracketBuilder returns the real BracketBuilder as a ports interface.
+// Test files are permitted to import app-layer packages for constructing test
+// fixtures; the important constraint is that production adapter code depends
+// only on ports.
+func newTestBracketBuilder() ports.BracketBuilder {
+	return bracket.NewBracketBuilder()
+}
 
 func TestThatPGODPCreatesReachForAllTeams(t *testing.T) {
 	givenTournamentID := "t"
@@ -15,7 +24,7 @@ func TestThatPGODPCreatesReachForAllTeams(t *testing.T) {
 	givenFinalFour := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 	givenScoringRules := []scoringRule{{WinIndex: 7, PointsAwarded: 100}}
 
-	whenBuilder := bracket.NewBracketBuilder()
+	whenBuilder := newTestBracketBuilder()
 	whenBracket, err := whenBuilder.BuildBracket(givenTournamentID, givenTeams, givenFinalFour)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)
@@ -38,7 +47,7 @@ func TestThatPGODPWinChampProbabilitiesSumToOneWithFallback(t *testing.T) {
 	givenFinalFour := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 	givenScoringRules := []scoringRule{{WinIndex: 7, PointsAwarded: 100}}
 
-	whenBuilder := bracket.NewBracketBuilder()
+	whenBuilder := newTestBracketBuilder()
 	whenBracket, err := whenBuilder.BuildBracket(givenTournamentID, givenTeams, givenFinalFour)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)
@@ -66,7 +75,7 @@ func TestThatPGODPProducesNonZeroExpectedValueForSomeTeam(t *testing.T) {
 	givenFinalFour := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 	givenScoringRules := []scoringRule{{WinIndex: 7, PointsAwarded: 100}}
 
-	whenBuilder := bracket.NewBracketBuilder()
+	whenBuilder := newTestBracketBuilder()
 	whenBracket, err := whenBuilder.BuildBracket(givenTournamentID, givenTeams, givenFinalFour)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)
@@ -113,7 +122,7 @@ func TestThatPGODPFavorsHigherKenPomNetInChampionshipProbability(t *testing.T) {
 		}
 	}
 
-	whenBuilder := bracket.NewBracketBuilder()
+	whenBuilder := newTestBracketBuilder()
 	whenBracket, err := whenBuilder.BuildBracket(givenTournamentID, givenTeams, givenFinalFour)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)

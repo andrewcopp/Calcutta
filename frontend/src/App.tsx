@@ -28,6 +28,7 @@ import { EvaluationDetailPage } from './pages/Lab/EvaluationDetailPage';
 import { EntryProfilePage } from './pages/Lab/EntryProfilePage';
 import { Header } from './components/Header';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { UserProvider } from './contexts/UserContext';
 
@@ -44,15 +45,15 @@ const AppLayout: React.FC = () => {
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
         <Route path="/calcuttas/create" element={<ProtectedRoute><CreateCalcuttaPage /></ProtectedRoute>} />
-        <Route path="/lab" element={<LabPage />} />
-        <Route path="/lab/models/:modelId" element={<ModelDetailPage />} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<EntryDetailPage />} />
-        <Route path="/lab/entries/:entryId" element={<EntryDetailPage />} />
-        <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<EntryProfilePage />} />
+        <Route path="/lab" element={<RouteErrorBoundary><LabPage /></RouteErrorBoundary>} />
+        <Route path="/lab/models/:modelId" element={<RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary>} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary>} />
+        <Route path="/lab/entries/:entryId" element={<RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary>} />
+        <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary>} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary>} />
         {/* Legacy evaluation route redirect */}
-        <Route path="/lab/evaluations/:evaluationId" element={<EvaluationDetailPage />} />
-        <Route path="/lab/entry-results/:entryResultId" element={<EntryProfilePage />} />
+        <Route path="/lab/evaluations/:evaluationId" element={<RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary>} />
+        <Route path="/lab/entry-results/:entryResultId" element={<RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary>} />
         {/* Legacy lab routes redirect to new lab tabs */}
         <Route path="/lab/candidates/*" element={<Navigate to="/lab?tab=entries" replace />} />
         <Route path="/lab/advancements/*" element={<Navigate to="/lab?tab=models" replace />} />
@@ -64,22 +65,22 @@ const AppLayout: React.FC = () => {
         {/* Legacy runs routes redirect to lab */}
         <Route path="/runs/*" element={<Navigate to="/lab?tab=evaluations" replace />} />
         <Route path="/analytics" element={<Navigate to="/lab" replace />} />
-        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
-        <Route path="/admin/api-keys" element={<ProtectedRoute><AdminApiKeysPage /></ProtectedRoute>} />
-        <Route path="/admin/bundles" element={<ProtectedRoute><AdminBundlesPage /></ProtectedRoute>} />
-        <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
-        <Route path="/admin/hall-of-fame" element={<ProtectedRoute><HallOfFamePage /></ProtectedRoute>} />
-        <Route path="/admin/tournaments" element={<ProtectedRoute><TournamentListPage /></ProtectedRoute>} />
-        <Route path="/admin/tournaments/create" element={<ProtectedRoute><TournamentCreatePage /></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id" element={<ProtectedRoute><TournamentViewPage /></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/edit" element={<ProtectedRoute><TournamentEditPage /></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/teams/add" element={<ProtectedRoute><TournamentAddTeamsPage /></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/bracket" element={<ProtectedRoute><TournamentBracketPage /></ProtectedRoute>} />
-        <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
-        <Route path="/calcuttas/:calcuttaId/settings" element={<ProtectedRoute><CalcuttaSettingsPage /></ProtectedRoute>} />
-        <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
-        <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
-        <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<ProtectedRoute><BiddingPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/api-keys" element={<ProtectedRoute><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/bundles" element={<ProtectedRoute><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/hall-of-fame" element={<ProtectedRoute><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/tournaments" element={<ProtectedRoute><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/tournaments/create" element={<ProtectedRoute><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id" element={<ProtectedRoute><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/edit" element={<ProtectedRoute><RouteErrorBoundary><TournamentEditPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/teams/add" element={<ProtectedRoute><RouteErrorBoundary><TournamentAddTeamsPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/bracket" element={<ProtectedRoute><RouteErrorBoundary><TournamentBracketPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/calcuttas/:calcuttaId" element={<RouteErrorBoundary><CalcuttaEntriesPage /></RouteErrorBoundary>} />
+        <Route path="/calcuttas/:calcuttaId/settings" element={<ProtectedRoute><RouteErrorBoundary><CalcuttaSettingsPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/calcuttas/:calcuttaId/teams" element={<RouteErrorBoundary><CalcuttaTeamsPage /></RouteErrorBoundary>} />
+        <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<RouteErrorBoundary><EntryTeamsPage /></RouteErrorBoundary>} />
+        <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<ProtectedRoute><RouteErrorBoundary><BiddingPage /></RouteErrorBoundary></ProtectedRoute>} />
       </Routes>
     </div>
   );
