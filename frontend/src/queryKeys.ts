@@ -28,5 +28,6 @@ export const queryKeys = {
     entriesPage: (calcuttaId: string | null | undefined) => ['calcuttaEntriesPage', calcuttaId ?? null] as const,
     entryTeamsPage: (calcuttaId: string | null | undefined, entryId: string | null | undefined) =>
       ['entryTeamsPage', calcuttaId ?? null, entryId ?? null] as const,
+    settings: (calcuttaId: string | null | undefined) => ['calcuttaSettings', calcuttaId ?? null] as const,
   },
 };

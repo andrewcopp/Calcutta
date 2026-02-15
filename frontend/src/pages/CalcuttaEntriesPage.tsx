@@ -1,20 +1,25 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam } from '../types/calcutta';
+import { Calcutta, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
-import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
 import { OwnershipTab } from './CalcuttaEntries/OwnershipTab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { useUser } from '../contexts/useUser';
 import { queryKeys } from '../queryKeys';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState('leaderboard');
 
   const formatDollarsFromCents = (cents?: number) => {
@@ -111,6 +116,7 @@ export function CalcuttaEntriesPage() {
         .sort((a, b) => a.seed - b.seed);
 
       return {
+        calcutta,
         calcuttaName: calcutta.name,
         entries: entriesWithPoints,
         totalEntries: entriesData.length,
@@ -124,6 +130,7 @@ export function CalcuttaEntriesPage() {
     },
   });
 
+  const calcutta: Calcutta | undefined = calcuttaEntriesQuery.data?.calcutta;
   const entries = useMemo(() => calcuttaEntriesQuery.data?.entries ?? [], [calcuttaEntriesQuery.data?.entries]);
   const totalEntries = calcuttaEntriesQuery.data?.totalEntries || 0;
   const schools = useMemo(() => calcuttaEntriesQuery.data?.schools ?? [], [calcuttaEntriesQuery.data?.schools]);
@@ -205,7 +212,8 @@ export function CalcuttaEntriesPage() {
   if (calcuttaEntriesQuery.isLoading) {
     return (
       <PageContainer>
-        <LoadingState label="Loading entries..." />
+        <PageHeader title="Loading..." />
+        <LeaderboardSkeleton />
       </PageContainer>
     );
   }
@@ -221,14 +229,35 @@ export function CalcuttaEntriesPage() {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: calcuttaName },
+        ]}
+      />
+
       <PageHeader
         title={calcuttaName}
         actions={
-          <Link to="/calcuttas" className="text-blue-600 hover:text-blue-800">
-            ← Back to Calcuttas
-          </Link>
+          user?.id === calcutta?.ownerId ? (
+            <Link to={`/calcuttas/${calcuttaId}/settings`}>
+              <Button variant="outline" size="sm">Settings</Button>
+            </Link>
+          ) : undefined
         }
       />
+
+      {calcutta && (
+        <div className="mb-4">
+          {calcutta.biddingOpen ? (
+            <Badge variant="success">Bidding Open</Badge>
+          ) : calcutta.biddingLockedAt ? (
+            <Badge variant="warning">Bidding Locked</Badge>
+          ) : (
+            <Badge variant="secondary">Bidding Closed</Badge>
+          )}
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

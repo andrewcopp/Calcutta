@@ -9,13 +9,11 @@ import { Button } from '../components/ui/Button';
 import { BudgetTracker } from '../components/Bidding/BudgetTracker';
 import { TeamBidRow } from '../components/Bidding/TeamBidRow';
 import { Badge } from '../components/ui/Badge';
+import { Modal, ModalActions } from '../components/ui/Modal';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { cn } from '../lib/cn';
 
-const BUDGET = 100;
-const MIN_TEAMS = 3;
-const MAX_TEAMS = 10;
 const MIN_BID = 1;
-const MAX_BID = 50;
 
 type SeedFilter = 'all' | '1-4' | '5-8' | '9-12' | '13-16';
 
@@ -33,6 +31,7 @@ export function BiddingPage() {
   const [seedFilter, setSeedFilter] = useState<SeedFilter>('all');
   const [unbidOnly, setUnbidOnly] = useState(false);
   const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(new Set());
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const biddingQuery = useQuery({
     queryKey: ['biddingPage', calcuttaId, entryId],
@@ -72,6 +71,12 @@ export function BiddingPage() {
     },
   });
 
+  const calcutta = biddingQuery.data?.calcutta;
+  const BUDGET = calcutta?.budgetPoints ?? 100;
+  const MIN_TEAMS = calcutta?.minTeams ?? 3;
+  const MAX_TEAMS = calcutta?.maxTeams ?? 10;
+  const MAX_BID = calcutta?.maxBid ?? 50;
+
   React.useEffect(() => {
     if (biddingQuery.data?.initialBids) {
       setBidsByTeamId(biddingQuery.data.initialBids);
@@ -102,7 +107,7 @@ export function BiddingPage() {
   const budgetRemaining = useMemo(() => {
     const spent = Object.values(bidsByTeamId).reduce((sum, bid) => sum + bid, 0);
     return BUDGET - spent;
-  }, [bidsByTeamId]);
+  }, [bidsByTeamId, BUDGET]);
 
   const teamCount = useMemo(() => {
     return Object.keys(bidsByTeamId).length;
@@ -134,19 +139,23 @@ export function BiddingPage() {
     });
 
     return errors;
-  }, [bidsByTeamId, teamCount, budgetRemaining, biddingQuery.data?.teams]);
+  }, [bidsByTeamId, teamCount, budgetRemaining, biddingQuery.data?.teams, MIN_TEAMS, MAX_TEAMS, MAX_BID]);
 
   const isValid = validationErrors.length === 0 && teamCount >= MIN_TEAMS && teamCount <= MAX_TEAMS;
 
   const handleSubmit = () => {
     if (!isValid) return;
+    setShowConfirmModal(true);
+  };
 
+  const handleConfirm = () => {
     const teams = Object.entries(bidsByTeamId).map(([teamId, bid]) => ({
       teamId,
       bid,
     }));
 
     updateEntryMutation.mutate(teams);
+    setShowConfirmModal(false);
   };
 
   const sortedTeams = useMemo(() => {
@@ -231,15 +240,29 @@ export function BiddingPage() {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: calcutta?.name ?? 'Pool', href: `/calcuttas/${calcuttaId}` },
+          { label: 'Bid' },
+        ]}
+      />
+
       <PageHeader
         title="Place Your Bids"
-        subtitle={`Budget: ${BUDGET} pts | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: ${MAX_BID} pts`}
+        subtitle={
+          <>
+            {`Budget: ${BUDGET} pts | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: ${MAX_BID} pts`}
+            {' '}
+            <Link to="/rules" className="text-blue-600 hover:text-blue-800 underline text-sm">Learn the rules</Link>
+          </>
+        }
         actions={
           <div className="flex gap-2">
             <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}`}>
               <Button variant="secondary">Cancel</Button>
             </Link>
-            <Button onClick={handleSubmit} disabled={!isValid || updateEntryMutation.isPending} loading={updateEntryMutation.isPending}>
+            <Button onClick={handleSubmit} disabled={!isValid || updateEntryMutation.isPending} loading={updateEntryMutation.isPending} title={!isValid && validationErrors.length > 0 ? validationErrors[0] : undefined}>
               {updateEntryMutation.isPending ? 'Saving...' : 'Save Bids'}
             </Button>
           </div>
@@ -383,6 +406,33 @@ export function BiddingPage() {
           })}
         </div>
       </div>
+
+      <Modal open={showConfirmModal} onClose={() => setShowConfirmModal(false)} title="Confirm Your Bids">
+        <div className="space-y-4">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>{portfolioSummary.length} teams selected</span>
+            <span>Total spent: {BUDGET - budgetRemaining} pts</span>
+          </div>
+          <div className="text-sm text-gray-600">
+            Budget remaining: {budgetRemaining} pts
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {portfolioSummary.map((item) => (
+              <div key={item.teamId} className="flex items-center justify-between py-1 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Badge variant={getSeedVariant(item.seed)} className="text-xs">{item.seed}</Badge>
+                  <span className="text-sm text-gray-800">{item.name}</span>
+                </div>
+                <span className="text-sm font-medium text-blue-700">{item.bid} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <ModalActions>
+          <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>Go Back</Button>
+          <Button onClick={handleConfirm} loading={updateEntryMutation.isPending}>Confirm &amp; Submit</Button>
+        </ModalActions>
+      </Modal>
     </PageContainer>
   );
 }

@@ -30,8 +30,7 @@ export function CreateCalcuttaPage() {
 
   const createCalcuttaMutation = useMutation({
     mutationFn: async ({ name, tournamentId }: { name: string; tournamentId: string }) => {
-      const sysAdminId = '090644de-1158-402e-a103-949b089d8cf9';
-      return calcuttaService.createCalcutta(name, tournamentId, sysAdminId);
+      return calcuttaService.createCalcutta(name, tournamentId);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() });

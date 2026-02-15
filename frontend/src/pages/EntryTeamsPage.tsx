@@ -1,11 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -136,6 +137,7 @@ export function EntryTeamsPage() {
       const allEntryTeams = allEntryTeamsResults.flat();
 
       return {
+        calcuttaName: calcutta.name,
         entryName,
         teams: teamsWithSchools,
         schools: schoolsData,
@@ -149,6 +151,7 @@ export function EntryTeamsPage() {
     },
   });
 
+  const calcuttaName = entryTeamsQuery.data?.calcuttaName || '';
   const entryName = entryTeamsQuery.data?.entryName || '';
   const teams = useMemo(() => entryTeamsQuery.data?.teams ?? [], [entryTeamsQuery.data?.teams]);
   const schools = useMemo(() => entryTeamsQuery.data?.schools ?? [], [entryTeamsQuery.data?.schools]);
@@ -288,14 +291,15 @@ export function EntryTeamsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title={entryName || 'Entry'}
-        actions={
-          <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">
-            ← Back to Entries
-          </Link>
-        }
+      <Breadcrumb
+        items={[
+          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: calcuttaName, href: `/calcuttas/${calcuttaId}` },
+          { label: entryName || 'Entry' },
+        ]}
       />
+
+      <PageHeader title={entryName || 'Entry'} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

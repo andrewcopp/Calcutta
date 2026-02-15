@@ -20,6 +20,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
+import { CalcuttaSettingsPage } from './pages/CalcuttaSettingsPage';
 import { LabPage } from './pages/LabPage';
 import { ModelDetailPage } from './pages/Lab/ModelDetailPage';
 import { EntryDetailPage } from './pages/Lab/EntryDetailPage';
@@ -73,6 +74,7 @@ const AppLayout: React.FC = () => {
         <Route path="/admin/tournaments/:id/teams/add" element={<TournamentAddTeamsPage />} />
         <Route path="/admin/tournaments/:id/bracket" element={<TournamentBracketPage />} />
         <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
+        <Route path="/calcuttas/:calcuttaId/settings" element={<CalcuttaSettingsPage />} />
         <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
         <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
         <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<BiddingPage />} />

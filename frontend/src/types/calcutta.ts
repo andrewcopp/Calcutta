@@ -3,6 +3,12 @@ export interface Calcutta {
   name: string;
   tournamentId: string;
   ownerId: string;
+  minTeams: number;
+  maxTeams: number;
+  maxBid: number;
+  budgetPoints: number;
+  biddingOpen: boolean;
+  biddingLockedAt?: string;
   created: string;
   updated: string;
 }

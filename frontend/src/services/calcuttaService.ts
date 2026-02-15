@@ -10,12 +10,15 @@ export const calcuttaService = {
     return apiClient.get<Calcutta>(`/calcuttas/${id}`);
   },
 
-  async createCalcutta(name: string, tournamentId: string, ownerId: string): Promise<Calcutta> {
+  async createCalcutta(name: string, tournamentId: string): Promise<Calcutta> {
     return apiClient.post<Calcutta>('/calcuttas', {
       name,
       tournamentId,
-      ownerId,
     });
+  },
+
+  async updateCalcutta(id: string, updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBid' | 'biddingOpen'>>): Promise<Calcutta> {
+    return apiClient.patch<Calcutta>(`/calcuttas/${id}`, updates);
   },
 
   async getCalcuttaEntries(calcuttaId: string): Promise<CalcuttaEntry[]> {

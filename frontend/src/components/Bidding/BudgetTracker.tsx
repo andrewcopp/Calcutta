@@ -38,7 +38,7 @@ export function BudgetTracker({
 
   return (
     <div className="sticky top-16 z-10 mb-6">
-      <Card className="bg-white shadow-md">
+      <Card className={cn('shadow-md', budgetRemaining < 0 ? 'bg-red-50 border border-red-200' : 'bg-white')}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <div className="text-sm text-gray-600 mb-1">Budget</div>

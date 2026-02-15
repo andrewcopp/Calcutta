@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { LoadingState } from '../components/ui/LoadingState';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { CalcuttaListSkeleton } from '../components/skeletons/CalcuttaListSkeleton';
 import { Calcutta } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useUser } from '../contexts/useUser';
@@ -58,7 +59,13 @@ export function CalcuttaListPage() {
   if (calcuttasQuery.isLoading) {
     return (
       <PageContainer>
-        <LoadingState label="Loading calcuttas..." />
+        <PageHeader
+          title="Calcuttas"
+          actions={
+            <Button onClick={() => navigate('/calcuttas/create')}>Create New Calcutta</Button>
+          }
+        />
+        <CalcuttaListSkeleton />
       </PageContainer>
     );
   }
@@ -120,12 +127,20 @@ export function CalcuttaListPage() {
         })}
         
         {calcuttas.length === 0 ? (
-          <Card className="text-center py-8">
-            <p className="text-gray-500 mb-4">No calcuttas found.</p>
-            <Link to="/calcuttas/create" className="text-blue-500 hover:text-blue-700">
-              Create your first Calcutta
-            </Link>
-          </Card>
+          <EmptyState
+            title="Welcome to Calcutta!"
+            description="Create your first pool or wait for an invitation from a commissioner."
+            action={
+              <div className="flex gap-3">
+                <Link to="/rules">
+                  <Button variant="outline">Learn the Rules</Button>
+                </Link>
+                <Link to="/calcuttas/create">
+                  <Button>Create a Pool</Button>
+                </Link>
+              </div>
+            }
+          />
         ) : null}
       </div>
     </PageContainer>
