@@ -2,8 +2,10 @@
 .DS_Store
 Thumbs.db
 
-# Claude Code local config (agent-memory is local-only)
+# Claude Code local config
+.claude/settings.local.json
 .claude/agent-memory/
+CLAUDE.local.md
 
 # Editor directories and files
 .idea/
