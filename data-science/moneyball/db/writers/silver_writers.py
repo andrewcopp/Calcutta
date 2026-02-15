@@ -297,6 +297,16 @@ def write_predicted_market_share_with_run(
     if not calcutta_id and not tournament_id:
         raise ValueError("Must provide either calcutta_id or tournament_id")
 
+    # Validate that predicted shares sum to 1.0 (before opening DB connection)
+    total_share = predictions_df['predicted_auction_share_of_pool'].sum()
+    if abs(total_share - 1.0) > 0.001:
+        raise ValueError(
+            f"Market share predictions must sum to 1.0, but got {total_share:.6f}. "
+            f"This often indicates the model produced negative predictions that were "
+            f"clipped to zero. Check model hyperparameters (e.g., seed_prior_k > 0 "
+            f"for optimal_v2 feature set)."
+        )
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             # Preferred path: create a market_share_run for calcutta-scoped predictions.

@@ -246,7 +246,7 @@ func ensureUserByEmail(ctx context.Context, tx pgx.Tx, email string, fullName *s
 
 	var id string
 	err := tx.QueryRow(ctx, `
-		INSERT INTO public.users (email, first_name, last_name)
+		INSERT INTO core.users (email, first_name, last_name)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (email)
 		DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, updated_at = NOW()

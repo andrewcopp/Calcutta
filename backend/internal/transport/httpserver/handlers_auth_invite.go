@@ -46,7 +46,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 	var email string
 	err = tx.QueryRow(r.Context(), `
 		SELECT id::text, email
-		FROM users
+		FROM core.users
 		WHERE invite_token_hash = $1
 		  AND deleted_at IS NULL
 		  AND invite_consumed_at IS NULL
@@ -71,7 +71,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 	hashStr := string(hash)
 
 	_, err = tx.Exec(r.Context(), `
-		UPDATE users
+		UPDATE core.users
 		SET
 		  password_hash = $2,
 		  status = 'active',

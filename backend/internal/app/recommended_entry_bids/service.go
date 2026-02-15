@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/google/uuid"
@@ -117,9 +116,9 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 	if err := s.pool.QueryRow(ctx, `
 		SELECT
 			run_key,
-			COALESCE(run_key_uuid::text, ''::text) AS run_key_uuid,
+			COALESCE(run_key, ''::text) AS run_key_fallback,
 			name,
-			optimizer_key,
+			optimizer_kind,
 			purpose,
 			returns_model_key,
 			calcutta_id::text,
@@ -128,8 +127,8 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 			game_outcome_run_id::text,
 			excluded_entry_name,
 			starting_state_key,
-			params_json
-		FROM derived.strategy_generation_runs
+			optimizer_params_json
+		FROM derived.optimized_entries
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
@@ -399,7 +398,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	simID := cc.SimulatedTournamentID
-	strategyRunID, err := upsertStrategyGenerationRun(ctx, tx, upsertStrategyGenerationRunParams{
+	optimizedEntryID, err := upsertOptimizedEntry(ctx, tx, upsertOptimizedEntryParams{
 		RunKey:                runKey,
 		Name:                  name,
 		SimulatedTournamentID: &simID,
@@ -407,20 +406,11 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 		Purpose:               "go_recommended_entry_bids",
 		ReturnsModelKey:       "legacy",
 		InvestmentModelKey:    "predicted_market_share",
-		OptimizerKey:          optimizerKey,
+		OptimizerKind:         optimizerKey,
 		MarketShareRunID:      selectedMarketShareRunID,
-		ParamsJSON:            paramsJSON,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = writeRecommendedEntryBids(ctx, tx, writeRecommendedEntryBidsParams{
-		RunID:                   runKey,
-		StrategyGenerationRunID: strategyRunID,
-		Bids:                    alloc.Bids,
-		ExpectedPointsByTeam:    toExpectedTeams(expected),
-		MarketPointsByTeam:      mapTeamMarketPoints(teams),
+		OptimizerParamsJSON:   paramsJSON,
+		Bids:                  alloc.Bids,
+		ExpectedPointsByTeam:  toExpectedTeams(expected),
 	})
 	if err != nil {
 		return nil, err
@@ -431,7 +421,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (*Gene
 	}
 
 	return &GenerateResult{
-		StrategyGenerationRunID: strategyRunID,
+		StrategyGenerationRunID: optimizedEntryID,
 		RunKey:                  runKey,
 		NTeams:                  len(alloc.Bids),
 		TotalBidPoints:          totalBid,
@@ -553,7 +543,7 @@ func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p Generat
 		excludedEntryNameParam = &p.ExcludedEntryName
 	}
 
-	strategyRunID, err := upsertStrategyGenerationRun(ctx, tx, upsertStrategyGenerationRunParams{
+	optimizedEntryID, err := upsertOptimizedEntry(ctx, tx, upsertOptimizedEntryParams{
 		RunKey:                runKey,
 		Name:                  name,
 		SimulatedTournamentID: nil,
@@ -561,23 +551,14 @@ func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p Generat
 		Purpose:               "lab_entries_generation",
 		ReturnsModelKey:       "pgo_dp",
 		InvestmentModelKey:    "predicted_market_share",
-		OptimizerKey:          optimizerKey,
+		OptimizerKind:         optimizerKey,
 		MarketShareRunID:      &p.MarketShareRunID,
 		GameOutcomeRunID:      &p.GameOutcomeRunID,
 		ExcludedEntryName:     excludedEntryNameParam,
 		StartingStateKey:      p.StartingStateKey,
-		ParamsJSON:            paramsJSON,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = writeRecommendedEntryBids(ctx, tx, writeRecommendedEntryBidsParams{
-		RunID:                   runKey,
-		StrategyGenerationRunID: strategyRunID,
-		Bids:                    alloc.Bids,
-		ExpectedPointsByTeam:    p.ExpectedPointsByTeam,
-		MarketPointsByTeam:      mapTeamMarketPoints(teams),
+		OptimizerParamsJSON:   paramsJSON,
+		Bids:                  alloc.Bids,
+		ExpectedPointsByTeam:  p.ExpectedPointsByTeam,
 	})
 	if err != nil {
 		return nil, err
@@ -588,7 +569,7 @@ func (s *Service) GenerateFromPredictionsAndWrite(ctx context.Context, p Generat
 	}
 
 	return &GenerateResult{
-		StrategyGenerationRunID: strategyRunID,
+		StrategyGenerationRunID: optimizedEntryID,
 		RunKey:                  runKey,
 		NTeams:                  len(alloc.Bids),
 		TotalBidPoints:          totalBid,
@@ -670,7 +651,7 @@ func (s *Service) loadExpectedPointsByTeam(ctx context.Context, cc *calcuttaCont
 	q := `
 		SELECT
 			st.team_id,
-			AVG(core.calcutta_points_for_progress($3::uuid, st.wins + 1, st.byes))::float AS expected_points
+			AVG(core.calcutta_points_for_progress($3::uuid, st.wins, st.byes))::float AS expected_points
 		FROM derived.simulated_teams st
 		WHERE st.tournament_id = $1
 			AND st.simulated_tournament_id = $2::uuid
@@ -740,7 +721,7 @@ func (s *Service) loadPredictedMarketShares(ctx context.Context, cc *calcuttaCon
 	return selected, out, nil
 }
 
-type upsertStrategyGenerationRunParams struct {
+type upsertOptimizedEntryParams struct {
 	RunKey                string
 	Name                  string
 	SimulatedTournamentID *string
@@ -748,67 +729,112 @@ type upsertStrategyGenerationRunParams struct {
 	Purpose               string
 	ReturnsModelKey       string
 	InvestmentModelKey    string
-	OptimizerKey          string
+	OptimizerKind         string
 	MarketShareRunID      *string
 	GameOutcomeRunID      *string
 	ExcludedEntryName     *string
 	StartingStateKey      *string
-	ParamsJSON            []byte
+	OptimizerParamsJSON   []byte
+	Bids                  map[string]int
+	ExpectedPointsByTeam  []ExpectedTeam
 }
 
-func upsertStrategyGenerationRun(ctx context.Context, tx pgx.Tx, p upsertStrategyGenerationRunParams) (string, error) {
+type bidEntry struct {
+	TeamID      string  `json:"team_id"`
+	BidPoints   int     `json:"bid_points"`
+	ExpectedROI float64 `json:"expected_roi"`
+}
+
+func upsertOptimizedEntry(ctx context.Context, tx pgx.Tx, p upsertOptimizedEntryParams) (string, error) {
+	// Build bids JSON array
+	expByTeam := make(map[string]float64, len(p.ExpectedPointsByTeam))
+	for _, t := range p.ExpectedPointsByTeam {
+		expByTeam[t.TeamID] = t.ExpectedPoints
+	}
+
+	bids := make([]bidEntry, 0, len(p.Bids))
+	for teamID, bidPoints := range p.Bids {
+		if bidPoints <= 0 {
+			continue
+		}
+		expectedROI := 0.0
+		if bidPoints > 0 {
+			expectedROI = expByTeam[teamID] / float64(bidPoints)
+		}
+		bids = append(bids, bidEntry{
+			TeamID:      teamID,
+			BidPoints:   bidPoints,
+			ExpectedROI: expectedROI,
+		})
+	}
+
+	bidsJSON, err := json.Marshal(bids)
+	if err != nil {
+		return "", err
+	}
+
 	var id string
 	q := `
-		INSERT INTO derived.strategy_generation_runs (
+		INSERT INTO derived.optimized_entries (
 			run_key,
 			name,
 			simulated_tournament_id,
 			calcutta_id,
-			purpose,
-			returns_model_key,
-			investment_model_key,
-			optimizer_key,
-			market_share_run_id,
 			game_outcome_run_id,
+			market_share_run_id,
+			optimizer_kind,
+			optimizer_params_json,
+			bids_json,
+			purpose,
 			excluded_entry_name,
 			starting_state_key,
-			params_json,
+			returns_model_key,
+			investment_model_key,
 			git_sha,
 			created_at,
 			updated_at,
 			deleted_at
 		)
-		VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9::uuid, $10::uuid, $11::text, $12::text, $13::jsonb, NULL, NOW(), NOW(), NULL)
-		ON CONFLICT (run_key) DO UPDATE SET
+		VALUES ($1, $2, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7, $8::jsonb, $9::jsonb, $10, $11::text, $12::text, $13, $14, NULL, NOW(), NOW(), NULL)
+		ON CONFLICT (run_key) WHERE run_key IS NOT NULL AND deleted_at IS NULL
+		DO UPDATE SET
 			name = EXCLUDED.name,
 			simulated_tournament_id = EXCLUDED.simulated_tournament_id,
 			calcutta_id = EXCLUDED.calcutta_id,
-			purpose = EXCLUDED.purpose,
-			returns_model_key = EXCLUDED.returns_model_key,
-			investment_model_key = EXCLUDED.investment_model_key,
-			optimizer_key = EXCLUDED.optimizer_key,
-			market_share_run_id = EXCLUDED.market_share_run_id,
 			game_outcome_run_id = EXCLUDED.game_outcome_run_id,
+			market_share_run_id = EXCLUDED.market_share_run_id,
+			optimizer_kind = EXCLUDED.optimizer_kind,
+			optimizer_params_json = EXCLUDED.optimizer_params_json,
+			bids_json = EXCLUDED.bids_json,
+			purpose = EXCLUDED.purpose,
 			excluded_entry_name = EXCLUDED.excluded_entry_name,
 			starting_state_key = EXCLUDED.starting_state_key,
-			params_json = EXCLUDED.params_json,
+			returns_model_key = EXCLUDED.returns_model_key,
+			investment_model_key = EXCLUDED.investment_model_key,
 			updated_at = NOW(),
 			deleted_at = NULL
 		RETURNING id
 	`
-	err := tx.QueryRow(ctx, q, p.RunKey, p.Name, p.SimulatedTournamentID, p.CalcuttaID, p.Purpose, p.ReturnsModelKey, p.InvestmentModelKey, p.OptimizerKey, p.MarketShareRunID, p.GameOutcomeRunID, p.ExcludedEntryName, p.StartingStateKey, p.ParamsJSON).Scan(&id)
+	err = tx.QueryRow(ctx, q,
+		p.RunKey,
+		p.Name,
+		p.SimulatedTournamentID,
+		p.CalcuttaID,
+		p.GameOutcomeRunID,
+		p.MarketShareRunID,
+		p.OptimizerKind,
+		p.OptimizerParamsJSON,
+		bidsJSON,
+		p.Purpose,
+		p.ExcludedEntryName,
+		p.StartingStateKey,
+		p.ReturnsModelKey,
+		p.InvestmentModelKey,
+	).Scan(&id)
 	if err != nil {
 		return "", err
 	}
 	return id, nil
-}
-
-type writeRecommendedEntryBidsParams struct {
-	RunID                   string
-	StrategyGenerationRunID string
-	Bids                    map[string]int
-	ExpectedPointsByTeam    []ExpectedTeam
-	MarketPointsByTeam      map[string]float64
 }
 
 func toExpectedTeams(in []ExpectedTeam) []ExpectedTeam { return in }
@@ -819,44 +845,4 @@ func mapTeamMarketPoints(teams []Team) map[string]float64 {
 		out[t.ID] = t.MarketPoints
 	}
 	return out
-}
-
-func writeRecommendedEntryBids(ctx context.Context, tx pgx.Tx, p writeRecommendedEntryBidsParams) error {
-	_, err := tx.Exec(ctx, `
-		DELETE FROM derived.strategy_generation_run_bids
-		WHERE strategy_generation_run_id = $1::uuid
-	`, p.StrategyGenerationRunID)
-	if err != nil {
-		return err
-	}
-
-	expByTeam := make(map[string]float64, len(p.ExpectedPointsByTeam))
-	for _, t := range p.ExpectedPointsByTeam {
-		expByTeam[t.TeamID] = t.ExpectedPoints
-	}
-
-	rows := make([][]any, 0, len(p.Bids))
-	for teamID, bid := range p.Bids {
-		if bid <= 0 {
-			continue
-		}
-		expected := expByTeam[teamID]
-		expectedROI := 0.0
-		if bid > 0 {
-			expectedROI = expected / float64(bid)
-		}
-		rows = append(rows, []any{p.RunID, p.StrategyGenerationRunID, teamID, bid, expectedROI, time.Now()})
-	}
-
-	copyFrom, err := tx.CopyFrom(
-		ctx,
-		pgx.Identifier{"derived", "strategy_generation_run_bids"},
-		[]string{"run_id", "strategy_generation_run_id", "team_id", "bid_points", "expected_roi", "created_at"},
-		pgx.CopyFromRows(rows),
-	)
-	if err != nil {
-		return err
-	}
-	_ = copyFrom
-	return nil
 }

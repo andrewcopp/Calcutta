@@ -3,8 +3,7 @@ package httpserver
 import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/calcuttas"
-	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/labcandidates"
-	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/mlanalytics"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/lab"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/tournaments"
 	"github.com/gorilla/mux"
 )
@@ -30,37 +29,6 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 		basic.Options{MetricsEnabled: s.cfg.MetricsEnabled},
 		basic.Handlers{Health: s.healthHandler, Ready: s.readyHandler, Metrics: s.metricsHandler},
 	)
-
-	// ML Analytics (public read-only endpoints)
-	mlanalytics.RegisterRoutes(r, mlanalytics.Handlers{
-		TournamentSimStats:                 s.handleGetTournamentSimStats,
-		TournamentSimStatsByID:             s.handleGetTournamentSimStatsByID,
-		ListTournamentSimulationBatches:    s.handleListTournamentSimulationBatches,
-		ListAlgorithms:                     s.handleListAlgorithms,
-		GetGameOutcomesAlgorithmCoverage:   s.handleGetGameOutcomesAlgorithmCoverage,
-		GetMarketShareAlgorithmCoverage:    s.handleGetMarketShareAlgorithmCoverage,
-		GetGameOutcomesCoverageDetail:      s.handleGetGameOutcomesAlgorithmCoverageDetail,
-		GetMarketShareCoverageDetail:       s.handleGetMarketShareAlgorithmCoverageDetail,
-		ListGameOutcomeRunsForTournament:   s.handleListGameOutcomeRunsForTournament,
-		GetTournamentPredictedAdvancement:  s.handleGetTournamentPredictedAdvancement,
-		GetCalcuttaPredictedReturns:        s.handleGetCalcuttaPredictedReturns,
-		GetCalcuttaPredictedInvestment:     s.handleGetCalcuttaPredictedInvestment,
-		GetCalcuttaPredictedMarketShare:    s.handleGetCalcuttaPredictedMarketShare,
-		ListMarketShareRunsForCalcutta:     s.handleListMarketShareRunsForCalcutta,
-		GetLatestPredictionRunsForCalcutta: s.handleGetLatestPredictionRunsForCalcutta,
-		GetCalcuttaSimulatedEntry:          s.handleGetCalcuttaSimulatedEntry,
-		GetCalcuttaSimulatedCalcuttas:      s.handleGetCalcuttaSimulatedCalcuttas,
-		ListCalcuttaEvaluationRuns:         s.handleListCalcuttaEvaluationRuns,
-		ListStrategyGenerationRuns:         s.handleListStrategyGenerationRuns,
-		GetTeamPerformance:                 s.handleGetTeamPerformance,
-		GetTeamPerformanceByCalcutta:       s.handleGetTeamPerformanceByCalcutta,
-		GetTeamPredictions:                 s.handleGetTeamPredictions,
-		GetOptimizationRuns:                s.handleGetOptimizationRuns,
-		GetOurEntryDetails:                 s.handleGetOurEntryDetails,
-		GetEntryRankings:                   s.handleGetEntryRankings,
-		GetEntrySimulations:                s.handleGetEntrySimulations,
-		GetEntryPortfolio:                  s.handleGetEntryPortfolio,
-	})
 }
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
@@ -92,37 +60,27 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		UpdateEntry:         cHandler.HandleUpdateEntry,
 	})
 
-	s.registerEntryEvaluationRequestRoutes(r)
-	s.registerRunProgressRoutes(r)
-	s.registerEntryRunRoutes(r)
-	s.registerEntryArtifactRoutes(r)
-	s.registerStrategyGenerationRunRoutes(r)
-
-	labHandler := labcandidates.NewHandlerWithAuthUserID(s.app, authUserID)
-	labcandidates.RegisterRoutes(r, labcandidates.Handlers{
-		ListCandidates:      s.requirePermission("analytics.suites.read", labHandler.HandleListLabCandidates),
-		ListCandidateCombos: s.requirePermission("analytics.suites.read", labHandler.HandleListCandidateCombos),
-		GenerateCandidates:  s.requirePermission("analytics.suites.write", labHandler.HandleGenerateCandidates),
-		CreateCandidates:    s.requirePermission("analytics.suites.write", labHandler.HandleCreateLabCandidates),
-		GetCandidateDetails: s.requirePermission("analytics.suites.read", labHandler.HandleGetLabCandidateDetail),
-		DeleteCandidate:     s.requirePermission("analytics.suites.write", labHandler.HandleDeleteLabCandidate),
+	// Lab endpoints (lab.* schema)
+	labHandler := lab.NewHandlerWithAuthUserID(s.app, authUserID)
+	lab.RegisterRoutes(r, lab.Handlers{
+		ListModels:                 s.requirePermission("analytics.suites.read", labHandler.HandleListModels),
+		GetModel:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetModel),
+		GetLeaderboard:             s.requirePermission("analytics.suites.read", labHandler.HandleGetLeaderboard),
+		GenerateEntries:            s.requirePermission("analytics.suites.write", labHandler.HandleGenerateEntries),
+		StartPipeline:              s.requirePermission("analytics.suites.write", labHandler.HandleStartPipeline),
+		GetModelPipelineProgress:   s.requirePermission("analytics.suites.read", labHandler.HandleGetModelPipelineProgress),
+		GetPipelineRun:             s.requirePermission("analytics.suites.read", labHandler.HandleGetPipelineRun),
+		CancelPipeline:             s.requirePermission("analytics.suites.write", labHandler.HandleCancelPipeline),
+		ListEntries:                s.requirePermission("analytics.suites.read", labHandler.HandleListEntries),
+		GetEntry:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetEntry),
+		GetEntryByModelAndCalcutta: s.requirePermission("analytics.suites.read", labHandler.HandleGetEntryByModelAndCalcutta),
+		ListEvaluations:            s.requirePermission("analytics.suites.read", labHandler.HandleListEvaluations),
+		GetEvaluation:              s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluation),
+		GetEvaluationEntryResults:  s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluationEntryResults),
+		GetEvaluationEntryProfile:  s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluationEntryProfile),
 	})
 
-	s.registerModelCatalogRoutes(r)
-	s.registerSyntheticCalcuttaCohortRoutes(r)
-	s.registerSimulatedCalcuttaRoutes(r)
-	s.registerSimulatedEntryRoutes(r)
-	s.registerCohortSimulationRoutes(r)
-	s.registerCohortSimulationBatchRoutes(r)
 	s.registerAnalyticsRoutes(r)
-	r.HandleFunc(
-		"/api/analytics/algorithms/{id}/game-outcome-runs/bulk",
-		s.requirePermission("analytics.strategy_generation_runs.write", s.handleBulkCreateGameOutcomeRunsForAlgorithm),
-	).Methods("POST", "OPTIONS")
-	r.HandleFunc(
-		"/api/analytics/algorithms/{id}/market-share-runs/bulk",
-		s.requirePermission("analytics.strategy_generation_runs.write", s.handleBulkCreateMarketShareRunsForAlgorithm),
-	).Methods("POST", "OPTIONS")
 	s.registerHallOfFameRoutes(r)
 }
 

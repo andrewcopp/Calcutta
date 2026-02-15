@@ -262,7 +262,7 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 		err = pool.QueryRow(ctx, `
 			SELECT c.id, c.name, COALESCE(u.email, '')
 			FROM core.calcuttas c
-			JOIN public.users u ON u.id = c.owner_id
+			JOIN core.users u ON u.id = c.owner_id
 			WHERE c.id = $1::uuid AND c.tournament_id = $2 AND c.deleted_at IS NULL AND u.deleted_at IS NULL
 		`, b.Calcutta.LegacyID, tournamentID).Scan(&calcuttaID, &calcuttaName, &ownerEmail)
 		if err != nil {
@@ -357,7 +357,7 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 	rows, err := pool.Query(ctx, `
 		SELECT e.id, e.name, COALESCE(u.email, '')
 		FROM core.entries e
-		LEFT JOIN public.users u ON u.id = e.user_id
+		LEFT JOIN core.users u ON u.id = e.user_id
 		WHERE e.calcutta_id = $1 AND e.deleted_at IS NULL
 	`, calcuttaID)
 	if err != nil {

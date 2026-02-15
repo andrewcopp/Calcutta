@@ -10,21 +10,21 @@ import (
 )
 
 const getActualEntryPortfolio = `-- name: GetActualEntryPortfolio :many
-WITH strategy_run AS (
-	SELECT sgr.calcutta_id
-	FROM derived.strategy_generation_runs sgr
-	WHERE sgr.run_key = $2::text
-		AND sgr.deleted_at IS NULL
+WITH optimized_entry AS (
+	SELECT oe.calcutta_id
+	FROM derived.optimized_entries oe
+	WHERE oe.run_key = $2::text
+		AND oe.deleted_at IS NULL
 	LIMIT 1
 )
-SELECT 
+SELECT
     t.id as team_id,
     s.name as school_name,
     t.seed,
     t.region,
     eb.bid_points
 FROM derived.entry_bids eb
-JOIN strategy_run sr ON sr.calcutta_id = eb.calcutta_id
+JOIN optimized_entry oe ON oe.calcutta_id = eb.calcutta_id
 JOIN core.teams t ON eb.team_id = t.id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 WHERE eb.entry_name = $1
@@ -73,18 +73,19 @@ func (q *Queries) GetActualEntryPortfolio(ctx context.Context, arg GetActualEntr
 }
 
 const getEntryPortfolio = `-- name: GetEntryPortfolio :many
-SELECT 
+SELECT
     t.id as team_id,
     s.name as school_name,
     t.seed,
     t.region,
-    reb.bid_points as bid_points
-FROM derived.strategy_generation_run_bids reb
-JOIN core.teams t ON reb.team_id = t.id AND t.deleted_at IS NULL
+    (bid->>'bid_points')::int as bid_points
+FROM derived.optimized_entries oe,
+     jsonb_array_elements(oe.bids_json) AS bid
+JOIN core.teams t ON (bid->>'team_id')::uuid = t.id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-WHERE reb.run_id = $1
-    AND reb.deleted_at IS NULL
-ORDER BY reb.bid_points DESC
+WHERE oe.run_key = $1
+    AND oe.deleted_at IS NULL
+ORDER BY (bid->>'bid_points')::int DESC
 `
 
 type GetEntryPortfolioRow struct {
@@ -96,7 +97,7 @@ type GetEntryPortfolioRow struct {
 }
 
 // For our strategy entry
-func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEntryPortfolioRow, error) {
+func (q *Queries) GetEntryPortfolio(ctx context.Context, runID *string) ([]GetEntryPortfolioRow, error) {
 	rows, err := q.db.Query(ctx, getEntryPortfolio, runID)
 	if err != nil {
 		return nil, err
@@ -122,22 +123,23 @@ func (q *Queries) GetEntryPortfolio(ctx context.Context, runID string) ([]GetEnt
 	return items, nil
 }
 
-const getEntryPortfolioByStrategyGenerationRunID = `-- name: GetEntryPortfolioByStrategyGenerationRunID :many
+const getEntryPortfolioByOptimizedEntryID = `-- name: GetEntryPortfolioByOptimizedEntryID :many
 SELECT
 	t.id as team_id,
 	s.name as school_name,
 	t.seed,
 	t.region,
-	reb.bid_points as bid_points
-FROM derived.strategy_generation_run_bids reb
-JOIN core.teams t ON reb.team_id = t.id AND t.deleted_at IS NULL
+	(bid->>'bid_points')::int as bid_points
+FROM derived.optimized_entries oe,
+     jsonb_array_elements(oe.bids_json) AS bid
+JOIN core.teams t ON (bid->>'team_id')::uuid = t.id AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-WHERE reb.strategy_generation_run_id = $1::uuid
-    AND reb.deleted_at IS NULL
-ORDER BY reb.bid_points DESC
+WHERE oe.id = $1::uuid
+    AND oe.deleted_at IS NULL
+ORDER BY (bid->>'bid_points')::int DESC
 `
 
-type GetEntryPortfolioByStrategyGenerationRunIDRow struct {
+type GetEntryPortfolioByOptimizedEntryIDRow struct {
 	TeamID     string
 	SchoolName string
 	Seed       int32
@@ -146,15 +148,15 @@ type GetEntryPortfolioByStrategyGenerationRunIDRow struct {
 }
 
 // For our strategy entry (lineage-native)
-func (q *Queries) GetEntryPortfolioByStrategyGenerationRunID(ctx context.Context, strategyGenerationRunID string) ([]GetEntryPortfolioByStrategyGenerationRunIDRow, error) {
-	rows, err := q.db.Query(ctx, getEntryPortfolioByStrategyGenerationRunID, strategyGenerationRunID)
+func (q *Queries) GetEntryPortfolioByOptimizedEntryID(ctx context.Context, optimizedEntryID string) ([]GetEntryPortfolioByOptimizedEntryIDRow, error) {
+	rows, err := q.db.Query(ctx, getEntryPortfolioByOptimizedEntryID, optimizedEntryID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetEntryPortfolioByStrategyGenerationRunIDRow
+	var items []GetEntryPortfolioByOptimizedEntryIDRow
 	for rows.Next() {
-		var i GetEntryPortfolioByStrategyGenerationRunIDRow
+		var i GetEntryPortfolioByOptimizedEntryIDRow
 		if err := rows.Scan(
 			&i.TeamID,
 			&i.SchoolName,
@@ -172,40 +174,41 @@ func (q *Queries) GetEntryPortfolioByStrategyGenerationRunID(ctx context.Context
 	return items, nil
 }
 
-const getOurEntryBidsByRunID = `-- name: GetOurEntryBidsByRunID :many
-SELECT 
-    t.id as team_id,
-    s.name as school_name,
-    t.seed,
-    t.region,
-    reb.bid_points,
-    reb.expected_roi
-FROM derived.strategy_generation_run_bids reb
-JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
+const getOurEntryBidsByOptimizedEntryID = `-- name: GetOurEntryBidsByOptimizedEntryID :many
+SELECT
+	t.id as team_id,
+	s.name as school_name,
+	t.seed,
+	t.region,
+	(bid->>'bid_points')::int as bid_points,
+	COALESCE((bid->>'expected_roi')::double precision, 0) as expected_roi
+FROM derived.optimized_entries oe,
+     jsonb_array_elements(oe.bids_json) AS bid
+JOIN core.teams t ON t.id = (bid->>'team_id')::uuid AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-WHERE reb.run_id = $1::text
-    AND reb.deleted_at IS NULL
-ORDER BY reb.bid_points DESC
+WHERE oe.id = $1::uuid
+    AND oe.deleted_at IS NULL
+ORDER BY (bid->>'bid_points')::int DESC
 `
 
-type GetOurEntryBidsByRunIDRow struct {
+type GetOurEntryBidsByOptimizedEntryIDRow struct {
 	TeamID      string
 	SchoolName  string
 	Seed        int32
 	Region      string
 	BidPoints   int32
-	ExpectedRoi float64
+	ExpectedRoi interface{}
 }
 
-func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) ([]GetOurEntryBidsByRunIDRow, error) {
-	rows, err := q.db.Query(ctx, getOurEntryBidsByRunID, dollar_1)
+func (q *Queries) GetOurEntryBidsByOptimizedEntryID(ctx context.Context, dollar_1 string) ([]GetOurEntryBidsByOptimizedEntryIDRow, error) {
+	rows, err := q.db.Query(ctx, getOurEntryBidsByOptimizedEntryID, dollar_1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOurEntryBidsByRunIDRow
+	var items []GetOurEntryBidsByOptimizedEntryIDRow
 	for rows.Next() {
-		var i GetOurEntryBidsByRunIDRow
+		var i GetOurEntryBidsByOptimizedEntryIDRow
 		if err := rows.Scan(
 			&i.TeamID,
 			&i.SchoolName,
@@ -224,40 +227,41 @@ func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) (
 	return items, nil
 }
 
-const getOurEntryBidsByStrategyGenerationRunID = `-- name: GetOurEntryBidsByStrategyGenerationRunID :many
+const getOurEntryBidsByRunID = `-- name: GetOurEntryBidsByRunID :many
 SELECT
-	t.id as team_id,
-	s.name as school_name,
-	t.seed,
-	t.region,
-	reb.bid_points,
-	reb.expected_roi
-FROM derived.strategy_generation_run_bids reb
-JOIN core.teams t ON t.id = reb.team_id AND t.deleted_at IS NULL
+    t.id as team_id,
+    s.name as school_name,
+    t.seed,
+    t.region,
+    (bid->>'bid_points')::int as bid_points,
+    COALESCE((bid->>'expected_roi')::double precision, 0) as expected_roi
+FROM derived.optimized_entries oe,
+     jsonb_array_elements(oe.bids_json) AS bid
+JOIN core.teams t ON t.id = (bid->>'team_id')::uuid AND t.deleted_at IS NULL
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-WHERE reb.strategy_generation_run_id = $1::uuid
-    AND reb.deleted_at IS NULL
-ORDER BY reb.bid_points DESC
+WHERE oe.run_key = $1::text
+    AND oe.deleted_at IS NULL
+ORDER BY (bid->>'bid_points')::int DESC
 `
 
-type GetOurEntryBidsByStrategyGenerationRunIDRow struct {
+type GetOurEntryBidsByRunIDRow struct {
 	TeamID      string
 	SchoolName  string
 	Seed        int32
 	Region      string
 	BidPoints   int32
-	ExpectedRoi float64
+	ExpectedRoi interface{}
 }
 
-func (q *Queries) GetOurEntryBidsByStrategyGenerationRunID(ctx context.Context, dollar_1 string) ([]GetOurEntryBidsByStrategyGenerationRunIDRow, error) {
-	rows, err := q.db.Query(ctx, getOurEntryBidsByStrategyGenerationRunID, dollar_1)
+func (q *Queries) GetOurEntryBidsByRunID(ctx context.Context, dollar_1 string) ([]GetOurEntryBidsByRunIDRow, error) {
+	rows, err := q.db.Query(ctx, getOurEntryBidsByRunID, dollar_1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOurEntryBidsByStrategyGenerationRunIDRow
+	var items []GetOurEntryBidsByRunIDRow
 	for rows.Next() {
-		var i GetOurEntryBidsByStrategyGenerationRunIDRow
+		var i GetOurEntryBidsByRunIDRow
 		if err := rows.Scan(
 			&i.TeamID,
 			&i.SchoolName,

@@ -176,7 +176,7 @@ type CalcuttaEvaluationRun struct {
 	CreatedAt             time.Time
 }
 
-type StrategyGenerationRun struct {
+type OptimizedEntry struct {
 	ID                    string
 	RunKey                *string
 	SimulatedTournamentID *string
@@ -184,7 +184,7 @@ type StrategyGenerationRun struct {
 	Purpose               string
 	ReturnsModelKey       string
 	InvestmentModelKey    string
-	OptimizerKey          string
+	OptimizerKind         string
 	ParamsJSON            []byte
 	GitSHA                *string
 	CreatedAt             time.Time
@@ -221,5 +221,5 @@ type MLAnalyticsRepository interface {
 
 	ListTournamentSimulationBatchesByCoreTournamentID(ctx context.Context, coreTournamentID string) ([]TournamentSimulationBatch, error)
 	ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]CalcuttaEvaluationRun, error)
-	ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]StrategyGenerationRun, error)
+	ListOptimizedEntriesByCoreCalcuttaID(ctx context.Context, calcuttaID string) ([]OptimizedEntry, error)
 }

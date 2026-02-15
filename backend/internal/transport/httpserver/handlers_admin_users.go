@@ -139,7 +139,7 @@ func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	_, err = s.pool.Exec(r.Context(), `
-		UPDATE users
+		UPDATE core.users
 		SET last_invite_sent_at = $2, updated_at = $2
 		WHERE id = $1 AND deleted_at IS NULL
 	`, userID, now)
@@ -170,7 +170,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 	var lastInviteSentAt pgtype.Timestamptz
 	err = tx.QueryRow(ctx, `
 		SELECT email, password_hash, last_invite_sent_at
-		FROM users
+		FROM core.users
 		WHERE id = $1 AND deleted_at IS NULL
 		FOR UPDATE
 	`, userID).Scan(&email, &passwordHash, &lastInviteSentAt)
@@ -204,7 +204,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 		var ct pgconn.CommandTag
 		if setLastSent {
 			ct, err = tx.Exec(ctx, `
-				UPDATE users
+				UPDATE core.users
 				SET
 				  status = 'requires_password_setup',
 				  invite_token_hash = $2,
@@ -217,7 +217,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 			`, userID, createdHash, expiresAt, now)
 		} else {
 			ct, err = tx.Exec(ctx, `
-				UPDATE users
+				UPDATE core.users
 				SET
 				  status = 'requires_password_setup',
 				  invite_token_hash = $2,
@@ -292,7 +292,7 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pool.Query(r.Context(), `
 		WITH active_grants AS (
 			SELECT *
-			FROM grants g
+			FROM core.grants g
 			WHERE g.revoked_at IS NULL
 			  AND g.scope_type = 'global'
 			  AND (g.expires_at IS NULL OR g.expires_at > NOW())
@@ -300,20 +300,20 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 		user_labels AS (
 			SELECT g.user_id, l.key
 			FROM active_grants g
-			JOIN labels l ON g.label_id = l.id
+			JOIN core.labels l ON g.label_id = l.id
 			WHERE l.deleted_at IS NULL
 		),
 		user_permissions AS (
 			SELECT g.user_id, p.key
 			FROM active_grants g
-			JOIN permissions p ON g.permission_id = p.id
+			JOIN core.permissions p ON g.permission_id = p.id
 			WHERE p.deleted_at IS NULL
 			UNION
 			SELECT g.user_id, p2.key
 			FROM active_grants g
-			JOIN labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-			JOIN label_permissions lp ON lp.label_id = l.id
-			JOIN permissions p2 ON lp.permission_id = p2.id AND p2.deleted_at IS NULL
+			JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+			JOIN core.label_permissions lp ON lp.label_id = l.id
+			JOIN core.permissions p2 ON lp.permission_id = p2.id AND p2.deleted_at IS NULL
 		)
 		SELECT
 			u.id::text,
@@ -329,7 +329,7 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 			u.updated_at,
 			COALESCE(array_agg(DISTINCT ul.key) FILTER (WHERE ul.key IS NOT NULL), ARRAY[]::text[]) AS labels,
 			COALESCE(array_agg(DISTINCT up.key) FILTER (WHERE up.key IS NOT NULL), ARRAY[]::text[]) AS permissions
-		FROM users u
+		FROM core.users u
 		LEFT JOIN user_labels ul ON ul.user_id = u.id
 		LEFT JOIN user_permissions up ON up.user_id = u.id
 		WHERE u.deleted_at IS NULL

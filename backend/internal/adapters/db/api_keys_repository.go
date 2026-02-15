@@ -43,7 +43,7 @@ func (r *APIKeysRepository) Create(ctx context.Context, userID, keyHash string, 
 	row.Label = label
 
 	err := r.pool.QueryRow(ctx, `
-		INSERT INTO api_keys (user_id, key_hash, label, created_at)
+		INSERT INTO core.api_keys (user_id, key_hash, label, created_at)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at
 	`, userID, keyHash, label, now).Scan(&row.ID, &row.CreatedAt)
@@ -61,7 +61,7 @@ func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string,
 	var row APIKey
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, user_id, label, created_at, revoked_at, last_used_at
-		FROM api_keys
+		FROM core.api_keys
 		WHERE key_hash = $1
 		  AND revoked_at IS NULL
 	`, keyHash).Scan(&row.ID, &row.UserID, &row.Label, &row.CreatedAt, &row.RevokedAt, &row.LastUsedAt)
@@ -73,7 +73,7 @@ func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string,
 	}
 
 	_, _ = r.pool.Exec(ctx, `
-		UPDATE api_keys
+		UPDATE core.api_keys
 		SET last_used_at = $2
 		WHERE id = $1
 	`, row.ID, now)
@@ -85,7 +85,7 @@ func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string,
 func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]APIKey, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, user_id, label, created_at, revoked_at, last_used_at
-		FROM api_keys
+		FROM core.api_keys
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`, userID)
@@ -113,7 +113,7 @@ func (r *APIKeysRepository) Revoke(ctx context.Context, id, userID string, now t
 		now = time.Now().UTC()
 	}
 	_, err := r.pool.Exec(ctx, `
-		UPDATE api_keys
+		UPDATE core.api_keys
 		SET revoked_at = $3
 		WHERE id = $1
 		  AND user_id = $2

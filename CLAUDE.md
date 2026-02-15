@@ -42,6 +42,28 @@ python scripts/derive_canonical.py ./out/[snapshot]
 python scripts/evaluate_harness.py ./out
 ```
 
+### Developer Productivity
+Use these instead of raw docker/psql/curl commands:
+```bash
+# Database
+make db                              # Interactive psql shell
+make query SQL="SELECT ..."          # Run SQL query
+make query-file FILE="path/to.sql"   # Run SQL from file
+make query-csv SQL="SELECT ..."      # Export query as CSV
+make db-sizes                        # Show table sizes
+make db-activity                     # Show active queries
+
+# Logs
+make logs-backend                    # Tail backend logs
+make logs-worker                     # Tail worker logs
+make logs-search PATTERN="error"     # Search logs for pattern
+make logs-tail LINES=100             # Recent logs (all services)
+
+# API
+make api-health                      # Health check
+make api-test ENDPOINT="/api/..."    # Test endpoint (supports METHOD, DATA)
+```
+
 ## Architecture
 
 ### Directory Structure

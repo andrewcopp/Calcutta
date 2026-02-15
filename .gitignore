@@ -2,6 +2,9 @@
 .DS_Store
 Thumbs.db
 
+# Claude Code local config
+.claude/
+
 # Editor directories and files
 .idea/
 .vscode/
@@ -28,6 +31,9 @@ data-science/out/
 
 # Airflow logs
 data-science/airflow/logs/
+
+# Go binaries
+backend/seed-simulations
 
 # Generated artifacts
 backend/exports/

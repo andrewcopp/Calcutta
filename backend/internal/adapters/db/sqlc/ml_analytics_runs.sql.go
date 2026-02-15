@@ -11,34 +11,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getStrategyGenerationRunByRunKey = `-- name: GetStrategyGenerationRunByRunKey :one
+const getOptimizedEntryByRunKey = `-- name: GetOptimizedEntryByRunKey :one
 SELECT
-	sgr.id,
-	COALESCE(sgr.run_key, ''::text) AS run_id,
-	COALESCE(NULLIF(sgr.name, ''::text), COALESCE(sgr.run_key, ''::text)) AS name,
-	sgr.calcutta_id,
-	COALESCE(NULLIF(sgr.optimizer_key::text, ''::text), 'legacy'::text) AS strategy,
+	oe.id,
+	COALESCE(oe.run_key, ''::text) AS run_id,
+	COALESCE(NULLIF(oe.name, ''::text), COALESCE(oe.run_key, ''::text)) AS name,
+	oe.calcutta_id,
+	COALESCE(NULLIF(oe.optimizer_kind::text, ''::text), 'legacy'::text) AS strategy,
 	COALESCE(tsb.n_sims, 0)::int AS n_sims,
 	COALESCE(tsb.seed, 0)::int AS seed,
 	COALESCE(c.budget_points, 100)::int AS budget_points,
-	sgr.created_at
-FROM derived.strategy_generation_runs sgr
+	oe.created_at
+FROM derived.optimized_entries oe
 LEFT JOIN core.calcuttas c
-	ON c.id = sgr.calcutta_id
+	ON c.id = oe.calcutta_id
 	AND c.deleted_at IS NULL
 LEFT JOIN derived.simulated_tournaments tsb
-	ON tsb.id = sgr.simulated_tournament_id
+	ON tsb.id = oe.simulated_tournament_id
 	AND tsb.deleted_at IS NULL
-WHERE sgr.run_key = $1::text
-	AND sgr.deleted_at IS NULL
+WHERE oe.run_key = $1::text
+	AND oe.deleted_at IS NULL
 LIMIT 1
 `
 
-type GetStrategyGenerationRunByRunKeyRow struct {
+type GetOptimizedEntryByRunKeyRow struct {
 	ID           string
 	RunID        *string
 	Name         interface{}
-	CalcuttaID   pgtype.UUID
+	CalcuttaID   string
 	Strategy     interface{}
 	NSims        int32
 	Seed         int32
@@ -46,9 +46,9 @@ type GetStrategyGenerationRunByRunKeyRow struct {
 	CreatedAt    pgtype.Timestamptz
 }
 
-func (q *Queries) GetStrategyGenerationRunByRunKey(ctx context.Context, dollar_1 string) (GetStrategyGenerationRunByRunKeyRow, error) {
-	row := q.db.QueryRow(ctx, getStrategyGenerationRunByRunKey, dollar_1)
-	var i GetStrategyGenerationRunByRunKeyRow
+func (q *Queries) GetOptimizedEntryByRunKey(ctx context.Context, dollar_1 string) (GetOptimizedEntryByRunKeyRow, error) {
+	row := q.db.QueryRow(ctx, getOptimizedEntryByRunKey, dollar_1)
+	var i GetOptimizedEntryByRunKeyRow
 	err := row.Scan(
 		&i.ID,
 		&i.RunID,
@@ -113,48 +113,48 @@ func (q *Queries) ListCalcuttaEvaluationRunsByCoreCalcuttaID(ctx context.Context
 	return items, nil
 }
 
-const listStrategyGenerationRunsByCoreCalcuttaID = `-- name: ListStrategyGenerationRunsByCoreCalcuttaID :many
+const listOptimizedEntriesByCoreCalcuttaID = `-- name: ListOptimizedEntriesByCoreCalcuttaID :many
 SELECT
-	sgr.id,
-	sgr.run_key,
-	sgr.simulated_tournament_id,
-	sgr.calcutta_id,
-	sgr.purpose,
-	sgr.returns_model_key,
-	sgr.investment_model_key,
-	sgr.optimizer_key,
-	sgr.params_json,
-	sgr.git_sha,
-	sgr.created_at
-FROM derived.strategy_generation_runs sgr
-WHERE sgr.calcutta_id = $1::uuid
-	AND sgr.deleted_at IS NULL
-ORDER BY sgr.created_at DESC
+	oe.id,
+	oe.run_key,
+	oe.simulated_tournament_id,
+	oe.calcutta_id,
+	oe.purpose,
+	oe.returns_model_key,
+	oe.investment_model_key,
+	oe.optimizer_kind,
+	oe.optimizer_params_json AS params_json,
+	oe.git_sha,
+	oe.created_at
+FROM derived.optimized_entries oe
+WHERE oe.calcutta_id = $1::uuid
+	AND oe.deleted_at IS NULL
+ORDER BY oe.created_at DESC
 `
 
-type ListStrategyGenerationRunsByCoreCalcuttaIDRow struct {
+type ListOptimizedEntriesByCoreCalcuttaIDRow struct {
 	ID                    string
 	RunKey                *string
 	SimulatedTournamentID pgtype.UUID
-	CalcuttaID            pgtype.UUID
-	Purpose               string
-	ReturnsModelKey       string
-	InvestmentModelKey    string
-	OptimizerKey          string
+	CalcuttaID            string
+	Purpose               *string
+	ReturnsModelKey       *string
+	InvestmentModelKey    *string
+	OptimizerKind         string
 	ParamsJson            []byte
 	GitSha                *string
 	CreatedAt             pgtype.Timestamptz
 }
 
-func (q *Queries) ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context, dollar_1 string) ([]ListStrategyGenerationRunsByCoreCalcuttaIDRow, error) {
-	rows, err := q.db.Query(ctx, listStrategyGenerationRunsByCoreCalcuttaID, dollar_1)
+func (q *Queries) ListOptimizedEntriesByCoreCalcuttaID(ctx context.Context, dollar_1 string) ([]ListOptimizedEntriesByCoreCalcuttaIDRow, error) {
+	rows, err := q.db.Query(ctx, listOptimizedEntriesByCoreCalcuttaID, dollar_1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListStrategyGenerationRunsByCoreCalcuttaIDRow
+	var items []ListOptimizedEntriesByCoreCalcuttaIDRow
 	for rows.Next() {
-		var i ListStrategyGenerationRunsByCoreCalcuttaIDRow
+		var i ListOptimizedEntriesByCoreCalcuttaIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.RunKey,
@@ -163,7 +163,7 @@ func (q *Queries) ListStrategyGenerationRunsByCoreCalcuttaID(ctx context.Context
 			&i.Purpose,
 			&i.ReturnsModelKey,
 			&i.InvestmentModelKey,
-			&i.OptimizerKey,
+			&i.OptimizerKind,
 			&i.ParamsJson,
 			&i.GitSha,
 			&i.CreatedAt,

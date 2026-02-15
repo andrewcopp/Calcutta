@@ -48,7 +48,7 @@ def recommend_entry_bids_from_simulations(
     # Use MINLP optimizer if strategy is "minlp"
     if strategy == "minlp":
         print(f"🔧 Using MINLP optimizer (strategy={strategy})")
-        from moneyball.models.portfolio_optimizer_minlp import optimize_portfolio_minlp
+        from moneyball.lab.portfolio_research import optimize_portfolio_gekko
         
         # MINLP optimizer expects specific column names
         teams_for_minlp = team_stats.copy()
@@ -97,7 +97,7 @@ def recommend_entry_bids_from_simulations(
         
         # Run MINLP optimizer
         try:
-            result, _ = optimize_portfolio_minlp(
+            result, _ = optimize_portfolio_gekko(
                 teams_df=teams_for_minlp,
                 budget_points=budget_points,
                 min_teams=min_teams,

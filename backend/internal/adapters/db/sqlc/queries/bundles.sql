@@ -1,7 +1,7 @@
 -- Bundles / bundle uploads
 
 -- name: UpsertBundleUpload :one
-INSERT INTO bundle_uploads (filename, sha256, size_bytes, archive, status)
+INSERT INTO core.bundle_uploads (filename, sha256, size_bytes, archive, status)
 VALUES (sqlc.arg(filename), sqlc.arg(sha256), sqlc.arg(size_bytes), sqlc.arg(archive), 'pending')
 ON CONFLICT (sha256) WHERE deleted_at IS NULL
 DO UPDATE SET
@@ -28,24 +28,24 @@ SELECT
 	error_message,
 	COALESCE(import_report, '{}'::jsonb)::jsonb AS import_report,
 	COALESCE(verify_report, '{}'::jsonb)::jsonb AS verify_report
-FROM bundle_uploads
+FROM core.bundle_uploads
 WHERE id = sqlc.arg(upload_id)::uuid AND deleted_at IS NULL;
 
 -- name: ClaimNextBundleUpload :one
 WITH candidate AS (
 	SELECT id
-	FROM bundle_uploads
+	FROM core.bundle_uploads
 	WHERE deleted_at IS NULL
-	  AND bundle_uploads.finished_at IS NULL
+	  AND core.bundle_uploads.finished_at IS NULL
 	  AND (
-		bundle_uploads.status = 'pending'
-		OR (bundle_uploads.status = 'running' AND bundle_uploads.started_at IS NOT NULL AND bundle_uploads.started_at < sqlc.arg(stale_before))
+		core.bundle_uploads.status = 'pending'
+		OR (core.bundle_uploads.status = 'running' AND core.bundle_uploads.started_at IS NOT NULL AND core.bundle_uploads.started_at < sqlc.arg(stale_before))
 	  )
 	ORDER BY created_at ASC
 	LIMIT 1
 	FOR UPDATE SKIP LOCKED
 )
-UPDATE bundle_uploads bu
+UPDATE core.bundle_uploads bu
 SET status = 'running',
 	started_at = sqlc.arg(now),
 	finished_at = NULL,
@@ -59,11 +59,11 @@ RETURNING bu.id;
 
 -- name: GetBundleUploadArchive :one
 SELECT archive
-FROM bundle_uploads
+FROM core.bundle_uploads
 WHERE id = sqlc.arg(upload_id)::uuid AND deleted_at IS NULL;
 
 -- name: MarkBundleUploadSucceeded :exec
-UPDATE bundle_uploads
+UPDATE core.bundle_uploads
 SET status = 'succeeded',
 	finished_at = NOW(),
 	import_report = sqlc.arg(import_report),
@@ -72,7 +72,7 @@ SET status = 'succeeded',
 WHERE id = sqlc.arg(upload_id)::uuid AND deleted_at IS NULL;
 
 -- name: MarkBundleUploadFailed :exec
-UPDATE bundle_uploads
+UPDATE core.bundle_uploads
 SET status = 'failed',
 	finished_at = NOW(),
 	error_message = sqlc.arg(error_message),

@@ -149,7 +149,7 @@ func (s *Server) isUserActive(ctx context.Context, userID string) (bool, error) 
 	var status string
 	err := s.pool.QueryRow(ctx, `
 		SELECT status
-		FROM users
+		FROM core.users
 		WHERE id = $1 AND deleted_at IS NULL
 	`, userID).Scan(&status)
 	if err != nil {

@@ -34,7 +34,7 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id
@@ -108,13 +108,13 @@ func (q *Queries) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID
 	return items, nil
 }
 
-const getCalcuttaPredictedInvestmentByStrategyGenerationRunID = `-- name: GetCalcuttaPredictedInvestmentByStrategyGenerationRunID :many
-WITH strategy_run AS (
+const getCalcuttaPredictedInvestmentByOptimizedEntryID = `-- name: GetCalcuttaPredictedInvestmentByOptimizedEntryID :many
+WITH optimized_entry AS (
   SELECT
-    sgr.simulated_tournament_id
-  FROM derived.strategy_generation_runs sgr
-  WHERE sgr.id = $1::uuid
-    AND sgr.deleted_at IS NULL
+    oe.simulated_tournament_id
+  FROM derived.optimized_entries oe
+  WHERE oe.id = $1::uuid
+    AND oe.deleted_at IS NULL
   LIMIT 1
 ),
 calcutta_ctx AS (
@@ -141,10 +141,10 @@ total_pool AS (
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
-    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)
   GROUP BY st.team_id
 ),
 total_expected_points AS (
@@ -178,12 +178,12 @@ WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
 ORDER BY predicted DESC, seed ASC
 `
 
-type GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDParams struct {
-	StrategyGenerationRunID string
-	CalcuttaID              string
+type GetCalcuttaPredictedInvestmentByOptimizedEntryIDParams struct {
+	OptimizedEntryID string
+	CalcuttaID       string
 }
 
-type GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDRow struct {
+type GetCalcuttaPredictedInvestmentByOptimizedEntryIDRow struct {
 	TeamID     string
 	SchoolName string
 	Seed       int32
@@ -193,15 +193,15 @@ type GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDRow struct {
 	Delta      float64
 }
 
-func (q *Queries) GetCalcuttaPredictedInvestmentByStrategyGenerationRunID(ctx context.Context, arg GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDParams) ([]GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDRow, error) {
-	rows, err := q.db.Query(ctx, getCalcuttaPredictedInvestmentByStrategyGenerationRunID, arg.StrategyGenerationRunID, arg.CalcuttaID)
+func (q *Queries) GetCalcuttaPredictedInvestmentByOptimizedEntryID(ctx context.Context, arg GetCalcuttaPredictedInvestmentByOptimizedEntryIDParams) ([]GetCalcuttaPredictedInvestmentByOptimizedEntryIDRow, error) {
+	rows, err := q.db.Query(ctx, getCalcuttaPredictedInvestmentByOptimizedEntryID, arg.OptimizedEntryID, arg.CalcuttaID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDRow
+	var items []GetCalcuttaPredictedInvestmentByOptimizedEntryIDRow
 	for rows.Next() {
-		var i GetCalcuttaPredictedInvestmentByStrategyGenerationRunIDRow
+		var i GetCalcuttaPredictedInvestmentByOptimizedEntryIDRow
 		if err := rows.Scan(
 			&i.TeamID,
 			&i.SchoolName,
@@ -235,7 +235,7 @@ WITH calcutta_ctx AS (
 team_win_counts AS (
   SELECT
     st.team_id,
-    (st.wins + st.byes + 1)::int AS progress,
+    (st.wins + st.byes)::int AS progress,
     COUNT(*) as sim_count
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
@@ -257,7 +257,7 @@ team_probabilities AS (
 team_expected_value AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_value
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   GROUP BY st.team_id
@@ -332,13 +332,13 @@ func (q *Queries) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID st
 	return items, nil
 }
 
-const getCalcuttaPredictedReturnsByStrategyGenerationRunID = `-- name: GetCalcuttaPredictedReturnsByStrategyGenerationRunID :many
-WITH strategy_run AS (
+const getCalcuttaPredictedReturnsByOptimizedEntryID = `-- name: GetCalcuttaPredictedReturnsByOptimizedEntryID :many
+WITH optimized_entry AS (
   SELECT
-    sgr.simulated_tournament_id
-  FROM derived.strategy_generation_runs sgr
-  WHERE sgr.id = $1::uuid
-    AND sgr.deleted_at IS NULL
+    oe.simulated_tournament_id
+  FROM derived.optimized_entries oe
+  WHERE oe.id = $1::uuid
+    AND oe.deleted_at IS NULL
   LIMIT 1
 ),
 calcutta_ctx AS (
@@ -354,11 +354,11 @@ calcutta_ctx AS (
 team_win_counts AS (
   SELECT
     st.team_id,
-    (st.wins + st.byes + 1)::int AS progress,
+    (st.wins + st.byes)::int AS progress,
     COUNT(*) as sim_count
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
-    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)
   GROUP BY st.team_id, progress
 ),
 team_probabilities AS (
@@ -377,10 +377,10 @@ team_probabilities AS (
 team_expected_value AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_value
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_value
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
-    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)
   GROUP BY st.team_id
 )
 SELECT
@@ -405,12 +405,12 @@ WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
 ORDER BY expected_value DESC, seed ASC
 `
 
-type GetCalcuttaPredictedReturnsByStrategyGenerationRunIDParams struct {
-	StrategyGenerationRunID string
-	CalcuttaID              string
+type GetCalcuttaPredictedReturnsByOptimizedEntryIDParams struct {
+	OptimizedEntryID string
+	CalcuttaID       string
 }
 
-type GetCalcuttaPredictedReturnsByStrategyGenerationRunIDRow struct {
+type GetCalcuttaPredictedReturnsByOptimizedEntryIDRow struct {
 	TeamID        string
 	SchoolName    string
 	Seed          int32
@@ -425,15 +425,15 @@ type GetCalcuttaPredictedReturnsByStrategyGenerationRunIDRow struct {
 	ExpectedValue float64
 }
 
-func (q *Queries) GetCalcuttaPredictedReturnsByStrategyGenerationRunID(ctx context.Context, arg GetCalcuttaPredictedReturnsByStrategyGenerationRunIDParams) ([]GetCalcuttaPredictedReturnsByStrategyGenerationRunIDRow, error) {
-	rows, err := q.db.Query(ctx, getCalcuttaPredictedReturnsByStrategyGenerationRunID, arg.StrategyGenerationRunID, arg.CalcuttaID)
+func (q *Queries) GetCalcuttaPredictedReturnsByOptimizedEntryID(ctx context.Context, arg GetCalcuttaPredictedReturnsByOptimizedEntryIDParams) ([]GetCalcuttaPredictedReturnsByOptimizedEntryIDRow, error) {
+	rows, err := q.db.Query(ctx, getCalcuttaPredictedReturnsByOptimizedEntryID, arg.OptimizedEntryID, arg.CalcuttaID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalcuttaPredictedReturnsByStrategyGenerationRunIDRow
+	var items []GetCalcuttaPredictedReturnsByOptimizedEntryIDRow
 	for rows.Next() {
-		var i GetCalcuttaPredictedReturnsByStrategyGenerationRunIDRow
+		var i GetCalcuttaPredictedReturnsByOptimizedEntryIDRow
 		if err := rows.Scan(
 			&i.TeamID,
 			&i.SchoolName,
@@ -482,28 +482,36 @@ total_pool AS (
   SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47)
     * COALESCE((SELECT budget_points FROM calcutta_ctx), 100)::double precision AS pool_size
 ),
-latest_strategy_generation AS (
-  SELECT sgr.id AS strategy_generation_run_id,
-    sgr.simulated_tournament_id
-  FROM derived.strategy_generation_runs sgr
+latest_optimized_entry AS (
+  SELECT oe.id AS optimized_entry_id,
+    oe.simulated_tournament_id,
+    oe.bids_json
+  FROM derived.optimized_entries oe
   JOIN calcutta_ctx cc ON TRUE
-  WHERE sgr.deleted_at IS NULL
-    AND sgr.calcutta_id = cc.calcutta_id
-  ORDER BY sgr.created_at DESC
+  WHERE oe.deleted_at IS NULL
+    AND oe.calcutta_id = cc.calcutta_id
+  ORDER BY oe.created_at DESC
   LIMIT 1
 ),
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
-    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM latest_strategy_generation)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM latest_optimized_entry)
   GROUP BY st.team_id
 ),
 total_expected_points AS (
   SELECT SUM(expected_points) AS total_ev
   FROM team_expected_points
+),
+our_bids AS (
+  SELECT
+    (bid->>'team_id')::uuid AS team_id,
+    (bid->>'bid_points')::int AS bid_points
+  FROM latest_optimized_entry loe,
+       jsonb_array_elements(loe.bids_json) AS bid
 )
 SELECT
   t.id as team_id,
@@ -512,7 +520,7 @@ SELECT
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (spms_t.predicted_share * (SELECT pool_size FROM total_pool))::double precision as expected_market,
-  COALESCE(reb.bid_points, 0.0)::double precision as our_bid
+  COALESCE(ob.bid_points, 0.0)::double precision as our_bid
 FROM core.teams t
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
@@ -521,10 +529,7 @@ JOIN derived.predicted_market_share spms_t
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
   AND spms_t.deleted_at IS NULL
-LEFT JOIN latest_strategy_generation lsg ON true
-LEFT JOIN derived.strategy_generation_run_bids reb
-  ON reb.strategy_generation_run_id = lsg.strategy_generation_run_id
-  AND reb.team_id = t.id
+LEFT JOIN our_bids ob ON ob.team_id = t.id
 WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   AND t.deleted_at IS NULL
 ORDER BY seed ASC, s.name ASC
@@ -568,7 +573,7 @@ func (q *Queries) GetCalcuttaSimulatedEntry(ctx context.Context, dollar_1 string
 	return items, nil
 }
 
-const getCalcuttaSimulatedEntryByStrategyGenerationRunID = `-- name: GetCalcuttaSimulatedEntryByStrategyGenerationRunID :many
+const getCalcuttaSimulatedEntryByOptimizedEntryID = `-- name: GetCalcuttaSimulatedEntryByOptimizedEntryID :many
 WITH calcutta_ctx AS (
   SELECT
     c.id AS calcutta_id,
@@ -576,7 +581,7 @@ WITH calcutta_ctx AS (
     t.id AS core_tournament_id
   FROM core.calcuttas c
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-  WHERE c.id = $2::uuid
+  WHERE c.id = $1::uuid
     AND c.deleted_at IS NULL
   LIMIT 1
 ),
@@ -590,25 +595,32 @@ total_pool AS (
   SELECT COALESCE(NULLIF((SELECT num_entries FROM entry_count), 0), 47)
     * COALESCE((SELECT budget_points FROM calcutta_ctx), 100)::double precision AS pool_size
 ),
-strategy_run AS (
-  SELECT sgr.simulated_tournament_id
-  FROM derived.strategy_generation_runs sgr
-  WHERE sgr.id = $1::uuid
-    AND sgr.deleted_at IS NULL
+optimized_entry AS (
+  SELECT oe.simulated_tournament_id, oe.bids_json
+  FROM derived.optimized_entries oe
+  WHERE oe.id = $2::uuid
+    AND oe.deleted_at IS NULL
   LIMIT 1
 ),
 team_expected_points AS (
   SELECT
     st.team_id,
-    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins + 1, st.byes))::float AS expected_points
+    AVG(core.calcutta_points_for_progress((SELECT calcutta_id FROM calcutta_ctx), st.wins, st.byes))::float AS expected_points
   FROM derived.simulated_teams st
   WHERE st.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
-    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM strategy_run)
+    AND st.simulated_tournament_id = (SELECT simulated_tournament_id FROM optimized_entry)
   GROUP BY st.team_id
 ),
 total_expected_points AS (
   SELECT SUM(expected_points) AS total_ev
   FROM team_expected_points
+),
+our_bids AS (
+  SELECT
+    (bid->>'team_id')::uuid AS team_id,
+    (bid->>'bid_points')::int AS bid_points
+  FROM optimized_entry oe,
+       jsonb_array_elements(oe.bids_json) AS bid
 )
 SELECT
   t.id as team_id,
@@ -617,7 +629,7 @@ SELECT
   COALESCE(t.region, '')::text as region,
   COALESCE(tep.expected_points, 0.0)::double precision as expected_points,
   (spms_t.predicted_share * (SELECT pool_size FROM total_pool))::double precision as expected_market,
-  COALESCE(reb.bid_points, 0.0)::double precision as our_bid
+  COALESCE(ob.bid_points, 0.0)::double precision as our_bid
 FROM core.teams t
 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
 LEFT JOIN team_expected_points tep ON t.id = tep.team_id
@@ -626,20 +638,18 @@ JOIN derived.predicted_market_share spms_t
   AND spms_t.calcutta_id IS NULL
   AND spms_t.team_id = t.id
   AND spms_t.deleted_at IS NULL
-LEFT JOIN derived.strategy_generation_run_bids reb
-  ON reb.strategy_generation_run_id = $1::uuid
-  AND reb.team_id = t.id
+LEFT JOIN our_bids ob ON ob.team_id = t.id
 WHERE t.tournament_id = (SELECT core_tournament_id FROM calcutta_ctx)
   AND t.deleted_at IS NULL
 ORDER BY seed ASC, s.name ASC
 `
 
-type GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams struct {
-	StrategyGenerationRunID string
-	CalcuttaID              string
+type GetCalcuttaSimulatedEntryByOptimizedEntryIDParams struct {
+	CalcuttaID       string
+	OptimizedEntryID string
 }
 
-type GetCalcuttaSimulatedEntryByStrategyGenerationRunIDRow struct {
+type GetCalcuttaSimulatedEntryByOptimizedEntryIDRow struct {
 	TeamID         string
 	SchoolName     string
 	Seed           int32
@@ -649,15 +659,15 @@ type GetCalcuttaSimulatedEntryByStrategyGenerationRunIDRow struct {
 	OurBid         float64
 }
 
-func (q *Queries) GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx context.Context, arg GetCalcuttaSimulatedEntryByStrategyGenerationRunIDParams) ([]GetCalcuttaSimulatedEntryByStrategyGenerationRunIDRow, error) {
-	rows, err := q.db.Query(ctx, getCalcuttaSimulatedEntryByStrategyGenerationRunID, arg.StrategyGenerationRunID, arg.CalcuttaID)
+func (q *Queries) GetCalcuttaSimulatedEntryByOptimizedEntryID(ctx context.Context, arg GetCalcuttaSimulatedEntryByOptimizedEntryIDParams) ([]GetCalcuttaSimulatedEntryByOptimizedEntryIDRow, error) {
+	rows, err := q.db.Query(ctx, getCalcuttaSimulatedEntryByOptimizedEntryID, arg.CalcuttaID, arg.OptimizedEntryID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalcuttaSimulatedEntryByStrategyGenerationRunIDRow
+	var items []GetCalcuttaSimulatedEntryByOptimizedEntryIDRow
 	for rows.Next() {
-		var i GetCalcuttaSimulatedEntryByStrategyGenerationRunIDRow
+		var i GetCalcuttaSimulatedEntryByOptimizedEntryIDRow
 		if err := rows.Scan(
 			&i.TeamID,
 			&i.SchoolName,
@@ -677,18 +687,18 @@ func (q *Queries) GetCalcuttaSimulatedEntryByStrategyGenerationRunID(ctx context
 	return items, nil
 }
 
-const getLatestStrategyGenerationRunIDByCoreCalcuttaID = `-- name: GetLatestStrategyGenerationRunIDByCoreCalcuttaID :one
+const getLatestOptimizedEntryIDByCoreCalcuttaID = `-- name: GetLatestOptimizedEntryIDByCoreCalcuttaID :one
 SELECT
-	sgr.id
-FROM derived.strategy_generation_runs sgr
-WHERE sgr.calcutta_id = $1::uuid
-	AND sgr.deleted_at IS NULL
-ORDER BY sgr.created_at DESC
+	oe.id
+FROM derived.optimized_entries oe
+WHERE oe.calcutta_id = $1::uuid
+	AND oe.deleted_at IS NULL
+ORDER BY oe.created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestStrategyGenerationRunIDByCoreCalcuttaID(ctx context.Context, calcuttaID string) (string, error) {
-	row := q.db.QueryRow(ctx, getLatestStrategyGenerationRunIDByCoreCalcuttaID, calcuttaID)
+func (q *Queries) GetLatestOptimizedEntryIDByCoreCalcuttaID(ctx context.Context, calcuttaID string) (string, error) {
+	row := q.db.QueryRow(ctx, getLatestOptimizedEntryIDByCoreCalcuttaID, calcuttaID)
 	var id string
 	err := row.Scan(&id)
 	return id, err

@@ -10,15 +10,15 @@ import (
 )
 
 const ensureBootstrapGlobalAdmin = `-- name: EnsureBootstrapGlobalAdmin :exec
-INSERT INTO grants (user_id, scope_type, scope_id, label_id)
+INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
 SELECT $1, 'global', NULL, l.id
-FROM labels l
+FROM core.labels l
 WHERE l.key = 'global_admin'
   AND l.deleted_at IS NULL
   AND NOT EXISTS (
     SELECT 1
-    FROM grants g
-    JOIN labels l2 ON g.label_id = l2.id
+    FROM core.grants g
+    JOIN core.labels l2 ON g.label_id = l2.id
     WHERE g.scope_type = 'global'
       AND g.revoked_at IS NULL
       AND l2.key = 'global_admin'
@@ -33,11 +33,11 @@ func (q *Queries) EnsureBootstrapGlobalAdmin(ctx context.Context, userID string)
 
 const hasPermission = `-- name: HasPermission :one
 SELECT 1
-FROM grants g
-LEFT JOIN permissions p_direct ON g.permission_id = p_direct.id AND p_direct.deleted_at IS NULL
-LEFT JOIN labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-LEFT JOIN label_permissions lp ON lp.label_id = l.id
-LEFT JOIN permissions p_label ON lp.permission_id = p_label.id AND p_label.deleted_at IS NULL
+FROM core.grants g
+LEFT JOIN core.permissions p_direct ON g.permission_id = p_direct.id AND p_direct.deleted_at IS NULL
+LEFT JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+LEFT JOIN core.label_permissions lp ON lp.label_id = l.id
+LEFT JOIN core.permissions p_label ON lp.permission_id = p_label.id AND p_label.deleted_at IS NULL
 WHERE g.user_id = $1
   AND g.revoked_at IS NULL
   AND (g.expires_at IS NULL OR g.expires_at > NOW())

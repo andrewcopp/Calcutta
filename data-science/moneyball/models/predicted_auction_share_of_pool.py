@@ -7,6 +7,9 @@ import numpy as np
 import pandas as pd
 
 from moneyball.models import feature_engineering
+from moneyball.models.analytical_tournament_value import (
+    compute_analytical_tournament_values,
+)
 from moneyball.utils import io, points
 from moneyball.utils.market_bids import (
     compute_team_shares_from_bids,
@@ -23,6 +26,7 @@ FEATURE_SETS = [
     "expanded_last_year_expected_with_market_features",
     "optimal",
     "optimal_v2",
+    "optimal_v3",
 ]
 
 DEFAULT_FEATURE_SET = "optimal"
@@ -377,6 +381,65 @@ def _load_team_dataset(snapshot_dir: Path) -> pd.DataFrame:
     return df
 
 
+def _enrich_with_analytical_probabilities(
+    df: pd.DataFrame,
+    kenpom_scale: float = 10.0,
+) -> pd.DataFrame:
+    """
+    Enrich team dataset with analytical championship probabilities.
+
+    Requires a complete 68-team field with proper tournament structure.
+
+    Args:
+        df: Team dataset with id/team_key, seed, region, kenpom_net
+        kenpom_scale: Scale parameter for win probability sigmoid
+
+    Returns:
+        DataFrame with added analytical_p_championship and
+        analytical_expected_points columns
+    """
+    # Ensure we have required columns
+    required = ["seed", "region", "kenpom_net"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"team_dataset missing columns for analytical: {missing}")
+
+    # Use team_key or id as identifier
+    id_col = "team_key" if "team_key" in df.columns else "id"
+    if id_col not in df.columns:
+        raise ValueError("team_dataset must have 'team_key' or 'id' column")
+
+    # Compute analytical values
+    analytical = compute_analytical_tournament_values(
+        df,
+        kenpom_scale=kenpom_scale,
+    )
+
+    # Merge back to original DataFrame
+    result = df.copy()
+    result["_merge_key"] = result[id_col].astype(str)
+    analytical["_merge_key"] = analytical["team_key"].astype(str)
+
+    result = result.merge(
+        analytical[["_merge_key", "analytical_p_championship", "analytical_expected_points"]],
+        on="_merge_key",
+        how="left",
+    )
+    result = result.drop(columns=["_merge_key"])
+
+    # Fill any missing values with 0
+    result["analytical_p_championship"] = (
+        pd.to_numeric(result["analytical_p_championship"], errors="coerce")
+        .fillna(0.0)
+    )
+    result["analytical_expected_points"] = (
+        pd.to_numeric(result["analytical_expected_points"], errors="coerce")
+        .fillna(0.0)
+    )
+
+    return result
+
+
 def _prepare_features_set(
     df: pd.DataFrame,
     feature_set: str,
@@ -576,7 +639,85 @@ def _prepare_features_set(
         else:
             base["program_share_count"] = 0.0
 
-    if fs != "basic" and fs != "optimal":
+    if fs == "optimal_v3":
+        # Use analytical KenPom-based probabilities (NOT hard-coded seed tables)
+        # Requires analytical_p_championship and analytical_expected_points
+        # to be pre-computed via _enrich_with_analytical_probabilities()
+
+        # 1. Championship probability from analytical calculation
+        if "analytical_p_championship" not in df.columns:
+            raise ValueError(
+                "optimal_v3 requires analytical_p_championship column. "
+                "Call _enrich_with_analytical_probabilities() first."
+            )
+        base["p_championship"] = pd.to_numeric(
+            df["analytical_p_championship"], errors="coerce"
+        ).fillna(0.0)
+
+        # 2. Expected points from analytical calculation
+        if "analytical_expected_points" not in df.columns:
+            raise ValueError(
+                "optimal_v3 requires analytical_expected_points column. "
+                "Call _enrich_with_analytical_probabilities() first."
+            )
+        base["expected_points"] = pd.to_numeric(
+            df["analytical_expected_points"], errors="coerce"
+        ).fillna(0.0)
+
+        # 3. KenPom z-scores (same as optimal)
+        kenpom_mean = base["kenpom_net"].mean()
+        kenpom_std = base["kenpom_net"].std()
+        if kenpom_std > 0:
+            base["kenpom_net_zscore"] = (
+                (base["kenpom_net"] - kenpom_mean) / kenpom_std
+            )
+        else:
+            base["kenpom_net_zscore"] = 0.0
+        base["kenpom_net_zscore_sq"] = base["kenpom_net_zscore"] ** 2
+        base["kenpom_net_zscore_cubed"] = base["kenpom_net_zscore"] ** 3
+
+        # 4. KenPom balance (offensive/defensive imbalance)
+        ko = pd.to_numeric(base["kenpom_o"], errors="coerce").fillna(0.0)
+        kd = pd.to_numeric(base["kenpom_d"], errors="coerce").fillna(0.0)
+        ko_std = float(ko.std() or 0.0)
+        ko_z = (ko - float(ko.mean() or 0.0)) / (
+            ko_std if ko_std > 0 else 1.0
+        )
+        kd_inv = -kd
+        kd_inv_std = float(kd_inv.std() or 0.0)
+        kd_z = (kd_inv - float(kd_inv.mean() or 0.0)) / (
+            kd_inv_std if kd_inv_std > 0 else 1.0
+        )
+        base["kenpom_balance"] = np.abs(ko_z - kd_z)
+
+        # 5. Points per championship probability (value play indicator)
+        base["points_per_p_champ"] = (
+            base["expected_points"] / (base["p_championship"] + 1e-9)
+        )
+
+        # 6. Seed interactions (same as optimal_v2)
+        base["seed_sq"] = base["seed"] ** 2
+        base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
+
+        # 7. Market behavior features (upset chic, within-seed ranking)
+        base["is_upset_seed"] = base["seed"].apply(
+            lambda x: 1 if 10 <= x <= 12 else 0
+        )
+
+        base["kenpom_rank_within_seed"] = df.groupby("seed")[
+            "kenpom_net"
+        ].rank(ascending=False, method="dense")
+        base["kenpom_rank_within_seed_norm"] = base.groupby("seed")[
+            "kenpom_rank_within_seed"
+        ].transform(
+            lambda x: (x - 1) / (x.max() - 1) if x.max() > 1 else 0
+        )
+        base["kenpom_rank_within_seed_norm"] = base[
+            "kenpom_rank_within_seed_norm"
+        ].fillna(0.0)
+        base = base.drop(columns=["kenpom_rank_within_seed"])
+
+    if fs != "basic" and fs != "optimal" and fs != "optimal_v3":
         base["seed_sq"] = base["seed"] ** 2
         base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
 
@@ -741,6 +882,7 @@ def predict_auction_share_of_pool(
     seed_prior_monotone: Optional[bool] = None,
     seed_prior_k: float = 0.0,
     program_prior_k: float = 0.0,
+    kenpom_scale: float = 10.0,
 ) -> pd.DataFrame:
     if train_team_dataset.empty:
         raise ValueError("train_team_dataset must not be empty")
@@ -755,6 +897,15 @@ def predict_auction_share_of_pool(
 
     if tt not in ("none", "log"):
         raise ValueError(f"unknown target_transform: {tt}")
+
+    # Validate hyperparameters for optimal_v2 feature set
+    if fs == "optimal_v2" and seed_prior_k <= 0:
+        raise ValueError(
+            "optimal_v2 feature set requires seed_prior_k > 0 to stabilize "
+            "market prior estimates for low seeds. Without shrinkage priors, "
+            "the model produces unstable predictions that may not sum to 1.0. "
+            "Recommended: seed_prior_k=20, program_prior_k=50."
+        )
 
     seed_prior_by_seed: Optional[Dict[int, float]] = None
     program_share_mean_by_slug: Optional[Dict[str, float]] = None
@@ -826,6 +977,28 @@ def predict_auction_share_of_pool(
                 }
             else:
                 program_share_mean_by_slug = grp.mean().to_dict()
+
+    # Enrich with analytical probabilities for optimal_v3
+    # IMPORTANT: Must process each year/snapshot separately since the analytical
+    # calculation expects a single 68-team tournament, not concatenated multi-year data
+    if fs == "optimal_v3":
+        if "snapshot" in train_team_dataset.columns:
+            # Process each year separately, then concatenate
+            enriched_frames = []
+            for snapshot, group in train_team_dataset.groupby("snapshot"):
+                enriched = _enrich_with_analytical_probabilities(
+                    group.copy(), kenpom_scale=kenpom_scale
+                )
+                enriched_frames.append(enriched)
+            train_team_dataset = pd.concat(enriched_frames, ignore_index=True)
+        else:
+            # Single tournament - process directly
+            train_team_dataset = _enrich_with_analytical_probabilities(
+                train_team_dataset, kenpom_scale=kenpom_scale
+            )
+        predict_team_dataset = _enrich_with_analytical_probabilities(
+            predict_team_dataset, kenpom_scale=kenpom_scale
+        )
 
     X_train = _prepare_features_set(
         train_team_dataset,
@@ -905,6 +1078,7 @@ def predict_auction_share_of_pool_from_out_root(
     seed_prior_monotone: Optional[bool] = None,
     seed_prior_k: float = 0.0,
     program_prior_k: float = 0.0,
+    kenpom_scale: float = 10.0,
     exclude_entry_names: Optional[List[str]] = None,
 ) -> pd.DataFrame:
     snapshot_dirs_by_name = _find_snapshot_dirs(Path(out_root))
@@ -1040,4 +1214,5 @@ def predict_auction_share_of_pool_from_out_root(
         seed_prior_monotone=seed_prior_monotone,
         seed_prior_k=float(seed_prior_k),
         program_prior_k=float(program_prior_k),
+        kenpom_scale=float(kenpom_scale),
     )

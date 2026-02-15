@@ -634,18 +634,15 @@ def allocate_minlp(
 
     Maximizes total expected return while avoiding guaranteed losses.
     """
-    from moneyball.models.portfolio_optimizer_minlp import (
-        optimize_portfolio_minlp,
-    )
+    from moneyball.lab.portfolio_research import optimize_portfolio_gekko
 
-    chosen, _ = optimize_portfolio_minlp(
+    chosen, _ = optimize_portfolio_gekko(
         teams_df=teams_df,
         budget_points=budget_points,
         min_teams=min_teams,
         max_teams=max_teams,
         max_per_team_points=max_per_team_points,
         min_bid_points=min_bid_points,
-        initial_solution="greedy",
     )
 
     return chosen[
@@ -673,9 +670,7 @@ def allocate_maxmin(
 
     Trades off total expected return for risk reduction.
     """
-    from moneyball.models.portfolio_optimizer_maxmin import (
-        optimize_portfolio_maxmin,
-    )
+    from moneyball.lab.portfolio_research import optimize_portfolio_maxmin
 
     chosen, _ = optimize_portfolio_maxmin(
         teams_df=teams_df,

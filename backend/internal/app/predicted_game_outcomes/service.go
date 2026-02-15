@@ -260,9 +260,9 @@ func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID strin
 		SELECT
 			r.tournament_id::text,
 			r.params_json,
-			COALESCE(NULLIF(a.name, ''), NULL) AS model_version
+			COALESCE(NULLIF(pm.name, ''), NULL) AS model_version
 		FROM derived.game_outcome_runs r
-		JOIN derived.algorithms a ON a.id = r.algorithm_id AND a.deleted_at IS NULL
+		LEFT JOIN derived.prediction_models pm ON pm.id = COALESCE(r.prediction_model_id, r.algorithm_id) AND pm.deleted_at IS NULL
 		WHERE r.id = $1::uuid
 			AND r.deleted_at IS NULL
 		LIMIT 1
@@ -597,30 +597,30 @@ func (s *Service) writePredictedGameOutcomes(
 		return err
 	}
 
-	algorithmName := p.ModelVersion
-	if algorithmName == "" {
-		algorithmName = "kenpom"
+	predictionModelName := p.ModelVersion
+	if predictionModelName == "" {
+		predictionModelName = "kenpom"
 	}
 
-	var algorithmID string
+	var predictionModelID string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.algorithms (kind, name, params_json)
+		INSERT INTO derived.prediction_models (kind, name, params_json)
 		VALUES ('game_outcomes', $1, $2::jsonb)
 		ON CONFLICT (kind, name) WHERE deleted_at IS NULL
 		DO UPDATE SET
 			params_json = EXCLUDED.params_json,
 			updated_at = NOW()
 		RETURNING id
-	`, algorithmName, string(paramsJSON)).Scan(&algorithmID); err != nil {
+	`, predictionModelName, string(paramsJSON)).Scan(&predictionModelID); err != nil {
 		return err
 	}
 
 	var runID string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.game_outcome_runs (algorithm_id, tournament_id, params_json)
-		VALUES ($1::uuid, $2::uuid, $3::jsonb)
+		INSERT INTO derived.game_outcome_runs (algorithm_id, prediction_model_id, tournament_id, params_json)
+		VALUES ($1::uuid, $1::uuid, $2::uuid, $3::jsonb)
 		RETURNING id
-	`, algorithmID, labTournamentID, string(paramsJSON)).Scan(&runID); err != nil {
+	`, predictionModelID, labTournamentID, string(paramsJSON)).Scan(&runID); err != nil {
 		return err
 	}
 

@@ -87,7 +87,7 @@ func (r *AuthRepository) IsUserActive(ctx context.Context, userID string) (bool,
 	var status string
 	err := r.pool.QueryRow(ctx, `
 		SELECT status
-		FROM users
+		FROM core.users
 		WHERE id = $1 AND deleted_at IS NULL
 	`, userID).Scan(&status)
 	if err != nil {

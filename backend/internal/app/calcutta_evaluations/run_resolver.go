@@ -3,6 +3,7 @@ package calcutta_evaluations
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/google/uuid"
@@ -253,10 +254,11 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 		if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
 			_, err := tx.Exec(ctx, `
 				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-				SELECT $1, greb.team_id, greb.bid_points
-				FROM derived.strategy_generation_run_bids greb
-				WHERE greb.strategy_generation_run_id = $2::uuid
-					AND greb.deleted_at IS NULL
+				SELECT $1, (bid->>'team_id')::uuid, (bid->>'bid_points')::int
+				FROM derived.optimized_entries oe,
+				     jsonb_array_elements(oe.bids_json) AS bid
+				WHERE oe.id = $2::uuid
+					AND oe.deleted_at IS NULL
 			`, snapshotEntryID, *strategyGenerationRunID)
 			if err != nil {
 				return "", err
@@ -265,10 +267,11 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 			if _, parseErr := uuid.Parse(runID); parseErr == nil {
 				_, err := tx.Exec(ctx, `
 					INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-					SELECT $1, greb.team_id, greb.bid_points
-					FROM derived.strategy_generation_run_bids greb
-					WHERE greb.run_id = $2::text
-						AND greb.deleted_at IS NULL
+					SELECT $1, (bid->>'team_id')::uuid, (bid->>'bid_points')::int
+					FROM derived.optimized_entries oe,
+					     jsonb_array_elements(oe.bids_json) AS bid
+					WHERE oe.run_key = $2::text
+						AND oe.deleted_at IS NULL
 				`, snapshotEntryID, runID)
 				if err != nil {
 					return "", err
@@ -356,21 +359,23 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 	}
 
 	// Add our simulated entry.
-	// Prefer using the strategy_generation_run_id when provided (Lab / deterministic entries).
+	// Prefer using the optimized_entry_id when provided (Lab / deterministic entries).
 	var ourRows pgx.Rows
 	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
 		ourRows, err = s.pool.Query(ctx, `
-			SELECT team_id, bid_points
-			FROM derived.strategy_generation_run_bids greb
-			WHERE greb.strategy_generation_run_id = $1::uuid
-				AND greb.deleted_at IS NULL
+			SELECT (bid->>'team_id')::uuid AS team_id, (bid->>'bid_points')::int AS bid_points
+			FROM derived.optimized_entries oe,
+			     jsonb_array_elements(oe.bids_json) AS bid
+			WHERE oe.id = $1::uuid
+				AND oe.deleted_at IS NULL
 		`, *strategyGenerationRunID)
 	} else {
 		ourRows, err = s.pool.Query(ctx, `
-			SELECT team_id, bid_points
-			FROM derived.strategy_generation_run_bids greb
-			WHERE greb.run_id = $1::text
-				AND greb.deleted_at IS NULL
+			SELECT (bid->>'team_id')::uuid AS team_id, (bid->>'bid_points')::int AS bid_points
+			FROM derived.optimized_entries oe,
+			     jsonb_array_elements(oe.bids_json) AS bid
+			WHERE oe.run_key = $1::text
+				AND oe.deleted_at IS NULL
 		`, runID)
 	}
 	if err != nil {
@@ -654,4 +659,183 @@ func (s *Service) getPayoutStructure(ctx context.Context, calcuttaID string) (ma
 	}
 
 	return payouts, firstPlacePayout, nil
+}
+
+// LabEntryPerformance contains performance metrics for a single entry in an evaluation.
+type LabEntryPerformance struct {
+	EntryName  string
+	MeanPayout float64
+	PTop1      float64
+	PInMoney   float64
+	Rank       int
+}
+
+// LabEvaluationResult contains the performance metrics for a lab entry evaluation.
+type LabEvaluationResult struct {
+	MeanNormalizedPayout   float64
+	MedianNormalizedPayout float64
+	PTop1                  float64
+	PInMoney               float64
+	NSims                  int
+	AllEntryResults        []LabEntryPerformance
+}
+
+// EvaluateLabEntry evaluates a lab entry against all other entries in a calcutta.
+// It runs simulations and returns the performance metrics for the lab entry.
+func (s *Service) EvaluateLabEntry(
+	ctx context.Context,
+	calcuttaID string,
+	labEntryBids map[string]int, // team_id -> bid_points
+	excludedEntryName string,
+) (*LabEvaluationResult, error) {
+	// Get calcutta context
+	cc, err := s.getCalcuttaContext(ctx, calcuttaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get calcutta context: %w", err)
+	}
+
+	// Get or create tournament simulation batch
+	batchID, ok, err := s.getLatestTournamentSimulationBatchID(ctx, cc.TournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tournament simulation batch: %w", err)
+	}
+	if !ok {
+		// Create a new simulation batch
+		snapshotID, err := s.createTournamentStateSnapshot(ctx, cc.TournamentID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tournament state snapshot: %w", err)
+		}
+		batchID, err = s.createTournamentSimulationBatch(ctx, cc.TournamentID, snapshotID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tournament simulation batch: %w", err)
+		}
+		if err := s.attachSimulationBatchToSimulatedTournaments(ctx, cc.TournamentID, batchID); err != nil {
+			return nil, fmt.Errorf("failed to attach simulation batch: %w", err)
+		}
+	}
+
+	// Get payout structure
+	payouts, firstPlacePayout, err := s.getPayoutStructure(ctx, cc.CalcuttaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payout structure: %w", err)
+	}
+
+	// Build entries map: existing entries + lab entry as "Our Strategy"
+	entries, err := s.getEntriesForLabEvaluation(ctx, cc, excludedEntryName, labEntryBids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entries: %w", err)
+	}
+
+	// Get simulations
+	simulations, err := s.getSimulations(ctx, cc, batchID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get simulations: %w", err)
+	}
+
+	if len(simulations) == 0 {
+		return nil, fmt.Errorf("no simulations available for tournament %s", cc.TournamentID)
+	}
+
+	// Run simulations
+	var allResults []SimulationResult
+	for simID, teamResults := range simulations {
+		simResults, err := s.calculateSimulationOutcomes(ctx, simID, entries, teamResults, payouts, firstPlacePayout)
+		if err != nil {
+			return nil, fmt.Errorf("simulation %d failed: %w", simID, err)
+		}
+		allResults = append(allResults, simResults...)
+	}
+
+	// Calculate performance metrics for all entries
+	performance := s.calculatePerformanceMetrics(allResults)
+
+	// Extract metrics for our lab entry ("Our Strategy")
+	ourPerformance, ok := performance["Our Strategy"]
+	if !ok {
+		return nil, fmt.Errorf("failed to find performance for lab entry")
+	}
+
+	// Build sorted list of all entry results
+	allEntryResults := make([]LabEntryPerformance, 0, len(performance))
+	for _, perf := range performance {
+		allEntryResults = append(allEntryResults, LabEntryPerformance{
+			EntryName:  perf.EntryName,
+			MeanPayout: perf.MeanPayout,
+			PTop1:      perf.PTop1,
+			PInMoney:   perf.PInMoney,
+		})
+	}
+	// Sort by MeanPayout descending
+	sort.Slice(allEntryResults, func(i, j int) bool {
+		return allEntryResults[i].MeanPayout > allEntryResults[j].MeanPayout
+	})
+	// Assign ranks
+	for i := range allEntryResults {
+		allEntryResults[i].Rank = i + 1
+	}
+
+	return &LabEvaluationResult{
+		MeanNormalizedPayout:   ourPerformance.MeanPayout,
+		MedianNormalizedPayout: ourPerformance.MedianPayout,
+		PTop1:                  ourPerformance.PTop1,
+		PInMoney:               ourPerformance.PInMoney,
+		NSims:                  len(simulations),
+		AllEntryResults:        allEntryResults,
+	}, nil
+}
+
+// getEntriesForLabEvaluation builds the entries map for lab evaluation.
+// It includes all real entries (except excluded) plus the lab entry as "Our Strategy".
+func (s *Service) getEntriesForLabEvaluation(
+	ctx context.Context,
+	cc *calcuttaContext,
+	excludedEntryName string,
+	labEntryBids map[string]int,
+) (map[string]*Entry, error) {
+	// Get real entries from core tables
+	query := `
+		SELECT
+			ce.name as entry_name,
+			cet.team_id,
+			cet.bid_points as bid_points
+		FROM core.entry_teams cet
+		JOIN core.entries ce ON cet.entry_id = ce.id
+		WHERE ce.calcutta_id = $1
+		  AND cet.deleted_at IS NULL
+		  AND ce.deleted_at IS NULL
+		  AND (ce.name != $2 OR $2 = '')
+	`
+
+	rows, err := s.pool.Query(ctx, query, cc.CalcuttaID, excludedEntryName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := make(map[string]*Entry)
+	for rows.Next() {
+		var entryName, teamID string
+		var bidPoints int
+		if err := rows.Scan(&entryName, &teamID, &bidPoints); err != nil {
+			return nil, err
+		}
+
+		if entries[entryName] == nil {
+			entries[entryName] = &Entry{
+				Name:  entryName,
+				Teams: make(map[string]int),
+			}
+		}
+		entries[entryName].Teams[teamID] = bidPoints
+	}
+
+	// Add lab entry as "Our Strategy"
+	if len(labEntryBids) > 0 {
+		entries["Our Strategy"] = &Entry{
+			Name:  "Our Strategy",
+			Teams: labEntryBids,
+		}
+	}
+
+	return entries, nil
 }

@@ -1,23 +1,16 @@
 package bootstrap
 
 import (
-	"context"
 	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/algorithm_registry"
 	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/lab_candidates"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/ml_analytics"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/model_catalogs"
+	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/strategy_runs"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_evaluations"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/suite_scenarios"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
@@ -53,34 +46,14 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
 	analyticsService := appanalytics.New(analyticsRepo)
-	if err := algorithm_registry.SyncToDatabase(context.Background(), pool, algorithm_registry.RegisteredAlgorithms()); err != nil {
-		return nil, nil, err
-	}
 
-	mlAnalyticsRepo := dbadapters.NewMLAnalyticsRepository(pool)
-	mlAnalyticsService := ml_analytics.New(mlAnalyticsRepo)
-
-	labCandidatesRepo := dbadapters.NewLabCandidatesRepository(pool)
-	labCandidatesService := lab_candidates.New(labCandidatesRepo)
-
-	suiteScenariosRepo := dbadapters.NewSuiteScenariosRepository(pool)
-	suiteScenariosService := suite_scenarios.New(suiteScenariosRepo)
-
-	suiteEvaluationsRepo := dbadapters.NewSuiteEvaluationsRepository(pool)
-	suiteEvaluationsService := suite_evaluations.New(suiteEvaluationsRepo)
-
-	strategyRunsRepo := dbadapters.NewStrategyRunsRepository(pool)
-	strategyRunsService := strategy_runs.New(strategyRunsRepo)
+	labRepo := dbadapters.NewLabRepository(pool)
+	labService := applab.NewWithPipelineRepo(labRepo)
 
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService
 	a.Analytics = analyticsService
-	a.LabCandidates = labCandidatesService
-	a.MLAnalytics = mlAnalyticsService
-	a.ModelCatalogs = model_catalogs.New()
-	a.SuiteScenarios = suiteScenariosService
-	a.SuiteEvaluations = suiteEvaluationsService
-	a.StrategyRuns = strategyRunsService
+	a.Lab = labService
 	a.Auth = appauth.New(dbUserRepo, authRepo, authzRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)
