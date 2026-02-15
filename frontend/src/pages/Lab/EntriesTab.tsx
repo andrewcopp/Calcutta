@@ -17,9 +17,8 @@ export function EntriesTab() {
     queryFn: () => labService.listEntries({ limit: 100 }),
   });
 
-  const items = entriesQuery.data?.items ?? [];
-
   const filteredItems = useMemo(() => {
+    const items = entriesQuery.data?.items ?? [];
     if (!modelFilter.trim()) return items;
     const lower = modelFilter.toLowerCase();
     return items.filter(
@@ -27,7 +26,7 @@ export function EntriesTab() {
         e.model_name.toLowerCase().includes(lower) ||
         e.calcutta_name.toLowerCase().includes(lower)
     );
-  }, [items, modelFilter]);
+  }, [entriesQuery.data, modelFilter]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);

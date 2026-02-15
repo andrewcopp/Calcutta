@@ -45,12 +45,13 @@ func asFloat64(v any) (float64, error) {
 }
 
 type AnalyticsRepository struct {
-	pool *pgxpool.Pool
-	q    *sqlc.Queries
+	pool           *pgxpool.Pool
+	q              *sqlc.Queries
+	bracketBuilder ports.BracketBuilder
 }
 
-func NewAnalyticsRepository(pool *pgxpool.Pool) *AnalyticsRepository {
-	return &AnalyticsRepository{pool: pool, q: sqlc.New(pool)}
+func NewAnalyticsRepository(pool *pgxpool.Pool, bracketBuilder ports.BracketBuilder) *AnalyticsRepository {
+	return &AnalyticsRepository{pool: pool, q: sqlc.New(pool), bracketBuilder: bracketBuilder}
 }
 
 func (r *AnalyticsRepository) resolveStrategyGenerationRunID(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, error) {
@@ -317,7 +318,7 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedInvestment(ctx context.Context
 		return nil, nil, nil, err
 	}
 
-	marketShareSelectedID, out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, calcuttaID, marketShareRunID, gameOutcomeRunID)
+	marketShareSelectedID, out, err := computeCalcuttaPredictedInvestmentFromPGO(ctx, r.pool, r.bracketBuilder, calcuttaID, marketShareRunID, gameOutcomeRunID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -331,7 +332,7 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, c
 		return nil, nil, nil, err
 	}
 
-	gameOutcomeSelectedID, out, err := computeCalcuttaPredictedReturnsFromPGO(ctx, r.pool, calcuttaID, gameOutcomeRunID)
+	gameOutcomeSelectedID, out, err := computeCalcuttaPredictedReturnsFromPGO(ctx, r.pool, r.bracketBuilder, calcuttaID, gameOutcomeRunID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -340,7 +341,7 @@ func (r *AnalyticsRepository) GetCalcuttaPredictedReturns(ctx context.Context, c
 }
 
 func (r *AnalyticsRepository) GetTournamentPredictedAdvancement(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, []ports.TournamentPredictedAdvancementData, error) {
-	selectedID, out, err := computeTournamentPredictedAdvancementFromPGO(ctx, r.pool, tournamentID, gameOutcomeRunID)
+	selectedID, out, err := computeTournamentPredictedAdvancementFromPGO(ctx, r.pool, r.bracketBuilder, tournamentID, gameOutcomeRunID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -348,7 +349,7 @@ func (r *AnalyticsRepository) GetTournamentPredictedAdvancement(ctx context.Cont
 }
 
 func (r *AnalyticsRepository) GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaID string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []ports.CalcuttaPredictedMarketShareData, error) {
-	marketShareSelectedID, gameOutcomeSelectedID, out, err := computeCalcuttaPredictedMarketShareFromPGO(ctx, r.pool, calcuttaID, marketShareRunID, gameOutcomeRunID)
+	marketShareSelectedID, gameOutcomeSelectedID, out, err := computeCalcuttaPredictedMarketShareFromPGO(ctx, r.pool, r.bracketBuilder, calcuttaID, marketShareRunID, gameOutcomeRunID)
 	if err != nil {
 		return nil, nil, nil, err
 	}

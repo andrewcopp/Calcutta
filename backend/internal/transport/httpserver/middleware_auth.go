@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"

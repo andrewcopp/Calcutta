@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 type CalcuttaReader interface {

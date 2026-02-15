@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

@@ -9,7 +9,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )

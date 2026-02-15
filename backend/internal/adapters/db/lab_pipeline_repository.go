@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/lab"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 )
 
 // CreatePipelineRun creates a new pipeline run.
-func (r *LabRepository) CreatePipelineRun(run *lab.PipelineRun) (*lab.PipelineRun, error) {
+func (r *LabRepository) CreatePipelineRun(run *models.LabPipelineRun) (*models.LabPipelineRun, error) {
 	ctx := context.Background()
 
 	query := `
@@ -52,7 +52,7 @@ func (r *LabRepository) CreatePipelineRun(run *lab.PipelineRun) (*lab.PipelineRu
 			updated_at
 	`
 
-	var result lab.PipelineRun
+	var result models.LabPipelineRun
 	var targetIDs []string
 	err := r.pool.QueryRow(ctx, query,
 		run.InvestmentModelID,
@@ -87,7 +87,7 @@ func (r *LabRepository) CreatePipelineRun(run *lab.PipelineRun) (*lab.PipelineRu
 }
 
 // GetPipelineRun returns a pipeline run by ID.
-func (r *LabRepository) GetPipelineRun(id string) (*lab.PipelineRun, error) {
+func (r *LabRepository) GetPipelineRun(id string) (*models.LabPipelineRun, error) {
 	ctx := context.Background()
 
 	query := `
@@ -110,7 +110,7 @@ func (r *LabRepository) GetPipelineRun(id string) (*lab.PipelineRun, error) {
 		WHERE id = $1::uuid
 	`
 
-	var result lab.PipelineRun
+	var result models.LabPipelineRun
 	var targetIDs []string
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&result.ID,
@@ -174,7 +174,7 @@ func (r *LabRepository) UpdatePipelineRunStatus(id string, status string, errorM
 }
 
 // ListPipelineRuns returns pipeline runs, optionally filtered by model ID and status.
-func (r *LabRepository) ListPipelineRuns(modelID *string, status *string, limit int) ([]lab.PipelineRun, error) {
+func (r *LabRepository) ListPipelineRuns(modelID *string, status *string, limit int) ([]models.LabPipelineRun, error) {
 	ctx := context.Background()
 
 	query := `
@@ -220,9 +220,9 @@ func (r *LabRepository) ListPipelineRuns(modelID *string, status *string, limit 
 	}
 	defer rows.Close()
 
-	var results []lab.PipelineRun
+	var results []models.LabPipelineRun
 	for rows.Next() {
-		var run lab.PipelineRun
+		var run models.LabPipelineRun
 		var targetIDs []string
 		if err := rows.Scan(
 			&run.ID,
@@ -249,7 +249,7 @@ func (r *LabRepository) ListPipelineRuns(modelID *string, status *string, limit 
 }
 
 // GetActivePipelineRun returns the most recent running or pending pipeline run for a model.
-func (r *LabRepository) GetActivePipelineRun(modelID string) (*lab.PipelineRun, error) {
+func (r *LabRepository) GetActivePipelineRun(modelID string) (*models.LabPipelineRun, error) {
 	ctx := context.Background()
 
 	query := `
@@ -275,7 +275,7 @@ func (r *LabRepository) GetActivePipelineRun(modelID string) (*lab.PipelineRun, 
 		LIMIT 1
 	`
 
-	var result lab.PipelineRun
+	var result models.LabPipelineRun
 	var targetIDs []string
 	err := r.pool.QueryRow(ctx, query, modelID).Scan(
 		&result.ID,
@@ -328,7 +328,7 @@ func (r *LabRepository) CreatePipelineCalcuttaRuns(pipelineRunID string, calcutt
 }
 
 // GetPipelineCalcuttaRuns returns all calcutta runs for a pipeline.
-func (r *LabRepository) GetPipelineCalcuttaRuns(pipelineRunID string) ([]lab.PipelineCalcuttaRun, error) {
+func (r *LabRepository) GetPipelineCalcuttaRuns(pipelineRunID string) ([]models.LabPipelineCalcuttaRun, error) {
 	ctx := context.Background()
 
 	query := `
@@ -361,9 +361,9 @@ func (r *LabRepository) GetPipelineCalcuttaRuns(pipelineRunID string) ([]lab.Pip
 	}
 	defer rows.Close()
 
-	var results []lab.PipelineCalcuttaRun
+	var results []models.LabPipelineCalcuttaRun
 	for rows.Next() {
-		var run lab.PipelineCalcuttaRun
+		var run models.LabPipelineCalcuttaRun
 		if err := rows.Scan(
 			&run.ID,
 			&run.PipelineRunID,
@@ -434,7 +434,7 @@ func (r *LabRepository) UpdatePipelineCalcuttaRun(id string, updates map[string]
 }
 
 // GetPipelineProgress returns detailed progress for a pipeline run.
-func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*lab.PipelineProgressResponse, error) {
+func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*models.LabPipelineProgressResponse, error) {
 	ctx := context.Background()
 
 	// Get pipeline run
@@ -486,13 +486,13 @@ func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*lab.Pipeline
 	}
 	defer rows.Close()
 
-	var calcuttas []lab.CalcuttaProgressResponse
-	var summary lab.PipelineProgressSummary
+	var calcuttas []models.LabCalcuttaProgressResponse
+	var summary models.LabPipelineProgressSummary
 	var payoutSum float64
 	var payoutCount int
 
 	for rows.Next() {
-		var c lab.CalcuttaProgressResponse
+		var c models.LabCalcuttaProgressResponse
 		var meanPayout *float64
 		if err := rows.Scan(
 			&c.CalcuttaID, &c.CalcuttaID, &c.CalcuttaName, &c.CalcuttaYear,
@@ -534,7 +534,7 @@ func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*lab.Pipeline
 		summary.AvgMeanPayout = &avgPayout
 	}
 
-	return &lab.PipelineProgressResponse{
+	return &models.LabPipelineProgressResponse{
 		ID:                pipelineRunID,
 		InvestmentModelID: pipelineRun.InvestmentModelID,
 		ModelName:         modelName,
@@ -548,7 +548,7 @@ func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*lab.Pipeline
 }
 
 // GetModelPipelineProgress returns the pipeline progress for a model, including existing artifacts.
-func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipelineProgress, error) {
+func (r *LabRepository) GetModelPipelineProgress(modelID string) (*models.LabModelPipelineProgress, error) {
 	ctx := context.Background()
 
 	// Get model name
@@ -615,13 +615,13 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipe
 	}
 	defer rows.Close()
 
-	var calcuttas []lab.CalcuttaProgressResponse
+	var calcuttas []models.LabCalcuttaProgressResponse
 	var totalCalcuttas, predictionsCount, entriesCount, evaluationsCount int
 	var payoutSum float64
 	var payoutCount int
 
 	for rows.Next() {
-		var c lab.CalcuttaProgressResponse
+		var c models.LabCalcuttaProgressResponse
 		var stage, status *string
 		var progress *float64
 		if err := rows.Scan(
@@ -674,7 +674,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*lab.ModelPipe
 		return nil, err
 	}
 
-	result := &lab.ModelPipelineProgress{
+	result := &models.LabModelPipelineProgress{
 		ModelID:          modelID,
 		ModelName:        modelName,
 		TotalCalcuttas:   totalCalcuttas,

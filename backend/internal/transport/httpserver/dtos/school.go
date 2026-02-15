@@ -1,6 +1,6 @@
 package dtos
 
-import "github.com/andrewcopp/Calcutta/backend/pkg/models"
+import "github.com/andrewcopp/Calcutta/backend/internal/models"
 
 type SchoolResponse struct {
 	ID   string `json:"id"`

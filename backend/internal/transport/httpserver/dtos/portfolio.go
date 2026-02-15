@@ -3,7 +3,7 @@ package dtos
 import (
 	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 type PortfolioResponse struct {

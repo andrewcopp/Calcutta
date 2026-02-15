@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/lab"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -22,7 +22,7 @@ func NewLabRepository(pool *pgxpool.Pool) *LabRepository {
 }
 
 // ListInvestmentModels returns investment models matching the filter.
-func (r *LabRepository) ListInvestmentModels(filter lab.ListModelsFilter, page lab.Pagination) ([]lab.InvestmentModel, error) {
+func (r *LabRepository) ListInvestmentModels(filter models.LabListModelsFilter, page models.LabPagination) ([]models.InvestmentModel, error) {
 	ctx := context.Background()
 
 	query := `
@@ -58,9 +58,9 @@ func (r *LabRepository) ListInvestmentModels(filter lab.ListModelsFilter, page l
 	}
 	defer rows.Close()
 
-	out := make([]lab.InvestmentModel, 0)
+	out := make([]models.InvestmentModel, 0)
 	for rows.Next() {
-		var m lab.InvestmentModel
+		var m models.InvestmentModel
 		var paramsStr string
 		if err := rows.Scan(&m.ID, &m.Name, &m.Kind, &paramsStr, &m.Notes, &m.CreatedAt, &m.UpdatedAt, &m.NEntries, &m.NEvaluations); err != nil {
 			return nil, err
@@ -72,7 +72,7 @@ func (r *LabRepository) ListInvestmentModels(filter lab.ListModelsFilter, page l
 }
 
 // GetInvestmentModel returns a single investment model by ID.
-func (r *LabRepository) GetInvestmentModel(id string) (*lab.InvestmentModel, error) {
+func (r *LabRepository) GetInvestmentModel(id string) (*models.InvestmentModel, error) {
 	ctx := context.Background()
 
 	query := `
@@ -90,7 +90,7 @@ func (r *LabRepository) GetInvestmentModel(id string) (*lab.InvestmentModel, err
 		WHERE im.id = $1::uuid AND im.deleted_at IS NULL
 	`
 
-	var m lab.InvestmentModel
+	var m models.InvestmentModel
 	var paramsStr string
 	err := r.pool.QueryRow(ctx, query, id).Scan(&m.ID, &m.Name, &m.Kind, &paramsStr, &m.Notes, &m.CreatedAt, &m.UpdatedAt, &m.NEntries, &m.NEvaluations)
 	if err == pgx.ErrNoRows {
@@ -104,7 +104,7 @@ func (r *LabRepository) GetInvestmentModel(id string) (*lab.InvestmentModel, err
 }
 
 // GetModelLeaderboard returns the model leaderboard.
-func (r *LabRepository) GetModelLeaderboard() ([]lab.LeaderboardEntry, error) {
+func (r *LabRepository) GetModelLeaderboard() ([]models.LabLeaderboardEntry, error) {
 	ctx := context.Background()
 
 	query := `
@@ -133,9 +133,9 @@ func (r *LabRepository) GetModelLeaderboard() ([]lab.LeaderboardEntry, error) {
 	}
 	defer rows.Close()
 
-	out := make([]lab.LeaderboardEntry, 0)
+	out := make([]models.LabLeaderboardEntry, 0)
 	for rows.Next() {
-		var e lab.LeaderboardEntry
+		var e models.LabLeaderboardEntry
 		if err := rows.Scan(
 			&e.InvestmentModelID,
 			&e.ModelName,
@@ -160,7 +160,7 @@ func (r *LabRepository) GetModelLeaderboard() ([]lab.LeaderboardEntry, error) {
 }
 
 // ListEntries returns entries matching the filter.
-func (r *LabRepository) ListEntries(filter lab.ListEntriesFilter, page lab.Pagination) ([]lab.EntryDetail, error) {
+func (r *LabRepository) ListEntries(filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error) {
 	ctx := context.Background()
 
 	query := `
@@ -214,9 +214,9 @@ func (r *LabRepository) ListEntries(filter lab.ListEntriesFilter, page lab.Pagin
 	}
 	defer rows.Close()
 
-	out := make([]lab.EntryDetail, 0)
+	out := make([]models.LabEntryDetail, 0)
 	for rows.Next() {
-		var e lab.EntryDetail
+		var e models.LabEntryDetail
 		var gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
 		if err := rows.Scan(
 			&e.ID,
@@ -246,7 +246,7 @@ func (r *LabRepository) ListEntries(filter lab.ListEntriesFilter, page lab.Pagin
 }
 
 // GetEntry returns a single entry by ID with full details.
-func (r *LabRepository) GetEntry(id string) (*lab.EntryDetail, error) {
+func (r *LabRepository) GetEntry(id string) (*models.LabEntryDetail, error) {
 	ctx := context.Background()
 
 	query := `
@@ -272,7 +272,7 @@ func (r *LabRepository) GetEntry(id string) (*lab.EntryDetail, error) {
 		WHERE e.id = $1::uuid AND e.deleted_at IS NULL
 	`
 
-	var e lab.EntryDetail
+	var e models.LabEntryDetail
 	var gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&e.ID,
@@ -304,7 +304,7 @@ func (r *LabRepository) GetEntry(id string) (*lab.EntryDetail, error) {
 }
 
 // ListEvaluations returns evaluations matching the filter.
-func (r *LabRepository) ListEvaluations(filter lab.ListEvaluationsFilter, page lab.Pagination) ([]lab.EvaluationDetail, error) {
+func (r *LabRepository) ListEvaluations(filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error) {
 	ctx := context.Background()
 
 	query := `
@@ -361,9 +361,9 @@ func (r *LabRepository) ListEvaluations(filter lab.ListEvaluationsFilter, page l
 	}
 	defer rows.Close()
 
-	out := make([]lab.EvaluationDetail, 0)
+	out := make([]models.LabEvaluationDetail, 0)
 	for rows.Next() {
-		var ev lab.EvaluationDetail
+		var ev models.LabEvaluationDetail
 		if err := rows.Scan(
 			&ev.ID,
 			&ev.EntryID,
@@ -391,7 +391,7 @@ func (r *LabRepository) ListEvaluations(filter lab.ListEvaluationsFilter, page l
 }
 
 // GetEvaluation returns a single evaluation by ID with full details.
-func (r *LabRepository) GetEvaluation(id string) (*lab.EvaluationDetail, error) {
+func (r *LabRepository) GetEvaluation(id string) (*models.LabEvaluationDetail, error) {
 	ctx := context.Background()
 
 	query := `
@@ -420,7 +420,7 @@ func (r *LabRepository) GetEvaluation(id string) (*lab.EvaluationDetail, error) 
 		WHERE ev.id = $1::uuid AND ev.deleted_at IS NULL AND e.deleted_at IS NULL
 	`
 
-	var ev lab.EvaluationDetail
+	var ev models.LabEvaluationDetail
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&ev.ID,
 		&ev.EntryID,
@@ -450,7 +450,7 @@ func (r *LabRepository) GetEvaluation(id string) (*lab.EvaluationDetail, error) 
 }
 
 // GetEntryEnriched returns a single entry with enriched bid data (team names, seeds, naive allocation).
-func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, error) {
+func (r *LabRepository) GetEntryEnriched(id string) (*models.LabEntryDetailEnriched, error) {
 	ctx := context.Background()
 
 	// First get the basic entry details
@@ -479,7 +479,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 		WHERE e.id = $1::uuid AND e.deleted_at IS NULL
 	`
 
-	var result lab.EntryDetailEnriched
+	var result models.LabEntryDetailEnriched
 	var (
 		tournamentID                                     string
 		gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
@@ -500,7 +500,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 	}
 
 	// Parse the raw predictions (if present)
-	var rawPredictions []lab.Prediction
+	var rawPredictions []models.LabPrediction
 	result.HasPredictions = predictionsStr != nil && *predictionsStr != ""
 	if result.HasPredictions {
 		if err := json.Unmarshal([]byte(*predictionsStr), &rawPredictions); err != nil {
@@ -509,7 +509,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 	}
 
 	// Parse the raw bids
-	var rawBids []lab.EntryBid
+	var rawBids []models.LabEntryBid
 	if err := json.Unmarshal([]byte(bidsStr), &rawBids); err != nil {
 		return nil, err
 	}
@@ -599,7 +599,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 	}
 
 	// Build enriched bids for ALL teams (not just those with bids > 0)
-	enrichedBids := make([]lab.EnrichedBid, 0, len(teamMap))
+	enrichedBids := make([]models.LabEnrichedBid, 0, len(teamMap))
 	for tid, ti := range teamMap {
 		bidPoints := bidPointsByTeam[tid] // 0 if not in map
 
@@ -613,7 +613,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 			edgePercent = float64(naivePoints-bidPoints) / float64(naivePoints) * 100
 		}
 
-		enrichedBids = append(enrichedBids, lab.EnrichedBid{
+		enrichedBids = append(enrichedBids, models.LabEnrichedBid{
 			TeamID:      tid,
 			SchoolName:  ti.Name,
 			Seed:        ti.Seed,
@@ -627,7 +627,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 
 	// Build enriched predictions (if present)
 	if result.HasPredictions {
-		enrichedPredictions := make([]lab.EnrichedPrediction, 0, len(rawPredictions))
+		enrichedPredictions := make([]models.LabEnrichedPrediction, 0, len(rawPredictions))
 		for _, p := range rawPredictions {
 			ti, ok := teamMap[p.TeamID]
 			if !ok {
@@ -653,7 +653,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 				edgePercent = float64(naivePoints-predictedBidPoints) / float64(naivePoints) * 100
 			}
 
-			enrichedPredictions = append(enrichedPredictions, lab.EnrichedPrediction{
+			enrichedPredictions = append(enrichedPredictions, models.LabEnrichedPrediction{
 				TeamID:               p.TeamID,
 				SchoolName:           ti.Name,
 				Seed:                 ti.Seed,
@@ -679,7 +679,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*lab.EntryDetailEnriched, e
 
 // GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
 // Defaults to starting_state_key='post_first_four' if not specified.
-func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*lab.EntryDetailEnriched, error) {
+func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
 	ctx := context.Background()
 
 	if startingStateKey == "" {
@@ -711,7 +711,7 @@ func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID
 }
 
 // GetEvaluationEntryResults returns per-entry results for an evaluation.
-func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.EvaluationEntryResult, error) {
+func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]models.LabEvaluationEntryResult, error) {
 	ctx := context.Background()
 
 	query := `
@@ -733,9 +733,9 @@ func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.Ev
 	}
 	defer rows.Close()
 
-	out := make([]lab.EvaluationEntryResult, 0)
+	out := make([]models.LabEvaluationEntryResult, 0)
 	for rows.Next() {
-		var e lab.EvaluationEntryResult
+		var e models.LabEvaluationEntryResult
 		if err := rows.Scan(
 			&e.ID,
 			&e.EntryName,
@@ -752,11 +752,11 @@ func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]lab.Ev
 }
 
 // GetEvaluationEntryProfile returns detailed profile for an entry in an evaluation.
-func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*lab.EvaluationEntryProfile, error) {
+func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*models.LabEvaluationEntryProfile, error) {
 	ctx := context.Background()
 
 	// First, get the entry result and evaluation_id from lab.evaluation_entry_results
-	var profile lab.EvaluationEntryProfile
+	var profile models.LabEvaluationEntryProfile
 	var evaluationID string
 	err := r.pool.QueryRow(ctx, `
 		SELECT
@@ -797,7 +797,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*lab.Ev
 		return nil, err
 	}
 
-	profile.Bids = make([]lab.EvaluationEntryBid, 0)
+	profile.Bids = make([]models.LabEvaluationEntryBid, 0)
 	profile.TotalBidPoints = 0
 
 	var rows pgx.Rows
@@ -883,10 +883,10 @@ func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*lab.Ev
 	}
 	defer rows.Close()
 
-	profile.Bids = make([]lab.EvaluationEntryBid, 0)
+	profile.Bids = make([]models.LabEvaluationEntryBid, 0)
 	profile.TotalBidPoints = 0
 	for rows.Next() {
-		var bid lab.EvaluationEntryBid
+		var bid models.LabEvaluationEntryBid
 		if err := rows.Scan(
 			&bid.TeamID,
 			&bid.SchoolName,

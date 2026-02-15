@@ -3,7 +3,7 @@ package calcutta
 import (
 	"context"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // MockCalcuttaRepository is a mock implementation of CalcuttaRepository for testing

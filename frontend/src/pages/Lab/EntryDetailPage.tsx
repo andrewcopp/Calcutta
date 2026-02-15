@@ -76,7 +76,7 @@ export function EntryDetailPage() {
 
   const entry = entryQuery.data;
   const evaluation = evaluationsQuery.data?.items[0] ?? null;
-  const predictions = entry?.predictions ?? [];
+  const predictions = useMemo(() => entry?.predictions ?? [], [entry?.predictions]);
   const bids = entry?.bids ?? [];
 
   // Sort predictions based on current sort settings

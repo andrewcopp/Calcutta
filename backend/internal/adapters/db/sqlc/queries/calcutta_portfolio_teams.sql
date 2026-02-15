@@ -21,7 +21,7 @@ SELECT
     tt.created_at AS team_created_at,
     tt.updated_at AS team_updated_at,
     s.name AS school_name
-FROM core.derived_portfolio_teams cpt
+FROM derived.portfolio_teams cpt
 JOIN core.teams tt ON cpt.team_id = tt.id
 LEFT JOIN core.schools s ON tt.school_id = s.id
 WHERE cpt.portfolio_id = $1 AND cpt.deleted_at IS NULL;

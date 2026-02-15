@@ -6,7 +6,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

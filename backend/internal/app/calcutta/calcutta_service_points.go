@@ -1,6 +1,6 @@
 package calcutta
 
-import "github.com/andrewcopp/Calcutta/backend/pkg/models"
+import "github.com/andrewcopp/Calcutta/backend/internal/models"
 
 // CalculatePoints calculates the points earned by a team based on its performance
 func (s *Service) CalculatePoints(team *models.TournamentTeam, rounds []*models.CalcuttaRound) float64 {

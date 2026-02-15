@@ -127,7 +127,6 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
   // Summary stats
   const investedRows = rows.filter(r => r.our_investment > 0);
   const totalOurInvestment = rows.reduce((sum, r) => sum + r.our_investment, 0);
-  const totalPredInvestment = rows.reduce((sum, r) => sum + r.pred_investment, 0);
 
   // Weighted average ROI (by our investment)
   const weightedPredRoi = investedRows.length > 0

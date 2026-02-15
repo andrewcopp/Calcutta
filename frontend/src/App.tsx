@@ -27,6 +27,8 @@ import { EntryDetailPage } from './pages/Lab/EntryDetailPage';
 import { EvaluationDetailPage } from './pages/Lab/EvaluationDetailPage';
 import { EntryProfilePage } from './pages/Lab/EntryProfilePage';
 import { Header } from './components/Header';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { UserProvider } from './contexts/UserContext';
 
 const AppLayout: React.FC = () => {
@@ -41,7 +43,7 @@ const AppLayout: React.FC = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/calcuttas" element={<CalcuttaListPage />} />
-        <Route path="/calcuttas/create" element={<CreateCalcuttaPage />} />
+        <Route path="/calcuttas/create" element={<ProtectedRoute><CreateCalcuttaPage /></ProtectedRoute>} />
         <Route path="/lab" element={<LabPage />} />
         <Route path="/lab/models/:modelId" element={<ModelDetailPage />} />
         <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<EntryDetailPage />} />
@@ -62,22 +64,22 @@ const AppLayout: React.FC = () => {
         {/* Legacy runs routes redirect to lab */}
         <Route path="/runs/*" element={<Navigate to="/lab?tab=evaluations" replace />} />
         <Route path="/analytics" element={<Navigate to="/lab" replace />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/api-keys" element={<AdminApiKeysPage />} />
-        <Route path="/admin/bundles" element={<AdminBundlesPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/hall-of-fame" element={<HallOfFamePage />} />
-        <Route path="/admin/tournaments" element={<TournamentListPage />} />
-        <Route path="/admin/tournaments/create" element={<TournamentCreatePage />} />
-        <Route path="/admin/tournaments/:id" element={<TournamentViewPage />} />
-        <Route path="/admin/tournaments/:id/edit" element={<TournamentEditPage />} />
-        <Route path="/admin/tournaments/:id/teams/add" element={<TournamentAddTeamsPage />} />
-        <Route path="/admin/tournaments/:id/bracket" element={<TournamentBracketPage />} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        <Route path="/admin/api-keys" element={<ProtectedRoute><AdminApiKeysPage /></ProtectedRoute>} />
+        <Route path="/admin/bundles" element={<ProtectedRoute><AdminBundlesPage /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
+        <Route path="/admin/hall-of-fame" element={<ProtectedRoute><HallOfFamePage /></ProtectedRoute>} />
+        <Route path="/admin/tournaments" element={<ProtectedRoute><TournamentListPage /></ProtectedRoute>} />
+        <Route path="/admin/tournaments/create" element={<ProtectedRoute><TournamentCreatePage /></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id" element={<ProtectedRoute><TournamentViewPage /></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/edit" element={<ProtectedRoute><TournamentEditPage /></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/teams/add" element={<ProtectedRoute><TournamentAddTeamsPage /></ProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/bracket" element={<ProtectedRoute><TournamentBracketPage /></ProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
-        <Route path="/calcuttas/:calcuttaId/settings" element={<CalcuttaSettingsPage />} />
+        <Route path="/calcuttas/:calcuttaId/settings" element={<ProtectedRoute><CalcuttaSettingsPage /></ProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
         <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
-        <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<BiddingPage />} />
+        <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<ProtectedRoute><BiddingPage /></ProtectedRoute>} />
       </Routes>
     </div>
   );
@@ -85,11 +87,13 @@ const AppLayout: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <UserProvider>
-      <Router>
-        <AppLayout />
-      </Router>
-    </UserProvider>
+    <ErrorBoundary>
+      <UserProvider>
+        <Router>
+          <AppLayout />
+        </Router>
+      </UserProvider>
+    </ErrorBoundary>
   );
 };
 

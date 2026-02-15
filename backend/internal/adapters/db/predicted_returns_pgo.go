@@ -7,9 +7,8 @@ import (
 	"math"
 	"sort"
 
-	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -43,7 +42,7 @@ type teamMeta struct {
 	Region     string
 }
 
-func computeCalcuttaPredictedReturnsFromPGO(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, gameOutcomeRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {
+func computeCalcuttaPredictedReturnsFromPGO(ctx context.Context, pool *pgxpool.Pool, bracketBuilder ports.BracketBuilder, calcuttaID string, gameOutcomeRunID *string) (*string, []ports.CalcuttaPredictedReturnsData, error) {
 	if calcuttaID == "" {
 		return nil, nil, errors.New("calcuttaID is required")
 	}
@@ -68,8 +67,7 @@ func computeCalcuttaPredictedReturnsFromPGO(ctx context.Context, pool *pgxpool.P
 		return nil, nil, err
 	}
 
-	builder := appbracket.NewBracketBuilder()
-	br, err := builder.BuildBracket(coreTournamentID, teams, finalFour)
+	br, err := bracketBuilder.BuildBracket(coreTournamentID, teams, finalFour)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -3,7 +3,7 @@ package calcutta
 import (
 	"context"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // ReinviteFromCalcutta creates a new calcutta and invites all participants from a source calcutta.

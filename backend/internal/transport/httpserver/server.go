@@ -10,7 +10,7 @@ import (
 	appbootstrap "github.com/andrewcopp/Calcutta/backend/internal/app/bootstrap"
 	"github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"

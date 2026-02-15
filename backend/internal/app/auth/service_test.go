@@ -9,7 +9,7 @@ import (
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

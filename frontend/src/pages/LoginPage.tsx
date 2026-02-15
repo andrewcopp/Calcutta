@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthForm } from '../components/Auth/AuthForm';
 import { useUser } from '../contexts/useUser';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useUser();
+  const from = (location.state as { from?: string })?.from ?? '/calcuttas';
 
   useEffect(() => {
-    if (user) navigate('/calcuttas');
-  }, [navigate, user]);
+    if (user) navigate(from);
+  }, [navigate, user, from]);
 
   return (
     <div className="min-h-screen bg-gray-100">

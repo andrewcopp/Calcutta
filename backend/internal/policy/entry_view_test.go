@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 type fakeAuthz struct {

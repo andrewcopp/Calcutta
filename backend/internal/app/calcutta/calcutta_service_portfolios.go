@@ -3,7 +3,7 @@ package calcutta
 import (
 	"context"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // CalculateTotalBids calculates the total bids for a Calcutta entry

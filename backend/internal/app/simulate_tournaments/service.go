@@ -11,7 +11,7 @@ import (
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

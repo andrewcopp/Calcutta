@@ -11,10 +11,8 @@ import { labService, EvaluationDetail, EvaluationEntryResult } from '../../servi
 import { cn } from '../../lib/cn';
 
 export function EvaluationDetailPage() {
-  const { evaluationId, modelName, calcuttaId } = useParams<{
+  const { evaluationId } = useParams<{
     evaluationId: string;
-    modelName?: string;
-    calcuttaId?: string;
   }>();
   const navigate = useNavigate();
 

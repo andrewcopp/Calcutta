@@ -4,7 +4,7 @@ import (
 	"context"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 type Service struct {

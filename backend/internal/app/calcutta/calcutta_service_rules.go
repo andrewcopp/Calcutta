@@ -3,7 +3,7 @@ package calcutta
 import (
 	"errors"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // ValidateEntry validates all bids for an entry according to the rules

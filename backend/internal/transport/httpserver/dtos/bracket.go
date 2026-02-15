@@ -1,7 +1,7 @@
 package dtos
 
 import (
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // BracketResponse represents the complete bracket structure for the frontend

@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

@@ -10,7 +10,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )

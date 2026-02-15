@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"sort"
 
-	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func computeTournamentPredictedAdvancementFromPGO(ctx context.Context, pool *pgxpool.Pool, tournamentID string, gameOutcomeRunID *string) (*string, []ports.TournamentPredictedAdvancementData, error) {
+func computeTournamentPredictedAdvancementFromPGO(ctx context.Context, pool *pgxpool.Pool, bracketBuilder ports.BracketBuilder, tournamentID string, gameOutcomeRunID *string) (*string, []ports.TournamentPredictedAdvancementData, error) {
 	if tournamentID == "" {
 		return nil, nil, errors.New("tournamentID is required")
 	}
@@ -29,8 +28,7 @@ func computeTournamentPredictedAdvancementFromPGO(ctx context.Context, pool *pgx
 		return nil, nil, err
 	}
 
-	builder := appbracket.NewBracketBuilder()
-	br, err := builder.BuildBracket(tournamentID, teams, finalFour)
+	br, err := bracketBuilder.BuildBracket(tournamentID, teams, finalFour)
 	if err != nil {
 		return nil, nil, err
 	}

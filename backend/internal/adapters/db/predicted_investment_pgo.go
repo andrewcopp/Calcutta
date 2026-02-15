@@ -13,6 +13,7 @@ import (
 func computeCalcuttaPredictedInvestmentFromPGO(
 	ctx context.Context,
 	pool *pgxpool.Pool,
+	bracketBuilder ports.BracketBuilder,
 	calcuttaID string,
 	marketShareRunID *string,
 	gameOutcomeRunID *string,
@@ -45,7 +46,7 @@ func computeCalcuttaPredictedInvestmentFromPGO(
 		return selectedMarketShareRunID, nil, fmt.Errorf("no predicted_market_share found for calcutta_id=%s", calcuttaID)
 	}
 
-	_, returns, err := computeCalcuttaPredictedReturnsFromPGO(ctx, pool, calcuttaID, gameOutcomeRunID)
+	_, returns, err := computeCalcuttaPredictedReturnsFromPGO(ctx, pool, bracketBuilder, calcuttaID, gameOutcomeRunID)
 	if err != nil {
 		return selectedMarketShareRunID, nil, err
 	}

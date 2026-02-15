@@ -8,17 +8,19 @@ import (
 	"strings"
 
 	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool           *pgxpool.Pool
+	bracketBuilder ports.BracketBuilder
 }
 
-func New(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func New(pool *pgxpool.Pool, bracketBuilder ports.BracketBuilder) *Service {
+	return &Service{pool: pool, bracketBuilder: bracketBuilder}
 }
 
 type GenerateParams struct {
@@ -235,7 +237,7 @@ func (s *Service) GenerateAndWriteToExistingStrategyGenerationRun(ctx context.Co
 			return nil, errors.New("market_share_run_id is required for pgo_dp lab entry generation")
 		}
 
-		repo := dbadapter.NewAnalyticsRepository(s.pool)
+		repo := dbadapter.NewAnalyticsRepository(s.pool, s.bracketBuilder)
 		_, _, returns, err := repo.GetCalcuttaPredictedReturns(ctx, calcuttaID, &strategyGenerationRunID, gameOutcomeRunID)
 		if err != nil {
 			return nil, err

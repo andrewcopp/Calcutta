@@ -5,7 +5,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/andrewcopp/Calcutta/backend/pkg/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 func (s *Service) GetAllCalcuttas(ctx context.Context) ([]*models.Calcutta, error) {

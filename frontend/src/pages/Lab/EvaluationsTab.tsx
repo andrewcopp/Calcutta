@@ -17,9 +17,8 @@ export function EvaluationsTab() {
     queryFn: () => labService.listEvaluations({ limit: 100 }),
   });
 
-  const items = evaluationsQuery.data?.items ?? [];
-
   const filteredItems = useMemo(() => {
+    const items = evaluationsQuery.data?.items ?? [];
     if (!modelFilter.trim()) return items;
     const lower = modelFilter.toLowerCase();
     return items.filter(
@@ -27,7 +26,7 @@ export function EvaluationsTab() {
         e.model_name.toLowerCase().includes(lower) ||
         e.calcutta_name.toLowerCase().includes(lower)
     );
-  }, [items, modelFilter]);
+  }, [evaluationsQuery.data, modelFilter]);
 
   const formatPct = (val?: number | null) => {
     if (val == null) return '-';
