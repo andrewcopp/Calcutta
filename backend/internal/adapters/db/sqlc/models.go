@@ -311,7 +311,7 @@ type CoreTournament struct {
 
 type CoreUser struct {
 	ID               string
-	Email            string
+	Email            *string
 	FirstName        string
 	LastName         string
 	CreatedAt        pgtype.Timestamptz

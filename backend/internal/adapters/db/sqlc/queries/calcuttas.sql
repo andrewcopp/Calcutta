@@ -36,3 +36,12 @@ WHERE id = $3 AND deleted_at IS NULL;
 SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at, deleted_at
 FROM core.calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL;
+
+-- name: ListCalcuttasByUserID :many
+SELECT DISTINCT c.id, c.tournament_id, c.owner_id, c.name, c.min_teams, c.max_teams, c.max_bid, c.bidding_open, c.bidding_locked_at, c.created_at, c.updated_at
+FROM core.calcuttas c
+WHERE c.deleted_at IS NULL
+  AND (c.owner_id = $1
+       OR EXISTS (SELECT 1 FROM core.entries e
+                  WHERE e.calcutta_id = c.id AND e.user_id = $1 AND e.deleted_at IS NULL))
+ORDER BY c.created_at DESC;

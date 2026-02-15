@@ -86,6 +86,26 @@ func (r *UpdateCalcuttaRequest) Validate() error {
 	return nil
 }
 
+type ReinviteRequest struct {
+	Name         string `json:"name"`
+	TournamentID string `json:"tournamentId"`
+}
+
+func (r *ReinviteRequest) Validate() error {
+	if strings.TrimSpace(r.Name) == "" {
+		return ErrFieldRequired("name")
+	}
+	if strings.TrimSpace(r.TournamentID) == "" {
+		return ErrFieldRequired("tournamentId")
+	}
+	return nil
+}
+
+type ReinviteResponse struct {
+	Calcutta    *CalcuttaResponse    `json:"calcutta"`
+	Invitations []*InvitationResponse `json:"invitations"`
+}
+
 func NewCalcuttaListResponse(calcuttas []*models.Calcutta) []*CalcuttaResponse {
 	if calcuttas == nil {
 		return []*CalcuttaResponse{}

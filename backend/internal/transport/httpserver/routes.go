@@ -62,6 +62,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		ListEntryTeams:      cHandler.HandleListEntryTeams,
 		ListEntryPortfolios: cHandler.HandleListEntryPortfolios,
 		UpdateEntry:         cHandler.HandleUpdateEntry,
+		Reinvite:            cHandler.HandleReinvite,
 	})
 
 	// Lab endpoints (lab.* schema)

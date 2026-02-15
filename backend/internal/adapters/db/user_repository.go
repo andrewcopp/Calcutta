@@ -26,11 +26,17 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	user.Created = now
 	user.Updated = now
 
+	status := user.Status
+	if status == "" {
+		status = "active"
+	}
+
 	return r.q.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:           user.ID,
 		Email:        user.Email,
 		FirstName:    user.FirstName,
 		LastName:     user.LastName,
+		Status:       status,
 		PasswordHash: user.PasswordHash,
 		CreatedAt:    pgtype.Timestamptz{Time: user.Created, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
@@ -38,14 +44,14 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 }
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
-	row, err := r.q.GetUserByEmail(ctx, email)
+	row, err := r.q.GetUserByEmail(ctx, &email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
+	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, error) {
@@ -56,7 +62,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 		}
 		return nil, err
 	}
-	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
+	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
@@ -68,18 +74,24 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 		deletedAt = pgtype.Timestamptz{Time: *user.Deleted, Valid: true}
 	}
 
+	status := user.Status
+	if status == "" {
+		status = "active"
+	}
+
 	return r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
 		ID:           user.ID,
 		Email:        user.Email,
 		FirstName:    user.FirstName,
 		LastName:     user.LastName,
+		Status:       status,
 		PasswordHash: user.PasswordHash,
 		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
 		DeletedAt:    deletedAt,
 	})
 }
 
-func userFromRow(id, email, firstName, lastName string, passwordHash *string, createdAt, updatedAt, deletedAt pgtype.Timestamptz) *models.User {
+func userFromRow(id string, email *string, firstName, lastName, status string, passwordHash *string, createdAt, updatedAt, deletedAt pgtype.Timestamptz) *models.User {
 	var deleted *time.Time
 	if deletedAt.Valid {
 		t := deletedAt.Time
@@ -90,6 +102,7 @@ func userFromRow(id, email, firstName, lastName string, passwordHash *string, cr
 		Email:        email,
 		FirstName:    firstName,
 		LastName:     lastName,
+		Status:       status,
 		PasswordHash: passwordHash,
 		Created:      createdAt.Time,
 		Updated:      updatedAt.Time,

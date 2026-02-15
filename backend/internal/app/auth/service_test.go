@@ -13,6 +13,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func strPtr(s string) *string { return &s }
+
 type fakeUserRepo struct {
 	byEmail map[string]*models.User
 	byID    map[string]*models.User
@@ -68,7 +70,7 @@ func TestThatLoginRejectsInactiveUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	hStr := string(h)
-	u := &models.User{ID: "u1", Email: "a@b.com", PasswordHash: &hStr}
+	u := &models.User{ID: "u1", Email: strPtr("a@b.com"), PasswordHash: &hStr}
 
 	ur := &fakeUserRepo{byEmail: map[string]*models.User{"a@b.com": u}, byID: map[string]*models.User{"u1": u}}
 	ar := &fakeAuthRepo{activeByUserID: map[string]bool{"u1": false}, sessionByHash: map[string]*dbadapters.AuthSession{}}
@@ -91,7 +93,7 @@ func TestThatLoginRejectsInactiveUser(t *testing.T) {
 
 func TestThatRefreshRejectsInactiveUser(t *testing.T) {
 	// GIVEN
-	u := &models.User{ID: "u1", Email: "a@b.com"}
+	u := &models.User{ID: "u1", Email: strPtr("a@b.com")}
 	sess := &dbadapters.AuthSession{ID: "s1", UserID: "u1", RefreshTokenHash: "h", ExpiresAt: time.Now().Add(time.Hour)}
 
 	refreshToken := "raw"
@@ -118,7 +120,7 @@ func TestThatRefreshRejectsInactiveUser(t *testing.T) {
 
 func TestThatRefreshDoesNotRotateTokenForInactiveUser(t *testing.T) {
 	// GIVEN
-	u := &models.User{ID: "u1", Email: "a@b.com"}
+	u := &models.User{ID: "u1", Email: strPtr("a@b.com")}
 	sess := &dbadapters.AuthSession{ID: "s1", UserID: "u1", RefreshTokenHash: "h", ExpiresAt: time.Now().Add(time.Hour)}
 
 	refreshToken := "raw"

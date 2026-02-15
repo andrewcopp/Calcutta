@@ -61,3 +61,8 @@ WHERE id = $1 AND deleted_at IS NULL;
 -- name: CreateEntry :exec
 INSERT INTO core.entries (id, name, user_id, calcutta_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, NOW(), NOW());
+
+-- name: ListDistinctUserIDsByCalcuttaID :many
+SELECT DISTINCT user_id
+FROM core.entries
+WHERE calcutta_id = $1 AND user_id IS NOT NULL AND deleted_at IS NULL;

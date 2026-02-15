@@ -210,6 +210,62 @@ func (q *Queries) ListCalcuttas(ctx context.Context) ([]ListCalcuttasRow, error)
 	return items, nil
 }
 
+const listCalcuttasByUserID = `-- name: ListCalcuttasByUserID :many
+SELECT DISTINCT c.id, c.tournament_id, c.owner_id, c.name, c.min_teams, c.max_teams, c.max_bid, c.bidding_open, c.bidding_locked_at, c.created_at, c.updated_at
+FROM core.calcuttas c
+WHERE c.deleted_at IS NULL
+  AND (c.owner_id = $1
+       OR EXISTS (SELECT 1 FROM core.entries e
+                  WHERE e.calcutta_id = c.id AND e.user_id = $1 AND e.deleted_at IS NULL))
+ORDER BY c.created_at DESC
+`
+
+type ListCalcuttasByUserIDRow struct {
+	ID              string
+	TournamentID    string
+	OwnerID         string
+	Name            string
+	MinTeams        int32
+	MaxTeams        int32
+	MaxBid          int32
+	BiddingOpen     bool
+	BiddingLockedAt pgtype.Timestamptz
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+func (q *Queries) ListCalcuttasByUserID(ctx context.Context, ownerID string) ([]ListCalcuttasByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listCalcuttasByUserID, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCalcuttasByUserIDRow
+	for rows.Next() {
+		var i ListCalcuttasByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TournamentID,
+			&i.OwnerID,
+			&i.Name,
+			&i.MinTeams,
+			&i.MaxTeams,
+			&i.MaxBid,
+			&i.BiddingOpen,
+			&i.BiddingLockedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateCalcutta = `-- name: UpdateCalcutta :execrows
 UPDATE core.calcuttas
 SET tournament_id = $1,

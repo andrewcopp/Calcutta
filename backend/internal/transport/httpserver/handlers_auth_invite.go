@@ -43,7 +43,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 
 	var userID string
-	var email string
+	var email *string
 	err = tx.QueryRow(r.Context(), `
 		SELECT id::text, email
 		FROM core.users
@@ -60,6 +60,10 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeErrorFromErr(w, r, err)
+		return
+	}
+	if email == nil || *email == "" {
+		writeError(w, r, http.StatusBadRequest, "invalid_state", "User has no email set", "")
 		return
 	}
 
@@ -91,7 +95,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.app.Auth.Login(r.Context(), email, req.Password, r.UserAgent(), r.RemoteAddr, time.Now())
+	res, err := s.app.Auth.Login(r.Context(), *email, req.Password, r.UserAgent(), r.RemoteAddr, time.Now())
 	if err != nil {
 		writeErrorFromErr(w, r, err)
 		return

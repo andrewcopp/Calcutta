@@ -77,7 +77,7 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 							last = "User"
 						}
 
-						created := &models.User{ID: id, Email: email, FirstName: first, LastName: last}
+						created := &models.User{ID: id, Email: &email, FirstName: first, LastName: last, Status: "active"}
 						_ = s.userRepo.Create(r.Context(), created)
 						user, _ = s.userRepo.GetByEmail(r.Context(), email)
 					}

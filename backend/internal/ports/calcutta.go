@@ -9,6 +9,7 @@ import (
 type CalcuttaReader interface {
 	GetAll(ctx context.Context) ([]*models.Calcutta, error)
 	GetByID(ctx context.Context, id string) (*models.Calcutta, error)
+	GetByUserID(ctx context.Context, userID string) ([]*models.Calcutta, error)
 	GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error)
 }
 
@@ -22,6 +23,7 @@ type EntryReader interface {
 	GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error)
 	GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error)
 	GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error)
+	GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error)
 }
 
 type EntryWriter interface {

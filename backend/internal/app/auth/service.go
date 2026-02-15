@@ -114,9 +114,10 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 
 	user := &models.User{
 		ID:           uuid.New().String(),
-		Email:        email,
+		Email:        &email,
 		FirstName:    firstName,
 		LastName:     lastName,
+		Status:       "active",
 		PasswordHash: &hashStr,
 		Created:      now,
 		Updated:      now,

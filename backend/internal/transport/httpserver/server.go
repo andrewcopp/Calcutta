@@ -110,9 +110,10 @@ func (s *Server) bootstrapAdmin(ctx context.Context) error {
 		}
 		user = &models.User{
 			ID:           uuid.New().String(),
-			Email:        email,
+			Email:        &email,
 			FirstName:    "Admin",
 			LastName:     "User",
+			Status:       "active",
 			PasswordHash: passwordHash,
 		}
 		if err := s.userRepo.Create(ctx, user); err != nil {

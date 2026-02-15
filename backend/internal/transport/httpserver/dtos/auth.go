@@ -52,9 +52,10 @@ type AuthResponse struct {
 
 type UserResponse struct {
 	ID        string    `json:"id"`
-	Email     string    `json:"email"`
+	Email     *string   `json:"email,omitempty"`
 	FirstName string    `json:"firstName"`
 	LastName  string    `json:"lastName"`
+	Status    string    `json:"status"`
 	Created   time.Time `json:"created"`
 	Updated   time.Time `json:"updated"`
 }
@@ -65,6 +66,7 @@ func NewUserResponse(u *models.User) *UserResponse {
 		Email:     u.Email,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
+		Status:    u.Status,
 		Created:   u.Created,
 		Updated:   u.Updated,
 	}

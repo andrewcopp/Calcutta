@@ -61,6 +61,32 @@ func (q *Queries) GetEntryByID(ctx context.Context, id string) (CoreEntry, error
 	return i, err
 }
 
+const listDistinctUserIDsByCalcuttaID = `-- name: ListDistinctUserIDsByCalcuttaID :many
+SELECT DISTINCT user_id
+FROM core.entries
+WHERE calcutta_id = $1 AND user_id IS NOT NULL AND deleted_at IS NULL
+`
+
+func (q *Queries) ListDistinctUserIDsByCalcuttaID(ctx context.Context, calcuttaID string) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listDistinctUserIDsByCalcuttaID, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var user_id pgtype.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEntriesByCalcuttaID = `-- name: ListEntriesByCalcuttaID :many
 WITH entry_bids AS (
     SELECT

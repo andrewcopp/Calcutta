@@ -32,16 +32,34 @@ func NewHandlerWithAuthUserID(a *app.App, authz policy.AuthorizationChecker, aut
 }
 
 func (h *Handler) HandleListCalcuttas(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Handling GET request to /api/calcuttas")
-	calcuttas, err := h.app.Calcutta.GetAllCalcuttas(r.Context())
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	// Check if user is admin
+	isAdmin, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
 	if err != nil {
-		log.Printf("Error getting all calcuttas: %v", err)
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	log.Printf("Successfully retrieved %d calcuttas", len(calcuttas))
 
-	resp := dtos.NewCalcuttaListResponse(calcuttas)
+	var result []*models.Calcutta
+	if isAdmin {
+		result, err = h.app.Calcutta.GetAllCalcuttas(r.Context())
+	} else {
+		result, err = h.app.Calcutta.GetCalcuttasByUser(r.Context(), userID)
+	}
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	resp := dtos.NewCalcuttaListResponse(result)
 	response.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -604,4 +622,72 @@ func (h *Handler) HandleListEntryPortfolios(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	response.WriteJSON(w, http.StatusOK, dtos.NewPortfolioListResponse(portfolios))
+}
+
+func (h *Handler) HandleReinvite(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	sourceCalcuttaID := vars["id"]
+	if sourceCalcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "id")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	// Check ownership or admin
+	source, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), sourceCalcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if source.OwnerID != userID {
+		ok, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		if !ok {
+			httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
+			return
+		}
+	}
+
+	var req dtos.ReinviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	newCalcutta := &models.Calcutta{
+		Name:         strings.TrimSpace(req.Name),
+		TournamentID: strings.TrimSpace(req.TournamentID),
+		OwnerID:      userID,
+	}
+
+	created, invitations, err := h.app.Calcutta.ReinviteFromCalcutta(r.Context(), sourceCalcuttaID, newCalcutta, userID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	invResp := make([]*dtos.InvitationResponse, 0, len(invitations))
+	for _, inv := range invitations {
+		invResp = append(invResp, dtos.NewInvitationResponse(inv))
+	}
+
+	response.WriteJSON(w, http.StatusCreated, dtos.ReinviteResponse{
+		Calcutta:    dtos.NewCalcuttaResponse(created),
+		Invitations: invResp,
+	})
 }

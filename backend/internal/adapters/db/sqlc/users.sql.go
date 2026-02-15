@@ -12,15 +12,16 @@ import (
 )
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO core.users (id, email, first_name, last_name, password_hash, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO core.users (id, email, first_name, last_name, status, password_hash, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type CreateUserParams struct {
 	ID           string
-	Email        string
+	Email        *string
 	FirstName    string
 	LastName     string
+	Status       string
 	PasswordHash *string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -32,6 +33,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Email,
 		arg.FirstName,
 		arg.LastName,
+		arg.Status,
 		arg.PasswordHash,
 		arg.CreatedAt,
 		arg.UpdatedAt,
@@ -40,23 +42,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, first_name, last_name, password_hash, created_at, updated_at, deleted_at
+SELECT id, email, first_name, last_name, status, password_hash, created_at, updated_at, deleted_at
 FROM core.users
 WHERE email = $1 AND deleted_at IS NULL
 `
 
 type GetUserByEmailRow struct {
 	ID           string
-	Email        string
+	Email        *string
 	FirstName    string
 	LastName     string
+	Status       string
 	PasswordHash *string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
 }
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i GetUserByEmailRow
 	err := row.Scan(
@@ -64,6 +67,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Email,
 		&i.FirstName,
 		&i.LastName,
+		&i.Status,
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -73,16 +77,17 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, first_name, last_name, password_hash, created_at, updated_at, deleted_at
+SELECT id, email, first_name, last_name, status, password_hash, created_at, updated_at, deleted_at
 FROM core.users
 WHERE id = $1 AND deleted_at IS NULL
 `
 
 type GetUserByIDRow struct {
 	ID           string
-	Email        string
+	Email        *string
 	FirstName    string
 	LastName     string
+	Status       string
 	PasswordHash *string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -97,6 +102,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 		&i.Email,
 		&i.FirstName,
 		&i.LastName,
+		&i.Status,
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -111,17 +117,19 @@ SET
   email = $2,
   first_name = $3,
   last_name = $4,
-  password_hash = $5,
-  updated_at = $6,
-  deleted_at = $7
+  status = $5,
+  password_hash = $6,
+  updated_at = $7,
+  deleted_at = $8
 WHERE id = $1
 `
 
 type UpdateUserParams struct {
 	ID           string
-	Email        string
+	Email        *string
 	FirstName    string
 	LastName     string
+	Status       string
 	PasswordHash *string
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -133,6 +141,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.Email,
 		arg.FirstName,
 		arg.LastName,
+		arg.Status,
 		arg.PasswordHash,
 		arg.UpdatedAt,
 		arg.DeletedAt,

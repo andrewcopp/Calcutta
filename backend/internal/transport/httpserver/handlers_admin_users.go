@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,7 +23,7 @@ import (
 
 type adminUserListItem struct {
 	ID               string     `json:"id"`
-	Email            string     `json:"email"`
+	Email            *string    `json:"email"`
 	FirstName        string     `json:"first_name"`
 	LastName         string     `json:"last_name"`
 	Status           string     `json:"status"`
@@ -42,9 +43,77 @@ type adminUsersListResponse struct {
 
 func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users", s.requirePermission("admin.users.read", s.adminUsersListHandler)).Methods("GET")
+	r.HandleFunc("/api/admin/users/{id}/email", s.requirePermission("admin.users.write", s.adminUsersSetEmailHandler)).Methods("PATCH")
 	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
 	r.HandleFunc("/api/admin/users/{id}/invite/send", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
 	r.HandleFunc("/api/admin/users/{id}/invite/resend", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
+}
+
+func (s *Server) adminUsersSetEmailHandler(w http.ResponseWriter, r *http.Request) {
+	if s.pool == nil || s.userRepo == nil {
+		writeError(w, r, http.StatusInternalServerError, "internal_error", "database not available", "")
+		return
+	}
+
+	userID := strings.TrimSpace(mux.Vars(r)["id"])
+	if userID == "" {
+		writeErrorFromErr(w, r, dtos.ErrFieldRequired("id"))
+		return
+	}
+	if _, err := uuid.Parse(userID); err != nil {
+		writeErrorFromErr(w, r, dtos.ErrFieldInvalid("id", "invalid uuid"))
+		return
+	}
+
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	email := strings.TrimSpace(req.Email)
+	if email == "" {
+		writeErrorFromErr(w, r, dtos.ErrFieldRequired("email"))
+		return
+	}
+	if !strings.Contains(email, "@") {
+		writeErrorFromErr(w, r, dtos.ErrFieldInvalid("email", "invalid email format"))
+		return
+	}
+
+	user, err := s.userRepo.GetByID(r.Context(), userID)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if user == nil {
+		writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "user", ID: userID})
+		return
+	}
+	if user.Status != "stub" {
+		writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "status", Message: "can only set email on stub users"})
+		return
+	}
+
+	existing, err := s.userRepo.GetByEmail(r.Context(), email)
+	if err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+	if existing != nil {
+		writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "user", Field: "email", Value: email})
+		return
+	}
+
+	user.Email = &email
+	user.Status = "invited"
+	if err := s.userRepo.Update(r.Context(), user); err != nil {
+		writeErrorFromErr(w, r, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, dtos.NewUserResponse(user))
 }
 
 func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +234,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 	}
 	defer tx.Rollback(ctx)
 
-	var email string
+	var email *string
 	var passwordHash *string
 	var lastInviteSentAt pgtype.Timestamptz
 	err = tx.QueryRow(ctx, `
@@ -179,6 +248,9 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 			return "", "", &apperrors.NotFoundError{Resource: "user", ID: userID}
 		}
 		return "", "", err
+	}
+	if email == nil || strings.TrimSpace(*email) == "" {
+		return "", "", &apperrors.InvalidArgumentError{Field: "email", Message: "user has no email set; assign an email first"}
 	}
 	if lastSentOut != nil {
 		if lastInviteSentAt.Valid {
@@ -245,7 +317,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 	if err := tx.Commit(ctx); err != nil {
 		return "", "", err
 	}
-	return inviteToken, email, nil
+	return inviteToken, *email, nil
 }
 
 func buildInviteURL(base string, token string) (string, error) {
@@ -282,7 +354,7 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
 	if statusFilter != "" {
 		switch statusFilter {
-		case "active", "invited", "requires_password_setup":
+		case "active", "invited", "requires_password_setup", "stub":
 		default:
 			writeErrorFromErr(w, r, dtos.ErrFieldInvalid("status", "invalid status"))
 			return

@@ -100,6 +100,46 @@ func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID stri
 	return nil
 }
 
+func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]*models.Calcutta, error) {
+	rows, err := r.q.ListCalcuttasByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*models.Calcutta, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &models.Calcutta{
+			ID:              row.ID,
+			TournamentID:    row.TournamentID,
+			OwnerID:         row.OwnerID,
+			Name:            row.Name,
+			MinTeams:        int(row.MinTeams),
+			MaxTeams:        int(row.MaxTeams),
+			MaxBid:          int(row.MaxBid),
+			BiddingOpen:     row.BiddingOpen,
+			BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+			Created:         row.CreatedAt.Time,
+			Updated:         row.UpdatedAt.Time,
+		})
+	}
+	return out, nil
+}
+
+func (r *CalcuttaRepository) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
+	uuids, err := r.q.ListDistinctUserIDsByCalcuttaID(ctx, calcuttaID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(uuids))
+	for _, u := range uuids {
+		s := uuidToPtrString(u)
+		if s != nil {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
+}
+
 func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Calcutta, error) {
 	row, err := r.q.GetCalcuttaByID(ctx, id)
 	if err != nil {

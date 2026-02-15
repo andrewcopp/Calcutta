@@ -188,6 +188,14 @@ func (s *Service) GetTournamentTeam(ctx context.Context, id string) (*models.Tou
 	return s.ports.TeamReader.GetTournamentTeam(ctx, id)
 }
 
+func (s *Service) GetCalcuttasByUser(ctx context.Context, userID string) ([]*models.Calcutta, error) {
+	return s.ports.CalcuttaReader.GetByUserID(ctx, userID)
+}
+
+func (s *Service) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
+	return s.ports.EntryReader.GetDistinctUserIDsByCalcutta(ctx, calcuttaID)
+}
+
 func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
 	return s.ports.CalcuttaReader.GetCalcuttasByTournament(ctx, tournamentID)
 }

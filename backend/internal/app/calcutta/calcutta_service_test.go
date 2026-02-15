@@ -102,3 +102,11 @@ func (m *MockCalcuttaRepository) GetTournamentTeam(ctx context.Context, id strin
 func (m *MockCalcuttaRepository) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
 	return nil
 }
+
+func (m *MockCalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]*models.Calcutta, error) {
+	return nil, nil
+}
+
+func (m *MockCalcuttaRepository) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
+	return nil, nil
+}
