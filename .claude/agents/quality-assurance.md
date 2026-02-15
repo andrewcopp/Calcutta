@@ -1,7 +1,10 @@
 ---
 name: quality-assurance
 description: "Use this agent when reviewing test quality, ensuring testing conventions are followed, evaluating test coverage, or writing test plans. Also use proactively after writing code to verify tests meet the strict standards, or when tests are flaky, slow, or non-deterministic.\n\nExamples:\n\n<example>\nContext: User has written new tests\nuser: \"I wrote tests for the payout calculator, can you review them?\"\nassistant: \"Let me use the quality-assurance agent to review your tests against our strict conventions.\"\n<Task tool call to quality-assurance agent>\n</example>\n\n<example>\nContext: A test is flaky\nuser: \"TestThatBracketBuilderHandlesPlayInGames fails intermittently\"\nassistant: \"I'll use the quality-assurance agent to diagnose the non-determinism in this test.\"\n<Task tool call to quality-assurance agent>\n</example>\n\n<example>\nContext: User wants to know what to test\nuser: \"What tests should I write for the new auction service?\"\nassistant: \"Let me use the quality-assurance agent to create a test plan for the auction service.\"\n<Task tool call to quality-assurance agent>\n</example>\n\n<example>\nContext: Code was just written and needs test review\nuser: \"I just refactored the scoring pipeline\"\nassistant: \"Let me use the quality-assurance agent to verify the tests still meet our conventions and cover the changes.\"\n<Task tool call to quality-assurance agent>\n</example>"
+tools: Read, Glob, Grep, Bash
 model: sonnet
+permissionMode: plan
+maxTurns: 30
 memory: project
 ---
 

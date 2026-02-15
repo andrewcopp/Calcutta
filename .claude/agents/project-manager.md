@@ -1,7 +1,10 @@
 ---
 name: project-manager
 description: "Use this agent when you need to assess project timeline, prioritize work for the March Madness deadline, evaluate if current tasks align with shipping goals, or when you need a reality check on scope and progress. Also use when planning sprints, triaging bugs vs features, or when someone asks 'should we do X?' and the answer depends on time-to-ship.\n\nExamples:\n\n<example>\nContext: Developer is about to start a refactoring task\nuser: \"I want to refactor the bracket builder to use a more functional approach\"\nassistant: \"Before we commit to this refactoring work, let me consult the project-manager agent to evaluate if this aligns with our March Madness deadline.\"\n<Task tool call to project-manager agent>\n</example>\n\n<example>\nContext: Team is deciding between two features\nuser: \"Should we add the mobile-responsive dashboard or the advanced analytics view first?\"\nassistant: \"This is a prioritization decision that affects our timeline. Let me use the project-manager agent to evaluate which path gets us to a shippable product faster.\"\n<Task tool call to project-manager agent>\n</example>\n\n<example>\nContext: A bug is discovered during development\nuser: \"We found an edge case where auctions with 0 bids crash the payout calculator\"\nassistant: \"Let me consult the project-manager agent to determine the severity and whether this is a ship-blocker or can be addressed post-launch.\"\n<Task tool call to project-manager agent>\n</example>\n\n<example>\nContext: Developer proposes adding a new feature\nuser: \"It would be cool to add a real-time bidding visualization\"\nassistant: \"That sounds interesting, but I should check with the project-manager agent on whether this fits within our March Madness deadline constraints.\"\n<Task tool call to project-manager agent>\n</example>"
+tools: Read, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: plan
+maxTurns: 25
 memory: project
 ---
 

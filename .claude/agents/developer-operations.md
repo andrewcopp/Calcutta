@@ -1,7 +1,10 @@
 ---
 name: developer-operations
 description: "Use this agent for Docker, CI/CD, Makefile, infrastructure, deployment, monitoring, and developer tooling concerns. Also use when troubleshooting container issues, optimizing build times, or setting up development environments.\n\nExamples:\n\n<example>\nContext: User is having Docker issues\nuser: \"The backend container keeps crashing on startup\"\nassistant: \"Let me use the developer-operations agent to diagnose the container issue.\"\n<Task tool call to developer-operations agent>\n</example>\n\n<example>\nContext: User wants to add a new Makefile command\nuser: \"I need a command to seed the database with test data\"\nassistant: \"I'll use the developer-operations agent to add this to the Makefile.\"\n<Task tool call to developer-operations agent>\n</example>\n\n<example>\nContext: User wants to set up CI/CD\nuser: \"We need GitHub Actions to run tests on PR\"\nassistant: \"Let me bring in the developer-operations agent to configure the CI pipeline.\"\n<Task tool call to developer-operations agent>\n</example>\n\n<example>\nContext: User is setting up their dev environment\nuser: \"make bootstrap is failing with a postgres error\"\nassistant: \"I'll use the developer-operations agent to troubleshoot the setup issue.\"\n<Task tool call to developer-operations agent>\n</example>"
+tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: default
+maxTurns: 50
 memory: project
 ---
 

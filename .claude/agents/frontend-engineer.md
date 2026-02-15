@@ -1,7 +1,10 @@
 ---
 name: frontend-engineer
 description: "Use this agent when writing, reviewing, or debugging React frontend code. This includes components, pages, hooks, services, routing, state management, and styling. Also use for UI implementation decisions and frontend architecture.\n\nExamples:\n\n<example>\nContext: User wants to build a new page\nuser: \"Create a dashboard page that shows all active Calcuttas\"\nassistant: \"I'll use the frontend-engineer agent to implement this page following our React patterns.\"\n<Task tool call to frontend-engineer agent>\n</example>\n\n<example>\nContext: User wants to fix a UI bug\nuser: \"The bid form isn't validating minimum bid amounts\"\nassistant: \"Let me use the frontend-engineer agent to fix the validation logic.\"\n<Task tool call to frontend-engineer agent>\n</example>\n\n<example>\nContext: User wants to add a new component\nuser: \"Build a bracket visualization component\"\nassistant: \"I'll bring in the frontend-engineer agent to design and implement this component.\"\n<Task tool call to frontend-engineer agent>\n</example>\n\n<example>\nContext: User wants to improve frontend architecture\nuser: \"Our API calls are scattered everywhere, how should we organize them?\"\nassistant: \"Let me use the frontend-engineer agent to evaluate the current state and recommend a pattern.\"\n<Task tool call to frontend-engineer agent>\n</example>"
+tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: default
+maxTurns: 50
 memory: project
 ---
 

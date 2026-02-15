@@ -1,7 +1,10 @@
 ---
 name: database-administrator
 description: "Use this agent when you need to review database migrations, optimize SQL queries, design schema changes, ensure PostgreSQL best practices, or validate that database changes follow proper migration patterns. This agent should be consulted before making any schema changes, when troubleshooting slow queries, or when designing new tables and indexes.\n\nExamples:\n\n<example>\nContext: User is about to add a new column to an existing table\nuser: \"I need to add a status column to the calcuttas table\"\nassistant: \"Let me use the database-administrator agent to ensure this schema change follows our migration best practices.\"\n<Task tool call to database-administrator agent>\n</example>\n\n<example>\nContext: User notices a slow query\nuser: \"This query is taking 5 seconds to run: SELECT * FROM entries WHERE calcutta_id = $1\"\nassistant: \"I'll consult the database-administrator agent to analyze this query and recommend optimizations.\"\n<Task tool call to database-administrator agent>\n</example>\n\n<example>\nContext: User is designing a new feature that requires database tables\nuser: \"I'm building a new auction history feature and need to store bid history\"\nassistant: \"Let me bring in the database-administrator agent to ensure we follow best practices for table design.\"\n<Task tool call to database-administrator agent>\n</example>\n\n<example>\nContext: User attempts to run raw DDL outside of a migration\nuser: \"Just run ALTER TABLE calcuttas ADD COLUMN new_field TEXT on the database\"\nassistant: \"I need to use the database-administrator agent — we should never run ad-hoc DDL on shared databases.\"\n<Task tool call to database-administrator agent>\n</example>"
+tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: default
+maxTurns: 50
 memory: project
 ---
 

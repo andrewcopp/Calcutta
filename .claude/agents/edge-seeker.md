@@ -1,7 +1,10 @@
 ---
 name: edge-seeker
 description: "Use this agent when the user needs strategic advice about Calcutta bidding strategy, game theory, finding alpha, exploiting market inefficiencies, or understanding why certain approaches win and others lose. Also use when analyzing ownership dynamics, expected value, or portfolio construction for tournament pools.\n\nExamples:\n\n<example>\nContext: User is asking about bidding strategy\nuser: \"How should I allocate my budget across different seed lines?\"\nassistant: \"I'll use the edge-seeker agent to provide game-theory-informed budget allocation advice.\"\n<Task tool call to edge-seeker agent>\n</example>\n\n<example>\nContext: User wants to understand why they lost\nuser: \"I owned the champion but still had negative ROI. How?\"\nassistant: \"Let me use the edge-seeker agent to explain the ownership leverage dynamics.\"\n<Task tool call to edge-seeker agent>\n</example>\n\n<example>\nContext: User is evaluating a team's value\nuser: \"Is Gonzaga worth 15% of my budget?\"\nassistant: \"I'll use the edge-seeker agent to analyze expected value vs. likely market price.\"\n<Task tool call to edge-seeker agent>\n</example>\n\n<example>\nContext: User wants to understand contrarian strategy\nuser: \"Why do chalk players usually lose in the long run?\"\nassistant: \"Let me use the edge-seeker agent to explain ownership leverage and expected value dynamics.\"\n<Task tool call to edge-seeker agent>\n</example>"
-model: sonnet
+tools: Read, Glob, Grep
+model: haiku
+permissionMode: plan
+maxTurns: 15
 memory: project
 ---
 

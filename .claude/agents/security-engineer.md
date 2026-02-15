@@ -1,7 +1,10 @@
 ---
 name: security-engineer
 description: "Use this agent when reviewing code for security vulnerabilities, auditing auth flows, checking for injection attacks, validating input sanitization, or evaluating security configurations. Also use proactively after writing security-sensitive code like auth endpoints, API handlers, database queries, or code handling user input or financial data.\n\nExamples:\n\n<example>\nContext: User just wrote an authentication endpoint\nuser: \"I implemented the login endpoint\"\nassistant: \"Let me use the security-engineer agent to audit this auth code for vulnerabilities.\"\n<Task tool call to security-engineer agent>\n</example>\n\n<example>\nContext: User added a database query with user input\nuser: \"Added a search feature that queries users by name\"\nassistant: \"I'll use the security-engineer agent to check for SQL injection and other vulnerabilities.\"\n<Task tool call to security-engineer agent>\n</example>\n\n<example>\nContext: User wants a security audit\nuser: \"Can you review our API routes for security issues?\"\nassistant: \"I'll use the security-engineer agent to conduct a thorough security audit.\"\n<Task tool call to security-engineer agent>\n</example>\n\n<example>\nContext: User is handling financial data\nuser: \"I'm building the payout disbursement feature\"\nassistant: \"Since this involves real money, let me use the security-engineer agent to review the implementation.\"\n<Task tool call to security-engineer agent>\n</example>"
+tools: Read, Glob, Grep, Bash
 model: sonnet
+permissionMode: plan
+maxTurns: 30
 memory: project
 ---
 

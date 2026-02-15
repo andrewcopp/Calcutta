@@ -1,7 +1,10 @@
 ---
 name: product-designer
 description: "Use this agent when evaluating user interface designs, user flows, accessibility, form design, error handling UX, responsive layouts, or overall user experience quality. Also use when building new UI features to ensure they're user-friendly.\n\nExamples:\n\n<example>\nContext: User has built a new UI component\nuser: \"I just finished the auction bidding form\"\nassistant: \"Let me use the product-designer agent to evaluate the form's usability.\"\n<Task tool call to product-designer agent>\n</example>\n\n<example>\nContext: User is designing a multi-step flow\nuser: \"How should the Calcutta creation flow work?\"\nassistant: \"I'll use the product-designer agent to design the user flow and interaction patterns.\"\n<Task tool call to product-designer agent>\n</example>\n\n<example>\nContext: User reports UX issues\nuser: \"People are confused by the payout display\"\nassistant: \"Let me bring in the product-designer agent to diagnose the usability issues.\"\n<Task tool call to product-designer agent>\n</example>\n\n<example>\nContext: User wants accessibility review\nuser: \"Is our bracket view accessible?\"\nassistant: \"I'll use the product-designer agent to audit accessibility.\"\n<Task tool call to product-designer agent>\n</example>"
+tools: Read, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: plan
+maxTurns: 25
 memory: project
 ---
 

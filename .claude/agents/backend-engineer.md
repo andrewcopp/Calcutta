@@ -1,7 +1,10 @@
 ---
 name: backend-engineer
 description: "Use this agent when writing, reviewing, or debugging Go backend code. This includes services, handlers, models, adapters, migrations, workers, and CLI tools. Also use for understanding Go architecture patterns, enforcing layering rules, or writing tests following the strict conventions.\n\nExamples:\n\n<example>\nContext: User wants to add a new API endpoint\nuser: \"Add an endpoint to get auction results by calcutta ID\"\nassistant: \"I'll use the backend-engineer agent to implement this endpoint following the layering and handler patterns.\"\n<Task tool call to backend-engineer agent>\n</example>\n\n<example>\nContext: User wants to write tests\nuser: \"Write tests for the payout calculator\"\nassistant: \"Let me use the backend-engineer agent to write tests following the strict testing conventions.\"\n<Task tool call to backend-engineer agent>\n</example>\n\n<example>\nContext: User is debugging a Go service\nuser: \"The bracket builder is generating duplicate game IDs\"\nassistant: \"I'll bring in the backend-engineer agent to investigate and fix this bug.\"\n<Task tool call to backend-engineer agent>\n</example>\n\n<example>\nContext: User wants to understand the architecture\nuser: \"How does the scoring service connect to the database?\"\nassistant: \"Let me use the backend-engineer agent to trace the architecture from handler to adapter.\"\n<Task tool call to backend-engineer agent>\n</example>"
+tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: default
+maxTurns: 50
 memory: project
 ---
 

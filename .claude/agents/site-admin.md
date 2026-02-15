@@ -1,7 +1,10 @@
 ---
 name: site-admin
 description: "Use this agent when you need to understand Calcutta rules, game mechanics, edge cases in scoring or payouts, historical context about how the game was run, or commissioner workflows. The site-admin is the domain authority who ran this game on Google Sheets for years.\n\nExamples:\n\n<example>\nContext: User has a question about Calcutta rules\nuser: \"What happens when two teams tie in the same round?\"\nassistant: \"Let me ask the site-admin agent — they wrote the original rules and know every edge case.\"\n<Task tool call to site-admin agent>\n</example>\n\n<example>\nContext: User is implementing scoring logic\nuser: \"How should payouts work for First Four games?\"\nassistant: \"The site-admin agent knows exactly how this was handled historically. Let me consult them.\"\n<Task tool call to site-admin agent>\n</example>\n\n<example>\nContext: User wants to understand commissioner workflows\nuser: \"What does a commissioner need to do after the tournament ends?\"\nassistant: \"I'll use the site-admin agent to walk through the end-of-tournament workflow.\"\n<Task tool call to site-admin agent>\n</example>\n\n<example>\nContext: User is debating a rule change\nuser: \"Should we allow participants to trade teams after the auction?\"\nassistant: \"Let me consult the site-admin agent — they've seen what rule variations work and what causes problems.\"\n<Task tool call to site-admin agent>\n</example>"
-model: sonnet
+tools: Read, Glob, Grep
+model: haiku
+permissionMode: plan
+maxTurns: 15
 memory: project
 ---
 

@@ -1,7 +1,10 @@
 ---
 name: data-scientist
 description: "Use this agent when working on data science tasks related to March Madness prediction and optimization, including: tournament team performance modeling, investment prediction, entry optimization strategies, or evaluation of results. Also use when needing to break down complex analytical problems, explore alternative methodologies, or deeply analyze the mathematical foundations of existing approaches.\n\nExamples:\n\n<example>\nContext: User wants to improve predictions\nuser: \"The current KenPom-based predictions seem to underperform for mid-major teams. Can we improve this?\"\nassistant: \"This is a data science question about improving predictions. Let me use the data-scientist agent to analyze the current approach.\"\n<Task tool call to data-scientist agent>\n</example>\n\n<example>\nContext: User wants to understand unexpected optimization results\nuser: \"The MINLP solver is recommending we bid heavily on 12-seeds but our simulations show poor returns.\"\nassistant: \"This involves optimization methodology. I'll use the data-scientist agent to diagnose this.\"\n<Task tool call to data-scientist agent>\n</example>\n\n<example>\nContext: User wants to add a new evaluation metric\nuser: \"I want to compare our strategy against a naive 'bid proportional to win probability' baseline\"\nassistant: \"This is an evaluation methodology question. Let me use the data-scientist agent.\"\n<Task tool call to data-scientist agent>\n</example>\n\n<example>\nContext: User is exploring a new modeling approach\nuser: \"What if we used historical tournament data to build an upset probability model?\"\nassistant: \"This is a significant modeling decision. I'll engage the data-scientist agent to explore this systematically.\"\n<Task tool call to data-scientist agent>\n</example>"
+tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: default
+maxTurns: 50
 memory: project
 ---
 

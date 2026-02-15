@@ -1,7 +1,10 @@
 ---
 name: product-manager
 description: "Use this agent when defining features, writing requirements, prioritizing the backlog, evaluating user stories, or making decisions about what to build and why. Also use when translating business goals into engineering tasks or when deciding between competing feature requests.\n\nExamples:\n\n<example>\nContext: User wants to add a new feature\nuser: \"We should add a way for commissioners to customize payout structures\"\nassistant: \"Let me consult the product-manager agent to define the requirements and evaluate how this fits into the product roadmap.\"\n<Task tool call to product-manager agent>\n</example>\n\n<example>\nContext: User is trying to decide what to build\nuser: \"What features do we need for a minimum viable auction experience?\"\nassistant: \"This is a product definition question. Let me use the product-manager agent to scope out the MVP requirements.\"\n<Task tool call to product-manager agent>\n</example>\n\n<example>\nContext: User needs to write user stories\nuser: \"Help me define the user flow for joining a Calcutta\"\nassistant: \"I'll use the product-manager agent to break this down into well-defined user stories with acceptance criteria.\"\n<Task tool call to product-manager agent>\n</example>\n\n<example>\nContext: User is evaluating a feature request\nuser: \"Someone asked for live auction bidding instead of blind bids. Should we do it?\"\nassistant: \"This is a significant product decision. Let me bring in the product-manager agent to evaluate the tradeoffs.\"\n<Task tool call to product-manager agent>\n</example>"
+tools: Read, Glob, Grep, WebSearch, WebFetch
 model: sonnet
+permissionMode: plan
+maxTurns: 25
 memory: project
 ---
 
