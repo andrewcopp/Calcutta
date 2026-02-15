@@ -26,6 +26,7 @@ export const TournamentAddTeamsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [selectedSchool, setSelectedSchool] = useState<string>('');
   const [selectedSeed, setSelectedSeed] = useState<number>(1);
+  const [selectedRegion, setSelectedRegion] = useState<string>('East');
   const [teamsToAdd, setTeamsToAdd] = useState<TeamToAdd[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -77,13 +78,14 @@ export const TournamentAddTeamsPage: React.FC = () => {
     const newTeam: TeamToAdd = {
       schoolId: selectedSchool,
       seed: selectedSeed,
-      region: 'Unknown', // Default region
+      region: selectedRegion,
     };
 
     setTeamsToAdd([...teamsToAdd, newTeam]);
     setSelectedSchool('');
     setSearchTerm('');
     setSelectedSeed(1);
+    setSelectedRegion('East');
   };
 
   const handleRemoveTeam = (index: number) => {
@@ -188,6 +190,14 @@ export const TournamentAddTeamsPage: React.FC = () => {
               placeholder="Seed"
             />
           </div>
+          <div className="w-full md:w-36">
+            <Select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
+              <option value="East">East</option>
+              <option value="West">West</option>
+              <option value="South">South</option>
+              <option value="Midwest">Midwest</option>
+            </Select>
+          </div>
           <Button type="button" onClick={handleAddTeam}>
             Add Team
           </Button>
@@ -200,7 +210,7 @@ export const TournamentAddTeamsPage: React.FC = () => {
             return (
               <div key={index} className="flex items-center justify-between gap-4 p-2 border rounded-lg">
                 <span>
-                  {school?.name || 'Unknown School'} (Seed {team.seed})
+                  {school?.name || 'Unknown School'} (Seed {team.seed}, {team.region})
                 </span>
                 <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveTeam(index)}>
                   Remove

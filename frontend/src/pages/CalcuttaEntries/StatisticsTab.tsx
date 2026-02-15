@@ -38,8 +38,8 @@ export const StatisticsTab: React.FC<{
               <BarChart data={seedInvestmentData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="seed" label={{ value: 'Seed', position: 'insideBottom', offset: -5 }} />
-                <YAxis label={{ value: 'Total Investment ($)', angle: -90, position: 'insideLeft' }} />
-                <Tooltip formatter={(value: number) => [`$${value.toFixed(2)}`, 'Total Investment']} />
+                <YAxis label={{ value: 'Total Investment (pts)', angle: -90, position: 'insideLeft' }} />
+                <Tooltip formatter={(value: number) => [`${value.toFixed(2)} pts`, 'Total Investment']} />
                 <Bar dataKey="totalInvestment" fill="#4F46E5" />
               </BarChart>
             </ResponsiveContainer>

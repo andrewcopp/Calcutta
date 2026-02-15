@@ -196,11 +196,11 @@ export const InvestmentsTab: React.FC<{
                       ]}
                       backgroundColor="#E5E7EB"
                       getTooltipTitle={(seg) => seg.label}
-                      getTooltipValue={(seg) => `$${seg.value.toFixed(2)}`}
+                      getTooltipValue={(seg) => `${seg.value.toFixed(2)} pts`}
                     />
                   </td>
-                  <td className="px-2 py-3 text-right font-medium text-gray-900 whitespace-nowrap">${row.entryInvestment.toFixed(2)}</td>
-                  <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">${row.totalInvestment.toFixed(2)}</td>
+                  <td className="px-2 py-3 text-right font-medium text-gray-900 whitespace-nowrap">{row.entryInvestment.toFixed(2)} pts</td>
+                  <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">{row.totalInvestment.toFixed(2)} pts</td>
                 </tr>
               );
             })}

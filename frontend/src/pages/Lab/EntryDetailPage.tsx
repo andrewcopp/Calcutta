@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { LoadingState } from '../../components/ui/LoadingState';
-import { TabsNav } from '../../components/TabsNav';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { labService, EntryDetail, ListEvaluationsResponse } from '../../services/labService';
 import { cn } from '../../lib/cn';
 
@@ -15,12 +15,6 @@ import { EvaluationsTab } from './EntryDetail/EvaluationsTab';
 
 type EntryDetailTabId = 'predictions' | 'entry' | 'evaluations';
 type SortDir = 'asc' | 'desc';
-
-const TABS = [
-  { id: 'predictions' as const, label: 'Market Predictions' },
-  { id: 'entry' as const, label: 'Optimized Entry' },
-  { id: 'evaluations' as const, label: 'Evaluations' },
-] as const;
 
 export function EntryDetailPage() {
   // Support both URL patterns:
@@ -211,46 +205,50 @@ export function EntryDetailPage() {
         </button>
       </div>
 
-      {/* Tabs navigation */}
-      <TabsNav tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as EntryDetailTabId)}>
+        <TabsList>
+          <TabsTrigger value="predictions">Market Predictions</TabsTrigger>
+          <TabsTrigger value="entry">Optimized Entry</TabsTrigger>
+          <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
+        </TabsList>
 
-      {/* Tab content */}
-      {activeTab === 'predictions' && (
-        hasPredictions ? (
-          <PredictionsTab
-            predictions={sortedPredictions}
-            sortKey={predSortKey}
-            sortDir={predSortDir}
-            onSort={handlePredSort}
+        <TabsContent value="predictions">
+          {hasPredictions ? (
+            <PredictionsTab
+              predictions={sortedPredictions}
+              sortKey={predSortKey}
+              sortDir={predSortDir}
+              onSort={handlePredSort}
+              optimizerParams={entry.optimizer_params_json}
+            />
+          ) : (
+            <Alert variant="info">No predictions available for this entry.</Alert>
+          )}
+        </TabsContent>
+
+        <TabsContent value="entry">
+          <EntryTab
+            bids={bids}
+            predictions={predictions}
+            sortKey={bidSortKey}
+            sortDir={bidSortDir}
+            onSort={handleBidSort}
+            showOnlyInvested={showOnlyInvested}
+            onShowOnlyInvestedChange={setShowOnlyInvested}
+            optimizerKind={entry.optimizer_kind}
             optimizerParams={entry.optimizer_params_json}
           />
-        ) : (
-          <Alert variant="info">No predictions available for this entry.</Alert>
-        )
-      )}
+        </TabsContent>
 
-      {activeTab === 'entry' && (
-        <EntryTab
-          bids={bids}
-          predictions={predictions}
-          sortKey={bidSortKey}
-          sortDir={bidSortDir}
-          onSort={handleBidSort}
-          showOnlyInvested={showOnlyInvested}
-          onShowOnlyInvestedChange={setShowOnlyInvested}
-          optimizerKind={entry.optimizer_kind}
-          optimizerParams={entry.optimizer_params_json}
-        />
-      )}
-
-      {activeTab === 'evaluations' && (
-        <EvaluationsTab
-          evaluation={evaluation}
-          isLoading={evaluationsQuery.isLoading}
-          modelName={entry.model_name}
-          calcuttaId={entry.calcutta_id}
-        />
-      )}
+        <TabsContent value="evaluations">
+          <EvaluationsTab
+            evaluation={evaluation}
+            isLoading={evaluationsQuery.isLoading}
+            modelName={entry.model_name}
+            calcuttaId={entry.calcutta_id}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
 import { StatisticsTab } from './EntryTeams/StatisticsTab';
-import { TabsNav } from '../components/TabsNav';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { queryKeys } from '../queryKeys';
 
 // Add a new section to display portfolio scores
@@ -52,23 +52,13 @@ const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaP
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
 
-  const [activeTab, setActiveTab] = useState<'investments' | 'ownerships' | 'returns' | 'statistics'>('ownerships');
+  const [activeTab, setActiveTab] = useState('ownerships');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
   const [investmentsSortBy, setInvestmentsSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
   const [showAllTeams, setShowAllTeams] = useState(false);
   const [ownershipShowAllTeams, setOwnershipShowAllTeams] = useState(false);
   const [returnsShowAllTeams, setReturnsShowAllTeams] = useState(false);
 
-  const tabs = useMemo(
-    () =>
-      [
-        { id: 'investments' as const, label: 'Investments' },
-        { id: 'ownerships' as const, label: 'Ownerships' },
-        { id: 'returns' as const, label: 'Returns' },
-        { id: 'statistics' as const, label: 'Statistics' },
-      ] as const,
-    []
-  );
 
   const entryTeamsQuery = useQuery({
     queryKey: queryKeys.calcuttas.entryTeamsPage(calcuttaId, entryId),
@@ -307,56 +297,63 @@ export function EntryTeamsPage() {
         }
       />
 
-      <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="investments">Investments</TabsTrigger>
+          <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
+          <TabsTrigger value="returns">Returns</TabsTrigger>
+          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+        </TabsList>
 
-      {activeTab === 'investments' && (
-        <InvestmentsTab
-          entryId={entryId!}
-          teams={teams}
-          tournamentTeams={tournamentTeams}
-          allEntryTeams={allEntryTeams}
-          schools={schools}
-          investmentsSortBy={investmentsSortBy}
-          setInvestmentsSortBy={setInvestmentsSortBy}
-          showAllTeams={showAllTeams}
-          setShowAllTeams={setShowAllTeams}
-        />
-      )}
+        <TabsContent value="investments">
+          <InvestmentsTab
+            entryId={entryId!}
+            teams={teams}
+            tournamentTeams={tournamentTeams}
+            allEntryTeams={allEntryTeams}
+            schools={schools}
+            investmentsSortBy={investmentsSortBy}
+            setInvestmentsSortBy={setInvestmentsSortBy}
+            showAllTeams={showAllTeams}
+            setShowAllTeams={setShowAllTeams}
+          />
+        </TabsContent>
 
-      {activeTab === 'ownerships' && (
-        <OwnershipsTab
-          ownershipShowAllTeams={ownershipShowAllTeams}
-          setOwnershipShowAllTeams={setOwnershipShowAllTeams}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          ownershipLoading={ownershipLoading}
-          ownershipTeamsData={ownershipTeamsData}
-          getPortfolioTeamData={getPortfolioTeamData}
-          getInvestorRanking={getInvestorRanking}
-          allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-          allCalcuttaPortfolios={allCalcuttaPortfolios}
-          portfolios={portfolios}
-        />
-      )}
+        <TabsContent value="ownerships">
+          <OwnershipsTab
+            ownershipShowAllTeams={ownershipShowAllTeams}
+            setOwnershipShowAllTeams={setOwnershipShowAllTeams}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            ownershipLoading={ownershipLoading}
+            ownershipTeamsData={ownershipTeamsData}
+            getPortfolioTeamData={getPortfolioTeamData}
+            getInvestorRanking={getInvestorRanking}
+            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+            allCalcuttaPortfolios={allCalcuttaPortfolios}
+            portfolios={portfolios}
+          />
+        </TabsContent>
 
-      {activeTab === 'returns' && (
-        <ReturnsTab
-          entryId={entryId!}
-          returnsShowAllTeams={returnsShowAllTeams}
-          setReturnsShowAllTeams={setReturnsShowAllTeams}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          tournamentTeams={tournamentTeams}
-          allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-          teams={teams}
-          schools={schools}
-          getPortfolioTeamData={getPortfolioTeamData}
-        />
-      )}
+        <TabsContent value="returns">
+          <ReturnsTab
+            entryId={entryId!}
+            returnsShowAllTeams={returnsShowAllTeams}
+            setReturnsShowAllTeams={setReturnsShowAllTeams}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            tournamentTeams={tournamentTeams}
+            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+            teams={teams}
+            schools={schools}
+            getPortfolioTeamData={getPortfolioTeamData}
+          />
+        </TabsContent>
 
-      {activeTab === 'statistics' && (
-        <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
-      )}
+        <TabsContent value="statistics">
+          <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
+        </TabsContent>
+      </Tabs>
     </PageContainer>
   );
 }

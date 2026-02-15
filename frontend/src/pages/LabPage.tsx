@@ -19,7 +19,11 @@ export function LabPage() {
     queryFn: () => calcuttaService.getAllCalcuttas(),
   });
 
-  const items = leaderboardQuery.data?.items ?? [];
+  const items = [...(leaderboardQuery.data?.items ?? [])].sort((a, b) => {
+    const aTop1 = a.avg_p_top1 ?? 0;
+    const bTop1 = b.avg_p_top1 ?? 0;
+    return bTop1 - aTop1;
+  });
   const totalCalcuttas = calcuttasQuery.data?.length ?? 0;
 
   const isLoading = leaderboardQuery.isLoading || calcuttasQuery.isLoading;

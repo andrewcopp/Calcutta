@@ -7,8 +7,11 @@ import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 
@@ -192,18 +195,14 @@ export const TournamentEditPage: React.FC = () => {
         title={`Edit Tournament: ${tournament.name}`}
         subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
         actions={
-          <>
-            <button onClick={() => navigate(`/admin/tournaments/${id}`)} className="px-4 py-2 border rounded hover:bg-gray-100">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate(`/admin/tournaments/${id}`)}>
               Cancel
-            </button>
-            <button
-              onClick={handleSaveAll}
-              disabled={isSaving}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-            >
+            </Button>
+            <Button onClick={handleSaveAll} disabled={isSaving} loading={isSaving}>
               {isSaving ? 'Saving...' : 'Save All Changes'}
-            </button>
-          </>
+            </Button>
+          </div>
         }
       />
 
@@ -224,6 +223,9 @@ export const TournamentEditPage: React.FC = () => {
                 School
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Region
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Byes
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -240,50 +242,52 @@ export const TournamentEditPage: React.FC = () => {
               .map(team => (
                 <tr key={team.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    <select
-                      value={team.seed}
+                    <Select
+                      value={String(team.seed)}
                       onChange={(e) => handleTeamUpdate(team.id, 'seed', parseInt(e.target.value) || 1)}
-                      className="w-16 p-1 border rounded"
+                      className="w-20"
                     >
                       {Array.from({ length: 16 }, (_, i) => i + 1).map(seed => (
                         <option key={seed} value={seed}>
                           {seed}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {schools[team.schoolId]?.name || 'Unknown School'}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <Badge variant="outline">{team.region || 'Unknown'}</Badge>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       max="7"
                       value={team.byes}
                       onChange={(e) => handleTeamUpdate(team.id, 'byes', parseInt(e.target.value) || 0)}
-                      className="w-16 p-1 border rounded"
+                      className="w-20"
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       max="7"
                       value={team.wins}
                       onChange={(e) => handleTeamUpdate(team.id, 'wins', parseInt(e.target.value) || 0)}
-                      className="w-16 p-1 border rounded"
+                      className="w-20"
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <select
+                    <Select
                       value={team.eliminated ? 'eliminated' : 'active'}
                       onChange={(e) => handleTeamUpdate(team.id, 'eliminated', e.target.value === 'eliminated')}
-                      className="p-1 border rounded"
                     >
                       <option value="active">Active</option>
                       <option value="eliminated">Eliminated</option>
-                    </select>
+                    </Select>
                   </td>
                 </tr>
               ))}

@@ -10,12 +10,12 @@ import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
 import { OwnershipTab } from './CalcuttaEntries/OwnershipTab';
-import { TabsNav } from '../components/TabsNav';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { queryKeys } from '../queryKeys';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'statistics' | 'investment' | 'ownership' | 'returns'>('leaderboard');
+  const [activeTab, setActiveTab] = useState('leaderboard');
 
   const formatDollarsFromCents = (cents?: number) => {
     if (!cents) return '$0';
@@ -27,17 +27,6 @@ export function CalcuttaEntriesPage() {
     return `${sign}$${dollars}.${remainder.toString().padStart(2, '0')}`;
   };
 
-  const tabs = useMemo(
-    () =>
-      [
-        { id: 'leaderboard' as const, label: 'Leaderboard' },
-        { id: 'investment' as const, label: 'Investments' },
-        { id: 'ownership' as const, label: 'Ownerships' },
-        { id: 'returns' as const, label: 'Returns' },
-        { id: 'statistics' as const, label: 'Statistics' },
-      ] as const,
-    []
-  );
 
   const calcuttaEntriesQuery = useQuery({
     queryKey: queryKeys.calcuttas.entriesPage(calcuttaId),
@@ -241,50 +230,55 @@ export function CalcuttaEntriesPage() {
         }
       />
 
-      <TabsNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+          <TabsTrigger value="investment">Investments</TabsTrigger>
+          <TabsTrigger value="ownership">Ownerships</TabsTrigger>
+          <TabsTrigger value="returns">Returns</TabsTrigger>
+          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+        </TabsList>
 
-      {activeTab === 'statistics' && (
-        <StatisticsTab
-          calcuttaId={calcuttaId}
-          totalEntries={totalEntries}
-          totalInvestment={totalInvestment}
-          totalReturns={totalReturns}
-          averageReturn={averageReturn}
-          returnsStdDev={returnsStdDev}
-          seedInvestmentData={seedInvestmentData}
-          teamROIData={teamROIData}
-        />
-      )}
+        <TabsContent value="statistics">
+          <StatisticsTab
+            calcuttaId={calcuttaId}
+            totalEntries={totalEntries}
+            totalInvestment={totalInvestment}
+            totalReturns={totalReturns}
+            averageReturn={averageReturn}
+            returnsStdDev={returnsStdDev}
+            seedInvestmentData={seedInvestmentData}
+            teamROIData={teamROIData}
+          />
+        </TabsContent>
 
-      {activeTab === 'returns' && (
-        <ReturnsTab
-          entries={entries}
-          schools={schools}
-          tournamentTeams={tournamentTeams}
-          allCalcuttaPortfolios={allCalcuttaPortfolios}
-          allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-        />
-      )}
+        <TabsContent value="returns">
+          <ReturnsTab
+            entries={entries}
+            schools={schools}
+            tournamentTeams={tournamentTeams}
+            allCalcuttaPortfolios={allCalcuttaPortfolios}
+            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+          />
+        </TabsContent>
 
-      {activeTab === 'investment' && (
-        <InvestmentTab entries={entries} schools={schools} tournamentTeams={tournamentTeams} allEntryTeams={allEntryTeams} />
-      )}
+        <TabsContent value="investment">
+          <InvestmentTab entries={entries} schools={schools} tournamentTeams={tournamentTeams} allEntryTeams={allEntryTeams} />
+        </TabsContent>
 
-      {activeTab === 'ownership' && (
-        <OwnershipTab
-          entries={entries}
-          schools={schools}
-          tournamentTeams={tournamentTeams}
-          allEntryTeams={allEntryTeams}
-          allCalcuttaPortfolios={allCalcuttaPortfolios}
-          allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-          isFetching={calcuttaEntriesQuery.isFetching}
-        />
-      )}
+        <TabsContent value="ownership">
+          <OwnershipTab
+            entries={entries}
+            schools={schools}
+            tournamentTeams={tournamentTeams}
+            allEntryTeams={allEntryTeams}
+            allCalcuttaPortfolios={allCalcuttaPortfolios}
+            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+            isFetching={calcuttaEntriesQuery.isFetching}
+          />
+        </TabsContent>
 
-      {activeTab === 'leaderboard' && (
-        <>
+        <TabsContent value="leaderboard">
           <div className="grid gap-4">
             {entries.map((entry, index) => {
               const displayPosition = entry.finishPosition || index + 1;
@@ -323,20 +317,24 @@ export function CalcuttaEntriesPage() {
                         {displayPosition}. {entry.name}
                         {isInTheMoney && payoutText && <span className="ml-2 text-sm text-gray-700">{payoutText}</span>}
                       </h2>
-                      <p className="text-gray-600">Created: {new Date(entry.created).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
                       <p className={`text-2xl font-bold ${pointsClass}`}>
                         {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
                       </p>
+                      {index > 0 && entries[0].totalPoints > 0 && (
+                        <p className="text-xs text-gray-500">
+                          {((entry.totalPoints || 0) - (entries[0].totalPoints || 0)).toFixed(2)} pts
+                        </p>
+                      )}
                     </div>
                   </div>
                 </Link>
               );
             })}
           </div>
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
     </PageContainer>
   );
 }

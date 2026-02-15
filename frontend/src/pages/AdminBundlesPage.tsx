@@ -186,12 +186,19 @@ export const AdminBundlesPage: React.FC = () => {
         <p className="text-gray-600 mb-4">Upload a bundles zip and import it into the database.</p>
 
         <div className="flex flex-col gap-3">
-          <input
-            type="file"
-            accept="application/zip,.zip"
-            disabled={busy}
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
+          <label className="flex items-center gap-3 cursor-pointer">
+            <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+              Choose File
+            </span>
+            <input
+              type="file"
+              accept="application/zip,.zip"
+              disabled={busy}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="sr-only"
+            />
+            <span className="text-sm text-gray-500">{file ? file.name : 'No file selected'}</span>
+          </label>
           <div>
             <Button onClick={upload} disabled={busy || !file}>
               Upload + Import
@@ -209,8 +216,49 @@ export const AdminBundlesPage: React.FC = () => {
 
         {result && (
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Result</h3>
-            <pre className="bg-gray-100 rounded p-4 overflow-auto text-sm">{JSON.stringify(result, null, 2)}</pre>
+            <h3 className="text-lg font-semibold mb-3">Result</h3>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <div className="text-gray-500">Status</div>
+              <div className="font-medium">{result.status}</div>
+              <div className="text-gray-500">Filename</div>
+              <div className="font-medium">{result.filename}</div>
+              <div className="text-gray-500">Size</div>
+              <div className="font-medium">{(result.size_bytes / 1024).toFixed(1)} KB</div>
+              {result.import_report && (
+                <>
+                  <div className="col-span-2 border-t border-gray-200 mt-2 pt-2 font-semibold">Import Report</div>
+                  <div className="text-gray-500">Schools</div>
+                  <div className="font-medium">{result.import_report.schools}</div>
+                  <div className="text-gray-500">Tournaments</div>
+                  <div className="font-medium">{result.import_report.tournaments}</div>
+                  <div className="text-gray-500">Teams</div>
+                  <div className="font-medium">{result.import_report.tournament_teams}</div>
+                  <div className="text-gray-500">Calcuttas</div>
+                  <div className="font-medium">{result.import_report.calcuttas}</div>
+                  <div className="text-gray-500">Entries</div>
+                  <div className="font-medium">{result.import_report.entries}</div>
+                  <div className="text-gray-500">Bids</div>
+                  <div className="font-medium">{result.import_report.bids}</div>
+                  <div className="text-gray-500">Payouts</div>
+                  <div className="font-medium">{result.import_report.payouts}</div>
+                </>
+              )}
+              {result.verify_report && (
+                <>
+                  <div className="col-span-2 border-t border-gray-200 mt-2 pt-2 font-semibold">Verify Report</div>
+                  <div className="text-gray-500">OK</div>
+                  <div className={`font-medium ${result.verify_report.ok ? 'text-green-600' : 'text-red-600'}`}>
+                    {result.verify_report.ok ? 'Yes' : 'No'}
+                  </div>
+                  {result.verify_report.mismatch_count > 0 && (
+                    <>
+                      <div className="text-gray-500">Mismatches</div>
+                      <div className="font-medium text-red-600">{result.verify_report.mismatch_count}</div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
       </Card>

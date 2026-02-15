@@ -37,13 +37,13 @@ export function BudgetTracker({
   };
 
   return (
-    <div className="sticky top-0 z-10 mb-6">
+    <div className="sticky top-16 z-10 mb-6">
       <Card className="bg-white shadow-md">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <div className="text-sm text-gray-600 mb-1">Budget</div>
             <div className={cn('text-2xl font-bold', getBudgetColor())}>
-              ${budgetRemaining.toFixed(2)} / ${totalBudget.toFixed(2)}
+              {budgetRemaining.toFixed(2)} / {totalBudget.toFixed(2)} pts
             </div>
             <div className="mt-2 bg-gray-200 rounded-full h-2 overflow-hidden">
               <div

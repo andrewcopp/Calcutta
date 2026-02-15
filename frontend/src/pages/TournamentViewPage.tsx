@@ -1,24 +1,22 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
+import { type ColumnDef } from '@tanstack/react-table';
 import { TournamentTeam } from '../types/calcutta';
 import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
 import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 
-type SortField = 'seed' | 'school' | 'byes' | 'wins' | 'status';
-type SortDirection = 'asc' | 'desc';
-
 export const TournamentViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [sortField, setSortField] = useState<SortField>('seed');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
@@ -48,46 +46,26 @@ export const TournamentViewPage: React.FC = () => {
     }, {} as Record<string, School>);
   }, [schoolsQuery.data]);
 
-  const handleSort = (field: SortField) => {
-    if (field === sortField) {
-      // Toggle direction if clicking the same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new field and default to ascending
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const getSortedTeams = () => {
-    const teams = teamsQuery.data || [];
-    return [...teams].sort((a, b) => {
-      let comparison = 0;
-
-      const schoolA = schools[a.schoolId]?.name || '';
-      const schoolB = schools[b.schoolId]?.name || '';
-
-      const comparisons: Record<SortField, number> = {
-        seed: a.seed - b.seed,
-        school: schoolA.localeCompare(schoolB),
-        byes: a.byes - b.byes,
-        wins: a.wins - b.wins,
-        // Sort eliminated teams to the bottom
-        status: (a.eliminated ? 1 : 0) - (b.eliminated ? 1 : 0),
-      };
-
-      comparison = comparisons[sortField] ?? 0;
-      
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  };
-
-  const getSortIcon = (field: SortField) => {
-    if (field !== sortField) {
-      return <span className="text-gray-400">↕</span>;
-    }
-    return sortDirection === 'asc' ? <span>↑</span> : <span>↓</span>;
-  };
+  const teamColumns = useMemo<ColumnDef<TournamentTeam, unknown>[]>(() => [
+    { accessorKey: 'seed', header: 'Seed' },
+    {
+      id: 'school',
+      header: 'School',
+      accessorFn: (row) => schools[row.schoolId]?.name || 'Unknown School',
+    },
+    { accessorKey: 'byes', header: 'Byes' },
+    { accessorKey: 'wins', header: 'Wins' },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorFn: (row) => (row.eliminated ? 1 : 0),
+      cell: ({ row }) => row.original.eliminated ? (
+        <Badge variant="destructive">Eliminated</Badge>
+      ) : (
+        <Badge variant="success">Active</Badge>
+      ),
+    },
+  ], [schools]);
 
   if (!id) {
     return (
@@ -151,25 +129,23 @@ export const TournamentViewPage: React.FC = () => {
     );
   }
 
-  const sortedTeams = getSortedTeams();
-
   return (
     <PageContainer>
       <PageHeader
         title={tournament.name}
         subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
         actions={
-          <>
-            <Link to={`/admin/tournaments/${id}/bracket`} className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
-              Manage Bracket
+          <div className="flex gap-2">
+            <Link to={`/admin/tournaments/${id}/bracket`}>
+              <Button variant="outline">Manage Bracket</Button>
             </Link>
-            <Link to={`/admin/tournaments/${id}/edit`} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-              Edit Tournament
+            <Link to={`/admin/tournaments/${id}/edit`}>
+              <Button variant="secondary">Edit Tournament</Button>
             </Link>
-            <Link to={`/admin/tournaments/${id}/teams/add`} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-              Add Teams
+            <Link to={`/admin/tournaments/${id}/teams/add`}>
+              <Button>Add Teams</Button>
             </Link>
-          </>
+          </div>
         }
       />
 
@@ -233,90 +209,17 @@ export const TournamentViewPage: React.FC = () => {
       {teams.length === 0 ? (
         <Card className="text-center">
           <p className="text-gray-500 mb-4">No teams have been added to this tournament yet.</p>
-          <Link
-            to={`/admin/tournaments/${id}/teams/add`}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Add Teams
+          <Link to={`/admin/tournaments/${id}/teams/add`}>
+            <Button>Add Teams</Button>
           </Link>
         </Card>
       ) : (
         <Card className="p-0 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('seed')}
-                >
-                  <div className="flex items-center">
-                    Seed {getSortIcon('seed')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('school')}
-                >
-                  <div className="flex items-center">
-                    School {getSortIcon('school')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('byes')}
-                >
-                  <div className="flex items-center">
-                    Byes {getSortIcon('byes')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('wins')}
-                >
-                  <div className="flex items-center">
-                    Wins {getSortIcon('wins')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('status')}
-                >
-                  <div className="flex items-center">
-                    Status {getSortIcon('status')}
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sortedTeams.map(team => (
-                <tr key={team.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {team.seed}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {schools[team.schoolId]?.name || 'Unknown School'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {team.byes}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {team.wins}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {team.eliminated ? (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                        Eliminated
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                        Active
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            columns={teamColumns}
+            data={teams}
+            initialSorting={[{ id: 'seed', desc: false }]}
+          />
         </Card>
       )}
     </PageContainer>

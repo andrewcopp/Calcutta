@@ -8,6 +8,8 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { Button } from '../components/ui/Button';
 import { BudgetTracker } from '../components/Bidding/BudgetTracker';
 import { TeamBidRow } from '../components/Bidding/TeamBidRow';
+import { Badge } from '../components/ui/Badge';
+import { cn } from '../lib/cn';
 
 const BUDGET = 100;
 const MIN_TEAMS = 3;
@@ -15,11 +17,22 @@ const MAX_TEAMS = 10;
 const MIN_BID = 1;
 const MAX_BID = 50;
 
+type SeedFilter = 'all' | '1-4' | '5-8' | '9-12' | '13-16';
+
+function getSeedVariant(seed: number): 'default' | 'secondary' | 'outline' {
+  if (seed <= 4) return 'default';
+  if (seed <= 8) return 'secondary';
+  return 'outline';
+}
+
 export function BiddingPage() {
   const { calcuttaId, entryId } = useParams<{ calcuttaId: string; entryId: string }>();
   const navigate = useNavigate();
 
   const [bidsByTeamId, setBidsByTeamId] = useState<Record<string, number>>({});
+  const [seedFilter, setSeedFilter] = useState<SeedFilter>('all');
+  const [unbidOnly, setUnbidOnly] = useState(false);
+  const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(new Set());
 
   const biddingQuery = useQuery({
     queryKey: ['biddingPage', calcuttaId, entryId],
@@ -107,16 +120,16 @@ export function BiddingPage() {
     }
 
     if (budgetRemaining < 0) {
-      errors.push(`Over budget by $${Math.abs(budgetRemaining).toFixed(2)}`);
+      errors.push(`Over budget by ${Math.abs(budgetRemaining).toFixed(2)} pts`);
     }
 
     Object.entries(bidsByTeamId).forEach(([teamId, bid]) => {
       if (bid < MIN_BID) {
-        errors.push(`All bids must be at least $${MIN_BID}`);
+        errors.push(`All bids must be at least ${MIN_BID} pts`);
       }
       if (bid > MAX_BID) {
         const team = biddingQuery.data?.teams.find((t) => t.id === teamId);
-        errors.push(`Bid on ${team?.school?.name || 'team'} exceeds max $${MAX_BID}`);
+        errors.push(`Bid on ${team?.school?.name || 'team'} exceeds max ${MAX_BID} pts`);
       }
     });
 
@@ -143,6 +156,53 @@ export function BiddingPage() {
       return a.seed - b.seed;
     });
   }, [biddingQuery.data?.teams]);
+
+  // Group teams by region
+  const teamsByRegion = useMemo(() => {
+    const groups = new Map<string, typeof sortedTeams>();
+    for (const team of sortedTeams) {
+      const existing = groups.get(team.region) || [];
+      existing.push(team);
+      groups.set(team.region, existing);
+    }
+    return groups;
+  }, [sortedTeams]);
+
+  // Apply filters
+  const matchesSeedFilter = (seed: number) => {
+    if (seedFilter === 'all') return true;
+    const [min, max] = seedFilter.split('-').map(Number);
+    return seed >= min && seed <= max;
+  };
+
+  const toggleRegion = (region: string) => {
+    setCollapsedRegions((prev) => {
+      const next = new Set(prev);
+      if (next.has(region)) {
+        next.delete(region);
+      } else {
+        next.add(region);
+      }
+      return next;
+    });
+  };
+
+  // Portfolio summary - teams with bids
+  const portfolioSummary = useMemo(() => {
+    if (!biddingQuery.data?.teams) return [];
+    return Object.entries(bidsByTeamId)
+      .filter(([, bid]) => bid > 0)
+      .map(([teamId, bid]) => {
+        const team = biddingQuery.data!.teams.find((t) => t.id === teamId);
+        return {
+          teamId,
+          name: team?.school?.name || 'Unknown',
+          seed: team?.seed || 0,
+          bid,
+        };
+      })
+      .sort((a, b) => b.bid - a.bid);
+  }, [bidsByTeamId, biddingQuery.data]);
 
   if (!calcuttaId || !entryId) {
     return (
@@ -173,7 +233,7 @@ export function BiddingPage() {
     <PageContainer>
       <PageHeader
         title="Place Your Bids"
-        subtitle={`Budget: $${BUDGET} | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: $${MAX_BID}`}
+        subtitle={`Budget: ${BUDGET} pts | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: ${MAX_BID} pts`}
         actions={
           <div className="flex gap-2">
             <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}`}>
@@ -202,39 +262,123 @@ export function BiddingPage() {
         validationErrors={validationErrors}
       />
 
+      {/* Portfolio summary */}
+      {portfolioSummary.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Your Bids So Far</h3>
+          <div className="flex flex-wrap gap-2">
+            {portfolioSummary.map((item) => (
+              <div key={item.teamId} className="flex items-center gap-1 bg-blue-50 rounded-md px-2 py-1">
+                <Badge variant={getSeedVariant(item.seed)} className="text-xs">{item.seed}</Badge>
+                <span className="text-sm text-gray-800">{item.name}</span>
+                <span className="text-sm font-medium text-blue-700">{item.bid} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Seeds:</span>
+          {(['all', '1-4', '5-8', '9-12', '13-16'] as SeedFilter[]).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setSeedFilter(filter)}
+              className={cn(
+                'px-3 py-1 text-sm rounded-md transition-colors',
+                seedFilter === filter
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              )}
+            >
+              {filter === 'all' ? 'All' : filter}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={unbidOnly}
+            onChange={(e) => setUnbidOnly(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          Unbid only
+        </label>
+      </div>
+
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Tournament Teams</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Select teams and enter your bid amounts. Leave bid at $0 to not select a team.
+            Select teams and enter your bid amounts. Leave bid at 0 to skip a team.
           </p>
         </div>
 
-        <div className="px-6 py-2">
-          <div className="grid grid-cols-12 gap-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-gray-300">
+        <div className="px-4 sm:px-6 py-2">
+          <div className="hidden sm:grid grid-cols-12 gap-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-gray-300">
             <div className="col-span-5">School</div>
             <div className="col-span-2 text-center">Seed</div>
             <div className="col-span-2 text-center">Region</div>
             <div className="col-span-3">Bid Amount</div>
           </div>
 
-          {sortedTeams.map((team) => {
-            const bid = bidsByTeamId[team.id] || 0;
-            const validationError =
-              bid > 0 && (bid < MIN_BID ? `Min $${MIN_BID}` : bid > MAX_BID ? `Max $${MAX_BID}` : undefined);
+          {Array.from(teamsByRegion.entries()).map(([region, teams]) => {
+            const isCollapsed = collapsedRegions.has(region);
+            const filteredTeams = teams.filter((team) => {
+              if (!matchesSeedFilter(team.seed)) return false;
+              if (unbidOnly && bidsByTeamId[team.id]) return false;
+              return true;
+            });
+
+            if (filteredTeams.length === 0 && (seedFilter !== 'all' || unbidOnly)) return null;
+
+            const regionBidCount = teams.filter((t) => bidsByTeamId[t.id]).length;
 
             return (
-              <TeamBidRow
-                key={team.id}
-                teamId={team.id}
-                schoolName={team.school?.name || 'Unknown'}
-                seed={team.seed}
-                region={team.region}
-                bidAmount={bid}
-                maxBid={MAX_BID}
-                onBidChange={handleBidChange}
-                validationError={validationError}
-              />
+              <div key={region}>
+                <button
+                  type="button"
+                  onClick={() => toggleRegion(region)}
+                  className="w-full flex items-center justify-between py-3 px-2 bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200 mt-1"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className={cn('h-4 w-4 text-gray-500 transition-transform', !isCollapsed && 'rotate-90')}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="2"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                    <span className="text-sm font-semibold text-gray-800">{region}</span>
+                  </div>
+                  {regionBidCount > 0 && (
+                    <span className="text-xs text-blue-600 font-medium">{regionBidCount} bid{regionBidCount !== 1 ? 's' : ''}</span>
+                  )}
+                </button>
+                {!isCollapsed && filteredTeams.map((team) => {
+                  const bid = bidsByTeamId[team.id] || 0;
+                  const validationError =
+                    bid > 0 ? (bid < MIN_BID ? `Min ${MIN_BID} pts` : bid > MAX_BID ? `Max ${MAX_BID} pts` : undefined) : undefined;
+
+                  return (
+                    <TeamBidRow
+                      key={team.id}
+                      teamId={team.id}
+                      schoolName={team.school?.name || 'Unknown'}
+                      seed={team.seed}
+                      region={team.region}
+                      bidAmount={bid}
+                      maxBid={MAX_BID}
+                      onBidChange={handleBidChange}
+                      validationError={validationError}
+                    />
+                  );
+                })}
+              </div>
             );
           })}
         </div>
