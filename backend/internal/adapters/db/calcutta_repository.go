@@ -33,16 +33,18 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 	out := make([]*models.Calcutta, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &models.Calcutta{
-			ID:           row.ID,
-			TournamentID: row.TournamentID,
-			OwnerID:      row.OwnerID,
-			Name:         row.Name,
-			MinTeams:     int(row.MinTeams),
-			MaxTeams:     int(row.MaxTeams),
-			MaxBid:       int(row.MaxBid),
-			Created:      row.CreatedAt.Time,
-			Updated:      row.UpdatedAt.Time,
-			Deleted:      nil,
+			ID:              row.ID,
+			TournamentID:    row.TournamentID,
+			OwnerID:         row.OwnerID,
+			Name:            row.Name,
+			MinTeams:        int(row.MinTeams),
+			MaxTeams:        int(row.MaxTeams),
+			MaxBid:          int(row.MaxBid),
+			BiddingOpen:     row.BiddingOpen,
+			BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+			Created:         row.CreatedAt.Time,
+			Updated:         row.UpdatedAt.Time,
+			Deleted:         nil,
 		})
 	}
 	return out, nil
@@ -107,16 +109,18 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		return nil, err
 	}
 	return &models.Calcutta{
-		ID:           row.ID,
-		TournamentID: row.TournamentID,
-		OwnerID:      row.OwnerID,
-		Name:         row.Name,
-		MinTeams:     int(row.MinTeams),
-		MaxTeams:     int(row.MaxTeams),
-		MaxBid:       int(row.MaxBid),
-		Created:      row.CreatedAt.Time,
-		Updated:      row.UpdatedAt.Time,
-		Deleted:      nil,
+		ID:              row.ID,
+		TournamentID:    row.TournamentID,
+		OwnerID:         row.OwnerID,
+		Name:            row.Name,
+		MinTeams:        int(row.MinTeams),
+		MaxTeams:        int(row.MaxTeams),
+		MaxBid:          int(row.MaxBid),
+		BiddingOpen:     row.BiddingOpen,
+		BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+		Created:         row.CreatedAt.Time,
+		Updated:         row.UpdatedAt.Time,
+		Deleted:         nil,
 	}, nil
 }
 
@@ -129,16 +133,18 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 	out := make([]*models.Calcutta, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &models.Calcutta{
-			ID:           row.ID,
-			TournamentID: row.TournamentID,
-			OwnerID:      row.OwnerID,
-			Name:         row.Name,
-			MinTeams:     int(row.MinTeams),
-			MaxTeams:     int(row.MaxTeams),
-			MaxBid:       int(row.MaxBid),
-			Created:      row.CreatedAt.Time,
-			Updated:      row.UpdatedAt.Time,
-			Deleted:      timestamptzToPtrTime(row.DeletedAt),
+			ID:              row.ID,
+			TournamentID:    row.TournamentID,
+			OwnerID:         row.OwnerID,
+			Name:            row.Name,
+			MinTeams:        int(row.MinTeams),
+			MaxTeams:        int(row.MaxTeams),
+			MaxBid:          int(row.MaxBid),
+			BiddingOpen:     row.BiddingOpen,
+			BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+			Created:         row.CreatedAt.Time,
+			Updated:         row.UpdatedAt.Time,
+			Deleted:         timestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -196,15 +202,21 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 	}()
 
 	qtx := r.q.WithTx(tx)
+	var biddingLockedAt pgtype.Timestamptz
+	if calcutta.BiddingLockedAt != nil {
+		biddingLockedAt = pgtype.Timestamptz{Time: *calcutta.BiddingLockedAt, Valid: true}
+	}
 	params := sqlc.UpdateCalcuttaParams{
-		TournamentID: calcutta.TournamentID,
-		OwnerID:      calcutta.OwnerID,
-		Name:         calcutta.Name,
-		MinTeams:     int32(calcutta.MinTeams),
-		MaxTeams:     int32(calcutta.MaxTeams),
-		MaxBid:       int32(calcutta.MaxBid),
-		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
-		ID:           calcutta.ID,
+		TournamentID:    calcutta.TournamentID,
+		OwnerID:         calcutta.OwnerID,
+		Name:            calcutta.Name,
+		MinTeams:        int32(calcutta.MinTeams),
+		MaxTeams:        int32(calcutta.MaxTeams),
+		MaxBid:          int32(calcutta.MaxBid),
+		BiddingOpen:     calcutta.BiddingOpen,
+		BiddingLockedAt: biddingLockedAt,
+		UpdatedAt:       pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
+		ID:              calcutta.ID,
 	}
 	affected, err := qtx.UpdateCalcutta(ctx, params)
 	if err != nil {
@@ -328,6 +340,30 @@ func (r *CalcuttaRepository) GetPayouts(ctx context.Context, calcuttaID string) 
 		})
 	}
 	return out, nil
+}
+
+func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error {
+	entry.ID = uuid.New().String()
+	now := time.Now()
+	entry.Created = now
+	entry.Updated = now
+
+	var userID pgtype.UUID
+	if entry.UserID != nil {
+		parsed, err := uuid.Parse(*entry.UserID)
+		if err != nil {
+			return err
+		}
+		userID = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	params := sqlc.CreateEntryParams{
+		ID:         entry.ID,
+		Name:       entry.Name,
+		UserID:     userID,
+		CalcuttaID: entry.CalcuttaID,
+	}
+	return r.q.CreateEntry(ctx, params)
 }
 
 func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {

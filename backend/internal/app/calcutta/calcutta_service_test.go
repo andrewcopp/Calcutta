@@ -79,6 +79,10 @@ func (m *MockCalcuttaRepository) GetEntry(ctx context.Context, id string) (*mode
 	return nil, nil
 }
 
+func (m *MockCalcuttaRepository) CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error {
+	return nil
+}
+
 func (m *MockCalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
 	return nil
 }

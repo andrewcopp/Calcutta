@@ -4,6 +4,7 @@ import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
 import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
 import { EntryTeamsPage } from './pages/EntryTeamsPage';
+import { BiddingPage } from './pages/BiddingPage';
 import { TournamentListPage } from './pages/TournamentListPage';
 import { TournamentViewPage } from './pages/TournamentViewPage';
 import { TournamentEditPage } from './pages/TournamentEditPage';
@@ -74,6 +75,7 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas/:calcuttaId" element={<CalcuttaEntriesPage />} />
         <Route path="/calcuttas/:calcuttaId/teams" element={<CalcuttaTeamsPage />} />
         <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<EntryTeamsPage />} />
+        <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<BiddingPage />} />
       </Routes>
     </div>
   );

@@ -41,4 +41,20 @@ export const calcuttaService = {
   async getPortfolioTeams(portfolioId: string): Promise<CalcuttaPortfolioTeam[]> {
     return apiClient.get<CalcuttaPortfolioTeam[]>(`/portfolios/${portfolioId}/teams`);
   },
+
+  async createEntry(calcuttaId: string, name: string, userId?: string): Promise<CalcuttaEntry> {
+    return apiClient.post<CalcuttaEntry>(`/calcuttas/${calcuttaId}/entries`, {
+      name,
+      userId,
+    });
+  },
+
+  async updateEntry(
+    entryId: string,
+    teams: Array<{ teamId: string; bid: number }>
+  ): Promise<CalcuttaEntry> {
+    return apiClient.patch<CalcuttaEntry>(`/entries/${entryId}`, {
+      teams,
+    });
+  },
 }; 

@@ -1,11 +1,11 @@
 -- name: ListCalcuttas :many
-SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at
 FROM core.calcuttas
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: GetCalcuttaByID :one
-SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at
 FROM core.calcuttas
 WHERE id = $1 AND deleted_at IS NULL;
 
@@ -21,8 +21,10 @@ SET tournament_id = $1,
     min_teams = $4,
     max_teams = $5,
     max_bid = $6,
-    updated_at = $7
-WHERE id = $8 AND deleted_at IS NULL;
+    bidding_open = $7,
+    bidding_locked_at = $8,
+    updated_at = $9
+WHERE id = $10 AND deleted_at IS NULL;
 
 -- name: DeleteCalcutta :execrows
 UPDATE core.calcuttas
@@ -31,6 +33,6 @@ SET deleted_at = $1,
 WHERE id = $3 AND deleted_at IS NULL;
 
 -- name: GetCalcuttasByTournament :many
-SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at, deleted_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at, deleted_at
 FROM core.calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL;

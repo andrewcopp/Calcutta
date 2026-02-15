@@ -422,3 +422,41 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenDatabaseURLCannotBeDetermined(t *t
 		t.Fatalf("expected error")
 	}
 }
+
+func TestThatDevModeIsRejectedOutsideDevelopment(t *testing.T) {
+	// GIVEN AUTH_MODE=dev and NODE_ENV=production
+	t.Setenv("AUTH_MODE", "dev")
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/testdb")
+	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("DOTENV_ENABLED", "false")
+
+	// WHEN loading config
+	_, err := LoadConfigFromEnv()
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error when AUTH_MODE=dev outside development")
+	}
+}
+
+func TestThatDevModeIsAllowedInDevelopment(t *testing.T) {
+	// GIVEN AUTH_MODE=dev and NODE_ENV=development
+	t.Setenv("AUTH_MODE", "dev")
+	t.Setenv("NODE_ENV", "development")
+	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/testdb")
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("DOTENV_ENABLED", "false")
+
+	// WHEN loading config
+	cfg, err := LoadConfigFromEnv()
+
+	// THEN no error is returned and auth mode is dev
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if cfg.AuthMode != "dev" {
+		t.Errorf("expected AuthMode=dev, got %q", cfg.AuthMode)
+	}
+}

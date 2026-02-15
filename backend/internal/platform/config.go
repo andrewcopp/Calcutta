@@ -213,6 +213,9 @@ func LoadConfigFromEnv() (Config, error) {
 	if authMode != "legacy" && authMode != "cognito" && authMode != "dev" {
 		return Config{}, fmt.Errorf("invalid AUTH_MODE %q (expected legacy, cognito, dev)", authMode)
 	}
+	if authMode == "dev" && env != "development" {
+		return Config{}, fmt.Errorf("AUTH_MODE=dev is only allowed when NODE_ENV=development")
+	}
 
 	accessTTLSeconds := 900
 	if v := os.Getenv("ACCESS_TOKEN_TTL_SECONDS"); v != "" {

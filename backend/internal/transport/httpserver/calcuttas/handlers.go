@@ -173,6 +173,16 @@ func (h *Handler) HandleUpdateCalcutta(w http.ResponseWriter, r *http.Request) {
 	if req.MaxBid != nil {
 		calcutta.MaxBid = *req.MaxBid
 	}
+	if req.BiddingOpen != nil {
+		calcutta.BiddingOpen = *req.BiddingOpen
+		if !*req.BiddingOpen && calcutta.BiddingLockedAt == nil {
+			now := time.Now()
+			calcutta.BiddingLockedAt = &now
+		}
+		if *req.BiddingOpen {
+			calcutta.BiddingLockedAt = nil
+		}
+	}
 
 	if err := h.app.Calcutta.UpdateCalcutta(r.Context(), calcutta); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
@@ -180,6 +190,74 @@ func (h *Handler) HandleUpdateCalcutta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJSON(w, http.StatusOK, dtos.NewCalcuttaResponse(calcutta))
+}
+
+func (h *Handler) HandleCreateEntry(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	if calcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "id")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	var req dtos.CreateEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanCreateEntry(r.Context(), h.authz, userID, calcutta, tournament, req.UserID, time.Now())
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	entryUserID := &userID
+	if req.UserID != nil {
+		entryUserID = req.UserID
+	}
+
+	entry := &models.CalcuttaEntry{
+		Name:       strings.TrimSpace(req.Name),
+		UserID:     entryUserID,
+		CalcuttaID: calcuttaID,
+	}
+
+	if err := h.app.Calcutta.CreateEntry(r.Context(), entry); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusCreated, dtos.NewEntryResponse(entry))
 }
 
 func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Request) {
@@ -335,6 +413,146 @@ func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.WriteJSON(w, http.StatusOK, dtos.NewEntryTeamListResponse(updatedTeams))
+}
+
+func (h *Handler) HandleCreateInvitation(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	if calcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "id")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	var req dtos.CreateInvitationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanInviteToCalcutta(r.Context(), h.authz, userID, calcutta)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	invitation := &models.CalcuttaInvitation{
+		CalcuttaID: calcuttaID,
+		UserID:     strings.TrimSpace(req.UserID),
+		InvitedBy:  userID,
+	}
+
+	if err := h.app.Calcutta.InviteUser(r.Context(), invitation); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusCreated, dtos.NewInvitationResponse(invitation))
+}
+
+func (h *Handler) HandleListInvitations(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	if calcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "id")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanInviteToCalcutta(r.Context(), h.authz, userID, calcutta)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	invitations, err := h.app.Calcutta.ListInvitations(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, dtos.NewInvitationListResponse(invitations))
+}
+
+func (h *Handler) HandleAcceptInvitation(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	invitationID := vars["invitationId"]
+	if calcuttaID == "" || invitationID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID and Invitation ID are required", "")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	invitation, err := h.app.Calcutta.GetInvitationByCalcuttaAndUser(r.Context(), calcuttaID, userID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if invitation.ID != invitationID {
+		httperr.Write(w, r, http.StatusNotFound, "not_found", "Invitation not found", "")
+		return
+	}
+	if invitation.Status != "pending" {
+		httperr.Write(w, r, http.StatusBadRequest, "already_processed", "Invitation has already been processed", "")
+		return
+	}
+
+	if err := h.app.Calcutta.AcceptInvitation(r.Context(), invitationID); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	invitation.Status = "accepted"
+	response.WriteJSON(w, http.StatusOK, dtos.NewInvitationResponse(invitation))
 }
 
 func (h *Handler) HandleListEntryPortfolios(w http.ResponseWriter, r *http.Request) {

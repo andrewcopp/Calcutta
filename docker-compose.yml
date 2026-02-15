@@ -43,6 +43,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - AUTH_MODE=${AUTH_MODE:-legacy}
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
     depends_on:

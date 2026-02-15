@@ -11,8 +11,8 @@ func (r *AcceptInviteRequest) Validate() error {
 	if strings.TrimSpace(r.Token) == "" {
 		return ErrFieldRequired("token")
 	}
-	if strings.TrimSpace(r.Password) == "" {
-		return ErrFieldRequired("password")
+	if err := ValidatePassword(r.Password); err != nil {
+		return err
 	}
 	return nil
 }

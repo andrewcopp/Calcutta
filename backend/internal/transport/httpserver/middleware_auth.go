@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.AuthMode == "dev" {
 			if userID := strings.TrimSpace(r.Header.Get("X-Dev-User")); userID != "" {
+				slog.Warn("dev_auth_bypass", "user_id", userID, "header", "X-Dev-User")
 				if s.pool == nil {
 					ctx := context.WithValue(r.Context(), authUserIDKey, userID)
 					next.ServeHTTP(w, r.WithContext(ctx))

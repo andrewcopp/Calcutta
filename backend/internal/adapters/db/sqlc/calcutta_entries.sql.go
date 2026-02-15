@@ -11,6 +11,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createEntry = `-- name: CreateEntry :exec
+INSERT INTO core.entries (id, name, user_id, calcutta_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+`
+
+type CreateEntryParams struct {
+	ID         string
+	Name       string
+	UserID     pgtype.UUID
+	CalcuttaID string
+}
+
+func (q *Queries) CreateEntry(ctx context.Context, arg CreateEntryParams) error {
+	_, err := q.db.Exec(ctx, createEntry,
+		arg.ID,
+		arg.Name,
+		arg.UserID,
+		arg.CalcuttaID,
+	)
+	return err
+}
+
 const getEntryByID = `-- name: GetEntryByID :one
 SELECT
     id,

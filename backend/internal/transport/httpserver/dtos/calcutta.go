@@ -30,40 +30,45 @@ func (r *CreateCalcuttaRequest) ToModel() *models.Calcutta {
 }
 
 type CalcuttaResponse struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	TournamentID string    `json:"tournamentId"`
-	OwnerID      string    `json:"ownerId"`
-	MinTeams     int       `json:"minTeams"`
-	MaxTeams     int       `json:"maxTeams"`
-	MaxBid       int       `json:"maxBid"`
-	Created      time.Time `json:"created"`
-	Updated      time.Time `json:"updated"`
+	ID              string     `json:"id"`
+	Name            string     `json:"name"`
+	TournamentID    string     `json:"tournamentId"`
+	OwnerID         string     `json:"ownerId"`
+	MinTeams        int        `json:"minTeams"`
+	MaxTeams        int        `json:"maxTeams"`
+	MaxBid          int        `json:"maxBid"`
+	BiddingOpen     bool       `json:"biddingOpen"`
+	BiddingLockedAt *time.Time `json:"biddingLockedAt,omitempty"`
+	Created         time.Time  `json:"created"`
+	Updated         time.Time  `json:"updated"`
 }
 
 func NewCalcuttaResponse(c *models.Calcutta) *CalcuttaResponse {
 	return &CalcuttaResponse{
-		ID:           c.ID,
-		Name:         c.Name,
-		TournamentID: c.TournamentID,
-		OwnerID:      c.OwnerID,
-		MinTeams:     c.MinTeams,
-		MaxTeams:     c.MaxTeams,
-		MaxBid:       c.MaxBid,
-		Created:      c.Created,
-		Updated:      c.Updated,
+		ID:              c.ID,
+		Name:            c.Name,
+		TournamentID:    c.TournamentID,
+		OwnerID:         c.OwnerID,
+		MinTeams:        c.MinTeams,
+		MaxTeams:        c.MaxTeams,
+		MaxBid:          c.MaxBid,
+		BiddingOpen:     c.BiddingOpen,
+		BiddingLockedAt: c.BiddingLockedAt,
+		Created:         c.Created,
+		Updated:         c.Updated,
 	}
 }
 
 type UpdateCalcuttaRequest struct {
-	Name     *string `json:"name,omitempty"`
-	MinTeams *int    `json:"minTeams,omitempty"`
-	MaxTeams *int    `json:"maxTeams,omitempty"`
-	MaxBid   *int    `json:"maxBid,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	MinTeams    *int    `json:"minTeams,omitempty"`
+	MaxTeams    *int    `json:"maxTeams,omitempty"`
+	MaxBid      *int    `json:"maxBid,omitempty"`
+	BiddingOpen *bool   `json:"biddingOpen,omitempty"`
 }
 
 func (r *UpdateCalcuttaRequest) Validate() error {
-	if r.Name == nil && r.MinTeams == nil && r.MaxTeams == nil && r.MaxBid == nil {
+	if r.Name == nil && r.MinTeams == nil && r.MaxTeams == nil && r.MaxBid == nil && r.BiddingOpen == nil {
 		return ErrFieldInvalid("body", "at least one field must be provided")
 	}
 	if r.Name != nil && strings.TrimSpace(*r.Name) == "" {

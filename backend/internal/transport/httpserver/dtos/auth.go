@@ -39,8 +39,8 @@ func (r *SignupRequest) Validate() error {
 	if strings.TrimSpace(r.LastName) == "" {
 		return ErrFieldRequired("lastName")
 	}
-	if strings.TrimSpace(r.Password) == "" {
-		return ErrFieldRequired("password")
+	if err := ValidatePassword(r.Password); err != nil {
+		return err
 	}
 	return nil
 }

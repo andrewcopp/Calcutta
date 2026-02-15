@@ -57,3 +57,7 @@ SELECT
     deleted_at
 FROM core.entries
 WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: CreateEntry :exec
+INSERT INTO core.entries (id, name, user_id, calcutta_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW());

@@ -32,16 +32,19 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	}
 
 	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)
+	invitationRepo := dbadapters.NewCalcuttaInvitationRepository(pool)
 	calcuttaService := appcalcutta.New(appcalcutta.Ports{
-		CalcuttaReader:  calcuttaRepo,
-		CalcuttaWriter:  calcuttaRepo,
-		EntryReader:     calcuttaRepo,
-		EntryWriter:     calcuttaRepo,
-		PayoutReader:    calcuttaRepo,
-		PortfolioReader: calcuttaRepo,
-		RoundReader:     calcuttaRepo,
-		RoundWriter:     calcuttaRepo,
-		TeamReader:      calcuttaRepo,
+		CalcuttaReader:   calcuttaRepo,
+		CalcuttaWriter:   calcuttaRepo,
+		EntryReader:      calcuttaRepo,
+		EntryWriter:      calcuttaRepo,
+		PayoutReader:     calcuttaRepo,
+		PortfolioReader:  calcuttaRepo,
+		RoundReader:      calcuttaRepo,
+		RoundWriter:      calcuttaRepo,
+		TeamReader:       calcuttaRepo,
+		InvitationReader: invitationRepo,
+		InvitationWriter: invitationRepo,
 	})
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)

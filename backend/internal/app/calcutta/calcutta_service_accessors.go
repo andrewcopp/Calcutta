@@ -168,6 +168,10 @@ func (s *Service) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntr
 	return s.ports.EntryReader.GetEntry(ctx, id)
 }
 
+func (s *Service) CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error {
+	return s.ports.EntryWriter.CreateEntry(ctx, entry)
+}
+
 func (s *Service) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
 	return s.ports.EntryWriter.ReplaceEntryTeams(ctx, entryID, teams)
 }

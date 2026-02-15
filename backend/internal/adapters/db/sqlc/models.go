@@ -52,17 +52,30 @@ type CoreBundleUpload struct {
 }
 
 type CoreCalcutta struct {
-	ID           string
-	TournamentID string
-	OwnerID      string
-	Name         string
-	MinTeams     int32
-	MaxTeams     int32
-	MaxBid       int32
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	BudgetPoints int32
+	ID              string
+	TournamentID    string
+	OwnerID         string
+	Name            string
+	MinTeams        int32
+	MaxTeams        int32
+	MaxBid          int32
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
+	BudgetPoints    int32
+	BiddingOpen     bool
+	BiddingLockedAt pgtype.Timestamptz
+}
+
+type CoreCalcuttaInvitation struct {
+	ID         string
+	CalcuttaID string
+	UserID     string
+	InvitedBy  string
+	Status     string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type CoreCalcuttaScoringRule struct {

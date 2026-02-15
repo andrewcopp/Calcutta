@@ -47,6 +47,18 @@ func NewEntryListResponse(entries []*models.CalcuttaEntry) []*EntryResponse {
 	return responses
 }
 
+type CreateEntryRequest struct {
+	Name   string  `json:"name"`
+	UserID *string `json:"userId,omitempty"`
+}
+
+func (r *CreateEntryRequest) Validate() error {
+	if strings.TrimSpace(r.Name) == "" {
+		return ErrFieldRequired("name")
+	}
+	return nil
+}
+
 type UpdateEntryTeamRequest struct {
 	TeamID string `json:"teamId"`
 	Bid    int    `json:"bid"`
