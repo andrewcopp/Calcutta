@@ -29,5 +29,6 @@ export const queryKeys = {
     entryTeamsPage: (calcuttaId: string | null | undefined, entryId: string | null | undefined) =>
       ['entryTeamsPage', calcuttaId ?? null, entryId ?? null] as const,
     settings: (calcuttaId: string | null | undefined) => ['calcuttaSettings', calcuttaId ?? null] as const,
+    payouts: (calcuttaId: string | null | undefined) => ['calcuttaPayouts', calcuttaId ?? null] as const,
   },
 };

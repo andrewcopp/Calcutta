@@ -6,6 +6,7 @@ import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -73,6 +74,12 @@ export function CreateCalcuttaPage() {
   return (
     <PageContainer>
       <div className="max-w-2xl mx-auto">
+        <Breadcrumb
+          items={[
+            { label: 'Calcuttas', href: '/calcuttas' },
+            { label: 'Create' },
+          ]}
+        />
         <PageHeader
           title="Create New Calcutta"
           actions={

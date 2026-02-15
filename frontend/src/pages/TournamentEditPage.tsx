@@ -8,6 +8,7 @@ import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -191,6 +192,13 @@ export const TournamentEditPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Tournaments', href: '/admin/tournaments' },
+          { label: tournament.name, href: `/admin/tournaments/${id}` },
+          { label: 'Edit' },
+        ]}
+      />
       <PageHeader
         title={`Edit Tournament: ${tournament.name}`}
         subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}

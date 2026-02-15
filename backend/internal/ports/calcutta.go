@@ -50,6 +50,10 @@ type PayoutReader interface {
 	GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error)
 }
 
+type PayoutWriter interface {
+	ReplacePayouts(ctx context.Context, calcuttaID string, payouts []*models.CalcuttaPayout) error
+}
+
 type CalcuttaInvitationReader interface {
 	ListInvitations(ctx context.Context, calcuttaID string) ([]*models.CalcuttaInvitation, error)
 	GetInvitationByCalcuttaAndUser(ctx context.Context, calcuttaID, userID string) (*models.CalcuttaInvitation, error)

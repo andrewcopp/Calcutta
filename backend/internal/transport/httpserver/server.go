@@ -17,16 +17,17 @@ import (
 )
 
 type Server struct {
-	app          *app.App
-	authRepo     *dbadapters.AuthRepository
-	authzRepo    *dbadapters.AuthorizationRepository
-	userRepo     *dbadapters.UserRepository
-	apiKeysRepo  *dbadapters.APIKeysRepository
-	tokenManager *auth.TokenManager
-	cognitoJWT   *cognitoJWTVerifier
-	pool         *pgxpool.Pool
-	cfg          platform.Config
-	emailSender  platform.EmailSender
+	app              *app.App
+	authRepo         *dbadapters.AuthRepository
+	authzRepo        *dbadapters.AuthorizationRepository
+	userRepo         *dbadapters.UserRepository
+	apiKeysRepo      *dbadapters.APIKeysRepository
+	idempotencyRepo  *dbadapters.IdempotencyRepository
+	tokenManager     *auth.TokenManager
+	cognitoJWT       *cognitoJWTVerifier
+	pool             *pgxpool.Pool
+	cfg              platform.Config
+	emailSender      platform.EmailSender
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
@@ -34,6 +35,7 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 	authzRepo := dbadapters.NewAuthorizationRepository(pool)
 	userRepo := dbadapters.NewUserRepository(pool)
 	apiKeysRepo := dbadapters.NewAPIKeysRepository(pool)
+	idempotencyRepo := dbadapters.NewIdempotencyRepository(pool)
 
 	a, tm, err := appbootstrap.NewApp(pool, cfg, authRepo, authzRepo)
 	if err != nil {
@@ -63,16 +65,17 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 	}
 
 	return &Server{
-		app:          a,
-		authRepo:     authRepo,
-		authzRepo:    authzRepo,
-		userRepo:     userRepo,
-		apiKeysRepo:  apiKeysRepo,
-		tokenManager: tm,
-		cognitoJWT:   cognitoJWT,
-		pool:         pool,
-		cfg:          cfg,
-		emailSender:  emailSender,
+		app:             a,
+		authRepo:        authRepo,
+		authzRepo:       authzRepo,
+		userRepo:        userRepo,
+		apiKeysRepo:     apiKeysRepo,
+		idempotencyRepo: idempotencyRepo,
+		tokenManager:    tm,
+		cognitoJWT:      cognitoJWT,
+		pool:            pool,
+		cfg:             cfg,
+		emailSender:     emailSender,
 	}, nil
 }
 

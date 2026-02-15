@@ -88,6 +88,18 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 		return
 	}
+
+	// Validate tournament has a start time (required for bidding-lock logic)
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if tournament.StartingAt == nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament must have a start time before creating a pool", "tournamentId")
+		return
+	}
+
 	if calcutta.MinTeams == 0 {
 		calcutta.MinTeams = 3
 	}
@@ -622,6 +634,105 @@ func (h *Handler) HandleListEntryPortfolios(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	response.WriteJSON(w, http.StatusOK, dtos.NewPortfolioListResponse(portfolios))
+}
+
+type payoutItem struct {
+	Position    int `json:"position"`
+	AmountCents int `json:"amountCents"`
+}
+
+type replacePayoutsRequest struct {
+	Payouts []payoutItem `json:"payouts"`
+}
+
+func (h *Handler) HandleListPayouts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	if calcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "id")
+		return
+	}
+
+	payouts, err := h.app.Calcutta.GetPayouts(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	items := make([]payoutItem, 0, len(payouts))
+	for _, p := range payouts {
+		items = append(items, payoutItem{Position: p.Position, AmountCents: p.AmountCents})
+	}
+	response.WriteJSON(w, http.StatusOK, map[string]any{"payouts": items})
+}
+
+func (h *Handler) HandleReplacePayouts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	calcuttaID := vars["id"]
+	if calcuttaID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Calcutta ID is required", "id")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	// Only owner or admin can modify payouts
+	if calcutta.OwnerID != userID {
+		ok, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		if !ok {
+			httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
+			return
+		}
+	}
+
+	var req replacePayoutsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+
+	payouts := make([]*models.CalcuttaPayout, 0, len(req.Payouts))
+	for _, p := range req.Payouts {
+		payouts = append(payouts, &models.CalcuttaPayout{
+			CalcuttaID:  calcuttaID,
+			Position:    p.Position,
+			AmountCents: p.AmountCents,
+		})
+	}
+
+	if err := h.app.Calcutta.ReplacePayouts(r.Context(), calcuttaID, payouts); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	updated, err := h.app.Calcutta.GetPayouts(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	items := make([]payoutItem, 0, len(updated))
+	for _, p := range updated {
+		items = append(items, payoutItem{Position: p.Position, AmountCents: p.AmountCents})
+	}
+	response.WriteJSON(w, http.StatusOK, map[string]any{"payouts": items})
 }
 
 func (h *Handler) HandleReinvite(w http.ResponseWriter, r *http.Request) {

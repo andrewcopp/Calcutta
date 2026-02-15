@@ -11,6 +11,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { LoadingState } from '../components/ui/LoadingState';
+import { SettingsSkeleton } from '../components/skeletons/SettingsSkeleton';
 
 export function CalcuttaSettingsPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
@@ -45,6 +46,33 @@ export function CalcuttaSettingsPage() {
     });
   }
 
+  const payoutsQuery = useQuery({
+    queryKey: queryKeys.calcuttas.payouts(calcuttaId),
+    enabled: Boolean(calcuttaId),
+    staleTime: 30_000,
+    queryFn: () => calcuttaService.getPayouts(calcuttaId!),
+  });
+
+  const [payoutRows, setPayoutRows] = useState<Array<{ position: number; amountCents: number }> | null>(null);
+
+  // Initialize payout form when data loads
+  const payoutsData = payoutsQuery.data;
+  if (payoutsData && !payoutRows) {
+    setPayoutRows(payoutsData.payouts.length > 0 ? [...payoutsData.payouts] : [{ position: 1, amountCents: 0 }]);
+  }
+
+  const payoutMutation = useMutation({
+    mutationFn: (payouts: Array<{ position: number; amountCents: number }>) => {
+      return calcuttaService.replacePayouts(calcuttaId!, payouts);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.payouts(calcuttaId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entriesPage(calcuttaId) });
+      setSuccessMessage('Payouts saved successfully.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof calcuttaService.updateCalcutta>[1]) => {
       return calcuttaService.updateCalcutta(calcuttaId!, updates);
@@ -74,7 +102,7 @@ export function CalcuttaSettingsPage() {
   if (calcuttaQuery.isLoading) {
     return (
       <PageContainer>
-        <LoadingState label="Loading settings..." />
+        <SettingsSkeleton />
       </PageContainer>
     );
   }
@@ -201,6 +229,67 @@ export function CalcuttaSettingsPage() {
             </Button>
           </div>
         </form>
+      </Card>
+
+      <PageHeader title="Payout Structure" className="mt-8" />
+
+      {payoutMutation.isError && (
+        <Alert variant="error" className="mb-4">
+          {payoutMutation.error instanceof Error ? payoutMutation.error.message : 'Failed to save payouts'}
+        </Alert>
+      )}
+
+      <Card>
+        {payoutsQuery.isLoading ? (
+          <LoadingState label="Loading payouts..." />
+        ) : payoutRows ? (
+          <div className="space-y-4">
+            {payoutRows.map((row, idx) => (
+              <div key={idx} className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700 w-8">{row.position}.</span>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="Amount (cents)"
+                    value={row.amountCents}
+                    onChange={(e) => {
+                      const updated = [...payoutRows];
+                      updated[idx] = { ...updated[idx], amountCents: parseInt(e.target.value) || 0 };
+                      setPayoutRows(updated);
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPayoutRows(payoutRows.filter((_, i) => i !== idx))}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setPayoutRows([...payoutRows, { position: payoutRows.length + 1, amountCents: 0 }])
+                }
+              >
+                Add Position
+              </Button>
+              <Button
+                type="button"
+                loading={payoutMutation.isPending}
+                onClick={() => payoutMutation.mutate(payoutRows)}
+              >
+                Save Payouts
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Card>
     </PageContainer>
   );

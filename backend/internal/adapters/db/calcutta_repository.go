@@ -11,6 +11,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -382,6 +383,49 @@ func (r *CalcuttaRepository) GetPayouts(ctx context.Context, calcuttaID string) 
 	return out, nil
 }
 
+func (r *CalcuttaRepository) ReplacePayouts(ctx context.Context, calcuttaID string, payouts []*models.CalcuttaPayout) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	now := time.Now()
+
+	// Soft-delete existing payouts
+	_, err = tx.Exec(ctx,
+		`UPDATE core.payouts SET deleted_at = $1, updated_at = $1 WHERE calcutta_id = $2 AND deleted_at IS NULL`,
+		now, calcuttaID,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Insert new payouts
+	for _, p := range payouts {
+		if p == nil {
+			continue
+		}
+		id := uuid.New().String()
+		_, err = tx.Exec(ctx,
+			`INSERT INTO core.payouts (id, calcutta_id, position, amount_cents, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
+			id, calcuttaID, p.Position, p.AmountCents, now,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error {
 	entry.ID = uuid.New().String()
 	now := time.Now()
@@ -403,7 +447,14 @@ func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.Calc
 		UserID:     userID,
 		CalcuttaID: entry.CalcuttaID,
 	}
-	return r.q.CreateEntry(ctx, params)
+	if err := r.q.CreateEntry(ctx, params); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return &apperrors.AlreadyExistsError{Resource: "entry", Field: "user_id"}
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {

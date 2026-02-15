@@ -9,6 +9,7 @@ import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
@@ -131,6 +132,12 @@ export const TournamentViewPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Tournaments', href: '/admin/tournaments' },
+          { label: tournament.name },
+        ]}
+      />
       <PageHeader
         title={tournament.name}
         subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}

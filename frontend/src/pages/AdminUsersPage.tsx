@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -47,6 +48,12 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Users' },
+        ]}
+      />
       <PageHeader
         title="Admin: Users"
         subtitle="List of all users and their effective global labels/permissions."

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { API_URL, apiClient } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -171,6 +172,12 @@ export const AdminBundlesPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Bundles' },
+        ]}
+      />
       <PageHeader title="Admin: Bundles" />
 
       <Card className="mb-6">

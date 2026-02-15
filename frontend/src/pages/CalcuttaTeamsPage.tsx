@@ -4,8 +4,9 @@ import { CalcuttaEntryTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Card } from '../components/ui/Card';
-import { LoadingState } from '../components/ui/LoadingState';
+import { CalcuttaTeamsSkeleton } from '../components/skeletons/CalcuttaTeamsSkeleton';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 
@@ -93,7 +94,7 @@ export function CalcuttaTeamsPage() {
   if (calcuttaTeamsQuery.isLoading) {
     return (
       <PageContainer>
-        <LoadingState label="Loading teams..." />
+        <CalcuttaTeamsSkeleton />
       </PageContainer>
     );
   }
@@ -112,6 +113,13 @@ export function CalcuttaTeamsPage() {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: calcuttaName || 'Pool', href: `/calcuttas/${calcuttaId}` },
+          { label: 'Teams' },
+        ]}
+      />
       <PageHeader
         title={`${calcuttaName} - Teams`}
         actions={

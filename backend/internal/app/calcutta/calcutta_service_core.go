@@ -10,6 +10,7 @@ type Ports struct {
 	EntryReader       ports.EntryReader
 	EntryWriter       ports.EntryWriter
 	PayoutReader      ports.PayoutReader
+	PayoutWriter      ports.PayoutWriter
 	PortfolioReader   ports.PortfolioReader
 	RoundReader       ports.RoundReader
 	RoundWriter       ports.RoundWriter

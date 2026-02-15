@@ -11,6 +11,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/pkg/models"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -192,5 +193,44 @@ func (s *Server) requirePermission(permissionKey string, next http.HandlerFunc) 
 		}
 
 		next(w, r)
+	}
+}
+
+// requirePermissionWithScope checks global grants first, then falls back to
+// a tournament-scoped grant extracted from the URL path variable.
+func (s *Server) requirePermissionWithScope(permissionKey, pathVar string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := authUserID(r.Context())
+		if userID == "" {
+			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+			return
+		}
+
+		// Check global permission first.
+		ok, err := s.authzRepo.HasPermission(r.Context(), userID, "global", "", permissionKey)
+		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		if ok {
+			next(w, r)
+			return
+		}
+
+		// Fall back to tournament-scoped permission.
+		scopeID := mux.Vars(r)[pathVar]
+		if scopeID != "" {
+			ok, err = s.authzRepo.HasPermission(r.Context(), userID, "tournament", scopeID, permissionKey)
+			if err != nil {
+				writeErrorFromErr(w, r, err)
+				return
+			}
+			if ok {
+				next(w, r)
+				return
+			}
+		}
+
+		writeError(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
 	}
 }

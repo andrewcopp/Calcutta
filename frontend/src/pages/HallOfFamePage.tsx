@@ -5,6 +5,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
@@ -158,6 +159,12 @@ export const HallOfFamePage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Hall of Fame' },
+        ]}
+      />
       <PageHeader
         title="Hall of Fame"
         subtitle="Leaderboards across all calcuttas (normalized for year-to-year comparisons)."

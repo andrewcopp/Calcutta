@@ -6,6 +6,7 @@ import { adminService } from '../services/adminService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -108,6 +109,12 @@ export const TournamentCreatePage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Tournaments', href: '/admin/tournaments' },
+          { label: 'Create' },
+        ]}
+      />
       <PageHeader
         title="Create New Tournament"
         actions={

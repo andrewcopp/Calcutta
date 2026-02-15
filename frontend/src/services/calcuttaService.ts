@@ -60,4 +60,12 @@ export const calcuttaService = {
       teams,
     });
   },
-}; 
+
+  async getPayouts(calcuttaId: string): Promise<{ payouts: Array<{ position: number; amountCents: number }> }> {
+    return apiClient.get(`/calcuttas/${calcuttaId}/payouts`);
+  },
+
+  async replacePayouts(calcuttaId: string, payouts: Array<{ position: number; amountCents: number }>): Promise<{ payouts: Array<{ position: number; amountCents: number }> }> {
+    return apiClient.put(`/calcuttas/${calcuttaId}/payouts`, { payouts });
+  },
+};

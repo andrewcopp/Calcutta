@@ -90,6 +90,18 @@ func WriteFromErr(w http.ResponseWriter, r *http.Request, err error, authUserID 
 		return
 	}
 
+	var forbiddenErr *apperrors.ForbiddenError
+	if errors.As(err, &forbiddenErr) {
+		Write(w, r, http.StatusForbidden, "forbidden", forbiddenErr.Error(), "")
+		return
+	}
+
+	var conflictErr *apperrors.ConflictError
+	if errors.As(err, &conflictErr) {
+		Write(w, r, http.StatusConflict, "conflict", conflictErr.Error(), "")
+		return
+	}
+
 	userID := ""
 	if authUserID != nil {
 		userID = authUserID(r.Context())

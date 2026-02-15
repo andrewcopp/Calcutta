@@ -20,6 +20,8 @@ type Handlers struct {
 	ListEntryPortfolios http.HandlerFunc
 	UpdateEntry         http.HandlerFunc
 	Reinvite            http.HandlerFunc
+	ListPayouts         http.HandlerFunc
+	ReplacePayouts      http.HandlerFunc
 }
 
 func RegisterRoutes(r *mux.Router, h Handlers) {
@@ -33,6 +35,8 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/calcuttas/{id}/invitations", h.ListInvitations).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{id}/invitations/{invitationId}/accept", h.AcceptInvitation).Methods("POST")
 	r.HandleFunc("/api/calcuttas/{id}/reinvite", h.Reinvite).Methods("POST")
+	r.HandleFunc("/api/calcuttas/{id}/payouts", h.ListPayouts).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id}/payouts", h.ReplacePayouts).Methods("PUT")
 	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", h.ListEntryTeams).Methods("GET")
 	r.HandleFunc("/api/entries/{id}/portfolios", h.ListEntryPortfolios).Methods("GET")
 	r.HandleFunc("/api/entries/{id}", h.UpdateEntry).Methods("PATCH")

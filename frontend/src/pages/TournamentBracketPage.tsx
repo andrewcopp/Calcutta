@@ -8,6 +8,7 @@ import { tournamentService } from '../services/tournamentService';
 import { BracketGameCard } from '../components/BracketGameCard';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -197,6 +198,13 @@ export const TournamentBracketPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Tournaments', href: '/admin/tournaments' },
+          { label: tournament?.name ?? 'Tournament', href: `/admin/tournaments/${id}` },
+          { label: 'Bracket' },
+        ]}
+      />
       {/* Header */}
       <PageHeader
         title={`${tournament?.name ?? 'Tournament'} - Bracket`}

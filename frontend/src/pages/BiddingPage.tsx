@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Alert } from '../components/ui/Alert';
-import { LoadingState } from '../components/ui/LoadingState';
+import { BiddingSkeleton } from '../components/skeletons/BiddingSkeleton';
 import { Button } from '../components/ui/Button';
 import { BudgetTracker } from '../components/Bidding/BudgetTracker';
 import { TeamBidRow } from '../components/Bidding/TeamBidRow';
@@ -224,7 +224,7 @@ export function BiddingPage() {
   if (biddingQuery.isLoading) {
     return (
       <PageContainer>
-        <LoadingState label="Loading bidding page..." />
+        <BiddingSkeleton />
       </PageContainer>
     );
   }

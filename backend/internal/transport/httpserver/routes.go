@@ -1,6 +1,9 @@
 package httpserver
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/calcuttas"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/lab"
@@ -14,6 +17,13 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	if s.cfg.AuthMode != "cognito" {
 		s.registerAuthRoutes(r)
 	}
+
+	// API v1 path rewrite: /api/v1/* → /api/* (both paths work identically)
+	r.PathPrefix("/api/v1/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		req.URL.Path = "/api/" + strings.TrimPrefix(req.URL.Path, "/api/v1/")
+		req.RequestURI = req.URL.RequestURI()
+		r.ServeHTTP(w, req)
+	})
 
 	protected := r.NewRoute().Subrouter()
 	protected.Use(s.requireAuthMiddleware)
@@ -61,8 +71,10 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		AcceptInvitation:    cHandler.HandleAcceptInvitation,
 		ListEntryTeams:      cHandler.HandleListEntryTeams,
 		ListEntryPortfolios: cHandler.HandleListEntryPortfolios,
-		UpdateEntry:         cHandler.HandleUpdateEntry,
+		UpdateEntry:         idempotencyMiddleware(s.idempotencyRepo, cHandler.HandleUpdateEntry),
 		Reinvite:            cHandler.HandleReinvite,
+		ListPayouts:         cHandler.HandleListPayouts,
+		ReplacePayouts:      cHandler.HandleReplacePayouts,
 	})
 
 	// Lab endpoints (lab.* schema)
@@ -85,6 +97,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		GetEvaluationEntryProfile:  s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluationEntryProfile),
 	})
 
+	s.registerTournamentModeratorRoutes(r)
 	s.registerAnalyticsRoutes(r)
 	s.registerHallOfFameRoutes(r)
 }
@@ -102,12 +115,18 @@ func (s *Server) registerBracketRoutes(r *mux.Router) {
 	// Bracket management
 	r.HandleFunc("/api/tournaments/{id}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/tournaments/{id}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermission("tournament.game.write", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermission("tournament.game.write", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournamentId", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournamentId", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerPortfolioRoutes(r *mux.Router) {
 	r.HandleFunc("/api/portfolios/{id}/teams", s.portfolioTeamsHandler).Methods("GET")
+}
+
+func (s *Server) registerTournamentModeratorRoutes(r *mux.Router) {
+	r.HandleFunc("/api/tournaments/{id}/moderators", s.requirePermission("tournament.game.write", s.listTournamentModeratorsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{id}/moderators", s.requirePermission("tournament.game.write", s.grantTournamentModeratorHandler)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/tournaments/{id}/moderators/{userId}", s.requirePermission("tournament.game.write", s.revokeTournamentModeratorHandler)).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerAnalyticsRoutes(r *mux.Router) {

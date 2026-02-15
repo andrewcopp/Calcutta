@@ -39,6 +39,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 		EntryReader:      calcuttaRepo,
 		EntryWriter:      calcuttaRepo,
 		PayoutReader:     calcuttaRepo,
+		PayoutWriter:     calcuttaRepo,
 		PortfolioReader:  calcuttaRepo,
 		RoundReader:      calcuttaRepo,
 		RoundWriter:      calcuttaRepo,

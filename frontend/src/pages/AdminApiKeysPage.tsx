@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -98,6 +99,12 @@ export const AdminApiKeysPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'API Keys' },
+        ]}
+      />
       <PageHeader
         title="Admin: API Keys"
         subtitle="Create API keys for server-to-server access (e.g. the Python data science client)."
