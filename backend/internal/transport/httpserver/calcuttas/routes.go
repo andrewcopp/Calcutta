@@ -26,22 +26,24 @@ type Handlers struct {
 	ReplacePayouts            http.HandlerFunc
 }
 
+const uuidPattern = `[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`
+
 func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/calcuttas", h.ListCalcuttas).Methods("GET")
 	r.HandleFunc("/api/calcuttas", h.CreateCalcutta).Methods("POST")
 	r.HandleFunc("/api/calcuttas/list-with-rankings", h.ListCalcuttasWithRankings).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}/dashboard", h.GetDashboard).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}", h.GetCalcutta).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}", h.UpdateCalcutta).Methods("PATCH")
-	r.HandleFunc("/api/calcuttas/{id}/entries", h.ListCalcuttaEntries).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}/entries", h.CreateEntry).Methods("POST")
-	r.HandleFunc("/api/calcuttas/{id}/invitations", h.CreateInvitation).Methods("POST")
-	r.HandleFunc("/api/calcuttas/{id}/invitations", h.ListInvitations).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}/invitations/{invitationId}/accept", h.AcceptInvitation).Methods("POST")
-	r.HandleFunc("/api/calcuttas/{id}/reinvite", h.Reinvite).Methods("POST")
-	r.HandleFunc("/api/calcuttas/{id}/payouts", h.ListPayouts).Methods("GET")
-	r.HandleFunc("/api/calcuttas/{id}/payouts", h.ReplacePayouts).Methods("PUT")
-	r.HandleFunc("/api/calcuttas/{calcuttaId}/entries/{entryId}/teams", h.ListEntryTeams).Methods("GET")
-	r.HandleFunc("/api/entries/{id}/portfolios", h.ListEntryPortfolios).Methods("GET")
-	r.HandleFunc("/api/entries/{id}", h.UpdateEntry).Methods("PATCH")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/dashboard", h.GetDashboard).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}", h.GetCalcutta).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}", h.UpdateCalcutta).Methods("PATCH")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/entries", h.ListCalcuttaEntries).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/entries", h.CreateEntry).Methods("POST")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations", h.CreateInvitation).Methods("POST")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations", h.ListInvitations).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations/{invitationId:"+uuidPattern+"}/accept", h.AcceptInvitation).Methods("POST")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/reinvite", h.Reinvite).Methods("POST")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/payouts", h.ListPayouts).Methods("GET")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/payouts", h.ReplacePayouts).Methods("PUT")
+	r.HandleFunc("/api/calcuttas/{calcuttaId:"+uuidPattern+"}/entries/{entryId:"+uuidPattern+"}/teams", h.ListEntryTeams).Methods("GET")
+	r.HandleFunc("/api/entries/{id:"+uuidPattern+"}/portfolios", h.ListEntryPortfolios).Methods("GET")
+	r.HandleFunc("/api/entries/{id:"+uuidPattern+"}", h.UpdateEntry).Methods("PATCH")
 }
