@@ -87,6 +87,7 @@ func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]AP
 		SELECT id, user_id, label, created_at, revoked_at, last_used_at
 		FROM core.api_keys
 		WHERE user_id = $1
+			AND revoked_at IS NULL
 		ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
