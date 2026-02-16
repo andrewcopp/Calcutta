@@ -263,7 +263,7 @@ func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID strin
 			r.params_json,
 			COALESCE(NULLIF(pm.name, ''), NULL) AS model_version
 		FROM derived.game_outcome_runs r
-		LEFT JOIN derived.prediction_models pm ON pm.id = COALESCE(r.prediction_model_id, r.algorithm_id) AND pm.deleted_at IS NULL
+		LEFT JOIN derived.prediction_models pm ON pm.id = r.prediction_model_id AND pm.deleted_at IS NULL
 		WHERE r.id = $1::uuid
 			AND r.deleted_at IS NULL
 		LIMIT 1

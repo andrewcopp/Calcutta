@@ -46,55 +46,6 @@ func (q *Queries) GetPortfolioByID(ctx context.Context, id string) (GetPortfolio
 	return i, err
 }
 
-const listPortfolios = `-- name: ListPortfolios :many
-SELECT
-    id,
-    entry_id,
-    maximum_points::float8 AS maximum_points,
-    created_at::timestamptz AS created_at,
-    updated_at::timestamptz AS updated_at,
-    deleted_at::timestamptz AS deleted_at
-FROM derived.portfolios
-WHERE entry_id = $1 AND deleted_at IS NULL
-ORDER BY created_at DESC
-`
-
-type ListPortfoliosRow struct {
-	ID            string
-	EntryID       string
-	MaximumPoints float64
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	DeletedAt     pgtype.Timestamptz
-}
-
-func (q *Queries) ListPortfolios(ctx context.Context, entryID string) ([]ListPortfoliosRow, error) {
-	rows, err := q.db.Query(ctx, listPortfolios, entryID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListPortfoliosRow
-	for rows.Next() {
-		var i ListPortfoliosRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.EntryID,
-			&i.MaximumPoints,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listPortfoliosByEntryID = `-- name: ListPortfoliosByEntryID :many
 SELECT
     id,

@@ -345,7 +345,6 @@ type DerivedEntrySimulationOutcome struct {
 
 type DerivedGameOutcomeRun struct {
 	ID                string
-	AlgorithmID       string
 	TournamentID      string
 	ParamsJson        []byte
 	GitSha            *string
