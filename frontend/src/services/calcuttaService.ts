@@ -1,5 +1,4 @@
-import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, TournamentTeam } from '../types/calcutta';
-import { School } from '../types/school';
+import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import { apiClient } from '../api/apiClient';
 
 export const calcuttaService = {
@@ -28,14 +27,6 @@ export const calcuttaService = {
 
   async getEntryTeams(entryId: string, calcuttaId: string): Promise<CalcuttaEntryTeam[]> {
     return apiClient.get<CalcuttaEntryTeam[]>(`/calcuttas/${calcuttaId}/entries/${entryId}/teams`);
-  },
-
-  async getSchools(): Promise<School[]> {
-    return apiClient.get<School[]>('/schools');
-  },
-
-  async getTournamentTeams(tournamentId: string): Promise<TournamentTeam[]> {
-    return apiClient.get<TournamentTeam[]>(`/tournaments/${tournamentId}/teams`);
   },
 
   async getPortfoliosByEntry(entryId: string): Promise<CalcuttaPortfolio[]> {

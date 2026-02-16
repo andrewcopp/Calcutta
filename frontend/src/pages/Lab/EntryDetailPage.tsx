@@ -7,7 +7,7 @@ import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { labService } from '../../services/labService';
-import type { EntryDetail, ListEvaluationsResponse } from '../../types/lab';
+import type { EntryDetail, ListEvaluationsResponse, SortDir } from '../../types/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
 
@@ -16,7 +16,6 @@ import { EntryTab, BidSortKey } from './EntryDetail/EntryTab';
 import { EvaluationsTab } from './EntryDetail/EvaluationsTab';
 
 type EntryDetailTabId = 'predictions' | 'entry' | 'evaluations';
-type SortDir = 'asc' | 'desc';
 
 export function EntryDetailPage() {
   // Support both URL patterns:

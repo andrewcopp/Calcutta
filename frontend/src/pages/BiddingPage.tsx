@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
+import { tournamentService } from '../services/tournamentService';
+import { schoolService } from '../services/schoolService';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Alert } from '../components/ui/Alert';
 import { BiddingSkeleton } from '../components/skeletons/BiddingSkeleton';
@@ -46,10 +48,10 @@ export function BiddingPage() {
       const [calcutta, entryTeams, schools] = await Promise.all([
         calcuttaService.getCalcutta(calcuttaId),
         calcuttaService.getEntryTeams(entryId, calcuttaId),
-        calcuttaService.getSchools(),
+        schoolService.getSchools(),
       ]);
 
-      const tournamentTeams = await calcuttaService.getTournamentTeams(calcutta.tournamentId);
+      const tournamentTeams = await tournamentService.getTournamentTeams(calcutta.tournamentId);
 
       const schoolMap = new Map(schools.map((school) => [school.id, school]));
       const teamsWithSchools = tournamentTeams.map((team) => ({

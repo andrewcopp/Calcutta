@@ -19,6 +19,17 @@ export function formatPct(val?: number | null, decimals = 1): string {
   return `${(val * 100).toFixed(decimals)}%`;
 }
 
+/** Format a date string for display. Optionally includes time. */
+export function formatDate(dateStr: string, includeTime = false): string {
+  const d = new Date(dateStr);
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  if (includeTime) {
+    opts.hour = '2-digit';
+    opts.minute = '2-digit';
+  }
+  return d.toLocaleDateString('en-US', opts);
+}
+
 /** Return Tailwind color classes based on a payout multiplier value. */
 export function getPayoutColor(payout?: number | null): string {
   if (payout == null) return 'text-gray-400';

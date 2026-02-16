@@ -2,10 +2,9 @@ import React from 'react';
 
 import { Card } from '../../../components/ui/Card';
 import { cn } from '../../../lib/cn';
-import type { EnrichedPrediction } from '../../../types/lab';
+import type { EnrichedPrediction, SortDir } from '../../../types/lab';
 
 type PredSortKey = 'seed' | 'team' | 'rational' | 'predicted' | 'edge';
-type SortDir = 'asc' | 'desc';
 
 interface PredictionsTabProps {
   predictions: EnrichedPrediction[];

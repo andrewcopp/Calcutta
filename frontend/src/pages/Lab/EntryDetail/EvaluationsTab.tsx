@@ -9,7 +9,7 @@ import { labService } from '../../../services/labService';
 import type { EvaluationEntryResult } from '../../../types/lab';
 import { cn } from '../../../lib/cn';
 import { queryKeys } from '../../../queryKeys';
-import { formatPayoutX, formatPct, getPayoutColor } from '../../../utils/labFormatters';
+import { formatDate, formatPayoutX, formatPct, getPayoutColor } from '../../../utils/labFormatters';
 
 interface Evaluation {
   id: string;
@@ -25,11 +25,6 @@ interface EvaluationsTabProps {
   isLoading: boolean;
   modelName: string;
   calcuttaId: string;
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }: EvaluationsTabProps) {

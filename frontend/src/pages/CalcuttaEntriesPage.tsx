@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Calcutta, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
+import { tournamentService } from '../services/tournamentService';
+import { schoolService } from '../services/schoolService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -33,8 +35,8 @@ export function CalcuttaEntriesPage() {
       const calcutta = await calcuttaService.getCalcutta(calcuttaId);
       const [entriesData, schoolsData, tournamentTeamsData] = await Promise.all([
         calcuttaService.getCalcuttaEntries(calcuttaId),
-        calcuttaService.getSchools(),
-        calcuttaService.getTournamentTeams(calcutta.tournamentId),
+        schoolService.getSchools(),
+        tournamentService.getTournamentTeams(calcutta.tournamentId),
       ]);
 
       const schoolMap = new Map(schoolsData.map((school) => [school.id, school]));

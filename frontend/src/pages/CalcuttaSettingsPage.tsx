@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
@@ -18,6 +18,11 @@ export function CalcuttaSettingsPage() {
   const { user } = useUser();
   const queryClient = useQueryClient();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => { clearTimeout(successTimerRef.current); };
+  }, []);
 
   const calcuttaQuery = useQuery({
     queryKey: queryKeys.calcuttas.settings(calcuttaId),
@@ -75,7 +80,7 @@ export function CalcuttaSettingsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.payouts(calcuttaId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entriesPage(calcuttaId) });
       setSuccessMessage('Payouts saved successfully.');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000);
     },
   });
 
@@ -87,7 +92,7 @@ export function CalcuttaSettingsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.settings(calcuttaId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entriesPage(calcuttaId) });
       setSuccessMessage('Settings saved successfully.');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000);
     },
   });
 

@@ -173,7 +173,6 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
 }
 
 export const apiClient = {
-  request,
   fetch: (path: string, options?: RequestInit) => {
     const url = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 
@@ -190,7 +189,6 @@ export const apiClient = {
 
     return fetchWithAuth(url, init, true);
   },
-  getAccessToken,
   setAccessToken,
   get: <T>(path: string, options?: Omit<RequestOptions, 'method'>) => request<T>(path, { ...options, method: 'GET' }),
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>

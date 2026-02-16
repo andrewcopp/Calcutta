@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { School } from '../types/school';
 import { Tournament } from '../types/calcutta';
-import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
+import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -42,7 +42,7 @@ export const TournamentAddTeamsPage: React.FC = () => {
   const schoolsQuery = useQuery({
     queryKey: queryKeys.schools.all(),
     staleTime: 30_000,
-    queryFn: () => calcuttaService.getSchools(),
+    queryFn: () => schoolService.getSchools(),
   });
 
   const createTeamsMutation = useMutation({

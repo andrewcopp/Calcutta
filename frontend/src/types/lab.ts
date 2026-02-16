@@ -1,3 +1,6 @@
+// Shared utility types
+export type SortDir = 'asc' | 'desc';
+
 // Types for lab.investment_models
 export type InvestmentModel = {
   id: string;

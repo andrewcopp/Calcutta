@@ -14,6 +14,7 @@ import { PipelineStatusTable } from '../../components/Lab/PipelineStatusTable';
 import { labService } from '../../services/labService';
 import type { InvestmentModel, ModelPipelineProgress } from '../../types/lab';
 import { queryKeys } from '../../queryKeys';
+import { formatDate } from '../../utils/labFormatters';
 
 export function ModelDetailPage() {
   const { modelId } = useParams<{ modelId: string }>();
@@ -75,11 +76,6 @@ export function ModelDetailPage() {
   const pipelineProgress = pipelineProgressQuery.data;
 
   const [showParams, setShowParams] = useState(false);
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
 
   // Build cross-calcutta performance data for chart
   const performanceData = (pipelineProgress?.calcuttas ?? [])

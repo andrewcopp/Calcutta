@@ -40,10 +40,10 @@ const AppLayout: React.FC = () => {
     <div className={hideHeader ? 'min-h-screen bg-[#070a12]' : 'min-h-screen bg-gray-100'}>
       {!hideHeader && <Header />}
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/rules" element={<RulesPage />} />
-        <Route path="/calcuttas" element={<CalcuttaListPage />} />
+        <Route path="/" element={<RouteErrorBoundary><HomePage /></RouteErrorBoundary>} />
+        <Route path="/login" element={<RouteErrorBoundary><LoginPage /></RouteErrorBoundary>} />
+        <Route path="/rules" element={<RouteErrorBoundary><RulesPage /></RouteErrorBoundary>} />
+        <Route path="/calcuttas" element={<RouteErrorBoundary><CalcuttaListPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/create" element={<ProtectedRoute><CreateCalcuttaPage /></ProtectedRoute>} />
         <Route path="/lab" element={<RouteErrorBoundary><LabPage /></RouteErrorBoundary>} />
         <Route path="/lab/models/:modelId" element={<RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary>} />

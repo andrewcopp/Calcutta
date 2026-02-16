@@ -11,7 +11,7 @@ import { labService } from '../../services/labService';
 import type { EvaluationDetail, EvaluationEntryResult } from '../../types/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
-import { formatPayoutX, formatPct } from '../../utils/labFormatters';
+import { formatDate, formatPayoutX, formatPct } from '../../utils/labFormatters';
 
 export function EvaluationDetailPage() {
   const { evaluationId } = useParams<{
@@ -33,11 +33,6 @@ export function EvaluationDetailPage() {
 
   const evaluation = evaluationQuery.data;
   const entryResults = entryResultsQuery.data ?? [];
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
 
   if (evaluationQuery.isLoading) {
     return (
@@ -104,7 +99,7 @@ export function EvaluationDetailPage() {
           </div>
           <div>
             <dt className="text-gray-500">Created</dt>
-            <dd className="font-medium">{formatDate(evaluation.created_at)}</dd>
+            <dd className="font-medium">{formatDate(evaluation.created_at, true)}</dd>
           </div>
         </dl>
       </Card>

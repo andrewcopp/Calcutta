@@ -4,10 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Alert } from '../../../components/ui/Alert';
 import { Card } from '../../../components/ui/Card';
 import { cn } from '../../../lib/cn';
-import type { EnrichedBid, EnrichedPrediction } from '../../../types/lab';
+import type { EnrichedBid, EnrichedPrediction, SortDir } from '../../../types/lab';
 
 type BidSortKey = 'seed' | 'team' | 'pred_perf' | 'pred_inv' | 'our_inv' | 'pred_roi' | 'adj_roi';
-type SortDir = 'asc' | 'desc';
 
 interface EntryTabProps {
   bids: EnrichedBid[];

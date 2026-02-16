@@ -5,7 +5,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { TournamentTeam, TournamentModerator } from '../types/calcutta';
 import { School } from '../types/school';
 import { tournamentService } from '../services/tournamentService';
-import { calcuttaService } from '../services/calcuttaService';
+import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
@@ -43,7 +43,7 @@ export const TournamentViewPage: React.FC = () => {
   const schoolsQuery = useQuery({
     queryKey: queryKeys.schools.all(),
     staleTime: 30_000,
-    queryFn: () => calcuttaService.getSchools(),
+    queryFn: () => schoolService.getSchools(),
   });
 
   const schools = useMemo(() => {

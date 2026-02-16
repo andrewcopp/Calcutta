@@ -2,6 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
+import { tournamentService } from '../services/tournamentService';
+import { schoolService } from '../services/schoolService';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
@@ -74,10 +76,10 @@ export function EntryTeamsPage() {
 
       const [teamsData, schoolsData, portfoliosData, allEntriesData, tournamentTeamsData] = await Promise.all([
         calcuttaService.getEntryTeams(entryId, calcuttaId),
-        calcuttaService.getSchools(),
+        schoolService.getSchools(),
         calcuttaService.getPortfoliosByEntry(entryId),
         calcuttaService.getCalcuttaEntries(calcuttaId),
-        calcuttaService.getTournamentTeams(calcutta.tournamentId),
+        tournamentService.getTournamentTeams(calcutta.tournamentId),
       ]);
 
       const currentEntry = allEntriesData.find((e) => e.id === entryId);
