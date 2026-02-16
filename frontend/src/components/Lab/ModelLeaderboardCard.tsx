@@ -3,20 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/cn';
 import { PipelineProgressBar } from './PipelineProgressBar';
 import type { LeaderboardEntry } from '../../types/lab';
-import { formatPayoutX, formatPct } from '../../utils/labFormatters';
+import { formatPayoutX, formatPct, getPayoutColor } from '../../utils/labFormatters';
 
 type ModelLeaderboardCardProps = {
   entry: LeaderboardEntry;
   rank: number;
   totalCalcuttas: number;
 };
-
-function getPayoutColorClass(payout?: number | null): string {
-  if (payout == null) return 'text-gray-500';
-  if (payout >= 1.2) return 'text-green-700';
-  if (payout < 0.9) return 'text-red-600';
-  return 'text-gray-700';
-}
 
 function getTop1ColorClass(p?: number | null): string {
   if (p == null) return 'text-gray-500';
@@ -84,7 +77,7 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
         {/* Avg Payout - hidden on mobile */}
         <div className="hidden md:block flex-shrink-0 w-20 text-center">
           <p className="text-xs text-gray-500">Avg Payout</p>
-          <p className={cn('text-sm font-medium', getPayoutColorClass(entry.avg_mean_payout))}>
+          <p className={cn('text-sm font-medium', getPayoutColor(entry.avg_mean_payout))}>
             {formatPayoutX(entry.avg_mean_payout, 2)}
           </p>
         </div>
@@ -103,7 +96,7 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
         </div>
         <div className="text-center">
           <p className="text-xs text-gray-500">Payout</p>
-          <p className={cn('text-xs font-semibold', getPayoutColorClass(entry.avg_mean_payout))}>
+          <p className={cn('text-xs font-semibold', getPayoutColor(entry.avg_mean_payout))}>
             {formatPayoutX(entry.avg_mean_payout, 2)}
           </p>
         </div>

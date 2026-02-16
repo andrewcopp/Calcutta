@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import type { ModelPipelineProgress } from '../../types/lab';
+import { formatPayoutX } from '../../utils/labFormatters';
 
 type PipelineSummaryProps = {
   progress: ModelPipelineProgress | null;
@@ -35,11 +36,6 @@ export function PipelineSummary({
       </div>
     );
   }
-
-  const formatPayout = (val?: number | null) => {
-    if (val == null) return '-';
-    return `${val.toFixed(3)}x`;
-  };
 
   const completedCount = progress.evaluations_count;
   const totalCount = progress.total_calcuttas;
@@ -124,7 +120,7 @@ export function PipelineSummary({
         </div>
         <div>
           <dt className="text-gray-500">Avg Payout</dt>
-          <dd className="font-medium">{formatPayout(progress.avg_mean_payout)}</dd>
+          <dd className="font-medium">{formatPayoutX(progress.avg_mean_payout)}</dd>
         </div>
       </div>
     </div>

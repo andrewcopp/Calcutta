@@ -1,9 +1,6 @@
 package ports
 
-import (
-	"context"
-	"time"
-)
+import "context"
 
 type SeedAnalyticsData struct {
 	Seed            int
@@ -106,84 +103,6 @@ type CareerLeaderboardData struct {
 	ActiveInLatestCalcutta bool
 }
 
-type CalcuttaPredictedInvestmentData struct {
-	TeamID     string
-	SchoolName string
-	Seed       int
-	Region     string
-	Rational   float64
-	Predicted  float64
-	Delta      float64
-}
-
-type CalcuttaPredictedReturnsData struct {
-	TeamID        string
-	SchoolName    string
-	Seed          int
-	Region        string
-	ProbPI        float64
-	ProbR64       float64
-	ProbR32       float64
-	ProbS16       float64
-	ProbE8        float64
-	ProbFF        float64
-	ProbChamp     float64
-	ExpectedValue float64
-}
-
-type CalcuttaPredictedMarketShareData struct {
-	TeamID         string
-	SchoolName     string
-	Seed           int
-	Region         string
-	RationalShare  float64
-	PredictedShare float64
-	DeltaPercent   float64
-}
-
-type TournamentPredictedAdvancementData struct {
-	TeamID     string
-	SchoolName string
-	Seed       int
-	Region     string
-	ProbPI     float64
-	ReachR64   float64
-	ReachR32   float64
-	ReachS16   float64
-	ReachE8    float64
-	ReachFF    float64
-	ReachChamp float64
-	WinChamp   float64
-}
-
-type CalcuttaSimulatedEntryData struct {
-	TeamID         string
-	SchoolName     string
-	Seed           int
-	Region         string
-	ExpectedPoints float64
-	ExpectedMarket float64
-	OurBid         float64
-}
-
-type Algorithm struct {
-	ID          string
-	Kind        string
-	Name        string
-	Description *string
-	ParamsJSON  []byte
-	CreatedAt   time.Time
-}
-
-type GameOutcomeRun struct {
-	ID           string
-	AlgorithmID  string
-	TournamentID string
-	ParamsJSON   []byte
-	GitSHA       *string
-	CreatedAt    time.Time
-}
-
 type AnalyticsRepo interface {
 	GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error)
 	GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsData, float64, float64, error)
@@ -194,11 +113,4 @@ type AnalyticsRepo interface {
 	GetBestInvestmentBids(ctx context.Context, limit int) ([]InvestmentLeaderboardData, error)
 	GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderboardData, error)
 	GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardData, error)
-	GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedInvestmentData, error)
-	GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedReturnsData, error)
-	GetTournamentPredictedAdvancement(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, []TournamentPredictedAdvancementData, error)
-	GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaID string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedMarketShareData, error)
-	GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryData, error)
-	ListAlgorithms(ctx context.Context, kind *string) ([]Algorithm, error)
-	ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]GameOutcomeRun, error)
 }

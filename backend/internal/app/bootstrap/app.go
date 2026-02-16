@@ -48,9 +48,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 		InvitationWriter: invitationRepo,
 	})
 
-	bracketBuilder := appbracket.NewBracketBuilder()
-
-	analyticsRepo := dbadapters.NewAnalyticsRepository(pool, bracketBuilder)
+	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
 	analyticsService := appanalytics.New(analyticsRepo)
 
 	labRepo := dbadapters.NewLabRepository(pool)

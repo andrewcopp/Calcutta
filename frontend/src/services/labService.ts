@@ -1,32 +1,5 @@
 import { apiClient } from '../api/apiClient';
 
-// Re-export all types from the canonical location so existing
-// `import { SomeType } from '../services/labService'` statements
-// continue to work without changes.
-export type {
-  InvestmentModel,
-  ListModelsResponse,
-  EnrichedPrediction,
-  EnrichedBid,
-  EntryDetail,
-  ListEntriesResponse,
-  EvaluationDetail,
-  ListEvaluationsResponse,
-  EvaluationEntryResult,
-  EvaluationEntryBid,
-  EvaluationEntryProfile,
-  LeaderboardEntry,
-  LeaderboardResponse,
-  GenerateEntriesRequest,
-  GenerateEntriesResponse,
-  StartPipelineRequest,
-  StartPipelineResponse,
-  CalcuttaPipelineStatus,
-  PipelineProgressSummary,
-  PipelineProgressResponse,
-  ModelPipelineProgress,
-} from '../types/lab';
-
 import type {
   InvestmentModel,
   ListModelsResponse,

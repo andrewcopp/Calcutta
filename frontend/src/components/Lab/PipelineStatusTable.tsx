@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CalcuttaPipelineStatus } from '../../types/lab';
+import { formatPayoutX } from '../../utils/labFormatters';
 
 type PipelineStatusTableProps = {
   calcuttas: CalcuttaPipelineStatus[];
@@ -73,11 +74,6 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
       </div>
     );
   }
-
-  const formatPayout = (val?: number | null) => {
-    if (val == null) return '-';
-    return `${val.toFixed(3)}x`;
-  };
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -168,7 +164,7 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
                           c.mean_payout && c.mean_payout >= 1 ? 'text-green-600' : 'text-gray-900'
                         }`}
                       >
-                        {formatPayout(c.mean_payout)}
+                        {formatPayoutX(c.mean_payout)}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>

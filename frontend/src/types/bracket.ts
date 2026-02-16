@@ -19,18 +19,10 @@ export interface BracketGame {
   canSelect: boolean;
 }
 
-export interface FinalFourConfig {
-  topLeftRegion: string;
-  bottomLeftRegion: string;
-  topRightRegion: string;
-  bottomRightRegion: string;
-}
-
 export interface BracketStructure {
   tournamentId: string;
   regions: string[];
   games: BracketGame[];
-  finalFour?: FinalFourConfig;
 }
 
 export type BracketRound = 

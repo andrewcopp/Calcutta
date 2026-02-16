@@ -25,7 +25,6 @@ services:
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
-      - NODE_ENV=${NODE_ENV}
       - DOTENV_ENABLED=false
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
@@ -59,7 +58,6 @@ services:
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
-      - NODE_ENV=${NODE_ENV}
       - DOTENV_ENABLED=false
       - PYTHON_BIN=python3
       - DB_HOST=${DB_HOST}
@@ -85,7 +83,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - NODE_ENV=${NODE_ENV}
       - PYTHON_BIN=python3
-      - PYTHON_MARKET_SHARE_RUNNER=/app/data-science/scripts/run_market_share_runner.py
+      - PYTHON_MARKET_SHARE_RUNNER=/app/data-science/scripts/market_share_job_worker.py
       - MARKET_SHARE_POLL_INTERVAL_SECONDS=2
       - MARKET_SHARE_STALE_AFTER_SECONDS=1800
     depends_on:

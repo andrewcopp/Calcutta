@@ -1,1 +1,1 @@
-"""Database connection and writer modules for analytics tables."""
+"""Database connection and writer modules for database tables."""

@@ -1,8 +1,8 @@
 """
-Database connection pooling for analytics database.
+Database connection pooling.
 
 Provides thread-safe connection pooling for Python services to write
-directly to the analytics Postgres database.
+directly to the Postgres database.
 """
 import os
 import logging
@@ -62,6 +62,9 @@ def get_db_connection():
     conn = _get_connection()
     try:
         yield conn
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         _release_connection(conn)
 

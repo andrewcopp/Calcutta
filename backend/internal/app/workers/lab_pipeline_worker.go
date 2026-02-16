@@ -102,25 +102,25 @@ func (w *LabPipelineWorker) RunWithOptions(ctx context.Context, pollInterval tim
 			// Check for pending pipeline runs to kick off
 			w.checkAndStartPendingPipelines(ctx)
 
-			// Claim and process jobs
-			job, ok, err := w.claimNextLabPipelineJob(ctx, workerID, staleAfter)
-			if err != nil {
-				log.Printf("Error claiming next lab pipeline job: %v", err)
-				continue
-			}
-			if !ok {
-				continue
-			}
-
-			// Acquire semaphore for concurrency control
+			// Acquire semaphore before claiming to avoid orphaned jobs
 			select {
 			case w.sem <- struct{}{}:
+				job, ok, err := w.claimNextLabPipelineJob(ctx, workerID, staleAfter)
+				if err != nil {
+					<-w.sem
+					log.Printf("Error claiming next lab pipeline job: %v", err)
+					continue
+				}
+				if !ok {
+					<-w.sem
+					continue
+				}
 				go func(j *labPipelineJob) {
 					defer func() { <-w.sem }()
 					_ = w.processLabPipelineJob(ctx, workerID, j)
 				}(job)
 			default:
-				// Too many concurrent jobs, skip this tick
+				// At capacity, skip this tick
 			}
 		}
 	}
