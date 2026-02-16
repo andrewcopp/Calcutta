@@ -19,8 +19,8 @@ Data science workflows in `data-science/` commonly produce Parquet artifacts on 
 
 ### Python writes (ML outputs)
 
-- `lab_silver.predicted_game_outcomes`
-- `lab_silver.predicted_market_share`
+- `derived.predicted_game_outcomes`
+- `derived.predicted_market_share`
 
 Python should stay focused on training/inference and writing the prediction artifacts.
 
@@ -66,7 +66,7 @@ export DB_PASSWORD=...
 
 The canonical schemas are `core.*` and `derived.*`.
 
-ML prediction artifacts are written under `lab_silver.*`.
+ML prediction artifacts are written under `derived.*`.
 
 ## Airflow DAG Structure
 

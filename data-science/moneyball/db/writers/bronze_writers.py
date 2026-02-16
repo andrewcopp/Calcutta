@@ -1,7 +1,10 @@
 """
-Bronze layer database writers.
+Bronze layer database lookups.
 
-Write raw tournament and simulation data using UUIDs.
+The lab_bronze schema no longer exists. Tournament and team data now lives
+in core.tournaments / core.teams / core.schools.  These functions preserve
+the original signatures so callers do not break, but they read from core.*
+instead of writing to lab_bronze.*.
 """
 import logging
 import pandas as pd
@@ -13,108 +16,73 @@ logger = logging.getLogger(__name__)
 
 def get_or_create_tournament(season: int) -> str:
     """
-    Get or create tournament by season, return tournament UUID.
-    
+    Look up the core tournament id for a given season year.
+
+    This previously created rows in lab_bronze.tournaments, but that schema
+    no longer exists.  The data already lives in core.tournaments joined to
+    core.seasons.
+
     Args:
         season: Tournament year (e.g., 2025)
-    
+
     Returns:
         tournament_id (UUID as string)
+
+    Raises:
+        ValueError: If no tournament exists for the given season.
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id FROM lab_bronze.tournaments
-                WHERE season = %s
-            """, (season,))
-            
+            cur.execute(
+                """
+                SELECT t.id
+                FROM core.tournaments t
+                JOIN core.seasons s
+                  ON s.id = t.season_id
+                 AND s.deleted_at IS NULL
+                WHERE s.year = %s
+                  AND t.deleted_at IS NULL
+                ORDER BY t.created_at DESC
+                LIMIT 1
+                """,
+                (season,),
+            )
             result = cur.fetchone()
             if result:
                 return str(result[0])
-            
-            cur.execute("""
-                INSERT INTO lab_bronze.tournaments (season)
-                VALUES (%s)
-                RETURNING id
-            """, (season,))
-            
-            tournament_id = cur.fetchone()[0]
-            conn.commit()
-            return str(tournament_id)
+
+            raise ValueError(
+                f"No core tournament found for season {season}. "
+                "Tournaments must be created via the Go API or migrations."
+            )
 
 
 def write_teams(tournament_id: str, teams_df: pd.DataFrame) -> Dict[str, str]:
     """
-    Write teams for a tournament, return school_slug -> team_id mapping.
-    
+    Look up team ids for a tournament, returning a school_slug -> team_id map.
+
+    This previously wrote to lab_bronze.teams, but that schema no longer
+    exists.  Team data already lives in core.teams / core.schools.
+
     Args:
         tournament_id: Tournament UUID
-        teams_df: DataFrame with columns:
-            - school_slug, school_name, seed, region
-            - kenpom_* (optional)
-    
+        teams_df: DataFrame (unused, kept for signature compatibility)
+
     Returns:
         Dict mapping school_slug to team_id (UUID as string)
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            team_ids = {}
-            
-            for _, row in teams_df.iterrows():
-                cur.execute("""
-                    INSERT INTO lab_bronze.teams
-                    (tournament_id, school_slug, school_name, seed, region,
-                     kenpom_net, kenpom_adj_em, kenpom_adj_o,
-                     kenpom_adj_d, kenpom_adj_t)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (tournament_id, school_slug)
-                    DO UPDATE SET
-                        school_name = EXCLUDED.school_name,
-                        seed = EXCLUDED.seed,
-                        region = EXCLUDED.region,
-                        kenpom_net = EXCLUDED.kenpom_net,
-                        kenpom_adj_em = EXCLUDED.kenpom_adj_em,
-                        kenpom_adj_o = EXCLUDED.kenpom_adj_o,
-                        kenpom_adj_d = EXCLUDED.kenpom_adj_d,
-                        kenpom_adj_t = EXCLUDED.kenpom_adj_t
-                    RETURNING id
-                """, (
-                    tournament_id,
-                    row['school_slug'],
-                    row['school_name'],
-                    int(row['seed']),
-                    row['region'],
-                    (
-                        float(row['kenpom_net'])
-                        if pd.notna(row.get('kenpom_net'))
-                        else None
-                    ),
-                    (
-                        float(row['kenpom_adj_em'])
-                        if pd.notna(row.get('kenpom_adj_em'))
-                        else None
-                    ),
-                    (
-                        float(row['kenpom_adj_o'])
-                        if pd.notna(row.get('kenpom_adj_o'))
-                        else None
-                    ),
-                    (
-                        float(row['kenpom_adj_d'])
-                        if pd.notna(row.get('kenpom_adj_d'))
-                        else None
-                    ),
-                    (
-                        float(row['kenpom_adj_t'])
-                        if pd.notna(row.get('kenpom_adj_t'))
-                        else None
-                    ),
-                ))
-                
-                team_id = cur.fetchone()[0]
-                team_ids[row['school_slug']] = str(team_id)
-            
-            conn.commit()
-            return team_ids
-
-
+            cur.execute(
+                """
+                SELECT s.slug, t.id
+                FROM core.teams t
+                JOIN core.schools s
+                  ON s.id = t.school_id
+                 AND s.deleted_at IS NULL
+                WHERE t.tournament_id = %s
+                  AND t.deleted_at IS NULL
+                """,
+                (tournament_id,),
+            )
+            return {str(row[0]): str(row[1]) for row in cur.fetchall()}

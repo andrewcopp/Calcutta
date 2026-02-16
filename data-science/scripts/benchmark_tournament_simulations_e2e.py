@@ -34,16 +34,20 @@ def _connect() -> psycopg2.extensions.connection:
     )
 
 
-def _resolve_tournament_ids(
+def _resolve_tournament_id(
     conn: psycopg2.extensions.connection,
     season: int,
-) -> Tuple[str, str]:
+) -> str:
+    """Resolve the core tournament id for a season year."""
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT t.id, t.core_tournament_id
-            FROM lab_bronze.tournaments t
-            WHERE t.season = %s
+            SELECT t.id
+            FROM core.tournaments t
+            JOIN core.seasons s
+              ON s.id = t.season_id
+             AND s.deleted_at IS NULL
+            WHERE s.year = %s
               AND t.deleted_at IS NULL
             ORDER BY t.created_at DESC
             LIMIT 1
@@ -52,63 +56,57 @@ def _resolve_tournament_ids(
         )
         row = cur.fetchone()
         if not row:
-            raise ValueError(f"No lab tournament found for season={season}")
-        lab_tournament_id = str(row[0])
-        core_tournament_id = str(row[1] or "")
-        if not core_tournament_id:
-            raise ValueError(
-                (
-                    "lab_bronze.tournaments.core_tournament_id is NULL "
-                    f"for season={season}"
-                )
-            )
-        return lab_tournament_id, core_tournament_id
+            raise ValueError(f"No tournament found for season={season}")
+        return str(row[0])
 
 
 def _load_teams(
     conn: psycopg2.extensions.connection,
-    lab_tournament_id: str,
+    tournament_id: str,
 ) -> pd.DataFrame:
     return pd.read_sql_query(
         """
-        SELECT id, school_name, seed, region
-        FROM lab_bronze.teams
-        WHERE tournament_id = %s
-          AND deleted_at IS NULL
-        ORDER BY seed ASC
+        SELECT t.id, s.name AS school_name, t.seed, t.region
+        FROM core.teams t
+        JOIN core.schools s
+          ON s.id = t.school_id
+         AND s.deleted_at IS NULL
+        WHERE t.tournament_id = %s
+          AND t.deleted_at IS NULL
+        ORDER BY t.seed ASC
         """,
         conn,
-        params=(lab_tournament_id,),
+        params=(tournament_id,),
     )
 
 
 def _load_predictions(
     conn: psycopg2.extensions.connection,
-    lab_tournament_id: str,
+    tournament_id: str,
 ) -> pd.DataFrame:
     df = pd.read_sql_query(
         """
         SELECT team1_id, team2_id, p_team1_wins
-        FROM lab_silver.predicted_game_outcomes
+        FROM derived.predicted_game_outcomes
         WHERE tournament_id = %s
           AND deleted_at IS NULL
         """,
         conn,
-        params=(lab_tournament_id,),
+        params=(tournament_id,),
     )
     # Match DB-first simulator expected column name
     df = df.rename(columns={"p_team1_wins": "p_team1_wins_given_matchup"})
     return df
 
 
-def _create_tournament_state_snapshot(
+def _create_simulation_state(
     conn: psycopg2.extensions.connection,
-    core_tournament_id: str,
+    tournament_id: str,
 ) -> str:
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO analytics.tournament_state_snapshots (
+            INSERT INTO derived.simulation_states (
                 tournament_id,
                 source,
                 description
@@ -120,14 +118,14 @@ def _create_tournament_state_snapshot(
             )
             RETURNING id
             """,
-            (core_tournament_id,),
+            (tournament_id,),
         )
         snapshot_id = str(cur.fetchone()[0])
 
         cur.execute(
             """
-            INSERT INTO analytics.tournament_state_snapshot_teams (
-                tournament_state_snapshot_id,
+            INSERT INTO derived.simulation_state_teams (
+                simulation_state_id,
                 team_id,
                 wins,
                 byes,
@@ -142,19 +140,19 @@ def _create_tournament_state_snapshot(
             FROM core.teams ct
             WHERE ct.tournament_id = %s
               AND ct.deleted_at IS NULL
-            ON CONFLICT (tournament_state_snapshot_id, team_id) DO NOTHING
+            ON CONFLICT (simulation_state_id, team_id) DO NOTHING
             """,
-            (snapshot_id, core_tournament_id),
+            (snapshot_id, tournament_id),
         )
 
     conn.commit()
     return snapshot_id
 
 
-def _create_simulation_batch(
+def _create_simulated_tournament(
     conn: psycopg2.extensions.connection,
-    core_tournament_id: str,
-    snapshot_id: str,
+    tournament_id: str,
+    simulation_state_id: str,
     n_sims: int,
     seed: int,
     probability_source_key: str,
@@ -162,9 +160,9 @@ def _create_simulation_batch(
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO analytics.tournament_simulation_batches (
+            INSERT INTO derived.simulated_tournaments (
                 tournament_id,
-                tournament_state_snapshot_id,
+                simulation_state_id,
                 n_sims,
                 seed,
                 probability_source_key
@@ -173,8 +171,8 @@ def _create_simulation_batch(
             RETURNING id
             """,
             (
-                core_tournament_id,
-                snapshot_id,
+                tournament_id,
+                simulation_state_id,
                 int(n_sims),
                 int(seed),
                 probability_source_key,
@@ -189,7 +187,7 @@ def _create_simulation_batch(
 def _rows_for_insert(
     *,
     batch_id: str,
-    lab_tournament_id: str,
+    tournament_id: str,
     sim_id_offset: int,
     chunk_df: pd.DataFrame,
 ) -> Iterable[Tuple[str, str, int, str, int, int, bool]]:
@@ -207,7 +205,7 @@ def _rows_for_insert(
     for row in df.itertuples(index=False):
         yield (
             batch_id,
-            lab_tournament_id,
+            tournament_id,
             int(row.sim_id),
             str(row.team_id),
             int(row.wins),
@@ -216,18 +214,18 @@ def _rows_for_insert(
         )
 
 
-def _insert_simulated_tournaments(
+def _insert_simulated_teams(
     conn: psycopg2.extensions.connection,
     *,
     batch_id: str,
-    lab_tournament_id: str,
+    tournament_id: str,
     sim_id_offset: int,
     chunk_df: pd.DataFrame,
 ) -> int:
     rows = list(
         _rows_for_insert(
             batch_id=batch_id,
-            lab_tournament_id=lab_tournament_id,
+            tournament_id=tournament_id,
             sim_id_offset=sim_id_offset,
             chunk_df=chunk_df,
         )
@@ -236,9 +234,9 @@ def _insert_simulated_tournaments(
         psycopg2.extras.execute_values(
             cur,
             """
-            INSERT INTO analytics.simulated_tournaments
+            INSERT INTO derived.simulated_teams
                 (
-                    tournament_simulation_batch_id,
+                    simulated_tournament_id,
                     tournament_id,
                     sim_id,
                     team_id,
@@ -281,12 +279,12 @@ def main() -> None:
 
     try:
         t_load0 = time.time()
-        lab_tournament_id, core_tournament_id = _resolve_tournament_ids(
+        tournament_id = _resolve_tournament_id(
             conn,
             args.season,
         )
-        teams_df = _load_teams(conn, lab_tournament_id)
-        predictions_df = _load_predictions(conn, lab_tournament_id)
+        teams_df = _load_teams(conn, tournament_id)
+        predictions_df = _load_predictions(conn, tournament_id)
         t_load1 = time.time()
 
         if len(teams_df) != 68:
@@ -294,14 +292,14 @@ def main() -> None:
                 f"Expected 68 teams, got {len(teams_df)}"
             )
 
-        snapshot_id = _create_tournament_state_snapshot(
+        simulation_state_id = _create_simulation_state(
             conn,
-            core_tournament_id,
+            tournament_id,
         )
-        batch_id = _create_simulation_batch(
+        batch_id = _create_simulated_tournament(
             conn,
-            core_tournament_id,
-            snapshot_id,
+            tournament_id,
+            simulation_state_id,
             n_sims=args.n_sims,
             seed=args.seed,
             probability_source_key=args.probability_source_key,
@@ -310,15 +308,14 @@ def main() -> None:
         print(
             (
                 f"Loaded season={args.season} "
-                f"lab_tournament_id={lab_tournament_id} "
-                f"core_tournament_id={core_tournament_id} "
+                f"tournament_id={tournament_id} "
                 f"teams={len(teams_df)} "
                 f"predictions={len(predictions_df)} "
                 f"in {t_load1 - t_load0:.3f}s"
             )
         )
         print(
-            f"Created snapshot_id={snapshot_id} batch_id={batch_id}"
+            f"Created simulation_state_id={simulation_state_id} batch_id={batch_id}"
         )
 
         t_sim0 = time.time()
@@ -348,10 +345,10 @@ def main() -> None:
             ].copy()
 
             t_write0 = time.time()
-            inserted = _insert_simulated_tournaments(
+            inserted = _insert_simulated_teams(
                 conn,
                 batch_id=batch_id,
-                lab_tournament_id=lab_tournament_id,
+                tournament_id=tournament_id,
                 sim_id_offset=sim_offset,
                 chunk_df=chunk_df,
             )

@@ -22,7 +22,7 @@ def write_predicted_game_outcomes(
 ) -> int:
     """
     Write game outcome predictions.
-    
+
     Args:
         tournament_id: Tournament ID
         predictions_df: DataFrame with columns:
@@ -30,7 +30,7 @@ def write_predicted_game_outcomes(
             - p_team1_wins_given_matchup, p_matchup
         team_id_map: Dict mapping school_slug to team_id
         model_version: Optional model version
-    
+
     Returns:
         Number of rows inserted
     """
@@ -38,13 +38,13 @@ def write_predicted_game_outcomes(
         with conn.cursor() as cur:
             # Clear existing predictions
             cur.execute("""
-                DELETE FROM lab_silver.predicted_game_outcomes
+                DELETE FROM derived.predicted_game_outcomes
                 WHERE tournament_id = %s
             """, (tournament_id,))
-            
+
             # Predictions already have team1_id and team2_id
             df = predictions_df.copy()
-            
+
             # Map round names to inverted integers (championship = 0)
             round_mapping = {
                 'championship': 0,
@@ -55,14 +55,14 @@ def write_predicted_game_outcomes(
                 'round_of_64': 5,
                 'first_four': 6,
             }
-            
+
             # Use round_int if provided, otherwise map from round name
             if 'round_int' not in df.columns:
                 df['round_int'] = df['round'].map(round_mapping)
             else:
                 # Invert the round_int (our data has 1=R1, but DB wants 5=R1)
                 df['round_int'] = df['round'].map(round_mapping)
-            
+
             values = [
                 (
                     tournament_id,
@@ -77,14 +77,14 @@ def write_predicted_game_outcomes(
                 )
                 for _, row in df.iterrows()
             ]
-            
+
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO lab_silver.predicted_game_outcomes
+                INSERT INTO derived.predicted_game_outcomes
                 (tournament_id, game_id, round, team1_id, team2_id,
                  p_team1_wins, p_matchup, model_version)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, values)
-            
+
             conn.commit()
             return len(values)
 
@@ -95,76 +95,36 @@ def write_simulated_tournaments(
     team_id_map: Dict[str, str]
 ) -> int:
     """
-    Write simulated tournament outcomes to silver layer.
-    
-    Simulated tournaments are derived data (Monte Carlo simulations),
-    not raw data, so they belong in the silver layer.
-    
+    Write simulated tournament outcomes to derived schema.
+
+    Simulated tournaments are derived data (Monte Carlo simulations).
+    The tournament_id passed here is now expected to be a core.tournaments id.
+
     Args:
-        tournament_id: Tournament ID
+        tournament_id: Core tournament UUID
         simulations_df: DataFrame with columns:
             - sim_id, school_slug, wins, byes, eliminated
         team_id_map: Dict mapping school_slug to team_id
-    
+
     Returns:
         Number of rows inserted
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Resolve core tournament id from lab tournament.
+            # tournament_id is already a core tournament id.
+            core_tournament_id = tournament_id
+
+            # Create simulation state snapshot from current core tournament state.
             cur.execute("""
-                SELECT core_tournament_id
-                FROM lab_bronze.tournaments
-                WHERE id = %s
-            """, (tournament_id,))
-            row = cur.fetchone()
-            core_tournament_id = str(row[0]) if row and row[0] else None
-
-            if not core_tournament_id:
-                # Legacy fallback: no lineage objects can be created without a core tournament id.
-                cur.execute("""
-                    DELETE FROM analytics.simulated_tournaments
-                    WHERE tournament_id = %s
-                """, (tournament_id,))
-
-                df = simulations_df.copy()
-                df['team_id'] = df['school_slug'].map(team_id_map)
-                if df['team_id'].isna().any():
-                    unmapped = df[df['team_id'].isna()]['school_slug'].unique()
-                    raise ValueError(f"Unmapped teams: {list(unmapped)}")
-
-                values = [
-                    (
-                        tournament_id,
-                        int(r['sim_id']),
-                        str(r['team_id']),
-                        int(r['wins']),
-                        int(r['byes']),
-                        bool(r['eliminated']),
-                    )
-                    for _, r in df.iterrows()
-                ]
-
-                psycopg2.extras.execute_batch(cur, """
-                    INSERT INTO analytics.simulated_tournaments
-                    (tournament_id, sim_id, team_id, wins, byes, eliminated)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, values, page_size=10000)
-
-                conn.commit()
-                return len(values)
-
-            # Create tournament state snapshot + snapshot teams from current core tournament state.
-            cur.execute("""
-                INSERT INTO analytics.tournament_state_snapshots (tournament_id, source, description)
+                INSERT INTO derived.simulation_states (tournament_id, source, description)
                 VALUES (%s, 'moneyball_pipeline', 'Autogenerated snapshot for tournament simulation batch')
                 RETURNING id
             """, (core_tournament_id,))
             snapshot_id = str(cur.fetchone()[0])
 
             cur.execute("""
-                INSERT INTO analytics.tournament_state_snapshot_teams (
-                    tournament_state_snapshot_id,
+                INSERT INTO derived.simulation_state_teams (
+                    simulation_state_id,
                     team_id,
                     wins,
                     byes,
@@ -179,40 +139,40 @@ def write_simulated_tournaments(
                 FROM core.teams ct
                 WHERE ct.tournament_id = %s
                   AND ct.deleted_at IS NULL
-                ON CONFLICT (tournament_state_snapshot_id, team_id) DO NOTHING
+                ON CONFLICT (simulation_state_id, team_id) DO NOTHING
             """, (snapshot_id, core_tournament_id))
 
-            # Create simulation batch.
+            # Create simulated_tournament record.
             n_sims = int(simulations_df['sim_id'].nunique())
             cur.execute("""
-                INSERT INTO analytics.tournament_simulation_batches (
+                INSERT INTO derived.simulated_tournaments (
                     tournament_id,
-                    tournament_state_snapshot_id,
+                    simulation_state_id,
                     n_sims,
                     seed,
                     probability_source_key
                 )
                 VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
-            """, (core_tournament_id, snapshot_id, n_sims, 0, 'moneyball_pipeline'))
+            """, (core_tournament_id, snapshot_id, n_sims, 42, 'moneyball_pipeline'))
             batch_id = str(cur.fetchone()[0])
 
-            # Backward-compat cleanup: clear legacy rows (no batch id) for this lab tournament.
+            # Backward-compat cleanup: clear legacy rows (no batch id) for this tournament.
             cur.execute("""
-                DELETE FROM analytics.simulated_tournaments
+                DELETE FROM derived.simulated_teams
                 WHERE tournament_id = %s
-                  AND tournament_simulation_batch_id IS NULL
+                  AND simulated_tournament_id IS NULL
             """, (tournament_id,))
-            
+
             # Map school_slug to team_id
             df = simulations_df.copy()
             df['team_id'] = df['school_slug'].map(team_id_map)
-            
+
             # Check for unmapped teams
             if df['team_id'].isna().any():
                 unmapped = df[df['team_id'].isna()]['school_slug'].unique()
                 raise ValueError(f"Unmapped teams: {list(unmapped)}")
-            
+
             # Prepare values
             values = [
                 (
@@ -226,11 +186,11 @@ def write_simulated_tournaments(
                 )
                 for _, row in df.iterrows()
             ]
-            
+
             # Batch insert
             psycopg2.extras.execute_batch(cur, """
-                INSERT INTO analytics.simulated_tournaments
-                (tournament_simulation_batch_id, tournament_id, sim_id, team_id, wins, byes, eliminated)
+                INSERT INTO derived.simulated_teams
+                (simulated_tournament_id, tournament_id, sim_id, team_id, wins, byes, eliminated)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, values, page_size=10000)
 

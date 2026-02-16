@@ -54,8 +54,18 @@ def stage_simulated_calcuttas(
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id FROM lab_bronze.tournaments WHERE season = %s",
-                (year,)
+                """
+                SELECT t.id
+                FROM core.tournaments t
+                JOIN core.seasons s
+                  ON s.id = t.season_id
+                 AND s.deleted_at IS NULL
+                WHERE s.year = %s
+                  AND t.deleted_at IS NULL
+                ORDER BY t.created_at DESC
+                LIMIT 1
+                """,
+                (year,),
             )
             result = cur.fetchone()
             if not result:
@@ -173,7 +183,7 @@ def stage_predicted_game_outcomes(
     ):
         raise RuntimeError(
             (
-                "This stage writes lab_silver.predicted_game_outcomes from "
+                "This stage writes derived.predicted_game_outcomes from "
                 "Python, which is disabled. Use the Go-first pipeline, or "
                 "set CALCUTTA_ALLOW_PYTHON_SILVER_WRITES=true to override."
             )
@@ -383,7 +393,7 @@ def stage_recommended_entry_bids(
     ):
         raise RuntimeError(
             (
-                "This stage writes lab_gold strategy outputs from Python, "
+                "This stage writes derived strategy outputs from Python, "
                 "which is disabled. Use the Go-first optimizer path, or "
                 "set CALCUTTA_ALLOW_PYTHON_GOLD_WRITES=true to override."
             )

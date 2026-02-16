@@ -54,10 +54,10 @@ def get_db_connection():
 def read_tournament(year: int) -> Optional[Dict[str, Any]]:
     """
     Read tournament metadata for a given year.
-    
+
     Args:
         year: Tournament year (e.g., 2025)
-        
+
     Returns:
         Dictionary with tournament metadata including id, season, created_at
         Returns None if tournament not found
@@ -67,9 +67,15 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, season, created_at
-                FROM lab_bronze.tournaments
-                WHERE season = %s
+                SELECT t.id, s.year AS season, t.created_at
+                FROM core.tournaments t
+                JOIN core.seasons s
+                  ON s.id = t.season_id
+                 AND s.deleted_at IS NULL
+                WHERE s.year = %s
+                  AND t.deleted_at IS NULL
+                ORDER BY t.created_at DESC
+                LIMIT 1
                 """,
                 (year,)
             )
@@ -334,13 +340,14 @@ def initialize_default_scoring_rules_for_calcutta(
 def read_teams(year: int) -> pd.DataFrame:
     """
     Read teams for a given tournament year.
-    
+
     Args:
         year: Tournament year
-        
+
     Returns:
-        DataFrame with columns: id, tournament_id, school_name, seed, region,
-        kenpom_net, adj_o, adj_d, adj_t, created_at, updated_at
+        DataFrame with columns: id, tournament_id, school_slug, school_name,
+        seed, region, kenpom_net, kenpom_adj_em, kenpom_adj_o, kenpom_adj_d,
+        kenpom_adj_t, created_at
     """
     conn = get_db_connection()
     try:
@@ -348,20 +355,32 @@ def read_teams(year: int) -> pd.DataFrame:
         SELECT
             t.id,
             t.tournament_id,
-            t.school_slug,
-            t.school_name,
+            s.slug AS school_slug,
+            s.name AS school_name,
             t.seed,
             t.region,
-            t.kenpom_net,
-            t.kenpom_adj_em,
-            t.kenpom_adj_o,
-            t.kenpom_adj_d,
-            t.kenpom_adj_t,
+            COALESCE(k.net_rtg, 0)::float8 AS kenpom_net,
+            COALESCE(k.net_rtg, 0)::float8 AS kenpom_adj_em,
+            COALESCE(k.o_rtg, 0)::float8 AS kenpom_adj_o,
+            COALESCE(k.d_rtg, 0)::float8 AS kenpom_adj_d,
+            COALESCE(k.adj_t, 0)::float8 AS kenpom_adj_t,
             t.created_at
-        FROM lab_bronze.teams t
-        JOIN lab_bronze.tournaments tour ON t.tournament_id = tour.id
-        WHERE tour.season = %s
-        ORDER BY t.seed, t.school_name
+        FROM core.teams t
+        JOIN core.schools s
+          ON s.id = t.school_id
+         AND s.deleted_at IS NULL
+        JOIN core.tournaments tour
+          ON tour.id = t.tournament_id
+         AND tour.deleted_at IS NULL
+        JOIN core.seasons seas
+          ON seas.id = tour.season_id
+         AND seas.deleted_at IS NULL
+        LEFT JOIN core.team_kenpom_stats k
+          ON k.team_id = t.id
+         AND k.deleted_at IS NULL
+        WHERE seas.year = %s
+          AND t.deleted_at IS NULL
+        ORDER BY t.seed, s.name
         """
         return pd.read_sql_query(query, conn, params=(year,))
     finally:
@@ -376,11 +395,13 @@ def read_simulated_tournaments(
 ) -> pd.DataFrame:
     """
     Read simulated tournament outcomes from the database.
-    
+
     Args:
         year: Tournament year
         run_id: Optional run_id to filter by specific simulation run
-        
+        calcutta_id: Optional calcutta id for scoring rules
+        tournament_simulation_batch_id: Optional batch id to filter by
+
     Returns:
         DataFrame with simulation results
     """
@@ -388,20 +409,23 @@ def read_simulated_tournaments(
     try:
         # Note: Schema doesn't have points column; we calculate it from
         # wins+byes.
-        # Also doesn't have run_id yet, so we ignore it for now.
 
         batch_id = tournament_simulation_batch_id
         if not batch_id:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT b.id
-                    FROM lab_bronze.tournaments tour
-                    JOIN analytics.tournament_simulation_batches b
-                      ON b.tournament_id = tour.core_tournament_id
-                     AND b.deleted_at IS NULL
-                    WHERE tour.season = %s
-                    ORDER BY b.created_at DESC
+                    SELECT st.id
+                    FROM core.tournaments tour
+                    JOIN core.seasons seas
+                      ON seas.id = tour.season_id
+                     AND seas.deleted_at IS NULL
+                    JOIN derived.simulated_tournaments st
+                      ON st.tournament_id = tour.id
+                     AND st.deleted_at IS NULL
+                    WHERE seas.year = %s
+                      AND tour.deleted_at IS NULL
+                    ORDER BY st.created_at DESC
                     LIMIT 1
                     """,
                     (year,),
@@ -421,14 +445,24 @@ def read_simulated_tournaments(
                 st.byes,
                 st.eliminated,
                 st.created_at,
-                t.school_name,
+                s.name AS school_name,
                 t.seed,
                 t.region
-            FROM analytics.simulated_tournaments st
-            JOIN lab_bronze.tournaments tour ON st.tournament_id = tour.id
-            JOIN lab_bronze.teams t ON st.team_id = t.id
-            WHERE tour.season = %s
-              AND st.tournament_simulation_batch_id = %s
+            FROM derived.simulated_teams st
+            JOIN core.teams t
+              ON t.id = st.team_id
+             AND t.deleted_at IS NULL
+            JOIN core.schools s
+              ON s.id = t.school_id
+             AND s.deleted_at IS NULL
+            JOIN core.tournaments tour
+              ON tour.id = st.tournament_id
+             AND tour.deleted_at IS NULL
+            JOIN core.seasons seas
+              ON seas.id = tour.season_id
+             AND seas.deleted_at IS NULL
+            WHERE seas.year = %s
+              AND st.simulated_tournament_id = %s
               AND st.deleted_at IS NULL
             ORDER BY st.sim_id, t.seed
             """
@@ -445,14 +479,24 @@ def read_simulated_tournaments(
                 st.byes,
                 st.eliminated,
                 st.created_at,
-                t.school_name,
+                s.name AS school_name,
                 t.seed,
                 t.region
-            FROM analytics.simulated_tournaments st
-            JOIN lab_bronze.tournaments tour ON st.tournament_id = tour.id
-            JOIN lab_bronze.teams t ON st.team_id = t.id
-            WHERE tour.season = %s
-              AND st.tournament_simulation_batch_id IS NULL
+            FROM derived.simulated_teams st
+            JOIN core.teams t
+              ON t.id = st.team_id
+             AND t.deleted_at IS NULL
+            JOIN core.schools s
+              ON s.id = t.school_id
+             AND s.deleted_at IS NULL
+            JOIN core.tournaments tour
+              ON tour.id = st.tournament_id
+             AND tour.deleted_at IS NULL
+            JOIN core.seasons seas
+              ON seas.id = tour.season_id
+             AND seas.deleted_at IS NULL
+            WHERE seas.year = %s
+              AND st.simulated_tournament_id IS NULL
               AND st.deleted_at IS NULL
             ORDER BY st.sim_id, t.seed
             """
