@@ -16,16 +16,6 @@ func nullUUIDParam(v string) any {
 	return v
 }
 
-func nullUUIDParamPtr(v *string) any {
-	if v == nil {
-		return nil
-	}
-	if *v == "" {
-		return nil
-	}
-	return *v
-}
-
 func resolveSeasonYearByCalcuttaID(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (int, error) {
 	var year int
 	q := `

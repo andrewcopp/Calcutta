@@ -20,10 +20,6 @@ type Handler struct {
 	authUserID func(context.Context) string
 }
 
-func NewHandler(a *app.App) *Handler {
-	return &Handler{app: a}
-}
-
 func NewHandlerWithAuthUserID(a *app.App, authUserID func(context.Context) string) *Handler {
 	return &Handler{app: a, authUserID: authUserID}
 }

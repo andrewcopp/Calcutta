@@ -13,11 +13,6 @@ type Service struct {
 	pipelineRepo PipelineRepository
 }
 
-// New creates a new lab service.
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
-}
-
 // NewWithPipelineRepo creates a new lab service with pipeline repository support.
 func NewWithPipelineRepo(repo PipelineRepository) *Service {
 	return &Service{repo: repo, pipelineRepo: repo}
@@ -59,11 +54,6 @@ func (s *Service) ListEntries(ctx context.Context, filter ListEntriesFilter, pag
 		page.Offset = 0
 	}
 	return s.repo.ListEntries(filter, page)
-}
-
-// GetEntry returns a single entry by ID with full details.
-func (s *Service) GetEntry(ctx context.Context, id string) (*EntryDetail, error) {
-	return s.repo.GetEntry(id)
 }
 
 // GetEntryEnriched returns a single entry with enriched bids (team names, seeds, naive allocation).

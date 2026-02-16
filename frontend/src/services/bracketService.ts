@@ -1,11 +1,11 @@
 import { BracketStructure } from '../types/bracket';
 import { apiClient } from '../api/apiClient';
 
-export async function fetchBracket(tournamentId: string): Promise<BracketStructure> {
+async function fetchBracket(tournamentId: string): Promise<BracketStructure> {
   return apiClient.get<BracketStructure>(`/tournaments/${tournamentId}/bracket`);
 }
 
-export async function selectWinner(
+async function selectWinner(
   tournamentId: string,
   gameId: string,
   winnerTeamId: string
@@ -16,14 +16,14 @@ export async function selectWinner(
   );
 }
 
-export async function unselectWinner(
+async function unselectWinner(
   tournamentId: string,
   gameId: string
 ): Promise<BracketStructure> {
   return apiClient.delete<BracketStructure>(`/tournaments/${tournamentId}/bracket/games/${gameId}/winner`);
 }
 
-export async function validateBracketSetup(tournamentId: string): Promise<{
+async function validateBracketSetup(tournamentId: string): Promise<{
   valid: boolean;
   errors: string[];
 }> {

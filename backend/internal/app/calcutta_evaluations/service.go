@@ -28,14 +28,6 @@ func New(pool *pgxpool.Pool) *Service {
 	return &Service{pool: pool}
 }
 
-// CalculateSimulatedCalcutta calculates entry outcomes for all simulations
-func (s *Service) CalculateSimulatedCalcutta(ctx context.Context, calcuttaID string, runID string) error {
-	// Get excluded entry name from environment (e.g., "Andrew Copp")
-	excludedEntryName := os.Getenv("EXCLUDED_ENTRY_NAME")
-	_, err := s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, nil, nil, nil)
-	return err
-}
-
 func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
 	ctx context.Context,
 	calcuttaID string,

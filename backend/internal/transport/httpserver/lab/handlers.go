@@ -21,11 +21,6 @@ type Handler struct {
 	authUserID func(context.Context) string
 }
 
-// NewHandler creates a new lab handler.
-func NewHandler(a *app.App) *Handler {
-	return &Handler{app: a}
-}
-
 // NewHandlerWithAuthUserID creates a new lab handler with auth user ID function.
 func NewHandlerWithAuthUserID(a *app.App, authUserID func(context.Context) string) *Handler {
 	return &Handler{app: a, authUserID: authUserID}

@@ -39,20 +39,3 @@ func resolveCohortSeed(ctx context.Context, pool *pgxpool.Pool, cohortID string,
 	}
 	return seed
 }
-
-func resolveCohortOptimizerKey(ctx context.Context, pool *pgxpool.Pool, cohortID string, fallback string) string {
-	var key string
-	if err := pool.QueryRow(ctx, `
-		SELECT optimizer_key
-		FROM derived.simulation_cohorts
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, cohortID).Scan(&key); err != nil {
-		return fallback
-	}
-	if key == "" {
-		return fallback
-	}
-	return key
-}
