@@ -17,12 +17,10 @@ export interface CalcuttaEntry {
   id: string;
   name: string;
   calcuttaId: string;
-  userId?: string;
   totalPoints?: number;
   finishPosition?: number;
   inTheMoney?: boolean;
   payoutCents?: number;
-  isTied?: boolean;
   created: string;
   updated: string;
 }
@@ -54,7 +52,6 @@ export interface CalcuttaPortfolio {
   maximumPoints: number;
   created: string;
   updated: string;
-  deleted?: string;
 }
 
 export interface CalcuttaPortfolioTeam {
@@ -67,7 +64,6 @@ export interface CalcuttaPortfolioTeam {
   predictedPoints: number;
   created: string;
   updated: string;
-  deleted?: string;
   team?: {
     id: string;
     schoolId: string;
