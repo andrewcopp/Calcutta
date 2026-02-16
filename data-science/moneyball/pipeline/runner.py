@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
 from moneyball.models.predicted_auction_share_of_pool import (
+    find_snapshot_dirs,
     predict_auction_share_of_pool_from_out_root,
 )
 from moneyball.models.predicted_game_outcomes import (
@@ -30,18 +31,6 @@ from moneyball.pipeline.artifacts import (
     sha256_jsonable,
     write_json,
 )
-
-
-def _list_snapshots_under_out_root(out_root: Path) -> Dict[str, Path]:
-    if not out_root.exists():
-        return {}
-    out: Dict[str, Path] = {}
-    for p in sorted(out_root.iterdir()):
-        if not p.is_dir():
-            continue
-        if (p / "derived" / "team_dataset.parquet").exists():
-            out[p.name] = p
-    return out
 
 
 def _stage_predicted_game_outcomes(
@@ -156,7 +145,7 @@ def _stage_predicted_auction_share_of_pool(
     out_root = sd.parent
     predict_snapshot = sd.name
 
-    snapshot_dirs = _list_snapshots_under_out_root(out_root)
+    snapshot_dirs = find_snapshot_dirs(out_root)
     if predict_snapshot not in snapshot_dirs:
         raise FileNotFoundError(
             "predict snapshot not found under out_root: "
@@ -483,8 +472,6 @@ def run(
     bids_strategy: str = "greedy",
     sim_n_sims: int = 5000,
     sim_seed: int = 123,
-    sim_budget_points: int = 100,
-    sim_keep_sims: bool = False,
     regenerate_tournaments: bool = False,
     use_cache: bool = True,
 ) -> Dict[str, Any]:

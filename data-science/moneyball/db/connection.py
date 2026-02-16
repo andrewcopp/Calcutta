@@ -39,12 +39,12 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     return _pool
 
 
-def get_connection():
+def _get_connection():
     """Get a connection from the pool."""
     return get_pool().getconn()
 
 
-def release_connection(conn):
+def _release_connection(conn):
     """Return a connection to the pool."""
     get_pool().putconn(conn)
 
@@ -59,14 +59,14 @@ def get_db_connection():
             with conn.cursor() as cur:
                 cur.execute("SELECT * FROM table")
     """
-    conn = get_connection()
+    conn = _get_connection()
     try:
         yield conn
     finally:
-        release_connection(conn)
+        _release_connection(conn)
 
 
-def close_pool():
+def _close_pool():
     """Close all connections in the pool."""
     global _pool
     if _pool is not None:

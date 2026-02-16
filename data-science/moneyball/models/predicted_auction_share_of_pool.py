@@ -361,7 +361,7 @@ def _merge_last_year(
     return out
 
 
-def _find_snapshot_dirs(out_root: Path) -> Dict[str, Path]:
+def find_snapshot_dirs(out_root: Path) -> Dict[str, Path]:
     if not out_root.exists():
         return {}
 
@@ -1081,7 +1081,7 @@ def predict_auction_share_of_pool_from_out_root(
     kenpom_scale: float = 10.0,
     exclude_entry_names: Optional[List[str]] = None,
 ) -> pd.DataFrame:
-    snapshot_dirs_by_name = _find_snapshot_dirs(Path(out_root))
+    snapshot_dirs_by_name = find_snapshot_dirs(Path(out_root))
     if not snapshot_dirs_by_name:
         raise FileNotFoundError(f"no snapshots found under: {out_root}")
 
