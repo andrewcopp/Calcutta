@@ -84,7 +84,7 @@ export function CalcuttaEntriesPage() {
       const entriesWithPoints = entriesData
         .map((entry) => ({
           ...entry,
-          totalPoints: entryPointsMap.get(entry.id) || 0,
+          totalPoints: entry.totalPoints || entryPointsMap.get(entry.id) || 0,
         }))
         .sort((a, b) => {
           const diff = (b.totalPoints || 0) - (a.totalPoints || 0);
