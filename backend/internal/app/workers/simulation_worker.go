@@ -42,21 +42,17 @@ func NewSimulationWorker(pool *pgxpool.Pool, progress ProgressWriter, artifactsD
 }
 
 type simulationRunRow struct {
-	ID                      string
-	RunKey                  string
-	SimulationBatchID       *string
-	CohortID                string
-	CalcuttaID              *string
-	SimulatedCalcuttaID     *string
-	GameOutcomeRunID        *string
-	GameOutcomeSpec         *simulation_game_outcomes.Spec
-	MarketShareRunID        *string
-	StrategyGenerationRunID *string
-	OptimizerKey            *string
-	NSims                   *int
-	Seed                    *int
-	StartingStateKey        string
-	ExcludedEntry           *string
+	ID                  string
+	RunKey              string
+	CohortID            string
+	CalcuttaID          *string
+	SimulatedCalcuttaID *string
+	GameOutcomeRunID    *string
+	GameOutcomeSpec     *simulation_game_outcomes.Spec
+	NSims               *int
+	Seed                *int
+	StartingStateKey    string
+	ExcludedEntry       *string
 }
 
 func (w *SimulationWorker) Run(ctx context.Context) {
@@ -197,15 +193,11 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		RETURNING
 			r.id,
 			r.run_key::text,
-			r.simulation_run_batch_id::text,
 			r.cohort_id::text,
 			r.calcutta_id::text,
 			r.simulated_calcutta_id::text,
 			r.game_outcome_run_id::text,
 			r.game_outcome_spec_json,
-			r.market_share_run_id::text,
-			r.strategy_generation_run_id,
-			r.optimizer_key,
 			r.n_sims,
 			r.seed,
 			r.starting_state_key,
@@ -221,15 +213,11 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 	).Scan(
 		&row.ID,
 		&row.RunKey,
-		&row.SimulationBatchID,
 		&row.CohortID,
 		&row.CalcuttaID,
 		&row.SimulatedCalcuttaID,
 		&row.GameOutcomeRunID,
 		&specRaw,
-		&row.MarketShareRunID,
-		&row.StrategyGenerationRunID,
-		&row.OptimizerKey,
 		&row.NSims,
 		&row.Seed,
 		&row.StartingStateKey,
@@ -265,11 +253,6 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		runKey = uuid.NewString()
 	}
 
-	strategyGenRunID := ""
-	if req.StrategyGenerationRunID != nil {
-		strategyGenRunID = *req.StrategyGenerationRunID
-	}
-
 	excluded := ""
 	if req.ExcludedEntry != nil {
 		excluded = *req.ExcludedEntry
@@ -283,24 +266,18 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 	if req.SimulatedCalcuttaID != nil {
 		simulatedCalcuttaID = *req.SimulatedCalcuttaID
 	}
-	marketShareRunID := ""
-	if req.MarketShareRunID != nil {
-		marketShareRunID = *req.MarketShareRunID
-	}
 
 	goRunID := ""
 	if req.GameOutcomeRunID != nil {
 		goRunID = *req.GameOutcomeRunID
 	}
-	log.Printf("simulation_worker start worker_id=%s run_id=%s cohort_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s market_share_run_id=%s strategy_generation_run_id=%s starting_state_key=%s excluded_entry_name=%q",
+	log.Printf("simulation_worker start worker_id=%s run_id=%s cohort_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s starting_state_key=%s excluded_entry_name=%q",
 		workerID,
 		req.ID,
 		req.CohortID,
 		calcuttaID,
 		runKey,
 		goRunID,
-		marketShareRunID,
-		strategyGenRunID,
 		req.StartingStateKey,
 		excluded,
 	)
@@ -346,14 +323,14 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		nSims = *req.NSims
 	}
 	if nSims <= 0 {
-		nSims = resolveCohortNSims(ctx, w.pool, req.CohortID, 10000)
+		nSims = 10000
 	}
 	seed := 0
 	if req.Seed != nil {
 		seed = *req.Seed
 	}
 	if seed == 0 {
-		seed = resolveCohortSeed(ctx, w.pool, req.CohortID, 42)
+		seed = 42
 	}
 	simRes, err := simSvc.Run(ctx, appsimulatetournaments.RunParams{
 		Season:               year,
@@ -398,25 +375,19 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		return false
 	}
 
-	optimizerKey := ""
-
 	_, err = w.pool.Exec(ctx, `
 		UPDATE derived.simulation_runs
 		SET status = 'succeeded',
-			optimizer_key = $2,
-			n_sims = $3,
-			seed = $4,
-			strategy_generation_run_id = $5::uuid,
-			calcutta_evaluation_run_id = $6::uuid,
+			n_sims = $2,
+			seed = $3,
+			calcutta_evaluation_run_id = $4::uuid,
 			error_message = NULL,
 			updated_at = NOW()
 		WHERE id = $1::uuid
 	`,
 		req.ID,
-		optimizerKey,
 		nSims,
 		seed,
-		nullUUIDParam(strategyGenRunID),
 		evalRunID,
 	)
 	if err != nil {
@@ -445,10 +416,8 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		"status":                  "succeeded",
 		"evaluationId":            req.ID,
 		"runKey":                  runKey,
-		"optimizerKey":            optimizerKey,
 		"nSims":                   nSims,
 		"seed":                    seed,
-		"strategyGenerationRunId": strategyGenRunID,
 		"calcuttaEvaluationRunId": evalRunID,
 	}
 	summaryJSON, err := json.Marshal(summary)
@@ -481,17 +450,13 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 		`, req.ID, runKeyParam, summaryJSON)
 	}
 
-	log.Printf("simulation_worker success worker_id=%s run_id=%s run_key=%s strategy_generation_run_id=%s calcutta_evaluation_run_id=%s",
+	log.Printf("simulation_worker success worker_id=%s run_id=%s run_key=%s calcutta_evaluation_run_id=%s",
 		workerID,
 		req.ID,
 		runKey,
-		strategyGenRunID,
 		evalRunID,
 	)
 
-	if req.SimulationBatchID != nil && *req.SimulationBatchID != "" {
-		w.artifactSvc.UpdateBatchStatus(ctx, *req.SimulationBatchID)
-	}
 	return true
 }
 
@@ -502,15 +467,14 @@ func (w *SimulationWorker) failSimulationRun(ctx context.Context, evaluationID s
 	}
 	w.updateRunJobProgress(ctx, "simulation", evaluationID, 1.0, "failed", msg)
 	var runKey *string
-	var simulationBatchID *string
 	e := w.pool.QueryRow(ctx, `
 		UPDATE derived.simulation_runs
 		SET status = 'failed',
 			error_message = $2,
 			updated_at = NOW()
 		WHERE id = $1::uuid
-		RETURNING run_key::text, simulation_run_batch_id::text
-	`, evaluationID, msg).Scan(&runKey, &simulationBatchID)
+		RETURNING run_key::text
+	`, evaluationID, msg).Scan(&runKey)
 	if e != nil {
 		log.Printf("Error marking simulation run %s failed: %v (original error: %v)", evaluationID, e, err)
 		return
@@ -560,10 +524,6 @@ func (w *SimulationWorker) failSimulationRun(ctx context.Context, evaluationID s
 				updated_at = NOW(),
 				deleted_at = NULL
 		`, evaluationID, runKeyParam, failureSummaryJSON)
-	}
-
-	if simulationBatchID != nil && *simulationBatchID != "" {
-		w.artifactSvc.UpdateBatchStatus(ctx, *simulationBatchID)
 	}
 }
 

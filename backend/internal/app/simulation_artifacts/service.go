@@ -26,8 +26,3 @@ func New(pool *pgxpool.Pool, artifactsDir string) *Service {
 func (s *Service) ExportArtifacts(ctx context.Context, simulationRunID, runKey, calcuttaEvaluationRunID string) error {
 	return s.exportArtifacts(ctx, simulationRunID, runKey, calcuttaEvaluationRunID)
 }
-
-// UpdateBatchStatus updates the status of a simulation batch based on the status of its runs.
-func (s *Service) UpdateBatchStatus(ctx context.Context, simulationBatchID string) {
-	s.updateBatchStatus(ctx, simulationBatchID)
-}
