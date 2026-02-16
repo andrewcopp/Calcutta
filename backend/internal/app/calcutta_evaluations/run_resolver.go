@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/sync/errgroup"
 )
 
 type calcuttaContext struct {
@@ -689,17 +691,31 @@ func (s *Service) EvaluateLabEntry(
 	}
 
 	// Run simulations
-	var allResults []SimulationResult
-	for simID, teamResults := range simulations {
-		simResults, err := s.calculateSimulationOutcomes(simID, entries, teamResults, payouts, firstPlacePayout)
-		if err != nil {
-			return nil, fmt.Errorf("simulation %d failed: %w", simID, err)
-		}
-		allResults = append(allResults, simResults...)
+	var (
+		mu         sync.Mutex
+		allResults []SimulationResult
+	)
+	g, _ := errgroup.WithContext(ctx)
+	g.SetLimit(10)
+	for simID := range simulations {
+		sid := simID
+		g.Go(func() error {
+			simResults, err := calculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
+			if err != nil {
+				return fmt.Errorf("simulation %d: %w", sid, err)
+			}
+			mu.Lock()
+			allResults = append(allResults, simResults...)
+			mu.Unlock()
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	// Calculate performance metrics for all entries
-	performance := s.calculatePerformanceMetrics(allResults)
+	performance := calculatePerformanceMetrics(allResults)
 
 	// Extract metrics for our lab entry ("Our Strategy")
 	ourPerformance, ok := performance["Our Strategy"]

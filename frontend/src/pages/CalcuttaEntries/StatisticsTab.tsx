@@ -25,7 +25,7 @@ export const StatisticsTab: React.FC<{
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Tournament Statistics</h2>
           <p className="text-gray-600">Total Entries: {totalEntries}</p>
-          <p className="text-gray-600">Total Investment: ${totalInvestment.toFixed(2)}</p>
+          <p className="text-gray-600">Total Investment: {totalInvestment.toFixed(2)} pts</p>
           <p className="text-gray-600">Total Returns: {totalReturns.toFixed(2)}</p>
           <p className="text-gray-600">Average Return: {averageReturn.toFixed(2)}</p>
           <p className="text-gray-600">Std Dev for Returns: {returnsStdDev.toFixed(2)}</p>
@@ -76,7 +76,7 @@ export const StatisticsTab: React.FC<{
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{team.region}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{team.teamName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{team.points.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${team.investment.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{team.investment.toFixed(2)} pts</td>
                   <td
                     className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${
                       index < 3 ? 'text-green-600' : 'text-gray-900'

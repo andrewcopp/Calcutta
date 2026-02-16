@@ -293,7 +293,9 @@ def create_entry_for_calcutta(
 
 def main():
     # Read defaults from environment variables
-    default_excluded_entry = os.environ.get("EXCLUDED_ENTRY_NAME", "Andrew Copp")
+    default_excluded_entry = os.environ.get("EXCLUDED_ENTRY_NAME", "").strip()
+    if not default_excluded_entry:
+        raise RuntimeError("EXCLUDED_ENTRY_NAME environment variable must be set")
     default_estimated_participants = int(os.environ.get("DEFAULT_ESTIMATED_PARTICIPANTS", "42"))
 
     parser = argparse.ArgumentParser(description="Generate lab entries for a model")

@@ -36,7 +36,7 @@ type TeamSimResult struct {
 	Points int
 }
 
-func (s *Service) calculateSimulationOutcomes(simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
+func calculateSimulationOutcomes(simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
 
 	// Build team points map for this simulation
 	teamPoints := make(map[string]int)
@@ -112,7 +112,7 @@ func (s *Service) calculateSimulationOutcomes(simID int, entries map[string]*Ent
 	return results, nil
 }
 
-func (s *Service) calculatePerformanceMetrics(results []SimulationResult) map[string]*EntryPerformance {
+func calculatePerformanceMetrics(results []SimulationResult) map[string]*EntryPerformance {
 	entryPayouts := make(map[string][]float64)
 
 	for _, r := range results {

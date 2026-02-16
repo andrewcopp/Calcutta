@@ -3,7 +3,6 @@ package calcutta_evaluations
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/google/uuid"
@@ -20,15 +19,13 @@ type CalcuttaEvaluationResult struct {
 
 // Service handles simulated calcutta analysis
 type Service struct {
-	pool                     *pgxpool.Pool
-	persistSimulationDetails bool
+	pool *pgxpool.Pool
 }
 
 // New creates a new simulated calcutta service
 func New(pool *pgxpool.Pool) *Service {
 	return &Service{
-		pool:                     pool,
-		persistSimulationDetails: os.Getenv("CALCUTTA_PERSIST_SIMULATION_DETAILS") == "true",
+		pool: pool,
 	}
 }
 
@@ -370,7 +367,7 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 	for simID := range simulations {
 		sid := simID
 		g.Go(func() error {
-			simResults, err := s.calculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
+			simResults, err := calculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
 			if err != nil {
 				return fmt.Errorf("simulation %d: %w", sid, err)
 			}
@@ -385,18 +382,11 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 		return 0, 0, err
 	}
 
-	persistDetails := s.persistSimulationDetails
-	if persistDetails {
-		if err := s.writeSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID, allResults); err != nil {
-			return 0, 0, fmt.Errorf("failed to write simulation outcomes: %w", err)
-		}
-	} else {
-		if err := s.deleteSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID); err != nil {
-			return 0, 0, fmt.Errorf("failed to clear simulation outcomes: %w", err)
-		}
+	if err := s.deleteSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID); err != nil {
+		return 0, 0, fmt.Errorf("failed to clear simulation outcomes: %w", err)
 	}
 
-	performance := s.calculatePerformanceMetrics(allResults)
+	performance := calculatePerformanceMetrics(allResults)
 	if err := s.writePerformanceMetrics(ctx, runID, calcuttaEvaluationRunID, performance); err != nil {
 		return 0, 0, fmt.Errorf("failed to write performance metrics: %w", err)
 	}

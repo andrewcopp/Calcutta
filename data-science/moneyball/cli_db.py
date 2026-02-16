@@ -12,7 +12,6 @@ import sys
 from moneyball.pipeline.runner_db import (
     stage_predicted_game_outcomes,
     stage_simulate_tournaments,
-    stage_recommended_entry_bids,
     run_full_pipeline,
 )
 
@@ -56,26 +55,6 @@ def main() -> int:
     p_st.add_argument("--seed", dest="seed", type=int, default=42)
     p_st.add_argument("--run-id", dest="run_id", default=None)
 
-    # Recommended entry bids
-    p_reb = sub.add_parser(
-        "recommended-entry-bids",
-        help="Generate recommended entry bids"
-    )
-    p_reb.add_argument("year", type=int, help="Tournament year")
-    p_reb.add_argument("--strategy", dest="strategy", default="greedy")
-    p_reb.add_argument(
-        "--budget-points",
-        dest="budget_points",
-        type=int,
-        default=100
-    )
-    p_reb.add_argument("--min-teams", dest="min_teams", type=int, default=3)
-    p_reb.add_argument("--max-teams", dest="max_teams", type=int, default=10)
-    p_reb.add_argument("--min-bid", dest="min_bid", type=int, default=1)
-    p_reb.add_argument("--max-bid", dest="max_bid", type=int, default=50)
-    p_reb.add_argument("--run-id", dest="run_id", default=None)
-    p_reb.add_argument("--calcutta-id", dest="calcutta_id", default=None)
-
     # Full pipeline
     p_full = sub.add_parser(
         "full-pipeline",
@@ -113,20 +92,6 @@ def main() -> int:
                 n_sims=args.n_sims,
                 seed=args.seed,
                 run_id=args.run_id,
-            )
-            print(f"\nResult: {result}")
-
-        elif args.cmd == "recommended-entry-bids":
-            result = stage_recommended_entry_bids(
-                year=args.year,
-                strategy=args.strategy,
-                budget_points=args.budget_points,
-                min_teams=args.min_teams,
-                max_teams=args.max_teams,
-                min_bid=args.min_bid,
-                max_bid=args.max_bid,
-                run_id=args.run_id,
-                calcutta_id=args.calcutta_id,
             )
             print(f"\nResult: {result}")
 

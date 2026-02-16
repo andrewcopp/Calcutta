@@ -151,7 +151,7 @@ export function CalcuttaTeamsPage() {
                   <TableCell className="text-gray-700">{team.schoolName}</TableCell>
                   <TableCell className="text-gray-700">{team.region}</TableCell>
                   <TableCell className="text-right text-gray-700">
-                    ${team.totalInvestment.toFixed(2)}
+                    {team.totalInvestment.toFixed(2)} pts
                   </TableCell>
                   <TableCell className="text-right text-gray-700">{team.points}</TableCell>
                   <TableCell className="text-right">

@@ -21,9 +21,6 @@ from moneyball.models.predicted_game_outcomes import (
 from moneyball.models.simulated_tournaments_db import (
     simulate_tournaments_from_predictions,
 )
-from moneyball.models.recommended_entry_bids_db import (
-    recommend_entry_bids_from_simulations,
-)
 import subprocess
 import os
 
@@ -94,7 +91,10 @@ def stage_simulated_calcuttas(
         )
     
     env = os.environ.copy()
-    env['EXCLUDED_ENTRY_NAME'] = env.get('EXCLUDED_ENTRY_NAME', 'Andrew Copp')
+    excluded = env.get('EXCLUDED_ENTRY_NAME', '').strip()
+    if not excluded:
+        raise RuntimeError('EXCLUDED_ENTRY_NAME environment variable must be set')
+    env['EXCLUDED_ENTRY_NAME'] = excluded
     env['DB_HOST'] = env.get('DB_HOST', 'localhost')
     env['DB_PORT'] = env.get('DB_PORT', '5432')
     env['DB_USER'] = env.get('DB_USER', 'calcutta')
@@ -359,198 +359,6 @@ def stage_simulate_tournaments(
     }
 
 
-def stage_recommended_entry_bids(
-    *,
-    year: int,
-    strategy: str = "greedy",
-    run_id: str = None,
-    budget_points: int = 100,
-    min_teams: int = 3,
-    max_teams: int = 10,
-    min_bid: int = 1,
-    max_bid: int = 50,
-    calcutta_id: Optional[str] = None,
-) -> dict:
-    """
-    Generate recommended entry bids from simulation results.
-
-    Args:
-        year: Tournament year
-        strategy: Portfolio strategy (greedy, minlp, etc.)
-        run_id: Run ID from simulations (if None, will find latest)
-        budget_points: Total budget in points
-        min_teams: Minimum number of teams
-        max_teams: Maximum number of teams
-        min_bid: Minimum bid per team
-        max_bid: Maximum bid per team
-        
-    Returns:
-        Dictionary with results
-    """
-    if (
-        os.getenv("CALCUTTA_ALLOW_PYTHON_GOLD_WRITES", "false").lower()
-        != "true"
-    ):
-        raise RuntimeError(
-            (
-                "This stage writes derived strategy outputs from Python, "
-                "which is disabled. Use the Go-first optimizer path, or "
-                "set CALCUTTA_ALLOW_PYTHON_GOLD_WRITES=true to override."
-            )
-        )
-
-    print(f"⚙ Generating recommended entry bids for {year}...")
-
-    if run_id is None:
-        # Find latest run_id for this year
-        from moneyball.db.connection import get_db_connection
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT sgr.run_key
-                    FROM derived.strategy_generation_runs sgr
-                    JOIN core.calcuttas c
-                      ON c.id = sgr.calcutta_id
-                     AND c.deleted_at IS NULL
-                    JOIN core.tournaments t
-                      ON t.id = c.tournament_id
-                     AND t.deleted_at IS NULL
-                    JOIN core.seasons seas
-                      ON seas.id = t.season_id
-                    WHERE sgr.deleted_at IS NULL
-                      AND sgr.run_key IS NOT NULL
-                      AND seas.year = %s
-                    ORDER BY sgr.created_at DESC
-                    LIMIT 1
-                """, (year,))
-                result = cur.fetchone()
-                if result:
-                    run_id = result[0]
-                    print(f"  Using run_id: {run_id}")
-                else:
-                    raise ValueError(
-                        f"No strategy generation runs found for year {year}"
-                    )
-    else:
-        print(f"  Using run_id: {run_id}")
-
-    from moneyball.db.connection import get_db_connection
-
-    db_calcutta_id = calcutta_id
-    if db_calcutta_id is None:
-        # Resolve a core calcutta_id for the given year so the backend can
-        # reliably find the "latest" strategy_generation_run for a selected
-        # calcutta.
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT c.id
-                    FROM core.calcuttas c
-                    JOIN core.tournaments t
-                      ON t.id = c.tournament_id
-                     AND t.deleted_at IS NULL
-                    JOIN core.seasons seas
-                      ON seas.id = t.season_id
-                    WHERE c.deleted_at IS NULL
-                      AND seas.year = %s
-                    ORDER BY c.created_at DESC
-                    LIMIT 1
-                    """,
-                    (year,),
-                )
-                result = cur.fetchone()
-                if not result or not result[0]:
-                    raise ValueError(f"No calcutta found for year {year}")
-                db_calcutta_id = str(result[0])
-
-    # Read simulations from database (scored using the resolved calcutta rules).
-    from moneyball.db.readers import read_simulated_tournaments
-    simulations_df = read_simulated_tournaments(
-        year,
-        calcutta_id=db_calcutta_id,
-    )
-
-    print(f"  Found {len(simulations_df)} simulation results")
-    
-    # Generate recommendations
-    recommendations_df = recommend_entry_bids_from_simulations(
-        simulations_df=simulations_df,
-        year=year,
-        strategy=strategy,
-        budget_points=budget_points,
-        min_teams=min_teams,
-        max_teams=max_teams,
-        min_bid=min_bid,
-        max_bid=max_bid,
-    )
-    
-    print(f"  Generated {len(recommendations_df)} recommendations")
-    
-    # Write to database
-    from moneyball.db.writers.gold_writers import (
-        write_optimization_run,
-        write_recommended_entry_bids,
-    )
-
-    # Attach latest simulated_tournament_id so "by strategy run" analytics can filter
-    # derived.simulated_teams deterministically.
-    simulated_tournament_id = None
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT st.id
-                FROM derived.simulated_tournaments st
-                JOIN core.tournaments t
-                  ON t.id = st.tournament_id
-                 AND t.deleted_at IS NULL
-                JOIN core.seasons seas
-                  ON seas.id = t.season_id
-                 AND seas.deleted_at IS NULL
-                WHERE st.deleted_at IS NULL
-                  AND seas.year = %s
-                ORDER BY st.created_at DESC
-                LIMIT 1
-                """,
-                (year,),
-            )
-            row = cur.fetchone()
-            if row and row[0]:
-                simulated_tournament_id = str(row[0])
-    
-    # Write optimization run
-    write_optimization_run(
-        run_id=run_id,
-        calcutta_id=db_calcutta_id,
-        simulated_tournament_id=simulated_tournament_id,
-        strategy=strategy,
-        n_sims=int(simulations_df['sim_id'].nunique()),
-        seed=42,
-        budget_points=budget_points,
-    )
-    
-    # Write recommendations
-    write_recommended_entry_bids(
-        run_id=run_id,
-        bids_df=recommendations_df,
-        team_id_map={
-            str(row['school_slug']): str(row['id'])
-            for _, row in read_teams(year).iterrows()
-        },
-    )
-    
-    print(f"✓ Recommended entry bids written to database (run_id={run_id})")
-    
-    return {
-        'year': year,
-        'strategy': strategy,
-        'run_id': run_id,
-        'n_recommendations': len(recommendations_df),
-        'total_bid': int(recommendations_df['bid_amount_points'].sum()),
-    }
-
-
 def run_full_pipeline(
     *,
     year: int,
@@ -596,21 +404,7 @@ def run_full_pipeline(
         seed=seed,
         calcutta_id=calcutta_id,
     )
-    
-    # Stage 3: Recommended entry bids
-    results['recommended_entry_bids'] = stage_recommended_entry_bids(
-        year=year,
-        strategy=strategy,
-        run_id=results['simulated_tournaments']['run_id'],
-        calcutta_id=calcutta_id,
-    )
-    
-    # Stage 4: Evaluate simulated entry via simulated calcuttas
-    results['simulated_calcuttas'] = stage_simulated_calcuttas(
-        year=year,
-        run_id=results['recommended_entry_bids']['run_id'],
-    )
-    
+
     print(f"\n{'='*60}")
     print(f"Pipeline complete for {year}")
     print(f"{'='*60}\n")

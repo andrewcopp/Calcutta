@@ -1,15 +1,16 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
-	"time"
+	"path/filepath"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -34,21 +35,21 @@ func run() error {
 		return fmt.Errorf("no migration action specified")
 	}
 
-	// Initialize context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Initialize database connection
-	fmt.Println("Initializing database connection...")
-	if err := db.Initialize(ctx); err != nil {
-		return fmt.Errorf("failed to initialize database: %w", err)
+	cfg, err := platform.LoadConfigFromEnv()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
-	fmt.Println("Database connection initialized successfully")
+
+	m, err := newMigrator(cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+	defer m.Close()
 
 	// Run migrations
 	if *force != 0 {
 		fmt.Printf("Forcing schema migration version to %d (clearing dirty state)...\n", *force)
-		if err := db.ForceSchemaMigrations(ctx, *force); err != nil {
+		if err := m.Force(*force); err != nil {
 			return fmt.Errorf("error forcing schema migrations: %w", err)
 		}
 		fmt.Println("Schema migration version forced successfully")
@@ -56,7 +57,7 @@ func run() error {
 
 	if *up {
 		fmt.Println("Running schema migrations up...")
-		if err := db.RunSchemaMigrations(ctx); err != nil {
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 			return fmt.Errorf("error running schema migrations: %w", err)
 		}
 		fmt.Println("Schema migrations completed successfully")
@@ -64,13 +65,28 @@ func run() error {
 
 	if *down {
 		fmt.Println("Rolling back schema migrations...")
-		if err := db.RollbackSchemaMigrations(ctx); err != nil {
+		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
 			return fmt.Errorf("error rolling back schema migrations: %w", err)
 		}
 		fmt.Println("Schema migrations rolled back successfully")
 	}
 
-	// Close the database connection
-	db.Close()
 	return nil
+}
+
+func newMigrator(databaseURL string) (*migrate.Migrate, error) {
+	workDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("error getting working directory: %w", err)
+	}
+
+	migrationsDir := filepath.Join(workDir, "migrations", "schema")
+	sourceURL := fmt.Sprintf("file://%s", migrationsDir)
+
+	m, err := migrate.New(sourceURL, databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("error creating migrator: %w", err)
+	}
+
+	return m, nil
 }

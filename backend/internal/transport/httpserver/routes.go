@@ -80,21 +80,21 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	// Lab endpoints (lab.* schema)
 	labHandler := lab.NewHandlerWithAuthUserID(s.app, authUserID)
 	lab.RegisterRoutes(r, lab.Handlers{
-		ListModels:                 s.requirePermission("analytics.suites.read", labHandler.HandleListModels),
-		GetModel:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetModel),
-		GetLeaderboard:             s.requirePermission("analytics.suites.read", labHandler.HandleGetLeaderboard),
-		GenerateEntries:            s.requirePermission("analytics.suites.write", labHandler.HandleGenerateEntries),
-		StartPipeline:              s.requirePermission("analytics.suites.write", labHandler.HandleStartPipeline),
-		GetModelPipelineProgress:   s.requirePermission("analytics.suites.read", labHandler.HandleGetModelPipelineProgress),
-		GetPipelineRun:             s.requirePermission("analytics.suites.read", labHandler.HandleGetPipelineRun),
-		CancelPipeline:             s.requirePermission("analytics.suites.write", labHandler.HandleCancelPipeline),
-		ListEntries:                s.requirePermission("analytics.suites.read", labHandler.HandleListEntries),
-		GetEntry:                   s.requirePermission("analytics.suites.read", labHandler.HandleGetEntry),
-		GetEntryByModelAndCalcutta: s.requirePermission("analytics.suites.read", labHandler.HandleGetEntryByModelAndCalcutta),
-		ListEvaluations:            s.requirePermission("analytics.suites.read", labHandler.HandleListEvaluations),
-		GetEvaluation:              s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluation),
-		GetEvaluationEntryResults:  s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluationEntryResults),
-		GetEvaluationEntryProfile:  s.requirePermission("analytics.suites.read", labHandler.HandleGetEvaluationEntryProfile),
+		ListModels:                 s.requirePermission("lab.read", labHandler.HandleListModels),
+		GetModel:                   s.requirePermission("lab.read", labHandler.HandleGetModel),
+		GetLeaderboard:             s.requirePermission("lab.read", labHandler.HandleGetLeaderboard),
+		GenerateEntries:            s.requirePermission("lab.write", labHandler.HandleGenerateEntries),
+		StartPipeline:              s.requirePermission("lab.write", labHandler.HandleStartPipeline),
+		GetModelPipelineProgress:   s.requirePermission("lab.read", labHandler.HandleGetModelPipelineProgress),
+		GetPipelineRun:             s.requirePermission("lab.read", labHandler.HandleGetPipelineRun),
+		CancelPipeline:             s.requirePermission("lab.write", labHandler.HandleCancelPipeline),
+		ListEntries:                s.requirePermission("lab.read", labHandler.HandleListEntries),
+		GetEntry:                   s.requirePermission("lab.read", labHandler.HandleGetEntry),
+		GetEntryByModelAndCalcutta: s.requirePermission("lab.read", labHandler.HandleGetEntryByModelAndCalcutta),
+		ListEvaluations:            s.requirePermission("lab.read", labHandler.HandleListEvaluations),
+		GetEvaluation:              s.requirePermission("lab.read", labHandler.HandleGetEvaluation),
+		GetEvaluationEntryResults:  s.requirePermission("lab.read", labHandler.HandleGetEvaluationEntryResults),
+		GetEvaluationEntryProfile:  s.requirePermission("lab.read", labHandler.HandleGetEvaluationEntryProfile),
 	})
 
 	s.registerTournamentModeratorRoutes(r)
