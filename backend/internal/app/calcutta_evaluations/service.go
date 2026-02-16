@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/errgroup"
 )
 
 type CalcuttaEvaluationResult struct {
@@ -358,42 +359,30 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 	payouts map[int]int,
 	firstPlacePayout int,
 ) (int, int, error) {
-	results := make(chan []SimulationResult, len(simulations))
-	errors := make(chan error, len(simulations))
+	var (
+		mu         sync.Mutex
+		allResults []SimulationResult
+	)
 
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10)
+	g, _ := errgroup.WithContext(ctx)
+	g.SetLimit(10)
 
 	for simID := range simulations {
-		wg.Add(1)
-		go func(sid int) {
-			defer wg.Done()
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-
+		sid := simID
+		g.Go(func() error {
 			simResults, err := s.calculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
 			if err != nil {
-				errors <- fmt.Errorf("simulation %d: %w", sid, err)
-				return
+				return fmt.Errorf("simulation %d: %w", sid, err)
 			}
-			results <- simResults
-		}(simID)
+			mu.Lock()
+			allResults = append(allResults, simResults...)
+			mu.Unlock()
+			return nil
+		})
 	}
 
-	go func() {
-		wg.Wait()
-		close(results)
-		close(errors)
-	}()
-
-	var allResults []SimulationResult
-	for simResults := range results {
-		allResults = append(allResults, simResults...)
-	}
-	for err := range errors {
-		if err != nil {
-			return 0, 0, err
-		}
+	if err := g.Wait(); err != nil {
+		return 0, 0, err
 	}
 
 	persistDetails := s.persistSimulationDetails
