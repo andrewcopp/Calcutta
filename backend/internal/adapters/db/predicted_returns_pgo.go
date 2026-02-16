@@ -430,7 +430,7 @@ func computeExpectedValueFromPGO(
 					n1, ok1 := netByTeamID[t1]
 					n2, ok2 := netByTeamID[t2]
 					if ok1 && ok2 {
-						p1 = winProb(n1, n2, kenpomScale)
+						p1 = mathutil.WinProb(n1, n2, kenpomScale)
 					} else {
 						p1 = 0.5
 					}
@@ -508,9 +508,3 @@ func applyReach(r *roundReach, round models.BracketRound, p float64) {
 	}
 }
 
-func winProb(net1 float64, net2 float64, scale float64) float64 {
-	if scale <= 0 {
-		return 0.5
-	}
-	return mathutil.Sigmoid((net1 - net2) / scale)
-}

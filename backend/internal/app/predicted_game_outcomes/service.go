@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/mathutil"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -97,12 +98,12 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 		return "", 0, errors.New("KenPomScale must be positive")
 	}
 
-	coreTournamentID, err := s.resolveCoreTournamentID(ctx, p.Season)
+	coreTournamentID, err := dbadapter.ResolveCoreTournamentID(ctx, s.pool, p.Season)
 	if err != nil {
 		return "", 0, err
 	}
 
-	ff, err := s.loadFinalFourConfig(ctx, coreTournamentID)
+	ff, err := dbadapter.LoadFinalFourConfig(ctx, s.pool, coreTournamentID)
 	if err != nil {
 		return "", 0, err
 	}
@@ -169,7 +170,7 @@ func (s *Service) GenerateAndWrite(ctx context.Context, p GenerateParams) (strin
 				continue
 			}
 
-			p1 := winProb(net1, net2, p.KenPomScale)
+			p1 := mathutil.WinProb(net1, net2, p.KenPomScale)
 			winner := t2
 			if rng.Float64() < p1 {
 				winner = t1
@@ -289,7 +290,7 @@ func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID strin
 		pp.Seed = 42
 	}
 
-	ff, err := s.loadFinalFourConfig(ctx, coreTournamentID)
+	ff, err := dbadapter.LoadFinalFourConfig(ctx, s.pool, coreTournamentID)
 	if err != nil {
 		return "", 0, err
 	}
@@ -356,7 +357,7 @@ func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID strin
 				continue
 			}
 
-			p1 := winProb(net1, net2, pp.KenPomScale)
+			p1 := mathutil.WinProb(net1, net2, pp.KenPomScale)
 			winner := t2
 			if rng.Float64() < p1 {
 				winner = t1
@@ -436,24 +437,6 @@ func (s *Service) GenerateAndWriteToExistingRun(ctx context.Context, runID strin
 	return coreTournamentID, len(rows), nil
 }
 
-func (s *Service) resolveCoreTournamentID(ctx context.Context, season int) (string, error) {
-	var id string
-	if err := s.pool.QueryRow(ctx, `
-		SELECT t.id
-		FROM core.tournaments t
-		JOIN core.seasons s
-			ON s.id = t.season_id
-			AND s.deleted_at IS NULL
-		WHERE s.year = $1::int
-			AND t.deleted_at IS NULL
-		ORDER BY t.created_at DESC
-		LIMIT 1
-	`, season).Scan(&id); err != nil {
-		return "", err
-	}
-	return id, nil
-}
-
 func (s *Service) loadTeams(
 	ctx context.Context,
 	coreTournamentID string,
@@ -522,53 +505,6 @@ func (s *Service) loadTeams(
 	}
 
 	return teams, netByID, nil
-}
-
-func (s *Service) loadFinalFourConfig(ctx context.Context, coreTournamentID string) (*models.FinalFourConfig, error) {
-	var tl, bl, tr, br *string
-	err := s.pool.QueryRow(ctx, `
-		SELECT
-			final_four_top_left,
-			final_four_bottom_left,
-			final_four_top_right,
-			final_four_bottom_right
-		FROM core.tournaments
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, coreTournamentID).Scan(&tl, &bl, &tr, &br)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &models.FinalFourConfig{}
-	if tl != nil {
-		cfg.TopLeftRegion = *tl
-	}
-	if bl != nil {
-		cfg.BottomLeftRegion = *bl
-	}
-	if tr != nil {
-		cfg.TopRightRegion = *tr
-	}
-	if br != nil {
-		cfg.BottomRightRegion = *br
-	}
-
-	if cfg.TopLeftRegion == "" {
-		cfg.TopLeftRegion = "East"
-	}
-	if cfg.BottomLeftRegion == "" {
-		cfg.BottomLeftRegion = "West"
-	}
-	if cfg.TopRightRegion == "" {
-		cfg.TopRightRegion = "South"
-	}
-	if cfg.BottomRightRegion == "" {
-		cfg.BottomRightRegion = "Midwest"
-	}
-
-	return cfg, nil
 }
 
 func (s *Service) writePredictedGameOutcomes(
@@ -729,13 +665,6 @@ func (s *predictionSource) Values() ([]any, error) {
 }
 
 func (s *predictionSource) Err() error { return nil }
-
-func winProb(net1 float64, net2 float64, scale float64) float64 {
-	if scale <= 0 {
-		return 0.5
-	}
-	return mathutil.Sigmoid((net1 - net2) / scale)
-}
 
 func prepareGames(bracket *models.BracketStructure) ([]*models.BracketGame, map[string]map[int]string, map[string]gameMeta) {
 	games := make([]*models.BracketGame, 0, len(bracket.Games))

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
@@ -134,12 +135,12 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	overallStart := time.Now()
 
 	loadStart := time.Now()
-	coreTournamentID, err := s.resolveCoreTournamentID(ctx, p.Season)
+	coreTournamentID, err := dbadapter.ResolveCoreTournamentID(ctx, s.pool, p.Season)
 	if err != nil {
 		return nil, err
 	}
 
-	ff, err := s.loadFinalFourConfig(ctx, coreTournamentID)
+	ff, err := dbadapter.LoadFinalFourConfig(ctx, s.pool, coreTournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -393,67 +394,6 @@ func (s *Service) createTournamentStateSnapshotFromBracket(
 	}
 
 	return snapshotID, nil
-}
-
-func (s *Service) resolveCoreTournamentID(ctx context.Context, season int) (string, error) {
-	var id string
-	if err := s.pool.QueryRow(ctx, `
-		SELECT t.id
-		FROM core.tournaments t
-		JOIN core.seasons s
-			ON s.id = t.season_id
-			AND s.deleted_at IS NULL
-		WHERE s.year = $1::int
-			AND t.deleted_at IS NULL
-		ORDER BY t.created_at DESC
-		LIMIT 1
-	`, season).Scan(&id); err != nil {
-		return "", err
-	}
-	return id, nil
-}
-
-func (s *Service) loadFinalFourConfig(ctx context.Context, coreTournamentID string) (*models.FinalFourConfig, error) {
-	var tl, bl, tr, br *string
-	err := s.pool.QueryRow(ctx, `
-		SELECT final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right
-		FROM core.tournaments
-		WHERE id = $1::uuid
-			AND deleted_at IS NULL
-		LIMIT 1
-	`, coreTournamentID).Scan(&tl, &bl, &tr, &br)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &models.FinalFourConfig{}
-	if tl != nil {
-		cfg.TopLeftRegion = *tl
-	}
-	if bl != nil {
-		cfg.BottomLeftRegion = *bl
-	}
-	if tr != nil {
-		cfg.TopRightRegion = *tr
-	}
-	if br != nil {
-		cfg.BottomRightRegion = *br
-	}
-
-	if cfg.TopLeftRegion == "" {
-		cfg.TopLeftRegion = "East"
-	}
-	if cfg.BottomLeftRegion == "" {
-		cfg.BottomLeftRegion = "West"
-	}
-	if cfg.TopRightRegion == "" {
-		cfg.TopRightRegion = "South"
-	}
-	if cfg.BottomRightRegion == "" {
-		cfg.BottomRightRegion = "Midwest"
-	}
-
-	return cfg, nil
 }
 
 func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*models.TournamentTeam, error) {
