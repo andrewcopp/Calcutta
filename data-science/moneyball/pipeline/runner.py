@@ -459,45 +459,6 @@ def _stage_simulated_tournaments(
     return out_path, manifest
 
 
-def _stage_simulated_entry_outcomes(
-    *,
-    snapshot_dir: Path,
-    out_dir: Path,
-    calcutta_key: Optional[str],
-    n_sims: int,
-    seed: int,
-    budget_points: int,
-    keep_sims: bool,
-    use_cache: bool,
-    manifest: Dict[str, Any],
-) -> Tuple[Path, Dict[str, Any]]:
-    raise RuntimeError(
-        "The file-based Python stage 'simulated_entry_outcomes' is deprecated; "
-        "use Go evaluation and derived.* tables instead."
-    )
-
-    raise RuntimeError("unreachable")
-
-
-def _stage_investment_report(
-    *,
-    snapshot_dir: Path,
-    out_dir: Path,
-    snapshot_name: str,
-    budget_points: int,
-    n_sims: int,
-    seed: int,
-    use_cache: bool,
-    manifest: Dict[str, Any],
-) -> Tuple[Path, Dict[str, Any]]:
-    raise RuntimeError(
-        "The file-based Python stage 'investment_report' is deprecated; "
-        "use Go evaluation outputs and DB-backed reports instead."
-    )
-
-    raise RuntimeError("unreachable")
-
-
 def run(
     *,
     snapshot_dir: Path,

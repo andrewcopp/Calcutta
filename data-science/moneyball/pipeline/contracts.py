@@ -167,54 +167,6 @@ def _validate_simulated_tournaments(df: pd.DataFrame) -> None:
         raise ValueError("wins must be non-negative integer")
 
 
-def _validate_simulated_entry_outcomes(df: pd.DataFrame) -> None:
-    _require_columns(
-        df,
-        [
-            "entry_key",
-            "sims",
-            "seed",
-            "budget_points",
-            "mean_payout_cents",
-            "mean_total_points",
-            "mean_finish_position",
-            "mean_n_entries",
-            "p_top1",
-            "p_in_money",
-        ],
-        name="simulated_entry_outcomes",
-    )
-    if df.empty:
-        raise ValueError("simulated_entry_outcomes must not be empty")
-
-    sims = pd.to_numeric(df["sims"], errors="coerce")
-    if sims.isna().any() or (sims <= 0).any():
-        raise ValueError("sims must be positive")
-
-    budget = pd.to_numeric(df["budget_points"], errors="coerce")
-    if budget.isna().any() or (budget <= 0).any():
-        raise ValueError("budget_points must be positive")
-
-    for c in ["p_top1", "p_in_money"]:
-        _require_in_0_1(df[c], col=c)
-
-    payout = pd.to_numeric(df["mean_payout_cents"], errors="coerce")
-    if payout.isna().any() or (payout < 0).any():
-        raise ValueError("mean_payout_cents must be non-negative")
-
-
-def _validate_investment_report(df: pd.DataFrame) -> None:
-    if (df["portfolio_team_count"] <= 0).any():
-        raise ValueError("portfolio_team_count must be positive")
-    hhi_col = "portfolio_concentration_hhi"
-    if ((df[hhi_col] < 0) | (df[hhi_col] > 1)).any():
-        raise ValueError(f"{hhi_col} must be in [0, 1]")
-    prob_cols = ["p_top1", "p_in_money"]
-    for col in prob_cols:
-        if ((df[col] < 0) | (df[col] > 1)).any():
-            raise ValueError(f"{col} must be in [0, 1]")
-
-
 CONTRACTS: Dict[str, ArtifactContract] = {
     "predicted_game_outcomes": ArtifactContract(
         name="predicted_game_outcomes",
@@ -247,43 +199,6 @@ CONTRACTS: Dict[str, ArtifactContract] = {
         name="simulated_tournaments",
         required_columns=["sim_id", "team_key", "wins"],
         validators=[_validate_simulated_tournaments],
-    ),
-    "simulated_entry_outcomes": ArtifactContract(
-        name="simulated_entry_outcomes",
-        required_columns=[
-            "entry_key",
-            "sims",
-            "seed",
-            "budget_points",
-            "mean_payout_cents",
-            "mean_total_points",
-            "mean_finish_position",
-            "p_top1",
-            "p_top3",
-            "p_top6",
-            "p_top10",
-        ],
-        validators=[_validate_simulated_entry_outcomes],
-    ),
-    "investment_report": ArtifactContract(
-        name="investment_report",
-        required_columns=[
-            "snapshot_name",
-            "budget_points",
-            "n_sims",
-            "seed",
-            "portfolio_team_count",
-            "portfolio_total_bids",
-            "mean_expected_payout_cents",
-            "mean_expected_points",
-            "mean_expected_finish_position",
-            "mean_n_entries",
-            "p_top1",
-            "p_in_money",
-            "portfolio_concentration_hhi",
-            "portfolio_teams_json",
-        ],
-        validators=[_validate_investment_report],
     ),
 }
 
