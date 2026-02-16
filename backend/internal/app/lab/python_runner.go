@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 const defaultGenerateEntriesTimeout = 5 * time.Minute
@@ -23,7 +25,7 @@ type pythonGenerateEntriesResult struct {
 }
 
 // RunGenerateEntriesScript executes the Python script to generate lab entries.
-func RunGenerateEntriesScript(ctx context.Context, modelID string, req GenerateEntriesRequest) (*GenerateEntriesResponse, error) {
+func RunGenerateEntriesScript(ctx context.Context, modelID string, req models.LabGenerateEntriesRequest) (*models.LabGenerateEntriesResponse, error) {
 	pythonBin := strings.TrimSpace(os.Getenv("PYTHON_BIN"))
 	if pythonBin == "" {
 		pythonBin = "python3"
@@ -118,7 +120,7 @@ func RunGenerateEntriesScript(ctx context.Context, modelID string, req GenerateE
 		return nil, errors.New(msg)
 	}
 
-	return &GenerateEntriesResponse{
+	return &models.LabGenerateEntriesResponse{
 		EntriesCreated: parsed.EntriesCreated,
 		Errors:         parsed.Errors,
 	}, nil

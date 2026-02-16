@@ -87,14 +87,6 @@ func (s *stubAnalyticsRepo) ListGameOutcomeRunsByTournamentID(ctx context.Contex
 	return nil, nil
 }
 
-func (s *stubAnalyticsRepo) ListMarketShareRunsByCalcuttaID(ctx context.Context, calcuttaID string) ([]ports.MarketShareRun, error) {
-	return nil, nil
-}
-
-func (s *stubAnalyticsRepo) GetLatestPredictionRunsForCalcutta(ctx context.Context, calcuttaID string) (*ports.LatestPredictionRuns, error) {
-	return nil, nil
-}
-
 func TestThatMeanFloat64ReturnsZeroForEmptySlice(t *testing.T) {
 	got := meanFloat64(nil)
 

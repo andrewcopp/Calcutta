@@ -184,21 +184,6 @@ type GameOutcomeRun struct {
 	CreatedAt    time.Time
 }
 
-type MarketShareRun struct {
-	ID          string
-	AlgorithmID string
-	CalcuttaID  string
-	ParamsJSON  []byte
-	GitSHA      *string
-	CreatedAt   time.Time
-}
-
-type LatestPredictionRuns struct {
-	TournamentID     string
-	GameOutcomeRunID *string
-	MarketShareRunID *string
-}
-
 type AnalyticsRepo interface {
 	GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsData, float64, float64, error)
 	GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsData, float64, float64, error)
@@ -216,6 +201,4 @@ type AnalyticsRepo interface {
 	GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryData, error)
 	ListAlgorithms(ctx context.Context, kind *string) ([]Algorithm, error)
 	ListGameOutcomeRunsByTournamentID(ctx context.Context, tournamentID string) ([]GameOutcomeRun, error)
-	ListMarketShareRunsByCalcuttaID(ctx context.Context, calcuttaID string) ([]MarketShareRun, error)
-	GetLatestPredictionRunsForCalcutta(ctx context.Context, calcuttaID string) (*LatestPredictionRuns, error)
 }

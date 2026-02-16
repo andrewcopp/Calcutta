@@ -9,6 +9,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
 	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/google/uuid"
@@ -47,12 +48,12 @@ func (h *Handler) HandleListModels(w http.ResponseWriter, r *http.Request) {
 
 	kind := strings.TrimSpace(r.URL.Query().Get("kind"))
 
-	filter := applab.ListModelsFilter{}
+	filter := models.LabListModelsFilter{}
 	if kind != "" {
 		filter.Kind = &kind
 	}
 
-	page := applab.Pagination{
+	page := models.LabPagination{
 		Limit:  getQueryInt(r, "limit", 50),
 		Offset: getQueryInt(r, "offset", 0),
 	}
@@ -119,7 +120,7 @@ func (h *Handler) HandleListEntries(w http.ResponseWriter, r *http.Request) {
 	calcuttaID := strings.TrimSpace(r.URL.Query().Get("calcutta_id"))
 	startingStateKey := strings.TrimSpace(r.URL.Query().Get("starting_state_key"))
 
-	filter := applab.ListEntriesFilter{}
+	filter := models.LabListEntriesFilter{}
 	if investmentModelID != "" {
 		filter.InvestmentModelID = &investmentModelID
 	}
@@ -130,7 +131,7 @@ func (h *Handler) HandleListEntries(w http.ResponseWriter, r *http.Request) {
 		filter.StartingStateKey = &startingStateKey
 	}
 
-	page := applab.Pagination{
+	page := models.LabPagination{
 		Limit:  getQueryInt(r, "limit", 50),
 		Offset: getQueryInt(r, "offset", 0),
 	}
@@ -217,7 +218,7 @@ func (h *Handler) HandleListEvaluations(w http.ResponseWriter, r *http.Request) 
 	investmentModelID := strings.TrimSpace(r.URL.Query().Get("investment_model_id"))
 	calcuttaID := strings.TrimSpace(r.URL.Query().Get("calcutta_id"))
 
-	filter := applab.ListEvaluationsFilter{}
+	filter := models.LabListEvaluationsFilter{}
 	if entryID != "" {
 		filter.EntryID = &entryID
 	}
@@ -228,7 +229,7 @@ func (h *Handler) HandleListEvaluations(w http.ResponseWriter, r *http.Request) 
 		filter.CalcuttaID = &calcuttaID
 	}
 
-	page := applab.Pagination{
+	page := models.LabPagination{
 		Limit:  getQueryInt(r, "limit", 50),
 		Offset: getQueryInt(r, "offset", 0),
 	}
@@ -346,7 +347,7 @@ func (h *Handler) HandleGenerateEntries(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Parse optional request body
-	var req applab.GenerateEntriesRequest
+	var req models.LabGenerateEntriesRequest
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			httperr.Write(w, r, http.StatusBadRequest, "validation_error", "invalid request body", "")
@@ -388,7 +389,7 @@ func (h *Handler) HandleStartPipeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse optional request body
-	var req applab.StartPipelineRequest
+	var req models.LabStartPipelineRequest
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			httperr.Write(w, r, http.StatusBadRequest, "validation_error", "invalid request body", "")
@@ -500,21 +501,21 @@ func (h *Handler) HandleCancelPipeline(w http.ResponseWriter, r *http.Request) {
 // Response types
 
 type listModelsResponse struct {
-	Items []applab.InvestmentModel `json:"items"`
+	Items []models.InvestmentModel `json:"items"`
 }
 
 type leaderboardResponse struct {
-	Items []applab.LeaderboardEntry `json:"items"`
+	Items []models.LabLeaderboardEntry `json:"items"`
 }
 
 type listEntriesResponse struct {
-	Items []applab.EntryDetail `json:"items"`
+	Items []models.LabEntryDetail `json:"items"`
 }
 
 type listEvaluationsResponse struct {
-	Items []applab.EvaluationDetail `json:"items"`
+	Items []models.LabEvaluationDetail `json:"items"`
 }
 
 type evaluationEntryResultsResponse struct {
-	Items []applab.EvaluationEntryResult `json:"items"`
+	Items []models.LabEvaluationEntryResult `json:"items"`
 }

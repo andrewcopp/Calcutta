@@ -70,24 +70,3 @@ func (e *InvalidArgumentError) Error() string {
 	return e.Message
 }
 
-type ForbiddenError struct {
-	Message string
-}
-
-func (e *ForbiddenError) Error() string {
-	if e.Message == "" {
-		return "forbidden"
-	}
-	return e.Message
-}
-
-type ConflictError struct {
-	Message string
-}
-
-func (e *ConflictError) Error() string {
-	if e.Message == "" {
-		return "conflict"
-	}
-	return e.Message
-}

@@ -5,21 +5,24 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
 // Service provides lab-related business logic.
 type Service struct {
-	repo         Repository
-	pipelineRepo PipelineRepository
+	repo         ports.LabRepository
+	pipelineRepo ports.LabPipelineRepository
 }
 
 // NewWithPipelineRepo creates a new lab service with pipeline repository support.
-func NewWithPipelineRepo(repo PipelineRepository) *Service {
+func NewWithPipelineRepo(repo ports.LabPipelineRepository) *Service {
 	return &Service{repo: repo, pipelineRepo: repo}
 }
 
 // ListInvestmentModels returns investment models matching the filter.
-func (s *Service) ListInvestmentModels(ctx context.Context, filter ListModelsFilter, page Pagination) ([]InvestmentModel, error) {
+func (s *Service) ListInvestmentModels(ctx context.Context, filter models.LabListModelsFilter, page models.LabPagination) ([]models.InvestmentModel, error) {
 	if page.Limit <= 0 {
 		page.Limit = 50
 	}
@@ -33,17 +36,17 @@ func (s *Service) ListInvestmentModels(ctx context.Context, filter ListModelsFil
 }
 
 // GetInvestmentModel returns a single investment model by ID.
-func (s *Service) GetInvestmentModel(ctx context.Context, id string) (*InvestmentModel, error) {
+func (s *Service) GetInvestmentModel(ctx context.Context, id string) (*models.InvestmentModel, error) {
 	return s.repo.GetInvestmentModel(id)
 }
 
 // GetModelLeaderboard returns the model leaderboard sorted by avg mean payout.
-func (s *Service) GetModelLeaderboard(ctx context.Context) ([]LeaderboardEntry, error) {
+func (s *Service) GetModelLeaderboard(ctx context.Context) ([]models.LabLeaderboardEntry, error) {
 	return s.repo.GetModelLeaderboard()
 }
 
 // ListEntries returns entries matching the filter.
-func (s *Service) ListEntries(ctx context.Context, filter ListEntriesFilter, page Pagination) ([]EntryDetail, error) {
+func (s *Service) ListEntries(ctx context.Context, filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error) {
 	if page.Limit <= 0 {
 		page.Limit = 50
 	}
@@ -57,17 +60,17 @@ func (s *Service) ListEntries(ctx context.Context, filter ListEntriesFilter, pag
 }
 
 // GetEntryEnriched returns a single entry with enriched bids (team names, seeds, naive allocation).
-func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*EntryDetailEnriched, error) {
+func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*models.LabEntryDetailEnriched, error) {
 	return s.repo.GetEntryEnriched(id)
 }
 
 // GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
-func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*EntryDetailEnriched, error) {
+func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
 	return s.repo.GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey)
 }
 
 // ListEvaluations returns evaluations matching the filter.
-func (s *Service) ListEvaluations(ctx context.Context, filter ListEvaluationsFilter, page Pagination) ([]EvaluationDetail, error) {
+func (s *Service) ListEvaluations(ctx context.Context, filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error) {
 	if page.Limit <= 0 {
 		page.Limit = 50
 	}
@@ -81,27 +84,27 @@ func (s *Service) ListEvaluations(ctx context.Context, filter ListEvaluationsFil
 }
 
 // GetEvaluation returns a single evaluation by ID with full details.
-func (s *Service) GetEvaluation(ctx context.Context, id string) (*EvaluationDetail, error) {
+func (s *Service) GetEvaluation(ctx context.Context, id string) (*models.LabEvaluationDetail, error) {
 	return s.repo.GetEvaluation(id)
 }
 
 // GetEvaluationEntryResults returns per-entry results for an evaluation.
-func (s *Service) GetEvaluationEntryResults(ctx context.Context, evaluationID string) ([]EvaluationEntryResult, error) {
+func (s *Service) GetEvaluationEntryResults(ctx context.Context, evaluationID string) ([]models.LabEvaluationEntryResult, error) {
 	return s.repo.GetEvaluationEntryResults(evaluationID)
 }
 
 // GetEvaluationEntryProfile returns detailed profile for an entry result.
-func (s *Service) GetEvaluationEntryProfile(ctx context.Context, entryResultID string) (*EvaluationEntryProfile, error) {
+func (s *Service) GetEvaluationEntryProfile(ctx context.Context, entryResultID string) (*models.LabEvaluationEntryProfile, error) {
 	return s.repo.GetEvaluationEntryProfile(entryResultID)
 }
 
 // GenerateEntries runs the Python script to generate entries for a model.
-func (s *Service) GenerateEntries(ctx context.Context, modelID string, req GenerateEntriesRequest) (*GenerateEntriesResponse, error) {
+func (s *Service) GenerateEntries(ctx context.Context, modelID string, req models.LabGenerateEntriesRequest) (*models.LabGenerateEntriesResponse, error) {
 	return RunGenerateEntriesScript(ctx, modelID, req)
 }
 
 // StartPipeline starts a new pipeline run for a model.
-func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPipelineRequest) (*StartPipelineResponse, error) {
+func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.LabStartPipelineRequest) (*models.LabStartPipelineResponse, error) {
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}
@@ -165,7 +168,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 	}
 
 	// Create pipeline run
-	run := &PipelineRun{
+	run := &models.LabPipelineRun{
 		InvestmentModelID: modelID,
 		TargetCalcuttaIDs: calcuttaIDs,
 		BudgetPoints:      budgetPoints,
@@ -189,7 +192,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 		return nil, err
 	}
 
-	return &StartPipelineResponse{
+	return &models.LabStartPipelineResponse{
 		PipelineRunID: created.ID,
 		NCalcuttas:    len(calcuttaIDs),
 		Status:        "pending",
@@ -197,7 +200,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req StartPi
 }
 
 // GetPipelineProgress returns the progress for a specific pipeline run.
-func (s *Service) GetPipelineProgress(ctx context.Context, pipelineRunID string) (*PipelineProgressResponse, error) {
+func (s *Service) GetPipelineProgress(ctx context.Context, pipelineRunID string) (*models.LabPipelineProgressResponse, error) {
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}
@@ -205,7 +208,7 @@ func (s *Service) GetPipelineProgress(ctx context.Context, pipelineRunID string)
 }
 
 // GetModelPipelineProgress returns the pipeline progress for a model.
-func (s *Service) GetModelPipelineProgress(ctx context.Context, modelID string) (*ModelPipelineProgress, error) {
+func (s *Service) GetModelPipelineProgress(ctx context.Context, modelID string) (*models.LabModelPipelineProgress, error) {
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}
@@ -213,7 +216,7 @@ func (s *Service) GetModelPipelineProgress(ctx context.Context, modelID string) 
 }
 
 // GetPipelineRun returns a pipeline run by ID.
-func (s *Service) GetPipelineRun(ctx context.Context, id string) (*PipelineRun, error) {
+func (s *Service) GetPipelineRun(ctx context.Context, id string) (*models.LabPipelineRun, error) {
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}

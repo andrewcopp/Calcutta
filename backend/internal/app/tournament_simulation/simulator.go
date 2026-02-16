@@ -36,7 +36,6 @@ type mapProbabilityProvider struct {
 }
 
 func (p mapProbabilityProvider) Prob(gameID string, team1ID string, team2ID string) float64 {
-	_ = gameID
 	if p.probs == nil {
 		return 0.5
 	}
@@ -74,7 +73,7 @@ func SimulateWithProvider(
 	}
 
 	games, prevByNext := prepareGames(bracket)
-	teams, baseByes := collectTeams(bracket, games)
+	teams, baseByes := collectTeams(games)
 	if len(teams) == 0 {
 		return nil, errors.New("bracket has no teams")
 	}
@@ -164,7 +163,7 @@ func prepareGames(bracket *models.BracketStructure) ([]*models.BracketGame, map[
 	return games, prevByNext
 }
 
-func collectTeams(bracket *models.BracketStructure, games []*models.BracketGame) ([]string, map[string]int) {
+func collectTeams(games []*models.BracketGame) ([]string, map[string]int) {
 	seen := make(map[string]struct{})
 	minRound := make(map[string]int)
 
@@ -204,7 +203,6 @@ func collectTeams(bracket *models.BracketStructure, games []*models.BracketGame)
 		}
 	}
 
-	_ = bracket
 	return teams, baseByes
 }
 

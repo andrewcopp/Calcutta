@@ -2,7 +2,6 @@ package calcutta_evaluations
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -123,87 +122,6 @@ func (s *Service) CalculateSimulatedCalcuttaForSimulatedCalcutta(
 	}
 
 	return evalRunID, nil
-}
-
-func (s *Service) EnqueueCalcuttaEvaluationRun(
-	ctx context.Context,
-	calcuttaID string,
-	excludedEntryName string,
-	tournamentSimulationBatchID *string,
-) (string, string, error) {
-	if calcuttaID == "" {
-		return "", "", fmt.Errorf("calcuttaID is required")
-	}
-
-	runKey := uuid.NewString()
-
-	cc, err := s.getCalcuttaContext(ctx, calcuttaID)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to resolve calcutta context: %w", err)
-	}
-
-	batchID := ""
-	if tournamentSimulationBatchID != nil {
-		batchID = *tournamentSimulationBatchID
-	}
-	if batchID == "" {
-		var ok bool
-		batchID, ok, err = s.getLatestTournamentSimulationBatchID(ctx, cc.TournamentID)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to resolve latest tournament simulation batch: %w", err)
-		}
-		if !ok {
-			tournamentStateSnapshotID, err := s.createTournamentStateSnapshot(ctx, cc.TournamentID)
-			if err != nil {
-				return "", "", fmt.Errorf("failed to create tournament state snapshot: %w", err)
-			}
-
-			batchID, err = s.createTournamentSimulationBatch(ctx, cc.TournamentID, tournamentStateSnapshotID)
-			if err != nil {
-				return "", "", fmt.Errorf("failed to create tournament simulation batch: %w", err)
-			}
-
-			if err := s.attachSimulationBatchToSimulatedTournaments(ctx, cc.TournamentID, batchID); err != nil {
-				return "", "", fmt.Errorf("failed to attach tournament_simulation_batch_id to simulated_tournaments: %w", err)
-			}
-		}
-	}
-
-	snapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runKey, excludedEntryName, nil, nil)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create calcutta snapshot: %w", err)
-	}
-
-	paramsJSON, _ := json.Marshal(map[string]any{
-		"workerize": true,
-		"source":    "enqueue_calcutta_evaluation",
-	})
-
-	gitSHA := os.Getenv("GIT_SHA")
-	var gitSHAParam any
-	if gitSHA != "" {
-		gitSHAParam = gitSHA
-	} else {
-		gitSHAParam = nil
-	}
-
-	var evalRunID string
-	if err := s.pool.QueryRow(ctx, `
-		INSERT INTO derived.calcutta_evaluation_runs (
-			run_key,
-			simulated_tournament_id,
-			calcutta_snapshot_id,
-			purpose,
-			params_json,
-			git_sha
-		)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, 'simulated_calcutta', $4::jsonb, $5)
-		RETURNING id::text
-	`, runKey, batchID, snapshotID, string(paramsJSON), gitSHAParam).Scan(&evalRunID); err != nil {
-		return "", "", err
-	}
-
-	return evalRunID, runKey, nil
 }
 
 func (s *Service) EvaluateExistingCalcuttaEvaluationRun(ctx context.Context, calcuttaEvaluationRunID string) (*CalcuttaEvaluationResult, error) {
@@ -336,34 +254,6 @@ func (s *Service) getEntriesFromSnapshot(ctx context.Context, snapshotID string)
 		return nil, err
 	}
 	return entries, nil
-}
-
-func (s *Service) CalculateSimulatedCalcuttaForStrategyGenerationRun(
-	ctx context.Context,
-	calcuttaID string,
-	runID string,
-	excludedEntryName string,
-	tournamentSimulationBatchID *string,
-	strategyGenerationRunID string,
-) (string, error) {
-	if strategyGenerationRunID == "" {
-		return "", fmt.Errorf("strategyGenerationRunID is required")
-	}
-	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil, &strategyGenerationRunID)
-}
-
-func (s *Service) CalculateSimulatedCalcuttaForEntryCandidate(
-	ctx context.Context,
-	calcuttaID string,
-	runID string,
-	excludedEntryName string,
-	tournamentSimulationBatchID *string,
-	entryCandidateID string,
-) (string, error) {
-	if entryCandidateID == "" {
-		return "", fmt.Errorf("entryCandidateID is required")
-	}
-	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, &entryCandidateID, nil)
 }
 
 func (s *Service) calculateSimulatedCalcuttaInternal(
