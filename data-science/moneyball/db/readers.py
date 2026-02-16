@@ -6,49 +6,12 @@ replacing parquet file dependencies with direct database queries.
 """
 from __future__ import annotations
 
-import os
 from typing import Optional, Dict, Any, List
 import pandas as pd
-import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from moneyball.db.connection import get_db_connection
 from moneyball.utils import points
-
-
-def get_db_connection():
-    """Get a database connection using environment variables."""
-    database_url = os.environ.get("DATABASE_URL", "").strip()
-    try:
-        if database_url:
-            return psycopg2.connect(database_url)
-
-        password = os.environ.get("DB_PASSWORD", "").strip()
-        if not password:
-            raise RuntimeError(
-                "DB_PASSWORD must be set (or use DATABASE_URL where supported)"
-            )
-
-        return psycopg2.connect(
-            host=os.environ.get("DB_HOST", "localhost"),
-            port=int(os.environ.get("DB_PORT", "5432")),
-            dbname=os.environ.get("DB_NAME", "calcutta"),
-            user=os.environ.get("DB_USER", "calcutta"),
-            password=password,
-        )
-    except psycopg2.OperationalError as e:
-        msg = str(e)
-        if 'could not translate host name "db"' in msg:
-            raise psycopg2.OperationalError(
-                msg
-                + "\n\n"
-                + (
-                    "It looks like DB_HOST is set to 'db' (docker-compose "
-                    "hostname). When running locally outside docker, set "
-                    "DB_HOST=localhost (and DB_PORT/DB_NAME/DB_USER as "
-                    "needed) or set DATABASE_URL."
-                )
-            )
-        raise
 
 
 def read_tournament(year: int) -> Optional[Dict[str, Any]]:
@@ -62,8 +25,7 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
         Dictionary with tournament metadata including id, season, created_at
         Returns None if tournament not found
     """
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
@@ -81,8 +43,6 @@ def read_tournament(year: int) -> Optional[Dict[str, Any]]:
             )
             row = cur.fetchone()
             return dict(row) if row else None
-    finally:
-        conn.close()
 
 
 def _read_latest_core_tournament_id_for_year(conn, year: int) -> Optional[str]:
@@ -130,8 +90,7 @@ def read_ridge_team_dataset_for_year(
     exclude_entry_names: Optional[List[str]] = None,
     include_target: bool = True,
 ) -> pd.DataFrame:
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         y = int(year)
         tournament_id = _read_latest_core_tournament_id_for_year(conn, y)
         if not tournament_id:
@@ -253,13 +212,10 @@ def read_ridge_team_dataset_for_year(
             str(tournament_id),
         )
         return pd.read_sql_query(query, conn, params=params)
-    finally:
-        conn.close()
 
 
 def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
@@ -296,15 +252,12 @@ def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
 
         df = pd.DataFrame(rows)
         return points.points_by_win_index_from_scoring_rules(df)
-    finally:
-        conn.close()
 
 
 def read_points_by_win_index_for_calcutta(
     calcutta_id: str,
 ) -> Dict[int, float]:
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
@@ -319,8 +272,6 @@ def read_points_by_win_index_for_calcutta(
 
         df = pd.DataFrame(rows)
         return points.points_by_win_index_from_scoring_rules(df)
-    finally:
-        conn.close()
 
 
 def initialize_default_scoring_rules_for_year(year: int) -> Dict[int, float]:
@@ -349,8 +300,7 @@ def read_teams(year: int) -> pd.DataFrame:
         seed, region, kenpom_net, kenpom_adj_em, kenpom_adj_o, kenpom_adj_d,
         kenpom_adj_t, created_at
     """
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         query = """
         SELECT
             t.id,
@@ -383,8 +333,6 @@ def read_teams(year: int) -> pd.DataFrame:
         ORDER BY t.seed, s.name
         """
         return pd.read_sql_query(query, conn, params=(year,))
-    finally:
-        conn.close()
 
 
 def read_simulated_tournaments(
@@ -405,8 +353,7 @@ def read_simulated_tournaments(
     Returns:
         DataFrame with simulation results
     """
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         # Note: Schema doesn't have points column; we calculate it from
         # wins+byes.
 
@@ -502,20 +449,18 @@ def read_simulated_tournaments(
             """
             df = pd.read_sql_query(query, conn, params=(year,))
 
-        pbwi = (
-            read_points_by_win_index_for_calcutta(calcutta_id)
-            if calcutta_id
-            else read_points_by_win_index_for_year(year)
+    pbwi = (
+        read_points_by_win_index_for_calcutta(calcutta_id)
+        if calcutta_id
+        else read_points_by_win_index_for_year(year)
+    )
+    df["points"] = (df["wins"] + df["byes"]).apply(
+        lambda p: points.team_points_from_scoring_rules(
+            int(p),
+            pbwi,
         )
-        df["points"] = (df["wins"] + df["byes"]).apply(
-            lambda p: points.team_points_from_scoring_rules(
-                int(p),
-                pbwi,
-            )
-        )
-        return df
-    finally:
-        conn.close()
+    )
+    return df
 
 
 def tournament_exists(year: int) -> bool:

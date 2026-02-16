@@ -403,7 +403,7 @@ def stage_recommended_entry_bids(
 
     if run_id is None:
         # Find latest run_id for this year
-        from moneyball.db.readers import get_db_connection
+        from moneyball.db.connection import get_db_connection
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -434,7 +434,7 @@ def stage_recommended_entry_bids(
     else:
         print(f"  Using run_id: {run_id}")
 
-    from moneyball.db.readers import get_db_connection
+    from moneyball.db.connection import get_db_connection
 
     db_calcutta_id = calcutta_id
     if db_calcutta_id is None:

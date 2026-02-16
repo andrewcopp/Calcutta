@@ -20,22 +20,34 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     """Get or create the connection pool."""
     global _pool
     if _pool is None:
-        password = os.getenv("DB_PASSWORD", "").strip()
-        if not password:
-            raise RuntimeError(
-                "DB_PASSWORD must be set (or use DATABASE_URL where supported)"
-            )
+        database_url = os.getenv("DATABASE_URL", "").strip()
 
         logger.info("Creating database connection pool")
-        _pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=int(os.getenv("DB_MIN_CONN", "1")),
-            maxconn=int(os.getenv("DB_MAX_CONN", "10")),
-            host=os.getenv("DB_HOST", "localhost"),
-            port=int(os.getenv("DB_PORT", "5432")),
-            database=os.getenv("DB_NAME", "calcutta"),
-            user=os.getenv("DB_USER", "calcutta"),
-            password=password,
-        )
+        minconn = int(os.getenv("DB_MIN_CONN", "1"))
+        maxconn = int(os.getenv("DB_MAX_CONN", "10"))
+
+        if database_url:
+            _pool = psycopg2.pool.ThreadedConnectionPool(
+                minconn=minconn,
+                maxconn=maxconn,
+                dsn=database_url,
+            )
+        else:
+            password = os.getenv("DB_PASSWORD", "").strip()
+            if not password:
+                raise RuntimeError(
+                    "DB_PASSWORD or DATABASE_URL must be set"
+                )
+
+            _pool = psycopg2.pool.ThreadedConnectionPool(
+                minconn=minconn,
+                maxconn=maxconn,
+                host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", "5432")),
+                database=os.getenv("DB_NAME", "calcutta"),
+                user=os.getenv("DB_USER", "calcutta"),
+                password=password,
+            )
     return _pool
 
 
