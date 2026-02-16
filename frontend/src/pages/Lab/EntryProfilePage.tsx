@@ -6,6 +6,7 @@ import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
+import { PageContainer } from '../../components/ui/Page';
 import { labService } from '../../services/labService';
 import type { EvaluationEntryProfile } from '../../types/lab';
 import { cn } from '../../lib/cn';
@@ -32,24 +33,24 @@ export function EntryProfilePage() {
 
   if (profileQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-4">
+      <PageContainer>
         <LoadingState label="Loading entry profile..." />
-      </div>
+      </PageContainer>
     );
   }
 
   if (profileQuery.isError || !profile) {
     return (
-      <div className="container mx-auto px-4 py-4">
+      <PageContainer>
         <Alert variant="error">Failed to load entry profile.</Alert>
-      </div>
+      </PageContainer>
     );
   }
 
   const isOurStrategy = profile.entry_name === 'Our Strategy';
 
   return (
-    <div className="container mx-auto px-4 py-4">
+    <PageContainer>
       <Breadcrumb
         items={[
           { label: 'Lab', href: '/lab' },
@@ -127,6 +128,6 @@ export function EntryProfilePage() {
           </div>
         )}
       </Card>
-    </div>
+    </PageContainer>
   );
 }

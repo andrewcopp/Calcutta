@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { LoadingState } from '../../components/ui/LoadingState';
+import { PageContainer } from '../../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { labService } from '../../services/labService';
 import type { EntryDetail, ListEvaluationsResponse, SortDir } from '../../types/lab';
@@ -125,17 +126,17 @@ export function EntryDetailPage() {
 
   if (entryQuery.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-4">
+      <PageContainer>
         <LoadingState label="Loading entry..." />
-      </div>
+      </PageContainer>
     );
   }
 
   if (entryQuery.isError || !entry) {
     return (
-      <div className="container mx-auto px-4 py-4">
+      <PageContainer>
         <Alert variant="error">Failed to load entry.</Alert>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -145,7 +146,7 @@ export function EntryDetailPage() {
   const hasEvaluations = evaluation !== null;
 
   return (
-    <div className="container mx-auto px-4 py-4">
+    <PageContainer>
       <Breadcrumb
         items={[
           { label: 'Lab', href: '/lab' },
@@ -250,6 +251,6 @@ export function EntryDetailPage() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   );
 }

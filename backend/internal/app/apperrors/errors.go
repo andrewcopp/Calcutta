@@ -14,23 +14,6 @@ func (e *NotFoundError) Error() string {
 	return fmt.Sprintf("%s not found: %s", e.Resource, e.ID)
 }
 
-type ValidationError struct {
-	Field   string
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return fmt.Sprintf("%s: %s", e.Field, e.Message)
-}
-
-func FieldRequired(field string) error {
-	return &ValidationError{Field: field, Message: "field is required"}
-}
-
-func FieldInvalid(field, reason string) error {
-	return &ValidationError{Field: field, Message: reason}
-}
-
 type AlreadyExistsError struct {
 	Resource string
 	Field    string

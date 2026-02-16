@@ -40,10 +40,6 @@ func (m *MockCalcuttaRepository) Update(ctx context.Context, calcutta *models.Ca
 	return nil
 }
 
-func (m *MockCalcuttaRepository) Delete(ctx context.Context, id string) error {
-	return nil
-}
-
 func (m *MockCalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
 	return nil, nil
 }

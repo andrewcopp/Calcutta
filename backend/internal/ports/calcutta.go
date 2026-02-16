@@ -16,7 +16,6 @@ type CalcuttaReader interface {
 type CalcuttaWriter interface {
 	Create(ctx context.Context, calcutta *models.Calcutta) error
 	Update(ctx context.Context, calcutta *models.Calcutta) error
-	Delete(ctx context.Context, id string) error
 }
 
 type EntryReader interface {

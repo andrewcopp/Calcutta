@@ -382,8 +382,8 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if cfg.AllowedOrigin != "http://localhost:3000" || cfg.Port != "8080" {
-		t.Fatalf("expected defaults origin/port, got %q/%q", cfg.AllowedOrigin, cfg.Port)
+	if len(cfg.AllowedOrigins) == 0 || cfg.AllowedOrigins[0] != "http://localhost:3000" || cfg.Port != "8080" {
+		t.Fatalf("expected defaults origin/port, got %v/%q", cfg.AllowedOrigins, cfg.Port)
 	}
 }
 

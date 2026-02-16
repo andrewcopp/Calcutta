@@ -273,39 +273,6 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 	return nil
 }
 
-func (r *CalcuttaRepository) Delete(ctx context.Context, id string) error {
-	now := time.Now()
-
-	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback(ctx)
-		}
-	}()
-
-	qtx := r.q.WithTx(tx)
-	params := sqlc.DeleteCalcuttaParams{
-		DeletedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		ID:        id,
-	}
-	affected, err := qtx.DeleteCalcutta(ctx, params)
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return &apperrors.NotFoundError{Resource: "calcutta", ID: id}
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *CalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error) {
 	rows, err := r.q.ListCalcuttaRounds(ctx, calcuttaID)
 	if err != nil {

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '../components/ui/Alert';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PageContainer, PageHeader } from '../components/ui/Page';
 import { ModelLeaderboardCard } from '../components/Lab/ModelLeaderboardCard';
 import { labService } from '../services/labService';
 import type { LeaderboardResponse } from '../types/lab';
@@ -32,16 +33,11 @@ export function LabPage() {
   const isError = leaderboardQuery.isError || calcuttasQuery.isError;
 
   return (
-    <div className="container mx-auto px-4 py-4">
-      <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Lab</h1>
-          <p className="text-sm text-gray-500">
-            {items.length} model{items.length !== 1 ? 's' : ''} registered
-            {totalCalcuttas > 0 ? ` across ${totalCalcuttas} calcutta${totalCalcuttas !== 1 ? 's' : ''}` : ''}
-          </p>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Lab"
+        subtitle={`${items.length} model${items.length !== 1 ? 's' : ''} registered${totalCalcuttas > 0 ? ` across ${totalCalcuttas} calcutta${totalCalcuttas !== 1 ? 's' : ''}` : ''}`}
+      />
 
       {isLoading ? <LoadingState label="Loading leaderboard..." layout="inline" /> : null}
 
@@ -65,6 +61,6 @@ export function LabPage() {
           ))}
         </div>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }

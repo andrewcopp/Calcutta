@@ -14,7 +14,6 @@ import (
 type Config struct {
 	DatabaseURL                     string
 	AllowedOrigins                  []string
-	AllowedOrigin                   string
 	Port                            string
 	ArtifactsDir                    string
 	BootstrapAdminEmail             string
@@ -291,7 +290,6 @@ func LoadConfigFromEnv() (Config, error) {
 	cfg := Config{
 		DatabaseURL:                     databaseURL,
 		AllowedOrigins:                  allowedOrigins,
-		AllowedOrigin:                   os.Getenv("ALLOWED_ORIGIN"),
 		Port:                            os.Getenv("PORT"),
 		ArtifactsDir:                    artifactsDir,
 		BootstrapAdminEmail:             strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")),
@@ -328,10 +326,6 @@ func LoadConfigFromEnv() (Config, error) {
 		CognitoAutoProvision:            envBool("COGNITO_AUTO_PROVISION", false),
 		CognitoAllowUnprovisioned:       envBool("COGNITO_ALLOW_UNPROVISIONED", false),
 	}
-	if len(cfg.AllowedOrigins) > 0 {
-		cfg.AllowedOrigin = cfg.AllowedOrigins[0]
-	}
-
 	if env == "development" && cfg.AuthMode != "cognito" && cfg.JWTSecret == "" {
 		cfg.JWTSecret = "dev-jwt-secret"
 	}

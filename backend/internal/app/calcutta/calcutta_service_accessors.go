@@ -16,14 +16,6 @@ func (s *Service) GetCalcuttaByID(ctx context.Context, id string) (*models.Calcu
 	return s.ports.CalcuttaReader.GetByID(ctx, id)
 }
 
-func (s *Service) CreateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
-	return s.ports.CalcuttaWriter.Create(ctx, calcutta)
-}
-
-func (s *Service) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
-	return s.ports.RoundWriter.CreateRound(ctx, round)
-}
-
 func (s *Service) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
 	return s.ports.CalcuttaWriter.Update(ctx, calcutta)
 }
@@ -190,10 +182,6 @@ func (s *Service) GetTournamentTeam(ctx context.Context, id string) (*models.Tou
 
 func (s *Service) GetCalcuttasByUser(ctx context.Context, userID string) ([]*models.Calcutta, error) {
 	return s.ports.CalcuttaReader.GetByUserID(ctx, userID)
-}
-
-func (s *Service) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
-	return s.ports.EntryReader.GetDistinctUserIDsByCalcutta(ctx, calcuttaID)
 }
 
 func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {

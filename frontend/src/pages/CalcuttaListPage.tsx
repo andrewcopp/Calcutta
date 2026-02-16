@@ -30,25 +30,30 @@ export function CalcuttaListPage() {
 
       const rankings: Record<string, CalcuttaRanking> = {};
       if (user) {
-        for (const calcutta of calcuttas) {
-          try {
-            const entries = await calcuttaService.getCalcuttaEntries(calcutta.id);
+        const results = await Promise.all(
+          calcuttas.map(async (calcutta) => {
+            try {
+              const entries = await calcuttaService.getCalcuttaEntries(calcutta.id);
+              return { calcuttaId: calcutta.id, entries };
+            } catch {
+              return { calcuttaId: calcutta.id, entries: null };
+            }
+          })
+        );
+        for (const { calcuttaId, entries } of results) {
+          if (!entries) continue;
+          const userEntry = entries.find((entry) => entry.userId === user.id);
+          if (!userEntry) continue;
 
-            const userEntry = entries.find((entry) => entry.userId === user.id);
-            if (!userEntry) continue;
+          const sortedEntries = [...entries].sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+          const userRank = sortedEntries.findIndex((entry) => entry.id === userEntry.id) + 1;
 
-            const sortedEntries = [...entries].sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-            const userRank = sortedEntries.findIndex((entry) => entry.id === userEntry.id) + 1;
-
-            rankings[calcutta.id] = {
-              calcuttaId: calcutta.id,
-              rank: userRank,
-              totalEntries: entries.length,
-              points: userEntry.totalPoints || 0,
-            };
-          } catch (entryError) {
-            console.error(`Error fetching entries for calcutta ${calcutta.id}:`, entryError);
-          }
+          rankings[calcuttaId] = {
+            calcuttaId,
+            rank: userRank,
+            totalEntries: entries.length,
+            points: userEntry.totalPoints || 0,
+          };
         }
       }
 
