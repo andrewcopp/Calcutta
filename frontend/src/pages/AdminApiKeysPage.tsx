@@ -215,5 +215,3 @@ export const AdminApiKeysPage: React.FC = () => {
     </PageContainer>
   );
 };
-
-export default AdminApiKeysPage;

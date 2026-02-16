@@ -320,5 +320,3 @@ export const HallOfFamePage: React.FC = () => {
     </PageContainer>
   );
 };
-
-export default HallOfFamePage;

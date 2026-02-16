@@ -265,5 +265,3 @@ export const TournamentCreatePage: React.FC = () => {
     </PageContainer>
   );
 };
-
-export default TournamentCreatePage; 

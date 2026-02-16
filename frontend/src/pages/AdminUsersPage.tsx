@@ -138,5 +138,3 @@ export const AdminUsersPage: React.FC = () => {
     </PageContainer>
   );
 };
-
-export default AdminUsersPage;

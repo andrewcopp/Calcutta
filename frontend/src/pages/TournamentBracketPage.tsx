@@ -261,5 +261,3 @@ export const TournamentBracketPage: React.FC = () => {
     </PageContainer>
   );
  };
-
-export default TournamentBracketPage;

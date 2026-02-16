@@ -62,5 +62,3 @@ export const AdminPage: React.FC = () => {
     </PageContainer>
   );
 };
-
-export default AdminPage; 

@@ -272,5 +272,3 @@ export const AdminBundlesPage: React.FC = () => {
     </PageContainer>
   );
 };
-
-export default AdminBundlesPage;
