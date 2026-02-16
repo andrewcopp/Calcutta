@@ -70,27 +70,6 @@ services:
         condition: service_healthy
     command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/workers -lab-pipeline-worker=true"
 
-  market_share_worker:
-    image: python:3.11-slim
-    working_dir: /app/data-science
-    volumes:
-      - ./data-science:/app/data-science
-    environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - NODE_ENV=${NODE_ENV}
-      - PYTHON_BIN=python3
-      - PYTHON_MARKET_SHARE_RUNNER=/app/data-science/scripts/market_share_job_worker.py
-      - MARKET_SHARE_POLL_INTERVAL_SECONDS=2
-      - MARKET_SHARE_STALE_AFTER_SECONDS=1800
-    depends_on:
-      db:
-        condition: service_healthy
-    command: sh -c "pip install --no-cache-dir -r requirements.txt psycopg2-binary && python /app/data-science/scripts/market_share_job_worker.py"
-
   db:
     image: postgres:16-alpine
     ports:

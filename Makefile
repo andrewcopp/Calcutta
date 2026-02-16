@@ -4,7 +4,6 @@ ENV_DOCKER = set -a; [ -f .env ] && . ./.env; set +a;
 DOCKER_PROJECT ?= calcutta
 DC = docker compose -p $(DOCKER_PROJECT)
 DC_PROD = docker compose -f docker-compose.local-prod.yml -p $(DOCKER_PROJECT)
-DC_AIRFLOW = docker compose -f data-science/docker-compose.airflow.yml
 
 .PHONY: env-init bootstrap dev dev-up dev-down up-d logs ps stats
 .PHONY: prod-up prod-down prod-reset prod-ops-migrate
@@ -13,7 +12,6 @@ DC_AIRFLOW = docker compose -f data-science/docker-compose.airflow.yml
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test curl
-.PHONY: airflow-up airflow-down airflow-logs airflow-reset
 .PHONY: register-models create-admin import-bundles seed-simulations dry-run
 
 env-init:
@@ -184,22 +182,6 @@ db-vacuum:
 	@echo "Running VACUUM ANALYZE (this may take a few seconds)..."
 	@$(ENV_DOCKER) docker exec $$($(DC) ps -q db) psql -U $${DB_USER} -d $${DB_NAME} -c "VACUUM ANALYZE;"
 	@echo "Done."
-
-# Airflow (full stack - heavyweight)
-airflow-up:
-	@echo "Starting Airflow (this may take 30-60 seconds)..."
-	$(DC_AIRFLOW) up -d
-	@echo "Airflow UI: http://localhost:8081 (airflow/airflow)"
-
-airflow-down:
-	$(DC_AIRFLOW) down
-
-airflow-logs:
-	$(DC_AIRFLOW) logs -f airflow-worker
-
-airflow-reset:
-	$(DC_AIRFLOW) down -v
-	@echo "Airflow data volumes removed. Run 'make airflow-up' to reinitialize."
 
 # Data science
 register-models:
