@@ -10,19 +10,21 @@ Runnable binaries live under `backend/cmd/*`.
   - Migration runner.
 - `cmd/simulate-tournaments`
   - Monte Carlo tournament simulation writer.
-- `cmd/generate-predicted-game-outcomes`
-  - Generates and writes `predicted_game_outcomes`.
-- `cmd/generate-recommended-entry-bids`
-  - Runs the portfolio optimizer and writes recommended bids.
-- `cmd/calculate-simulated-calcuttas`
-  - Calculates simulated calcutta results.
 - `cmd/evaluate-calcutta`
   - Runs calcutta evaluation using an existing simulation batch.
-- `cmd/benchmark-tournament-simulations`
-  - End-to-end benchmark for tournament simulation + DB writes.
-- `cmd/tools/*`
-  - One-off operational tools.
+- `cmd/tools/create-admin`
+  - Creates an admin user.
+- `cmd/tools/export-bundles`
+  - Exports data bundles for backup/transfer.
+- `cmd/tools/import-bundles`
+  - Imports data bundles.
+- `cmd/tools/verify-bundles`
+  - Verifies data bundle integrity.
+- `cmd/tools/retain-simulation-runs`
+  - Retains selected simulation runs and cleans up old ones.
+- `cmd/tools/seed-simulations`
+  - Seeds simulation runs for the worker to process.
 - `cmd/workers`
-  - Background workers (placeholder).
+  - Background worker system (simulation worker, game outcome worker).
 
 Each command directory has a `README.md` describing how to run it, configuration, and side effects.
