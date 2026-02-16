@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../ui/Button';
-import { ModelPipelineProgress } from '../../services/labService';
+import type { ModelPipelineProgress } from '../../types/lab';
 
 type PipelineSummaryProps = {
   progress: ModelPipelineProgress | null;

@@ -6,26 +6,11 @@ import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
-import { labService, EvaluationEntryProfile } from '../../services/labService';
+import { labService } from '../../services/labService';
+import type { EvaluationEntryProfile } from '../../types/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
-
-function formatPayoutX(val?: number | null): string {
-  if (val == null) return '-';
-  return `${val.toFixed(3)}x`;
-}
-
-function formatPct(val?: number | null): string {
-  if (val == null) return '-';
-  return `${(val * 100).toFixed(1)}%`;
-}
-
-function getPayoutColor(payout?: number | null): string {
-  if (payout == null) return 'text-gray-400';
-  if (payout >= 1.2) return 'text-green-700 font-bold';
-  if (payout >= 0.9) return 'text-yellow-700';
-  return 'text-red-700';
-}
+import { formatPayoutX, formatPct, getPayoutColor } from '../../utils/labFormatters';
 
 export function EntryProfilePage() {
   const { entryResultId, modelName, calcuttaId } = useParams<{

@@ -7,9 +7,11 @@ import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
-import { labService, EvaluationDetail, EvaluationEntryResult } from '../../services/labService';
+import { labService } from '../../services/labService';
+import type { EvaluationDetail, EvaluationEntryResult } from '../../types/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
+import { formatPayoutX, formatPct } from '../../utils/labFormatters';
 
 export function EvaluationDetailPage() {
   const { evaluationId } = useParams<{
@@ -35,16 +37,6 @@ export function EvaluationDetailPage() {
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatPayoutX = (val?: number | null) => {
-    if (val == null) return '-';
-    return `${val.toFixed(4)}x`;
-  };
-
-  const formatPct = (val?: number | null) => {
-    if (val == null) return '-';
-    return `${(val * 100).toFixed(2)}%`;
   };
 
   if (evaluationQuery.isLoading) {
@@ -123,27 +115,27 @@ export function EvaluationDetailPage() {
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">Mean Normalized Payout</div>
             <div className="text-2xl font-bold text-gray-900">
-              {formatPayoutX(evaluation.mean_normalized_payout)}
+              {formatPayoutX(evaluation.mean_normalized_payout, 4)}
             </div>
             <div className="text-xs text-gray-500 mt-1">The key metric</div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">Median Normalized Payout</div>
             <div className="text-2xl font-bold text-gray-700">
-              {formatPayoutX(evaluation.median_normalized_payout)}
+              {formatPayoutX(evaluation.median_normalized_payout, 4)}
             </div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">P(Top 1)</div>
             <div className="text-2xl font-bold text-gray-700">
-              {formatPct(evaluation.p_top1)}
+              {formatPct(evaluation.p_top1, 2)}
             </div>
             <div className="text-xs text-gray-500 mt-1">Probability of winning</div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">P(In Money)</div>
             <div className="text-2xl font-bold text-gray-700">
-              {formatPct(evaluation.p_in_money)}
+              {formatPct(evaluation.p_in_money, 2)}
             </div>
             <div className="text-xs text-gray-500 mt-1">Probability of payout</div>
           </div>
@@ -189,9 +181,9 @@ export function EvaluationDetailPage() {
                       <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
                         {entry.entry_name}
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.mean_normalized_payout)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_top1)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_in_money)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.mean_normalized_payout, 4)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_top1, 2)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_in_money, 2)}</td>
                     </tr>
                   );
                 })}

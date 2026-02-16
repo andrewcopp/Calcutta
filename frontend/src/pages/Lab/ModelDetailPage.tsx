@@ -11,7 +11,8 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { PipelineSummary } from '../../components/Lab/PipelineSummary';
 import { PipelineStatusTable } from '../../components/Lab/PipelineStatusTable';
-import { labService, InvestmentModel, ModelPipelineProgress } from '../../services/labService';
+import { labService } from '../../services/labService';
+import type { InvestmentModel, ModelPipelineProgress } from '../../types/lab';
 import { queryKeys } from '../../queryKeys';
 
 export function ModelDetailPage() {

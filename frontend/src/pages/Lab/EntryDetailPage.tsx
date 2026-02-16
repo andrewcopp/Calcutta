@@ -6,7 +6,8 @@ import { Alert } from '../../components/ui/Alert';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
-import { labService, EntryDetail, ListEvaluationsResponse } from '../../services/labService';
+import { labService } from '../../services/labService';
+import type { EntryDetail, ListEvaluationsResponse } from '../../types/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalcuttaPipelineStatus } from '../../services/labService';
+import type { CalcuttaPipelineStatus } from '../../types/lab';
 
 type PipelineStatusTableProps = {
   calcuttas: CalcuttaPipelineStatus[];

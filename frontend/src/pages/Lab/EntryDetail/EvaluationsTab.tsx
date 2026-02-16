@@ -5,9 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../../../components/ui/Alert';
 import { Card } from '../../../components/ui/Card';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { labService, EvaluationEntryResult } from '../../../services/labService';
+import { labService } from '../../../services/labService';
+import type { EvaluationEntryResult } from '../../../types/lab';
 import { cn } from '../../../lib/cn';
 import { queryKeys } from '../../../queryKeys';
+import { formatPayoutX, formatPct, getPayoutColor } from '../../../utils/labFormatters';
 
 interface Evaluation {
   id: string;
@@ -28,23 +30,6 @@ interface EvaluationsTabProps {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatPayoutX(val?: number | null): string {
-  if (val == null) return '-';
-  return `${val.toFixed(3)}x`;
-}
-
-function formatPct(val?: number | null): string {
-  if (val == null) return '-';
-  return `${(val * 100).toFixed(1)}%`;
-}
-
-function getPayoutColor(payout?: number | null): string {
-  if (payout == null) return 'text-gray-400';
-  if (payout >= 1.2) return 'text-green-700 font-bold';
-  if (payout >= 0.9) return 'text-yellow-700';
-  return 'text-red-700';
 }
 
 export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }: EvaluationsTabProps) {
