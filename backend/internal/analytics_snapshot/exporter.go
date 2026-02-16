@@ -200,11 +200,6 @@ func loadCalcutta(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, to
 	return key, name, nil
 }
 
-type teamsLoadResult struct {
-	schoolSlugByID map[string]string
-	table          csvTable
-}
-
 func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (map[string]string, csvTable, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
@@ -408,11 +403,6 @@ func loadPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (cs
 	}
 
 	return csvTable{header: header, rows: rows}, nil
-}
-
-type gamesTable struct {
-	header []string
-	rows   [][]string
 }
 
 func buildGamesRows(tournamentKey string, bracket *models.BracketStructure, schoolSlugByID map[string]string) (csvTable, error) {

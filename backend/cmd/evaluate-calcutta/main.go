@@ -64,5 +64,3 @@ func run() error {
 	log.Printf("Enqueued calcutta evaluation run calcutta_id=%s", calcuttaID)
 	return nil
 }
-
-func ctx() context.Context { return context.Background() }

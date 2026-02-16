@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -12,37 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-func asFloat64(v any) (float64, error) {
-	switch t := v.(type) {
-	case nil:
-		return 0, nil
-	case float64:
-		return t, nil
-	case float32:
-		return float64(t), nil
-	case int:
-		return float64(t), nil
-	case int32:
-		return float64(t), nil
-	case int64:
-		return float64(t), nil
-	case uint:
-		return float64(t), nil
-	case uint32:
-		return float64(t), nil
-	case uint64:
-		return float64(t), nil
-	case string:
-		f, err := strconv.ParseFloat(t, 64)
-		if err != nil {
-			return 0, err
-		}
-		return f, nil
-	default:
-		return 0, fmt.Errorf("unexpected numeric type %T", v)
-	}
-}
 
 type AnalyticsRepository struct {
 	pool           *pgxpool.Pool
