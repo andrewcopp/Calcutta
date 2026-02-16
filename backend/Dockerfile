@@ -27,6 +27,9 @@ COPY --from=builder /app/migrations /app/migrations
 
 EXPOSE 8080
 
+# Run as non-root user (distroless provides nonroot:nonroot)
+USER nonroot:nonroot
+
 # Run the built binary
 CMD ["/app/bin/api"]
 
