@@ -6,7 +6,6 @@ import { desaturateHex } from '../../utils/color';
 
 export const InvestmentsTab: React.FC<{
   entryId: string;
-  teams: CalcuttaEntryTeam[];
   tournamentTeams: TournamentTeam[];
   allEntryTeams: CalcuttaEntryTeam[];
   schools: School[];

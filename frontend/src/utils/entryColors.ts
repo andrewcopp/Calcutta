@@ -1,4 +1,4 @@
-export const DEFAULT_ENTRY_COLOR_PALETTE = [
+const DEFAULT_ENTRY_COLOR_PALETTE = [
   '#2563EB',
   '#DC2626',
   '#059669',

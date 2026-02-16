@@ -1,4 +1,4 @@
-export function mixHex(hexA: string, hexB: string, amountB: number) {
+function mixHex(hexA: string, hexB: string, amountB: number) {
   const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
   const norm = (hex: string) => hex.replace('#', '');
   const a = norm(hexA);

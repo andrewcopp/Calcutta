@@ -1,4 +1,4 @@
-export class ApiError extends Error {
+class ApiError extends Error {
   status: number;
   body: unknown;
 
@@ -22,7 +22,7 @@ function resolveApiUrl(): string {
 }
 
 export const API_URL = resolveApiUrl();
-export const API_BASE_URL = `${API_URL}/api`;
+const API_BASE_URL = `${API_URL}/api`;
 
 const ACCESS_TOKEN_KEY = 'accessToken';
 

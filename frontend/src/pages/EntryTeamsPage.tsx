@@ -312,7 +312,6 @@ export function EntryTeamsPage() {
         <TabsContent value="investments">
           <InvestmentsTab
             entryId={entryId!}
-            teams={teams}
             tournamentTeams={tournamentTeams}
             allEntryTeams={allEntryTeams}
             schools={schools}

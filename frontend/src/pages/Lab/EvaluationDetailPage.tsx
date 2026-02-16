@@ -211,15 +211,6 @@ export function EvaluationDetailPage() {
           >
             View Entry Details
           </button>
-          {evaluation.simulated_calcutta_id ? (
-            <button
-              type="button"
-              className="text-blue-600 hover:underline text-sm"
-              onClick={() => navigate(`/sandbox/calcuttas/${encodeURIComponent(evaluation.simulated_calcutta_id!)}`)}
-            >
-              View Simulated Calcutta
-            </button>
-          ) : null}
         </div>
       </Card>
     </PageContainer>
