@@ -245,64 +245,6 @@ func (r *LabRepository) ListEntries(filter models.LabListEntriesFilter, page mod
 	return out, rows.Err()
 }
 
-// GetEntry returns a single entry by ID with full details.
-func (r *LabRepository) GetEntry(id string) (*models.LabEntryDetail, error) {
-	ctx := context.Background()
-
-	query := `
-		SELECT
-			e.id::text,
-			e.investment_model_id::text,
-			e.calcutta_id::text,
-			e.game_outcome_kind,
-			e.game_outcome_params_json::text,
-			e.optimizer_kind,
-			e.optimizer_params_json::text,
-			e.starting_state_key,
-			e.bids_json::text,
-			e.created_at,
-			e.updated_at,
-			im.name AS model_name,
-			im.kind AS model_kind,
-			c.name AS calcutta_name,
-			(SELECT COUNT(*) FROM lab.evaluations ev WHERE ev.entry_id = e.id AND ev.deleted_at IS NULL)::int AS n_evaluations
-		FROM lab.entries e
-		JOIN lab.investment_models im ON im.id = e.investment_model_id
-		JOIN core.calcuttas c ON c.id = e.calcutta_id
-		WHERE e.id = $1::uuid AND e.deleted_at IS NULL
-	`
-
-	var e models.LabEntryDetail
-	var gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&e.ID,
-		&e.InvestmentModelID,
-		&e.CalcuttaID,
-		&e.GameOutcomeKind,
-		&gameOutcomeParamsStr,
-		&e.OptimizerKind,
-		&optimizerParamsStr,
-		&e.StartingStateKey,
-		&bidsStr,
-		&e.CreatedAt,
-		&e.UpdatedAt,
-		&e.ModelName,
-		&e.ModelKind,
-		&e.CalcuttaName,
-		&e.NEvaluations,
-	)
-	if err == pgx.ErrNoRows {
-		return nil, &apperrors.NotFoundError{Resource: "entry", ID: id}
-	}
-	if err != nil {
-		return nil, err
-	}
-	e.GameOutcomeParamsJSON = json.RawMessage(gameOutcomeParamsStr)
-	e.OptimizerParamsJSON = json.RawMessage(optimizerParamsStr)
-	e.BidsJSON = json.RawMessage(bidsStr)
-	return &e, nil
-}
-
 // ListEvaluations returns evaluations matching the filter.
 func (r *LabRepository) ListEvaluations(filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error) {
 	ctx := context.Background()

@@ -14,10 +14,6 @@ export type InvestmentModel = {
   n_evaluations: number;
 };
 
-export type ListModelsResponse = {
-  items: InvestmentModel[];
-};
-
 // Types for lab.entries - market predictions (what model thinks market will bid)
 export type EnrichedPrediction = {
   team_id: string;
@@ -62,10 +58,6 @@ export type EntryDetail = {
   model_kind: string;
   calcutta_name: string;
   n_evaluations: number;
-};
-
-export type ListEntriesResponse = {
-  items: EntryDetail[];
 };
 
 // Types for lab.evaluations
@@ -146,18 +138,6 @@ export type LeaderboardResponse = {
   items: LeaderboardEntry[];
 };
 
-// Types for generate entries
-export type GenerateEntriesRequest = {
-  years?: number[];
-  budget_points?: number;
-  excluded_entry?: string;
-};
-
-export type GenerateEntriesResponse = {
-  entries_created: number;
-  errors?: string[];
-};
-
 // Types for pipeline
 export type StartPipelineRequest = {
   calcutta_ids?: string[];
@@ -191,27 +171,6 @@ export type CalcuttaPipelineStatus = {
   mean_payout?: number | null;
   our_rank?: number | null;
   error_message?: string | null;
-};
-
-export type PipelineProgressSummary = {
-  total_calcuttas: number;
-  predictions_count: number;
-  entries_count: number;
-  evaluations_count: number;
-  failed_count: number;
-  avg_mean_payout?: number | null;
-};
-
-export type PipelineProgressResponse = {
-  id: string;
-  investment_model_id: string;
-  model_name: string;
-  status: string;
-  started_at?: string | null;
-  finished_at?: string | null;
-  error_message?: string | null;
-  summary: PipelineProgressSummary;
-  calcuttas: CalcuttaPipelineStatus[];
 };
 
 export type ModelPipelineProgress = {

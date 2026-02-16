@@ -6,7 +6,7 @@ This module provides a clean interface for:
 2. Generating entries (optimized bids)
 3. Recording evaluation results
 4. Comparing model performance
-5. Portfolio optimization research (GEKKO, maxmin)
+5. Portfolio optimization research (maxmin)
 
 The lab schema replaces the over-complicated derived.algorithms,
 derived.candidates, and derived.suite_* tables with just 3 tables:

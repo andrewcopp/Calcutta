@@ -35,6 +35,7 @@ data-science/airflow/logs/
 
 # Go binaries
 backend/seed-simulations
+backend/migrate
 
 # Generated artifacts
 backend/exports/

@@ -119,56 +119,6 @@ func (v *BracketValidator) ValidateWinnerSelection(game *BracketGame, winnerTeam
 	return nil
 }
 
-// ValidateBracketProgression validates that the bracket progression is valid
-func (v *BracketValidator) ValidateBracketProgression(bracket *BracketStructure) error {
-	if bracket == nil {
-		return errors.New("bracket cannot be nil")
-	}
-
-	// Validate that all games with winners have their winners properly progressed
-	for _, game := range bracket.Games {
-		if game.Winner != nil && game.NextGameID != "" {
-			nextGame, exists := bracket.Games[game.NextGameID]
-			if !exists {
-				return fmt.Errorf("next game %s not found for game %s", game.NextGameID, game.GameID)
-			}
-
-			// Check that the winner is in the correct slot of the next game
-			if game.NextGameSlot == 1 && (nextGame.Team1 == nil || nextGame.Team1.TeamID != game.Winner.TeamID) {
-				return fmt.Errorf("winner not properly progressed to slot 1 of next game")
-			}
-			if game.NextGameSlot == 2 && (nextGame.Team2 == nil || nextGame.Team2.TeamID != game.Winner.TeamID) {
-				return fmt.Errorf("winner not properly progressed to slot 2 of next game")
-			}
-		}
-	}
-
-	return nil
-}
-
-// GetMatchupForSeeds returns the seed that a given seed should play in the first round
-// Based on NCAA tournament rules where seeds sum to 17
-func GetMatchupForSeeds(seed int) int {
-	return 17 - seed
-}
-
-// IsFirstFourSeed determines if a seed participates in the First Four
-// In a 68-team tournament, there are typically 4 First Four games:
-// - Four 16 seeds play each other (2 games)
-// - Four 11 seeds play each other (2 games)
-func IsFirstFourSeed(seed int, region string, teams []*TournamentTeam) bool {
-	// Count how many teams have this seed in this region
-	count := 0
-	for _, team := range teams {
-		if team.Seed == seed && team.Region == region {
-			count++
-		}
-	}
-
-	// If there are 2 teams with the same seed in the same region, they play in First Four
-	return count == 2
-}
-
 // CalculateWinsAndByes calculates wins and byes for a team based on bracket state
 func CalculateWinsAndByes(teamID string, bracket *BracketStructure) (wins int, byes int, eliminated bool) {
 	wins = 0

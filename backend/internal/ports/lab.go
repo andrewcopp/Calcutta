@@ -8,7 +8,6 @@ type LabRepository interface {
 	GetInvestmentModel(id string) (*models.InvestmentModel, error)
 	GetModelLeaderboard() ([]models.LabLeaderboardEntry, error)
 	ListEntries(filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error)
-	GetEntry(id string) (*models.LabEntryDetail, error)
 	GetEntryEnriched(id string) (*models.LabEntryDetailEnriched, error)
 	GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error)
 	ListEvaluations(filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error)

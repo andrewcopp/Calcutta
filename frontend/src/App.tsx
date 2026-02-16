@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CalcuttaListPage } from './pages/CalcuttaListPage';
 import { CalcuttaEntriesPage } from './pages/CalcuttaEntriesPage';
 import { CalcuttaTeamsPage } from './pages/CalcuttaTeamsPage';
@@ -54,17 +54,6 @@ const AppLayout: React.FC = () => {
         {/* Legacy evaluation route redirect */}
         <Route path="/lab/evaluations/:evaluationId" element={<RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary>} />
         <Route path="/lab/entry-results/:entryResultId" element={<RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary>} />
-        {/* Legacy lab routes redirect to new lab tabs */}
-        <Route path="/lab/candidates/*" element={<Navigate to="/lab?tab=entries" replace />} />
-        <Route path="/lab/advancements/*" element={<Navigate to="/lab?tab=models" replace />} />
-        <Route path="/lab/investments/*" element={<Navigate to="/lab?tab=models" replace />} />
-        <Route path="/lab/entry-runs/*" element={<Navigate to="/lab?tab=entries" replace />} />
-        <Route path="/lab/entry-artifacts/*" element={<Navigate to="/lab?tab=entries" replace />} />
-        {/* Legacy sandbox routes redirect to lab */}
-        <Route path="/sandbox/*" element={<Navigate to="/lab?tab=evaluations" replace />} />
-        {/* Legacy runs routes redirect to lab */}
-        <Route path="/runs/*" element={<Navigate to="/lab?tab=evaluations" replace />} />
-        <Route path="/analytics" element={<Navigate to="/lab" replace />} />
         <Route path="/admin" element={<ProtectedRoute><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/api-keys" element={<ProtectedRoute><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/bundles" element={<ProtectedRoute><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></ProtectedRoute>} />

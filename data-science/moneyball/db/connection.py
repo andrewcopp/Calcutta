@@ -79,12 +79,3 @@ def get_db_connection():
         raise
     finally:
         _release_connection(conn)
-
-
-def _close_pool():
-    """Close all connections in the pool."""
-    global _pool
-    if _pool is not None:
-        logger.info("Closing database connection pool")
-        _pool.closeall()
-        _pool = None
