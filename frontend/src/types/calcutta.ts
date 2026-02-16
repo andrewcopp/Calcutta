@@ -104,4 +104,24 @@ export interface TournamentModerator {
   email: string;
   firstName: string;
   lastName: string;
+}
+
+export interface CalcuttaDashboard {
+  calcutta: Calcutta;
+  entries: CalcuttaEntry[];
+  entryTeams: CalcuttaEntryTeam[];
+  portfolios: CalcuttaPortfolio[];
+  portfolioTeams: CalcuttaPortfolioTeam[];
+  schools: { id: string; name: string }[];
+  tournamentTeams: TournamentTeam[];
+}
+
+export interface CalcuttaRanking {
+  rank: number;
+  totalEntries: number;
+  points: number;
+}
+
+export interface CalcuttaWithRanking extends Calcutta {
+  ranking?: CalcuttaRanking;
 } 

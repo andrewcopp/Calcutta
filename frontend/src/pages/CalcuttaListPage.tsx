@@ -6,58 +6,20 @@ import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { CalcuttaListSkeleton } from '../components/skeletons/CalcuttaListSkeleton';
-import { Calcutta } from '../types/calcutta';
+import { CalcuttaWithRanking } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { useUser } from '../contexts/useUser';
 import { queryKeys } from '../queryKeys';
-
-interface CalcuttaRanking {
-  calcuttaId: string;
-  rank: number;
-  totalEntries: number;
-  points: number;
-}
 
 export function CalcuttaListPage() {
   const navigate = useNavigate();
   const { user } = useUser();
 
   const calcuttasQuery = useQuery({
-    queryKey: queryKeys.calcuttas.all(user?.id),
+    queryKey: queryKeys.calcuttas.listWithRankings(user?.id),
     staleTime: 30_000,
     queryFn: async () => {
-      const calcuttas = await calcuttaService.getAllCalcuttas();
-
-      const rankings: Record<string, CalcuttaRanking> = {};
-      if (user) {
-        const results = await Promise.all(
-          calcuttas.map(async (calcutta) => {
-            try {
-              const entries = await calcuttaService.getCalcuttaEntries(calcutta.id);
-              return { calcuttaId: calcutta.id, entries };
-            } catch {
-              return { calcuttaId: calcutta.id, entries: null };
-            }
-          })
-        );
-        for (const { calcuttaId, entries } of results) {
-          if (!entries) continue;
-          const userEntry = entries.find((entry) => entry.userId === user.id);
-          if (!userEntry) continue;
-
-          const sortedEntries = [...entries].sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-          const userRank = sortedEntries.findIndex((entry) => entry.id === userEntry.id) + 1;
-
-          rankings[calcuttaId] = {
-            calcuttaId,
-            rank: userRank,
-            totalEntries: entries.length,
-            points: userEntry.totalPoints || 0,
-          };
-        }
-      }
-
-      return { calcuttas, rankings };
+      return calcuttaService.getCalcuttasWithRankings();
     },
   });
 
@@ -90,8 +52,7 @@ export function CalcuttaListPage() {
     );
   }
 
-  const calcuttas: Calcutta[] = calcuttasQuery.data?.calcuttas || [];
-  const rankings = calcuttasQuery.data?.rankings || {};
+  const calcuttas: CalcuttaWithRanking[] = calcuttasQuery.data || [];
 
   return (
     <PageContainer>
@@ -104,7 +65,7 @@ export function CalcuttaListPage() {
 
       <div className="grid gap-4">
         {calcuttas.map((calcutta) => {
-          const ranking = rankings[calcutta.id];
+          const ranking = calcutta.ranking;
           return (
             <Link
               key={calcutta.id}
@@ -130,7 +91,7 @@ export function CalcuttaListPage() {
             </Link>
           );
         })}
-        
+
         {calcuttas.length === 0 ? (
           <EmptyState
             title="Welcome to Calcutta!"

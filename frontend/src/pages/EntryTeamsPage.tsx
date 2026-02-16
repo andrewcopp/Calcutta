@@ -1,10 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
-import { calcuttaService } from '../services/calcuttaService';
-import { tournamentService } from '../services/tournamentService';
-import { schoolService } from '../services/schoolService';
-import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
 import { PageContainer, PageHeader } from '../components/ui/Page';
@@ -14,7 +10,7 @@ import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
 import { StatisticsTab } from './EntryTeams/StatisticsTab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
-import { queryKeys } from '../queryKeys';
+import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 
 // Add a new section to display portfolio scores
 const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }> = ({
@@ -62,113 +58,105 @@ export function EntryTeamsPage() {
   const [ownershipShowAllTeams, setOwnershipShowAllTeams] = useState(false);
   const [returnsShowAllTeams, setReturnsShowAllTeams] = useState(false);
 
+  const dashboardQuery = useCalcuttaDashboard(calcuttaId);
 
-  const entryTeamsQuery = useQuery({
-    queryKey: queryKeys.calcuttas.entryTeamsPage(calcuttaId, entryId),
-    enabled: Boolean(entryId && calcuttaId),
-    staleTime: 30_000,
-    queryFn: async () => {
-      if (!entryId || !calcuttaId) {
-        throw new Error('Missing required parameters');
-      }
-
-      const calcutta = await calcuttaService.getCalcutta(calcuttaId);
-
-      const [teamsData, schoolsData, portfoliosData, allEntriesData, tournamentTeamsData] = await Promise.all([
-        calcuttaService.getEntryTeams(entryId, calcuttaId),
-        schoolService.getSchools(),
-        calcuttaService.getPortfoliosByEntry(entryId),
-        calcuttaService.getCalcuttaEntries(calcuttaId),
-        tournamentService.getTournamentTeams(calcutta.tournamentId),
-      ]);
-
-      const currentEntry = allEntriesData.find((e) => e.id === entryId);
-      const entryName = currentEntry?.name || '';
-
-      const entryNameMap = new Map(allEntriesData.map((entry) => [entry.id, entry.name]));
-      const schoolMap = new Map(schoolsData.map((school) => [school.id, school]));
-
-      const teamsWithSchools = teamsData.map((team) => ({
-        ...team,
-        team: team.team
-          ? {
-              ...team.team,
-              school: schoolMap.get(team.team.schoolId),
-            }
-          : undefined,
-      }));
-
-      let portfolioTeamsWithSchools: CalcuttaPortfolioTeam[] = [];
-      if (portfoliosData.length > 0) {
-        const portfolioTeamsResults = await Promise.all(portfoliosData.map((portfolio) => calcuttaService.getPortfolioTeams(portfolio.id)));
-        const allPortfolioTeams = portfolioTeamsResults.flat();
-
-        portfolioTeamsWithSchools = allPortfolioTeams.map((team) => ({
-          ...team,
-          team: team.team
-            ? {
-                ...team.team,
-                school: schoolMap.get(team.team.schoolId),
-              }
-            : undefined,
-        }));
-      }
-
-      const allPortfoliosResults = await Promise.all(allEntriesData.map((entry) => calcuttaService.getPortfoliosByEntry(entry.id)));
-      const allPortfoliosFlat = allPortfoliosResults.flat();
-
-      const allPortfoliosWithEntryNames = allPortfoliosFlat.map((portfolio) => ({
-        ...portfolio,
-        entryName: entryNameMap.get(portfolio.entryId),
-      }));
-
-      const allPortfolioTeamsResults = await Promise.all(allPortfoliosFlat.map((portfolio) => calcuttaService.getPortfolioTeams(portfolio.id)));
-      const allCalcuttaPortfolioTeams = allPortfolioTeamsResults.flat();
-
-      const allCalcuttaPortfolioTeamsWithSchools = allCalcuttaPortfolioTeams.map((team) => ({
-        ...team,
-        team: team.team
-          ? {
-              ...team.team,
-              school: schoolMap.get(team.team.schoolId),
-            }
-          : undefined,
-      }));
-
-      const allEntryTeamsResults = await Promise.all(allEntriesData.map((entry) => calcuttaService.getEntryTeams(entry.id, calcuttaId)));
-      const allEntryTeams = allEntryTeamsResults.flat();
-
+  const enrichedData = useMemo(() => {
+    if (!dashboardQuery.data || !entryId) {
       return {
-        calcuttaName: calcutta.name,
-        entryName,
-        teams: teamsWithSchools,
-        schools: schoolsData,
-        portfolios: portfoliosData,
-        portfolioTeams: portfolioTeamsWithSchools,
-        tournamentTeams: tournamentTeamsData,
-        allEntryTeams,
-        allCalcuttaPortfolios: allPortfoliosWithEntryNames,
-        allCalcuttaPortfolioTeams: allCalcuttaPortfolioTeamsWithSchools,
+        calcuttaName: '',
+        entryName: '',
+        teams: [] as CalcuttaEntryTeam[],
+        schools: [] as { id: string; name: string }[],
+        portfolios: [] as CalcuttaPortfolio[],
+        portfolioTeams: [] as CalcuttaPortfolioTeam[],
+        tournamentTeams: dashboardQuery.data?.tournamentTeams ?? [],
+        allEntryTeams: [] as CalcuttaEntryTeam[],
+        allCalcuttaPortfolios: [] as (CalcuttaPortfolio & { entryName?: string })[],
+        allCalcuttaPortfolioTeams: [] as CalcuttaPortfolioTeam[],
       };
-    },
-  });
+    }
 
-  const calcuttaName = entryTeamsQuery.data?.calcuttaName || '';
-  const entryName = entryTeamsQuery.data?.entryName || '';
-  const teams = useMemo(() => entryTeamsQuery.data?.teams ?? [], [entryTeamsQuery.data?.teams]);
-  const schools = useMemo(() => entryTeamsQuery.data?.schools ?? [], [entryTeamsQuery.data?.schools]);
-  const portfolios = useMemo(() => entryTeamsQuery.data?.portfolios ?? [], [entryTeamsQuery.data?.portfolios]);
-  const portfolioTeams = useMemo(() => entryTeamsQuery.data?.portfolioTeams ?? [], [entryTeamsQuery.data?.portfolioTeams]);
-  const tournamentTeams = useMemo(() => entryTeamsQuery.data?.tournamentTeams ?? [], [entryTeamsQuery.data?.tournamentTeams]);
-  const allEntryTeams = useMemo(() => entryTeamsQuery.data?.allEntryTeams ?? [], [entryTeamsQuery.data?.allEntryTeams]);
-  const allCalcuttaPortfolios = useMemo(
-    () => entryTeamsQuery.data?.allCalcuttaPortfolios ?? [],
-    [entryTeamsQuery.data?.allCalcuttaPortfolios]
-  );
-  const allCalcuttaPortfolioTeams = useMemo(
-    () => entryTeamsQuery.data?.allCalcuttaPortfolioTeams ?? [],
-    [entryTeamsQuery.data?.allCalcuttaPortfolioTeams]
-  );
+    const { calcutta, entries, entryTeams, portfolios, portfolioTeams, schools, tournamentTeams } = dashboardQuery.data;
+    const schoolMap = new Map(schools.map((s) => [s.id, s]));
+    const entryNameMap = new Map(entries.map((e) => [e.id, e.name]));
+
+    const currentEntry = entries.find((e) => e.id === entryId);
+    const entryName = currentEntry?.name || '';
+
+    // Filter entry teams for this entry
+    const thisEntryTeams = entryTeams.filter((et) => et.entryId === entryId);
+
+    // Enrich entry teams with school info
+    const teamsWithSchools: CalcuttaEntryTeam[] = thisEntryTeams.map((team) => ({
+      ...team,
+      team: team.team
+        ? {
+            ...team.team,
+            school: schoolMap.get(team.team.schoolId),
+          }
+        : undefined,
+    }));
+
+    // Filter portfolios for this entry
+    const thisEntryPortfolios = portfolios.filter((p) => p.entryId === entryId);
+
+    // Filter portfolio teams for this entry's portfolios
+    const thisPortfolioIds = new Set(thisEntryPortfolios.map((p) => p.id));
+    const thisPortfolioTeams: CalcuttaPortfolioTeam[] = portfolioTeams
+      .filter((pt) => thisPortfolioIds.has(pt.portfolioId))
+      .map((pt) => ({
+        ...pt,
+        team: pt.team
+          ? {
+              ...pt.team,
+              school: schoolMap.get(pt.team.schoolId),
+            }
+          : undefined,
+      }));
+
+    // Enrich all portfolios with entry names
+    const allPortfoliosWithNames: (CalcuttaPortfolio & { entryName?: string })[] = portfolios.map((p) => ({
+      ...p,
+      entryName: entryNameMap.get(p.entryId),
+    }));
+
+    // Enrich all portfolio teams with school info
+    const allPortfolioTeamsWithSchools: CalcuttaPortfolioTeam[] = portfolioTeams.map((pt) => ({
+      ...pt,
+      team: pt.team
+        ? {
+            ...pt.team,
+            school: schoolMap.get(pt.team.schoolId),
+          }
+        : undefined,
+    }));
+
+    return {
+      calcuttaName: calcutta.name,
+      entryName,
+      teams: teamsWithSchools,
+      schools,
+      portfolios: thisEntryPortfolios,
+      portfolioTeams: thisPortfolioTeams,
+      tournamentTeams,
+      allEntryTeams: entryTeams,
+      allCalcuttaPortfolios: allPortfoliosWithNames,
+      allCalcuttaPortfolioTeams: allPortfolioTeamsWithSchools,
+    };
+  }, [dashboardQuery.data, entryId]);
+
+  const {
+    calcuttaName,
+    entryName,
+    teams,
+    schools,
+    portfolios,
+    portfolioTeams,
+    tournamentTeams,
+    allEntryTeams,
+    allCalcuttaPortfolios,
+    allCalcuttaPortfolioTeams,
+  } = enrichedData;
 
   // Helper function to find portfolio team data for a given team ID
   const getPortfolioTeamData = useCallback(
@@ -252,7 +240,7 @@ export function EntryTeamsPage() {
     );
   }
 
-  if (entryTeamsQuery.isLoading) {
+  if (dashboardQuery.isLoading) {
     return (
       <PageContainer>
         <EntryTeamsSkeleton />
@@ -260,8 +248,8 @@ export function EntryTeamsPage() {
     );
   }
 
-  if (entryTeamsQuery.isError) {
-    const message = entryTeamsQuery.error instanceof Error ? entryTeamsQuery.error.message : 'Failed to fetch data';
+  if (dashboardQuery.isError) {
+    const message = dashboardQuery.error instanceof Error ? dashboardQuery.error.message : 'Failed to fetch data';
     return (
       <PageContainer>
         <Alert variant="error">{message}</Alert>
@@ -269,22 +257,22 @@ export function EntryTeamsPage() {
     );
   }
 
-  const ownershipLoading = entryTeamsQuery.isFetching;
+  const ownershipLoading = dashboardQuery.isFetching;
 
   // Helper function to calculate investor ranking for a team
   const getInvestorRanking = (teamId: string) => {
     // Get all portfolio teams for this team across all portfolios in the Calcutta
     const allInvestors = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === teamId);
-    
+
     // Sort investors by ownership percentage (descending)
     const sortedInvestors = [...allInvestors].sort((a, b) => b.ownershipPercentage - a.ownershipPercentage);
-    
+
     // Find current user's rank
     const userPortfolio = portfolios[0];
-    const userRank = userPortfolio ? 
-      sortedInvestors.findIndex(pt => pt.portfolioId === userPortfolio.id) + 1 : 
+    const userRank = userPortfolio ?
+      sortedInvestors.findIndex(pt => pt.portfolioId === userPortfolio.id) + 1 :
       0;
-    
+
     return {
       rank: userRank,
       total: allInvestors.length
@@ -362,4 +350,3 @@ export function EntryTeamsPage() {
     </PageContainer>
   );
 }
- 

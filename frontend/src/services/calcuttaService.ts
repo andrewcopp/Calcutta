@@ -1,4 +1,4 @@
-import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
+import { Calcutta, CalcuttaDashboard, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaWithRanking } from '../types/calcutta';
 import { apiClient } from '../api/apiClient';
 
 export const calcuttaService = {
@@ -35,6 +35,14 @@ export const calcuttaService = {
 
   async getPortfolioTeams(portfolioId: string): Promise<CalcuttaPortfolioTeam[]> {
     return apiClient.get<CalcuttaPortfolioTeam[]>(`/portfolios/${portfolioId}/teams`);
+  },
+
+  async getCalcuttaDashboard(calcuttaId: string): Promise<CalcuttaDashboard> {
+    return apiClient.get<CalcuttaDashboard>(`/calcuttas/${calcuttaId}/dashboard`);
+  },
+
+  async getCalcuttasWithRankings(): Promise<CalcuttaWithRanking[]> {
+    return apiClient.get<CalcuttaWithRanking[]>('/calcuttas/list-with-rankings');
   },
 
   async updateEntry(

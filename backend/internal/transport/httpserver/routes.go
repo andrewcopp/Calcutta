@@ -60,21 +60,23 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 
 	cHandler := calcuttas.NewHandlerWithAuthUserID(s.app, s.authzRepo, authUserID)
 	calcuttas.RegisterRoutes(r, calcuttas.Handlers{
-		ListCalcuttas:       cHandler.HandleListCalcuttas,
-		CreateCalcutta:      cHandler.HandleCreateCalcutta,
-		GetCalcutta:         cHandler.HandleGetCalcutta,
-		UpdateCalcutta:      cHandler.HandleUpdateCalcutta,
-		ListCalcuttaEntries: cHandler.HandleListCalcuttaEntries,
-		CreateEntry:         cHandler.HandleCreateEntry,
-		CreateInvitation:    cHandler.HandleCreateInvitation,
-		ListInvitations:     cHandler.HandleListInvitations,
-		AcceptInvitation:    cHandler.HandleAcceptInvitation,
-		ListEntryTeams:      cHandler.HandleListEntryTeams,
-		ListEntryPortfolios: cHandler.HandleListEntryPortfolios,
-		UpdateEntry:         idempotencyMiddleware(s.idempotencyRepo, cHandler.HandleUpdateEntry),
-		Reinvite:            cHandler.HandleReinvite,
-		ListPayouts:         cHandler.HandleListPayouts,
-		ReplacePayouts:      cHandler.HandleReplacePayouts,
+		ListCalcuttas:             cHandler.HandleListCalcuttas,
+		ListCalcuttasWithRankings: cHandler.HandleListCalcuttasWithRankings,
+		CreateCalcutta:            cHandler.HandleCreateCalcutta,
+		GetCalcutta:               cHandler.HandleGetCalcutta,
+		GetDashboard:              cHandler.HandleGetDashboard,
+		UpdateCalcutta:            cHandler.HandleUpdateCalcutta,
+		ListCalcuttaEntries:       cHandler.HandleListCalcuttaEntries,
+		CreateEntry:               cHandler.HandleCreateEntry,
+		CreateInvitation:          cHandler.HandleCreateInvitation,
+		ListInvitations:           cHandler.HandleListInvitations,
+		AcceptInvitation:          cHandler.HandleAcceptInvitation,
+		ListEntryTeams:            cHandler.HandleListEntryTeams,
+		ListEntryPortfolios:       cHandler.HandleListEntryPortfolios,
+		UpdateEntry:               idempotencyMiddleware(s.idempotencyRepo, cHandler.HandleUpdateEntry),
+		Reinvite:                  cHandler.HandleReinvite,
+		ListPayouts:               cHandler.HandleListPayouts,
+		ReplacePayouts:            cHandler.HandleReplacePayouts,
 	})
 
 	// Lab endpoints (lab.* schema)

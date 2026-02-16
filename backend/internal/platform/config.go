@@ -235,7 +235,7 @@ func LoadConfigFromEnv() (Config, error) {
 	httpIdleTimeoutSeconds := envInt("HTTP_IDLE_TIMEOUT_SECONDS", 60, 1)
 	httpReadHeaderTimeoutSeconds := envInt("HTTP_READ_HEADER_TIMEOUT_SECONDS", 5, 1)
 	httpMaxBodyBytes := envInt64("HTTP_MAX_BODY_BYTES", 2*1024*1024, 1)
-	rateLimitRPM := envInt("RATE_LIMIT_RPM", 300, 0)
+	rateLimitRPM := envInt("RATE_LIMIT_RPM", 600, 0)
 	metricsEnabled := envBool("METRICS_ENABLED", false)
 	metricsAuthToken := strings.TrimSpace(os.Getenv("METRICS_AUTH_TOKEN"))
 
