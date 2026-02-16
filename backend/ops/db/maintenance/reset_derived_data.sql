@@ -6,9 +6,6 @@ TRUNCATE TABLE
     derived.simulated_tournaments,
     derived.simulation_state_teams,
     derived.simulation_states,
-    derived.detailed_investment_report,
-    derived.recommended_entry_bids,
-    derived.optimization_runs,
     derived.strategy_generation_runs,
     derived.predicted_market_share,
     derived.predicted_game_outcomes
