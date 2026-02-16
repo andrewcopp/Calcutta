@@ -19,7 +19,7 @@ SELECT
     created_at::timestamptz AS created_at,
     updated_at::timestamptz AS updated_at,
     deleted_at::timestamptz AS deleted_at
-FROM core.derived_portfolios
+FROM derived.portfolios
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -54,7 +54,7 @@ SELECT
     created_at::timestamptz AS created_at,
     updated_at::timestamptz AS updated_at,
     deleted_at::timestamptz AS deleted_at
-FROM core.derived_portfolios
+FROM derived.portfolios
 WHERE entry_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
@@ -102,7 +102,7 @@ SELECT
     created_at::timestamptz AS created_at,
     updated_at::timestamptz AS updated_at,
     deleted_at::timestamptz AS deleted_at
-FROM core.derived_portfolios
+FROM derived.portfolios
 WHERE entry_id = $1 AND deleted_at IS NULL
 `
 

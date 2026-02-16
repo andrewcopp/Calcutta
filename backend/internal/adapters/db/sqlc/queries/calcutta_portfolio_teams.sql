@@ -1,6 +1,6 @@
 -- name: ListPortfolioTeamsByPortfolioID :many
 SELECT
-    cpt.id,
+    cpt.id::text AS id,
     cpt.portfolio_id,
     cpt.team_id,
     cpt.ownership_percentage::float8 AS ownership_percentage,
