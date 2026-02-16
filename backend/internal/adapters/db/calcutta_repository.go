@@ -619,26 +619,6 @@ func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID s
 	return out, nil
 }
 
-func (r *CalcuttaRepository) GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
-	rows, err := r.q.ListPortfolios(ctx, entryID)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]*models.CalcuttaPortfolio, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, &models.CalcuttaPortfolio{
-			ID:            row.ID,
-			EntryID:       row.EntryID,
-			MaximumPoints: row.MaximumPoints,
-			Created:       row.CreatedAt.Time,
-			Updated:       row.UpdatedAt.Time,
-			Deleted:       timestamptzToPtrTime(row.DeletedAt),
-		})
-	}
-	return out, nil
-}
-
 func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
 	row, err := r.q.GetTeamByID(ctx, id)
 	if err != nil {

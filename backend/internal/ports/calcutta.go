@@ -35,7 +35,6 @@ type PortfolioReader interface {
 	GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error)
 	GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error)
 	GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
-	GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
 }
 
 type RoundReader interface {

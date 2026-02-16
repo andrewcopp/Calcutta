@@ -145,7 +145,7 @@ func (s *Service) attachSimulationBatchToSimulatedTournaments(ctx context.Contex
 	return err
 }
 
-func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string, entryCandidateID *string, strategyGenerationRunID *string) (string, error) {
+func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string, strategyGenerationRunID *string) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -280,28 +280,6 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 		}
 	}
 
-	if entryCandidateID != nil && *entryCandidateID != "" {
-		var snapshotEntryID string
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
-			VALUES ($1, NULL, 'Entry Candidate', true)
-			RETURNING id
-		`, snapshotID).Scan(&snapshotEntryID); err != nil {
-			return "", err
-		}
-
-		_, err := tx.Exec(ctx, `
-			INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-			SELECT $1, ecb.team_id, ecb.bid_points
-			FROM models.entry_candidate_bids ecb
-			WHERE ecb.entry_candidate_id = $2::uuid
-				AND ecb.deleted_at IS NULL
-		`, snapshotEntryID, *entryCandidateID)
-		if err != nil {
-			return "", err
-		}
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return "", err
 	}
@@ -320,7 +298,7 @@ func (s *Service) createCalcuttaEvaluationRun(ctx context.Context, tournamentSim
 	return evalID, nil
 }
 
-func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID string, excludedEntry string, entryCandidateID *string, strategyGenerationRunID *string) (map[string]*Entry, error) {
+func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID string, excludedEntry string, strategyGenerationRunID *string) (map[string]*Entry, error) {
 	// Use canonical core tables for entries/bids.
 	query := `
 		SELECT
@@ -399,32 +377,6 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 
 	if len(ourEntry.Teams) > 0 {
 		entries["Our Strategy"] = ourEntry
-	}
-
-	if entryCandidateID != nil && *entryCandidateID != "" {
-		candidateRows, err := s.pool.Query(ctx, `
-			SELECT team_id, bid_points
-			FROM models.entry_candidate_bids
-			WHERE entry_candidate_id = $1::uuid
-				AND deleted_at IS NULL
-		`, *entryCandidateID)
-		if err != nil {
-			return nil, err
-		}
-		defer candidateRows.Close()
-
-		candidate := &Entry{Name: "Entry Candidate", Teams: make(map[string]int)}
-		for candidateRows.Next() {
-			var teamID string
-			var bidPoints int
-			if err := candidateRows.Scan(&teamID, &bidPoints); err != nil {
-				return nil, err
-			}
-			candidate.Teams[teamID] = bidPoints
-		}
-		if len(candidate.Teams) > 0 {
-			entries[candidate.Name] = candidate
-		}
 	}
 
 	return entries, nil
@@ -739,7 +691,7 @@ func (s *Service) EvaluateLabEntry(
 	// Run simulations
 	var allResults []SimulationResult
 	for simID, teamResults := range simulations {
-		simResults, err := s.calculateSimulationOutcomes(ctx, simID, entries, teamResults, payouts, firstPlacePayout)
+		simResults, err := s.calculateSimulationOutcomes(simID, entries, teamResults, payouts, firstPlacePayout)
 		if err != nil {
 			return nil, fmt.Errorf("simulation %d failed: %w", simID, err)
 		}

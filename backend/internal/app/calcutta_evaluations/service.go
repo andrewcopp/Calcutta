@@ -19,12 +19,16 @@ type CalcuttaEvaluationResult struct {
 
 // Service handles simulated calcutta analysis
 type Service struct {
-	pool *pgxpool.Pool
+	pool                     *pgxpool.Pool
+	persistSimulationDetails bool
 }
 
 // New creates a new simulated calcutta service
 func New(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+	return &Service{
+		pool:                     pool,
+		persistSimulationDetails: os.Getenv("CALCUTTA_PERSIST_SIMULATION_DETAILS") == "true",
+	}
 }
 
 func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
@@ -34,7 +38,7 @@ func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
 	excludedEntryName string,
 	tournamentSimulationBatchID *string,
 ) (string, error) {
-	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil, nil)
+	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil)
 }
 
 func (s *Service) CalculateSimulatedCalcuttaForSimulatedCalcutta(
@@ -262,7 +266,6 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	runID string,
 	excludedEntryName string,
 	tournamentSimulationBatchIDOverride *string,
-	entryCandidateID *string,
 	strategyGenerationRunID *string,
 ) (string, error) {
 	cc, err := s.getCalcuttaContext(ctx, calcuttaID)
@@ -298,7 +301,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 		}
 	}
 
-	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runID, excludedEntryName, entryCandidateID, strategyGenerationRunID)
+	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runID, excludedEntryName, strategyGenerationRunID)
 	if err != nil {
 		return "", fmt.Errorf("failed to create calcutta snapshot: %w", err)
 	}
@@ -315,7 +318,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	}
 
 	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, cc, runID, excludedEntryName, entryCandidateID, strategyGenerationRunID)
+	entries, err := s.getEntries(ctx, cc, runID, excludedEntryName, strategyGenerationRunID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get entries: %w", err)
 	}
@@ -368,7 +371,7 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			simResults, err := s.calculateSimulationOutcomes(ctx, sid, entries, simulations[sid], payouts, firstPlacePayout)
+			simResults, err := s.calculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
 			if err != nil {
 				errors <- fmt.Errorf("simulation %d: %w", sid, err)
 				return
@@ -393,7 +396,7 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 		}
 	}
 
-	persistDetails := os.Getenv("CALCUTTA_PERSIST_SIMULATION_DETAILS") == "true"
+	persistDetails := s.persistSimulationDetails
 	if persistDetails {
 		if err := s.writeSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID, allResults); err != nil {
 			return 0, 0, fmt.Errorf("failed to write simulation outcomes: %w", err)

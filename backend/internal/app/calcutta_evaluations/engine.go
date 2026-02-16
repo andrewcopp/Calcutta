@@ -1,7 +1,6 @@
 package calcutta_evaluations
 
 import (
-	"context"
 	"sort"
 )
 
@@ -37,8 +36,7 @@ type TeamSimResult struct {
 	Points int
 }
 
-func (s *Service) calculateSimulationOutcomes(ctx context.Context, simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
-	_ = ctx
+func (s *Service) calculateSimulationOutcomes(simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
 
 	// Build team points map for this simulation
 	teamPoints := make(map[string]int)

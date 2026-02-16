@@ -553,8 +553,8 @@ func (s *Service) writePredictedGameOutcomes(
 
 	var runID string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO derived.game_outcome_runs (algorithm_id, prediction_model_id, tournament_id, params_json)
-		VALUES ($1::uuid, $1::uuid, $2::uuid, $3::jsonb)
+		INSERT INTO derived.game_outcome_runs (prediction_model_id, tournament_id, params_json)
+		VALUES ($1::uuid, $2::uuid, $3::jsonb)
 		RETURNING id
 	`, predictionModelID, labTournamentID, string(paramsJSON)).Scan(&runID); err != nil {
 		return err

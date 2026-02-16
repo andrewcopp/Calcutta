@@ -87,10 +87,6 @@ func (m *MockCalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID 
 	return nil
 }
 
-func (m *MockCalcuttaRepository) GetPortfolios(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
-	return nil, nil
-}
-
 func (m *MockCalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
 	return nil, nil
 }
