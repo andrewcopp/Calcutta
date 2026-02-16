@@ -61,8 +61,9 @@ class TestThatManifestMatchesIsCacheHit(unittest.TestCase):
         self.assertTrue(out)
 
 
-def test_that_cache_misses_when_config_changes(self) -> None:
-    def test_cache_misses_when_config_changes(self) -> None:
+class TestThatCacheMissesWhenConfigChanges(unittest.TestCase):
+
+    def test_that_cache_misses_when_config_changes(self) -> None:
         stage = "predicted_game_outcomes"
         stage_config_a = {"n_sims": 10, "seed": 1}
         stage_config_b = {"n_sims": 999, "seed": 1}

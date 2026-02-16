@@ -6,7 +6,7 @@ services:
       args:
         VITE_API_URL: ${API_URL}
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       - backend
 
@@ -38,12 +38,11 @@ services:
     command: [
       "/app/bin/workers",
       "-bundle-import-worker=false",
-      "-entry-eval-worker=false",
       "-market-share-worker=false",
       "-game-outcome-worker=false",
-      "-strategy-generation-worker=true",
       "-calcutta-eval-worker=false",
-      "-suite-eval-worker=true"
+      "-simulation-worker=true",
+      "-lab-pipeline-worker=true"
     ]
 
   db:
