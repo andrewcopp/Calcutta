@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
@@ -384,11 +383,6 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	entryCandidateID *string,
 	strategyGenerationRunID *string,
 ) (string, error) {
-	log.Printf("Calculating simulated calcutta for calcutta %s, run %s", calcuttaID, runID)
-	if excludedEntryName != "" {
-		log.Printf("Excluding entry name: %s", excludedEntryName)
-	}
-
 	cc, err := s.getCalcuttaContext(ctx, calcuttaID)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve calcutta context: %w", err)
@@ -438,8 +432,6 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 		return "", fmt.Errorf("failed to get payout structure: %w", err)
 	}
 
-	log.Printf("Found payout structure with %d positions, 1st place: %d cents", len(payouts), firstPlacePayout)
-
 	// Get all entries and their bids
 	entries, err := s.getEntries(ctx, cc, runID, excludedEntryName, entryCandidateID, strategyGenerationRunID)
 	if err != nil {
@@ -451,7 +443,6 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 		return "", err
 	}
 
-	log.Printf("Successfully calculated simulated calcutta for %d entries", len(entries))
 	return calcuttaEvaluationRunID, nil
 }
 
@@ -482,10 +473,6 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 	payouts map[int]int,
 	firstPlacePayout int,
 ) (int, int, error) {
-	log.Printf("Found %d entries", len(entries))
-
-	log.Printf("Found %d simulations", len(simulations))
-
 	results := make(chan []SimulationResult, len(simulations))
 	errors := make(chan error, len(simulations))
 
@@ -523,8 +510,6 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 			return 0, 0, err
 		}
 	}
-
-	log.Printf("Calculated %d total outcomes", len(allResults))
 
 	persistDetails := os.Getenv("CALCUTTA_PERSIST_SIMULATION_DETAILS") == "true"
 	if persistDetails {

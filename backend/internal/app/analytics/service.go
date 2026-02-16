@@ -2,7 +2,6 @@ package analytics
 
 import (
 	"context"
-	"log"
 	"math"
 	"sort"
 
@@ -231,7 +230,6 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 
 	data, err := s.repo.GetBestInvestments(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting best investments: %v", err)
 		return nil, err
 	}
 
@@ -262,7 +260,6 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedInvestmentResult, error) {
 	selectedID, marketShareSelectedID, data, err := s.repo.GetCalcuttaPredictedInvestment(ctx, calcuttaID, strategyGenerationRunID, marketShareRunID, gameOutcomeRunID)
 	if err != nil {
-		log.Printf("Error getting predicted investment: %v", err)
 		return nil, nil, nil, err
 	}
 
@@ -285,7 +282,6 @@ func (s *Service) GetCalcuttaPredictedInvestment(ctx context.Context, calcuttaID
 func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID string, strategyGenerationRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedReturnsResult, error) {
 	selectedID, gameOutcomeSelectedID, data, err := s.repo.GetCalcuttaPredictedReturns(ctx, calcuttaID, strategyGenerationRunID, gameOutcomeRunID)
 	if err != nil {
-		log.Printf("Error getting predicted returns: %v", err)
 		return nil, nil, nil, err
 	}
 
@@ -313,7 +309,6 @@ func (s *Service) GetCalcuttaPredictedReturns(ctx context.Context, calcuttaID st
 func (s *Service) GetTournamentPredictedAdvancement(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, []TournamentPredictedAdvancementResult, error) {
 	selectedRunID, data, err := s.repo.GetTournamentPredictedAdvancement(ctx, tournamentID, gameOutcomeRunID)
 	if err != nil {
-		log.Printf("Error getting tournament predicted advancement: %v", err)
 		return nil, nil, err
 	}
 
@@ -341,7 +336,6 @@ func (s *Service) GetTournamentPredictedAdvancement(ctx context.Context, tournam
 func (s *Service) GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaID string, marketShareRunID *string, gameOutcomeRunID *string) (*string, *string, []CalcuttaPredictedMarketShareResult, error) {
 	marketShareSelectedID, gameOutcomeSelectedID, data, err := s.repo.GetCalcuttaPredictedMarketShare(ctx, calcuttaID, marketShareRunID, gameOutcomeRunID)
 	if err != nil {
-		log.Printf("Error getting calcutta predicted market share: %v", err)
 		return nil, nil, nil, err
 	}
 
@@ -364,7 +358,6 @@ func (s *Service) GetCalcuttaPredictedMarketShare(ctx context.Context, calcuttaI
 func (s *Service) GetCalcuttaSimulatedEntry(ctx context.Context, calcuttaID string, strategyGenerationRunID *string) (*string, []CalcuttaSimulatedEntryResult, error) {
 	selectedID, data, err := s.repo.GetCalcuttaSimulatedEntry(ctx, calcuttaID, strategyGenerationRunID)
 	if err != nil {
-		log.Printf("Error getting simulated entry: %v", err)
 		return nil, nil, err
 	}
 
@@ -410,7 +403,6 @@ func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeader
 
 	data, err := s.repo.GetBestCareers(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting best careers: %v", err)
 		return nil, err
 	}
 
@@ -442,7 +434,6 @@ func (s *Service) GetBestInvestmentBids(ctx context.Context, limit int) ([]Inves
 
 	data, err := s.repo.GetBestInvestmentBids(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting best investment bids: %v", err)
 		return nil, err
 	}
 
@@ -477,7 +468,6 @@ func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderb
 
 	data, err := s.repo.GetBestEntries(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting best entries: %v", err)
 		return nil, err
 	}
 
@@ -502,7 +492,6 @@ func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderb
 func (s *Service) GetSeedInvestmentDistribution(ctx context.Context) (*SeedInvestmentDistributionResult, error) {
 	data, err := s.repo.GetSeedInvestmentPoints(ctx)
 	if err != nil {
-		log.Printf("Error getting seed investment points: %v", err)
 		return nil, err
 	}
 
@@ -612,7 +601,6 @@ func quantileSorted(sortedValues []float64, q float64) float64 {
 func (s *Service) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, float64, float64, error) {
 	data, totalPoints, totalInvestment, err := s.repo.GetSeedAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting seed analytics: %v", err)
 		return nil, 0, 0, err
 	}
 
@@ -657,7 +645,6 @@ func (s *Service) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, 
 func (s *Service) GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsResult, float64, float64, error) {
 	data, totalPoints, totalInvestment, err := s.repo.GetRegionAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting region analytics: %v", err)
 		return nil, 0, 0, err
 	}
 
@@ -700,7 +687,6 @@ func (s *Service) GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsResu
 func (s *Service) GetTeamAnalytics(ctx context.Context) ([]TeamAnalyticsResult, float64, error) {
 	data, err := s.repo.GetTeamAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting team analytics: %v", err)
 		return nil, 0, err
 	}
 
@@ -745,7 +731,6 @@ func (s *Service) GetTeamAnalytics(ctx context.Context) ([]TeamAnalyticsResult, 
 func (s *Service) GetSeedVarianceAnalytics(ctx context.Context) ([]SeedVarianceResult, error) {
 	data, err := s.repo.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting seed variance analytics: %v", err)
 		return nil, err
 	}
 

@@ -2,8 +2,9 @@ package simulation_game_outcomes
 
 import (
 	"errors"
-	"math"
 	"strings"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/mathutil"
 )
 
 type Spec struct {
@@ -47,14 +48,5 @@ func (s *Spec) WinProb(net1 float64, net2 float64) float64 {
 	if s.Sigma <= 0 {
 		return 0.5
 	}
-	return sigmoid((net1 - net2) / s.Sigma)
-}
-
-func sigmoid(x float64) float64 {
-	if x >= 0 {
-		z := math.Exp(-x)
-		return 1.0 / (1.0 + z)
-	}
-	z := math.Exp(x)
-	return z / (1.0 + z)
+	return mathutil.Sigmoid((net1 - net2) / s.Sigma)
 }

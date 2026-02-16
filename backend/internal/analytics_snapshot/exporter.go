@@ -61,7 +61,7 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 		return res, err
 	}
 
-	entryBidsRows, err := loadEntryBids(ctx, pool, calcuttaID, tournamentID, tournamentKey, schoolSlugByID)
+	entryBidsRows, err := loadEntryBids(ctx, pool, calcuttaID, tournamentKey, schoolSlugByID)
 	if err != nil {
 		return res, err
 	}
@@ -299,7 +299,7 @@ func loadEntries(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (cs
 	return csvTable{header: header, rows: rows}, nil
 }
 
-func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string, tournamentKey string, schoolSlugByID map[string]string) (csvTable, error) {
+func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentKey string, schoolSlugByID map[string]string) (csvTable, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
 			et.id,
@@ -341,7 +341,6 @@ func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, t
 		return csvTable{}, err
 	}
 
-	_ = tournamentID
 	return csvTable{header: header, rows: rows}, nil
 }
 
