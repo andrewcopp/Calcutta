@@ -9,12 +9,12 @@ DC_AIRFLOW = docker compose -f data-science/docker-compose.airflow.yml
 .PHONY: env-init bootstrap dev dev-up dev-down up-d logs ps stats
 .PHONY: prod-up prod-down prod-reset prod-ops-migrate
 .PHONY: up down reset ops-migrate backend-test sqlc-generate
-.PHONY: reset-derived db-shell db-query db query query-file query-csv
+.PHONY: db-shell db-query db query query-file query-csv
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test curl
 .PHONY: airflow-up airflow-down airflow-logs airflow-reset
-.PHONY: register-models
+.PHONY: register-models create-admin import-bundles seed-simulations dry-run
 
 env-init:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -93,9 +93,6 @@ prod-ops-migrate:
 
 ops-migrate:
 	$(ENV_DOCKER) $(DC) --profile ops run --rm migrate
-
-reset-derived:
-	$(ENV) psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" -v ON_ERROR_STOP=1 -f backend/ops/db/maintenance/reset_derived_data.sql
 
 # Service restart commands
 restart-backend:
@@ -212,3 +209,20 @@ register-models:
 		DB_HOST=localhost DB_USER=$${DB_USER:-calcutta} DB_PASSWORD=$${DB_PASSWORD:-calcutta} \
 		DB_NAME=$${DB_NAME:-calcutta} DB_PORT=$${DB_PORT:-5432} \
 		python scripts/register_investment_models.py
+
+# Seeding and admin tools
+create-admin:
+	@if [ -z "$(EMAIL)" ]; then echo "Usage: make create-admin EMAIL=\"admin@example.com\" [NAME=\"Admin User\"]"; exit 1; fi
+	@$(ENV) go run ./backend/cmd/tools/create-admin -email="$(EMAIL)" $(if $(NAME),-name="$(NAME)",)
+
+import-bundles:
+	@$(ENV) go run ./backend/cmd/tools/import-bundles -in=./backend/exports/bundles -dry-run=false
+
+seed-simulations:
+	@NSIMS=$${NSIMS:-10000}; \
+	SEED=$${SEED:-42}; \
+	echo "Seeding simulations (n-sims=$$NSIMS, seed=$$SEED)..."; \
+	$(ENV) go run ./backend/cmd/tools/seed-simulations -n-sims=$$NSIMS -seed=$$SEED
+
+dry-run:
+	@./scripts/dry-run-local.sh
