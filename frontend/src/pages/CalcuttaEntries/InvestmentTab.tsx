@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { CalcuttaEntry, CalcuttaEntryTeam, School, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntry, CalcuttaEntryTeam, TournamentTeam } from '../../types/calcutta';
+import { School } from '../../types/school';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
 

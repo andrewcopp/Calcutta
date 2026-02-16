@@ -4,9 +4,9 @@ import {
   CalcuttaEntryTeam,
   CalcuttaPortfolio,
   CalcuttaPortfolioTeam,
-  School,
   TournamentTeam,
 } from '../../types/calcutta';
+import { School } from '../../types/school';
 import { getEntryColorById } from '../../utils/entryColors';
 import { OwnershipPieChart } from '../../components/charts/OwnershipPieChart';
 import { LoadingState } from '../../components/ui/LoadingState';

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { CalcuttaEntryTeam, School, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntryTeam, TournamentTeam } from '../../types/calcutta';
+import { School } from '../../types/school';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { desaturateHex } from '../../utils/color';
 

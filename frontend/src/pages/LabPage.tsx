@@ -7,15 +7,16 @@ import { ModelLeaderboardCard } from '../components/Lab/ModelLeaderboardCard';
 import { labService, LeaderboardResponse } from '../services/labService';
 import { calcuttaService } from '../services/calcuttaService';
 import { Calcutta } from '../types/calcutta';
+import { queryKeys } from '../queryKeys';
 
 export function LabPage() {
   const leaderboardQuery = useQuery<LeaderboardResponse | null>({
-    queryKey: ['lab', 'models', 'leaderboard'],
+    queryKey: queryKeys.lab.leaderboard(),
     queryFn: () => labService.getLeaderboard(),
   });
 
   const calcuttasQuery = useQuery<Calcutta[]>({
-    queryKey: ['calcuttas'],
+    queryKey: queryKeys.calcuttas.all(),
     queryFn: () => calcuttaService.getAllCalcuttas(),
   });
 

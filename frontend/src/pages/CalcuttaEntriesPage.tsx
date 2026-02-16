@@ -16,22 +16,12 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useUser } from '../contexts/useUser';
 import { queryKeys } from '../queryKeys';
+import { formatDollarsFromCents } from '../utils/format';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const { user } = useUser();
   const [activeTab, setActiveTab] = useState('leaderboard');
-
-  const formatDollarsFromCents = (cents?: number) => {
-    if (!cents) return '$0';
-    const abs = Math.abs(cents);
-    const dollars = Math.floor(abs / 100);
-    const remainder = abs % 100;
-    const sign = cents < 0 ? '-' : '';
-    if (remainder === 0) return `${sign}$${dollars}`;
-    return `${sign}$${dollars}.${remainder.toString().padStart(2, '0')}`;
-  };
-
 
   const calcuttaEntriesQuery = useQuery({
     queryKey: queryKeys.calcuttas.entriesPage(calcuttaId),

@@ -12,6 +12,7 @@ import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { PipelineSummary } from '../../components/Lab/PipelineSummary';
 import { PipelineStatusTable } from '../../components/Lab/PipelineStatusTable';
 import { labService, InvestmentModel, ModelPipelineProgress } from '../../services/labService';
+import { queryKeys } from '../../queryKeys';
 
 export function ModelDetailPage() {
   const { modelId } = useParams<{ modelId: string }>();
@@ -20,13 +21,13 @@ export function ModelDetailPage() {
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
 
   const modelQuery = useQuery<InvestmentModel | null>({
-    queryKey: ['lab', 'models', modelId],
+    queryKey: queryKeys.lab.models.detail(modelId),
     queryFn: () => (modelId ? labService.getModel(modelId) : Promise.resolve(null)),
     enabled: Boolean(modelId),
   });
 
   const pipelineProgressQuery = useQuery<ModelPipelineProgress | null>({
-    queryKey: ['lab', 'models', modelId, 'pipeline-progress'],
+    queryKey: queryKeys.lab.models.pipelineProgress(modelId),
     queryFn: () => (modelId ? labService.getModelPipelineProgress(modelId) : Promise.resolve(null)),
     enabled: Boolean(modelId),
     refetchInterval: isPipelineRunning ? 2000 : false,
@@ -45,7 +46,7 @@ export function ModelDetailPage() {
     mutationFn: () => labService.startPipeline(modelId!),
     onSuccess: () => {
       setIsPipelineRunning(true);
-      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId, 'pipeline-progress'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.lab.models.pipelineProgress(modelId) });
     },
   });
 
@@ -53,7 +54,7 @@ export function ModelDetailPage() {
     mutationFn: () => labService.startPipeline(modelId!, { force_rerun: true }),
     onSuccess: () => {
       setIsPipelineRunning(true);
-      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId, 'pipeline-progress'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.lab.models.pipelineProgress(modelId) });
     },
   });
 
@@ -65,7 +66,7 @@ export function ModelDetailPage() {
     },
     onSuccess: () => {
       setIsPipelineRunning(false);
-      queryClient.invalidateQueries({ queryKey: ['lab', 'models', modelId, 'pipeline-progress'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.lab.models.pipelineProgress(modelId) });
     },
   });
 

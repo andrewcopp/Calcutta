@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
@@ -34,17 +34,20 @@ export function CalcuttaSettingsPage() {
     biddingOpen: boolean;
   } | null>(null);
 
-  // Initialize form when data loads
   const calcutta = calcuttaQuery.data;
-  if (calcutta && !form) {
-    setForm({
-      name: calcutta.name,
-      minTeams: calcutta.minTeams,
-      maxTeams: calcutta.maxTeams,
-      maxBid: calcutta.maxBid,
-      biddingOpen: calcutta.biddingOpen,
-    });
-  }
+
+  // Initialize form when data loads
+  useEffect(() => {
+    if (calcutta && !form) {
+      setForm({
+        name: calcutta.name,
+        minTeams: calcutta.minTeams,
+        maxTeams: calcutta.maxTeams,
+        maxBid: calcutta.maxBid,
+        biddingOpen: calcutta.biddingOpen,
+      });
+    }
+  }, [calcutta, form]);
 
   const payoutsQuery = useQuery({
     queryKey: queryKeys.calcuttas.payouts(calcuttaId),
@@ -55,11 +58,14 @@ export function CalcuttaSettingsPage() {
 
   const [payoutRows, setPayoutRows] = useState<Array<{ position: number; amountCents: number }> | null>(null);
 
-  // Initialize payout form when data loads
   const payoutsData = payoutsQuery.data;
-  if (payoutsData && !payoutRows) {
-    setPayoutRows(payoutsData.payouts.length > 0 ? [...payoutsData.payouts] : [{ position: 1, amountCents: 0 }]);
-  }
+
+  // Initialize payout form when data loads
+  useEffect(() => {
+    if (payoutsData && !payoutRows) {
+      setPayoutRows(payoutsData.payouts.length > 0 ? [...payoutsData.payouts] : [{ position: 1, amountCents: 0 }]);
+    }
+  }, [payoutsData, payoutRows]);
 
   const payoutMutation = useMutation({
     mutationFn: (payouts: Array<{ position: number; amountCents: number }>) => {

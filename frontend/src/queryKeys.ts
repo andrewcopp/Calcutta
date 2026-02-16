@@ -27,4 +27,34 @@ export const queryKeys = {
     settings: (calcuttaId: string | null | undefined) => ['calcuttaSettings', calcuttaId ?? null] as const,
     payouts: (calcuttaId: string | null | undefined) => ['calcuttaPayouts', calcuttaId ?? null] as const,
   },
+  bidding: {
+    page: (calcuttaId: string | null | undefined, entryId: string | null | undefined) =>
+      ['biddingPage', calcuttaId ?? null, entryId ?? null] as const,
+  },
+  lab: {
+    leaderboard: () => ['lab', 'models', 'leaderboard'] as const,
+    models: {
+      detail: (modelId: string | null | undefined) => ['lab', 'models', modelId ?? null] as const,
+      pipelineProgress: (modelId: string | null | undefined) =>
+        ['lab', 'models', modelId ?? null, 'pipeline-progress'] as const,
+    },
+    entries: {
+      all: () => ['lab', 'entries'] as const,
+      detail: (entryId: string | null | undefined) => ['lab', 'entries', entryId ?? null] as const,
+      byModelAndCalcutta: (modelName: string | null | undefined, calcuttaId: string | null | undefined) =>
+        ['lab', 'entries', 'by-model-calcutta', modelName ?? null, calcuttaId ?? null] as const,
+    },
+    evaluations: {
+      all: () => ['lab', 'evaluations'] as const,
+      detail: (evaluationId: string | null | undefined) => ['lab', 'evaluations', evaluationId ?? null] as const,
+      entries: (evaluationId: string | null | undefined) =>
+        ['lab', 'evaluations', evaluationId ?? null, 'entries'] as const,
+      byEntry: (entryId: string | null | undefined) =>
+        ['lab', 'evaluations', { entry_id: entryId ?? null }] as const,
+    },
+    entryResults: {
+      profile: (entryResultId: string | null | undefined) =>
+        ['lab', 'entry-results', entryResultId ?? null] as const,
+    },
+  },
 };

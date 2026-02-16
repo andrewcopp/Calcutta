@@ -7,13 +7,14 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { labService, ListEntriesResponse } from '../../services/labService';
+import { queryKeys } from '../../queryKeys';
 
 export function EntriesTab() {
   const navigate = useNavigate();
   const [modelFilter, setModelFilter] = useState('');
 
   const entriesQuery = useQuery<ListEntriesResponse | null>({
-    queryKey: ['lab', 'entries'],
+    queryKey: queryKeys.lab.entries.all(),
     queryFn: () => labService.listEntries({ limit: 100 }),
   });
 

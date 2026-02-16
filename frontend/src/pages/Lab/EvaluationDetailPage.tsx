@@ -9,6 +9,7 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { labService, EvaluationDetail, EvaluationEntryResult } from '../../services/labService';
 import { cn } from '../../lib/cn';
+import { queryKeys } from '../../queryKeys';
 
 export function EvaluationDetailPage() {
   const { evaluationId } = useParams<{
@@ -17,13 +18,13 @@ export function EvaluationDetailPage() {
   const navigate = useNavigate();
 
   const evaluationQuery = useQuery<EvaluationDetail | null>({
-    queryKey: ['lab', 'evaluations', evaluationId],
+    queryKey: queryKeys.lab.evaluations.detail(evaluationId),
     queryFn: () => (evaluationId ? labService.getEvaluation(evaluationId) : Promise.resolve(null)),
     enabled: Boolean(evaluationId),
   });
 
   const entryResultsQuery = useQuery<EvaluationEntryResult[]>({
-    queryKey: ['lab', 'evaluations', evaluationId, 'entries'],
+    queryKey: queryKeys.lab.evaluations.entries(evaluationId),
     queryFn: () => (evaluationId ? labService.getEvaluationEntryResults(evaluationId) : Promise.resolve([])),
     enabled: Boolean(evaluationId),
   });

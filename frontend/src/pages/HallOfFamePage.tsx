@@ -22,16 +22,7 @@ import {
   InvestmentLeaderboardResponse,
   InvestmentLeaderboardRow,
 } from '../types/hallOfFame';
-
-const formatDollarsFromCents = (cents?: number) => {
-  if (!cents) return '$0';
-  const abs = Math.abs(cents);
-  const dollars = Math.floor(abs / 100);
-  const remainder = abs % 100;
-  const sign = cents < 0 ? '-' : '';
-  if (remainder === 0) return `${sign}$${dollars}`;
-  return `${sign}$${dollars}.${remainder.toString().padStart(2, '0')}`;
-};
+import { formatDollarsFromCents } from '../utils/format';
 
 const bestTeamsColumns: ColumnDef<BestTeam, unknown>[] = [
   { id: 'rank', header: 'Rank', cell: ({ row }) => row.index + 1, enableSorting: false },

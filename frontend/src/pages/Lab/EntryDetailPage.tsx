@@ -8,6 +8,7 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { labService, EntryDetail, ListEvaluationsResponse } from '../../services/labService';
 import { cn } from '../../lib/cn';
+import { queryKeys } from '../../queryKeys';
 
 import { PredictionsTab, PredSortKey } from './EntryDetail/PredictionsTab';
 import { EntryTab, BidSortKey } from './EntryDetail/EntryTab';
@@ -52,8 +53,8 @@ export function EntryDetailPage() {
   // Determine which API to call based on URL params
   const useNewEndpoint = Boolean(modelName && calcuttaId);
   const queryKey = useNewEndpoint
-    ? ['lab', 'entries', 'by-model-calcutta', modelName, calcuttaId]
-    : ['lab', 'entries', entryId];
+    ? queryKeys.lab.entries.byModelAndCalcutta(modelName, calcuttaId)
+    : queryKeys.lab.entries.detail(entryId);
 
   const entryQuery = useQuery<EntryDetail | null>({
     queryKey,
@@ -69,7 +70,7 @@ export function EntryDetailPage() {
   // For evaluations, we need the entry ID from the loaded entry
   const loadedEntryId = entryQuery.data?.id;
   const evaluationsQuery = useQuery<ListEvaluationsResponse | null>({
-    queryKey: ['lab', 'evaluations', { entry_id: loadedEntryId }],
+    queryKey: queryKeys.lab.evaluations.byEntry(loadedEntryId),
     queryFn: () => (loadedEntryId ? labService.listEvaluations({ entry_id: loadedEntryId, limit: 1 }) : Promise.resolve(null)),
     enabled: Boolean(loadedEntryId),
   });

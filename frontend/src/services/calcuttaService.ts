@@ -1,4 +1,5 @@
-import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, School, TournamentTeam } from '../types/calcutta';
+import { Calcutta, CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, TournamentTeam } from '../types/calcutta';
+import { School } from '../types/school';
 import { apiClient } from '../api/apiClient';
 
 export const calcuttaService = {

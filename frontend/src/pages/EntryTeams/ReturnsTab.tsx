@@ -1,4 +1,5 @@
-import { CalcuttaEntryTeam, CalcuttaPortfolioTeam, School, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntryTeam, CalcuttaPortfolioTeam, TournamentTeam } from '../../types/calcutta';
+import { School } from '../../types/school';
 import { SegmentedBar } from '../../components/SegmentedBar';
 
 export const ReturnsTab: React.FC<{

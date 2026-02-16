@@ -12,6 +12,7 @@ import { Badge } from '../components/ui/Badge';
 import { Modal, ModalActions } from '../components/ui/Modal';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { cn } from '../lib/cn';
+import { queryKeys } from '../queryKeys';
 
 const MIN_BID = 1;
 
@@ -34,7 +35,7 @@ export function BiddingPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const biddingQuery = useQuery({
-    queryKey: ['biddingPage', calcuttaId, entryId],
+    queryKey: queryKeys.bidding.page(calcuttaId, entryId),
     enabled: Boolean(calcuttaId && entryId),
     staleTime: 30_000,
     queryFn: async () => {

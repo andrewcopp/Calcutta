@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { labService, EvaluationEntryProfile } from '../../services/labService';
 import { cn } from '../../lib/cn';
+import { queryKeys } from '../../queryKeys';
 
 function formatPayoutX(val?: number | null): string {
   if (val == null) return '-';
@@ -34,7 +35,7 @@ export function EntryProfilePage() {
   }>();
 
   const profileQuery = useQuery<EvaluationEntryProfile | null>({
-    queryKey: ['lab', 'entry-results', entryResultId],
+    queryKey: queryKeys.lab.entryResults.profile(entryResultId),
     queryFn: () =>
       entryResultId
         ? labService.getEvaluationEntryProfile(entryResultId)

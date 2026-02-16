@@ -7,6 +7,7 @@ import { Card } from '../../../components/ui/Card';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { labService, EvaluationEntryResult } from '../../../services/labService';
 import { cn } from '../../../lib/cn';
+import { queryKeys } from '../../../queryKeys';
 
 interface Evaluation {
   id: string;
@@ -51,7 +52,7 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
 
   // Fetch entry results when we have an evaluation
   const entryResultsQuery = useQuery<EvaluationEntryResult[]>({
-    queryKey: ['lab', 'evaluations', evaluation?.id, 'entries'],
+    queryKey: queryKeys.lab.evaluations.entries(evaluation?.id),
     queryFn: () => (evaluation?.id ? labService.getEvaluationEntryResults(evaluation.id) : Promise.resolve([])),
     enabled: Boolean(evaluation?.id),
   });
