@@ -9,13 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func nullUUIDParam(v string) any {
-	if v == "" {
-		return nil
-	}
-	return v
-}
-
 func resolveSeasonYearByCalcuttaID(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (int, error) {
 	var year int
 	q := `
