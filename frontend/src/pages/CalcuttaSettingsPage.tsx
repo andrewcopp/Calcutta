@@ -78,7 +78,6 @@ export function CalcuttaSettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.payouts(calcuttaId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entriesPage(calcuttaId) });
       setSuccessMessage('Payouts saved successfully.');
       successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000);
     },
@@ -90,7 +89,6 @@ export function CalcuttaSettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.settings(calcuttaId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entriesPage(calcuttaId) });
       setSuccessMessage('Settings saved successfully.');
       successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000);
     },

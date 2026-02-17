@@ -2,8 +2,6 @@ import { useMemo } from 'react';
 import { CalcuttaEntryTeam, TournamentTeam } from '../../types/calcutta';
 import { School } from '../../types/school';
 import { SegmentedBar } from '../../components/SegmentedBar';
-import { desaturateHex } from '../../utils/color';
-
 export const InvestmentsTab: React.FC<{
   entryId: string;
   tournamentTeams: TournamentTeam[];
@@ -118,7 +116,7 @@ export const InvestmentsTab: React.FC<{
   }, [investmentRows.rows, investmentsSortBy]);
 
   const ENTRY_COLOR = '#2563EB';
-  const OTHER_COLOR = desaturateHex('#94A3B8');
+  const OTHER_COLOR = '#cfd6df';
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
