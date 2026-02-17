@@ -44,7 +44,7 @@ logs-frontend:
 
 logs-search:
 	@if [ -z "$(PATTERN)" ]; then echo "Usage: make logs-search PATTERN=\"error\""; exit 1; fi
-	$(ENV_DOCKER) $(DC) logs --tail=100 | grep -i "$(PATTERN)"
+	@LINES=$${LINES:-1000}; $(ENV_DOCKER) $(DC) logs --tail=$$LINES | grep -i "$(PATTERN)"
 
 logs-tail:
 	@LINES=$${LINES:-50}; $(ENV_DOCKER) $(DC) logs --tail=$$LINES
