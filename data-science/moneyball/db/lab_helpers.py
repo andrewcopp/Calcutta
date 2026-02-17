@@ -1,7 +1,7 @@
 """
 Shared database helpers for lab pipeline scripts.
 
-Deduplicates queries that were copy-pasted across generate_lab_entries.py,
+Deduplicates queries that were copy-pasted across
 generate_lab_predictions.py, generate_naive_ev_predictions.py, and
 generate_oracle_predictions.py.
 """

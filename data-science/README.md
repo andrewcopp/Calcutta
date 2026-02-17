@@ -17,7 +17,6 @@ pip install -r requirements.txt
 - `generate_lab_predictions.py` — Generate market predictions for a model across historical calcuttas.
 - `generate_oracle_predictions.py` — Generate oracle predictions using actual historical market shares.
 - `generate_naive_ev_predictions.py` — Generate naive expected-value predictions.
-- `generate_lab_entries.py` — Generate optimized entries from predictions.
 - `optimize_lab_entries.py` — Run portfolio optimization for lab entries.
 
 ## How to run
@@ -51,9 +50,6 @@ python scripts/register_investment_models.py
 
 # Generate predictions for a model
 python scripts/generate_lab_predictions.py --model-name ridge-v1
-
-# Generate entries
-python scripts/generate_lab_entries.py --model-name ridge-v1
 
 # Optimize entries
 python scripts/optimize_lab_entries.py --model-name ridge-v1
