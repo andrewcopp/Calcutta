@@ -44,7 +44,6 @@ func NewSimulationWorker(pool *pgxpool.Pool, progress ProgressWriter, artifactsD
 type simulationRunRow struct {
 	ID                  string
 	RunKey              string
-	CohortID            string
 	CalcuttaID          *string
 	SimulatedCalcuttaID *string
 	GameOutcomeRunID    *string
@@ -193,7 +192,6 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 		RETURNING
 			r.id,
 			r.run_key::text,
-			r.cohort_id::text,
 			r.calcutta_id::text,
 			r.simulated_calcutta_id::text,
 			r.game_outcome_run_id::text,
@@ -213,7 +211,6 @@ func (w *SimulationWorker) claimNextSimulationRun(ctx context.Context, workerID 
 	).Scan(
 		&row.ID,
 		&row.RunKey,
-		&row.CohortID,
 		&row.CalcuttaID,
 		&row.SimulatedCalcuttaID,
 		&row.GameOutcomeRunID,
@@ -271,10 +268,9 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 	if req.GameOutcomeRunID != nil {
 		goRunID = *req.GameOutcomeRunID
 	}
-	log.Printf("simulation_worker start worker_id=%s run_id=%s cohort_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s starting_state_key=%s excluded_entry_name=%q",
+	log.Printf("simulation_worker start worker_id=%s run_id=%s calcutta_id=%s run_key=%s game_outcome_run_id=%s starting_state_key=%s excluded_entry_name=%q",
 		workerID,
 		req.ID,
-		req.CohortID,
 		calcuttaID,
 		runKey,
 		goRunID,
