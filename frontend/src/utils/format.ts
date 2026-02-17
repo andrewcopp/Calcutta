@@ -4,7 +4,7 @@
  * Omits decimal places when the amount is a whole number of dollars.
  */
 export function formatDollarsFromCents(cents?: number): string {
-  if (!cents) return '$0';
+  if (cents == null) return '$0';
   const abs = Math.abs(cents);
   const dollars = Math.floor(abs / 100);
   const remainder = abs % 100;
