@@ -4,6 +4,7 @@ Database connection pooling.
 Provides thread-safe connection pooling for Python services to write
 directly to the Postgres database.
 """
+import atexit
 import os
 import logging
 from typing import Optional
@@ -66,16 +67,30 @@ def get_db_connection():
     """
     Context manager for database connections.
 
+    Automatically commits on success and rolls back on exception.
+
     Usage:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT * FROM table")
+                cur.execute("INSERT INTO table ...")
     """
     conn = _get_connection()
     try:
         yield conn
+        conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         _release_connection(conn)
+
+
+def _close_pool():
+    """Shut down the connection pool at interpreter exit."""
+    global _pool
+    if _pool is not None:
+        _pool.closeall()
+        _pool = None
+
+
+atexit.register(_close_pool)

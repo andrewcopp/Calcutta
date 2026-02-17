@@ -109,7 +109,6 @@ def create_investment_model(
                 (model_id, name, kind, json.dumps(params), notes),
             )
             row = cur.fetchone()
-            conn.commit()
 
     logger.info(f"Created investment model: {name} ({kind})")
     return InvestmentModel(
@@ -288,7 +287,6 @@ def create_entry_with_predictions(
                 ),
             )
             row = cur.fetchone()
-            conn.commit()
 
     logger.info(f"Created entry with {len(predictions)} predictions for calcutta {calcutta_id}")
     return Entry(
@@ -351,7 +349,6 @@ def update_entry_with_bids(
                     entry_id,
                 ),
             )
-            conn.commit()
 
     logger.info(f"Updated entry {entry_id} with {len(bids)} optimized bids")
 

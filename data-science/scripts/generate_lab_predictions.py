@@ -82,7 +82,8 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
                 include_target=True,
             )
             train_frames.append(df)
-        except Exception:
+        except Exception as e:
+            print(f"  Warning: Could not load training data for {y}: {e}")
             continue
 
     if not train_frames:
