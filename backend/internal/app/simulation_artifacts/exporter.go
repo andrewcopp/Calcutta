@@ -37,57 +37,14 @@ func (s *Service) exportArtifacts(ctx context.Context, simulationRunID, runKey, 
 		return fmt.Errorf("create_artifacts_dir_failed: %w", err)
 	}
 
-	results := make([]artifactExportResult, 0, 2)
-
 	perfPath := filepath.Join(baseDir, "entry_performance.v1.jsonl")
-	if res, ok, err := s.exportEntryPerformanceJSONL(ctx, calcuttaEvaluationRunID, perfPath); err != nil {
+	if _, _, err := s.exportEntryPerformanceJSONL(ctx, calcuttaEvaluationRunID, perfPath); err != nil {
 		return fmt.Errorf("export_entry_performance_failed: %w", err)
-	} else if ok {
-		results = append(results, res)
 	}
 
 	outcomesPath := filepath.Join(baseDir, "entry_simulation_outcomes.v1.jsonl")
-	if res, ok, err := s.exportEntrySimulationOutcomesJSONL(ctx, calcuttaEvaluationRunID, outcomesPath); err != nil {
+	if _, _, err := s.exportEntrySimulationOutcomesJSONL(ctx, calcuttaEvaluationRunID, outcomesPath); err != nil {
 		return fmt.Errorf("export_entry_simulation_outcomes_failed: %w", err)
-	} else if ok {
-		results = append(results, res)
-	}
-
-	var runKeyParam any
-	if strings.TrimSpace(runKey) != "" {
-		runKeyParam = runKey
-	} else {
-		runKeyParam = nil
-	}
-
-	for _, res := range results {
-		summary := map[string]any{
-			"rowCount": res.RowCount,
-		}
-		summaryJSON, _ := json.Marshal(summary)
-		_, err := s.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('simulation', $1::uuid, $2::uuid, $3, $4, $5, $6::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, simulationRunID, runKeyParam, res.ArtifactKind, res.SchemaVersion, res.StorageURI, summaryJSON)
-		if err != nil {
-			return fmt.Errorf("upsert_run_artifact_failed kind=%s: %w", res.ArtifactKind, err)
-		}
 	}
 
 	return nil

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,13 +28,6 @@ type simulationRunToDelete struct {
 	RunKey                uuid.UUID
 	CalcuttaEvaluationRun uuid.UUID
 	FinishedAt            time.Time
-}
-
-type runArtifact struct {
-	ID           uuid.UUID
-	RunID        uuid.UUID
-	ArtifactKind string
-	StorageURI   *string
 }
 
 func main() {
@@ -112,20 +104,6 @@ func run() error {
 		}
 	}
 
-	artifacts, err := selectSimulationRunArtifacts(ctx, pool, runIDs)
-	if err != nil {
-		return err
-	}
-
-	filesToDelete := make(map[uuid.UUID][]string)
-	for _, a := range artifacts {
-		p, ok := filePathFromStorageURI(a.StorageURI)
-		if !ok {
-			continue
-		}
-		filesToDelete[a.RunID] = append(filesToDelete[a.RunID], p)
-	}
-
 	evalIDsSafeToDelete := make(map[uuid.UUID]bool, len(evalIDs))
 	for _, evalID := range evalIDs {
 		ok, err := evalRunExclusiveToDeletionSet(ctx, pool, evalID, runIDs)
@@ -146,7 +124,6 @@ func run() error {
 				"run_key", r.RunKey.String(),
 				"finished_at", r.FinishedAt.Format(time.RFC3339),
 				"calcutta_evaluation_run_id", r.CalcuttaEvaluationRun.String(),
-				"artifact_files", len(filesToDelete[r.ID]),
 			)
 		}
 		slog.Info("retention_dry_run_complete", "candidates", len(runs))
@@ -178,14 +155,6 @@ func run() error {
 		}
 
 		if _, err := tx.Exec(ctx, `
-			DELETE FROM derived.run_artifacts
-			WHERE run_kind = 'simulation'
-				AND run_id = $1::uuid
-			`, r.ID); err != nil {
-			return fmt.Errorf("delete_run_artifacts_failed run_id=%s: %w", r.ID.String(), err)
-		}
-
-		if _, err := tx.Exec(ctx, `
 			DELETE FROM derived.run_jobs
 			WHERE run_kind = 'simulation'
 				AND run_id = $1::uuid
@@ -207,30 +176,8 @@ func run() error {
 		return fmt.Errorf("tx_commit_failed: %w", err)
 	}
 
-	// 2) Delete files after DB commit.
-	deletedFiles := 0
+	// 2) Delete artifact files after DB commit.
 	for _, r := range runs {
-		for _, p := range filesToDelete[r.ID] {
-			if absArtifactsDir == "" {
-				slog.Warn("artifact_file_delete_skipped_no_artifacts_dir", "simulation_run_id", r.ID.String(), "path", p)
-				continue
-			}
-			ok, err := isPathUnderDir(p, absArtifactsDir)
-			if err != nil {
-				slog.Warn("artifact_file_delete_skipped", "simulation_run_id", r.ID.String(), "path", p, "error", err)
-				continue
-			}
-			if !ok {
-				slog.Warn("artifact_file_delete_skipped_outside_artifacts_dir", "simulation_run_id", r.ID.String(), "path", p, "artifacts_dir", absArtifactsDir)
-				continue
-			}
-			if err := os.RemoveAll(p); err != nil {
-				slog.Warn("artifact_file_delete_failed", "simulation_run_id", r.ID.String(), "path", p, "error", err)
-				continue
-			}
-			deletedFiles++
-		}
-
 		if absArtifactsDir != "" {
 			runDir := filepath.Join(absArtifactsDir, "simulation", r.ID.String())
 			ok, err := isPathUnderDir(runDir, absArtifactsDir)
@@ -240,7 +187,7 @@ func run() error {
 		}
 	}
 
-	slog.Info("retention_complete", "deleted_runs", deletedRuns, "deleted_files", deletedFiles)
+	slog.Info("retention_complete", "deleted_runs", deletedRuns)
 	return nil
 }
 
@@ -280,36 +227,6 @@ func selectSimulationRunsToDelete(ctx context.Context, q querier, cutoff time.Ti
 	return out, nil
 }
 
-func selectSimulationRunArtifacts(ctx context.Context, q querier, runIDs []uuid.UUID) ([]runArtifact, error) {
-	if len(runIDs) == 0 {
-		return nil, nil
-	}
-	rows, err := q.Query(ctx, `
-		SELECT id, run_id, artifact_kind, storage_uri
-		FROM derived.run_artifacts
-		WHERE run_kind = 'simulation'
-			AND deleted_at IS NULL
-			AND run_id = ANY($1::uuid[])
-	`, runIDs)
-	if err != nil {
-		return nil, fmt.Errorf("select_run_artifacts_failed: %w", err)
-	}
-	defer rows.Close()
-
-	out := make([]runArtifact, 0)
-	for rows.Next() {
-		var a runArtifact
-		if err := rows.Scan(&a.ID, &a.RunID, &a.ArtifactKind, &a.StorageURI); err != nil {
-			return nil, fmt.Errorf("scan_run_artifact_failed: %w", err)
-		}
-		out = append(out, a)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("select_run_artifacts_rows_failed: %w", err)
-	}
-	return out, nil
-}
-
 func evalRunExclusiveToDeletionSet(ctx context.Context, q querier, evalRunID uuid.UUID, deletingRunIDs []uuid.UUID) (bool, error) {
 	if evalRunID == uuid.Nil {
 		return false, nil
@@ -326,30 +243,6 @@ func evalRunExclusiveToDeletionSet(ctx context.Context, q querier, evalRunID uui
 		return false, fmt.Errorf("eval_run_refcount_failed: %w", err)
 	}
 	return nOther == 0, nil
-}
-
-func filePathFromStorageURI(storageURI *string) (string, bool) {
-	if storageURI == nil {
-		return "", false
-	}
-	uStr := strings.TrimSpace(*storageURI)
-	if uStr == "" {
-		return "", false
-	}
-
-	u, err := url.Parse(uStr)
-	if err != nil {
-		return "", false
-	}
-	if u.Scheme != "file" {
-		return "", false
-	}
-
-	p := u.Path
-	if p == "" {
-		return "", false
-	}
-	return filepath.Clean(p), true
 }
 
 func isPathUnderDir(path string, dir string) (bool, error) {

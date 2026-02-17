@@ -187,7 +187,7 @@ func (w *GameOutcomeWorker) processGameOutcomeJob(ctx context.Context, workerID 
 
 	svc := pgo.New(w.pool)
 	start := time.Now()
-	tournamentID, nRows, err := svc.GenerateAndWriteToExistingRun(ctx, job.RunID)
+	_, nRows, err := svc.GenerateAndWriteToExistingRun(ctx, job.RunID)
 	dur := time.Since(start)
 	if err != nil {
 		w.failGameOutcomeJob(ctx, job, err)
@@ -206,50 +206,6 @@ func (w *GameOutcomeWorker) processGameOutcomeJob(ctx context.Context, workerID 
 	`, job.RunID)
 
 	w.updateRunJobProgress(ctx, "game_outcome", job.RunID, 1.0, "succeeded", "Completed")
-
-	summary := map[string]any{
-		"status":       "succeeded",
-		"runId":        job.RunID,
-		"runKey":       job.RunKey,
-		"tournamentId": tournamentID,
-		"rowsInserted": nRows,
-		"durationMs":   dur.Milliseconds(),
-	}
-	if len(job.Params) > 0 {
-		var p any
-		if err := json.Unmarshal(job.Params, &p); err == nil {
-			summary["params"] = p
-		}
-	}
-	summaryJSON, jerr := json.Marshal(summary)
-	if jerr == nil {
-		var runKeyParam any
-		if job.RunKey != "" {
-			runKeyParam = job.RunKey
-		} else {
-			runKeyParam = nil
-		}
-		_, _ = w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('game_outcome', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, job.RunID, runKeyParam, summaryJSON)
-	}
 
 	log.Printf("game_outcome_worker success worker_id=%s run_id=%s run_key=%s rows=%d dur_ms=%d", workerID, job.RunID, job.RunKey, nRows, dur.Milliseconds())
 	return true
@@ -273,48 +229,6 @@ func (w *GameOutcomeWorker) failGameOutcomeJob(ctx context.Context, job *gameOut
 		WHERE run_kind = 'game_outcome'
 			AND run_id = $1::uuid
 	`, job.RunID, msg)
-
-	failureSummary := map[string]any{
-		"status":       "failed",
-		"runId":        job.RunID,
-		"runKey":       job.RunKey,
-		"errorMessage": msg,
-	}
-	if len(job.Params) > 0 {
-		var p any
-		if err := json.Unmarshal(job.Params, &p); err == nil {
-			failureSummary["params"] = p
-		}
-	}
-	failureSummaryJSON, jerr := json.Marshal(failureSummary)
-	if jerr == nil {
-		var runKeyParam any
-		if job.RunKey != "" {
-			runKeyParam = job.RunKey
-		} else {
-			runKeyParam = nil
-		}
-		_, _ = w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('game_outcome', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, job.RunID, runKeyParam, failureSummaryJSON)
-	}
 }
 
 func (w *GameOutcomeWorker) updateRunJobProgress(ctx context.Context, runKind string, runID string, percent float64, phase string, message string) {

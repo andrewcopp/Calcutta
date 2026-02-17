@@ -408,44 +408,6 @@ func (w *SimulationWorker) processSimulationRun(ctx context.Context, workerID st
 
 	w.updateRunJobProgress(ctx, "simulation", req.ID, 1.0, "succeeded", "Completed")
 
-	summary := map[string]any{
-		"status":                  "succeeded",
-		"evaluationId":            req.ID,
-		"runKey":                  runKey,
-		"nSims":                   nSims,
-		"seed":                    seed,
-		"calcuttaEvaluationRunId": evalRunID,
-	}
-	summaryJSON, err := json.Marshal(summary)
-	if err == nil {
-		var runKeyParam any
-		if runKey != "" {
-			runKeyParam = runKey
-		} else {
-			runKeyParam = nil
-		}
-		_, _ = w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('simulation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, req.ID, runKeyParam, summaryJSON)
-	}
-
 	log.Printf("simulation_worker success worker_id=%s run_id=%s run_key=%s calcutta_evaluation_run_id=%s",
 		workerID,
 		req.ID,
@@ -462,15 +424,13 @@ func (w *SimulationWorker) failSimulationRun(ctx context.Context, evaluationID s
 		msg = err.Error()
 	}
 	w.updateRunJobProgress(ctx, "simulation", evaluationID, 1.0, "failed", msg)
-	var runKey *string
-	e := w.pool.QueryRow(ctx, `
+	_, e := w.pool.Exec(ctx, `
 		UPDATE derived.simulation_runs
 		SET status = 'failed',
 			error_message = $2,
 			updated_at = NOW()
 		WHERE id = $1::uuid
-		RETURNING run_key::text
-	`, evaluationID, msg).Scan(&runKey)
+	`, evaluationID, msg)
 	if e != nil {
 		log.Printf("Error marking simulation run %s failed: %v (original error: %v)", evaluationID, e, err)
 		return
@@ -485,42 +445,6 @@ func (w *SimulationWorker) failSimulationRun(ctx context.Context, evaluationID s
 		WHERE run_kind = 'simulation'
 			AND run_id = $1::uuid
 	`, evaluationID, msg)
-
-	failureSummary := map[string]any{
-		"status":       "failed",
-		"evaluationId": evaluationID,
-		"runKey":       runKey,
-		"errorMessage": msg,
-	}
-	failureSummaryJSON, err := json.Marshal(failureSummary)
-	if err == nil {
-		var runKeyParam any
-		if runKey != nil && *runKey != "" {
-			runKeyParam = *runKey
-		} else {
-			runKeyParam = nil
-		}
-		_, _ = w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('simulation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, evaluationID, runKeyParam, failureSummaryJSON)
-	}
 }
 
 func (w *SimulationWorker) updateRunJobProgress(ctx context.Context, runKind string, runID string, percent float64, phase string, message string) {

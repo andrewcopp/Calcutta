@@ -207,39 +207,6 @@ func (w *CalcuttaEvaluationWorker) processCalcuttaEvaluationJob(ctx context.Cont
 
 	w.updateRunJobProgress(ctx, "calcutta_evaluation", job.RunID, 1.0, "succeeded", "Completed")
 
-	summary := map[string]any{
-		"status":                  "succeeded",
-		"calcuttaEvaluationRunId": res.CalcuttaEvaluationRunID,
-		"runId":                   job.RunID,
-		"runKey":                  job.RunKey,
-		"nSims":                   res.NSims,
-		"nEntries":                res.NEntries,
-		"durationMs":              dur.Milliseconds(),
-	}
-	summaryJSON, jerr := json.Marshal(summary)
-	if jerr == nil {
-		_, _ = w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('calcutta_evaluation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, job.RunID, job.RunKey, summaryJSON)
-	}
-
 	log.Printf("calcutta_eval_worker success worker_id=%s run_id=%s run_key=%s n_sims=%d n_entries=%d dur_ms=%d",
 		workerID,
 		job.RunID,
@@ -269,36 +236,6 @@ func (w *CalcuttaEvaluationWorker) failCalcuttaEvaluationJob(ctx context.Context
 		WHERE run_kind = 'calcutta_evaluation'
 			AND run_id = $1::uuid
 	`, job.RunID, msg)
-
-	failureSummary := map[string]any{
-		"status":       "failed",
-		"runId":        job.RunID,
-		"runKey":       job.RunKey,
-		"errorMessage": msg,
-	}
-	failureSummaryJSON, jerr := json.Marshal(failureSummary)
-	if jerr == nil {
-		_, _ = w.pool.Exec(ctx, `
-			INSERT INTO derived.run_artifacts (
-				run_kind,
-				run_id,
-				run_key,
-				artifact_kind,
-				schema_version,
-				storage_uri,
-				summary_json
-			)
-			VALUES ('calcutta_evaluation', $1::uuid, $2::uuid, 'metrics', 'v1', NULL, $3::jsonb)
-			ON CONFLICT (run_kind, run_id, artifact_kind) WHERE deleted_at IS NULL
-			DO UPDATE
-			SET run_key = EXCLUDED.run_key,
-				schema_version = EXCLUDED.schema_version,
-				storage_uri = EXCLUDED.storage_uri,
-				summary_json = EXCLUDED.summary_json,
-				updated_at = NOW(),
-				deleted_at = NULL
-		`, job.RunID, job.RunKey, failureSummaryJSON)
-	}
 }
 
 func (w *CalcuttaEvaluationWorker) updateRunJobProgress(ctx context.Context, runKind string, runID string, percent float64, phase string, message string) {
