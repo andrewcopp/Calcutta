@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
+import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
@@ -34,66 +36,44 @@ type ListAPIKeysResponse = {
 };
 
 export const AdminApiKeysPage: React.FC = () => {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const [label, setLabel] = useState('python-ds');
   const [created, setCreated] = useState<CreateAPIKeyResponse | null>(null);
 
-  const [keys, setKeys] = useState<APIKeyListItem[]>([]);
+  const keysQuery = useQuery({
+    queryKey: queryKeys.admin.apiKeys(),
+    queryFn: () => apiClient.get<ListAPIKeysResponse>('/admin/api-keys'),
+  });
 
-  const load = async () => {
-    setError(null);
-    try {
-      const res = await apiClient.get<ListAPIKeysResponse>('/admin/api-keys');
-      setKeys(res.items ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  const create = async () => {
-    setError(null);
-    setCreated(null);
-    setBusy(true);
-    try {
+  const createMutation = useMutation({
+    mutationFn: (trimmedLabel: string) => {
       const body: CreateAPIKeyRequest = {};
-      const trimmed = label.trim();
-      if (trimmed) body.label = trimmed;
+      if (trimmedLabel) body.label = trimmedLabel;
+      return apiClient.post<CreateAPIKeyResponse>('/admin/api-keys', body);
+    },
+    onSuccess: (data) => {
+      setCreated(data);
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.apiKeys() });
+    },
+  });
 
-      const res = await apiClient.post<CreateAPIKeyResponse>('/admin/api-keys', body);
-      setCreated(res);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(`/admin/api-keys/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.apiKeys() });
+    },
+  });
 
-  const revoke = async (id: string) => {
-    setError(null);
-    setBusy(true);
-    try {
-      await apiClient.delete<void>(`/admin/api-keys/${id}`);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const busy = createMutation.isPending || revokeMutation.isPending;
+  const error = keysQuery.error || createMutation.error || revokeMutation.error;
+  const keys = keysQuery.data?.items ?? [];
 
   const copy = async (value: string) => {
-    setError(null);
     try {
       await navigator.clipboard.writeText(value);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // Clipboard errors are non-critical; silently ignored
     }
   };
 
@@ -127,17 +107,15 @@ export const AdminApiKeysPage: React.FC = () => {
               placeholder="Label (optional)"
               className="flex-1"
             />
-            <Button onClick={create} disabled={busy}>
+            <Button onClick={() => createMutation.mutate(label.trim())} disabled={busy}>
               Create API key
             </Button>
           </div>
         </div>
 
-        {busy ? <LoadingState label="Working..." layout="inline" /> : null}
-
         {error && (
           <Alert variant="error" className="mt-4">
-            {error}
+            {error instanceof Error ? error.message : String(error)}
           </Alert>
         )}
 
@@ -161,49 +139,53 @@ export const AdminApiKeysPage: React.FC = () => {
         <h2 className="text-xl font-semibold mb-2">Your keys</h2>
         <p className="text-gray-600 mb-4">These are key records (not the raw secret).</p>
 
-        <Table className="text-sm">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Label</TableHeaderCell>
-              <TableHeaderCell>Created</TableHeaderCell>
-              <TableHeaderCell>Last used</TableHeaderCell>
-              <TableHeaderCell>Revoked</TableHeaderCell>
-              <TableHeaderCell>Actions</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {keys.map((k) => (
-              <TableRow key={k.id}>
-                <TableCell>{k.label || '-'}</TableCell>
-                <TableCell>{k.created_at}</TableCell>
-                <TableCell>{k.last_used_at || '-'}</TableCell>
-                <TableCell>{k.revoked_at || '-'}</TableCell>
-                <TableCell>
-                  <Button
-                    onClick={() => revoke(k.id)}
-                    disabled={busy || Boolean(k.revoked_at)}
-                    variant="secondary"
-                    size="sm"
-                    className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600"
-                  >
-                    Revoke
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-
-            {keys.length === 0 ? (
+        {keysQuery.isLoading ? (
+          <LoadingState label="Loading API keys..." layout="inline" />
+        ) : (
+          <Table className="text-sm">
+            <TableHead>
               <TableRow>
-                <TableCell className="text-gray-500" colSpan={5}>
-                  No keys yet.
-                </TableCell>
+                <TableHeaderCell>Label</TableHeaderCell>
+                <TableHeaderCell>Created</TableHeaderCell>
+                <TableHeaderCell>Last used</TableHeaderCell>
+                <TableHeaderCell>Revoked</TableHeaderCell>
+                <TableHeaderCell>Actions</TableHeaderCell>
               </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {keys.map((k) => (
+                <TableRow key={k.id}>
+                  <TableCell>{k.label || '-'}</TableCell>
+                  <TableCell>{k.created_at}</TableCell>
+                  <TableCell>{k.last_used_at || '-'}</TableCell>
+                  <TableCell>{k.revoked_at || '-'}</TableCell>
+                  <TableCell>
+                    <Button
+                      onClick={() => revokeMutation.mutate(k.id)}
+                      disabled={busy || Boolean(k.revoked_at)}
+                      variant="secondary"
+                      size="sm"
+                      className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600"
+                    >
+                      Revoke
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {keys.length === 0 ? (
+                <TableRow>
+                  <TableCell className="text-gray-500" colSpan={5}>
+                    No keys yet.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        )}
 
         <div className="mt-6">
-          <Button onClick={load} disabled={busy} variant="secondary">
+          <Button onClick={() => keysQuery.refetch()} disabled={busy || keysQuery.isFetching} variant="secondary">
             Refresh list
           </Button>
         </div>

@@ -26,20 +26,17 @@ export const TournamentEditPage: React.FC = () => {
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
     enabled: Boolean(id),
-    staleTime: 30_000,
     queryFn: () => tournamentService.getTournament(id!),
   });
 
   const teamsQuery = useQuery({
     queryKey: queryKeys.tournaments.teams(id),
     enabled: Boolean(id),
-    staleTime: 30_000,
     queryFn: () => tournamentService.getTournamentTeams(id!),
   });
 
   const schoolsQuery = useQuery({
     queryKey: queryKeys.schools.all(),
-    staleTime: 30_000,
     queryFn: () => schoolService.getSchools(),
   });
 
@@ -122,7 +119,6 @@ export const TournamentEditPage: React.FC = () => {
       await saveAllMutation.mutateAsync();
     } catch (err) {
       setError('Failed to save changes');
-      console.error('Error saving changes:', err);
     } finally {
       setIsSaving(false);
     }

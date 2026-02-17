@@ -17,7 +17,6 @@ export function CalcuttaListPage() {
 
   const calcuttasQuery = useQuery({
     queryKey: queryKeys.calcuttas.listWithRankings(user?.id),
-    staleTime: 30_000,
     queryFn: async () => {
       return calcuttaService.getCalcuttasWithRankings();
     },

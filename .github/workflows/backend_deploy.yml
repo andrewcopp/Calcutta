@@ -53,6 +53,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          target: prod
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}

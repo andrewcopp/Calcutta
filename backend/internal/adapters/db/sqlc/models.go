@@ -341,28 +341,6 @@ type DerivedGameOutcomeRun struct {
 	PredictionModelID pgtype.UUID
 }
 
-type DerivedOptimizedEntry struct {
-	ID                    string
-	RunKey                *string
-	Name                  *string
-	CalcuttaID            string
-	SimulatedTournamentID pgtype.UUID
-	GameOutcomeRunID      pgtype.UUID
-	MarketShareRunID      pgtype.UUID
-	OptimizerKind         string
-	OptimizerParamsJson   []byte
-	BidsJson              []byte
-	Purpose               *string
-	ExcludedEntryName     *string
-	StartingStateKey      *string
-	ReturnsModelKey       *string
-	InvestmentModelKey    *string
-	GitSha                *string
-	CreatedAt             pgtype.Timestamptz
-	UpdatedAt             pgtype.Timestamptz
-	DeletedAt             pgtype.Timestamptz
-}
-
 type DerivedPortfolio struct {
 	ID            string
 	EntryID       string
@@ -512,27 +490,6 @@ type DerivedSimulatedTournament struct {
 	DeletedAt            pgtype.Timestamptz
 }
 
-type DerivedSimulationRun struct {
-	ID                      string
-	RunKey                  string
-	CalcuttaID              pgtype.UUID
-	GameOutcomeRunID        pgtype.UUID
-	CalcuttaEvaluationRunID pgtype.UUID
-	StartingStateKey        string
-	ExcludedEntryName       *string
-	NSims                   *int32
-	Seed                    *int32
-	Status                  string
-	ClaimedAt               pgtype.Timestamptz
-	ClaimedBy               *string
-	ErrorMessage            *string
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	SimulatedCalcuttaID     pgtype.UUID
-	GameOutcomeSpecJson     []byte
-}
-
 type DerivedSimulationState struct {
 	ID           string
 	TournamentID string
@@ -571,7 +528,6 @@ type LabEntry struct {
 	DeletedAt pgtype.Timestamptz
 	// Market predictions: [{team_id, predicted_market_share, expected_points}]. What model predicts others will bid.
 	PredictionsJson []byte
-	State           string
 }
 
 type LabEntryEvaluation struct {
@@ -628,8 +584,6 @@ type LabInvestmentModel struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
-	// True for oracle/baseline models that should be excluded from training data
-	IsBenchmark bool
 }
 
 type LabModelLeaderboard struct {

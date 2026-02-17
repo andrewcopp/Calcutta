@@ -7,7 +7,6 @@ export function useCalcuttaDashboard(calcuttaId: string | undefined) {
   return useQuery<CalcuttaDashboard>({
     queryKey: queryKeys.calcuttas.dashboard(calcuttaId),
     enabled: Boolean(calcuttaId),
-    staleTime: 30_000,
     queryFn: () => {
       if (!calcuttaId) throw new Error('Missing calcuttaId');
       return calcuttaService.getCalcuttaDashboard(calcuttaId);

@@ -31,7 +31,6 @@ export const TournamentCreatePage: React.FC = () => {
 
   const schoolsQuery = useQuery({
     queryKey: queryKeys.schools.all(),
-    staleTime: 30_000,
     queryFn: () => schoolService.getSchools(),
   });
 

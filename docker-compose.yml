@@ -13,6 +13,9 @@ services:
     environment:
       - VITE_API_URL=${API_URL}
       - NODE_ENV=${NODE_ENV}
+    depends_on:
+      backend:
+        condition: service_healthy
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000 --no-open"
 
   backend:
@@ -43,6 +46,12 @@ services:
       db:
         condition: service_healthy
     command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/api"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   worker:
     build: ./backend
@@ -56,9 +65,10 @@ services:
       - PYTHON_BIN=python3
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
-      - ARTIFACTS_DIR=${ARTIFACTS_DIR}
     depends_on:
       db:
+        condition: service_healthy
+      backend:
         condition: service_healthy
     command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/workers -bundle-import-worker=false -lab-pipeline-worker=true"
 

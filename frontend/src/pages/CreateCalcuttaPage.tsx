@@ -25,7 +25,6 @@ export function CreateCalcuttaPage() {
 
   const tournamentsQuery = useQuery({
     queryKey: queryKeys.tournaments.all(),
-    staleTime: 30_000,
     queryFn: () => tournamentService.getAllTournaments(),
   });
 

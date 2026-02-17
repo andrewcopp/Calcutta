@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
+import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
@@ -25,26 +27,12 @@ type AdminUsersListResponse = {
 };
 
 export const AdminUsersPage: React.FC = () => {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<AdminUserListItem[]>([]);
+  const usersQuery = useQuery({
+    queryKey: queryKeys.admin.users(),
+    queryFn: () => apiClient.get<AdminUsersListResponse>('/admin/users'),
+  });
 
-  const load = async () => {
-    setError(null);
-    setBusy(true);
-    try {
-      const res = await apiClient.get<AdminUsersListResponse>('/admin/users');
-      setUsers(res.items ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
+  const users = usersQuery.data?.items ?? [];
 
   return (
     <PageContainer>
@@ -67,18 +55,18 @@ export const AdminUsersPage: React.FC = () => {
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Users</h2>
-          <Button onClick={load} disabled={busy} variant="secondary">
+          <Button onClick={() => usersQuery.refetch()} disabled={usersQuery.isFetching} variant="secondary">
             Refresh
           </Button>
         </div>
 
-        {error && (
+        {usersQuery.isError && (
           <Alert variant="error" className="mb-4">
-            {error}
+            {usersQuery.error instanceof Error ? usersQuery.error.message : String(usersQuery.error)}
           </Alert>
         )}
 
-        {busy && users.length === 0 ? <LoadingState label="Loading users..." layout="inline" /> : null}
+        {usersQuery.isLoading ? <LoadingState label="Loading users..." layout="inline" /> : null}
 
         <Table className="text-sm">
           <TableHead>
@@ -125,7 +113,7 @@ export const AdminUsersPage: React.FC = () => {
               </TableRow>
             ))}
 
-            {users.length === 0 && !busy ? (
+            {users.length === 0 && !usersQuery.isLoading ? (
               <TableRow>
                 <TableCell className="text-gray-500" colSpan={5}>
                   No users found.

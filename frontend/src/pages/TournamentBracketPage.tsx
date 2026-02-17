@@ -24,7 +24,6 @@ export const TournamentBracketPage: React.FC = () => {
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
     enabled: Boolean(id),
-    staleTime: 30_000,
     queryFn: () => tournamentService.getTournament(id!),
   });
 
@@ -32,7 +31,6 @@ export const TournamentBracketPage: React.FC = () => {
   const validationQuery = useQuery({
     queryKey: queryKeys.bracket.validation(id),
     enabled: Boolean(id),
-    staleTime: 30_000,
     queryFn: () => bracketService.validateBracketSetup(id!),
   });
 

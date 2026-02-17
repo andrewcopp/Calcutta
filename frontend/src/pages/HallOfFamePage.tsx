@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
-import { apiClient } from '../api/apiClient';
 import { queryKeys } from '../queryKeys';
+import { hallOfFameService } from '../services/hallOfFameService';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
@@ -14,12 +14,8 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import {
   BestTeam,
-  BestTeamsResponse,
-  CareerLeaderboardResponse,
   CareerLeaderboardRow,
-  EntryLeaderboardResponse,
   EntryLeaderboardRow,
-  InvestmentLeaderboardResponse,
   InvestmentLeaderboardRow,
 } from '../types/hallOfFame';
 import { formatDollarsFromCents } from '../utils/format';
@@ -117,28 +113,24 @@ const bestCareersColumns: ColumnDef<CareerLeaderboardRow, unknown>[] = [
 export const HallOfFamePage: React.FC = () => {
   const [hideInactiveCareers, setHideInactiveCareers] = useState<boolean>(false);
 
-  const bestTeamsQuery = useQuery<BestTeamsResponse, Error>({
+  const bestTeamsQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestTeams(200),
-    staleTime: 30_000,
-    queryFn: () => apiClient.get<BestTeamsResponse>('/hall-of-fame/best-teams?limit=200'),
+    queryFn: () => hallOfFameService.getBestTeams(200),
   });
 
-  const bestInvestmentsQuery = useQuery<InvestmentLeaderboardResponse, Error>({
+  const bestInvestmentsQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestInvestments(200),
-    staleTime: 30_000,
-    queryFn: () => apiClient.get<InvestmentLeaderboardResponse>('/hall-of-fame/best-investments?limit=200'),
+    queryFn: () => hallOfFameService.getBestInvestments(200),
   });
 
-  const bestEntriesQuery = useQuery<EntryLeaderboardResponse, Error>({
+  const bestEntriesQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestEntries(200),
-    staleTime: 30_000,
-    queryFn: () => apiClient.get<EntryLeaderboardResponse>('/hall-of-fame/best-entries?limit=200'),
+    queryFn: () => hallOfFameService.getBestEntries(200),
   });
 
-  const bestCareersQuery = useQuery<CareerLeaderboardResponse, Error>({
+  const bestCareersQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestCareers(200),
-    staleTime: 30_000,
-    queryFn: () => apiClient.get<CareerLeaderboardResponse>('/hall-of-fame/best-careers?limit=200'),
+    queryFn: () => hallOfFameService.getBestCareers(200),
   });
 
   const filteredCareers = useMemo(() => {

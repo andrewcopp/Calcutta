@@ -1,4 +1,8 @@
 export const queryKeys = {
+  admin: {
+    users: () => ['admin', 'users'] as const,
+    apiKeys: () => ['admin', 'apiKeys'] as const,
+  },
   hallOfFame: {
     bestTeams: (limit?: number) => ['hallOfFame', 'bestTeams', limit ?? null] as const,
     bestInvestments: (limit?: number) => ['hallOfFame', 'bestInvestments', limit ?? null] as const,

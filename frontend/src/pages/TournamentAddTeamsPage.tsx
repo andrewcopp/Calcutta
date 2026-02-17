@@ -35,13 +35,11 @@ export const TournamentAddTeamsPage: React.FC = () => {
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
     enabled: Boolean(id),
-    staleTime: 30_000,
     queryFn: () => tournamentService.getTournament(id!),
   });
 
   const schoolsQuery = useQuery({
     queryKey: queryKeys.schools.all(),
-    staleTime: 30_000,
     queryFn: () => schoolService.getSchools(),
   });
 

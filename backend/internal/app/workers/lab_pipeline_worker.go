@@ -792,11 +792,6 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 		WHERE id = $1::uuid
 	`, params.PipelineCalcuttaRunID, evaluationID)
 
-	// Update entry state to complete
-	_, _ = w.pool.Exec(ctx, `
-		UPDATE lab.entries SET state = 'complete', updated_at = NOW() WHERE id = $1::uuid
-	`, params.EntryID)
-
 	log.Printf("lab_pipeline_worker evaluation_success worker_id=%s run_id=%s evaluation_id=%s n_sims=%d mean_payout=%.4f p_top1=%.4f dur_ms=%d",
 		workerID, job.RunID, evaluationID, result.NSims, result.MeanNormalizedPayout, result.PTop1, dur.Milliseconds())
 	return true

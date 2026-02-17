@@ -27,7 +27,6 @@ export function CalcuttaSettingsPage() {
   const calcuttaQuery = useQuery({
     queryKey: queryKeys.calcuttas.settings(calcuttaId),
     enabled: Boolean(calcuttaId),
-    staleTime: 30_000,
     queryFn: () => calcuttaService.getCalcutta(calcuttaId!),
   });
 
@@ -57,7 +56,6 @@ export function CalcuttaSettingsPage() {
   const payoutsQuery = useQuery({
     queryKey: queryKeys.calcuttas.payouts(calcuttaId),
     enabled: Boolean(calcuttaId),
-    staleTime: 30_000,
     queryFn: () => calcuttaService.getPayouts(calcuttaId!),
   });
 

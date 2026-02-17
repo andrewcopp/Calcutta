@@ -29,7 +29,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[1]
@@ -188,11 +188,6 @@ def optimize_entry(
     elif optimizer_kind == "edge_weighted":
         edge_multiplier = optimizer_params.get("edge_multiplier", 2.0)
         return optimize_edge_weighted(entry.predictions, budget_points, max_per_team, edge_multiplier)
-    elif optimizer_kind == "minlp":
-        raise ValueError(
-            "MINLP optimizer was removed. Use the Go DP allocator via lab_pipeline_worker "
-            "or use 'predicted_market_share' or 'edge_weighted' for research."
-        )
     else:
         raise ValueError(f"Unknown optimizer kind: {optimizer_kind}")
 
@@ -207,9 +202,6 @@ def get_entry_constraints(entry: Entry, cli_args) -> dict:
     return {
         "budget_points": cli_args.budget if cli_args.budget is not None else stored.get("budget_points", 100),
         "max_per_team": cli_args.max_per_team if cli_args.max_per_team is not None else stored.get("max_per_team", 50),
-        "min_teams": cli_args.min_teams if cli_args.min_teams is not None else stored.get("min_teams", 3),
-        "max_teams": cli_args.max_teams if cli_args.max_teams is not None else stored.get("max_teams", 10),
-        "min_bid": cli_args.min_bid if cli_args.min_bid is not None else stored.get("min_bid", 1),
         "edge_multiplier": cli_args.edge_multiplier if cli_args.edge_multiplier is not None else stored.get("edge_multiplier", 2.0),
         "estimated_participants": stored.get("estimated_participants"),
         "excluded_entry_name": stored.get("excluded_entry_name"),
@@ -235,12 +227,6 @@ def main():
                        help="Override maximum bid per team (default: from entry/calcutta rules)")
     parser.add_argument("--edge-multiplier", type=float, default=None,
                        help="Edge multiplier for edge_weighted optimizer (default: 2.0)")
-    parser.add_argument("--min-teams", type=int, default=None,
-                       help="Override minimum teams for minlp optimizer (default: from entry/calcutta rules)")
-    parser.add_argument("--max-teams", type=int, default=None,
-                       help="Override maximum teams for minlp optimizer (default: from entry/calcutta rules)")
-    parser.add_argument("--min-bid", type=int, default=None,
-                       help="Override minimum bid per team for minlp optimizer (default: 1)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done")
     parser.add_argument("--json-output", action="store_true", help="Output JSON result")
 
@@ -294,9 +280,8 @@ def main():
 
     log(f"Optimizer: {args.optimizer}")
     log(f"Note: Constraints default to values from entry's optimizer_params (calcutta rules)")
-    if args.budget or args.max_per_team or args.min_teams or args.max_teams or args.min_bid:
-        log(f"CLI overrides: budget={args.budget}, max_per_team={args.max_per_team}, "
-            f"min_teams={args.min_teams}, max_teams={args.max_teams}, min_bid={args.min_bid}")
+    if args.budget or args.max_per_team:
+        log(f"CLI overrides: budget={args.budget}, max_per_team={args.max_per_team}")
     log("")
 
     entries_optimized = 0
@@ -312,8 +297,7 @@ def main():
 
         # Get constraints from entry's stored params, with CLI overrides
         constraints = get_entry_constraints(entry, args)
-        log(f"  Constraints: budget={constraints['budget_points']}, max_per_team={constraints['max_per_team']}, "
-            f"min_teams={constraints['min_teams']}, max_teams={constraints['max_teams']}")
+        log(f"  Constraints: budget={constraints['budget_points']}, max_per_team={constraints['max_per_team']}")
 
         try:
             bids = optimize_entry(
@@ -322,9 +306,6 @@ def main():
                 budget_points=constraints["budget_points"],
                 max_per_team=constraints["max_per_team"],
                 edge_multiplier=constraints["edge_multiplier"],
-                min_teams=constraints["min_teams"],
-                max_teams=constraints["max_teams"],
-                min_bid=constraints["min_bid"],
             )
         except Exception as e:
             log(f"  Error: {e}")
@@ -345,8 +326,6 @@ def main():
             optimizer_params = {
                 "budget_points": constraints["budget_points"],
                 "max_per_team": constraints["max_per_team"],
-                "min_teams": constraints["min_teams"],
-                "max_teams": constraints["max_teams"],
             }
             # Preserve prediction inputs from original entry
             if constraints.get("estimated_participants"):
@@ -356,8 +335,6 @@ def main():
             # Add optimizer-specific params
             if args.optimizer == "edge_weighted":
                 optimizer_params["edge_multiplier"] = constraints["edge_multiplier"]
-            elif args.optimizer == "minlp":
-                optimizer_params["min_bid"] = constraints["min_bid"]
 
             update_entry_with_bids(
                 entry.id,

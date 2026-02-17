@@ -39,7 +39,6 @@ export function BiddingPage() {
   const biddingQuery = useQuery({
     queryKey: queryKeys.bidding.page(calcuttaId, entryId),
     enabled: Boolean(calcuttaId && entryId),
-    staleTime: 30_000,
     queryFn: async () => {
       if (!calcuttaId || !entryId) {
         throw new Error('Missing required parameters');

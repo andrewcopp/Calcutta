@@ -23,7 +23,6 @@ export const TournamentListPage: React.FC = () => {
   const navigate = useNavigate();
   const tournamentsQuery = useQuery({
     queryKey: queryKeys.tournaments.all(),
-    staleTime: 30_000,
     queryFn: async (): Promise<TournamentWithStatus[]> => {
       const data = await tournamentService.getAllTournaments();
 
