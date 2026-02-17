@@ -26,14 +26,13 @@ func run() error {
 	slog.Info("workers_starting")
 
 	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
-	runMarketShareWorker := flag.Bool("market-share-worker", false, "Run the market share worker (normally run via data-science/scripts/market_share_job_worker.py)")
 	runGameOutcomeWorker := flag.Bool("game-outcome-worker", true, "Run the predicted game outcomes worker")
 	runCalcuttaEvalWorker := flag.Bool("calcutta-eval-worker", true, "Run the calcutta evaluation worker")
 	runSimulationWorker := flag.Bool("simulation-worker", true, "Run the simulation worker")
 	runLabPipelineWorker := flag.Bool("lab-pipeline-worker", true, "Run the lab pipeline worker")
 	flag.Parse()
 
-	if !*runBundleImportWorker && !*runMarketShareWorker && !*runGameOutcomeWorker && !*runCalcuttaEvalWorker && !*runSimulationWorker && !*runLabPipelineWorker {
+	if !*runBundleImportWorker && !*runGameOutcomeWorker && !*runCalcuttaEvalWorker && !*runSimulationWorker && !*runLabPipelineWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -51,7 +50,6 @@ func run() error {
 
 	progress := workers.NewDBProgressWriter(pool)
 	bundleWorker := workers.NewBundleImportWorker(pool)
-	marketShareWorker := workers.NewMarketShareWorker(pool, progress)
 	gameOutcomeWorker := workers.NewGameOutcomeWorker(pool, progress)
 	calcuttaEvalWorker := workers.NewCalcuttaEvaluationWorker(pool, progress)
 	simulationWorker := workers.NewSimulationWorker(pool, progress, cfg.ArtifactsDir)
@@ -67,13 +65,6 @@ func run() error {
 		go func() {
 			defer wg.Done()
 			bundleWorker.Run(ctx)
-		}()
-	}
-	if *runMarketShareWorker {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			marketShareWorker.Run(ctx)
 		}()
 	}
 	if *runGameOutcomeWorker {

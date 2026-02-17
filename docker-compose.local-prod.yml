@@ -38,7 +38,6 @@ services:
     command: [
       "/app/bin/workers",
       "-bundle-import-worker=false",
-      "-market-share-worker=false",
       "-game-outcome-worker=false",
       "-calcutta-eval-worker=false",
       "-simulation-worker=true",
