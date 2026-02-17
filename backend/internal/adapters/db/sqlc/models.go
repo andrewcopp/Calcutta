@@ -571,36 +571,14 @@ type DerivedSimulatedTournament struct {
 	DeletedAt            pgtype.Timestamptz
 }
 
-type DerivedSimulationCohort struct {
-	ID                      string
-	Name                    string
-	Description             *string
-	GameOutcomesAlgorithmID string
-	MarketShareAlgorithmID  string
-	OptimizerKey            string
-	NSims                   int32
-	Seed                    int32
-	StartingStateKey        string
-	ExcludedEntryName       *string
-	ParamsJson              []byte
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-}
-
 type DerivedSimulationRun struct {
 	ID                        string
 	RunKey                    string
-	SimulationRunBatchID      pgtype.UUID
-	CohortID                  string
 	CalcuttaID                pgtype.UUID
 	GameOutcomeRunID          pgtype.UUID
-	MarketShareRunID          pgtype.UUID
-	StrategyGenerationRunID   pgtype.UUID
 	CalcuttaEvaluationRunID   pgtype.UUID
 	StartingStateKey          string
 	ExcludedEntryName         *string
-	OptimizerKey              *string
 	NSims                     *int32
 	Seed                      *int32
 	OurRank                   *int32
@@ -624,22 +602,6 @@ type DerivedSimulationRun struct {
 	FocusSnapshotEntryID      pgtype.UUID
 	SimulatedCalcuttaID       pgtype.UUID
 	GameOutcomeSpecJson       []byte
-}
-
-type DerivedSimulationRunBatch struct {
-	ID                string
-	CohortID          string
-	Name              *string
-	OptimizerKey      *string
-	NSims             *int32
-	Seed              *int32
-	StartingStateKey  string
-	ExcludedEntryName *string
-	Status            string
-	ErrorMessage      *string
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
-	DeletedAt         pgtype.Timestamptz
 }
 
 type DerivedSimulationState struct {

@@ -19,9 +19,10 @@ SELECT 1
 FROM core.grants g
 LEFT JOIN core.permissions p_direct ON g.permission_id = p_direct.id AND p_direct.deleted_at IS NULL
 LEFT JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-LEFT JOIN core.label_permissions lp ON lp.label_id = l.id
+LEFT JOIN core.label_permissions lp ON lp.label_id = l.id AND lp.deleted_at IS NULL
 LEFT JOIN core.permissions p_label ON lp.permission_id = p_label.id AND p_label.deleted_at IS NULL
 WHERE g.user_id = $1
+  AND g.deleted_at IS NULL
   AND g.revoked_at IS NULL
   AND (g.expires_at IS NULL OR g.expires_at > NOW())
   AND (

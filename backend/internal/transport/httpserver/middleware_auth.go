@@ -79,7 +79,11 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 						}
 
 						created := &models.User{ID: id, Email: &email, FirstName: first, LastName: last, Status: "active"}
-						_ = s.userRepo.Create(r.Context(), created)
+						if err := s.userRepo.Create(r.Context(), created); err != nil {
+							slog.Error("cognito_auto_provision_failed", "email", email, "error", err)
+							http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+							return
+						}
 						user, _ = s.userRepo.GetByEmail(r.Context(), email)
 					}
 					if err == nil && user != nil {
@@ -99,6 +103,7 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 						next.ServeHTTP(w, r.WithContext(ctx))
 						return
 					}
+					http.Error(w, "Forbidden", http.StatusForbidden)
 					return
 				}
 			}

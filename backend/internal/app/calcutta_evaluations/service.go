@@ -71,8 +71,11 @@ func (s *Service) CalculateSimulatedCalcuttaForSimulatedCalcutta(
 		batchID = *tournamentSimulationBatchID
 	}
 	if batchID == "" {
-		var ok bool
-		batchID, ok, err := s.getLatestTournamentSimulationBatchID(ctx, tournamentID)
+		var (
+			ok  bool
+			err error
+		)
+		batchID, ok, err = s.getLatestTournamentSimulationBatchID(ctx, tournamentID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve latest tournament simulation batch: %w", err)
 		}
