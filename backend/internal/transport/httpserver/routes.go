@@ -85,7 +85,6 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		ListModels:                 s.requirePermission("lab.read", labHandler.HandleListModels),
 		GetModel:                   s.requirePermission("lab.read", labHandler.HandleGetModel),
 		GetLeaderboard:             s.requirePermission("lab.read", labHandler.HandleGetLeaderboard),
-		GenerateEntries:            s.requirePermission("lab.write", labHandler.HandleGenerateEntries),
 		StartPipeline:              s.requirePermission("lab.write", labHandler.HandleStartPipeline),
 		GetModelPipelineProgress:   s.requirePermission("lab.read", labHandler.HandleGetModelPipelineProgress),
 		GetPipelineRun:             s.requirePermission("lab.read", labHandler.HandleGetPipelineRun),

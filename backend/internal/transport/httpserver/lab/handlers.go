@@ -310,48 +310,6 @@ func (h *Handler) HandleGetEvaluationEntryProfile(w http.ResponseWriter, r *http
 	response.WriteJSON(w, http.StatusOK, profile)
 }
 
-// HandleGenerateEntries handles POST /api/lab/models/:id/generate-entries
-func (h *Handler) HandleGenerateEntries(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := strings.TrimSpace(vars["id"])
-	if id == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
-		return
-	}
-	if _, err := uuid.Parse(id); err != nil {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
-		return
-	}
-	if h.app == nil || h.app.Lab == nil {
-		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
-		return
-	}
-
-	// Verify model exists
-	_, err := h.app.Lab.GetInvestmentModel(r.Context(), id)
-	if err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
-	}
-
-	// Parse optional request body
-	var req models.LabGenerateEntriesRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			httperr.Write(w, r, http.StatusBadRequest, "validation_error", "invalid request body", "")
-			return
-		}
-	}
-
-	result, err := h.app.Lab.GenerateEntries(r.Context(), id, req)
-	if err != nil {
-		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", err.Error(), "")
-		return
-	}
-
-	response.WriteJSON(w, http.StatusOK, result)
-}
-
 // HandleStartPipeline handles POST /api/lab/models/:id/pipeline/start
 func (h *Handler) HandleStartPipeline(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

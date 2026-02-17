@@ -98,11 +98,6 @@ func (s *Service) GetEvaluationEntryProfile(ctx context.Context, entryResultID s
 	return s.repo.GetEvaluationEntryProfile(entryResultID)
 }
 
-// GenerateEntries runs the Python script to generate entries for a model.
-func (s *Service) GenerateEntries(ctx context.Context, modelID string, req models.LabGenerateEntriesRequest) (*models.LabGenerateEntriesResponse, error) {
-	return RunGenerateEntriesScript(ctx, modelID, req)
-}
-
 // StartPipeline starts a new pipeline run for a model.
 func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.LabStartPipelineRequest) (*models.LabStartPipelineResponse, error) {
 	if s.pipelineRepo == nil {

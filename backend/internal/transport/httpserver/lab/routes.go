@@ -11,7 +11,6 @@ type Handlers struct {
 	ListModels                   http.HandlerFunc
 	GetModel                     http.HandlerFunc
 	GetLeaderboard               http.HandlerFunc
-	GenerateEntries              http.HandlerFunc
 	StartPipeline                http.HandlerFunc
 	GetModelPipelineProgress     http.HandlerFunc
 	GetPipelineRun               http.HandlerFunc
@@ -31,7 +30,6 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/lab/models", h.ListModels).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/models/leaderboard", h.GetLeaderboard).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{modelName}/calcutta/{calcuttaId}/entry", h.GetEntryByModelAndCalcutta).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/lab/models/{id}/generate-entries", h.GenerateEntries).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{id}/pipeline/start", h.StartPipeline).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{id}/pipeline/progress", h.GetModelPipelineProgress).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/lab/models/{id}", h.GetModel).Methods("GET", "OPTIONS")

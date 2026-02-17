@@ -204,15 +204,3 @@ type LabPagination struct {
 	Offset int
 }
 
-// LabGenerateEntriesRequest for triggering entry generation via Python.
-type LabGenerateEntriesRequest struct {
-	Years         []int  `json:"years,omitempty"`
-	BudgetPoints  int    `json:"budget_points,omitempty"`
-	ExcludedEntry string `json:"excluded_entry,omitempty"`
-}
-
-// LabGenerateEntriesResponse from the Python entry generation script.
-type LabGenerateEntriesResponse struct {
-	EntriesCreated int      `json:"entries_created"`
-	Errors         []string `json:"errors,omitempty"`
-}
