@@ -20,27 +20,6 @@ type LabPipelineRun struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
-// LabPipelineCalcuttaRun represents a lab.pipeline_calcutta_runs row.
-type LabPipelineCalcuttaRun struct {
-	ID                string     `json:"id"`
-	PipelineRunID     string     `json:"pipeline_run_id"`
-	CalcuttaID        string     `json:"calcutta_id"`
-	EntryID           *string    `json:"entry_id,omitempty"`
-	Stage             string     `json:"stage"`
-	Status            string     `json:"status"`
-	Progress          float64    `json:"progress"`
-	ProgressMessage   *string    `json:"progress_message,omitempty"`
-	PredictionsJobID  *string    `json:"predictions_job_id,omitempty"`
-	OptimizationJobID *string    `json:"optimization_job_id,omitempty"`
-	EvaluationJobID   *string    `json:"evaluation_job_id,omitempty"`
-	EvaluationID      *string    `json:"evaluation_id,omitempty"`
-	ErrorMessage      *string    `json:"error_message,omitempty"`
-	StartedAt         *time.Time `json:"started_at,omitempty"`
-	FinishedAt        *time.Time `json:"finished_at,omitempty"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-}
-
 // LabStartPipelineRequest is the input for starting a pipeline run.
 type LabStartPipelineRequest struct {
 	CalcuttaIDs       []string `json:"calcutta_ids,omitempty"`

@@ -275,7 +275,6 @@ func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*models.LabPi
 	// Get calcutta runs with calcutta details
 	query := `
 		SELECT
-			pcr.id::text,
 			pcr.calcutta_id::text,
 			c.name AS calcutta_name,
 			s.year AS calcutta_year,
@@ -315,7 +314,7 @@ func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*models.LabPi
 		var c models.LabCalcuttaProgressResponse
 		var meanPayout *float64
 		if err := rows.Scan(
-			&c.CalcuttaID, &c.CalcuttaID, &c.CalcuttaName, &c.CalcuttaYear,
+			&c.CalcuttaID, &c.CalcuttaName, &c.CalcuttaYear,
 			&c.Stage, &c.Status, &c.Progress, &c.ProgressMessage,
 			&c.EntryID, &c.EvaluationID, &c.ErrorMessage,
 			&c.HasPredictions, &c.HasEntry, &c.HasEvaluation,
@@ -546,41 +545,6 @@ func (r *LabRepository) GetHistoricalCalcuttaIDs() ([]string, error) {
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
-}
-
-// EnqueuePipelineJob creates a run_job for a pipeline stage.
-func (r *LabRepository) EnqueuePipelineJob(runKind string, pipelineCalcuttaRunID string, params map[string]interface{}) (string, error) {
-	ctx := context.Background()
-
-	paramsJSON := "{}"
-	if params != nil {
-		// Simple JSON encoding
-		parts := make([]string, 0, len(params))
-		for k, v := range params {
-			switch val := v.(type) {
-			case string:
-				parts = append(parts, fmt.Sprintf(`"%s":"%s"`, k, val))
-			case int:
-				parts = append(parts, fmt.Sprintf(`"%s":%d`, k, val))
-			case float64:
-				parts = append(parts, fmt.Sprintf(`"%s":%f`, k, val))
-			case bool:
-				parts = append(parts, fmt.Sprintf(`"%s":%t`, k, val))
-			}
-		}
-		paramsJSON = "{" + strings.Join(parts, ",") + "}"
-	}
-
-	var jobID string
-	err := r.pool.QueryRow(ctx, `
-		INSERT INTO derived.run_jobs (run_kind, run_key, params_json, status)
-		VALUES ($1, $2::uuid, $3::jsonb, 'queued')
-		RETURNING run_id::text
-	`, runKind, pipelineCalcuttaRunID, paramsJSON).Scan(&jobID)
-	if err != nil {
-		return "", err
-	}
-	return jobID, nil
 }
 
 // SoftDeleteModelArtifacts soft-deletes all entries and evaluations for a model.

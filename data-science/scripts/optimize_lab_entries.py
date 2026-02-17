@@ -27,12 +27,9 @@ Usage:
 """
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from typing import List, Optional
-
-import pandas as pd
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[1]

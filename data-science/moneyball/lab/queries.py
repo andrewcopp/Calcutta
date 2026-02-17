@@ -4,14 +4,11 @@ Lab query helpers for comparing investment model performance.
 Provides pandas-based queries for analysis and comparison.
 """
 
-import logging
 from typing import List, Optional
 
 import pandas as pd
 
 from moneyball.db.connection import get_db_connection
-
-logger = logging.getLogger(__name__)
 
 
 def get_model_leaderboard() -> pd.DataFrame:

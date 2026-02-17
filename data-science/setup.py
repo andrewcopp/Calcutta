@@ -9,7 +9,7 @@ setup(
         "numpy>=1.24.0",
         "psycopg2-binary>=2.9.0",
     ],
-    python_requires=">=3.11",
+    python_requires=">=3.9",
     author="Calcutta",
     description="NCAA Tournament Calcutta Analytics Pipeline",
 )

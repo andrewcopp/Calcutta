@@ -33,16 +33,12 @@ services:
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
       - DEFAULT_ESTIMATED_PARTICIPANTS=${DEFAULT_ESTIMATED_PARTICIPANTS}
-      - ARTIFACTS_DIR=${ARTIFACTS_DIR}
     depends_on:
       db:
         condition: service_healthy
     command: [
       "/app/bin/workers",
       "-bundle-import-worker=false",
-      "-game-outcome-worker=false",
-      "-calcutta-eval-worker=false",
-      "-simulation-worker=true",
       "-lab-pipeline-worker=true"
     ]
 

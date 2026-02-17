@@ -301,7 +301,7 @@ def _prepare_features_set(
         ].fillna(0.0)
         base = base.drop(columns=["kenpom_rank_within_seed"])
 
-    if fs != "basic" and fs != "optimal" and fs != "optimal_v3":
+    if fs == "expanded":
         base["seed_sq"] = base["seed"] ** 2
         base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
 

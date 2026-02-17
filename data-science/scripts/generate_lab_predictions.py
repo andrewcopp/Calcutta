@@ -22,6 +22,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[1]
@@ -36,7 +37,7 @@ from moneyball.db.lab_helpers import (
 )
 
 
-def generate_market_predictions(model_name: str, year: int, excluded_entry_name: str | None = None):
+def generate_market_predictions(model_name: str, year: int, excluded_entry_name: Optional[str] = None):
     """
     Generate market predictions for a model against a specific year.
 
