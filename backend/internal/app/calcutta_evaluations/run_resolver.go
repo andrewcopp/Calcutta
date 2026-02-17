@@ -613,7 +613,7 @@ func (s *Service) EvaluateLabEntry(
 		mu         sync.Mutex
 		allResults []SimulationResult
 	)
-	g, _ := errgroup.WithContext(ctx)
+	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(10)
 	for simID := range simulations {
 		sid := simID
