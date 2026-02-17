@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -12,7 +11,6 @@ func (s *Server) analyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.app.Analytics.GetAllAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting analytics: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -29,7 +27,6 @@ func (s *Server) hofBestTeamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.app.Analytics.GetBestInvestments(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting hall of fame best teams: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -46,7 +43,6 @@ func (s *Server) hofBestInvestmentsHandler(w http.ResponseWriter, r *http.Reques
 
 	results, err := s.app.Analytics.GetBestInvestmentBids(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting hall of fame best investments: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -63,7 +59,6 @@ func (s *Server) hofBestEntriesHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.app.Analytics.GetBestEntries(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting hall of fame best entries: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -80,7 +75,6 @@ func (s *Server) hofBestCareersHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.app.Analytics.GetBestCareers(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting hall of fame best careers: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -97,7 +91,6 @@ func (s *Server) bestInvestmentsHandler(w http.ResponseWriter, r *http.Request) 
 
 	results, err := s.app.Analytics.GetBestInvestments(ctx, limit)
 	if err != nil {
-		log.Printf("Error getting best investments: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -112,7 +105,6 @@ func (s *Server) seedInvestmentDistributionHandler(w http.ResponseWriter, r *htt
 
 	distribution, err := s.app.Analytics.GetSeedInvestmentDistribution(ctx)
 	if err != nil {
-		log.Printf("Error getting seed investment distribution: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -127,7 +119,6 @@ func (s *Server) seedAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	seedAnalytics, totalPoints, totalInvestment, err := s.app.Analytics.GetSeedAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting seed analytics: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -165,7 +156,6 @@ func (s *Server) regionAnalyticsHandler(w http.ResponseWriter, r *http.Request) 
 
 	regionAnalytics, totalPoints, totalInvestment, err := s.app.Analytics.GetRegionAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting region analytics: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -203,7 +193,6 @@ func (s *Server) teamAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	teamAnalytics, baselineROI, err := s.app.Analytics.GetTeamAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting team analytics: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
@@ -234,7 +223,6 @@ func (s *Server) seedVarianceAnalyticsHandler(w http.ResponseWriter, r *http.Req
 
 	varianceAnalytics, err := s.app.Analytics.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
-		log.Printf("Error getting seed variance analytics: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}

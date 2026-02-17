@@ -14,7 +14,9 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, NamedTuple
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+_PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from moneyball.lab.models import get_or_create_investment_model
 
@@ -130,14 +132,14 @@ def main():
 
     for spec in INVESTMENT_MODELS:
         try:
-            model = get_or_create_investment_model(
+            model, was_created = get_or_create_investment_model(
                 name=spec.name,
                 kind=spec.kind,
                 params=spec.params,
                 notes=spec.notes,
             )
 
-            if model.created_at:
+            if was_created:
                 logger.info(f"  {spec.name}: registered (id={model.id})")
                 created += 1
             else:

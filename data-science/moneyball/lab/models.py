@@ -9,7 +9,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from moneyball.db.connection import get_db_connection
 
@@ -196,7 +196,7 @@ def get_or_create_investment_model(
     kind: str,
     params: Optional[Dict[str, Any]] = None,
     notes: Optional[str] = None,
-) -> InvestmentModel:
+) -> Tuple[InvestmentModel, bool]:
     """
     Get an existing investment model by name, or create if it doesn't exist.
 
@@ -207,12 +207,13 @@ def get_or_create_investment_model(
         notes: Free-form notes (only used if creating)
 
     Returns:
-        The existing or newly created InvestmentModel
+        Tuple of (InvestmentModel, created) where created is True if a new
+        model was inserted, False if an existing model was returned.
     """
     existing = get_investment_model(name)
     if existing:
-        return existing
-    return create_investment_model(name, kind, params, notes)
+        return existing, False
+    return create_investment_model(name, kind, params, notes), True
 
 
 def create_entry_with_predictions(

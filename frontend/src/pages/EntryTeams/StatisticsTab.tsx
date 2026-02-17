@@ -1,9 +1,12 @@
+import React from 'react';
 import { CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
 
-export const StatisticsTab: React.FC<{
+type StatisticsTabProps = {
   portfolios: CalcuttaPortfolio[];
   portfolioTeams: CalcuttaPortfolioTeam[];
   PortfolioScoresComponent: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }>;
-}> = ({ portfolios, portfolioTeams, PortfolioScoresComponent }) => {
-  return <>{portfolios.length > 0 && <PortfolioScoresComponent portfolio={portfolios[0]} teams={portfolioTeams} />}</>;
 };
+
+export function StatisticsTab({ portfolios, portfolioTeams, PortfolioScoresComponent }: StatisticsTabProps) {
+  return <>{portfolios.length > 0 && <PortfolioScoresComponent portfolio={portfolios[0]} teams={portfolioTeams} />}</>;
+}

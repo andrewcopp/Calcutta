@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { CalcuttaListSkeleton } from '../components/skeletons/CalcuttaListSkeleton';
 import { CalcuttaWithRanking } from '../types/calcutta';
@@ -40,13 +40,7 @@ export function CalcuttaListPage() {
     const message = calcuttasQuery.error instanceof Error ? calcuttasQuery.error.message : 'Failed to fetch calcuttas';
     return (
       <PageContainer>
-        <Alert variant="error">
-          <h2 className="text-lg font-semibold mb-2">Error</h2>
-          <p>{message}</p>
-          <div className="mt-4">
-            <Button onClick={() => calcuttasQuery.refetch()}>Retry</Button>
-          </div>
-        </Alert>
+        <ErrorState error={message} onRetry={() => calcuttasQuery.refetch()} />
       </PageContainer>
     );
   }

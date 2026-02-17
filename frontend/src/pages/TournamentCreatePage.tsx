@@ -9,8 +9,11 @@ import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { ErrorState } from '../components/ui/ErrorState';
+import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { Select } from '../components/ui/Select';
 
 interface TeamToAdd {
   schoolId: string;
@@ -117,9 +120,9 @@ export const TournamentCreatePage: React.FC = () => {
       <PageHeader
         title="Create New Tournament"
         actions={
-          <button onClick={() => navigate('/admin/tournaments')} className="px-4 py-2 border rounded hover:bg-gray-100">
+          <Button variant="outline" onClick={() => navigate('/admin/tournaments')}>
             Cancel
-          </button>
+          </Button>
         }
       />
 
@@ -130,13 +133,10 @@ export const TournamentCreatePage: React.FC = () => {
       )}
 
       {schoolsQuery.isError && (
-        <Alert variant="error" className="mb-4">
-          <div className="font-semibold mb-1">Failed to load schools</div>
-          <div className="mb-3">{schoolsQuery.error instanceof Error ? schoolsQuery.error.message : 'An error occurred'}</div>
-          <Button size="sm" onClick={() => schoolsQuery.refetch()}>
-            Retry
-          </Button>
-        </Alert>
+        <ErrorState
+          error={schoolsQuery.error instanceof Error ? schoolsQuery.error.message : 'Failed to load schools'}
+          onRetry={() => schoolsQuery.refetch()}
+        />
       )}
 
       {schoolsQuery.isLoading && <LoadingState label="Loading schools..." layout="inline" />}
@@ -155,11 +155,10 @@ export const TournamentCreatePage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tournament Name
               </label>
-              <input
+              <Input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full p-2 border rounded"
                 required
               />
             </div>
@@ -167,13 +166,12 @@ export const TournamentCreatePage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Number of Rounds
               </label>
-              <input
+              <Input
                 type="number"
                 value={rounds}
                 onChange={(e) => setRounds(parseInt(e.target.value))}
-                min="1"
-                max="7"
-                className="w-full p-2 border rounded"
+                min={1}
+                max={7}
                 required
               />
             </div>
@@ -184,19 +182,17 @@ export const TournamentCreatePage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">Add Teams</h2>
           <div className="flex gap-4 mb-4">
             <div className="flex-1">
-              <input
+              <Input
                 type="text"
                 placeholder="Search schools..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-2 border rounded"
               />
             </div>
             <div className="flex-1">
-              <select
+              <Select
                 value={selectedSchool}
                 onChange={(e) => setSelectedSchool(e.target.value)}
-                className="w-full p-2 border rounded"
               >
                 <option value="">Select a school</option>
                 {filteredSchools.map(school => (
@@ -204,26 +200,24 @@ export const TournamentCreatePage: React.FC = () => {
                     {school.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="w-32">
-              <input
+              <Input
                 type="number"
-                min="1"
-                max="68"
+                min={1}
+                max={68}
                 value={selectedSeed}
                 onChange={(e) => setSelectedSeed(parseInt(e.target.value) || 1)}
-                className="w-full p-2 border rounded"
                 placeholder="Seed"
               />
             </div>
-            <button
+            <Button
               type="button"
               onClick={handleAddTeam}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               Add Team
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-2">
@@ -238,13 +232,15 @@ export const TournamentCreatePage: React.FC = () => {
                   <span>
                     {school?.name || 'Unknown School'} (Seed {team.seed})
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleRemoveTeam(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
               );
             })}
@@ -252,13 +248,13 @@ export const TournamentCreatePage: React.FC = () => {
         </Card>
 
         <div className="flex justify-end">
-          <button
+          <Button
             type="submit"
             disabled={createTournamentMutation.isPending || schoolsQuery.isLoading || teamsToAdd.length === 0}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+            loading={createTournamentMutation.isPending}
           >
             {createTournamentMutation.isPending ? 'Creating Tournament...' : 'Create Tournament'}
-          </button>
+          </Button>
         </div>
       </form>
     </PageContainer>

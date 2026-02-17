@@ -23,8 +23,7 @@ func NewLabRepository(pool *pgxpool.Pool) *LabRepository {
 }
 
 // ListInvestmentModels returns investment models matching the filter.
-func (r *LabRepository) ListInvestmentModels(filter models.LabListModelsFilter, page models.LabPagination) ([]models.InvestmentModel, error) {
-	ctx := context.Background()
+func (r *LabRepository) ListInvestmentModels(ctx context.Context, filter models.LabListModelsFilter, page models.LabPagination) ([]models.InvestmentModel, error) {
 
 	query := `
 		SELECT
@@ -73,8 +72,7 @@ func (r *LabRepository) ListInvestmentModels(filter models.LabListModelsFilter, 
 }
 
 // GetInvestmentModel returns a single investment model by ID.
-func (r *LabRepository) GetInvestmentModel(id string) (*models.InvestmentModel, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetInvestmentModel(ctx context.Context, id string) (*models.InvestmentModel, error) {
 
 	query := `
 		SELECT
@@ -105,8 +103,7 @@ func (r *LabRepository) GetInvestmentModel(id string) (*models.InvestmentModel, 
 }
 
 // GetModelLeaderboard returns the model leaderboard.
-func (r *LabRepository) GetModelLeaderboard() ([]models.LabLeaderboardEntry, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetModelLeaderboard(ctx context.Context) ([]models.LabLeaderboardEntry, error) {
 
 	query := `
 		SELECT
@@ -161,8 +158,7 @@ func (r *LabRepository) GetModelLeaderboard() ([]models.LabLeaderboardEntry, err
 }
 
 // ListEntries returns entries matching the filter.
-func (r *LabRepository) ListEntries(filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error) {
-	ctx := context.Background()
+func (r *LabRepository) ListEntries(ctx context.Context, filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error) {
 
 	query := `
 		SELECT
@@ -247,8 +243,7 @@ func (r *LabRepository) ListEntries(filter models.LabListEntriesFilter, page mod
 }
 
 // ListEvaluations returns evaluations matching the filter.
-func (r *LabRepository) ListEvaluations(filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error) {
-	ctx := context.Background()
+func (r *LabRepository) ListEvaluations(ctx context.Context, filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error) {
 
 	query := `
 		SELECT
@@ -261,7 +256,6 @@ func (r *LabRepository) ListEvaluations(filter models.LabListEvaluationsFilter, 
 			ev.p_top1,
 			ev.p_in_money,
 			ev.our_rank,
-			ev.simulated_calcutta_id::text,
 			ev.created_at,
 			ev.updated_at,
 			im.name AS model_name,
@@ -317,7 +311,6 @@ func (r *LabRepository) ListEvaluations(filter models.LabListEvaluationsFilter, 
 			&ev.PTop1,
 			&ev.PInMoney,
 			&ev.OurRank,
-			&ev.SimulatedCalcuttaID,
 			&ev.CreatedAt,
 			&ev.UpdatedAt,
 			&ev.ModelName,
@@ -334,8 +327,7 @@ func (r *LabRepository) ListEvaluations(filter models.LabListEvaluationsFilter, 
 }
 
 // GetEvaluation returns a single evaluation by ID with full details.
-func (r *LabRepository) GetEvaluation(id string) (*models.LabEvaluationDetail, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetEvaluation(ctx context.Context, id string) (*models.LabEvaluationDetail, error) {
 
 	query := `
 		SELECT
@@ -348,7 +340,6 @@ func (r *LabRepository) GetEvaluation(id string) (*models.LabEvaluationDetail, e
 			ev.p_top1,
 			ev.p_in_money,
 			ev.our_rank,
-			ev.simulated_calcutta_id::text,
 			ev.created_at,
 			ev.updated_at,
 			im.name AS model_name,
@@ -374,7 +365,6 @@ func (r *LabRepository) GetEvaluation(id string) (*models.LabEvaluationDetail, e
 		&ev.PTop1,
 		&ev.PInMoney,
 		&ev.OurRank,
-		&ev.SimulatedCalcuttaID,
 		&ev.CreatedAt,
 		&ev.UpdatedAt,
 		&ev.ModelName,
@@ -393,8 +383,7 @@ func (r *LabRepository) GetEvaluation(id string) (*models.LabEvaluationDetail, e
 }
 
 // GetEntryEnriched returns a single entry with enriched bid data (team names, seeds, naive allocation).
-func (r *LabRepository) GetEntryEnriched(id string) (*models.LabEntryDetailEnriched, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetEntryEnriched(ctx context.Context, id string) (*models.LabEntryDetailEnriched, error) {
 
 	// First get the basic entry details
 	query := `
@@ -622,8 +611,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*models.LabEntryDetailEnric
 
 // GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
 // Defaults to starting_state_key='post_first_four' if not specified.
-func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
 
 	if startingStateKey == "" {
 		startingStateKey = "post_first_four"
@@ -650,12 +638,11 @@ func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID
 	}
 
 	// Delegate to GetEntryEnriched
-	return r.GetEntryEnriched(entryID)
+	return r.GetEntryEnriched(ctx, entryID)
 }
 
 // GetEvaluationEntryResults returns per-entry results for an evaluation.
-func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]models.LabEvaluationEntryResult, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetEvaluationEntryResults(ctx context.Context, evaluationID string) ([]models.LabEvaluationEntryResult, error) {
 
 	query := `
 		SELECT
@@ -695,8 +682,7 @@ func (r *LabRepository) GetEvaluationEntryResults(evaluationID string) ([]models
 }
 
 // GetEvaluationEntryProfile returns detailed profile for an entry in an evaluation.
-func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*models.LabEvaluationEntryProfile, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResultID string) (*models.LabEvaluationEntryProfile, error) {
 
 	// First, get the entry result and evaluation_id from lab.evaluation_entry_results
 	var profile models.LabEvaluationEntryProfile

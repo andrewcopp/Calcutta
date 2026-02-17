@@ -258,11 +258,13 @@ export function CalcuttaSettingsPage() {
                   <Input
                     type="number"
                     min={0}
-                    placeholder="Amount (cents)"
-                    value={row.amountCents}
+                    step="0.01"
+                    placeholder="Amount ($)"
+                    value={row.amountCents ? (row.amountCents / 100).toFixed(2) : ''}
                     onChange={(e) => {
                       const updated = [...payoutRows];
-                      updated[idx] = { ...updated[idx], amountCents: parseInt(e.target.value) || 0 };
+                      const dollars = parseFloat(e.target.value);
+                      updated[idx] = { ...updated[idx], amountCents: isNaN(dollars) ? 0 : Math.round(dollars * 100) };
                       setPayoutRows(updated);
                     }}
                   />

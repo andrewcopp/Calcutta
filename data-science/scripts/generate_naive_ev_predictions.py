@@ -10,7 +10,7 @@ Pipeline stage 2 (naive_ev variant):
 1. Register model (lab.investment_models) - already done: naive-ev-baseline
 2. Generate predictions (this script) -> predictions_json
 3. Optimize entry (optimize_lab_entries.py) -> bids_json
-4. Evaluate (evaluate_lab_entries.py) -> lab.evaluations
+4. Evaluate (lab pipeline worker) -> lab.evaluations
 
 Usage:
     python generate_naive_ev_predictions.py
@@ -159,7 +159,7 @@ def main():
 
     # Filter by calcutta_id if specified
     if args.calcutta_id:
-        calcuttas = [c for c in calcuttas if c["id"] == args.calcutta_id]
+        calcuttas = [c for c in calcuttas if c.id == args.calcutta_id]
         if not calcuttas:
             if args.json_output:
                 print(json.dumps({"ok": False, "entry_id": None, "error": f"Calcutta {args.calcutta_id} not found"}))
@@ -167,12 +167,12 @@ def main():
             else:
                 print(f"Error: Calcutta {args.calcutta_id} not found")
                 sys.exit(1)
-        log(f"Processing single calcutta: {calcuttas[0]['name']}")
+        log(f"Processing single calcutta: {calcuttas[0].name}")
 
     # Filter by years if specified
     if args.years:
         target_years = [int(y.strip()) for y in args.years.split(",")]
-        calcuttas = [c for c in calcuttas if c["year"] in target_years]
+        calcuttas = [c for c in calcuttas if c.year in target_years]
         log(f"Filtered to {len(calcuttas)} calcuttas for years: {target_years}")
 
     log("")
@@ -182,18 +182,18 @@ def main():
     last_entry_id = None
 
     for calcutta in calcuttas:
-        log(f"Processing {calcutta['name']} ({calcutta['year']})...")
+        log(f"Processing {calcutta.name} ({calcutta.year})...")
 
         if args.dry_run:
-            expected_points_map = get_expected_points_map(calcutta["id"])
+            expected_points_map = get_expected_points_map(calcutta.id)
             total_expected = sum(expected_points_map.values())
             log(f"  Would create entry with {len(expected_points_map)} predictions")
             log(f"  Total expected points: {total_expected:.1f}")
         else:
             entry = create_naive_ev_predictions_for_calcutta(
                 model.id,
-                calcutta["id"],
-                calcutta["tournament_id"],
+                calcutta.id,
+                calcutta.tournament_id,
             )
             if entry:
                 log(f"  Created entry {entry.id} with {len(entry.predictions)} predictions")
@@ -201,7 +201,7 @@ def main():
                 last_entry_id = entry.id
             else:
                 log(f"  No entry created (no expected points data)")
-                errors.append(f"{calcutta['name']}: No expected points data")
+                errors.append(f"{calcutta.name}: No expected points data")
 
     log("")
     log("Done!")

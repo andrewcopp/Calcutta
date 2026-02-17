@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-export const StatisticsTab: React.FC<{
+type StatisticsTabProps = {
   calcuttaId: string;
   totalEntries: number;
   totalInvestment: number;
@@ -18,7 +18,9 @@ export const StatisticsTab: React.FC<{
     investment: number;
     roi: number;
   }[];
-}> = ({ calcuttaId, totalEntries, totalInvestment, totalReturns, averageReturn, returnsStdDev, seedInvestmentData, teamROIData }) => {
+};
+
+export function StatisticsTab({ calcuttaId, totalEntries, totalInvestment, totalReturns, averageReturn, returnsStdDev, seedInvestmentData, teamROIData }: StatisticsTabProps) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -92,4 +94,4 @@ export const StatisticsTab: React.FC<{
       </div>
     </>
   );
-};
+}

@@ -18,14 +18,12 @@ type TournamentRepo interface {
 type Service struct {
 	tournamentRepo TournamentRepo
 	builder        *BracketBuilder
-	validator      *models.BracketValidator
 }
 
 func New(tournamentRepo TournamentRepo) *Service {
 	return &Service{
 		tournamentRepo: tournamentRepo,
 		builder:        NewBracketBuilder(),
-		validator:      models.NewBracketValidator(),
 	}
 }
 
@@ -88,7 +86,7 @@ func (s *Service) SelectWinner(ctx context.Context, tournamentID, gameID, winner
 		return nil, &apperrors.NotFoundError{Resource: "game", ID: gameID}
 	}
 
-	if err := s.validator.ValidateWinnerSelection(game, winnerTeamID); err != nil {
+	if err := models.ValidateWinnerSelection(game, winnerTeamID); err != nil {
 		return nil, err
 	}
 

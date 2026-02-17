@@ -7,12 +7,28 @@ generate_oracle_predictions.py.
 """
 from __future__ import annotations
 
-from typing import Dict, List
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 from moneyball.db.connection import get_db_connection
 
 
-def get_historical_calcuttas() -> List[dict]:
+@dataclass
+class HistoricalCalcutta:
+    """A historical calcutta with its rules and entry count."""
+
+    id: str
+    name: str
+    year: int
+    tournament_id: str
+    budget_points: Optional[int]
+    min_teams: Optional[int]
+    max_teams: Optional[int]
+    max_bid: Optional[int]
+    entry_count: int
+
+
+def get_historical_calcuttas() -> List[HistoricalCalcutta]:
     """Get all historical calcuttas from the database with their rules and entry counts."""
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -34,17 +50,17 @@ def get_historical_calcuttas() -> List[dict]:
                 ORDER BY s.year DESC
             """)
             return [
-                {
-                    "id": str(row[0]),
-                    "name": row[1],
-                    "year": row[2],
-                    "tournament_id": str(row[3]),
-                    "budget_points": row[4],
-                    "min_teams": row[5],
-                    "max_teams": row[6],
-                    "max_bid": row[7],
-                    "entry_count": row[8],
-                }
+                HistoricalCalcutta(
+                    id=str(row[0]),
+                    name=row[1],
+                    year=row[2],
+                    tournament_id=str(row[3]),
+                    budget_points=row[4],
+                    min_teams=row[5],
+                    max_teams=row[6],
+                    max_bid=row[7],
+                    entry_count=row[8],
+                )
                 for row in cur.fetchall()
             ]
 

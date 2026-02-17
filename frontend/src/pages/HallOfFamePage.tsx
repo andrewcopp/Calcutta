@@ -4,11 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
 import { queryKeys } from '../queryKeys';
 import { hallOfFameService } from '../services/hallOfFameService';
-import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
+import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
@@ -177,13 +176,10 @@ export const HallOfFamePage: React.FC = () => {
           {bestTeamsQuery.isLoading && <LoadingState label="Loading best teams..." layout="inline" />}
 
           {bestTeamsQuery.isError && (
-            <Alert variant="error" className="mt-3">
-              <div className="font-semibold mb-1">Failed to load best teams</div>
-              <div className="mb-3">{bestTeamsQuery.error instanceof Error ? bestTeamsQuery.error.message : 'An error occurred'}</div>
-              <Button size="sm" onClick={() => bestTeamsQuery.refetch()}>
-                Retry
-              </Button>
-            </Alert>
+            <ErrorState
+              error={bestTeamsQuery.error instanceof Error ? bestTeamsQuery.error.message : 'Failed to load best teams'}
+              onRetry={() => bestTeamsQuery.refetch()}
+            />
           )}
 
           {bestTeamsQuery.data && (
@@ -207,13 +203,10 @@ export const HallOfFamePage: React.FC = () => {
           {bestInvestmentsQuery.isLoading && <LoadingState label="Loading best investments..." layout="inline" />}
 
           {bestInvestmentsQuery.isError && (
-            <Alert variant="error" className="mt-3">
-              <div className="font-semibold mb-1">Failed to load best investments</div>
-              <div className="mb-3">{bestInvestmentsQuery.error instanceof Error ? bestInvestmentsQuery.error.message : 'An error occurred'}</div>
-              <Button size="sm" onClick={() => bestInvestmentsQuery.refetch()}>
-                Retry
-              </Button>
-            </Alert>
+            <ErrorState
+              error={bestInvestmentsQuery.error instanceof Error ? bestInvestmentsQuery.error.message : 'Failed to load best investments'}
+              onRetry={() => bestInvestmentsQuery.refetch()}
+            />
           )}
 
           {bestInvestmentsQuery.data && (
@@ -237,13 +230,10 @@ export const HallOfFamePage: React.FC = () => {
           {bestEntriesQuery.isLoading && <LoadingState label="Loading best entries..." layout="inline" />}
 
           {bestEntriesQuery.isError && (
-            <Alert variant="error" className="mt-3">
-              <div className="font-semibold mb-1">Failed to load best entries</div>
-              <div className="mb-3">{bestEntriesQuery.error instanceof Error ? bestEntriesQuery.error.message : 'An error occurred'}</div>
-              <Button size="sm" onClick={() => bestEntriesQuery.refetch()}>
-                Retry
-              </Button>
-            </Alert>
+            <ErrorState
+              error={bestEntriesQuery.error instanceof Error ? bestEntriesQuery.error.message : 'Failed to load best entries'}
+              onRetry={() => bestEntriesQuery.refetch()}
+            />
           )}
 
           {bestEntriesQuery.data && (
@@ -280,13 +270,10 @@ export const HallOfFamePage: React.FC = () => {
           {bestCareersQuery.isLoading && <LoadingState label="Loading best careers..." layout="inline" />}
 
           {bestCareersQuery.isError && (
-            <Alert variant="error" className="mt-3">
-              <div className="font-semibold mb-1">Failed to load best careers</div>
-              <div className="mb-3">{bestCareersQuery.error instanceof Error ? bestCareersQuery.error.message : 'An error occurred'}</div>
-              <Button size="sm" onClick={() => bestCareersQuery.refetch()}>
-                Retry
-              </Button>
-            </Alert>
+            <ErrorState
+              error={bestCareersQuery.error instanceof Error ? bestCareersQuery.error.message : 'Failed to load best careers'}
+              onRetry={() => bestCareersQuery.refetch()}
+            />
           )}
 
           {bestCareersQuery.data && (

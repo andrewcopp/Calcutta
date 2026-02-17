@@ -21,17 +21,16 @@ const (
 type bracketRoundMeta struct {
 	order       int
 	minProgress int
-	storageInt  int
 }
 
 var bracketRoundMetaByRound = map[BracketRound]bracketRoundMeta{
-	RoundFirstFour:    {order: 1, minProgress: 0, storageInt: 6},
-	RoundOf64:         {order: 2, minProgress: 1, storageInt: 5},
-	RoundOf32:         {order: 3, minProgress: 2, storageInt: 4},
-	RoundSweet16:      {order: 4, minProgress: 3, storageInt: 3},
-	RoundElite8:       {order: 5, minProgress: 4, storageInt: 2},
-	RoundFinalFour:    {order: 6, minProgress: 5, storageInt: 1},
-	RoundChampionship: {order: 7, minProgress: 6, storageInt: 0},
+	RoundFirstFour:    {order: 1, minProgress: 0},
+	RoundOf64:         {order: 2, minProgress: 1},
+	RoundOf32:         {order: 3, minProgress: 2},
+	RoundSweet16:      {order: 4, minProgress: 3},
+	RoundElite8:       {order: 5, minProgress: 4},
+	RoundFinalFour:    {order: 6, minProgress: 5},
+	RoundChampionship: {order: 7, minProgress: 6},
 }
 
 func (r BracketRound) Order() int {
@@ -46,13 +45,6 @@ func (r BracketRound) MinProgressRequired() int {
 		return m.minProgress
 	}
 	return 0
-}
-
-func (r BracketRound) StorageInt() int {
-	if m, ok := bracketRoundMetaByRound[r]; ok {
-		return m.storageInt
-	}
-	return 999
 }
 
 // BracketGame represents a single game in the bracket with its participants
@@ -94,16 +86,8 @@ type FinalFourConfig struct {
 	BottomRightRegion string `json:"bottomRightRegion"`
 }
 
-// BracketValidator validates bracket operations
-type BracketValidator struct{}
-
-// NewBracketValidator creates a new bracket validator
-func NewBracketValidator() *BracketValidator {
-	return &BracketValidator{}
-}
-
-// ValidateWinnerSelection validates that a winner can be selected for a game
-func (v *BracketValidator) ValidateWinnerSelection(game *BracketGame, winnerTeamID string) error {
+// ValidateWinnerSelection validates that a winner can be selected for a game.
+func ValidateWinnerSelection(game *BracketGame, winnerTeamID string) error {
 	if game == nil {
 		return errors.New("game cannot be nil")
 	}

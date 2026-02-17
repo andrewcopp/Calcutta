@@ -32,17 +32,17 @@ func (s *Service) ListInvestmentModels(ctx context.Context, filter models.LabLis
 	if page.Offset < 0 {
 		page.Offset = 0
 	}
-	return s.repo.ListInvestmentModels(filter, page)
+	return s.repo.ListInvestmentModels(ctx, filter, page)
 }
 
 // GetInvestmentModel returns a single investment model by ID.
 func (s *Service) GetInvestmentModel(ctx context.Context, id string) (*models.InvestmentModel, error) {
-	return s.repo.GetInvestmentModel(id)
+	return s.repo.GetInvestmentModel(ctx, id)
 }
 
 // GetModelLeaderboard returns the model leaderboard sorted by avg mean payout.
 func (s *Service) GetModelLeaderboard(ctx context.Context) ([]models.LabLeaderboardEntry, error) {
-	return s.repo.GetModelLeaderboard()
+	return s.repo.GetModelLeaderboard(ctx)
 }
 
 // ListEntries returns entries matching the filter.
@@ -56,17 +56,17 @@ func (s *Service) ListEntries(ctx context.Context, filter models.LabListEntriesF
 	if page.Offset < 0 {
 		page.Offset = 0
 	}
-	return s.repo.ListEntries(filter, page)
+	return s.repo.ListEntries(ctx, filter, page)
 }
 
 // GetEntryEnriched returns a single entry with enriched bids (team names, seeds, naive allocation).
 func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*models.LabEntryDetailEnriched, error) {
-	return s.repo.GetEntryEnriched(id)
+	return s.repo.GetEntryEnriched(ctx, id)
 }
 
 // GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
 func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
-	return s.repo.GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID, startingStateKey)
+	return s.repo.GetEntryEnrichedByModelAndCalcutta(ctx, modelName, calcuttaID, startingStateKey)
 }
 
 // ListEvaluations returns evaluations matching the filter.
@@ -80,22 +80,22 @@ func (s *Service) ListEvaluations(ctx context.Context, filter models.LabListEval
 	if page.Offset < 0 {
 		page.Offset = 0
 	}
-	return s.repo.ListEvaluations(filter, page)
+	return s.repo.ListEvaluations(ctx, filter, page)
 }
 
 // GetEvaluation returns a single evaluation by ID with full details.
 func (s *Service) GetEvaluation(ctx context.Context, id string) (*models.LabEvaluationDetail, error) {
-	return s.repo.GetEvaluation(id)
+	return s.repo.GetEvaluation(ctx, id)
 }
 
 // GetEvaluationEntryResults returns per-entry results for an evaluation.
 func (s *Service) GetEvaluationEntryResults(ctx context.Context, evaluationID string) ([]models.LabEvaluationEntryResult, error) {
-	return s.repo.GetEvaluationEntryResults(evaluationID)
+	return s.repo.GetEvaluationEntryResults(ctx, evaluationID)
 }
 
 // GetEvaluationEntryProfile returns detailed profile for an entry result.
 func (s *Service) GetEvaluationEntryProfile(ctx context.Context, entryResultID string) (*models.LabEvaluationEntryProfile, error) {
-	return s.repo.GetEvaluationEntryProfile(entryResultID)
+	return s.repo.GetEvaluationEntryProfile(ctx, entryResultID)
 }
 
 // StartPipeline starts a new pipeline run for a model.
@@ -106,12 +106,12 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 
 	// If force_rerun, delete existing artifacts first (this also cancels active pipelines)
 	if req.ForceRerun {
-		if err := s.pipelineRepo.SoftDeleteModelArtifacts(modelID); err != nil {
+		if err := s.pipelineRepo.SoftDeleteModelArtifacts(ctx, modelID); err != nil {
 			return nil, fmt.Errorf("failed to clear existing artifacts: %w", err)
 		}
 	} else {
 		// Only check for active pipeline if not force re-running
-		active, err := s.pipelineRepo.GetActivePipelineRun(modelID)
+		active, err := s.pipelineRepo.GetActivePipelineRun(ctx, modelID)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 	calcuttaIDs := req.CalcuttaIDs
 	if len(calcuttaIDs) == 0 {
 		var err error
-		calcuttaIDs, err = s.pipelineRepo.GetHistoricalCalcuttaIDs()
+		calcuttaIDs, err = s.pipelineRepo.GetHistoricalCalcuttaIDs(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -176,13 +176,13 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 		run.ExcludedEntryName = &excludedEntryName
 	}
 
-	created, err := s.pipelineRepo.CreatePipelineRun(run)
+	created, err := s.pipelineRepo.CreatePipelineRun(ctx, run)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create calcutta runs
-	err = s.pipelineRepo.CreatePipelineCalcuttaRuns(created.ID, calcuttaIDs)
+	err = s.pipelineRepo.CreatePipelineCalcuttaRuns(ctx, created.ID, calcuttaIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (s *Service) GetPipelineProgress(ctx context.Context, pipelineRunID string)
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}
-	return s.pipelineRepo.GetPipelineProgress(pipelineRunID)
+	return s.pipelineRepo.GetPipelineProgress(ctx, pipelineRunID)
 }
 
 // GetModelPipelineProgress returns the pipeline progress for a model.
@@ -207,7 +207,7 @@ func (s *Service) GetModelPipelineProgress(ctx context.Context, modelID string) 
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}
-	return s.pipelineRepo.GetModelPipelineProgress(modelID)
+	return s.pipelineRepo.GetModelPipelineProgress(ctx, modelID)
 }
 
 // GetPipelineRun returns a pipeline run by ID.
@@ -215,7 +215,7 @@ func (s *Service) GetPipelineRun(ctx context.Context, id string) (*models.LabPip
 	if s.pipelineRepo == nil {
 		return nil, &PipelineNotAvailableError{}
 	}
-	return s.pipelineRepo.GetPipelineRun(id)
+	return s.pipelineRepo.GetPipelineRun(ctx, id)
 }
 
 // CancelPipeline cancels a running pipeline.
@@ -224,7 +224,7 @@ func (s *Service) CancelPipeline(ctx context.Context, pipelineRunID string) erro
 		return &PipelineNotAvailableError{}
 	}
 
-	run, err := s.pipelineRepo.GetPipelineRun(pipelineRunID)
+	run, err := s.pipelineRepo.GetPipelineRun(ctx, pipelineRunID)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (s *Service) CancelPipeline(ctx context.Context, pipelineRunID string) erro
 	}
 
 	msg := "cancelled by user"
-	return s.pipelineRepo.UpdatePipelineRunStatus(pipelineRunID, "cancelled", &msg)
+	return s.pipelineRepo.UpdatePipelineRunStatus(ctx, pipelineRunID, "cancelled", &msg)
 }
 
 // Pipeline errors

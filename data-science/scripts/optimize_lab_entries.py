@@ -10,7 +10,7 @@ This is stage 3 of the lab pipeline:
 1. Register model (lab.investment_models)
 2. Generate predictions (generate_lab_predictions.py) -> predictions_json
 3. Optimize entry (Go DP allocator via lab_pipeline_worker) -> bids_json
-4. Evaluate (evaluate_lab_entries.py) -> lab.evaluations
+4. Evaluate (lab pipeline worker) -> lab.evaluations
 
 Currently supports (for research only):
 - predicted_market_share: Bid proportionally to predicted market share (baseline)

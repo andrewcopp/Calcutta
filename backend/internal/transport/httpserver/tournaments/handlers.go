@@ -216,7 +216,6 @@ func (h *Handler) HandleCreateTournamentTeam(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := h.app.Tournament.CreateTeam(r.Context(), team); err != nil {
-		log.Printf("Error creating team: %v", err)
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}

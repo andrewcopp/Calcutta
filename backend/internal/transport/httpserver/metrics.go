@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -121,68 +120,6 @@ func (m *httpMetricsRegistry) WritePrometheus(w io.Writer) {
 	}
 }
 
-func reflectStatInt64(stat any, name string) (int64, bool) {
-	if stat == nil {
-		return 0, false
-	}
-
-	statVal := reflect.ValueOf(stat)
-	if m := statVal.MethodByName(name); m.IsValid() && m.Type().NumIn() == 0 && m.Type().NumOut() == 1 {
-		out := m.Call(nil)[0]
-		switch out.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return out.Int(), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return int64(out.Uint()), true
-		}
-	}
-
-	v := statVal
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-	if v.IsValid() && v.Kind() == reflect.Struct {
-		f := v.FieldByName(name)
-		if f.IsValid() {
-			switch f.Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				return f.Int(), true
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				return int64(f.Uint()), true
-			}
-		}
-	}
-
-	return 0, false
-}
-
-func reflectStatDuration(stat any, name string) (time.Duration, bool) {
-	if stat == nil {
-		return 0, false
-	}
-
-	statVal := reflect.ValueOf(stat)
-	if m := statVal.MethodByName(name); m.IsValid() && m.Type().NumIn() == 0 && m.Type().NumOut() == 1 {
-		out := m.Call(nil)[0]
-		if out.Type() == reflect.TypeOf(time.Duration(0)) {
-			return time.Duration(out.Int()), true
-		}
-	}
-
-	v := statVal
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-	if v.IsValid() && v.Kind() == reflect.Struct {
-		f := v.FieldByName(name)
-		if f.IsValid() && f.Type() == reflect.TypeOf(time.Duration(0)) {
-			return time.Duration(f.Int()), true
-		}
-	}
-
-	return 0, false
-}
-
 func writePGXPoolPrometheus(w io.Writer, pool *pgxpool.Pool) {
 	if pool == nil {
 		return
@@ -190,51 +127,38 @@ func writePGXPoolPrometheus(w io.Writer, pool *pgxpool.Pool) {
 
 	st := pool.Stat()
 
-	if v, ok := reflectStatInt64(st, "MaxConns"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_max_conns gauge")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_max_conns %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "TotalConns"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_total_conns gauge")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_total_conns %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "IdleConns"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_idle_conns gauge")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_idle_conns %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "AcquiredConns"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquired_conns gauge")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquired_conns %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "ConstructingConns"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_constructing_conns gauge")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_constructing_conns %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "AcquireCount"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_total counter")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_total %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "EmptyAcquireCount"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_empty_acquire_total counter")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_empty_acquire_total %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "CanceledAcquireCount"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_canceled_acquire_total counter")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_canceled_acquire_total %d\n", v)
-	}
-	if v, ok := reflectStatInt64(st, "AcquireTimeoutCount"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_timeout_total counter")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_timeout_total %d\n", v)
-	}
-	if dur, ok := reflectStatDuration(st, "AcquireDuration"); ok {
-		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_duration_ms_total counter")
-		_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_duration_ms_total %d\n", dur.Milliseconds())
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_max_conns gauge")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_max_conns %d\n", st.MaxConns())
 
-		if cnt, ok := reflectStatInt64(st, "AcquireCount"); ok && cnt > 0 {
-			avgMs := float64(dur.Milliseconds()) / float64(cnt)
-			_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_duration_ms_avg gauge")
-			_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_duration_ms_avg %.3f\n", avgMs)
-		}
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_total_conns gauge")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_total_conns %d\n", st.TotalConns())
+
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_idle_conns gauge")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_idle_conns %d\n", st.IdleConns())
+
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquired_conns gauge")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquired_conns %d\n", st.AcquiredConns())
+
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_constructing_conns gauge")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_constructing_conns %d\n", st.ConstructingConns())
+
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_total counter")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_total %d\n", st.AcquireCount())
+
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_empty_acquire_total counter")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_empty_acquire_total %d\n", st.EmptyAcquireCount())
+
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_canceled_acquire_total counter")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_canceled_acquire_total %d\n", st.CanceledAcquireCount())
+
+	dur := st.AcquireDuration()
+	_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_duration_ms_total counter")
+	_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_duration_ms_total %d\n", dur.Milliseconds())
+
+	if cnt := st.AcquireCount(); cnt > 0 {
+		avgMs := float64(dur.Milliseconds()) / float64(cnt)
+		_, _ = fmt.Fprintln(w, "# TYPE calcutta_db_pool_acquire_duration_ms_avg gauge")
+		_, _ = fmt.Fprintf(w, "calcutta_db_pool_acquire_duration_ms_avg %.3f\n", avgMs)
 	}
 }
 

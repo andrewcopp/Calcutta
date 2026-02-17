@@ -11,6 +11,7 @@ import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 
@@ -154,10 +155,7 @@ export const TournamentBracketPage: React.FC = () => {
   if (error) {
     return (
       <PageContainer>
-        <Alert variant="error" className="mb-4">
-          {error}
-        </Alert>
-        <Button onClick={loadData}>Retry</Button>
+        <ErrorState error={error} onRetry={loadData} />
       </PageContainer>
     );
   }
@@ -171,10 +169,7 @@ export const TournamentBracketPage: React.FC = () => {
 
     return (
       <PageContainer>
-        <Alert variant="error" className="mb-4">
-          {message}
-        </Alert>
-        <Button onClick={loadData}>Retry</Button>
+        <ErrorState error={message} onRetry={loadData} />
       </PageContainer>
     );
   }

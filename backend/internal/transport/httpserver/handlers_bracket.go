@@ -24,15 +24,12 @@ func (s *Server) getBracketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Building bracket for tournament: %s", tournamentID)
 	bracket, err := s.app.Bracket.GetBracket(r.Context(), tournamentID)
 	if err != nil {
-		log.Printf("Error getting bracket for tournament %s: %v", tournamentID, err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	log.Printf("Successfully built bracket with %d games", len(bracket.Games))
 	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
 
@@ -59,26 +56,21 @@ func (s *Server) selectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req dtos.SelectWinnerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding request body: %v", err)
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 
 	if err := req.Validate(); err != nil {
-		log.Printf("Request validation failed: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	log.Printf("Selecting winner for tournament %s, game %s, winner team %s", tournamentID, gameID, req.WinnerTeamID)
 	bracket, err := s.app.Bracket.SelectWinner(r.Context(), tournamentID, gameID, req.WinnerTeamID)
 	if err != nil {
-		log.Printf("Error selecting winner for tournament %s, game %s: %v", tournamentID, gameID, err)
 		writeErrorFromErr(w, r, err)
 		return
 	}
 
-	log.Printf("Successfully selected winner, returning bracket with %d games", len(bracket.Games))
 	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
 
@@ -98,20 +90,8 @@ func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 
 	bracket, err := s.app.Bracket.UnselectWinner(r.Context(), tournamentID, gameID)
 	if err != nil {
-		log.Printf("Error unselecting winner: %v", err)
 		writeErrorFromErr(w, r, err)
 		return
-	}
-
-	log.Printf("Successfully unselected winner for game %s, returning bracket with %d games", gameID, len(bracket.Games))
-
-	// Log the specific game state for debugging
-	if game, exists := bracket.Games[gameID]; exists {
-		log.Printf("Game %s after unselect - Winner: %v, Team1: %v, Team2: %v",
-			gameID,
-			game.Winner != nil,
-			game.Team1 != nil,
-			game.Team2 != nil)
 	}
 
 	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))

@@ -70,7 +70,6 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := req.Validate(); err != nil {
-		log.Printf("Validation error: %v", err)
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
@@ -107,7 +106,6 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.app.Calcutta.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
-		log.Printf("Error creating calcutta with rounds: %v", err)
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}

@@ -119,7 +119,6 @@ type LabEvaluation struct {
 	PTop1                  *float64  `json:"p_top1,omitempty"`
 	PInMoney               *float64  `json:"p_in_money,omitempty"`
 	OurRank                *int      `json:"our_rank,omitempty"`
-	SimulatedCalcuttaID    *string   `json:"simulated_calcutta_id,omitempty"`
 	CreatedAt              time.Time `json:"created_at"`
 	UpdatedAt              time.Time `json:"updated_at"`
 }

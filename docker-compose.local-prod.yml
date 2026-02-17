@@ -19,6 +19,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
       - DOTENV_ENABLED=false
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_MODE=${AUTH_MODE:-legacy}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     depends_on:
       db:
         condition: service_healthy

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/lab"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
@@ -81,6 +82,30 @@ func WriteFromErr(w http.ResponseWriter, r *http.Request, err error, authUserID 
 	var unauthorizedErr *apperrors.UnauthorizedError
 	if errors.As(err, &unauthorizedErr) {
 		Write(w, r, http.StatusUnauthorized, "unauthorized", unauthorizedErr.Error(), "")
+		return
+	}
+
+	var pipelineAlreadyRunningErr *lab.PipelineAlreadyRunningError
+	if errors.As(err, &pipelineAlreadyRunningErr) {
+		Write(w, r, http.StatusConflict, "pipeline_already_running", pipelineAlreadyRunningErr.Error(), "")
+		return
+	}
+
+	var noCalcuttasErr *lab.NoCalcuttasAvailableError
+	if errors.As(err, &noCalcuttasErr) {
+		Write(w, r, http.StatusBadRequest, "no_calcuttas_available", noCalcuttasErr.Error(), "")
+		return
+	}
+
+	var pipelineNotCancellableErr *lab.PipelineNotCancellableError
+	if errors.As(err, &pipelineNotCancellableErr) {
+		Write(w, r, http.StatusConflict, "pipeline_not_cancellable", pipelineNotCancellableErr.Error(), "")
+		return
+	}
+
+	var pipelineNotAvailableErr *lab.PipelineNotAvailableError
+	if errors.As(err, &pipelineNotAvailableErr) {
+		Write(w, r, http.StatusServiceUnavailable, "pipeline_not_available", pipelineNotAvailableErr.Error(), "")
 		return
 	}
 

@@ -83,52 +83,60 @@ func TestCalculateWinsAndByes(t *testing.T) {
 	})
 }
 
-func TestBracketValidator_ValidateWinnerSelection(t *testing.T) {
-	validator := NewBracketValidator()
+func TestThatValidateWinnerSelectionAcceptsParticipant(t *testing.T) {
+	// GIVEN a game with two teams
+	game := &BracketGame{
+		Team1: &BracketTeam{TeamID: "team1"},
+		Team2: &BracketTeam{TeamID: "team2"},
+	}
 
-	team1 := &BracketTeam{TeamID: "team1"}
-	team2 := &BracketTeam{TeamID: "team2"}
+	// WHEN validating team1 as winner
+	err := ValidateWinnerSelection(game, "team1")
 
-	t.Run("Valid winner selection", func(t *testing.T) {
-		game := &BracketGame{
-			Team1: team1,
-			Team2: team2,
-		}
+	// THEN no error is returned
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
 
-		err := validator.ValidateWinnerSelection(game, "team1")
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-	})
+func TestThatValidateWinnerSelectionRejectsNonParticipant(t *testing.T) {
+	// GIVEN a game with two teams
+	game := &BracketGame{
+		Team1: &BracketTeam{TeamID: "team1"},
+		Team2: &BracketTeam{TeamID: "team2"},
+	}
 
-	t.Run("Invalid winner - not a participant", func(t *testing.T) {
-		game := &BracketGame{
-			Team1: team1,
-			Team2: team2,
-		}
+	// WHEN validating a non-participant as winner
+	err := ValidateWinnerSelection(game, "team3")
 
-		err := validator.ValidateWinnerSelection(game, "team3")
-		if err == nil {
-			t.Error("Expected error for non-participant winner")
-		}
-	})
+	// THEN an error is returned
+	if err == nil {
+		t.Error("Expected error for non-participant winner")
+	}
+}
 
-	t.Run("Invalid - missing teams", func(t *testing.T) {
-		game := &BracketGame{
-			Team1: team1,
-		}
+func TestThatValidateWinnerSelectionRejectsMissingTeam(t *testing.T) {
+	// GIVEN a game with only one team
+	game := &BracketGame{
+		Team1: &BracketTeam{TeamID: "team1"},
+	}
 
-		err := validator.ValidateWinnerSelection(game, "team1")
-		if err == nil {
-			t.Error("Expected error when team2 is missing")
-		}
-	})
+	// WHEN validating a winner
+	err := ValidateWinnerSelection(game, "team1")
 
-	t.Run("Invalid - nil game", func(t *testing.T) {
-		err := validator.ValidateWinnerSelection(nil, "team1")
-		if err == nil {
-			t.Error("Expected error for nil game")
-		}
-	})
+	// THEN an error is returned
+	if err == nil {
+		t.Error("Expected error when team2 is missing")
+	}
+}
+
+func TestThatValidateWinnerSelectionRejectsNilGame(t *testing.T) {
+	// WHEN validating a nil game
+	err := ValidateWinnerSelection(nil, "team1")
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("Expected error for nil game")
+	}
 }
 

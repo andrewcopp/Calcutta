@@ -1,1 +1,1 @@
-"""Database connection and writer modules for database tables."""
+"""Database connection, query helpers, and writer modules."""

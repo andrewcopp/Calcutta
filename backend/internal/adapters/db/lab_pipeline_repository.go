@@ -13,8 +13,7 @@ import (
 )
 
 // CreatePipelineRun creates a new pipeline run.
-func (r *LabRepository) CreatePipelineRun(run *models.LabPipelineRun) (*models.LabPipelineRun, error) {
-	ctx := context.Background()
+func (r *LabRepository) CreatePipelineRun(ctx context.Context, run *models.LabPipelineRun) (*models.LabPipelineRun, error) {
 
 	query := `
 		INSERT INTO lab.pipeline_runs (
@@ -88,8 +87,7 @@ func (r *LabRepository) CreatePipelineRun(run *models.LabPipelineRun) (*models.L
 }
 
 // GetPipelineRun returns a pipeline run by ID.
-func (r *LabRepository) GetPipelineRun(id string) (*models.LabPipelineRun, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetPipelineRun(ctx context.Context, id string) (*models.LabPipelineRun, error) {
 
 	query := `
 		SELECT
@@ -140,8 +138,7 @@ func (r *LabRepository) GetPipelineRun(id string) (*models.LabPipelineRun, error
 }
 
 // UpdatePipelineRunStatus updates the status of a pipeline run.
-func (r *LabRepository) UpdatePipelineRunStatus(id string, status string, errorMessage *string) error {
-	ctx := context.Background()
+func (r *LabRepository) UpdatePipelineRunStatus(ctx context.Context, id string, status string, errorMessage *string) error {
 
 	var finishedAt *time.Time
 	var startedAt *time.Time
@@ -175,8 +172,7 @@ func (r *LabRepository) UpdatePipelineRunStatus(id string, status string, errorM
 }
 
 // GetActivePipelineRun returns the most recent running or pending pipeline run for a model.
-func (r *LabRepository) GetActivePipelineRun(modelID string) (*models.LabPipelineRun, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetActivePipelineRun(ctx context.Context, modelID string) (*models.LabPipelineRun, error) {
 
 	query := `
 		SELECT
@@ -230,8 +226,7 @@ func (r *LabRepository) GetActivePipelineRun(modelID string) (*models.LabPipelin
 }
 
 // CreatePipelineCalcuttaRuns creates calcutta run records for a pipeline.
-func (r *LabRepository) CreatePipelineCalcuttaRuns(pipelineRunID string, calcuttaIDs []string) error {
-	ctx := context.Background()
+func (r *LabRepository) CreatePipelineCalcuttaRuns(ctx context.Context, pipelineRunID string, calcuttaIDs []string) error {
 
 	if len(calcuttaIDs) == 0 {
 		return nil
@@ -254,11 +249,10 @@ func (r *LabRepository) CreatePipelineCalcuttaRuns(pipelineRunID string, calcutt
 }
 
 // GetPipelineProgress returns detailed progress for a pipeline run.
-func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*models.LabPipelineProgressResponse, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID string) (*models.LabPipelineProgressResponse, error) {
 
 	// Get pipeline run
-	pipelineRun, err := r.GetPipelineRun(pipelineRunID)
+	pipelineRun, err := r.GetPipelineRun(ctx, pipelineRunID)
 	if err != nil {
 		return nil, err
 	}
@@ -367,8 +361,7 @@ func (r *LabRepository) GetPipelineProgress(pipelineRunID string) (*models.LabPi
 }
 
 // GetModelPipelineProgress returns the pipeline progress for a model, including existing artifacts.
-func (r *LabRepository) GetModelPipelineProgress(modelID string) (*models.LabModelPipelineProgress, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetModelPipelineProgress(ctx context.Context, modelID string) (*models.LabModelPipelineProgress, error) {
 
 	// Get model name
 	var modelName string
@@ -383,7 +376,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*models.LabMod
 	}
 
 	// Check for active pipeline run
-	activePipeline, err := r.GetActivePipelineRun(modelID)
+	activePipeline, err := r.GetActivePipelineRun(ctx, modelID)
 	if err != nil {
 		return nil, err
 	}
@@ -516,8 +509,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*models.LabMod
 }
 
 // GetHistoricalCalcuttaIDs returns all historical calcutta IDs (years before current year).
-func (r *LabRepository) GetHistoricalCalcuttaIDs() ([]string, error) {
-	ctx := context.Background()
+func (r *LabRepository) GetHistoricalCalcuttaIDs(ctx context.Context) ([]string, error) {
 
 	query := `
 		SELECT c.id::text
@@ -549,8 +541,7 @@ func (r *LabRepository) GetHistoricalCalcuttaIDs() ([]string, error) {
 
 // SoftDeleteModelArtifacts soft-deletes all entries and evaluations for a model.
 // This is used when force_rerun=true to ensure fresh results.
-func (r *LabRepository) SoftDeleteModelArtifacts(modelID string) error {
-	ctx := context.Background()
+func (r *LabRepository) SoftDeleteModelArtifacts(ctx context.Context, modelID string) error {
 
 	// Use a transaction to ensure atomicity
 	tx, err := r.pool.Begin(ctx)

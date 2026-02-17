@@ -10,7 +10,7 @@ Pipeline stage 2 (oracle variant):
 1. Register model (lab.investment_models) - already done: oracle-actual-market
 2. Generate predictions (this script) -> predictions_json
 3. Optimize entry (optimize_lab_entries.py) -> bids_json
-4. Evaluate (evaluate_lab_entries.py) -> lab.evaluations
+4. Evaluate (lab pipeline worker) -> lab.evaluations
 
 Usage:
     python generate_oracle_predictions.py
@@ -245,7 +245,7 @@ def main():
 
     # Filter by calcutta_id if specified
     if args.calcutta_id:
-        calcuttas = [c for c in calcuttas if c["id"] == args.calcutta_id]
+        calcuttas = [c for c in calcuttas if c.id == args.calcutta_id]
         if not calcuttas:
             if args.json_output:
                 print(json.dumps({"ok": False, "entry_id": None, "error": f"Calcutta {args.calcutta_id} not found"}))
@@ -253,12 +253,12 @@ def main():
             else:
                 print(f"Error: Calcutta {args.calcutta_id} not found")
                 sys.exit(1)
-        log(f"Processing single calcutta: {calcuttas[0]['name']}")
+        log(f"Processing single calcutta: {calcuttas[0].name}")
 
     # Filter by years if specified
     if args.years:
         target_years = [int(y.strip()) for y in args.years.split(",")]
-        calcuttas = [c for c in calcuttas if c["year"] in target_years]
+        calcuttas = [c for c in calcuttas if c.year in target_years]
         log(f"Filtered to {len(calcuttas)} calcuttas for years: {target_years}")
 
     log("")
@@ -268,12 +268,12 @@ def main():
     last_entry_id = None
 
     for calcutta in calcuttas:
-        log(f"Processing {calcutta['name']} ({calcutta['year']})...")
+        log(f"Processing {calcutta.name} ({calcutta.year})...")
 
         if args.dry_run:
             actual_shares = get_actual_market_shares(
-                calcutta["id"],
-                calcutta["tournament_id"],
+                calcutta.id,
+                calcutta.tournament_id,
                 [args.excluded_entry] if args.excluded_entry else None,
             )
             log(f"  Would create entry with {len(actual_shares)} predictions")
@@ -281,8 +281,8 @@ def main():
         else:
             entry = create_oracle_predictions_for_calcutta(
                 model.id,
-                calcutta["id"],
-                calcutta["tournament_id"],
+                calcutta.id,
+                calcutta.tournament_id,
                 args.excluded_entry,
             )
             if entry:
@@ -291,7 +291,7 @@ def main():
                 last_entry_id = entry.id
             else:
                 log(f"  No entry created (no market data)")
-                errors.append(f"{calcutta['name']}: No market data")
+                errors.append(f"{calcutta.name}: No market data")
 
     log("")
     log("Done!")
