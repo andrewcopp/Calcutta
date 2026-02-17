@@ -26,58 +26,10 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 
-def get_historical_calcuttas():
-    """Get all historical calcuttas from the database with their rules and entry counts."""
-    from moneyball.db.connection import get_db_connection
-
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT
-                    c.id,
-                    c.name,
-                    s.year,
-                    t.id as tournament_id,
-                    c.budget_points,
-                    c.min_teams,
-                    c.max_teams,
-                    c.max_bid,
-                    (SELECT COUNT(*) FROM core.entries e WHERE e.calcutta_id = c.id AND e.deleted_at IS NULL) as entry_count
-                FROM core.calcuttas c
-                JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-                JOIN core.seasons s ON s.id = t.season_id AND s.deleted_at IS NULL
-                WHERE c.deleted_at IS NULL
-                ORDER BY s.year DESC
-            """)
-            return [
-                {
-                    "id": str(row[0]),
-                    "name": row[1],
-                    "year": row[2],
-                    "tournament_id": str(row[3]),
-                    "budget_points": row[4],
-                    "min_teams": row[5],
-                    "max_teams": row[6],
-                    "max_bid": row[7],
-                    "entry_count": row[8],
-                }
-                for row in cur.fetchall()
-            ]
-
-
-def get_team_id_map(tournament_id: str):
-    """Get mapping from school_slug to team_id for a tournament."""
-    from moneyball.db.connection import get_db_connection
-
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT s.slug, t.id
-                FROM core.teams t
-                JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-                WHERE t.tournament_id = %s AND t.deleted_at IS NULL
-            """, (tournament_id,))
-            return {row[0]: str(row[1]) for row in cur.fetchall()}
+from moneyball.db.lab_helpers import (
+    get_historical_calcuttas,
+    get_team_id_map,
+)
 
 
 def get_expected_points_map(year: int):
@@ -304,7 +256,7 @@ def main():
     parser.add_argument("--excluded-entry", default=default_excluded_entry,
                        help=f"Entry name to exclude from training (env: EXCLUDED_ENTRY_NAME, default: {default_excluded_entry})")
     parser.add_argument("--optimizer", default="predicted_market_share",
-                       choices=["predicted_market_share", "edge_weighted", "minlp"],
+                       choices=["predicted_market_share", "edge_weighted"],
                        help="Optimizer to use for bid generation")
     parser.add_argument("--estimated-participants-override", type=int,
                        help=f"Override estimated participants (env: DEFAULT_ESTIMATED_PARTICIPANTS={default_estimated_participants}). "

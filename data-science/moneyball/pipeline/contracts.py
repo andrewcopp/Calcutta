@@ -32,16 +32,6 @@ def _require_in_0_1(series: pd.Series, *, col: str) -> None:
         raise ValueError(f"{col} must be in [0, 1]")
 
 
-def _require_finite_non_negative(series: pd.Series, *, col: str) -> None:
-    v = pd.to_numeric(series, errors="coerce")
-    if v.isna().any():
-        raise ValueError(f"{col} contains non-numeric values")
-    if (~pd.Series(v).map(pd.api.types.is_number)).any():
-        raise ValueError(f"{col} contains non-numeric values")
-    if (v < 0.0).any():
-        raise ValueError(f"{col} must be non-negative")
-
-
 def _require_sum_to_one(series: pd.Series, *, col: str, tol: float) -> None:
     v = pd.to_numeric(series, errors="coerce")
     if v.isna().any():

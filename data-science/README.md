@@ -14,8 +14,6 @@ pip install -r requirements.txt
 
 - `ingest_snapshot.py`
   - Ingest a snapshot export from the backend admin tools.
-- `derive_canonical.py`
-  - Build a canonical dataset from ingested files.
 - `evaluate_harness.py`
   - Run leakage-safe baseline evaluation across snapshots.
 - `backtest_scaffold.py`
@@ -51,29 +49,20 @@ python ingest_snapshot.py \
 
 The snapshot will be written to `./out/<snapshot>/` and `./out/LATEST` will contain the snapshot directory name.
 
-### 2) Derive canonical tables
-
-```bash
-SNAP=./out/$(cat ./out/LATEST)
-python derive_canonical.py "$SNAP"
-```
-
-This writes `derived/team_features.parquet`, `derived/team_market.parquet`, and `derived/team_dataset.parquet`.
-
-### 3) Evaluate baselines across snapshots
+### 2) Evaluate baselines across snapshots
 
 ```bash
 python evaluate_harness.py ./out --out ./out/eval_report.json
 ```
 
-### 4) Backtest scaffold (realized payout/ROI)
+### 3) Backtest scaffold (realized payout/ROI)
 
 ```bash
 SNAP=./out/$(cat ./out/LATEST)
 python backtest_scaffold.py "$SNAP" --out "$SNAP/derived/backtest.json"
 ```
 
-### 5) Expected payout/ROI (Monte Carlo)
+### 4) Expected payout/ROI (Monte Carlo)
 
 ```bash
 SNAP=./out/$(cat ./out/LATEST)
@@ -83,7 +72,7 @@ python backtest_scaffold.py "$SNAP" \
   --out "$SNAP/derived/backtest_with_expected.json"
 ```
 
-### 6) Calibrate KenPom scale (recommended) + use it
+### 5) Calibrate KenPom scale (recommended) + use it
 
 ```bash
 python calibrate_kenpom_scale.py ./out --out ./out/kenpom_scale.json

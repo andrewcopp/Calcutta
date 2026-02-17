@@ -7,7 +7,7 @@
 #
 # Flow:
 # 1. Create a new environment (fresh containers + DB)
-# 2. Get admin access (manual SQL for now, TODO: build create-admin CLI)
+# 2. Get admin access (via make create-admin)
 # 3. Seed the database (schools, tournaments, calcuttas)
 # 4. Invite users to join (email simulation via Mailpit)
 # 5. Create tournament + configure teams + bracket
@@ -93,20 +93,9 @@ echo ""
 
 # Step 4: Create admin user
 echo -e "${YELLOW}[4/8] Creating admin user${NC}"
-echo "NOTE: This is a manual SQL insert. TODO: Build create-admin CLI tool."
 
 ADMIN_EMAIL="admin@dryrun.local"
-make query SQL="
-  INSERT INTO core.users (id, email, name, role, status)
-  VALUES (
-    uuid_generate_v4(),
-    '$ADMIN_EMAIL',
-    'Dry Run Admin',
-    'admin',
-    'active'
-  )
-  ON CONFLICT (email) DO NOTHING;
-"
+make create-admin EMAIL="$ADMIN_EMAIL" NAME="Dry Run Admin"
 
 echo -e "${GREEN}✓ Admin user created: $ADMIN_EMAIL${NC}"
 echo ""

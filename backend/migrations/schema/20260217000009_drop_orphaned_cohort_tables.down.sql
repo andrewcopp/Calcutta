@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS derived.simulation_run_batches (
     starting_state_key text NOT NULL DEFAULT 'post_first_four',
     excluded_entry_name text,
     params_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    status text NOT NULL DEFAULT 'queued',
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     deleted_at timestamptz,

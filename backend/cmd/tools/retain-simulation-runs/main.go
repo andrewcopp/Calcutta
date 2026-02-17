@@ -141,12 +141,6 @@ func run() error {
 	for _, r := range runs {
 		if evalIDsSafeToDelete[r.CalcuttaEvaluationRun] {
 			if _, err := tx.Exec(ctx, `
-				DELETE FROM derived.entry_simulation_outcomes
-				WHERE calcutta_evaluation_run_id = $1::uuid
-			`, r.CalcuttaEvaluationRun); err != nil {
-				return fmt.Errorf("delete_entry_simulation_outcomes_failed run_id=%s: %w", r.ID.String(), err)
-			}
-			if _, err := tx.Exec(ctx, `
 				DELETE FROM derived.entry_performance
 				WHERE calcutta_evaluation_run_id = $1::uuid
 			`, r.CalcuttaEvaluationRun); err != nil {

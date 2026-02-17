@@ -42,11 +42,6 @@ func (s *Service) exportArtifacts(ctx context.Context, simulationRunID, runKey, 
 		return fmt.Errorf("export_entry_performance_failed: %w", err)
 	}
 
-	outcomesPath := filepath.Join(baseDir, "entry_simulation_outcomes.v1.jsonl")
-	if _, _, err := s.exportEntrySimulationOutcomesJSONL(ctx, calcuttaEvaluationRunID, outcomesPath); err != nil {
-		return fmt.Errorf("export_entry_simulation_outcomes_failed: %w", err)
-	}
-
 	return nil
 }
 
@@ -112,65 +107,3 @@ func (s *Service) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvalu
 	return artifactExportResult{ArtifactKind: "entry_performance_jsonl", SchemaVersion: "v1", StorageURI: u, RowCount: count}, true, nil
 }
 
-func (s *Service) exportEntrySimulationOutcomesJSONL(ctx context.Context, calcuttaEvaluationRunID, outPath string) (artifactExportResult, bool, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT
-			eo.entry_name,
-			eo.sim_id::int,
-			COALESCE(eo.points_scored, 0.0)::double precision,
-			COALESCE(eo.payout_cents, 0)::int,
-			COALESCE(eo.rank, 0)::int
-		FROM derived.entry_simulation_outcomes eo
-		WHERE eo.calcutta_evaluation_run_id = $1::uuid
-			AND eo.deleted_at IS NULL
-		ORDER BY eo.entry_name ASC, eo.sim_id ASC
-	`, calcuttaEvaluationRunID)
-	if err != nil {
-		return artifactExportResult{}, false, err
-	}
-	defer rows.Close()
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return artifactExportResult{}, false, err
-	}
-	defer func() { _ = f.Close() }()
-
-	bw := bufio.NewWriter(f)
-	defer func() { _ = bw.Flush() }()
-
-	count := 0
-	for rows.Next() {
-		var entryName string
-		var simID, payoutCents, rank int
-		var pointsScored float64
-		if err := rows.Scan(&entryName, &simID, &pointsScored, &payoutCents, &rank); err != nil {
-			return artifactExportResult{}, false, err
-		}
-		b, err := json.Marshal(map[string]any{
-			"entry_name":    entryName,
-			"sim_id":        simID,
-			"points_scored": pointsScored,
-			"payout_cents":  payoutCents,
-			"rank":          rank,
-		})
-		if err != nil {
-			return artifactExportResult{}, false, err
-		}
-		if _, err := bw.Write(append(b, '\n')); err != nil {
-			return artifactExportResult{}, false, err
-		}
-		count++
-	}
-	if err := rows.Err(); err != nil {
-		return artifactExportResult{}, false, err
-	}
-
-	if count == 0 {
-		return artifactExportResult{}, false, nil
-	}
-
-	abs, _ := filepath.Abs(outPath)
-	u := (&url.URL{Scheme: "file", Path: abs}).String()
-	return artifactExportResult{ArtifactKind: "entry_simulation_outcomes_jsonl", SchemaVersion: "v1", StorageURI: u, RowCount: count}, true, nil
-}

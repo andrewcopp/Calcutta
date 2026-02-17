@@ -65,6 +65,10 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
+      - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
+      - ARTIFACTS_DIR=${ARTIFACTS_DIR}
+      - DEFAULT_ESTIMATED_PARTICIPANTS=${DEFAULT_ESTIMATED_PARTICIPANTS}
     depends_on:
       db:
         condition: service_healthy

@@ -5,7 +5,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from moneyball.models import feature_engineering
 from moneyball.models.analytical_tournament_value import (
     compute_analytical_tournament_values,
 )
@@ -13,7 +12,6 @@ from moneyball.models.analytical_tournament_value import (
 FEATURE_SETS = [
     "basic",
     "expanded",
-    "enhanced",
     "optimal",
     "optimal_v2",
     "optimal_v3",
@@ -92,61 +90,6 @@ def _prepare_features_set(
     fs = str(feature_set)
     if fs not in FEATURE_SETS:
         raise ValueError(f"unknown feature_set: {fs}")
-
-    if fs == "enhanced":
-        required = [
-            "seed",
-            "region",
-            "kenpom_net",
-            "kenpom_o",
-            "kenpom_d",
-            "kenpom_adj_t",
-        ]
-        missing = [c for c in required if c not in df.columns]
-        if missing:
-            raise ValueError(f"team_dataset missing columns: {missing}")
-
-        base = df.copy()
-        base = feature_engineering.add_all_enhanced_features(base)
-
-        core_features = [
-            "seed",
-            "kenpom_net",
-            "kenpom_o",
-            "kenpom_d",
-            "kenpom_adj_t",
-        ]
-        enhanced_features = (
-            feature_engineering.get_enhanced_feature_columns()
-        )
-
-        last_year_features = [
-            "has_last_year",
-            "wins_last_year",
-            "byes_last_year",
-            "progress_last_year",
-            "points_last_year",
-            "total_bid_amount_last_year",
-            "team_share_of_pool_last_year",
-            "points_per_dollar_last_year",
-            "bid_per_point_last_year",
-            "expected_progress_last_year",
-            "expected_points_last_year",
-            "expected_points_per_dollar_last_year",
-            "progress_ratio_last_year",
-            "progress_residual_last_year",
-            "roi_ratio_last_year",
-        ]
-
-        all_features = core_features + enhanced_features + last_year_features
-        available = [c for c in all_features if c in base.columns]
-        base = base[available + ["region"]].copy()
-
-        for c in available:
-            base[c] = pd.to_numeric(base[c], errors="coerce").fillna(0.0)
-
-        X = pd.get_dummies(base, columns=["region"], dummy_na=True)
-        return X
 
     if fs == "basic":
         required = ["seed", "region", "kenpom_net"]

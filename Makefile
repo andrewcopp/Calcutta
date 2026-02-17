@@ -5,13 +5,13 @@ DOCKER_PROJECT ?= calcutta
 DC = docker compose -p $(DOCKER_PROJECT)
 DC_PROD = docker compose -f docker-compose.local-prod.yml -p $(DOCKER_PROJECT)
 
-.PHONY: env-init bootstrap dev dev-up dev-down up-d logs ps stats
+.PHONY: env-init bootstrap dev up-d logs ps stats
 .PHONY: prod-up prod-down prod-reset prod-ops-migrate
 .PHONY: up down reset ops-migrate backend-test sqlc-generate
 .PHONY: db-shell db-query db query query-file query-csv
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
-.PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test curl
+.PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test
 .PHONY: register-models create-admin import-bundles seed-simulations dry-run
 
 env-init:
@@ -23,11 +23,7 @@ env-init:
 		perl -pi -e 's/^SMTP_HOST=.*/SMTP_HOST=localhost/' .env.local; \
 	fi
 
-dev-up: up-d
-
-dev-down: down
-
-dev: dev-up ops-migrate
+dev: up-d ops-migrate
 
 bootstrap: env-init dev
 
@@ -118,10 +114,6 @@ api-test:
 		curl -s -X $$METHOD -H "Content-Type: application/json" -d '$(DATA)' http://localhost:8080$(ENDPOINT) | jq . || \
 		curl -s -X $$METHOD -H "Content-Type: application/json" -d '$(DATA)' http://localhost:8080$(ENDPOINT); \
 	fi
-
-curl:
-	@if [ -z "$(URL)" ]; then echo "Usage: make curl URL=\"http://localhost:8080/api/health\""; exit 1; fi
-	@curl -s $(URL) | jq . || curl -s $(URL)
 
 # Database access (via docker exec - works regardless of host psql)
 db-shell:

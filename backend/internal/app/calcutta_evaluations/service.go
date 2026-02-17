@@ -385,10 +385,6 @@ func (s *Service) calculateAndWriteCalcuttaEvaluationWithSimulations(
 		return 0, 0, err
 	}
 
-	if err := s.deleteSimulationOutcomes(ctx, runID, calcuttaEvaluationRunID); err != nil {
-		return 0, 0, fmt.Errorf("failed to clear simulation outcomes: %w", err)
-	}
-
 	performance := calculatePerformanceMetrics(allResults)
 	if err := s.writePerformanceMetrics(ctx, runID, calcuttaEvaluationRunID, performance); err != nil {
 		return 0, 0, fmt.Errorf("failed to write performance metrics: %w", err)

@@ -25,6 +25,11 @@ export const userService = {
   getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
-    return JSON.parse(userStr);
+    try {
+      return JSON.parse(userStr) as User;
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
   },
 };

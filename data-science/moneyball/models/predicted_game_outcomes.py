@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
@@ -136,59 +135,3 @@ def predict_game_outcomes(
         ascending=[True, True, True, False],
     ).reset_index(drop=True)
     return df
-
-
-def predict_game_outcomes_from_snapshot(
-    *,
-    snapshot_dir: Path,
-    calcutta_key: Optional[str],
-    kenpom_scale: float,
-    n_sims: int,
-    seed: int,
-) -> pd.DataFrame:
-    games_path = snapshot_dir / "games.parquet"
-    teams_path = snapshot_dir / "teams.parquet"
-    if not games_path.exists():
-        raise FileNotFoundError(f"missing required file: {games_path}")
-    if not teams_path.exists():
-        raise FileNotFoundError(f"missing required file: {teams_path}")
-
-    games = pd.read_parquet(games_path)
-    teams = pd.read_parquet(teams_path)
-
-    return predict_game_outcomes(
-        games=games,
-        teams=teams,
-        calcutta_key=calcutta_key,
-        kenpom_scale=kenpom_scale,
-        n_sims=n_sims,
-        seed=seed,
-    )
-
-
-def predict_game_outcomes_from_teams_df(
-    *,
-    teams_df: pd.DataFrame,
-    kenpom_scale: float = 10.0,
-    n_sims: int = 5000,
-    seed: int = 42,
-) -> pd.DataFrame:
-    """
-    Generate ALL theoretical matchup predictions for tournament.
-    
-    Creates predictions for every possible team pairing across all rounds.
-    For a 68-team field, this generates all possible matchups accounting
-    for First Four games.
-    
-    Args:
-        teams_df: DataFrame with all teams (68 for NCAA tournament)
-        kenpom_scale: KenPom scaling factor
-        n_sims: Unused (kept for API compatibility)
-        seed: Unused (kept for API compatibility)
-        
-    Returns:
-        DataFrame with all theoretical matchup predictions
-    """
-    from moneyball.models.all_matchups import generate_all_theoretical_matchups
-    
-    return generate_all_theoretical_matchups(teams_df, kenpom_scale)

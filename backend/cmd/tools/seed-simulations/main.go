@@ -101,6 +101,7 @@ func getSeasons(ctx context.Context, pool *pgxpool.Pool) ([]int, error) {
 		SELECT s.year
 		FROM core.tournaments t
 		JOIN core.seasons s ON s.id = t.season_id
+		WHERE t.deleted_at IS NULL AND s.deleted_at IS NULL
 		ORDER BY s.year
 	`)
 	if err != nil {

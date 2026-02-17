@@ -23,8 +23,9 @@ export const AuthForm: React.FC = () => {
       } else {
         await signup(email, firstName, lastName, password);
       }
-    } catch (err) {
-      setError('Authentication failed. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Authentication failed. Please try again.';
+      setError(message);
     }
   };
 

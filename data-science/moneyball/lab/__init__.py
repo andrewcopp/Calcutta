@@ -18,35 +18,3 @@ For production portfolio optimization, use the Go DP allocator in
 backend/internal/app/recommended_entry_bids/allocator.go which provides
 exact optimal solutions.
 """
-
-from moneyball.lab.models import (
-    InvestmentModel,
-    Entry,
-    Evaluation,
-    create_investment_model,
-    get_investment_model,
-    create_entry,
-    get_entry,
-    create_evaluation,
-)
-from moneyball.lab.queries import (
-    get_model_leaderboard,
-    get_entry_evaluations,
-    compare_models,
-)
-__all__ = [
-    # Models
-    "InvestmentModel",
-    "Entry",
-    "Evaluation",
-    # Writers
-    "create_investment_model",
-    "get_investment_model",
-    "create_entry",
-    "get_entry",
-    "create_evaluation",
-    # Queries
-    "get_model_leaderboard",
-    "get_entry_evaluations",
-    "compare_models",
-]

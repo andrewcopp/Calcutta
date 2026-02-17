@@ -194,11 +194,15 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 			if excludedEntryName != nil {
 				params.ExcludedEntryName = *excludedEntryName
 			}
-			paramsJSON, _ := json.Marshal(params)
+			paramsJSON, err := json.Marshal(params)
+			if err != nil {
+				log.Printf("lab_pipeline_worker marshal_params error=%v", err)
+				continue
+			}
 
 			// Enqueue prediction job
 			var jobID string
-			err := w.pool.QueryRow(ctx, `
+			err = w.pool.QueryRow(ctx, `
 				INSERT INTO derived.run_jobs (run_kind, run_id, run_key, params_json, status)
 				VALUES ('lab_predictions', uuid_generate_v4(), $1::uuid, $2::jsonb, 'queued')
 				RETURNING run_id::text

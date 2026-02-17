@@ -38,7 +38,6 @@ make sqlc-generate      # Regenerate SQL type-safe wrappers from queries
 ```bash
 source data-science/.venv/bin/activate
 python scripts/ingest_snapshot.py --base-url http://localhost:8080 ...
-python scripts/derive_canonical.py ./out/[snapshot]
 ```
 
 ### Developer Productivity
