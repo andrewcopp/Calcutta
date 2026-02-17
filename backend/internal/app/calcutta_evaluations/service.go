@@ -28,7 +28,7 @@ func (s *Service) CalculateSimulatedCalcuttaForEvaluationRun(
 	excludedEntryName string,
 	tournamentSimulationBatchID *string,
 ) (string, error) {
-	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID, nil)
+	return s.calculateSimulatedCalcuttaInternal(ctx, calcuttaID, runID, excludedEntryName, tournamentSimulationBatchID)
 }
 
 func (s *Service) calculateSimulatedCalcuttaInternal(
@@ -37,7 +37,6 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	runID string,
 	excludedEntryName string,
 	tournamentSimulationBatchIDOverride *string,
-	strategyGenerationRunID *string,
 ) (string, error) {
 	cc, err := s.getCalcuttaContext(ctx, calcuttaID)
 	if err != nil {
@@ -72,7 +71,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 		}
 	}
 
-	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runID, excludedEntryName, strategyGenerationRunID)
+	calcuttaSnapshotID, err := s.createCalcuttaSnapshot(ctx, cc.CalcuttaID, cc.TournamentID, runID, excludedEntryName)
 	if err != nil {
 		return "", fmt.Errorf("failed to create calcutta snapshot: %w", err)
 	}
@@ -89,7 +88,7 @@ func (s *Service) calculateSimulatedCalcuttaInternal(
 	}
 
 	// Get all entries and their bids
-	entries, err := s.getEntries(ctx, cc, runID, excludedEntryName, strategyGenerationRunID)
+	entries, err := s.getEntries(ctx, cc, excludedEntryName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get entries: %w", err)
 	}

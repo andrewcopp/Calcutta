@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/sync/errgroup"
 )
@@ -148,7 +147,7 @@ func (s *Service) attachSimulationBatchToSimulatedTournaments(ctx context.Contex
 	return err
 }
 
-func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string, strategyGenerationRunID *string) (string, error) {
+func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string, coreTournamentID string, runID string, excludedEntryName string) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -244,45 +243,6 @@ func (s *Service) createCalcuttaSnapshot(ctx context.Context, calcuttaID string,
 		}
 	}
 
-	{
-		var snapshotEntryID string
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO core.calcutta_snapshot_entries (calcutta_snapshot_id, entry_id, display_name, is_synthetic)
-			VALUES ($1, NULL, 'Our Strategy', true)
-			RETURNING id
-		`, snapshotID).Scan(&snapshotEntryID); err != nil {
-			return "", err
-		}
-
-		if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
-			_, err := tx.Exec(ctx, `
-				INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-				SELECT $1, (bid->>'team_id')::uuid, (bid->>'bid_points')::int
-				FROM derived.optimized_entries oe,
-				     jsonb_array_elements(oe.bids_json) AS bid
-				WHERE oe.id = $2::uuid
-					AND oe.deleted_at IS NULL
-			`, snapshotEntryID, *strategyGenerationRunID)
-			if err != nil {
-				return "", err
-			}
-		} else {
-			if _, parseErr := uuid.Parse(runID); parseErr == nil {
-				_, err := tx.Exec(ctx, `
-					INSERT INTO core.calcutta_snapshot_entry_teams (calcutta_snapshot_entry_id, team_id, bid_points)
-					SELECT $1, (bid->>'team_id')::uuid, (bid->>'bid_points')::int
-					FROM derived.optimized_entries oe,
-					     jsonb_array_elements(oe.bids_json) AS bid
-					WHERE oe.run_key = $2::text
-						AND oe.deleted_at IS NULL
-				`, snapshotEntryID, runID)
-				if err != nil {
-					return "", err
-				}
-			}
-		}
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return "", err
 	}
@@ -301,7 +261,7 @@ func (s *Service) createCalcuttaEvaluationRun(ctx context.Context, tournamentSim
 	return evalID, nil
 }
 
-func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID string, excludedEntry string, strategyGenerationRunID *string) (map[string]*Entry, error) {
+func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, excludedEntry string) (map[string]*Entry, error) {
 	// Use canonical core tables for entries/bids.
 	query := `
 		SELECT
@@ -337,49 +297,6 @@ func (s *Service) getEntries(ctx context.Context, cc *calcuttaContext, runID str
 			}
 		}
 		entries[entryName].Teams[teamID] = bidPoints
-	}
-
-	// Add our simulated entry.
-	// Prefer using the optimized_entry_id when provided (Lab / deterministic entries).
-	var ourRows pgx.Rows
-	if strategyGenerationRunID != nil && *strategyGenerationRunID != "" {
-		ourRows, err = s.pool.Query(ctx, `
-			SELECT (bid->>'team_id')::uuid AS team_id, (bid->>'bid_points')::int AS bid_points
-			FROM derived.optimized_entries oe,
-			     jsonb_array_elements(oe.bids_json) AS bid
-			WHERE oe.id = $1::uuid
-				AND oe.deleted_at IS NULL
-		`, *strategyGenerationRunID)
-	} else {
-		ourRows, err = s.pool.Query(ctx, `
-			SELECT (bid->>'team_id')::uuid AS team_id, (bid->>'bid_points')::int AS bid_points
-			FROM derived.optimized_entries oe,
-			     jsonb_array_elements(oe.bids_json) AS bid
-			WHERE oe.run_key = $1::text
-				AND oe.deleted_at IS NULL
-		`, runID)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer ourRows.Close()
-
-	ourEntry := &Entry{
-		Name:  "Our Strategy",
-		Teams: make(map[string]int),
-	}
-
-	for ourRows.Next() {
-		var teamID string
-		var bidPoints int
-		if err := ourRows.Scan(&teamID, &bidPoints); err != nil {
-			return nil, err
-		}
-		ourEntry.Teams[teamID] = bidPoints
-	}
-
-	if len(ourEntry.Teams) > 0 {
-		entries["Our Strategy"] = ourEntry
 	}
 
 	return entries, nil
