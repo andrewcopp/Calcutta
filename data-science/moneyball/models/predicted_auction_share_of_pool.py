@@ -11,7 +11,6 @@ from moneyball.models.analytical_tournament_value import (
 
 FEATURE_SETS = [
     "basic",
-    "expanded",
     "optimal",
     "optimal_v2",
     "optimal_v3",
@@ -300,10 +299,6 @@ def _prepare_features_set(
             "kenpom_rank_within_seed_norm"
         ].fillna(0.0)
         base = base.drop(columns=["kenpom_rank_within_seed"])
-
-    if fs == "expanded":
-        base["seed_sq"] = base["seed"] ** 2
-        base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
 
     if fs in (
         "optimal",
