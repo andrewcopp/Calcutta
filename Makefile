@@ -12,7 +12,7 @@ DC_PROD = docker compose -f docker-compose.local-prod.yml -p $(DOCKER_PROJECT)
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test
-.PHONY: register-models create-admin import-bundles seed-simulations dry-run
+.PHONY: register-models import-bundles seed-simulations dry-run
 
 env-init:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -183,11 +183,6 @@ register-models:
 		DB_HOST=localhost DB_USER=$${DB_USER:-calcutta} DB_PASSWORD=$${DB_PASSWORD:-calcutta} \
 		DB_NAME=$${DB_NAME:-calcutta} DB_PORT=$${DB_PORT:-5432} \
 		python scripts/register_investment_models.py
-
-# Seeding and admin tools
-create-admin:
-	@if [ -z "$(EMAIL)" ]; then echo "Usage: make create-admin EMAIL=\"admin@example.com\" [NAME=\"Admin User\"]"; exit 1; fi
-	@$(ENV) go run ./backend/cmd/tools/create-admin -email="$(EMAIL)" $(if $(NAME),-name="$(NAME)",)
 
 import-bundles:
 	@$(ENV) go run ./backend/cmd/tools/import-bundles -in=./backend/exports/bundles -dry-run=false

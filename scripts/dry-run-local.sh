@@ -46,7 +46,7 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 # Step 1: Create a new environment
-echo -e "${YELLOW}[1/8] Creating new environment (fresh containers + DB)${NC}"
+echo -e "${YELLOW}[1/7] Creating new environment (fresh containers + DB)${NC}"
 echo "Stopping existing containers and removing volumes..."
 make prod-reset
 
@@ -65,13 +65,13 @@ echo -e "${GREEN}✓ Environment created${NC}"
 echo ""
 
 # Step 2: Run migrations
-echo -e "${YELLOW}[2/8] Running database migrations${NC}"
+echo -e "${YELLOW}[2/7] Running database migrations${NC}"
 make prod-ops-migrate
 echo -e "${GREEN}✓ Migrations complete${NC}"
 echo ""
 
 # Step 3: Seed the database
-echo -e "${YELLOW}[3/8] Seeding database with historical data${NC}"
+echo -e "${YELLOW}[3/7] Seeding database with historical data${NC}"
 
 if [ ! -d "backend/exports/bundles" ]; then
   echo -e "${RED}ERROR: Bundle directory not found at backend/exports/bundles${NC}"
@@ -91,17 +91,8 @@ cd ..
 echo -e "${GREEN}✓ Database seeded${NC}"
 echo ""
 
-# Step 4: Create admin user
-echo -e "${YELLOW}[4/8] Creating admin user${NC}"
-
-ADMIN_EMAIL="admin@dryrun.local"
-make create-admin EMAIL="$ADMIN_EMAIL" NAME="Dry Run Admin"
-
-echo -e "${GREEN}✓ Admin user created: $ADMIN_EMAIL${NC}"
-echo ""
-
-# Step 5: Verify environment
-echo -e "${YELLOW}[5/8] Verifying environment health${NC}"
+# Step 4: Verify environment
+echo -e "${YELLOW}[4/7] Verifying environment health${NC}"
 
 echo "Backend health check..."
 HEALTH_RESPONSE=$(curl -s http://localhost:8080/api/health || echo "FAILED")
@@ -132,8 +123,8 @@ fi
 
 echo ""
 
-# Step 6: Manual testing instructions
-echo -e "${YELLOW}[6/8] Manual testing (interactive)${NC}"
+# Step 5: Manual testing instructions
+echo -e "${YELLOW}[5/7] Manual testing (interactive)${NC}"
 echo ""
 echo "The environment is now ready for manual testing."
 echo ""
@@ -170,14 +161,14 @@ read -r
 
 echo ""
 
-# Step 7: Teardown
-echo -e "${YELLOW}[7/8] Tearing down environment${NC}"
+# Step 6: Teardown
+echo -e "${YELLOW}[6/7] Tearing down environment${NC}"
 echo "Stopping containers..."
 make prod-down
 echo -e "${GREEN}✓ Containers stopped${NC}"
 echo ""
 
-# Step 8: Summary
+# Step 7: Summary
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Dry Run Complete${NC}"
 echo -e "${BLUE}========================================${NC}"
@@ -185,7 +176,6 @@ echo ""
 echo "Summary:"
 echo "  - Environment created and torn down successfully"
 echo "  - Database seeded with $SCHOOLS_COUNT schools, $TOURNAMENTS_COUNT tournaments, $CALCUTTAS_COUNT calcuttas"
-echo "  - Admin user created: $ADMIN_EMAIL"
 echo ""
 echo "Next steps:"
 echo "  1. Review any issues encountered during testing"

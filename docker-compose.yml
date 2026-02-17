@@ -36,12 +36,6 @@ services:
       - INVITE_BASE_URL=${INVITE_BASE_URL}
       - INVITE_RESEND_MIN_SECONDS=${INVITE_RESEND_MIN_SECONDS}
       - PYTHON_BIN=python3
-      - PYTHON_GENERATE_LAB_ENTRIES=/data-science/scripts/generate_lab_entries.py
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
       - AUTH_MODE=${AUTH_MODE:-legacy}
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
@@ -60,19 +54,13 @@ services:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
       - DOTENV_ENABLED=false
       - PYTHON_BIN=python3
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
       - ARTIFACTS_DIR=${ARTIFACTS_DIR}
-      - DEFAULT_ESTIMATED_PARTICIPANTS=${DEFAULT_ESTIMATED_PARTICIPANTS}
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/workers -lab-pipeline-worker=true"
+    command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt psycopg2-binary && go run ./cmd/workers -bundle-import-worker=false -lab-pipeline-worker=true"
 
   db:
     image: postgres:16-alpine
