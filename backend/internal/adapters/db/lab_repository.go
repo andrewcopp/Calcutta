@@ -745,7 +745,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*models
 
 	var rows pgx.Rows
 
-	if profile.EntryName == "Our Strategy" {
+	if profile.EntryName == models.LabStrategyEntryName {
 		// Get bids from lab.entries.bids_json
 		query := `
 			WITH entry_bids AS (

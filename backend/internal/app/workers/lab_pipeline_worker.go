@@ -19,6 +19,7 @@ import (
 
 	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 const (
@@ -726,10 +727,10 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.95, "evaluation", "Saving results")
 
-	// Extract "Our Strategy" rank from results
+	// Extract lab strategy rank from results
 	var ourRank int
 	for _, entry := range result.AllEntryResults {
-		if entry.EntryName == "Our Strategy" {
+		if entry.EntryName == models.LabStrategyEntryName {
 			ourRank = entry.Rank
 			break
 		}

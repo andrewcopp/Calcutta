@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+// LabStrategyEntryName is the canonical display name for the lab-generated entry
+// when it participates in simulated calcutta evaluations.
+const LabStrategyEntryName = "Our Strategy"
+
 // InvestmentModel represents a lab.investment_models row.
 type InvestmentModel struct {
 	ID           string          `json:"id"`
