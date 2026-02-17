@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -244,7 +245,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 		FOR UPDATE
 	`, userID).Scan(&email, &passwordHash, &lastInviteSentAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return "", "", &apperrors.NotFoundError{Resource: "user", ID: userID}
 		}
 		return "", "", err

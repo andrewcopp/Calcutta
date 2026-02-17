@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -161,7 +162,7 @@ func (s *Server) isUserActive(ctx context.Context, userID string) (bool, error) 
 		WHERE id = $1 AND deleted_at IS NULL
 	`, userID).Scan(&status)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
 		return false, err

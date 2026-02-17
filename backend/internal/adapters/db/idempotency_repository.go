@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,7 +34,7 @@ func (r *IdempotencyRepository) Get(ctx context.Context, key, userID string) (*I
 		key, userID,
 	).Scan(&rec.Key, &rec.UserID, &rec.ResponseStatus, &rec.ResponseBody)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err

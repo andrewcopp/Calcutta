@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
 	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httputil"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -25,18 +25,6 @@ type Handler struct {
 // NewHandlerWithAuthUserID creates a new lab handler with auth user ID function.
 func NewHandlerWithAuthUserID(a *app.App, authUserID func(context.Context) string) *Handler {
 	return &Handler{app: a, authUserID: authUserID}
-}
-
-func getQueryInt(r *http.Request, name string, defaultValue int) int {
-	v := strings.TrimSpace(r.URL.Query().Get(name))
-	if v == "" {
-		return defaultValue
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return defaultValue
-	}
-	return n
 }
 
 // HandleListModels handles GET /api/lab/models
@@ -54,8 +42,8 @@ func (h *Handler) HandleListModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := models.LabPagination{
-		Limit:  getQueryInt(r, "limit", 50),
-		Offset: getQueryInt(r, "offset", 0),
+		Limit:  httputil.GetQueryInt(r, "limit", 50),
+		Offset: httputil.GetQueryInt(r, "offset", 0),
 	}
 
 	items, err := h.app.Lab.ListInvestmentModels(r.Context(), filter, page)
@@ -132,8 +120,8 @@ func (h *Handler) HandleListEntries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := models.LabPagination{
-		Limit:  getQueryInt(r, "limit", 50),
-		Offset: getQueryInt(r, "offset", 0),
+		Limit:  httputil.GetQueryInt(r, "limit", 50),
+		Offset: httputil.GetQueryInt(r, "offset", 0),
 	}
 
 	items, err := h.app.Lab.ListEntries(r.Context(), filter, page)
@@ -230,8 +218,8 @@ func (h *Handler) HandleListEvaluations(w http.ResponseWriter, r *http.Request) 
 	}
 
 	page := models.LabPagination{
-		Limit:  getQueryInt(r, "limit", 50),
-		Offset: getQueryInt(r, "offset", 0),
+		Limit:  httputil.GetQueryInt(r, "limit", 50),
+		Offset: httputil.GetQueryInt(r, "offset", 0),
 	}
 
 	items, err := h.app.Lab.ListEvaluations(r.Context(), filter, page)

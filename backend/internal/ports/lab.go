@@ -24,13 +24,10 @@ type LabPipelineRepository interface {
 	CreatePipelineRun(run *models.LabPipelineRun) (*models.LabPipelineRun, error)
 	GetPipelineRun(id string) (*models.LabPipelineRun, error)
 	UpdatePipelineRunStatus(id string, status string, errorMessage *string) error
-	ListPipelineRuns(modelID *string, status *string, limit int) ([]models.LabPipelineRun, error)
 	GetActivePipelineRun(modelID string) (*models.LabPipelineRun, error)
 
 	// Pipeline calcutta run operations
 	CreatePipelineCalcuttaRuns(pipelineRunID string, calcuttaIDs []string) error
-	GetPipelineCalcuttaRuns(pipelineRunID string) ([]models.LabPipelineCalcuttaRun, error)
-	UpdatePipelineCalcuttaRun(id string, updates map[string]interface{}) error
 
 	// Progress queries
 	GetPipelineProgress(pipelineRunID string) (*models.LabPipelineProgressResponse, error)

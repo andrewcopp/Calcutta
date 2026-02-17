@@ -49,7 +49,7 @@ def prepare_bracket_graph(
     ]
     missing = [c for c in required if c not in games.columns]
     if missing:
-        raise ValueError(f"games.parquet missing columns: {missing}")
+        raise ValueError(f"games DataFrame missing columns: {missing}")
 
     g = games.copy()
     g["sort_order"] = (

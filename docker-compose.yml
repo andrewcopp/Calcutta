@@ -110,7 +110,6 @@ services:
       db:
         condition: service_healthy
     command: sh -c "go run ./cmd/migrate -up"
-    restart: on-failure
 
 volumes:
   postgres_data:

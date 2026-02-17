@@ -1,6 +1,6 @@
 # Data Science
 
-Small Python utilities used to ingest/export snapshots and generate canonical datasets.
+Python utilities for ML model training, market prediction, entry optimization, and evaluation.
 
 ## Setup
 
@@ -12,21 +12,17 @@ pip install -r requirements.txt
 
 ## Scripts
 
-- `ingest_snapshot.py`
-  - Ingest a snapshot export from the backend admin tools.
-- `evaluate_harness.py`
-  - Run leakage-safe baseline evaluation across snapshots.
-- `backtest_scaffold.py`
-  - Build a feasible portfolio under auction constraints and compute realized + expected payout/ROI.
-- `calibrate_kenpom_scale.py`
-  - Fit a global KenPom win probability scale from historical outcomes.
-- `investment_report.py`
-  - Generate per-snapshot investment reports (portfolio + realized/expected evaluation) with staged artifacts and caching.
-  - See `calcutta_ds/investment_report/README.md` for details on outputs and CLI flags.
+- `ingest_snapshot.py` — Ingest a snapshot export from the backend admin tools.
+- `register_investment_models.py` — Register investment models in `lab.investment_models`.
+- `generate_lab_predictions.py` — Generate market predictions for a model across historical calcuttas.
+- `generate_oracle_predictions.py` — Generate oracle predictions using actual historical market shares.
+- `generate_naive_ev_predictions.py` — Generate naive expected-value predictions.
+- `generate_lab_entries.py` — Generate optimized entries from predictions.
+- `optimize_lab_entries.py` — Run portfolio optimization for lab entries.
 
 ## How to run
 
-### 1) Export + ingest a snapshot (Option A layout)
+### 1) Export + ingest a snapshot
 
 - Generate an API key in the admin console.
 - Set it as:
@@ -38,7 +34,7 @@ export CALCUTTA_API_KEY="..."
 Then ingest:
 
 ```bash
-python ingest_snapshot.py \
+python scripts/ingest_snapshot.py \
   --base-url http://localhost:8080 \
   --tournament-id <TOURNAMENT_ID> \
   --calcutta-id <CALCUTTA_ID> \
@@ -47,46 +43,20 @@ python ingest_snapshot.py \
   --update-latest
 ```
 
-The snapshot will be written to `./out/<snapshot>/` and `./out/LATEST` will contain the snapshot directory name.
-
-### 2) Evaluate baselines across snapshots
+### 2) Run the lab pipeline
 
 ```bash
-python evaluate_harness.py ./out --out ./out/eval_report.json
-```
+# Register models
+python scripts/register_investment_models.py
 
-### 3) Backtest scaffold (realized payout/ROI)
+# Generate predictions for a model
+python scripts/generate_lab_predictions.py --model-name ridge-v1
 
-```bash
-SNAP=./out/$(cat ./out/LATEST)
-python backtest_scaffold.py "$SNAP" --out "$SNAP/derived/backtest.json"
-```
+# Generate entries
+python scripts/generate_lab_entries.py --model-name ridge-v1
 
-### 4) Expected payout/ROI (Monte Carlo)
-
-```bash
-SNAP=./out/$(cat ./out/LATEST)
-python backtest_scaffold.py "$SNAP" \
-  --expected-sims 1000 \
-  --expected-seed 1 \
-  --out "$SNAP/derived/backtest_with_expected.json"
-```
-
-### 5) Calibrate KenPom scale (recommended) + use it
-
-```bash
-python calibrate_kenpom_scale.py ./out --out ./out/kenpom_scale.json
-```
-
-Then:
-
-```bash
-SNAP=./out/$(cat ./out/LATEST)
-python backtest_scaffold.py "$SNAP" \
-  --expected-sims 1000 \
-  --expected-seed 1 \
-  --kenpom-scale-file ./out/kenpom_scale.json \
-  --out "$SNAP/derived/backtest_with_expected.json"
+# Optimize entries
+python scripts/optimize_lab_entries.py --model-name ridge-v1
 ```
 
 ## Notes

@@ -21,8 +21,7 @@ func New(pool *pgxpool.Pool, artifactsDir string) *Service {
 	}
 }
 
-// ExportArtifacts exports simulation artifacts (entry performance and simulation outcomes)
-// to JSONL files and records them in run_artifacts.
+// ExportArtifacts exports simulation artifacts (entry performance) to JSONL files.
 func (s *Service) ExportArtifacts(ctx context.Context, simulationRunID, runKey, calcuttaEvaluationRunID string) error {
 	return s.exportArtifacts(ctx, simulationRunID, runKey, calcuttaEvaluationRunID)
 }

@@ -19,6 +19,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -35,7 +36,7 @@ from moneyball.db.lab_helpers import (
 )
 
 
-def generate_market_predictions(model_name: str, year: int, excluded_entry_name: str = "Andrew Copp"):
+def generate_market_predictions(model_name: str, year: int, excluded_entry_name: str | None = None):
     """
     Generate market predictions for a model against a specific year.
 
@@ -165,7 +166,7 @@ def main():
     parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
     parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
     parser.add_argument("--calcutta-id", help="Process only this specific calcutta (for pipeline worker)")
-    parser.add_argument("--excluded-entry", default="Andrew Copp", help="Entry name to exclude from training")
+    parser.add_argument("--excluded-entry", default=os.environ.get("EXCLUDED_ENTRY_NAME"), help="Entry name to exclude from training (default: $EXCLUDED_ENTRY_NAME)")
     parser.add_argument("--years", type=str, help="Comma-separated years to process (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
     parser.add_argument("--json-output", action="store_true", help="Output machine-readable JSON result")

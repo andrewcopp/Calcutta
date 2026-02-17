@@ -2,6 +2,7 @@ package calcutta_evaluations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -35,7 +36,7 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, core
 		LIMIT 1
 	`, coreTournamentID).Scan(&batchID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false, nil
 		}
 		return "", false, err

@@ -19,6 +19,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -193,8 +194,8 @@ def main():
     )
     parser.add_argument(
         "--excluded-entry",
-        default="Andrew Copp",
-        help="Entry name to exclude from market (default: Andrew Copp)",
+        default=os.environ.get("EXCLUDED_ENTRY_NAME"),
+        help="Entry name to exclude from market (default: $EXCLUDED_ENTRY_NAME)",
     )
     parser.add_argument(
         "--years",

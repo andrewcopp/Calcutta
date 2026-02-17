@@ -20,7 +20,6 @@ export type EnrichedPrediction = {
   school_name: string;
   seed: number;
   region: string;
-  predicted_market_share: number;
   predicted_bid_points: number;
   expected_points: number;
   expected_roi: number;

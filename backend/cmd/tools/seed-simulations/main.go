@@ -7,7 +7,6 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/predicted_game_outcomes"
 	sim "github.com/andrewcopp/Calcutta/backend/internal/app/simulate_tournaments"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,33 +47,11 @@ func run() error {
 
 	log.Printf("Found %d seasons to seed", len(seasons))
 
-	// Step 1: Generate game outcome predictions for each season
-	goSvc := predicted_game_outcomes.New(pool)
-	var readySeasons []int
-	for _, season := range seasons {
-		log.Printf("Generating game outcome predictions for season %d...", season)
-		_, n, err := goSvc.GenerateAndWrite(ctx, predicted_game_outcomes.GenerateParams{
-			Season:       season,
-			KenPomScale:  11.0,
-			NSims:        10000,
-			Seed:         seed,
-			ModelVersion: "kenpom-v1-sigma11-go",
-		})
-		if err != nil {
-			log.Printf("  SKIP season %d: %v", season, err)
-			continue
-		}
-		if n == 0 {
-			log.Printf("  SKIP season %d: no KenPom stats (0 predictions generated)", season)
-			continue
-		}
-		log.Printf("  Generated %d game outcome predictions for season %d", n, season)
-		readySeasons = append(readySeasons, season)
-	}
-
-	// Step 2: Generate tournament simulations for ready seasons
+	// Generate tournament simulations for each season
+	// Note: Game outcome predictions must already exist (created via lab pipeline).
 	simSvc := sim.New(pool)
-	for _, season := range readySeasons {
+	var seededCount int
+	for _, season := range seasons {
 		log.Printf("Simulating tournaments for season %d (%d sims)...", season, nSims)
 		res, err := simSvc.Run(ctx, sim.RunParams{
 			Season:               season,
@@ -90,9 +67,10 @@ func run() error {
 		}
 		log.Printf("  Simulated season %d: tournament_id=%s batch_id=%s rows=%d (%s)",
 			season, res.CoreTournamentID, res.TournamentSimulationBatchID, res.RowsWritten, res.OverallDuration)
+		seededCount++
 	}
 
-	log.Printf("Done! %d of %d seasons seeded with game outcomes and simulations.", len(readySeasons), len(seasons))
+	log.Printf("Done! %d of %d seasons seeded with simulations.", seededCount, len(seasons))
 	return nil
 }
 

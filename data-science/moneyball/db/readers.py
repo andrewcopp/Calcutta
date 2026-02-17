@@ -1,8 +1,7 @@
 """
 Database readers for loading data from PostgreSQL.
 
-This module provides functions to read data from the analytics database,
-replacing parquet file dependencies with direct database queries.
+This module provides functions to read data from the analytics database.
 """
 from __future__ import annotations
 
@@ -12,37 +11,6 @@ from psycopg2.extras import RealDictCursor
 
 from moneyball.db.connection import get_db_connection
 from moneyball.utils import points
-
-
-def read_tournament(year: int) -> Optional[Dict[str, Any]]:
-    """
-    Read tournament metadata for a given year.
-
-    Args:
-        year: Tournament year (e.g., 2025)
-
-    Returns:
-        Dictionary with tournament metadata including id, season, created_at
-        Returns None if tournament not found
-    """
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT t.id, s.year AS season, t.created_at
-                FROM core.tournaments t
-                JOIN core.seasons s
-                  ON s.id = t.season_id
-                 AND s.deleted_at IS NULL
-                WHERE s.year = %s
-                  AND t.deleted_at IS NULL
-                ORDER BY t.created_at DESC
-                LIMIT 1
-                """,
-                (year,)
-            )
-            row = cur.fetchone()
-            return dict(row) if row else None
 
 
 def _read_latest_core_tournament_id_for_year(conn, year: int) -> Optional[str]:
@@ -254,35 +222,7 @@ def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
         return points.points_by_win_index_from_scoring_rules(df)
 
 
-def read_points_by_win_index_for_calcutta(
-    calcutta_id: str,
-) -> Dict[int, float]:
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT r.win_index, r.points_awarded
-                FROM core.calcutta_scoring_rules r
-                WHERE r.calcutta_id = %s AND r.deleted_at IS NULL
-                ORDER BY r.win_index ASC
-                """,
-                (calcutta_id,),
-            )
-            rows = cur.fetchall() or []
-
-        df = pd.DataFrame(rows)
-        return points.points_by_win_index_from_scoring_rules(df)
-
-
 def initialize_default_scoring_rules_for_year(year: int) -> Dict[int, float]:
     pbwi = read_points_by_win_index_for_year(year)
-    points.set_default_points_by_win_index(pbwi)
-    return pbwi
-
-
-def initialize_default_scoring_rules_for_calcutta(
-    calcutta_id: str,
-) -> Dict[int, float]:
-    pbwi = read_points_by_win_index_for_calcutta(calcutta_id)
     points.set_default_points_by_win_index(pbwi)
     return pbwi

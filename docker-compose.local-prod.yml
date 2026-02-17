@@ -18,7 +18,6 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
-      - NODE_ENV=${NODE_ENV}
       - DOTENV_ENABLED=false
     depends_on:
       db:
@@ -30,8 +29,11 @@ services:
       target: prod
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
-      - NODE_ENV=${NODE_ENV}
       - DOTENV_ENABLED=false
+      - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
+      - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
+      - DEFAULT_ESTIMATED_PARTICIPANTS=${DEFAULT_ESTIMATED_PARTICIPANTS}
+      - ARTIFACTS_DIR=${ARTIFACTS_DIR}
     depends_on:
       db:
         condition: service_healthy
@@ -73,7 +75,6 @@ services:
       db:
         condition: service_healthy
     command: ["/app/bin/migrate", "-up"]
-    restart: on-failure
 
 volumes:
   postgres_data:

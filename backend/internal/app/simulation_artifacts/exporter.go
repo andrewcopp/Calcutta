@@ -5,18 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 )
-
-type artifactExportResult struct {
-	ArtifactKind  string
-	SchemaVersion string
-	StorageURI    string
-	RowCount      int
-}
 
 func (s *Service) exportArtifacts(ctx context.Context, simulationRunID, runKey, calcuttaEvaluationRunID string) error {
 	if s == nil || s.pool == nil {
@@ -38,14 +30,14 @@ func (s *Service) exportArtifacts(ctx context.Context, simulationRunID, runKey, 
 	}
 
 	perfPath := filepath.Join(baseDir, "entry_performance.v1.jsonl")
-	if _, _, err := s.exportEntryPerformanceJSONL(ctx, calcuttaEvaluationRunID, perfPath); err != nil {
+	if _, err := s.exportEntryPerformanceJSONL(ctx, calcuttaEvaluationRunID, perfPath); err != nil {
 		return fmt.Errorf("export_entry_performance_failed: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Service) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvaluationRunID, outPath string) (artifactExportResult, bool, error) {
+func (s *Service) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvaluationRunID, outPath string) (bool, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT
 			ep.entry_name,
@@ -59,13 +51,13 @@ func (s *Service) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvalu
 		ORDER BY ep.entry_name ASC
 	`, calcuttaEvaluationRunID)
 	if err != nil {
-		return artifactExportResult{}, false, err
+		return false, err
 	}
 	defer rows.Close()
 
 	f, err := os.Create(outPath)
 	if err != nil {
-		return artifactExportResult{}, false, err
+		return false, err
 	}
 	defer func() { _ = f.Close() }()
 
@@ -77,7 +69,7 @@ func (s *Service) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvalu
 		var entryName string
 		var mean, median, pTop1, pInMoney float64
 		if err := rows.Scan(&entryName, &mean, &median, &pTop1, &pInMoney); err != nil {
-			return artifactExportResult{}, false, err
+			return false, err
 		}
 		b, err := json.Marshal(map[string]any{
 			"entry_name":               entryName,
@@ -87,23 +79,21 @@ func (s *Service) exportEntryPerformanceJSONL(ctx context.Context, calcuttaEvalu
 			"p_in_money":               pInMoney,
 		})
 		if err != nil {
-			return artifactExportResult{}, false, err
+			return false, err
 		}
 		if _, err := bw.Write(append(b, '\n')); err != nil {
-			return artifactExportResult{}, false, err
+			return false, err
 		}
 		count++
 	}
 	if err := rows.Err(); err != nil {
-		return artifactExportResult{}, false, err
+		return false, err
 	}
 
 	if count == 0 {
-		return artifactExportResult{}, false, nil
+		return false, nil
 	}
 
-	abs, _ := filepath.Abs(outPath)
-	u := (&url.URL{Scheme: "file", Path: abs}).String()
-	return artifactExportResult{ArtifactKind: "entry_performance_jsonl", SchemaVersion: "v1", StorageURI: u, RowCount: count}, true, nil
+	return true, nil
 }
 

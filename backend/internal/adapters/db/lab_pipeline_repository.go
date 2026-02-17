@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -128,7 +129,7 @@ func (r *LabRepository) GetPipelineRun(id string) (*models.LabPipelineRun, error
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "pipeline_run", ID: id}
 	}
 	if err != nil {
@@ -171,81 +172,6 @@ func (r *LabRepository) UpdatePipelineRunStatus(id string, status string, errorM
 		return &apperrors.NotFoundError{Resource: "pipeline_run", ID: id}
 	}
 	return nil
-}
-
-// ListPipelineRuns returns pipeline runs, optionally filtered by model ID and status.
-func (r *LabRepository) ListPipelineRuns(modelID *string, status *string, limit int) ([]models.LabPipelineRun, error) {
-	ctx := context.Background()
-
-	query := `
-		SELECT
-			id::text,
-			investment_model_id::text,
-			target_calcutta_ids::text[],
-			budget_points,
-			optimizer_kind,
-			n_sims,
-			seed,
-			excluded_entry_name,
-			status,
-			started_at,
-			finished_at,
-			error_message,
-			created_at,
-			updated_at
-		FROM lab.pipeline_runs
-		WHERE 1=1
-	`
-	args := []any{}
-	argIdx := 1
-
-	if modelID != nil && *modelID != "" {
-		query += fmt.Sprintf(" AND investment_model_id = $%d::uuid", argIdx)
-		args = append(args, *modelID)
-		argIdx++
-	}
-	if status != nil && *status != "" {
-		query += fmt.Sprintf(" AND status = $%d", argIdx)
-		args = append(args, *status)
-		argIdx++
-	}
-
-	query += " ORDER BY created_at DESC"
-	query += fmt.Sprintf(" LIMIT $%d", argIdx)
-	args = append(args, limit)
-
-	rows, err := r.pool.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var results []models.LabPipelineRun
-	for rows.Next() {
-		var run models.LabPipelineRun
-		var targetIDs []string
-		if err := rows.Scan(
-			&run.ID,
-			&run.InvestmentModelID,
-			&targetIDs,
-			&run.BudgetPoints,
-			&run.OptimizerKind,
-			&run.NSims,
-			&run.Seed,
-			&run.ExcludedEntryName,
-			&run.Status,
-			&run.StartedAt,
-			&run.FinishedAt,
-			&run.ErrorMessage,
-			&run.CreatedAt,
-			&run.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		run.TargetCalcuttaIDs = targetIDs
-		results = append(results, run)
-	}
-	return results, rows.Err()
 }
 
 // GetActivePipelineRun returns the most recent running or pending pipeline run for a model.
@@ -293,7 +219,7 @@ func (r *LabRepository) GetActivePipelineRun(modelID string) (*models.LabPipelin
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -325,112 +251,6 @@ func (r *LabRepository) CreatePipelineCalcuttaRuns(pipelineRunID string, calcutt
 
 	_, err := r.pool.Exec(ctx, query, args...)
 	return err
-}
-
-// GetPipelineCalcuttaRuns returns all calcutta runs for a pipeline.
-func (r *LabRepository) GetPipelineCalcuttaRuns(pipelineRunID string) ([]models.LabPipelineCalcuttaRun, error) {
-	ctx := context.Background()
-
-	query := `
-		SELECT
-			id::text,
-			pipeline_run_id::text,
-			calcutta_id::text,
-			entry_id::text,
-			stage,
-			status,
-			progress,
-			progress_message,
-			predictions_job_id::text,
-			optimization_job_id::text,
-			evaluation_job_id::text,
-			evaluation_id::text,
-			error_message,
-			started_at,
-			finished_at,
-			created_at,
-			updated_at
-		FROM lab.pipeline_calcutta_runs
-		WHERE pipeline_run_id = $1::uuid
-		ORDER BY created_at ASC
-	`
-
-	rows, err := r.pool.Query(ctx, query, pipelineRunID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var results []models.LabPipelineCalcuttaRun
-	for rows.Next() {
-		var run models.LabPipelineCalcuttaRun
-		if err := rows.Scan(
-			&run.ID,
-			&run.PipelineRunID,
-			&run.CalcuttaID,
-			&run.EntryID,
-			&run.Stage,
-			&run.Status,
-			&run.Progress,
-			&run.ProgressMessage,
-			&run.PredictionsJobID,
-			&run.OptimizationJobID,
-			&run.EvaluationJobID,
-			&run.EvaluationID,
-			&run.ErrorMessage,
-			&run.StartedAt,
-			&run.FinishedAt,
-			&run.CreatedAt,
-			&run.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		results = append(results, run)
-	}
-	return results, rows.Err()
-}
-
-// UpdatePipelineCalcuttaRun updates fields on a pipeline calcutta run.
-func (r *LabRepository) UpdatePipelineCalcuttaRun(id string, updates map[string]interface{}) error {
-	ctx := context.Background()
-
-	if len(updates) == 0 {
-		return nil
-	}
-
-	setClauses := make([]string, 0, len(updates))
-	args := []any{id}
-	argIdx := 2
-
-	for col, val := range updates {
-		switch col {
-		case "entry_id", "predictions_job_id", "optimization_job_id", "evaluation_job_id", "evaluation_id":
-			setClauses = append(setClauses, fmt.Sprintf("%s = $%d::uuid", col, argIdx))
-		case "progress":
-			setClauses = append(setClauses, fmt.Sprintf("%s = $%d::double precision", col, argIdx))
-		case "started_at", "finished_at":
-			setClauses = append(setClauses, fmt.Sprintf("%s = $%d::timestamptz", col, argIdx))
-		default:
-			setClauses = append(setClauses, fmt.Sprintf("%s = $%d", col, argIdx))
-		}
-		args = append(args, val)
-		argIdx++
-	}
-
-	query := fmt.Sprintf(`
-		UPDATE lab.pipeline_calcutta_runs
-		SET %s, updated_at = NOW()
-		WHERE id = $1::uuid
-	`, strings.Join(setClauses, ", "))
-
-	tag, err := r.pool.Exec(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return &apperrors.NotFoundError{Resource: "pipeline_calcutta_run", ID: id}
-	}
-	return nil
 }
 
 // GetPipelineProgress returns detailed progress for a pipeline run.
@@ -556,7 +376,7 @@ func (r *LabRepository) GetModelPipelineProgress(modelID string) (*models.LabMod
 	err := r.pool.QueryRow(ctx, `
 		SELECT name FROM lab.investment_models WHERE id = $1::uuid AND deleted_at IS NULL
 	`, modelID).Scan(&modelName)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "investment_model", ID: modelID}
 	}
 	if err != nil {

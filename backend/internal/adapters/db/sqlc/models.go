@@ -329,20 +329,6 @@ type DerivedEntryPerformance struct {
 	CalcuttaEvaluationRunID pgtype.UUID
 }
 
-type DerivedEntrySimulationOutcome struct {
-	ID                      string
-	RunID                   string
-	EntryName               string
-	SimID                   int32
-	PayoutCents             int32
-	Rank                    int32
-	CreatedAt               pgtype.Timestamptz
-	PointsScored            float64
-	UpdatedAt               pgtype.Timestamptz
-	DeletedAt               pgtype.Timestamptz
-	CalcuttaEvaluationRunID pgtype.UUID
-}
-
 type DerivedGameOutcomeRun struct {
 	ID                string
 	TournamentID      string
@@ -415,19 +401,6 @@ type DerivedPredictedGameOutcome struct {
 	RunID        pgtype.UUID
 }
 
-type DerivedPredictedMarketShare struct {
-	ID              string
-	CalcuttaID      pgtype.UUID
-	TeamID          string
-	PredictedShare  float64
-	PredictedPoints float64
-	CreatedAt       pgtype.Timestamptz
-	TournamentID    pgtype.UUID
-	UpdatedAt       pgtype.Timestamptz
-	DeletedAt       pgtype.Timestamptz
-	RunID           pgtype.UUID
-}
-
 type DerivedPredictionModel struct {
 	ID          string
 	Kind        string
@@ -437,22 +410,6 @@ type DerivedPredictionModel struct {
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	DeletedAt   pgtype.Timestamptz
-}
-
-type DerivedRunArtifact struct {
-	ID                         string
-	RunKind                    string
-	RunID                      string
-	RunKey                     pgtype.UUID
-	ArtifactKind               string
-	SchemaVersion              string
-	StorageUri                 *string
-	SummaryJson                []byte
-	CreatedAt                  pgtype.Timestamptz
-	UpdatedAt                  pgtype.Timestamptz
-	DeletedAt                  pgtype.Timestamptz
-	InputMarketShareArtifactID pgtype.UUID
-	InputAdvancementArtifactID pgtype.UUID
 }
 
 type DerivedRunJob struct {
@@ -474,34 +431,18 @@ type DerivedRunJob struct {
 	UpdatedAt         pgtype.Timestamptz
 }
 
-type DerivedRunProgressEvent struct {
-	ID          string
-	RunKind     string
-	RunID       string
-	RunKey      pgtype.UUID
-	EventKind   string
-	Status      *string
-	Percent     *float64
-	Phase       *string
-	Message     *string
-	Source      string
-	PayloadJson []byte
-	CreatedAt   pgtype.Timestamptz
-}
-
 type DerivedSimulatedCalcutta struct {
-	ID                          string
-	Name                        string
-	Description                 *string
-	TournamentID                string
-	BaseCalcuttaID              pgtype.UUID
-	StartingStateKey            string
-	ExcludedEntryName           *string
-	MetadataJson                []byte
-	CreatedAt                   pgtype.Timestamptz
-	UpdatedAt                   pgtype.Timestamptz
-	DeletedAt                   pgtype.Timestamptz
-	HighlightedSimulatedEntryID pgtype.UUID
+	ID                string
+	Name              string
+	Description       *string
+	TournamentID      string
+	BaseCalcuttaID    pgtype.UUID
+	StartingStateKey  string
+	ExcludedEntryName *string
+	MetadataJson      []byte
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+	DeletedAt         pgtype.Timestamptz
 }
 
 type DerivedSimulatedCalcuttaPayout struct {
@@ -572,36 +513,24 @@ type DerivedSimulatedTournament struct {
 }
 
 type DerivedSimulationRun struct {
-	ID                        string
-	RunKey                    string
-	CalcuttaID                pgtype.UUID
-	GameOutcomeRunID          pgtype.UUID
-	CalcuttaEvaluationRunID   pgtype.UUID
-	StartingStateKey          string
-	ExcludedEntryName         *string
-	NSims                     *int32
-	Seed                      *int32
-	OurRank                   *int32
-	OurMeanNormalizedPayout   *float64
-	OurMedianNormalizedPayout *float64
-	OurPTop1                  *float64
-	OurPInMoney               *float64
-	TotalSimulations          *int32
-	RealizedFinishPosition    *int32
-	RealizedIsTied            *bool
-	RealizedInTheMoney        *bool
-	RealizedPayoutCents       *int32
-	RealizedTotalPoints       *float64
-	Status                    string
-	ClaimedAt                 pgtype.Timestamptz
-	ClaimedBy                 *string
-	ErrorMessage              *string
-	CreatedAt                 pgtype.Timestamptz
-	UpdatedAt                 pgtype.Timestamptz
-	DeletedAt                 pgtype.Timestamptz
-	FocusSnapshotEntryID      pgtype.UUID
-	SimulatedCalcuttaID       pgtype.UUID
-	GameOutcomeSpecJson       []byte
+	ID                      string
+	RunKey                  string
+	CalcuttaID              pgtype.UUID
+	GameOutcomeRunID        pgtype.UUID
+	CalcuttaEvaluationRunID pgtype.UUID
+	StartingStateKey        string
+	ExcludedEntryName       *string
+	NSims                   *int32
+	Seed                    *int32
+	Status                  string
+	ClaimedAt               pgtype.Timestamptz
+	ClaimedBy               *string
+	ErrorMessage            *string
+	CreatedAt               pgtype.Timestamptz
+	UpdatedAt               pgtype.Timestamptz
+	DeletedAt               pgtype.Timestamptz
+	SimulatedCalcuttaID     pgtype.UUID
+	GameOutcomeSpecJson     []byte
 }
 
 type DerivedSimulationState struct {

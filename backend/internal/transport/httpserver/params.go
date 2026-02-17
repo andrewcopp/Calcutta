@@ -2,21 +2,10 @@ package httpserver
 
 import (
 	"net/http"
-	"strconv"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httputil"
 )
 
-func getQueryInt(r *http.Request, key string, defaultValue int) int {
-	raw := r.URL.Query().Get(key)
-	if raw == "" {
-		return defaultValue
-	}
-	v, err := strconv.Atoi(raw)
-	if err != nil {
-		return defaultValue
-	}
-	return v
-}
-
 func getLimit(r *http.Request, defaultValue int) int {
-	return getQueryInt(r, "limit", defaultValue)
+	return httputil.GetQueryInt(r, "limit", defaultValue)
 }

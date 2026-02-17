@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -93,7 +94,7 @@ func (r *LabRepository) GetInvestmentModel(id string) (*models.InvestmentModel, 
 	var m models.InvestmentModel
 	var paramsStr string
 	err := r.pool.QueryRow(ctx, query, id).Scan(&m.ID, &m.Name, &m.Kind, &paramsStr, &m.Notes, &m.CreatedAt, &m.UpdatedAt, &m.NEntries, &m.NEvaluations)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "investment_model", ID: id}
 	}
 	if err != nil {
@@ -382,7 +383,7 @@ func (r *LabRepository) GetEvaluation(id string) (*models.LabEvaluationDetail, e
 		&ev.CalcuttaName,
 		&ev.StartingStateKey,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "evaluation", ID: id}
 	}
 	if err != nil {
@@ -434,7 +435,7 @@ func (r *LabRepository) GetEntryEnriched(id string) (*models.LabEntryDetailEnric
 		&result.StartingStateKey, &predictionsStr, &bidsStr, &result.CreatedAt, &result.UpdatedAt,
 		&result.ModelName, &result.ModelKind, &result.CalcuttaName, &tournamentID, &result.NEvaluations,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "entry", ID: id}
 	}
 	if err != nil {
@@ -641,7 +642,7 @@ func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(modelName, calcuttaID
 		ORDER BY e.created_at DESC
 		LIMIT 1
 	`, modelName, calcuttaID, startingStateKey).Scan(&entryID)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "entry", ID: modelName + "/" + calcuttaID}
 	}
 	if err != nil {
@@ -718,7 +719,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(entryResultID string) (*models
 		&profile.Rank,
 		&evaluationID,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, &apperrors.NotFoundError{Resource: "evaluation_entry_result", ID: entryResultID}
 	}
 	if err != nil {

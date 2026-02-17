@@ -20,6 +20,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { CalcuttaSettingsPage } from './pages/CalcuttaSettingsPage';
 import { LabPage } from './pages/LabPage';
 import { ModelDetailPage } from './pages/Lab/ModelDetailPage';
@@ -44,7 +45,7 @@ const AppLayout: React.FC = () => {
         <Route path="/login" element={<RouteErrorBoundary><LoginPage /></RouteErrorBoundary>} />
         <Route path="/rules" element={<RouteErrorBoundary><RulesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas" element={<RouteErrorBoundary><CalcuttaListPage /></RouteErrorBoundary>} />
-        <Route path="/calcuttas/create" element={<ProtectedRoute><CreateCalcuttaPage /></ProtectedRoute>} />
+        <Route path="/calcuttas/create" element={<ProtectedRoute><RouteErrorBoundary><CreateCalcuttaPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/lab" element={<RouteErrorBoundary><LabPage /></RouteErrorBoundary>} />
         <Route path="/lab/models/:modelId" element={<RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary>} />
         <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary>} />
@@ -70,6 +71,7 @@ const AppLayout: React.FC = () => {
         <Route path="/calcuttas/:calcuttaId/teams" element={<RouteErrorBoundary><CalcuttaTeamsPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/:calcuttaId/entries/:entryId" element={<RouteErrorBoundary><EntryTeamsPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/:calcuttaId/entries/:entryId/bid" element={<ProtectedRoute><RouteErrorBoundary><BiddingPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="*" element={<RouteErrorBoundary><NotFoundPage /></RouteErrorBoundary>} />
       </Routes>
     </div>
   );

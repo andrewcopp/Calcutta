@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -55,7 +56,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 		FOR UPDATE
 	`, h, now).Scan(&userID, &email)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			writeErrorFromErr(w, r, &apperrors.UnauthorizedError{Message: "invalid or expired invite token"})
 			return
 		}

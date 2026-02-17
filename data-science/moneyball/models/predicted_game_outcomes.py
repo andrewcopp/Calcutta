@@ -27,9 +27,9 @@ def predict_game_outcomes(
         teams = teams[teams["calcutta_key"] == calcutta_key].copy()
 
     if "team_key" not in teams.columns:
-        raise ValueError("teams.parquet missing team_key")
+        raise ValueError("teams DataFrame missing column: team_key")
     if "kenpom_net" not in teams.columns:
-        raise ValueError("teams.parquet missing kenpom_net")
+        raise ValueError("teams DataFrame missing column: kenpom_net")
 
     teams["kenpom_net"] = pd.to_numeric(teams["kenpom_net"], errors="coerce")
 
