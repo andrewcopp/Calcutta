@@ -3,6 +3,8 @@ package httpserver
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
@@ -28,6 +30,8 @@ type Server struct {
 	pool             *pgxpool.Pool
 	cfg              platform.Config
 	emailSender      platform.EmailSender
+	cookieSecure     bool
+	cookieSameSite   http.SameSite
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
@@ -64,6 +68,8 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 		}
 	}
 
+	cookieSecure, cookieSameSite := computeCookieSettings()
+
 	return &Server{
 		app:             a,
 		authRepo:        authRepo,
@@ -76,6 +82,8 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 		pool:            pool,
 		cfg:             cfg,
 		emailSender:     emailSender,
+		cookieSecure:    cookieSecure,
+		cookieSameSite:  cookieSameSite,
 	}, nil
 }
 
@@ -135,4 +143,42 @@ func (s *Server) bootstrapAdmin(ctx context.Context) error {
 	}
 
 	return s.authzRepo.GrantGlobalAdmin(ctx, user.ID)
+}
+
+func computeCookieSettings() (secure bool, sameSite http.SameSite) {
+	env := os.Getenv("NODE_ENV")
+	if env == "" {
+		env = "development"
+	}
+
+	secure = env != "development"
+	if secure {
+		sameSite = http.SameSiteNoneMode
+	} else {
+		sameSite = http.SameSiteLaxMode
+	}
+
+	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
+		if strings.EqualFold(v, "true") || v == "1" || strings.EqualFold(v, "yes") {
+			secure = true
+		}
+		if strings.EqualFold(v, "false") || v == "0" || strings.EqualFold(v, "no") {
+			secure = false
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))) {
+	case "none":
+		sameSite = http.SameSiteNoneMode
+	case "lax":
+		sameSite = http.SameSiteLaxMode
+	case "strict":
+		sameSite = http.SameSiteStrictMode
+	}
+
+	if sameSite == http.SameSiteNoneMode && !secure {
+		sameSite = http.SameSiteLaxMode
+	}
+
+	return secure, sameSite
 }

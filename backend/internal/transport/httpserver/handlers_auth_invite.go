@@ -102,6 +102,6 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setRefreshCookie(w, r, res.RefreshToken, res.RefreshExpiresAt)
+	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
 	writeJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }

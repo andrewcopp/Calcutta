@@ -4,51 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 )
-
-func refreshCookieSettingsFromEnv() (secure bool, sameSite http.SameSite) {
-	env := os.Getenv("NODE_ENV")
-	if env == "" {
-		env = "development"
-	}
-
-	secure = env != "development"
-	if secure {
-		sameSite = http.SameSiteNoneMode
-	} else {
-		sameSite = http.SameSiteLaxMode
-	}
-
-	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
-		if strings.EqualFold(v, "true") || v == "1" || strings.EqualFold(v, "yes") {
-			secure = true
-		}
-		if strings.EqualFold(v, "false") || v == "0" || strings.EqualFold(v, "no") {
-			secure = false
-		}
-	}
-
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))) {
-	case "none":
-		sameSite = http.SameSiteNoneMode
-	case "lax":
-		sameSite = http.SameSiteLaxMode
-	case "strict":
-		sameSite = http.SameSiteStrictMode
-	}
-
-	if sameSite == http.SameSiteNoneMode && !secure {
-		sameSite = http.SameSiteLaxMode
-	}
-
-	return secure, sameSite
-}
 
 func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var req dtos.LoginRequest
@@ -71,7 +31,7 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	setRefreshCookie(w, r, res.RefreshToken, res.RefreshExpiresAt)
+	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
 	writeJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
@@ -91,7 +51,7 @@ func (s *Server) signupHandler(w http.ResponseWriter, r *http.Request) {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	setRefreshCookie(w, r, res.RefreshToken, res.RefreshExpiresAt)
+	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
 	writeJSON(w, http.StatusCreated, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
@@ -107,7 +67,7 @@ func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
 		writeErrorFromErr(w, r, err)
 		return
 	}
-	setRefreshCookie(w, r, res.RefreshToken, res.RefreshExpiresAt)
+	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
 	writeJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
@@ -116,25 +76,23 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	if err == nil && c.Value != "" {
 		_ = s.app.Auth.Logout(r.Context(), c.Value)
 	}
-	clearRefreshCookie(w)
+	s.clearRefreshCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func setRefreshCookie(w http.ResponseWriter, r *http.Request, refreshToken string, expiresAt time.Time) {
-	secure, sameSite := refreshCookieSettingsFromEnv()
+func (s *Server) setRefreshCookie(w http.ResponseWriter, refreshToken string, expiresAt time.Time) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		Path:     "/api/auth",
 		Expires:  expiresAt,
 		HttpOnly: true,
-		Secure:   secure,
-		SameSite: sameSite,
+		Secure:   s.cookieSecure,
+		SameSite: s.cookieSameSite,
 	})
 }
 
-func clearRefreshCookie(w http.ResponseWriter) {
-	secure, sameSite := refreshCookieSettingsFromEnv()
+func (s *Server) clearRefreshCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
@@ -142,7 +100,7 @@ func clearRefreshCookie(w http.ResponseWriter) {
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   secure,
-		SameSite: sameSite,
+		Secure:   s.cookieSecure,
+		SameSite: s.cookieSameSite,
 	})
 }
