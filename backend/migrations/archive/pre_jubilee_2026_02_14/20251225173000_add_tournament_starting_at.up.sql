@@ -1,2 +1,0 @@
-ALTER TABLE tournaments
-ADD COLUMN starting_at TIMESTAMP WITH TIME ZONE;

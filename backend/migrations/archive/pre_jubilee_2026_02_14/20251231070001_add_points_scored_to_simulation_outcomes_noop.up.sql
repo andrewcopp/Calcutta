@@ -1,3 +1,0 @@
--- No-op migration.
--- A previous migration pair existed with duplicate version 20251231070000 and empty contents.
--- It was replaced with this uniquely-versioned placeholder to preserve ordering without duplicating a version.
