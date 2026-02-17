@@ -32,13 +32,13 @@ BEGIN
         'game_outcome',
         NEW.id,
         NEW.run_key,
-        'pending',
+        'queued',
         base_params,
         NOW(),
         NOW()
     )
     ON CONFLICT (run_kind, run_id) DO UPDATE SET
-        status = 'pending',
+        status = 'queued',
         params_json = EXCLUDED.params_json,
         updated_at = NOW();
 
