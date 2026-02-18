@@ -77,16 +77,14 @@ func (r *UpdateEntryRequest) Validate() error {
 	if len(r.Teams) == 0 {
 		return ErrFieldInvalid("teams", "at least one team must be provided")
 	}
-	for i, t := range r.Teams {
+	for _, t := range r.Teams {
 		if t == nil {
 			return ErrFieldInvalid("teams", "team cannot be null")
 		}
 		if strings.TrimSpace(t.TeamID) == "" {
-			_ = i
 			return ErrFieldRequired("teamId")
 		}
 		if t.Bid <= 0 {
-			_ = i
 			return ErrFieldInvalid("bid", "must be greater than 0")
 		}
 	}

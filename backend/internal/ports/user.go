@@ -6,17 +6,9 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-type UserReader interface {
+type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	GetByID(ctx context.Context, id string) (*models.User, error)
-}
-
-type UserWriter interface {
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
-}
-
-type UserRepository interface {
-	UserReader
-	UserWriter
 }

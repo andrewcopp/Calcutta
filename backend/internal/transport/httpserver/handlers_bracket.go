@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -10,13 +9,6 @@ import (
 )
 
 func (s *Server) getBracketHandler(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			log.Printf("PANIC in getBracketHandler: %v", rec)
-			writeError(w, r, http.StatusInternalServerError, "internal_error", "Internal server error building bracket", "")
-		}
-	}()
-
 	vars := mux.Vars(r)
 	tournamentID := vars["id"]
 	if tournamentID == "" {
@@ -34,13 +26,6 @@ func (s *Server) getBracketHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) selectWinnerHandler(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			log.Printf("PANIC in selectWinnerHandler: %v", rec)
-			writeError(w, r, http.StatusInternalServerError, "internal_error", "Internal server error selecting winner", "")
-		}
-	}()
-
 	vars := mux.Vars(r)
 	tournamentID := vars["tournamentId"]
 	gameID := vars["gameId"]

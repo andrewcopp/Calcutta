@@ -353,7 +353,7 @@ func verifyCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID, 
 	return out
 }
 
-func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tournamentID, calcuttaID, calcuttaKey string, entries []bundles.EntryRecord, bids []bundles.EntryTeamBid) []Mismatch {
+func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, _, calcuttaID, calcuttaKey string, entries []bundles.EntryRecord, bids []bundles.EntryTeamBid) []Mismatch {
 	rows, err := pool.Query(ctx, `
 		SELECT e.id, e.name, COALESCE(u.email, '')
 		FROM core.entries e
@@ -426,7 +426,6 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, tourn
 		return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
 	}
 
-	_ = tournamentID
 	for _, b := range bids {
 		k := strings.TrimSpace(b.EntryKey)
 		entryID := ""

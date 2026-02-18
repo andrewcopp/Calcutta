@@ -314,7 +314,6 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 		SELECT
 			e.id,
 			e.name,
-			e.user_id,
 			COALESCE(u.email, ''),
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
@@ -334,9 +333,8 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 	entries := make([]bundles.EntryRecord, 0)
 	for r.Next() {
 		var entryID, name string
-		var userID *string
 		var email, first, last string
-		if err := r.Scan(&entryID, &name, &userID, &email, &first, &last); err != nil {
+		if err := r.Scan(&entryID, &name, &email, &first, &last); err != nil {
 			return nil, nil, err
 		}
 
@@ -357,8 +355,6 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 		if email != "" {
 			userEmail = &email
 		}
-
-		_ = userID
 
 		entries = append(entries, bundles.EntryRecord{Key: entryKey, Name: name, UserName: userName, UserEmail: userEmail, LegacyID: entryID})
 	}
