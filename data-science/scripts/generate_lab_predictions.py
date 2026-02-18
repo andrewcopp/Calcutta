@@ -74,7 +74,9 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
     exclude_entry_names = [excluded_entry_name] if excluded_entry_name else None
 
     # Load training data
+    logger = logging.getLogger(__name__)
     train_frames = []
+    train_failures = 0
     for y in train_years:
         try:
             df = read_ridge_team_dataset_for_year(
@@ -84,8 +86,12 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
             )
             train_frames.append(df)
         except Exception as e:
-            print(f"  Warning: Could not load training data for {y}: {e}")
+            train_failures += 1
+            logger.warning("Could not load training data for %d: %s", y, e)
             continue
+
+    if train_failures > 1:
+        return None, f"{train_failures}/{len(train_years)} training years failed to load"
 
     if not train_frames:
         return None, "No training data available"
@@ -132,13 +138,16 @@ def create_predictions_for_calcutta(
     """Create a lab entry with market predictions."""
     from moneyball.lab.models import Prediction, create_entry_with_predictions
 
+    logger = logging.getLogger(__name__)
     predictions = []
+    skipped_slugs = []
     for _, row in predictions_df.iterrows():
         team_slug = row["team_slug"]
         predicted_share = row["predicted_auction_share_of_pool"]
 
         team_id = team_id_map.get(team_slug)
         if not team_id:
+            skipped_slugs.append(team_slug)
             continue
 
         expected_points = expected_points_map.get(team_slug)
@@ -151,6 +160,13 @@ def create_predictions_for_calcutta(
             predicted_market_share=predicted_share,
             expected_points=expected_points,
         ))
+
+    if skipped_slugs:
+        logger.warning(
+            "Skipped %d teams with no ID mapping: %s",
+            len(skipped_slugs),
+            skipped_slugs,
+        )
 
     if not predictions:
         return None

@@ -141,9 +141,11 @@ def create_oracle_predictions_for_calcutta(
     expected_points_map = get_expected_points_map(calcutta_id)
 
     predictions = []
+    skipped_slugs = []
     for team_slug, market_share in actual_shares.items():
         team_id = team_id_map.get(team_slug)
         if not team_id:
+            skipped_slugs.append(team_slug)
             continue
 
         expected_points = expected_points_map.get(team_slug)
@@ -156,6 +158,13 @@ def create_oracle_predictions_for_calcutta(
             predicted_market_share=market_share,
             expected_points=expected_points,
         ))
+
+    if skipped_slugs:
+        logging.warning(
+            "Skipped %d teams with no ID mapping: %s",
+            len(skipped_slugs),
+            skipped_slugs,
+        )
 
     if not predictions:
         return None

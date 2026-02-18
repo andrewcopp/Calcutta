@@ -19,6 +19,7 @@ Usage:
 """
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import List
@@ -60,9 +61,11 @@ def create_naive_ev_predictions_for_calcutta(
         return None
 
     predictions = []
+    skipped_slugs = []
     for team_slug, expected_points in expected_points_map.items():
         team_id = team_id_map.get(team_slug)
         if not team_id:
+            skipped_slugs.append(team_slug)
             continue
 
         # Naive EV: market share proportional to expected points
@@ -73,6 +76,13 @@ def create_naive_ev_predictions_for_calcutta(
             predicted_market_share=predicted_market_share,
             expected_points=expected_points,
         ))
+
+    if skipped_slugs:
+        logging.warning(
+            "Skipped %d teams with no ID mapping: %s",
+            len(skipped_slugs),
+            skipped_slugs,
+        )
 
     if not predictions:
         return None

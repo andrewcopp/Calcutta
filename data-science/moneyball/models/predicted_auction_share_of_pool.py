@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from moneyball.models.analytical_tournament_value import (
     compute_analytical_tournament_values,
@@ -66,14 +69,21 @@ def _enrich_with_analytical_probabilities(
     result = result.drop(columns=["_merge_key"])
 
     # Fill any missing values with 0
-    result["analytical_p_championship"] = (
-        pd.to_numeric(result["analytical_p_championship"], errors="coerce")
-        .fillna(0.0)
+    result["analytical_p_championship"] = pd.to_numeric(
+        result["analytical_p_championship"], errors="coerce"
     )
-    result["analytical_expected_points"] = (
-        pd.to_numeric(result["analytical_expected_points"], errors="coerce")
-        .fillna(0.0)
+    n_coerced = result["analytical_p_championship"].isna().sum()
+    if n_coerced > 0:
+        logger.warning("Coerced %d non-numeric analytical_p_championship values to NaN", n_coerced)
+    result["analytical_p_championship"] = result["analytical_p_championship"].fillna(0.0)
+
+    result["analytical_expected_points"] = pd.to_numeric(
+        result["analytical_expected_points"], errors="coerce"
     )
+    n_coerced = result["analytical_expected_points"].isna().sum()
+    if n_coerced > 0:
+        logger.warning("Coerced %d non-numeric analytical_expected_points values to NaN", n_coerced)
+    result["analytical_expected_points"] = result["analytical_expected_points"].fillna(0.0)
 
     return result
 
