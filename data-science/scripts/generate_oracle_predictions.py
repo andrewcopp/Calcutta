@@ -19,6 +19,7 @@ Usage:
 """
 import argparse
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -145,7 +146,10 @@ def create_oracle_predictions_for_calcutta(
         if not team_id:
             continue
 
-        expected_points = expected_points_map.get(team_slug, 10.0)
+        expected_points = expected_points_map.get(team_slug)
+        if expected_points is None:
+            logging.warning("No expected points for team %s, using default 10.0", team_slug)
+            expected_points = 10.0
 
         predictions.append(Prediction(
             team_id=team_id,

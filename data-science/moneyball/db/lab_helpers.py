@@ -7,6 +7,7 @@ generate_oracle_predictions.py.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -134,6 +135,7 @@ def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
 
             # Fall back to seed-based estimates if no simulation data
             if not result:
+                logging.warning("No simulation data for calcutta %s, falling back to seed-based estimates", calcutta_id)
                 seed_expected_points = {
                     1: 80.0, 2: 55.0, 3: 42.0, 4: 35.0,
                     5: 28.0, 6: 23.0, 7: 19.0, 8: 16.0,
