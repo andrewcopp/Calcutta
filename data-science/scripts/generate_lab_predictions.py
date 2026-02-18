@@ -66,8 +66,8 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
 
     initialize_default_scoring_rules_for_year(year)
 
-    # Training years
-    all_years = [2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+    # Training years - derive from database instead of hardcoding
+    all_years = sorted({c.year for c in get_historical_calcuttas()})
     train_years = [y for y in all_years if y != year]
 
     exclude_entry_names = [excluded_entry_name] if excluded_entry_name else None

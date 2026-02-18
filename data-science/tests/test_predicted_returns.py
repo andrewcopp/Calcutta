@@ -248,28 +248,6 @@ class TestThatProbabilitiesAreNormalized(unittest.TestCase):
 class TestThatNCAAPointValuesAreCorrect(unittest.TestCase):
     """Test that NCAA tournament point values are correct."""
 
-    def test_that_point_values_match_ncaa_scoring(self) -> None:
-        """Verify point values match standard NCAA tournament scoring."""
-        pbwi = _points_by_win_index_fixture()
-
-        expected_points = {
-            wins: int(
-                mb_points.team_points_from_scoring_rules(
-                    int(wins) + 1,
-                    pbwi,
-                )
-            )
-            for wins in range(7)
-        }
-        
-        # These should match the backend SQL calculation
-        for wins, expected in expected_points.items():
-            self.assertEqual(
-                expected,
-                expected_points[wins],
-                f"Points for {wins} wins should be {expected}",
-            )
-    
     def test_that_incremental_points_per_round_are_correct(self) -> None:
         """Verify incremental points awarded per round."""
         pbwi = _points_by_win_index_fixture()

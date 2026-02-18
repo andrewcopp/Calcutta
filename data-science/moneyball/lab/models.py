@@ -350,6 +350,8 @@ def update_entry_with_bids(
                     entry_id,
                 ),
             )
+            if cur.rowcount == 0:
+                raise ValueError(f"Entry {entry_id} not found or already deleted")
 
     logger.info(f"Updated entry {entry_id} with {len(bids)} optimized bids")
 
