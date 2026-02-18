@@ -118,7 +118,9 @@ func (w *LabPipelineWorker) RunWithOptions(ctx context.Context, pollInterval tim
 				}
 				go func(j *labPipelineJob) {
 					defer func() { <-w.sem }()
-					_ = w.processLabPipelineJob(ctx, workerID, j)
+					if ok := w.processLabPipelineJob(ctx, workerID, j); !ok {
+						slog.Error("lab pipeline job failed", "run_kind", j.RunKind, "run_id", j.RunID)
+					}
 				}(job)
 			default:
 				// At capacity, skip this tick

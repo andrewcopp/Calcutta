@@ -35,6 +35,10 @@ func (s *Server) listTournamentModeratorsHandler(w http.ResponseWriter, r *http.
 	for _, uid := range userIDs {
 		user, err := s.userRepo.GetByID(r.Context(), uid)
 		if err != nil {
+			writeErrorFromErr(w, r, err)
+			return
+		}
+		if user == nil {
 			continue
 		}
 		email := ""

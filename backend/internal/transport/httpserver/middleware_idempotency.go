@@ -3,6 +3,7 @@ package httpserver
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -73,6 +74,8 @@ func idempotencyMiddleware(repo *dbadapters.IdempotencyRepository, next http.Han
 		next(iw, r)
 
 		// Store the response (best-effort; don't fail the request if caching fails)
-		_ = repo.Complete(r.Context(), key, userID, iw.status, json.RawMessage(iw.body.Bytes()))
+		if err := repo.Complete(r.Context(), key, userID, iw.status, json.RawMessage(iw.body.Bytes())); err != nil {
+			slog.Error("idempotency cache store failed", "key", key, "user_id", userID, "error", err)
+		}
 	}
 }

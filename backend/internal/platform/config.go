@@ -3,6 +3,7 @@ package platform
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -122,8 +123,12 @@ func loadDotEnvFiles() {
 		return
 	}
 
-	_ = loadDotEnvFile(filepath.Join(foundDir, ".env"))
-	_ = loadDotEnvFile(filepath.Join(foundDir, ".env.local"))
+	if err := loadDotEnvFile(filepath.Join(foundDir, ".env")); err != nil && !os.IsNotExist(err) {
+		slog.Warn("failed to load .env", "path", filepath.Join(foundDir, ".env"), "error", err)
+	}
+	if err := loadDotEnvFile(filepath.Join(foundDir, ".env.local")); err != nil && !os.IsNotExist(err) {
+		slog.Warn("failed to load .env.local", "path", filepath.Join(foundDir, ".env.local"), "error", err)
+	}
 }
 
 func loadDotEnvFile(path string) error {

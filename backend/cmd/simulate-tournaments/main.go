@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"runtime"
@@ -77,19 +76,17 @@ func run() error {
 		return fmt.Errorf("simulate tournaments failed: %w", err)
 	}
 
-	log.Printf(
-		"Simulated tournaments: season=%d core_tournament_id=%s batch_id=%s n_sims=%d rows=%d",
-		season,
-		res.CoreTournamentID,
-		res.TournamentSimulationBatchID,
-		res.NSims,
-		res.RowsWritten,
+	slog.Info("simulated tournaments",
+		"season", season,
+		"core_tournament_id", res.CoreTournamentID,
+		"batch_id", res.TournamentSimulationBatchID,
+		"n_sims", res.NSims,
+		"rows", res.RowsWritten,
 	)
-	log.Printf(
-		"Timing: load=%s simulate+write=%s overall=%s",
-		res.LoadDuration,
-		res.SimulateWriteDuration,
-		res.OverallDuration,
+	slog.Info("timing",
+		"load", res.LoadDuration,
+		"simulate_write", res.SimulateWriteDuration,
+		"overall", res.OverallDuration,
 	)
 
 	return nil

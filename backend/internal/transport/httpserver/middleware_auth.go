@@ -34,7 +34,12 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 					return
 				}
 				active, err := s.isUserActive(r.Context(), userID)
-				if err == nil && active {
+				if err != nil {
+					slog.Error("auth_user_active_check_failed", "user_id", userID, "error", err)
+					http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+					return
+				}
+				if active {
 					ctx := context.WithValue(r.Context(), authUserIDKey, userID)
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
@@ -87,9 +92,19 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 						}
 						user = created
 					}
-					if err == nil && user != nil {
+					if err != nil {
+						slog.Error("auth_cognito_user_lookup_failed", "email", email, "error", err)
+						http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+						return
+					}
+					if user != nil {
 						active, err := s.isUserActive(r.Context(), user.ID)
-						if err == nil && active {
+						if err != nil {
+							slog.Error("auth_user_active_check_failed", "user_id", user.ID, "error", err)
+							http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+							return
+						}
+						if active {
 							ctx := context.WithValue(r.Context(), authUserIDKey, user.ID)
 							next.ServeHTTP(w, r.WithContext(ctx))
 							return
@@ -99,7 +114,12 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 
 				if s.cfg.CognitoAllowUnprovisioned {
 					active, err := s.isUserActive(r.Context(), claims.Sub)
-					if err == nil && active {
+					if err != nil {
+						slog.Error("auth_user_active_check_failed", "user_id", claims.Sub, "error", err)
+						http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+						return
+					}
+					if active {
 						ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
 						next.ServeHTTP(w, r.WithContext(ctx))
 						return
@@ -114,9 +134,19 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 			claims, err := s.tokenManager.VerifyAccessToken(tok, time.Now())
 			if err == nil {
 				sess, err := s.authRepo.GetSessionByID(r.Context(), claims.Sid)
-				if err == nil && sess != nil && sess.RevokedAt == nil && !time.Now().After(sess.ExpiresAt) && sess.UserID == claims.Sub {
+				if err != nil {
+					slog.Error("auth_session_lookup_failed", "session_id", claims.Sid, "error", err)
+					http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+					return
+				}
+				if sess != nil && sess.RevokedAt == nil && !time.Now().After(sess.ExpiresAt) && sess.UserID == claims.Sub {
 					active, err := s.isUserActive(r.Context(), claims.Sub)
-					if err == nil && active {
+					if err != nil {
+						slog.Error("auth_user_active_check_failed", "user_id", claims.Sub, "error", err)
+						http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+						return
+					}
+					if active {
 						ctx := context.WithValue(r.Context(), authUserIDKey, claims.Sub)
 						ctx = context.WithValue(ctx, authSessionIDKey, claims.Sid)
 						next.ServeHTTP(w, r.WithContext(ctx))
@@ -130,9 +160,19 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 			sum := sha256.Sum256([]byte(tok))
 			h := hex.EncodeToString(sum[:])
 			k, err := s.apiKeysRepo.GetActiveByHash(r.Context(), h, time.Now().UTC())
-			if err == nil && k != nil {
+			if err != nil {
+				slog.Error("auth_api_key_lookup_failed", "error", err)
+				http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+				return
+			}
+			if k != nil {
 				active, err := s.isUserActive(r.Context(), k.UserID)
-				if err == nil && active {
+				if err != nil {
+					slog.Error("auth_user_active_check_failed", "user_id", k.UserID, "error", err)
+					http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+					return
+				}
+				if active {
 					ctx := context.WithValue(r.Context(), authUserIDKey, k.UserID)
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
