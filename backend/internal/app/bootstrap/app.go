@@ -52,7 +52,10 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	analyticsService := appanalytics.New(analyticsRepo)
 
 	labRepo := dbadapters.NewLabRepository(pool)
-	labService := applab.NewWithPipelineRepo(labRepo)
+	labService := applab.NewWithPipelineRepo(labRepo, applab.ServiceConfig{
+		DefaultNSims:      cfg.DefaultNSims,
+		ExcludedEntryName: cfg.ExcludedEntryName,
+	})
 
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService

@@ -5,172 +5,231 @@ import (
 	"time"
 )
 
-func TestTournamentTeam_Validate(t *testing.T) {
+func TestThatTournamentTeamValidateAcceptsValidTeamWithDefaultConfig(t *testing.T) {
+	// GIVEN a valid tournament team with default config values
 	now := time.Now()
-	defaultConfig := DefaultTournamentConfig()
-
-	tests := []struct {
-		name    string
-		team    *TournamentTeam
-		config  *TournamentConfig
-		wantErr bool
-	}{
-		{
-			name: "valid team with default config",
-			team: &TournamentTeam{
-				ID:           "1",
-				SchoolID:     "school1",
-				TournamentID: "tournament1",
-				Seed:         1,
-				Byes:         0,
-				Wins:         0,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: false,
-		},
-		{
-			name: "valid team with max values",
-			team: &TournamentTeam{
-				ID:           "2",
-				SchoolID:     "school2",
-				TournamentID: "tournament1",
-				Seed:         16,
-				Byes:         1,
-				Wins:         7,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: false,
-		},
-		{
-			name: "invalid seed 0",
-			team: &TournamentTeam{
-				ID:           "3",
-				SchoolID:     "school3",
-				TournamentID: "tournament1",
-				Seed:         0,
-				Byes:         0,
-				Wins:         0,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: true,
-		},
-		{
-			name: "invalid seed 17",
-			team: &TournamentTeam{
-				ID:           "4",
-				SchoolID:     "school4",
-				TournamentID: "tournament1",
-				Seed:         17,
-				Byes:         0,
-				Wins:         0,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: true,
-		},
-		{
-			name: "invalid byes -1",
-			team: &TournamentTeam{
-				ID:           "5",
-				SchoolID:     "school5",
-				TournamentID: "tournament1",
-				Seed:         1,
-				Byes:         -1,
-				Wins:         0,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: true,
-		},
-		{
-			name: "invalid byes 2",
-			team: &TournamentTeam{
-				ID:           "6",
-				SchoolID:     "school6",
-				TournamentID: "tournament1",
-				Seed:         1,
-				Byes:         2,
-				Wins:         0,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: true,
-		},
-		{
-			name: "invalid wins -1",
-			team: &TournamentTeam{
-				ID:           "7",
-				SchoolID:     "school7",
-				TournamentID: "tournament1",
-				Seed:         1,
-				Byes:         0,
-				Wins:         -1,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: true,
-		},
-		{
-			name: "invalid wins 8",
-			team: &TournamentTeam{
-				ID:           "8",
-				SchoolID:     "school8",
-				TournamentID: "tournament1",
-				Seed:         1,
-				Byes:         0,
-				Wins:         8,
-				Created:      now,
-				Updated:      now,
-			},
-			config:  defaultConfig,
-			wantErr: true,
-		},
-		{
-			name: "custom config - expanded tournament",
-			team: &TournamentTeam{
-				ID:           "9",
-				SchoolID:     "school9",
-				TournamentID: "tournament1",
-				Seed:         20,
-				Byes:         2,
-				Wins:         8,
-				Created:      now,
-				Updated:      now,
-			},
-			config: &TournamentConfig{
-				MinSeed: 1,
-				MaxSeed: 20,
-				MinByes: 0,
-				MaxByes: 2,
-				MinWins: 0,
-				MaxWins: 8,
-			},
-			wantErr: false,
-		},
+	team := &TournamentTeam{
+		ID:           "1",
+		SchoolID:     "school1",
+		TournamentID: "tournament1",
+		Seed:         1,
+		Byes:         0,
+		Wins:         0,
+		Created:      now,
+		Updated:      now,
 	}
+	config := DefaultTournamentConfig()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.team.Validate(tt.config)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("TournamentTeam.Validate() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-		})
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN no error is returned
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
 	}
 }
 
-func TestTournamentTeam_ValidateDefault(t *testing.T) {
+func TestThatTournamentTeamValidateAcceptsValidTeamWithMaxValues(t *testing.T) {
+	// GIVEN a valid tournament team with max allowed values
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "2",
+		SchoolID:     "school2",
+		TournamentID: "tournament1",
+		Seed:         16,
+		Byes:         1,
+		Wins:         7,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN no error is returned
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+}
+
+func TestThatTournamentTeamValidateRejectsSeedZero(t *testing.T) {
+	// GIVEN a tournament team with seed 0
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "3",
+		SchoolID:     "school3",
+		TournamentID: "tournament1",
+		Seed:         0,
+		Byes:         0,
+		Wins:         0,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error for seed 0")
+	}
+}
+
+func TestThatTournamentTeamValidateRejectsSeedSeventeen(t *testing.T) {
+	// GIVEN a tournament team with seed 17
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "4",
+		SchoolID:     "school4",
+		TournamentID: "tournament1",
+		Seed:         17,
+		Byes:         0,
+		Wins:         0,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error for seed 17")
+	}
+}
+
+func TestThatTournamentTeamValidateRejectsNegativeByes(t *testing.T) {
+	// GIVEN a tournament team with byes -1
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "5",
+		SchoolID:     "school5",
+		TournamentID: "tournament1",
+		Seed:         1,
+		Byes:         -1,
+		Wins:         0,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error for byes -1")
+	}
+}
+
+func TestThatTournamentTeamValidateRejectsByesGreaterThanOne(t *testing.T) {
+	// GIVEN a tournament team with byes 2
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "6",
+		SchoolID:     "school6",
+		TournamentID: "tournament1",
+		Seed:         1,
+		Byes:         2,
+		Wins:         0,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error for byes 2")
+	}
+}
+
+func TestThatTournamentTeamValidateRejectsNegativeWins(t *testing.T) {
+	// GIVEN a tournament team with wins -1
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "7",
+		SchoolID:     "school7",
+		TournamentID: "tournament1",
+		Seed:         1,
+		Byes:         0,
+		Wins:         -1,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error for wins -1")
+	}
+}
+
+func TestThatTournamentTeamValidateRejectsWinsGreaterThanSeven(t *testing.T) {
+	// GIVEN a tournament team with wins 8
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "8",
+		SchoolID:     "school8",
+		TournamentID: "tournament1",
+		Seed:         1,
+		Byes:         0,
+		Wins:         8,
+		Created:      now,
+		Updated:      now,
+	}
+	config := DefaultTournamentConfig()
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN an error is returned
+	if err == nil {
+		t.Error("expected error for wins 8")
+	}
+}
+
+func TestThatTournamentTeamValidateAcceptsCustomConfig(t *testing.T) {
+	// GIVEN a tournament team with values valid for a custom config
+	now := time.Now()
+	team := &TournamentTeam{
+		ID:           "9",
+		SchoolID:     "school9",
+		TournamentID: "tournament1",
+		Seed:         20,
+		Byes:         2,
+		Wins:         8,
+		Created:      now,
+		Updated:      now,
+	}
+	config := &TournamentConfig{
+		MinSeed: 1,
+		MaxSeed: 20,
+		MinByes: 0,
+		MaxByes: 2,
+		MinWins: 0,
+		MaxWins: 8,
+	}
+
+	// WHEN validating the team
+	err := team.Validate(config)
+
+	// THEN no error is returned
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+}
+
+func TestThatTournamentTeamValidateDefaultAcceptsValidTeam(t *testing.T) {
+	// GIVEN a valid tournament team
 	now := time.Now()
 	team := &TournamentTeam{
 		ID:           "1",
@@ -183,8 +242,11 @@ func TestTournamentTeam_ValidateDefault(t *testing.T) {
 		Updated:      now,
 	}
 
+	// WHEN validating with default config
 	err := team.ValidateDefault()
+
+	// THEN no error is returned
 	if err != nil {
-		t.Errorf("TournamentTeam.ValidateDefault() error = %v", err)
+		t.Errorf("expected no error, got %v", err)
 	}
 }

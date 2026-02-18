@@ -114,19 +114,22 @@ func CanViewEntryData(
 		}
 	}
 
-	authorized := false
-	if entry.UserID != nil && *entry.UserID == userID {
-		authorized = true
-	}
-	if calcutta.OwnerID == userID {
-		authorized = true
-	}
-	if isAdmin {
-		authorized = true
-	}
+	authorized := IsEntryOwnerOrCalcuttaOwner(userID, entry, calcutta) || isAdmin
 	if !authorized {
 		return Decision{Allowed: false, IsAdmin: isAdmin, Status: http.StatusForbidden, Code: "forbidden", Message: "Insufficient permissions"}, nil
 	}
 
 	return Decision{Allowed: true, IsAdmin: isAdmin}, nil
+}
+
+// IsEntryOwnerOrCalcuttaOwner is a pure function that checks if a user owns the entry or the calcutta.
+// This can be tested without mocking authorization.
+func IsEntryOwnerOrCalcuttaOwner(userID string, entry *models.CalcuttaEntry, calcutta *models.Calcutta) bool {
+	if entry != nil && entry.UserID != nil && *entry.UserID == userID {
+		return true
+	}
+	if calcutta != nil && calcutta.OwnerID == userID {
+		return true
+	}
+	return false
 }

@@ -26,6 +26,24 @@ func ResolveCoreTournamentID(ctx context.Context, pool *pgxpool.Pool, season int
 	return id, nil
 }
 
+// ResolveSeasonFromTournamentID finds the season year for a given tournament ID.
+func ResolveSeasonFromTournamentID(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (int, error) {
+	var year int
+	if err := pool.QueryRow(ctx, `
+		SELECT s.year
+		FROM core.tournaments t
+		JOIN core.seasons s
+			ON s.id = t.season_id
+			AND s.deleted_at IS NULL
+		WHERE t.id = $1::uuid
+			AND t.deleted_at IS NULL
+		LIMIT 1
+	`, tournamentID).Scan(&year); err != nil {
+		return 0, err
+	}
+	return year, nil
+}
+
 // LoadFinalFourConfig loads the Final Four region configuration for a tournament.
 func LoadFinalFourConfig(ctx context.Context, pool *pgxpool.Pool, coreTournamentID string) (*models.FinalFourConfig, error) {
 	var tl, bl, tr, br *string
@@ -58,17 +76,8 @@ func LoadFinalFourConfig(ctx context.Context, pool *pgxpool.Pool, coreTournament
 		cfg.BottomRightRegion = *br
 	}
 
-	if cfg.TopLeftRegion == "" {
-		cfg.TopLeftRegion = "East"
-	}
-	if cfg.BottomLeftRegion == "" {
-		cfg.BottomLeftRegion = "West"
-	}
-	if cfg.TopRightRegion == "" {
-		cfg.TopRightRegion = "South"
-	}
-	if cfg.BottomRightRegion == "" {
-		cfg.BottomRightRegion = "Midwest"
+	if err := cfg.ApplyDefaults(); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

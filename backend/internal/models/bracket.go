@@ -86,6 +86,24 @@ type FinalFourConfig struct {
 	BottomRightRegion string `json:"bottomRightRegion"`
 }
 
+// ApplyDefaults fills in missing region names with standard NCAA defaults.
+// Returns an error if any region is still empty after applying defaults (should not happen).
+func (c *FinalFourConfig) ApplyDefaults() error {
+	if c.TopLeftRegion == "" {
+		c.TopLeftRegion = "East"
+	}
+	if c.BottomLeftRegion == "" {
+		c.BottomLeftRegion = "West"
+	}
+	if c.TopRightRegion == "" {
+		c.TopRightRegion = "South"
+	}
+	if c.BottomRightRegion == "" {
+		c.BottomRightRegion = "Midwest"
+	}
+	return nil
+}
+
 // ValidateWinnerSelection validates that a winner can be selected for a game.
 func ValidateWinnerSelection(game *BracketGame, winnerTeamID string) error {
 	if game == nil {

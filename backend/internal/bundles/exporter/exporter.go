@@ -2,9 +2,7 @@ package exporter
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -22,18 +20,6 @@ func slugify(s string) string {
 	s = nonAlnum.ReplaceAllString(s, "-")
 	s = strings.Trim(s, "-")
 	return s
-}
-
-func writeJSON(path string, v any) error {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, b, 0o644)
 }
 
 func uniquifyKey(base string, used map[string]int) string {
@@ -80,7 +66,7 @@ func exportSchools(ctx context.Context, pool *pgxpool.Pool, outDir string, gener
 		return err
 	}
 
-	return writeJSON(filepath.Join(outDir, "schools.json"), out)
+	return bundles.WriteJSON(filepath.Join(outDir, "schools.json"), out)
 }
 
 func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time) error {
@@ -123,13 +109,12 @@ func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, g
 				FinalFourBottomLeft:  f2,
 				FinalFourTopRight:    f3,
 				FinalFourBottomRight: f4,
-				LegacyTournamentID:   tournamentID,
 			},
 			Teams: teams,
 		}
 
 		path := filepath.Join(outDir, "tournaments", fmt.Sprintf("%s.json", importKey))
-		if err := writeJSON(path, bundle); err != nil {
+		if err := bundles.WriteJSON(path, bundle); err != nil {
 			return err
 		}
 	}
@@ -174,9 +159,9 @@ func loadTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID s
 			return nil, err
 		}
 
-		tr := bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, Eliminated: eliminated, LegacyTeamID: teamID}
+		tr := bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, Eliminated: eliminated}
 		if hasKP {
-			tr.KenPom = &bundles.KenPomRecord{NetRTG: derefF(net), ORTG: derefF(o), DRTG: derefF(d), AdjT: derefF(adj)}
+			tr.KenPom = &bundles.KenPomRecord{NetRTG: bundles.DerefFloat64(net), ORTG: bundles.DerefFloat64(o), DRTG: bundles.DerefFloat64(d), AdjT: bundles.DerefFloat64(adj)}
 		}
 		out = append(out, tr)
 	}
@@ -253,11 +238,9 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 			GeneratedAt: generatedAt,
 			Tournament:  bundles.TournamentRef{ImportKey: tournamentKey, Name: tournamentName},
 			Calcutta: bundles.CalcuttaRecord{
-				Key:           calcuttaKey,
-				Name:          calcuttaName,
-				Owner:         owner,
-				LegacyID:      calcuttaID,
-				LegacyOwnerID: ownerID,
+				Key:   calcuttaKey,
+				Name:  calcuttaName,
+				Owner: owner,
 			},
 			Rounds:  rounds,
 			Payouts: payouts,
@@ -266,7 +249,7 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 		}
 
 		path := filepath.Join(outDir, "calcuttas", tournamentKey, fmt.Sprintf("%s.json", calcuttaKey))
-		if err := writeJSON(path, bundle); err != nil {
+		if err := bundles.WriteJSON(path, bundle); err != nil {
 			return err
 		}
 	}
@@ -328,7 +311,7 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 	defer r.Close()
 
 	usedEntryKeys := make(map[string]int)
-	entryKeyByLegacyID := make(map[string]string)
+	entryKeyByEntryID := make(map[string]string)
 
 	entries := make([]bundles.EntryRecord, 0)
 	for r.Next() {
@@ -341,7 +324,7 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 		base := "entry-" + slugify(name)
 		entryKey := uniquifyKey(base, usedEntryKeys)
 		entryKey = fmt.Sprintf("%s:%s", calcuttaKey, entryKey)
-		entryKeyByLegacyID[entryID] = entryKey
+		entryKeyByEntryID[entryID] = entryKey
 
 		var userName *string
 		if first != "" || last != "" {
@@ -356,13 +339,13 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 			userEmail = &email
 		}
 
-		entries = append(entries, bundles.EntryRecord{Key: entryKey, Name: name, UserName: userName, UserEmail: userEmail, LegacyID: entryID})
+		entries = append(entries, bundles.EntryRecord{Key: entryKey, Name: name, UserName: userName, UserEmail: userEmail})
 	}
 	if err := r.Err(); err != nil {
 		return nil, nil, err
 	}
 
-	bids, err := loadCalcuttaBids(ctx, pool, calcuttaID, entryKeyByLegacyID)
+	bids, err := loadCalcuttaBids(ctx, pool, calcuttaID, entryKeyByEntryID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -371,10 +354,9 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 	return entries, bids, nil
 }
 
-func loadCalcuttaBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, entryKeyByLegacyID map[string]string) ([]bundles.EntryTeamBid, error) {
+func loadCalcuttaBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, entryKeyByEntryID map[string]string) ([]bundles.EntryTeamBid, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			et.id,
 			et.entry_id,
 			et.bid_points,
 			s.slug
@@ -392,23 +374,16 @@ func loadCalcuttaBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string
 
 	out := make([]bundles.EntryTeamBid, 0)
 	for r.Next() {
-		var id, entryID, schoolSlug string
+		var entryID, schoolSlug string
 		var bid int
-		if err := r.Scan(&id, &entryID, &bid, &schoolSlug); err != nil {
+		if err := r.Scan(&entryID, &bid, &schoolSlug); err != nil {
 			return nil, err
 		}
-		entryKey := entryKeyByLegacyID[entryID]
-		out = append(out, bundles.EntryTeamBid{EntryKey: entryKey, SchoolSlug: schoolSlug, Bid: bid, LegacyEntryTeamID: id})
+		entryKey := entryKeyByEntryID[entryID]
+		out = append(out, bundles.EntryTeamBid{EntryKey: entryKey, SchoolSlug: schoolSlug, Bid: bid})
 	}
 	if err := r.Err(); err != nil {
 		return nil, err
 	}
 	return out, nil
-}
-
-func derefF(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }

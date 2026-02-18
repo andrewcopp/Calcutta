@@ -3,13 +3,13 @@ package analytics_snapshot
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/bundles"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -126,7 +126,7 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 		Notes:          fmt.Sprintf("games.csv is derived from bracket builder using team region/seed and team progress (wins+byes+eliminated). Tournament rounds=%d.", rounds),
 	}
 
-	if err := writeJSON(filepath.Join(outDir, "manifest.json"), m); err != nil {
+	if err := bundles.WriteJSON(filepath.Join(outDir, "manifest.json"), m); err != nil {
 		return res, err
 	}
 
@@ -160,18 +160,6 @@ func writeCSV(path string, header []string, rows [][]string) error {
 	}
 	w.Flush()
 	return w.Error()
-}
-
-func writeJSON(path string, v any) error {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, b, 0o644)
 }
 
 func loadTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (key string, name string, rounds int, err error) {

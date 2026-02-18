@@ -206,6 +206,8 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
     """Create a 68-team field with all required columns for auction prediction."""
     teams = []
     regions = ["East", "West", "South", "Midwest"]
+    # Fake tournament_id for optimal_v3 tests (DB query will return empty)
+    fake_tournament_id = "00000000-0000-0000-0000-000000000000"
 
     for region in regions:
         for seed in range(1, 17):
@@ -220,6 +222,7 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
                 "kenpom_d": 100 - kenpom_net * 0.2,
                 "kenpom_adj_t": 68 + seed * 0.1,
                 "school_slug": f"school-{region.lower()}-{seed}",
+                "tournament_id": fake_tournament_id,
             })
 
     # First Four teams
@@ -240,6 +243,7 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
             "kenpom_d": 100 - kenpom * 0.2,
             "kenpom_adj_t": 68 + seed * 0.1,
             "school_slug": f"school-{region.lower()}-{seed}-ff",
+            "tournament_id": fake_tournament_id,
         })
 
     return pd.DataFrame(teams)

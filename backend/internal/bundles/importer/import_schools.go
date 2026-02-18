@@ -11,7 +11,7 @@ import (
 func importSchools(ctx context.Context, tx pgx.Tx, inDir string) (int, error) {
 	path := filepath.Join(inDir, "schools.json")
 	var b bundles.SchoolsBundle
-	if err := readJSON(path, &b); err != nil {
+	if err := bundles.ReadJSON(path, &b); err != nil {
 		return 0, err
 	}
 	for _, s := range b.Schools {

@@ -11,27 +11,27 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
 	appbootstrap "github.com/andrewcopp/Calcutta/backend/internal/app/bootstrap"
 	"github.com/andrewcopp/Calcutta/backend/internal/auth"
-	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Server struct {
-	app              *app.App
-	authRepo         *dbadapters.AuthRepository
-	authzRepo        *dbadapters.AuthorizationRepository
-	userRepo         *dbadapters.UserRepository
-	apiKeysRepo      *dbadapters.APIKeysRepository
-	idempotencyRepo  *dbadapters.IdempotencyRepository
-	tokenManager     *auth.TokenManager
-	cognitoJWT       *cognitoJWTVerifier
-	pool             *pgxpool.Pool
-	cfg              platform.Config
-	emailSender      platform.EmailSender
-	cookieSecure     bool
-	cookieSameSite   http.SameSite
+	app             *app.App
+	authRepo        *dbadapters.AuthRepository
+	authzRepo       *dbadapters.AuthorizationRepository
+	userRepo        *dbadapters.UserRepository
+	apiKeysRepo     *dbadapters.APIKeysRepository
+	idempotencyRepo *dbadapters.IdempotencyRepository
+	tokenManager    *auth.TokenManager
+	cognitoJWT      *cognitoJWTVerifier
+	pool            *pgxpool.Pool
+	cfg             platform.Config
+	emailSender     platform.EmailSender
+	cookieSecure    bool
+	cookieSameSite  http.SameSite
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
@@ -68,7 +68,7 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 		}
 	}
 
-	cookieSecure, cookieSameSite := computeCookieSettings()
+	cookieSecure, cookieSameSite := computeCookieSettings(cfg)
 
 	return &Server{
 		app:             a,
@@ -145,12 +145,13 @@ func (s *Server) bootstrapAdmin(ctx context.Context) error {
 	return s.authzRepo.GrantGlobalAdmin(ctx, user.ID)
 }
 
-func computeCookieSettings() (secure bool, sameSite http.SameSite) {
+func computeCookieSettings(cfg platform.Config) (secure bool, sameSite http.SameSite) {
 	env := os.Getenv("NODE_ENV")
 	if env == "" {
 		env = "development"
 	}
 
+	// Default: secure in production, not in development
 	secure = env != "development"
 	if secure {
 		sameSite = http.SameSiteNoneMode
@@ -158,16 +159,12 @@ func computeCookieSettings() (secure bool, sameSite http.SameSite) {
 		sameSite = http.SameSiteLaxMode
 	}
 
-	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
-		if strings.EqualFold(v, "true") || v == "1" || strings.EqualFold(v, "yes") {
-			secure = true
-		}
-		if strings.EqualFold(v, "false") || v == "0" || strings.EqualFold(v, "no") {
-			secure = false
-		}
+	// Override from config if explicitly set
+	if cfg.CookieSecure != nil {
+		secure = *cfg.CookieSecure
 	}
 
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))) {
+	switch cfg.CookieSameSite {
 	case "none":
 		sameSite = http.SameSiteNoneMode
 	case "lax":
@@ -176,6 +173,7 @@ func computeCookieSettings() (secure bool, sameSite http.SameSite) {
 		sameSite = http.SameSiteStrictMode
 	}
 
+	// SameSite=None requires Secure
 	if sameSite == http.SameSiteNoneMode && !secure {
 		sameSite = http.SameSiteLaxMode
 	}

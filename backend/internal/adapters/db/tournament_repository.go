@@ -33,11 +33,11 @@ func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament,
 			ID:                   row.ID,
 			Name:                 row.Name,
 			Rounds:               int(row.Rounds),
-			FinalFourTopLeft:     derefString(row.FinalFourTopLeft),
-			FinalFourBottomLeft:  derefString(row.FinalFourBottomLeft),
-			FinalFourTopRight:    derefString(row.FinalFourTopRight),
-			FinalFourBottomRight: derefString(row.FinalFourBottomRight),
-			StartingAt:           timestamptzToTimePtr(row.StartingAt),
+			FinalFourTopLeft:     DerefString(row.FinalFourTopLeft),
+			FinalFourBottomLeft:  DerefString(row.FinalFourBottomLeft),
+			FinalFourTopRight:    DerefString(row.FinalFourTopRight),
+			FinalFourBottomRight: DerefString(row.FinalFourBottomRight),
+			StartingAt:           TimestamptzToPtrTime(row.StartingAt),
 			Created:              row.CreatedAt.Time,
 			Updated:              row.UpdatedAt.Time,
 		})
@@ -57,11 +57,11 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 		ID:                   row.ID,
 		Name:                 row.Name,
 		Rounds:               int(row.Rounds),
-		FinalFourTopLeft:     derefString(row.FinalFourTopLeft),
-		FinalFourBottomLeft:  derefString(row.FinalFourBottomLeft),
-		FinalFourTopRight:    derefString(row.FinalFourTopRight),
-		FinalFourBottomRight: derefString(row.FinalFourBottomRight),
-		StartingAt:           timestamptzToTimePtr(row.StartingAt),
+		FinalFourTopLeft:     DerefString(row.FinalFourTopLeft),
+		FinalFourBottomLeft:  DerefString(row.FinalFourBottomLeft),
+		FinalFourTopRight:    DerefString(row.FinalFourTopRight),
+		FinalFourBottomRight: DerefString(row.FinalFourBottomRight),
+		StartingAt:           TimestamptzToPtrTime(row.StartingAt),
 		Created:              row.CreatedAt.Time,
 		Updated:              row.UpdatedAt.Time,
 	}, nil
@@ -300,21 +300,6 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 		team.KenPom = &models.KenPomStats{NetRtg: row.NetRtg, ORtg: row.ORtg, DRtg: row.DRtg, AdjT: row.AdjT}
 	}
 	return team, nil
-}
-
-func derefString(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
-func timestamptzToTimePtr(ts pgtype.Timestamptz) *time.Time {
-	if !ts.Valid {
-		return nil
-	}
-	t := ts.Time
-	return &t
 }
 
 func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region string, byes, wins int32, eliminated bool, createdAt, updatedAt pgtype.Timestamptz, netRtg, oRtg, dRtg, adjT *float64, schoolName *string) *models.TournamentTeam {

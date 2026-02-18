@@ -414,9 +414,9 @@ func (r *LabRepository) GetEntryEnriched(ctx context.Context, id string) (*model
 
 	var result models.LabEntryDetailEnriched
 	var (
-		tournamentID                                     string
+		tournamentID                                      string
 		gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
-		predictionsStr                                   *string
+		predictionsStr                                    *string
 	)
 
 	err := r.pool.QueryRow(ctx, query, id).Scan(
@@ -613,11 +613,9 @@ func (r *LabRepository) GetEntryEnriched(ctx context.Context, id string) (*model
 }
 
 // GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
-// Defaults to starting_state_key='post_first_four' if not specified.
 func (r *LabRepository) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
-
 	if startingStateKey == "" {
-		startingStateKey = "post_first_four"
+		return nil, errors.New("startingStateKey is required")
 	}
 
 	// Find the entry ID by model name, calcutta ID, and starting state key

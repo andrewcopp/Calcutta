@@ -1,9 +1,5 @@
 """
 Shared database helpers for lab pipeline scripts.
-
-Deduplicates queries that were copy-pasted across
-generate_lab_predictions.py, generate_naive_ev_predictions.py, and
-generate_oracle_predictions.py.
 """
 from __future__ import annotations
 
@@ -83,16 +79,44 @@ def get_team_id_map(tournament_id: str) -> Dict[str, str]:
 
 def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
     """
-    Get expected tournament points for each team from simulation data.
+    Get expected tournament points for each team.
 
-    Uses pre-computed simulations from derived.simulated_teams and the calcutta's
-    scoring rules via core.calcutta_points_for_progress() to calculate:
-        expected_points = AVG(calcutta_points_for_progress(wins, byes))
-
-    Falls back to seed-based estimates if no simulation data exists.
+    First tries to use Go-generated predictions from derived.predicted_team_values.
+    Falls back to simulation-based calculation if no predictions exist.
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
+            # First, try to get from Go-generated predictions
+            cur.execute("""
+                WITH calcutta_ctx AS (
+                    SELECT c.id AS calcutta_id, t.id AS tournament_id
+                    FROM core.calcuttas c
+                    JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+                    WHERE c.id = %s AND c.deleted_at IS NULL
+                ),
+                latest_batch AS (
+                    SELECT pb.id
+                    FROM derived.prediction_batches pb
+                    WHERE pb.tournament_id = (SELECT tournament_id FROM calcutta_ctx)
+                        AND pb.deleted_at IS NULL
+                    ORDER BY pb.created_at DESC
+                    LIMIT 1
+                )
+                SELECT s.slug AS team_slug, ptv.expected_points::float
+                FROM derived.predicted_team_values ptv
+                JOIN core.teams t ON t.id = ptv.team_id AND t.deleted_at IS NULL
+                JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
+                WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
+                    AND ptv.deleted_at IS NULL
+            """, (calcutta_id,))
+            result = {row[0]: row[1] for row in cur.fetchall()}
+
+            if result:
+                logger.info("Using Go-generated predictions for calcutta %s (%d teams)", calcutta_id, len(result))
+                return result
+
+            # Fallback: compute from simulations
+            logger.info("No Go predictions found, falling back to simulation-based calculation for calcutta %s", calcutta_id)
             cur.execute("""
                 WITH calcutta_ctx AS (
                     SELECT c.id AS calcutta_id, t.id AS tournament_id
@@ -137,8 +161,8 @@ def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
 
             if not result:
                 raise ValueError(
-                    f"No simulation data for calcutta {calcutta_id}. "
-                    "Run tournament simulations before generating predictions."
+                    f"No prediction or simulation data for calcutta {calcutta_id}. "
+                    "Run predictions or simulations before generating market predictions."
                 )
 
             return result

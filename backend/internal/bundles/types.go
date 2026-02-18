@@ -21,28 +21,24 @@ type TournamentBundle struct {
 }
 
 type TournamentRecord struct {
-	ImportKey             string `json:"import_key"`
-	Name                  string `json:"name"`
-	Rounds                int    `json:"rounds"`
-	FinalFourTopLeft      string `json:"final_four_top_left"`
-	FinalFourBottomLeft   string `json:"final_four_bottom_left"`
-	FinalFourTopRight     string `json:"final_four_top_right"`
-	FinalFourBottomRight  string `json:"final_four_bottom_right"`
-	LegacyTournamentID    string `json:"legacy_tournament_id,omitempty"`
-	LegacyTournamentName  string `json:"legacy_tournament_name,omitempty"`
-	LegacyTournamentNotes string `json:"legacy_tournament_notes,omitempty"`
+	ImportKey            string `json:"import_key"`
+	Name                 string `json:"name"`
+	Rounds               int    `json:"rounds"`
+	FinalFourTopLeft     string `json:"final_four_top_left"`
+	FinalFourBottomLeft  string `json:"final_four_bottom_left"`
+	FinalFourTopRight    string `json:"final_four_top_right"`
+	FinalFourBottomRight string `json:"final_four_bottom_right"`
 }
 
 type TeamRecord struct {
-	SchoolSlug   string        `json:"school_slug"`
-	SchoolName   string        `json:"school_name"`
-	Seed         int           `json:"seed"`
-	Region       string        `json:"region"`
-	Byes         int           `json:"byes"`
-	Wins         int           `json:"wins"`
-	Eliminated   bool          `json:"eliminated"`
-	KenPom       *KenPomRecord `json:"kenpom,omitempty"`
-	LegacyTeamID string        `json:"legacy_team_id,omitempty"`
+	SchoolSlug string        `json:"school_slug"`
+	SchoolName string        `json:"school_name"`
+	Seed       int           `json:"seed"`
+	Region     string        `json:"region"`
+	Byes       int           `json:"byes"`
+	Wins       int           `json:"wins"`
+	Eliminated bool          `json:"eliminated"`
+	KenPom     *KenPomRecord `json:"kenpom,omitempty"`
 }
 
 type KenPomRecord struct {
@@ -53,15 +49,14 @@ type KenPomRecord struct {
 }
 
 type CalcuttaBundle struct {
-	Version     int               `json:"version"`
-	GeneratedAt time.Time         `json:"generated_at"`
-	Tournament  TournamentRef     `json:"tournament"`
-	Calcutta    CalcuttaRecord    `json:"calcutta"`
-	Rounds      []RoundRecord     `json:"rounds"`
-	Payouts     []PayoutRecord    `json:"payouts"`
-	Entries     []EntryRecord     `json:"entries"`
-	Bids        []EntryTeamBid    `json:"bids"`
-	LegacyNotes map[string]string `json:"legacy_notes,omitempty"`
+	Version     int            `json:"version"`
+	GeneratedAt time.Time      `json:"generated_at"`
+	Tournament  TournamentRef  `json:"tournament"`
+	Calcutta    CalcuttaRecord `json:"calcutta"`
+	Rounds      []RoundRecord  `json:"rounds"`
+	Payouts     []PayoutRecord `json:"payouts"`
+	Entries     []EntryRecord  `json:"entries"`
+	Bids        []EntryTeamBid `json:"bids"`
 }
 
 type TournamentRef struct {
@@ -70,11 +65,9 @@ type TournamentRef struct {
 }
 
 type CalcuttaRecord struct {
-	Key           string   `json:"key"`
-	Name          string   `json:"name"`
-	Owner         *UserRef `json:"owner,omitempty"`
-	LegacyID      string   `json:"legacy_id,omitempty"`
-	LegacyOwnerID string   `json:"legacy_owner_id,omitempty"`
+	Key   string   `json:"key"`
+	Name  string   `json:"name"`
+	Owner *UserRef `json:"owner,omitempty"`
 }
 
 type UserRef struct {
@@ -98,12 +91,10 @@ type EntryRecord struct {
 	Name      string  `json:"name"`
 	UserName  *string `json:"user_name,omitempty"`
 	UserEmail *string `json:"user_email,omitempty"`
-	LegacyID  string  `json:"legacy_id,omitempty"`
 }
 
 type EntryTeamBid struct {
-	EntryKey          string `json:"entry_key"`
-	SchoolSlug        string `json:"school_slug"`
-	Bid               int    `json:"bid"`
-	LegacyEntryTeamID string `json:"legacy_id,omitempty"`
+	EntryKey   string `json:"entry_key"`
+	SchoolSlug string `json:"school_slug"`
+	Bid        int    `json:"bid"`
 }

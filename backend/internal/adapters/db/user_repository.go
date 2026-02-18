@@ -22,21 +22,20 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	if user.Status == "" {
+		return errors.New("user status is required")
+	}
+
 	now := time.Now()
 	user.Created = now
 	user.Updated = now
-
-	status := user.Status
-	if status == "" {
-		status = "active"
-	}
 
 	return r.q.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:           user.ID,
 		Email:        user.Email,
 		FirstName:    user.FirstName,
 		LastName:     user.LastName,
-		Status:       status,
+		Status:       user.Status,
 		PasswordHash: user.PasswordHash,
 		CreatedAt:    pgtype.Timestamptz{Time: user.Created, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
@@ -66,6 +65,10 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
+	if user.Status == "" {
+		return errors.New("user status is required")
+	}
+
 	now := time.Now()
 	user.Updated = now
 
@@ -74,17 +77,12 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 		deletedAt = pgtype.Timestamptz{Time: *user.Deleted, Valid: true}
 	}
 
-	status := user.Status
-	if status == "" {
-		status = "active"
-	}
-
 	return r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
 		ID:           user.ID,
 		Email:        user.Email,
 		FirstName:    user.FirstName,
 		LastName:     user.LastName,
-		Status:       status,
+		Status:       user.Status,
 		PasswordHash: user.PasswordHash,
 		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
 		DeletedAt:    deletedAt,

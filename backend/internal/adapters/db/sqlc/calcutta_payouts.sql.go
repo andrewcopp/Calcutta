@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createPayout = `-- name: CreatePayout :exec
+INSERT INTO core.payouts (id, calcutta_id, position, amount_cents, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type CreatePayoutParams struct {
+	ID          string
+	CalcuttaID  string
+	Position    int32
+	AmountCents int32
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+func (q *Queries) CreatePayout(ctx context.Context, arg CreatePayoutParams) error {
+	_, err := q.db.Exec(ctx, createPayout,
+		arg.ID,
+		arg.CalcuttaID,
+		arg.Position,
+		arg.AmountCents,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const listCalcuttaPayouts = `-- name: ListCalcuttaPayouts :many
 SELECT id, calcutta_id, position, amount_cents, created_at, updated_at
 FROM core.payouts
@@ -52,4 +78,24 @@ func (q *Queries) ListCalcuttaPayouts(ctx context.Context, calcuttaID string) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeletePayoutsByCalcuttaID = `-- name: SoftDeletePayoutsByCalcuttaID :execrows
+UPDATE core.payouts
+SET deleted_at = $1, updated_at = $2
+WHERE calcutta_id = $3 AND deleted_at IS NULL
+`
+
+type SoftDeletePayoutsByCalcuttaIDParams struct {
+	DeletedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	CalcuttaID string
+}
+
+func (q *Queries) SoftDeletePayoutsByCalcuttaID(ctx context.Context, arg SoftDeletePayoutsByCalcuttaIDParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeletePayoutsByCalcuttaID, arg.DeletedAt, arg.UpdatedAt, arg.CalcuttaID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

@@ -4,7 +4,75 @@ import (
 	"testing"
 )
 
-func TestCalculateWinsAndByes(t *testing.T) {
+func TestThatTeamWithByeAndNoGamesPlayedHasZeroWins(t *testing.T) {
+	// GIVEN a bracket with a 1-seed team that has not played
+	bracket := createTestBracketWithTwoTeams()
+
+	// WHEN calculating wins and byes
+	wins, _, _ := CalculateWinsAndByes("team1", bracket)
+
+	// THEN the team has 0 wins
+	if wins != 0 {
+		t.Errorf("Expected 0 wins, got %d", wins)
+	}
+}
+
+func TestThatTeamWithByeAndNoGamesPlayedHasOneBye(t *testing.T) {
+	// GIVEN a bracket with a 1-seed team that has not played
+	bracket := createTestBracketWithTwoTeams()
+
+	// WHEN calculating wins and byes
+	_, byes, _ := CalculateWinsAndByes("team1", bracket)
+
+	// THEN the team has 1 bye
+	if byes != 1 {
+		t.Errorf("Expected 1 bye, got %d", byes)
+	}
+}
+
+func TestThatTeamWithByeAndNoGamesPlayedIsNotEliminated(t *testing.T) {
+	// GIVEN a bracket with a 1-seed team that has not played
+	bracket := createTestBracketWithTwoTeams()
+
+	// WHEN calculating wins and byes
+	_, _, eliminated := CalculateWinsAndByes("team1", bracket)
+
+	// THEN the team is not eliminated
+	if eliminated {
+		t.Errorf("Expected team to not be eliminated")
+	}
+}
+
+func TestThatTeamWinningFirstGameHasOneWin(t *testing.T) {
+	// GIVEN a bracket where team1 has won their first game
+	bracket := createTestBracketWithTwoTeams()
+	bracket.Games["game1"].Winner = bracket.Games["game1"].Team1
+	bracket.Games["game2"].Team1 = bracket.Games["game1"].Team1
+
+	// WHEN calculating wins and byes
+	wins, _, _ := CalculateWinsAndByes("team1", bracket)
+
+	// THEN the team has 1 win
+	if wins != 1 {
+		t.Errorf("Expected 1 win, got %d", wins)
+	}
+}
+
+func TestThatTeamLosingFirstGameIsEliminated(t *testing.T) {
+	// GIVEN a bracket where team1 has lost their first game
+	bracket := createTestBracketWithTwoTeams()
+	bracket.Games["game1"].Winner = bracket.Games["game1"].Team2
+
+	// WHEN calculating wins and byes
+	_, _, eliminated := CalculateWinsAndByes("team1", bracket)
+
+	// THEN the team is eliminated
+	if !eliminated {
+		t.Errorf("Expected team to be eliminated")
+	}
+}
+
+func createTestBracketWithTwoTeams() *BracketStructure {
 	bracket := &BracketStructure{
 		TournamentID: "test-tournament",
 		Games:        make(map[string]*BracketGame),
@@ -41,46 +109,7 @@ func TestCalculateWinsAndByes(t *testing.T) {
 	bracket.Games["game1"] = game1
 	bracket.Games["game2"] = game2
 
-	t.Run("Team with bye, no games played", func(t *testing.T) {
-		wins, byes, eliminated := CalculateWinsAndByes("team1", bracket)
-		if wins != 0 {
-			t.Errorf("Expected 0 wins, got %d", wins)
-		}
-		if byes != 1 {
-			t.Errorf("Expected 1 bye, got %d", byes)
-		}
-		if eliminated {
-			t.Errorf("Expected team to not be eliminated")
-		}
-	})
-
-	t.Run("Team wins first game", func(t *testing.T) {
-		game1.Winner = team1
-		game2.Team1 = team1
-
-		wins, byes, eliminated := CalculateWinsAndByes("team1", bracket)
-		if wins != 1 {
-			t.Errorf("Expected 1 win, got %d", wins)
-		}
-		if byes != 1 {
-			t.Errorf("Expected 1 bye, got %d", byes)
-		}
-		if eliminated {
-			t.Errorf("Expected team to not be eliminated")
-		}
-	})
-
-	t.Run("Team loses first game", func(t *testing.T) {
-		game1.Winner = team16
-
-		wins, _, eliminated := CalculateWinsAndByes("team1", bracket)
-		if wins != 0 {
-			t.Errorf("Expected 0 wins, got %d", wins)
-		}
-		if eliminated != true {
-			t.Errorf("Expected team to be eliminated")
-		}
-	})
+	return bracket
 }
 
 func TestThatValidateWinnerSelectionAcceptsParticipant(t *testing.T) {
@@ -139,4 +168,3 @@ func TestThatValidateWinnerSelectionRejectsNilGame(t *testing.T) {
 		t.Error("Expected error for nil game")
 	}
 }
-

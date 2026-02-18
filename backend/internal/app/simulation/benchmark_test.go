@@ -1,4 +1,4 @@
-package tournament_simulation
+package simulation
 
 import (
 	"testing"

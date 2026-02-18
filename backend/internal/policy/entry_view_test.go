@@ -1,89 +1,82 @@
 package policy
 
 import (
-	"context"
-	"errors"
 	"testing"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-type fakeAuthz struct {
-	ok  bool
-	err error
-}
-
-func (a *fakeAuthz) HasPermission(ctx context.Context, userID string, scope string, scopeID string, permission string) (bool, error) {
-	return a.ok, a.err
-}
-
-func TestThatCanViewEntryDataRejectsWhenEntryNotOwned(t *testing.T) {
-	// GIVEN
+func TestThatIsEntryOwnerOrCalcuttaOwnerReturnsFalseWhenEntryNotOwned(t *testing.T) {
+	// GIVEN a user who does not own the entry or calcutta
 	userID := "u1"
 	otherUserID := "u2"
 	entry := &models.CalcuttaEntry{UserID: &otherUserID}
 	calcutta := &models.Calcutta{OwnerID: "owner"}
 
-	// WHEN
-	decision, err := CanViewEntryData(context.Background(), &fakeAuthz{ok: false}, userID, entry, calcutta)
+	// WHEN checking ownership
+	result := IsEntryOwnerOrCalcuttaOwner(userID, entry, calcutta)
 
-	// THEN
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if decision.Allowed {
-		t.Fatalf("expected not allowed")
+	// THEN the result is false
+	if result {
+		t.Fatalf("expected false")
 	}
 }
 
-func TestThatCanViewEntryDataAllowsWhenEntryOwned(t *testing.T) {
-	// GIVEN
+func TestThatIsEntryOwnerOrCalcuttaOwnerReturnsTrueWhenEntryOwned(t *testing.T) {
+	// GIVEN a user who owns the entry
 	userID := "u1"
 	entry := &models.CalcuttaEntry{UserID: &userID}
 	calcutta := &models.Calcutta{OwnerID: "owner"}
 
-	// WHEN
-	decision, err := CanViewEntryData(context.Background(), &fakeAuthz{ok: false}, userID, entry, calcutta)
+	// WHEN checking ownership
+	result := IsEntryOwnerOrCalcuttaOwner(userID, entry, calcutta)
 
-	// THEN
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !decision.Allowed {
-		t.Fatalf("expected allowed")
+	// THEN the result is true
+	if !result {
+		t.Fatalf("expected true")
 	}
 }
 
-func TestThatCanViewEntryDataAllowsWhenCalcuttaOwner(t *testing.T) {
-	// GIVEN
+func TestThatIsEntryOwnerOrCalcuttaOwnerReturnsTrueWhenCalcuttaOwner(t *testing.T) {
+	// GIVEN a user who owns the calcutta
 	userID := "u1"
 	entry := &models.CalcuttaEntry{UserID: nil}
 	calcutta := &models.Calcutta{OwnerID: userID}
 
-	// WHEN
-	decision, err := CanViewEntryData(context.Background(), &fakeAuthz{ok: false}, userID, entry, calcutta)
+	// WHEN checking ownership
+	result := IsEntryOwnerOrCalcuttaOwner(userID, entry, calcutta)
 
-	// THEN
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !decision.Allowed {
-		t.Fatalf("expected allowed")
+	// THEN the result is true
+	if !result {
+		t.Fatalf("expected true")
 	}
 }
 
-func TestThatCanViewEntryDataReturnsErrorWhenAuthzErrors(t *testing.T) {
-	// GIVEN
+func TestThatIsEntryOwnerOrCalcuttaOwnerReturnsFalseForNilEntry(t *testing.T) {
+	// GIVEN a nil entry
 	userID := "u1"
-	errBoom := errors.New("boom")
-	entry := &models.CalcuttaEntry{UserID: nil}
 	calcutta := &models.Calcutta{OwnerID: "owner"}
 
-	// WHEN
-	_, err := CanViewEntryData(context.Background(), &fakeAuthz{ok: false, err: errBoom}, userID, entry, calcutta)
+	// WHEN checking ownership
+	result := IsEntryOwnerOrCalcuttaOwner(userID, nil, calcutta)
 
-	// THEN
-	if err == nil {
-		t.Fatalf("expected error")
+	// THEN the result is false
+	if result {
+		t.Fatalf("expected false")
+	}
+}
+
+func TestThatIsEntryOwnerOrCalcuttaOwnerReturnsFalseForNilCalcutta(t *testing.T) {
+	// GIVEN a nil calcutta and entry with different owner
+	userID := "u1"
+	otherUserID := "u2"
+	entry := &models.CalcuttaEntry{UserID: &otherUserID}
+
+	// WHEN checking ownership
+	result := IsEntryOwnerOrCalcuttaOwner(userID, entry, nil)
+
+	// THEN the result is false
+	if result {
+		t.Fatalf("expected false")
 	}
 }

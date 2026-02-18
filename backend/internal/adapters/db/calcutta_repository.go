@@ -41,7 +41,7 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 			MaxTeams:        int(row.MaxTeams),
 			MaxBid:          int(row.MaxBid),
 			BiddingOpen:     row.BiddingOpen,
-			BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
 			Created:         row.CreatedAt.Time,
 			Updated:         row.UpdatedAt.Time,
 			Deleted:         nil,
@@ -117,7 +117,7 @@ func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]
 			MaxTeams:        int(row.MaxTeams),
 			MaxBid:          int(row.MaxBid),
 			BiddingOpen:     row.BiddingOpen,
-			BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
 			Created:         row.CreatedAt.Time,
 			Updated:         row.UpdatedAt.Time,
 		})
@@ -132,7 +132,7 @@ func (r *CalcuttaRepository) GetDistinctUserIDsByCalcutta(ctx context.Context, c
 	}
 	out := make([]string, 0, len(uuids))
 	for _, u := range uuids {
-		s := uuidToPtrString(u)
+		s := UUIDToPtrString(u)
 		if s != nil {
 			out = append(out, *s)
 		}
@@ -157,7 +157,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		MaxTeams:        int(row.MaxTeams),
 		MaxBid:          int(row.MaxBid),
 		BiddingOpen:     row.BiddingOpen,
-		BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+		BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
 		Created:         row.CreatedAt.Time,
 		Updated:         row.UpdatedAt.Time,
 		Deleted:         nil,
@@ -181,10 +181,10 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 			MaxTeams:        int(row.MaxTeams),
 			MaxBid:          int(row.MaxBid),
 			BiddingOpen:     row.BiddingOpen,
-			BiddingLockedAt: timestamptzToPtrTime(row.BiddingLockedAt),
+			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
 			Created:         row.CreatedAt.Time,
 			Updated:         row.UpdatedAt.Time,
-			Deleted:         timestamptzToPtrTime(row.DeletedAt),
+			Deleted:         TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -361,12 +361,14 @@ func (r *CalcuttaRepository) ReplacePayouts(ctx context.Context, calcuttaID stri
 	}()
 
 	now := time.Now()
+	qtx := r.q.WithTx(tx)
 
 	// Soft-delete existing payouts
-	_, err = tx.Exec(ctx,
-		`UPDATE core.payouts SET deleted_at = $1, updated_at = $1 WHERE calcutta_id = $2 AND deleted_at IS NULL`,
-		now, calcuttaID,
-	)
+	_, err = qtx.SoftDeletePayoutsByCalcuttaID(ctx, sqlc.SoftDeletePayoutsByCalcuttaIDParams{
+		DeletedAt:  pgtype.Timestamptz{Time: now, Valid: true},
+		UpdatedAt:  pgtype.Timestamptz{Time: now, Valid: true},
+		CalcuttaID: calcuttaID,
+	})
 	if err != nil {
 		return err
 	}
@@ -376,11 +378,14 @@ func (r *CalcuttaRepository) ReplacePayouts(ctx context.Context, calcuttaID stri
 		if p == nil {
 			continue
 		}
-		id := uuid.New().String()
-		_, err = tx.Exec(ctx,
-			`INSERT INTO core.payouts (id, calcutta_id, position, amount_cents, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
-			id, calcuttaID, p.Position, p.AmountCents, now,
-		)
+		err = qtx.CreatePayout(ctx, sqlc.CreatePayoutParams{
+			ID:          uuid.New().String(),
+			CalcuttaID:  calcuttaID,
+			Position:    int32(p.Position),
+			AmountCents: int32(p.AmountCents),
+			CreatedAt:   pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt:   pgtype.Timestamptz{Time: now, Valid: true},
+		})
 		if err != nil {
 			return err
 		}
@@ -434,12 +439,12 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 		out = append(out, &models.CalcuttaEntry{
 			ID:          row.ID,
 			Name:        row.Name,
-			UserID:      uuidToPtrString(row.UserID),
+			UserID:      UUIDToPtrString(row.UserID),
 			CalcuttaID:  row.CalcuttaID,
 			TotalPoints: row.TotalPoints,
 			Created:     row.CreatedAt.Time,
 			Updated:     row.UpdatedAt.Time,
-			Deleted:     timestamptzToPtrTime(row.DeletedAt),
+			Deleted:     TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -457,11 +462,11 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 	return &models.CalcuttaEntry{
 		ID:         row.ID,
 		Name:       row.Name,
-		UserID:     uuidToPtrString(row.UserID),
+		UserID:     UUIDToPtrString(row.UserID),
 		CalcuttaID: row.CalcuttaID,
 		Created:    row.CreatedAt.Time,
 		Updated:    row.UpdatedAt.Time,
-		Deleted:    timestamptzToPtrTime(row.DeletedAt),
+		Deleted:    TimestamptzToPtrTime(row.DeletedAt),
 	}, nil
 }
 
@@ -480,7 +485,7 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			Bid:     int(row.Bid),
 			Created: row.CreatedAt.Time,
 			Updated: row.UpdatedAt.Time,
-			Deleted: timestamptzToPtrTime(row.DeletedAt),
+			Deleted: TimestamptzToPtrTime(row.DeletedAt),
 		}
 
 		tt := &models.TournamentTeam{
@@ -492,7 +497,7 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			Wins:         int(row.Wins),
 			Created:      row.TeamCreatedAt.Time,
 			Updated:      row.TeamUpdatedAt.Time,
-			Deleted:      timestamptzToPtrTime(row.TeamDeletedAt),
+			Deleted:      TimestamptzToPtrTime(row.TeamDeletedAt),
 		}
 		if row.SchoolName != nil {
 			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
@@ -519,7 +524,7 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 		MaximumPoints: row.MaximumPoints,
 		Created:       row.CreatedAt.Time,
 		Updated:       row.UpdatedAt.Time,
-		Deleted:       timestamptzToPtrTime(row.DeletedAt),
+		Deleted:       TimestamptzToPtrTime(row.DeletedAt),
 	}, nil
 }
 
@@ -540,7 +545,7 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			ExpectedPoints:      row.ExpectedPoints,
 			Created:             row.CreatedAt.Time,
 			Updated:             row.UpdatedAt.Time,
-			Deleted:             timestamptzToPtrTime(row.DeletedAt),
+			Deleted:             TimestamptzToPtrTime(row.DeletedAt),
 		}
 
 		tt := &models.TournamentTeam{
@@ -578,7 +583,7 @@ func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID s
 			EntryID: row.EntryID,
 			Created: row.CreatedAt.Time,
 			Updated: row.UpdatedAt.Time,
-			Deleted: timestamptzToPtrTime(row.DeletedAt),
+			Deleted: TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -613,21 +618,3 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 	}
 	return team, nil
 }
-
-func timestamptzToPtrTime(ts pgtype.Timestamptz) *time.Time {
-	if !ts.Valid {
-		return nil
-	}
-	t := ts.Time
-	return &t
-}
-
-func uuidToPtrString(u pgtype.UUID) *string {
-	if !u.Valid {
-		return nil
-	}
-	id := uuid.UUID(u.Bytes)
-	s := id.String()
-	return &s
-}
-

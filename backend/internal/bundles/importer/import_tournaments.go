@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -20,7 +21,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 	teamsInserted := 0
 	for _, path := range paths {
 		var b bundles.TournamentBundle
-		if err := readJSON(path, &b); err != nil {
+		if err := bundles.ReadJSON(path, &b); err != nil {
 			return 0, 0, err
 		}
 
@@ -87,7 +88,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 				updated_at = NOW(),
 				deleted_at = NULL
 			RETURNING id
-		`, b.Tournament.LegacyTournamentID, b.Tournament.Name, b.Tournament.ImportKey, b.Tournament.Rounds, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft, b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
+		`, uuid.New().String(), b.Tournament.Name, b.Tournament.ImportKey, b.Tournament.Rounds, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft, b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -119,7 +120,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 					updated_at = NOW(),
 					deleted_at = NULL
 				RETURNING id
-			`, team.LegacyTeamID, tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.Eliminated).Scan(&tournamentTeamID)
+			`, uuid.New().String(), tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.Eliminated).Scan(&tournamentTeamID)
 			if err != nil {
 				return 0, 0, err
 			}

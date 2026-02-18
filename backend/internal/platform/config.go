@@ -49,6 +49,17 @@ type Config struct {
 	CognitoAppClientID              string
 	CognitoAutoProvision            bool
 	CognitoAllowUnprovisioned       bool
+
+	// Lab/Worker settings
+	DefaultNSims       int
+	ExcludedEntryName  string
+	PythonBin          string
+	RunJobsMaxAttempts int
+	WorkerID           string
+
+	// Cookie settings
+	CookieSecure   *bool  // nil = auto (secure in production)
+	CookieSameSite string // "none", "lax", "strict", or "" for auto
 }
 
 func envBool(key string, defaultValue bool) bool {
@@ -94,6 +105,31 @@ func envInt64(key string, defaultValue int64, minValue int64) int64 {
 		return defaultValue
 	}
 	return parsed
+}
+
+func envString(key string, defaultValue string) string {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return defaultValue
+	}
+	return v
+}
+
+func envBoolPtr(key string) *bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if v == "" {
+		return nil
+	}
+	var result bool
+	switch v {
+	case "1", "true", "t", "yes", "y", "on":
+		result = true
+	case "0", "false", "f", "no", "n", "off":
+		result = false
+	default:
+		return nil
+	}
+	return &result
 }
 
 func loadDotEnvFiles() {
@@ -326,6 +362,17 @@ func LoadConfigFromEnv() (Config, error) {
 		CognitoAppClientID:              os.Getenv("COGNITO_APP_CLIENT_ID"),
 		CognitoAutoProvision:            envBool("COGNITO_AUTO_PROVISION", false),
 		CognitoAllowUnprovisioned:       envBool("COGNITO_ALLOW_UNPROVISIONED", false),
+
+		// Lab/Worker settings
+		DefaultNSims:       envInt("DEFAULT_N_SIMS", 10000, 1),
+		ExcludedEntryName:  strings.TrimSpace(os.Getenv("EXCLUDED_ENTRY_NAME")),
+		PythonBin:          envString("PYTHON_BIN", "python3"),
+		RunJobsMaxAttempts: envInt("RUN_JOBS_MAX_ATTEMPTS", 5, 1),
+		WorkerID:           envString("HOSTNAME", "worker"),
+
+		// Cookie settings
+		CookieSecure:   envBoolPtr("COOKIE_SECURE"),
+		CookieSameSite: strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))),
 	}
 	if env == "development" && cfg.AuthMode != "cognito" && cfg.JWTSecret == "" {
 		cfg.JWTSecret = "dev-jwt-secret"

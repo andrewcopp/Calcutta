@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -448,10 +449,10 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		it.InvitedAt = timestamptzPtr(invitedAt)
-		it.LastInviteSentAt = timestamptzPtr(lastInviteSentAt)
-		it.InviteExpiresAt = timestamptzPtr(inviteExpiresAt)
-		it.InviteConsumedAt = timestamptzPtr(inviteConsumedAt)
+		it.InvitedAt = db.TimestamptzToPtrTimeUTC(invitedAt)
+		it.LastInviteSentAt = db.TimestamptzToPtrTimeUTC(lastInviteSentAt)
+		it.InviteExpiresAt = db.TimestamptzToPtrTimeUTC(inviteExpiresAt)
+		it.InviteConsumedAt = db.TimestamptzToPtrTimeUTC(inviteConsumedAt)
 
 		sort.Strings(labels)
 		sort.Strings(perms)
@@ -466,16 +467,4 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, adminUsersListResponse{Items: items})
-}
-
-func timestamptzPtr(v pgtype.Timestamptz) *time.Time {
-	if !v.Valid {
-		return nil
-	}
-	t := v.Time
-	if t.IsZero() {
-		return nil
-	}
-	ut := t.UTC()
-	return &ut
 }

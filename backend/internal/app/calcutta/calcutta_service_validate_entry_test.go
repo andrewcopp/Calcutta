@@ -7,7 +7,7 @@ import (
 )
 
 func TestThatValidEntryPassesValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN a valid entry with 3 teams and total bids of 90
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -21,13 +21,17 @@ func TestThatValidEntryPassesValidation(t *testing.T) {
 		{ID: "team3", EntryID: "entry1", TeamID: "team3", Bid: 40},
 	}
 
-	if err := service.ValidateEntry(entry, teams); err != nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN no error is returned
+	if err != nil {
 		t.Fatalf("expected nil error, got: %v", err)
 	}
 }
 
 func TestThatFewerThanThreeTeamsFailsValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN an entry with only 2 teams
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -40,13 +44,17 @@ func TestThatFewerThanThreeTeamsFailsValidation(t *testing.T) {
 		{ID: "team2", EntryID: "entry1", TeamID: "team2", Bid: 30},
 	}
 
-	if err := service.ValidateEntry(entry, teams); err == nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN an error is returned
+	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 }
 
 func TestThatMoreThanTenTeamsFailsValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN an entry with 11 teams
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -59,13 +67,17 @@ func TestThatMoreThanTenTeamsFailsValidation(t *testing.T) {
 		teams[i] = &models.CalcuttaEntryTeam{ID: "team" + string(rune('1'+i)), EntryID: "entry1", TeamID: "team" + string(rune('1'+i)), Bid: 10}
 	}
 
-	if err := service.ValidateEntry(entry, teams); err == nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN an error is returned
+	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 }
 
 func TestThatBidOver50FailsValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN an entry with a bid of 51 on one team
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -79,13 +91,17 @@ func TestThatBidOver50FailsValidation(t *testing.T) {
 		{ID: "team3", EntryID: "entry1", TeamID: "team3", Bid: 20},
 	}
 
-	if err := service.ValidateEntry(entry, teams); err == nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN an error is returned
+	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 }
 
 func TestThatTotalBidsOver100FailsValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN an entry with total bids of 102
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -99,13 +115,17 @@ func TestThatTotalBidsOver100FailsValidation(t *testing.T) {
 		{ID: "team3", EntryID: "entry1", TeamID: "team3", Bid: 1},
 	}
 
-	if err := service.ValidateEntry(entry, teams); err == nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN an error is returned
+	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 }
 
 func TestThatBidUnder1FailsValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN an entry with a bid of 0 on one team
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -119,13 +139,17 @@ func TestThatBidUnder1FailsValidation(t *testing.T) {
 		{ID: "team3", EntryID: "entry1", TeamID: "team3", Bid: 0},
 	}
 
-	if err := service.ValidateEntry(entry, teams); err == nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN an error is returned
+	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 }
 
 func TestThatDuplicateTeamBidsFailsValidation(t *testing.T) {
-	service := newTestCalcuttaService()
+	// GIVEN an entry with duplicate team IDs
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -139,7 +163,11 @@ func TestThatDuplicateTeamBidsFailsValidation(t *testing.T) {
 		{ID: "team3", EntryID: "entry1", TeamID: "team1", Bid: 10},
 	}
 
-	if err := service.ValidateEntry(entry, teams); err == nil {
+	// WHEN validating the entry
+	err := ValidateEntry(entry, teams)
+
+	// THEN an error is returned
+	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 }

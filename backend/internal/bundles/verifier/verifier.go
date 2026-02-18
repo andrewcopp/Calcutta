@@ -2,7 +2,6 @@ package verifier
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -43,18 +42,10 @@ func VerifyDirAgainstDB(ctx context.Context, pool *pgxpool.Pool, inDir string) (
 	return r, nil
 }
 
-func readJSON(path string, v any) error {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, v)
-}
-
 func verifySchools(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mismatch {
 	path := filepath.Join(inDir, "schools.json")
 	var b bundles.SchoolsBundle
-	if err := readJSON(path, &b); err != nil {
+	if err := bundles.ReadJSON(path, &b); err != nil {
 		return []Mismatch{{Where: "schools", What: err.Error()}}
 	}
 
@@ -100,7 +91,7 @@ func verifyTournaments(ctx context.Context, pool *pgxpool.Pool, inDir string) []
 	var out []Mismatch
 	for _, path := range paths {
 		var b bundles.TournamentBundle
-		if err := readJSON(path, &b); err != nil {
+		if err := bundles.ReadJSON(path, &b); err != nil {
 			out = append(out, Mismatch{Where: "tournaments", What: err.Error()})
 			continue
 		}
@@ -125,16 +116,16 @@ func verifyTournaments(ctx context.Context, pool *pgxpool.Pool, inDir string) []
 			out = append(out, Mismatch{Where: "tournaments:" + b.Tournament.ImportKey, What: fmt.Sprintf("rounds mismatch db=%d bundle=%d", rounds, b.Tournament.Rounds)})
 		}
 
-		if deref(f1) != b.Tournament.FinalFourTopLeft {
+		if bundles.DerefString(f1) != b.Tournament.FinalFourTopLeft {
 			out = append(out, Mismatch{Where: "tournaments:" + b.Tournament.ImportKey, What: "final_four_top_left mismatch"})
 		}
-		if deref(f2) != b.Tournament.FinalFourBottomLeft {
+		if bundles.DerefString(f2) != b.Tournament.FinalFourBottomLeft {
 			out = append(out, Mismatch{Where: "tournaments:" + b.Tournament.ImportKey, What: "final_four_bottom_left mismatch"})
 		}
-		if deref(f3) != b.Tournament.FinalFourTopRight {
+		if bundles.DerefString(f3) != b.Tournament.FinalFourTopRight {
 			out = append(out, Mismatch{Where: "tournaments:" + b.Tournament.ImportKey, What: "final_four_top_right mismatch"})
 		}
-		if deref(f4) != b.Tournament.FinalFourBottomRight {
+		if bundles.DerefString(f4) != b.Tournament.FinalFourBottomRight {
 			out = append(out, Mismatch{Where: "tournaments:" + b.Tournament.ImportKey, What: "final_four_bottom_right mismatch"})
 		}
 
@@ -181,7 +172,7 @@ func verifyTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID
 		}
 		tInDB[slug] = bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, Eliminated: eliminated}
 		if hasKP {
-			kpInDB[slug] = &bundles.KenPomRecord{NetRTG: derefF(net), ORTG: derefF(o), DRTG: derefF(d), AdjT: derefF(adj)}
+			kpInDB[slug] = &bundles.KenPomRecord{NetRTG: bundles.DerefFloat64(net), ORTG: bundles.DerefFloat64(o), DRTG: bundles.DerefFloat64(d), AdjT: bundles.DerefFloat64(adj)}
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -244,7 +235,7 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 	var out []Mismatch
 	for _, path := range paths {
 		var b bundles.CalcuttaBundle
-		if err := readJSON(path, &b); err != nil {
+		if err := bundles.ReadJSON(path, &b); err != nil {
 			out = append(out, Mismatch{Where: "calcuttas", What: err.Error()})
 			continue
 		}
@@ -263,8 +254,8 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 			SELECT c.id, c.name, COALESCE(u.email, '')
 			FROM core.calcuttas c
 			JOIN core.users u ON u.id = c.owner_id
-			WHERE c.id = $1::uuid AND c.tournament_id = $2 AND c.deleted_at IS NULL AND u.deleted_at IS NULL
-		`, b.Calcutta.LegacyID, tournamentID).Scan(&calcuttaID, &calcuttaName, &ownerEmail)
+			WHERE c.name = $1 AND c.tournament_id = $2 AND c.deleted_at IS NULL AND u.deleted_at IS NULL
+		`, b.Calcutta.Name, tournamentID).Scan(&calcuttaID, &calcuttaName, &ownerEmail)
 		if err != nil {
 			out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: "missing in db"})
 			continue
@@ -281,7 +272,7 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 
 		out = append(out, verifyCalcuttaRounds(ctx, pool, calcuttaID, b.Calcutta.Key, b.Rounds)...)
 		out = append(out, verifyCalcuttaPayouts(ctx, pool, calcuttaID, b.Calcutta.Key, b.Payouts)...)
-		out = append(out, verifyCalcuttaEntriesAndBids(ctx, pool, tournamentID, calcuttaID, b.Calcutta.Key, b.Entries, b.Bids)...)
+		out = append(out, verifyCalcuttaEntriesAndBids(ctx, pool, calcuttaID, b.Calcutta.Key, b.Entries, b.Bids)...)
 	}
 
 	return out
@@ -353,7 +344,7 @@ func verifyCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID, 
 	return out
 }
 
-func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, _, calcuttaID, calcuttaKey string, entries []bundles.EntryRecord, bids []bundles.EntryTeamBid) []Mismatch {
+func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, entries []bundles.EntryRecord, bids []bundles.EntryTeamBid) []Mismatch {
 	rows, err := pool.Query(ctx, `
 		SELECT e.id, e.name, COALESCE(u.email, '')
 		FROM core.entries e
@@ -365,8 +356,9 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, _, ca
 	}
 	defer rows.Close()
 
-	inDB := map[string]struct {
-		name  string
+	// Map by entry name for lookup (since we no longer have legacy IDs)
+	inDBByName := map[string]struct {
+		id    string
 		email string
 	}{}
 	for rows.Next() {
@@ -374,25 +366,25 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, _, ca
 		if err := rows.Scan(&id, &n, &e); err != nil {
 			return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
 		}
-		inDB[id] = struct {
-			name  string
+		inDBByName[n] = struct {
+			id    string
 			email string
-		}{name: n, email: e}
+		}{id: id, email: e}
 	}
 	if err := rows.Err(); err != nil {
 		return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
 	}
 
+	// Build entry name to ID mapping for bid verification
+	entryIDByName := make(map[string]string, len(entries))
 	var out []Mismatch
 	for _, e := range entries {
-		db, ok := inDB[e.LegacyID]
+		db, ok := inDBByName[e.Name]
 		if !ok {
 			out = append(out, Mismatch{Where: "calcutta_entries:" + calcuttaKey, What: fmt.Sprintf("missing entry_key %s", e.Key)})
 			continue
 		}
-		if db.name != e.Name {
-			out = append(out, Mismatch{Where: "calcutta_entries:" + calcuttaKey, What: fmt.Sprintf("entry %s name mismatch db=%q bundle=%q", e.Key, db.name, e.Name)})
-		}
+		entryIDByName[e.Name] = db.id
 		if e.UserEmail != nil {
 			if db.email != *e.UserEmail {
 				out = append(out, Mismatch{Where: "calcutta_entries:" + calcuttaKey, What: fmt.Sprintf("entry %s email mismatch db=%q bundle=%q", e.Key, db.email, *e.UserEmail)})
@@ -426,22 +418,24 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, _, ca
 		return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
 	}
 
+	// Build entry key to name mapping
+	entryNameByKey := make(map[string]string, len(entries))
+	for _, e := range entries {
+		entryNameByKey[e.Key] = e.Name
+	}
+
 	for _, b := range bids {
-		k := strings.TrimSpace(b.EntryKey)
-		entryID := ""
-		if parts := strings.SplitN(k, ":", 2); len(parts) == 2 {
-			entryID = parts[0]
+		entryName, ok := entryNameByKey[b.EntryKey]
+		if !ok || entryName == "" {
+			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid references unknown entry_key %s", b.EntryKey)})
+			continue
 		}
-		if entryID == "" {
-			// Fall back to legacy id map via bundle
-			for _, e := range entries {
-				if e.Key == b.EntryKey {
-					entryID = e.LegacyID
-					break
-				}
-			}
+		entryID, ok := entryIDByName[entryName]
+		if !ok || entryID == "" {
+			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid entry %s not found in db", entryName)})
+			continue
 		}
-		k = entryID + ":" + b.SchoolSlug
+		k := entryID + ":" + b.SchoolSlug
 		v, ok := bidDB[k]
 		if !ok {
 			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("missing bid %s", k)})
@@ -452,20 +446,6 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, _, ca
 		}
 	}
 	return out
-}
-
-func deref(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
-func derefF(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }
 
 func approxEq(a, b float64) bool {

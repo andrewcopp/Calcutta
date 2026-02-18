@@ -48,17 +48,8 @@ func (s *Service) GetBracket(ctx context.Context, tournamentID string) (*models.
 		TopRightRegion:    tournament.FinalFourTopRight,
 		BottomRightRegion: tournament.FinalFourBottomRight,
 	}
-	if finalFour.TopLeftRegion == "" {
-		finalFour.TopLeftRegion = "East"
-	}
-	if finalFour.BottomLeftRegion == "" {
-		finalFour.BottomLeftRegion = "West"
-	}
-	if finalFour.TopRightRegion == "" {
-		finalFour.TopRightRegion = "South"
-	}
-	if finalFour.BottomRightRegion == "" {
-		finalFour.BottomRightRegion = "Midwest"
+	if err := finalFour.ApplyDefaults(); err != nil {
+		return nil, fmt.Errorf("failed to apply final four defaults: %w", err)
 	}
 
 	bracket, err := BuildBracketStructure(tournamentID, teams, finalFour)
@@ -193,6 +184,12 @@ func (s *Service) ValidateBracketSetup(ctx context.Context, tournamentID string)
 		return err
 	}
 
+	return ValidateBracketSetupTeams(teams)
+}
+
+// ValidateBracketSetupTeams validates that the teams slice represents a valid 68-team tournament bracket.
+// This is a pure function that can be tested without mocking repositories.
+func ValidateBracketSetupTeams(teams []*models.TournamentTeam) error {
 	if len(teams) != 68 {
 		return fmt.Errorf("tournament must have exactly 68 teams, has %d", len(teams))
 	}

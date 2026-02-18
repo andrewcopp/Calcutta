@@ -6,8 +6,9 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-// ValidateEntry validates all bids for an entry according to the rules
-func (s *Service) ValidateEntry(entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {
+// ValidateEntry validates all bids for an entry according to the rules.
+// This is a pure function that can be tested without mocking repositories.
+func ValidateEntry(entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {
 	// Rule 1: All bids are sealed until the tournament begins
 	// This is handled at the API level, not in the service
 

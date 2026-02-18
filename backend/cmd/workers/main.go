@@ -47,7 +47,11 @@ func run() error {
 
 	progress := workers.NewDBProgressWriter(pool)
 	bundleWorker := workers.NewBundleImportWorker(pool)
-	labPipelineWorker := workers.NewLabPipelineWorker(pool, progress)
+	labPipelineWorker := workers.NewLabPipelineWorker(pool, progress, workers.LabPipelineWorkerConfig{
+		PythonBin:          cfg.PythonBin,
+		RunJobsMaxAttempts: cfg.RunJobsMaxAttempts,
+		WorkerID:           cfg.WorkerID,
+	})
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
+	calcuttaapp "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
-	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/gorilla/mux"
 )
 
@@ -414,7 +415,7 @@ func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 		teams = append(teams, &models.CalcuttaEntryTeam{EntryID: entryID, TeamID: t.TeamID, Bid: t.Bid})
 	}
 
-	if err := h.app.Calcutta.ValidateEntry(entry, teams); err != nil {
+	if err := calcuttaapp.ValidateEntry(entry, teams); err != nil {
 		httperr.Write(w, r, http.StatusBadRequest, "validation_error", err.Error(), "teams")
 		return
 	}

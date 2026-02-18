@@ -1,4 +1,4 @@
-package simulate_tournaments
+package simulation
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
-	tsim "github.com/andrewcopp/Calcutta/backend/internal/app/tournament_simulation"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,12 +23,12 @@ type Service struct {
 type kenPomProvider struct {
 	spec        *simulation_game_outcomes.Spec
 	netByTeamID map[string]float64
-	overrides   map[tsim.MatchupKey]float64
+	overrides   map[MatchupKey]float64
 }
 
 func (p kenPomProvider) Prob(gameID string, team1ID string, team2ID string) float64 {
 	if p.overrides != nil {
-		if v, ok := p.overrides[tsim.MatchupKey{GameID: gameID, Team1ID: team1ID, Team2ID: team2ID}]; ok {
+		if v, ok := p.overrides[MatchupKey{GameID: gameID, Team1ID: team1ID, Team2ID: team2ID}]; ok {
 			return v
 		}
 	}
@@ -155,8 +154,8 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}
 
-	var provider tsim.ProbabilityProvider
-	var probs map[tsim.MatchupKey]float64
+	var provider ProbabilityProvider
+	var probs map[MatchupKey]float64
 	if p.GameOutcomeSpec != nil {
 		p.GameOutcomeSpec.Normalize()
 		if err := p.GameOutcomeSpec.Validate(); err != nil {
@@ -169,7 +168,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		if len(netByTeamID) == 0 {
 			return nil, errors.New("no kenpom ratings available for tournament")
 		}
-		overrides := make(map[tsim.MatchupKey]float64)
+		overrides := make(map[MatchupKey]float64)
 		if p.StartingStateKey == "post_first_four" {
 			if err := s.lockInFirstFourResults(ctx, br, overrides); err != nil {
 				return nil, err
@@ -227,11 +226,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		}
 
 		batchSeed := int64(p.Seed) + int64(offset)*1_000_003
-		var results []tsim.TeamSimulationResult
+		var results []TeamSimulationResult
 		if provider != nil {
-			results, err = tsim.SimulateWithProvider(br, provider, n, batchSeed, tsim.Options{Workers: p.Workers})
+			results, err = SimulateWithProvider(br, provider, n, batchSeed, Options{Workers: p.Workers})
 		} else {
-			results, err = tsim.Simulate(br, probs, n, batchSeed, tsim.Options{Workers: p.Workers})
+			results, err = Simulate(br, probs, n, batchSeed, Options{Workers: p.Workers})
 		}
 		if err != nil {
 			return nil, err
@@ -262,7 +261,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 func (s *Service) lockInFirstFourResults(
 	ctx context.Context,
 	br *models.BracketStructure,
-	probs map[tsim.MatchupKey]float64,
+	probs map[MatchupKey]float64,
 ) error {
 	if br == nil {
 		return errors.New("bracket must not be nil")
@@ -318,8 +317,8 @@ func (s *Service) lockInFirstFourResults(
 			g.Winner = g.Team2
 		}
 
-		probs[tsim.MatchupKey{GameID: g.GameID, Team1ID: team1, Team2ID: team2}] = p1
-		probs[tsim.MatchupKey{GameID: g.GameID, Team1ID: team2, Team2ID: team1}] = 1.0 - p1
+		probs[MatchupKey{GameID: g.GameID, Team1ID: team1, Team2ID: team2}] = p1
+		probs[MatchupKey{GameID: g.GameID, Team1ID: team2, Team2ID: team1}] = 1.0 - p1
 	}
 
 	return nil
@@ -450,7 +449,7 @@ func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*mo
 	return out, nil
 }
 
-func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, map[tsim.MatchupKey]float64, int, error) {
+func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, map[MatchupKey]float64, int, error) {
 	if gameOutcomeRunID != nil && *gameOutcomeRunID != "" {
 		out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, *gameOutcomeRunID)
 		if err != nil {
@@ -488,7 +487,7 @@ func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, to
 	return ptr, out, n, nil
 }
 
-func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID string) (map[tsim.MatchupKey]float64, int, error) {
+func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID string) (map[MatchupKey]float64, int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT game_id, team1_id, team2_id, p_team1_wins
 		FROM derived.predicted_game_outcomes
@@ -500,7 +499,7 @@ func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID st
 	}
 	defer rows.Close()
 
-	out := make(map[tsim.MatchupKey]float64)
+	out := make(map[MatchupKey]float64)
 	n := 0
 	for rows.Next() {
 		var gameID string
@@ -511,8 +510,8 @@ func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID st
 			return nil, 0, err
 		}
 		n++
-		out[tsim.MatchupKey{GameID: gameID, Team1ID: t1, Team2ID: t2}] = p
-		out[tsim.MatchupKey{GameID: gameID, Team1ID: t2, Team2ID: t1}] = 1.0 - p
+		out[MatchupKey{GameID: gameID, Team1ID: t1, Team2ID: t2}] = p
+		out[MatchupKey{GameID: gameID, Team1ID: t2, Team2ID: t1}] = 1.0 - p
 	}
 	if rows.Err() != nil {
 		return nil, 0, rows.Err()
@@ -595,7 +594,7 @@ type simResultsSource struct {
 	batchID      string
 	tournamentID string
 	simOffset    int
-	results      []tsim.TeamSimulationResult
+	results      []TeamSimulationResult
 	idx          int
 }
 
@@ -624,7 +623,7 @@ func (s *Service) copyInsertSimulatedTournaments(
 	batchID string,
 	tournamentID string,
 	simOffset int,
-	results []tsim.TeamSimulationResult,
+	results []TeamSimulationResult,
 ) (int64, error) {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {

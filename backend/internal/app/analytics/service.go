@@ -408,6 +408,33 @@ func (s *Service) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, 
 		return nil, 0, 0, err
 	}
 
+	// Convert ports data to input type for pure function
+	input := make([]SeedAnalyticsInput, len(data))
+	for i, d := range data {
+		input[i] = SeedAnalyticsInput{
+			Seed:            d.Seed,
+			TotalPoints:     d.TotalPoints,
+			TotalInvestment: d.TotalInvestment,
+			TeamCount:       d.TeamCount,
+		}
+	}
+
+	results := CalculateSeedAnalyticsResults(input, totalPoints, totalInvestment)
+	return results, totalPoints, totalInvestment, nil
+}
+
+// SeedAnalyticsInput represents the raw data needed to calculate seed analytics.
+// This mirrors ports.SeedAnalyticsData but is defined here to avoid circular dependencies in tests.
+type SeedAnalyticsInput struct {
+	Seed            int
+	TotalPoints     float64
+	TotalInvestment float64
+	TeamCount       int
+}
+
+// CalculateSeedAnalyticsResults is a pure function that calculates seed analytics from raw data.
+// This can be tested without mocking repositories.
+func CalculateSeedAnalyticsResults(data []SeedAnalyticsInput, totalPoints, totalInvestment float64) []SeedAnalyticsResult {
 	// Calculate baseline ROI (overall points per dollar)
 	var baselineROI float64
 	if totalInvestment > 0 {
@@ -443,7 +470,7 @@ func (s *Service) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, 
 		}
 	}
 
-	return results, totalPoints, totalInvestment, nil
+	return results
 }
 
 func (s *Service) GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsResult, float64, float64, error) {
@@ -538,6 +565,35 @@ func (s *Service) GetSeedVarianceAnalytics(ctx context.Context) ([]SeedVarianceR
 		return nil, err
 	}
 
+	// Convert ports data to input type for pure function
+	input := make([]SeedVarianceInput, len(data))
+	for i, d := range data {
+		input[i] = SeedVarianceInput{
+			Seed:             d.Seed,
+			InvestmentStdDev: d.InvestmentStdDev,
+			PointsStdDev:     d.PointsStdDev,
+			InvestmentMean:   d.InvestmentMean,
+			PointsMean:       d.PointsMean,
+			TeamCount:        d.TeamCount,
+		}
+	}
+
+	return CalculateSeedVarianceResults(input), nil
+}
+
+// SeedVarianceInput represents the raw data needed to calculate seed variance analytics.
+type SeedVarianceInput struct {
+	Seed             int
+	InvestmentStdDev float64
+	PointsStdDev     float64
+	InvestmentMean   float64
+	PointsMean       float64
+	TeamCount        int
+}
+
+// CalculateSeedVarianceResults is a pure function that calculates seed variance analytics from raw data.
+// This can be tested without mocking repositories.
+func CalculateSeedVarianceResults(data []SeedVarianceInput) []SeedVarianceResult {
 	results := make([]SeedVarianceResult, len(data))
 	for i, d := range data {
 		results[i] = SeedVarianceResult{
@@ -565,7 +621,7 @@ func (s *Service) GetSeedVarianceAnalytics(ctx context.Context) ([]SeedVarianceR
 		}
 	}
 
-	return results, nil
+	return results
 }
 
 func (s *Service) GetAllAnalytics(ctx context.Context) (*AnalyticsResult, error) {

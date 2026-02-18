@@ -1,33 +1,10 @@
 package bracket
 
 import (
-	"context"
 	"testing"
-
-	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-type stubTournamentRepo struct {
-	teams []*models.TournamentTeam
-}
-
-func (r *stubTournamentRepo) GetByID(ctx context.Context, id string) (*models.Tournament, error) {
-	return nil, nil
-}
-
-func (r *stubTournamentRepo) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
-	return r.teams, nil
-}
-
-func (r *stubTournamentRepo) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
-	return nil, nil
-}
-
-func (r *stubTournamentRepo) UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error {
-	return nil
-}
-
-func TestThatValidateBracketSetupReturnsErrorWhenPlayInTeamHasBye(t *testing.T) {
+func TestThatValidateBracketSetupTeamsReturnsErrorWhenPlayInTeamHasBye(t *testing.T) {
 	// GIVEN a tournament with a duplicated (region, seed) but a play-in team has byes=1
 	teams := createFullTournamentTeams("t")
 	for _, team := range teams {
@@ -37,10 +14,8 @@ func TestThatValidateBracketSetupReturnsErrorWhenPlayInTeamHasBye(t *testing.T) 
 		}
 	}
 
-	svc := New(&stubTournamentRepo{teams: teams})
-
 	// WHEN validating bracket setup
-	err := svc.ValidateBracketSetup(context.Background(), "t")
+	err := ValidateBracketSetupTeams(teams)
 
 	// THEN validation fails
 	if err == nil {
@@ -48,7 +23,7 @@ func TestThatValidateBracketSetupReturnsErrorWhenPlayInTeamHasBye(t *testing.T) 
 	}
 }
 
-func TestThatValidateBracketSetupReturnsErrorWhenNonPlayInTeamHasNoBye(t *testing.T) {
+func TestThatValidateBracketSetupTeamsReturnsErrorWhenNonPlayInTeamHasNoBye(t *testing.T) {
 	// GIVEN a tournament with a non-play-in team but byes=0
 	teams := createFullTournamentTeams("t")
 	for _, team := range teams {
@@ -58,10 +33,8 @@ func TestThatValidateBracketSetupReturnsErrorWhenNonPlayInTeamHasNoBye(t *testin
 		}
 	}
 
-	svc := New(&stubTournamentRepo{teams: teams})
-
 	// WHEN validating bracket setup
-	err := svc.ValidateBracketSetup(context.Background(), "t")
+	err := ValidateBracketSetupTeams(teams)
 
 	// THEN validation fails
 	if err == nil {

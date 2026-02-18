@@ -3,22 +3,27 @@ package lab
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
+// ServiceConfig holds configuration for the lab service.
+type ServiceConfig struct {
+	DefaultNSims      int
+	ExcludedEntryName string
+}
+
 // Service provides lab-related business logic.
 type Service struct {
 	repo         ports.LabRepository
 	pipelineRepo ports.LabPipelineRepository
+	cfg          ServiceConfig
 }
 
 // NewWithPipelineRepo creates a new lab service with pipeline repository support.
-func NewWithPipelineRepo(repo ports.LabPipelineRepository) *Service {
-	return &Service{repo: repo, pipelineRepo: repo}
+func NewWithPipelineRepo(repo ports.LabPipelineRepository, cfg ServiceConfig) *Service {
+	return &Service{repo: repo, pipelineRepo: repo, cfg: cfg}
 }
 
 // ListInvestmentModels returns investment models matching the filter.
@@ -133,7 +138,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 		return nil, &NoCalcuttasAvailableError{}
 	}
 
-	// Set defaults
+	// Set defaults for optional parameters
 	budgetPoints := req.BudgetPoints
 	if budgetPoints <= 0 {
 		budgetPoints = 100
@@ -144,11 +149,9 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 	}
 	nSims := req.NSims
 	if nSims <= 0 {
-		nSims = 10000 // fallback default
-		if envNSims := os.Getenv("DEFAULT_N_SIMS"); envNSims != "" {
-			if parsed, err := strconv.Atoi(envNSims); err == nil && parsed > 0 {
-				nSims = parsed
-			}
+		nSims = s.cfg.DefaultNSims
+		if nSims <= 0 {
+			nSims = 10000
 		}
 	}
 	seed := req.Seed
@@ -156,10 +159,10 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 		seed = 42
 	}
 
-	// Determine excluded entry name (request value takes precedence over env var)
+	// Determine excluded entry name (request value takes precedence over config)
 	excludedEntryName := req.ExcludedEntryName
 	if excludedEntryName == "" {
-		excludedEntryName = os.Getenv("EXCLUDED_ENTRY_NAME")
+		excludedEntryName = s.cfg.ExcludedEntryName
 	}
 
 	// Create pipeline run

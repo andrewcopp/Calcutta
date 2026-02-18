@@ -6,11 +6,9 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from moneyball.db.connection import get_db_connection
 
-from moneyball.models.analytical_tournament_value import (
-    compute_analytical_tournament_values,
-)
+logger = logging.getLogger(__name__)
 
 FEATURE_SETS = [
     "basic",
@@ -22,6 +20,40 @@ FEATURE_SETS = [
 DEFAULT_FEATURE_SET = "optimal"
 
 
+def _get_analytical_values_from_db(
+    tournament_id: str,
+) -> Dict[str, Tuple[float, float]]:
+    """
+    Get analytical values from Go-generated predictions in the database.
+
+    Returns:
+        Dict mapping team_id -> (p_championship, expected_points)
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                WITH latest_batch AS (
+                    SELECT pb.id
+                    FROM derived.prediction_batches pb
+                    WHERE pb.tournament_id = %s::uuid
+                        AND pb.deleted_at IS NULL
+                    ORDER BY pb.created_at DESC
+                    LIMIT 1
+                )
+                SELECT
+                    ptv.team_id::text,
+                    COALESCE(ptv.p_round_7, 0)::float AS p_championship,
+                    COALESCE(ptv.expected_points, 0)::float AS expected_points
+                FROM derived.predicted_team_values ptv
+                WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
+                    AND ptv.deleted_at IS NULL
+            """, (tournament_id,))
+            return {
+                str(row[0]): (float(row[1]), float(row[2]))
+                for row in cur.fetchall()
+            }
+
+
 def _enrich_with_analytical_probabilities(
     df: pd.DataFrame,
     kenpom_scale: float = 10.0,
@@ -29,61 +61,58 @@ def _enrich_with_analytical_probabilities(
     """
     Enrich team dataset with analytical championship probabilities.
 
-    Requires a complete 68-team field with proper tournament structure.
+    Reads from Go-generated predictions in derived.predicted_team_values.
+    Requires predictions to be pre-generated for the tournament.
 
     Args:
-        df: Team dataset with id/team_key, seed, region, kenpom_net
-        kenpom_scale: Scale parameter for win probability sigmoid
+        df: Team dataset with id/team_key and tournament_id
+        kenpom_scale: Ignored (kept for API compatibility)
 
     Returns:
         DataFrame with added analytical_p_championship and
         analytical_expected_points columns
     """
-    # Ensure we have required columns
-    required = ["seed", "region", "kenpom_net"]
-    missing = [c for c in required if c not in df.columns]
-    if missing:
-        raise ValueError(f"team_dataset missing columns for analytical: {missing}")
-
     # Use team_key or id as identifier
     id_col = "team_key" if "team_key" in df.columns else "id"
     if id_col not in df.columns:
         raise ValueError("team_dataset must have 'team_key' or 'id' column")
 
-    # Compute analytical values
-    analytical = compute_analytical_tournament_values(
-        df,
-        kenpom_scale=kenpom_scale,
-    )
+    # Get tournament_id from the dataframe
+    if "tournament_id" in df.columns:
+        tournament_id = str(df["tournament_id"].iloc[0])
+    elif "tournament_key" in df.columns:
+        tournament_id = str(df["tournament_key"].iloc[0])
+    else:
+        raise ValueError(
+            "team_dataset must have 'tournament_id' or 'tournament_key' column"
+        )
 
-    # Merge back to original DataFrame
+    # Get analytical values from database
+    analytical_values = _get_analytical_values_from_db(tournament_id)
+
+    if not analytical_values:
+        logger.warning(
+            "No Go predictions found for tournament %s. "
+            "Setting analytical values to 0.",
+            tournament_id,
+        )
+
+    # Add columns to dataframe
     result = df.copy()
-    result["_merge_key"] = result[id_col].astype(str)
-    analytical["_merge_key"] = analytical["team_key"].astype(str)
-
-    result = result.merge(
-        analytical[["_merge_key", "analytical_p_championship", "analytical_expected_points"]],
-        on="_merge_key",
-        how="left",
+    result["analytical_p_championship"] = result[id_col].astype(str).map(
+        lambda tid: analytical_values.get(tid, (0.0, 0.0))[0]
     )
-    result = result.drop(columns=["_merge_key"])
+    result["analytical_expected_points"] = result[id_col].astype(str).map(
+        lambda tid: analytical_values.get(tid, (0.0, 0.0))[1]
+    )
 
-    # Fill any missing values with 0
+    # Ensure numeric types
     result["analytical_p_championship"] = pd.to_numeric(
         result["analytical_p_championship"], errors="coerce"
-    )
-    n_coerced = result["analytical_p_championship"].isna().sum()
-    if n_coerced > 0:
-        logger.warning("Coerced %d non-numeric analytical_p_championship values to NaN", n_coerced)
-    result["analytical_p_championship"] = result["analytical_p_championship"].fillna(0.0)
-
+    ).fillna(0.0)
     result["analytical_expected_points"] = pd.to_numeric(
         result["analytical_expected_points"], errors="coerce"
-    )
-    n_coerced = result["analytical_expected_points"].isna().sum()
-    if n_coerced > 0:
-        logger.warning("Coerced %d non-numeric analytical_expected_points values to NaN", n_coerced)
-    result["analytical_expected_points"] = result["analytical_expected_points"].fillna(0.0)
+    ).fillna(0.0)
 
     return result
 

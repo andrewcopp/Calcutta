@@ -2,8 +2,6 @@ package importer
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -106,12 +104,4 @@ func importAll(ctx context.Context, tx pgx.Tx, inDir string) (importCounts, erro
 	c.rounds = rounds
 
 	return c, nil
-}
-
-func readJSON(path string, v any) error {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, v)
 }

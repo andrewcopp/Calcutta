@@ -1,4 +1,4 @@
-package tournament_simulation
+package simulation
 
 import (
 	"errors"
@@ -8,28 +8,6 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
-
-type MatchupKey struct {
-	GameID  string
-	Team1ID string
-	Team2ID string
-}
-
-type TeamSimulationResult struct {
-	SimID      int
-	TeamID     string
-	Wins       int
-	Byes       int
-	Eliminated bool
-}
-
-type Options struct {
-	Workers int
-}
-
-type ProbabilityProvider interface {
-	Prob(gameID string, team1ID string, team2ID string) float64
-}
 
 type mapProbabilityProvider struct {
 	probs map[MatchupKey]float64
