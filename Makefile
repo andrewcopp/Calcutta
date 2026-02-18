@@ -178,10 +178,8 @@ db-vacuum:
 # Data science
 register-models:
 	@echo "Registering investment models..."
-	@cd data-science && \
+	@$(ENV) cd data-science && \
 		. .venv/bin/activate && \
-		DB_HOST=localhost DB_USER=$${DB_USER:-calcutta} DB_PASSWORD=$${DB_PASSWORD:-calcutta} \
-		DB_NAME=$${DB_NAME:-calcutta} DB_PORT=$${DB_PORT:-5432} \
 		python scripts/register_investment_models.py
 
 import-bundles:
