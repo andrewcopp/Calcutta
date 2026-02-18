@@ -103,16 +103,15 @@ restart-db:
 
 # API testing helpers
 api-health:
-	@curl -s http://localhost:8080/api/health | jq . || curl -s http://localhost:8080/api/health
+	@OUT=$$(curl -s http://localhost:8080/api/health); echo "$$OUT" | jq . 2>/dev/null || echo "$$OUT"
 
 api-test:
 	@if [ -z "$(ENDPOINT)" ]; then echo "Usage: make api-test ENDPOINT=\"/api/calcuttas\" [METHOD=GET] [DATA='{}']"; exit 1; fi
 	@METHOD=$${METHOD:-GET}; \
 	if [ -z "$(DATA)" ]; then \
-		curl -s -X $$METHOD http://localhost:8080$(ENDPOINT) | jq . || curl -s -X $$METHOD http://localhost:8080$(ENDPOINT); \
+		OUT=$$(curl -s -X $$METHOD http://localhost:8080$(ENDPOINT)); echo "$$OUT" | jq . 2>/dev/null || echo "$$OUT"; \
 	else \
-		curl -s -X $$METHOD -H "Content-Type: application/json" -d '$(DATA)' http://localhost:8080$(ENDPOINT) | jq . || \
-		curl -s -X $$METHOD -H "Content-Type: application/json" -d '$(DATA)' http://localhost:8080$(ENDPOINT); \
+		OUT=$$(curl -s -X $$METHOD -H "Content-Type: application/json" -d '$(DATA)' http://localhost:8080$(ENDPOINT)); echo "$$OUT" | jq . 2>/dev/null || echo "$$OUT"; \
 	fi
 
 # Database access (via docker exec - works regardless of host psql)

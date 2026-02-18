@@ -3,7 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -55,6 +55,6 @@ func (w *DBProgressWriter) Update(ctx context.Context, runKind string, runID str
 			AND run_id = $2::uuid
 	`, runKind, runID, b)
 	if err != nil {
-		log.Printf("run_job_progress_update_failed run_kind=%s run_id=%s err=%v", runKind, runID, err)
+		slog.Error("run_job_progress_update_failed", "run_kind", runKind, "run_id", runID, "error", err)
 	}
 }

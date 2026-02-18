@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"os"
@@ -37,7 +37,7 @@ func (w *BundleImportWorker) Run(ctx context.Context) {
 
 func (w *BundleImportWorker) RunWithOptions(ctx context.Context, pollInterval time.Duration, staleAfter time.Duration) {
 	if w == nil || w.pool == nil {
-		log.Printf("Bundle import worker disabled: database pool not available")
+		slog.Warn("bundle_import_worker_disabled", "reason", "database pool not available")
 		<-ctx.Done()
 		return
 	}
@@ -58,7 +58,7 @@ func (w *BundleImportWorker) RunWithOptions(ctx context.Context, pollInterval ti
 		case <-t.C:
 			uploadID, ok, err := w.claimNextBundleUpload(ctx, staleAfter)
 			if err != nil {
-				log.Printf("Error claiming next bundle upload: %v", err)
+				slog.Error("bundle_import_claim_failed", "error", err)
 				continue
 			}
 			if !ok {
@@ -150,7 +150,7 @@ func (w *BundleImportWorker) processBundleUpload(ctx context.Context, uploadID s
 			VerifyReport: verJSON,
 		})
 		if err != nil {
-			log.Printf("Error marking bundle upload %s succeeded: %v", uploadID, err)
+			slog.Error("bundle_upload_mark_succeeded_failed", "upload_id", uploadID, "error", err)
 		}
 		return nil
 	}()
@@ -175,6 +175,6 @@ func (w *BundleImportWorker) failBundleUpload(ctx context.Context, uploadID stri
 		ErrorMessage: &msg,
 	})
 	if err != nil {
-		log.Printf("Error marking bundle upload %s failed: %v", uploadID, err)
+		slog.Error("bundle_upload_mark_failed_failed", "upload_id", uploadID, "error", err)
 	}
 }

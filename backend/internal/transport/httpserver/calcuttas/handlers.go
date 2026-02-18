@@ -3,7 +3,7 @@ package calcuttas
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -60,11 +60,9 @@ func (h *Handler) HandleListCalcuttas(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Handling POST request to /api/calcuttas")
-
 	var req dtos.CreateCalcuttaRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding request body: %v", err)
+		slog.Debug("create_calcutta_decode_failed", "error", err)
 		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
@@ -109,7 +107,7 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	log.Printf("Successfully created calcutta %s with rounds", calcutta.ID)
+	slog.Info("calcutta_created", "calcutta_id", calcutta.ID)
 	response.WriteJSON(w, http.StatusCreated, dtos.NewCalcuttaResponse(calcutta))
 }
 

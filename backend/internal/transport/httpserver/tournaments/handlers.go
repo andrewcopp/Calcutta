@@ -3,7 +3,7 @@ package tournaments
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
@@ -36,7 +36,7 @@ func (h *Handler) HandleListTournaments(w http.ResponseWriter, r *http.Request) 
 		tournament := tournament
 		team, err := h.app.Tournament.GetWinningTeam(r.Context(), tournament.ID)
 		if err != nil {
-			log.Printf("Error getting winning team for tournament %s: %v", tournament.ID, err)
+			slog.Error("get_winning_team_failed", "tournament_id", tournament.ID, "error", err)
 			continue
 		}
 
@@ -44,7 +44,7 @@ func (h *Handler) HandleListTournaments(w http.ResponseWriter, r *http.Request) 
 		if team != nil {
 			school, err := h.app.School.GetByID(r.Context(), team.SchoolID)
 			if err != nil {
-				log.Printf("Error getting school for team %s: %v", team.ID, err)
+				slog.Error("get_school_failed", "team_id", team.ID, "error", err)
 				continue
 			}
 			if school != nil {
@@ -52,7 +52,7 @@ func (h *Handler) HandleListTournaments(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 
-		log.Printf("Processing tournament: ID=%s, Name=%s", tournament.ID, tournament.Name)
+		slog.Debug("processing_tournament", "tournament_id", tournament.ID, "tournament_name", tournament.Name)
 		resp = append(resp, dtos.NewTournamentResponse(&tournament, winnerName))
 	}
 	response.WriteJSON(w, http.StatusOK, resp)
@@ -78,14 +78,14 @@ func (h *Handler) HandleGetTournament(w http.ResponseWriter, r *http.Request) {
 
 	team, err := h.app.Tournament.GetWinningTeam(r.Context(), tournament.ID)
 	if err != nil {
-		log.Printf("Error getting winning team for tournament %s: %v", tournament.ID, err)
+		slog.Error("get_winning_team_failed", "tournament_id", tournament.ID, "error", err)
 	}
 
 	winnerName := ""
 	if team != nil {
 		school, err := h.app.School.GetByID(r.Context(), team.SchoolID)
 		if err != nil {
-			log.Printf("Error getting school for team %s: %v", team.ID, err)
+			slog.Error("get_school_failed", "team_id", team.ID, "error", err)
 		} else if school != nil {
 			winnerName = school.Name
 		}
@@ -148,14 +148,14 @@ func (h *Handler) HandleUpdateTournament(w http.ResponseWriter, r *http.Request)
 
 	team, err := h.app.Tournament.GetWinningTeam(r.Context(), tournament.ID)
 	if err != nil {
-		log.Printf("Error getting winning team for tournament %s: %v", tournament.ID, err)
+		slog.Error("get_winning_team_failed", "tournament_id", tournament.ID, "error", err)
 	}
 
 	winnerName := ""
 	if team != nil {
 		school, err := h.app.School.GetByID(r.Context(), team.SchoolID)
 		if err != nil {
-			log.Printf("Error getting school for team %s: %v", team.ID, err)
+			slog.Error("get_school_failed", "team_id", team.ID, "error", err)
 		} else if school != nil {
 			winnerName = school.Name
 		}
@@ -282,7 +282,7 @@ func (h *Handler) HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 
 	school, err := h.app.School.GetByID(r.Context(), responseTeam.SchoolID)
 	if err != nil {
-		log.Printf("Error getting school for team %s: %v", responseTeam.ID, err)
+		slog.Error("get_school_failed", "team_id", responseTeam.ID, "error", err)
 		response.WriteJSON(w, http.StatusOK, dtos.NewTournamentTeamResponse(responseTeam, nil))
 		return
 	}
