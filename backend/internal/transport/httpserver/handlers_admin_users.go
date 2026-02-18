@@ -267,6 +267,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 
 	var inviteToken string
 	var inviteHash string
+	var lastErr error
 	for i := 0; i < 3; i++ {
 		created, err := coreauth.NewInviteToken()
 		if err != nil {
@@ -302,6 +303,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 			`, userID, createdHash, expiresAt, now)
 		}
 		if err != nil {
+			lastErr = err
 			continue
 		}
 		if ct.RowsAffected() == 0 {
@@ -312,7 +314,7 @@ func (s *Server) generateInviteToken(ctx context.Context, userID string, now tim
 		break
 	}
 	if inviteToken == "" || inviteHash == "" {
-		return "", "", fmt.Errorf("failed to generate invite token")
+		return "", "", fmt.Errorf("failed to generate invite token after 3 attempts: %w", lastErr)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

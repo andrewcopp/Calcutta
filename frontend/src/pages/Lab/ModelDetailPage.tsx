@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 import { Alert } from '../../components/ui/Alert';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -98,7 +99,7 @@ export function ModelDetailPage() {
   if (modelQuery.isError || !model) {
     return (
       <PageContainer>
-        <Alert variant="error">Failed to load model.</Alert>
+        <ErrorState error={modelQuery.error ?? 'Failed to load model.'} onRetry={() => modelQuery.refetch()} />
       </PageContainer>
     );
   }

@@ -55,7 +55,7 @@ export const OwnershipTab: React.FC<{
   const ownershipTeamsData = useMemo(() => {
     const byTeamSpend = new Map<string, number>();
     for (const entryTeam of allEntryTeams) {
-      const amount = entryTeam.bid || 0;
+      const amount = entryTeam.bid;
       if (amount <= 0) continue;
       byTeamSpend.set(entryTeam.teamId, (byTeamSpend.get(entryTeam.teamId) || 0) + amount);
     }

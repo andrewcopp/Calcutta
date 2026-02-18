@@ -8,6 +8,7 @@ import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
+import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -142,36 +143,17 @@ export const TournamentEditPage: React.FC = () => {
   }
 
   if (tournamentQuery.isError || teamsQuery.isError || schoolsQuery.isError) {
-    const tournamentMessage = tournamentQuery.error instanceof Error ? tournamentQuery.error.message : 'Failed to load tournament';
-    const teamsMessage = teamsQuery.error instanceof Error ? teamsQuery.error.message : 'Failed to load teams';
-    const schoolsMessage = schoolsQuery.error instanceof Error ? schoolsQuery.error.message : 'Failed to load schools';
-
+    const firstError = tournamentQuery.error ?? teamsQuery.error ?? schoolsQuery.error;
     return (
       <PageContainer>
-        <Alert variant="error">
-          <div className="font-semibold mb-1">Failed to load tournament data</div>
-          {tournamentQuery.isError ? <div className="text-sm">Tournament: {tournamentMessage}</div> : null}
-          {teamsQuery.isError ? <div className="text-sm">Teams: {teamsMessage}</div> : null}
-          {schoolsQuery.isError ? <div className="text-sm">Schools: {schoolsMessage}</div> : null}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {tournamentQuery.isError ? (
-              <Button size="sm" onClick={() => tournamentQuery.refetch()}>
-                Retry tournament
-              </Button>
-            ) : null}
-            {teamsQuery.isError ? (
-              <Button size="sm" variant="secondary" onClick={() => teamsQuery.refetch()}>
-                Retry teams
-              </Button>
-            ) : null}
-            {schoolsQuery.isError ? (
-              <Button size="sm" variant="secondary" onClick={() => schoolsQuery.refetch()}>
-                Retry schools
-              </Button>
-            ) : null}
-          </div>
-        </Alert>
+        <ErrorState
+          error={firstError}
+          onRetry={() => {
+            if (tournamentQuery.isError) tournamentQuery.refetch();
+            if (teamsQuery.isError) teamsQuery.refetch();
+            if (schoolsQuery.isError) schoolsQuery.refetch();
+          }}
+        />
       </PageContainer>
     );
   }

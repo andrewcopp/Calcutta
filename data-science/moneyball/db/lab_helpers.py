@@ -13,6 +13,8 @@ from typing import Dict, List, Optional
 
 from moneyball.db.connection import get_db_connection
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class HistoricalCalcutta:
@@ -133,22 +135,10 @@ def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
             """, (calcutta_id,))
             result = {row[0]: row[1] for row in cur.fetchall()}
 
-            # Fall back to seed-based estimates if no simulation data
             if not result:
-                logging.warning("No simulation data for calcutta %s, falling back to seed-based estimates", calcutta_id)
-                seed_expected_points = {
-                    1: 80.0, 2: 55.0, 3: 42.0, 4: 35.0,
-                    5: 28.0, 6: 23.0, 7: 19.0, 8: 16.0,
-                    9: 14.0, 10: 12.0, 11: 10.0, 12: 9.0,
-                    13: 5.0, 14: 4.0, 15: 2.5, 16: 1.0,
-                }
-                cur.execute("""
-                    SELECT s.slug, t.seed
-                    FROM core.teams t
-                    JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-                    JOIN core.calcuttas c ON c.tournament_id = t.tournament_id AND c.deleted_at IS NULL
-                    WHERE c.id = %s AND t.deleted_at IS NULL
-                """, (calcutta_id,))
-                result = {row[0]: seed_expected_points.get(row[1], 10.0) for row in cur.fetchall()}
+                raise ValueError(
+                    f"No simulation data for calcutta {calcutta_id}. "
+                    "Run tournament simulations before generating predictions."
+                )
 
             return result

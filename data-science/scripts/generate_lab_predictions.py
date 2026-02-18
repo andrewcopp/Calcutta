@@ -37,6 +37,8 @@ from moneyball.db.lab_helpers import (
     get_expected_points_map,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def generate_market_predictions(model_name: str, year: int, excluded_entry_name: Optional[str] = None):
     """
@@ -74,7 +76,6 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
     exclude_entry_names = [excluded_entry_name] if excluded_entry_name else None
 
     # Load training data
-    logger = logging.getLogger(__name__)
     train_frames = []
     train_failures = 0
     for y in train_years:
@@ -90,7 +91,7 @@ def generate_market_predictions(model_name: str, year: int, excluded_entry_name:
             logger.warning("Could not load training data for %d: %s", y, e)
             continue
 
-    if train_failures > 1:
+    if train_failures > 0:
         return None, f"{train_failures}/{len(train_years)} training years failed to load"
 
     if not train_frames:
@@ -138,7 +139,6 @@ def create_predictions_for_calcutta(
     """Create a lab entry with market predictions."""
     from moneyball.lab.models import Prediction, create_entry_with_predictions
 
-    logger = logging.getLogger(__name__)
     predictions = []
     skipped_slugs = []
     for _, row in predictions_df.iterrows():
@@ -152,8 +152,10 @@ def create_predictions_for_calcutta(
 
         expected_points = expected_points_map.get(team_slug)
         if expected_points is None:
-            logging.warning("No expected points for team %s, using default 10.0", team_slug)
-            expected_points = 10.0
+            raise ValueError(
+                f"No expected points for team {team_slug}. "
+                "Run tournament simulations before generating predictions."
+            )
 
         predictions.append(Prediction(
             team_id=team_id,

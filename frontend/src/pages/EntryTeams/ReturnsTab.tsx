@@ -69,8 +69,8 @@ export const ReturnsTab: React.FC<{
               {(() => {
                 const globalMax = tournamentTeams.reduce((max, tt) => {
                   const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === tt.id);
-                  const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
-                  const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.expectedPoints || 0), 0);
+                  const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
+                  const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.expectedPoints, 0);
                   const eliminated = tt.eliminated === true;
                   const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
                   return Math.max(max, totalActualPoints, totalPossiblePoints);
@@ -101,8 +101,8 @@ export const ReturnsTab: React.FC<{
                   const pointsB = portfolioTeamB?.actualPoints || 0;
                   const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
                   const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-                  const bidA = a.bid || 0;
-                  const bidB = b.bid || 0;
+                  const bidA = a.bid;
+                  const bidB = b.bid;
 
                   if (sortBy === 'points') {
                     if (pointsB !== pointsA) return pointsB - pointsA;
@@ -126,7 +126,7 @@ export const ReturnsTab: React.FC<{
                   const tournamentTeam = tournamentTeams.find((tt) => tt.id === team.teamId);
                   const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === team.teamId);
 
-                  const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
+                  const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
 
                   const userOwnership = portfolioTeam?.ownershipPercentage ?? 0;
                   const userActualPoints = totalActualPoints * userOwnership;

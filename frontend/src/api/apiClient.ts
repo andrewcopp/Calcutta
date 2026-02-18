@@ -53,11 +53,17 @@ async function refreshAccessToken(): Promise<string | null> {
         },
       });
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        console.error('Token refresh failed with status', res.status);
+        return null;
+      }
       const rawBody = (await res.json().catch(() => undefined)) as unknown;
       const body = rawBody && typeof rawBody === 'object' ? (rawBody as Record<string, unknown>) : undefined;
       const tok = body?.accessToken;
-      if (typeof tok !== 'string' || tok.trim() === '') return null;
+      if (typeof tok !== 'string' || tok.trim() === '') {
+        console.error('Token refresh returned empty or invalid token');
+        return null;
+      }
 
       setAccessToken(tok);
       if (body?.user) {
@@ -98,6 +104,7 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
     setAccessToken(null);
     localStorage.removeItem('user');
     if (typeof window !== 'undefined') {
+      console.warn('Session expired, redirecting to login');
       window.location.href = '/';
     }
     return response;
@@ -111,6 +118,7 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
     setAccessToken(null);
     localStorage.removeItem('user');
     if (typeof window !== 'undefined') {
+      console.warn('Session expired after retry, redirecting to login');
       window.location.href = '/';
     }
   }
@@ -156,8 +164,8 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
 
   const parseBody = async () => {
     if (!response.ok) {
-      if (isJson) return response.json().catch(() => undefined);
-      return response.text().catch(() => undefined);
+      if (isJson) return response.json().catch((e: unknown) => { console.error('Failed to parse error response JSON', e); return undefined; });
+      return response.text().catch((e: unknown) => { console.error('Failed to parse error response text', e); return undefined; });
     }
     if (isJson) return response.json();
     return response.text();

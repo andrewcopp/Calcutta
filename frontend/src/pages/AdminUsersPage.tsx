@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
-import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -47,9 +47,7 @@ export const AdminUsersPage: React.FC = () => {
         </div>
 
         {usersQuery.isError && (
-          <Alert variant="error" className="mb-4">
-            {usersQuery.error instanceof Error ? usersQuery.error.message : String(usersQuery.error)}
-          </Alert>
+          <ErrorState error={usersQuery.error} onRetry={() => usersQuery.refetch()} />
         )}
 
         {usersQuery.isLoading ? <LoadingState label="Loading users..." layout="inline" /> : null}

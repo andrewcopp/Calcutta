@@ -14,6 +14,7 @@ import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
+import { formatDate } from '../utils/format';
 
 interface TeamToAdd {
   schoolId: string;
@@ -155,7 +156,7 @@ export const TournamentAddTeamsPage: React.FC = () => {
             Add Teams to {tournament.name}
           </span>
         }
-        subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
+        subtitle={`${tournament.rounds} rounds • Created ${formatDate(tournament.created)}`}
         actions={
           <Button variant="ghost" onClick={() => navigate(`/admin/tournaments/${id}`)}>
             Cancel

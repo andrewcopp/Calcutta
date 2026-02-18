@@ -6,12 +6,15 @@ Debug artifact: All fields for inspection and debugging
 """
 from __future__ import annotations
 
+import logging
 from typing import Dict, Tuple
 
 import pandas as pd
 import numpy as np
 
 from moneyball.utils import points
+
+logger = logging.getLogger(__name__)
 
 
 def generate_tournament_value(
@@ -59,15 +62,21 @@ def generate_tournament_value(
     df = df[df["round_order"].notna()].copy()
     df["round_order"] = df["round_order"].astype(int)
 
-    df["p_matchup"] = pd.to_numeric(df["p_matchup"], errors="coerce").fillna(0)
-    df["p_team1_wins_given_matchup"] = pd.to_numeric(
-        df["p_team1_wins_given_matchup"],
-        errors="coerce",
-    ).fillna(0)
-    df["p_team2_wins_given_matchup"] = pd.to_numeric(
-        df["p_team2_wins_given_matchup"],
-        errors="coerce",
-    ).fillna(0)
+    prob_cols = ["p_matchup", "p_team1_wins_given_matchup", "p_team2_wins_given_matchup"]
+    for col in prob_cols:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    nan_count = df[prob_cols].isna().sum().sum()
+    total_values = len(df) * len(prob_cols)
+    if nan_count > 0:
+        nan_pct = nan_count / total_values
+        logger.warning("Coerced %d/%d probability values to 0 (%.1f%%)", nan_count, total_values, nan_pct * 100)
+        if nan_pct > 0.10:
+            raise ValueError(
+                f"Too many NaN probability values: {nan_count}/{total_values} ({nan_pct:.1%}). "
+                "Check input data quality."
+            )
+    for col in prob_cols:
+        df[col] = df[col].fillna(0)
 
     df = df[(df["round_order"] >= 1) & (df["round_order"] <= 7)].copy()
 

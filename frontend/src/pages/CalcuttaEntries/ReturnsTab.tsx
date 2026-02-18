@@ -64,8 +64,8 @@ export const ReturnsTab: React.FC<{
       if (!teamEntryAgg.has(pt.teamId)) teamEntryAgg.set(pt.teamId, new Map());
       const byEntry = teamEntryAgg.get(pt.teamId)!;
       const current = byEntry.get(entryId) || { actual: 0, expected: 0 };
-      current.actual += pt.actualPoints || 0;
-      current.expected += pt.expectedPoints || 0;
+      current.actual += pt.actualPoints;
+      current.expected += pt.expectedPoints;
       byEntry.set(entryId, current);
     }
 

@@ -110,7 +110,7 @@ def create_investment_model(
             )
             row = cur.fetchone()
 
-    logger.info(f"Created investment model: {name} ({kind})")
+    logger.info("Created investment model: %s (%s)", name, kind)
     return InvestmentModel(
         id=row[0] if row else model_id,
         name=name,
@@ -289,7 +289,7 @@ def create_entry_with_predictions(
             )
             row = cur.fetchone()
 
-    logger.info(f"Created entry with {len(predictions)} predictions for calcutta {calcutta_id}")
+    logger.info("Created entry with %d predictions for calcutta %s", len(predictions), calcutta_id)
     return Entry(
         id=str(row[0]) if row else entry_id,
         investment_model_id=investment_model_id,
@@ -353,37 +353,11 @@ def update_entry_with_bids(
             if cur.rowcount == 0:
                 raise ValueError(f"Entry {entry_id} not found or already deleted")
 
-    logger.info(f"Updated entry {entry_id} with {len(bids)} optimized bids")
+    logger.info("Updated entry %s with %d optimized bids", entry_id, len(bids))
 
 
-def get_entry(entry_id: str) -> Optional[Entry]:
-    """
-    Get an entry by ID.
-
-    Args:
-        entry_id: Entry UUID
-
-    Returns:
-        Entry if found, None otherwise
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, investment_model_id, calcutta_id,
-                       game_outcome_kind, game_outcome_params_json,
-                       optimizer_kind, optimizer_params_json,
-                       starting_state_key, predictions_json, bids_json, created_at
-                FROM lab.entries
-                WHERE id = %s AND deleted_at IS NULL
-                """,
-                (entry_id,),
-            )
-            row = cur.fetchone()
-
-    if not row:
-        return None
-
+def _row_to_entry(row) -> Entry:
+    """Parse a database row into an Entry dataclass."""
     predictions_data = row[8] if row[8] else []
     predictions = [
         Prediction(
@@ -417,6 +391,37 @@ def get_entry(entry_id: str) -> Optional[Entry]:
         bids=bids,
         created_at=row[10],
     )
+
+
+def get_entry(entry_id: str) -> Optional[Entry]:
+    """
+    Get an entry by ID.
+
+    Args:
+        entry_id: Entry UUID
+
+    Returns:
+        Entry if found, None otherwise
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, investment_model_id, calcutta_id,
+                       game_outcome_kind, game_outcome_params_json,
+                       optimizer_kind, optimizer_params_json,
+                       starting_state_key, predictions_json, bids_json, created_at
+                FROM lab.entries
+                WHERE id = %s AND deleted_at IS NULL
+                """,
+                (entry_id,),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return None
+
+    return _row_to_entry(row)
 
 
 def get_entries_pending_optimization(
@@ -465,40 +470,4 @@ def get_entries_pending_optimization(
                 )
             rows = cur.fetchall()
 
-    entries = []
-    for row in rows:
-        predictions_data = row[8] if row[8] else []
-        predictions = [
-            Prediction(
-                team_id=p["team_id"],
-                predicted_market_share=p["predicted_market_share"],
-                expected_points=p["expected_points"],
-            )
-            for p in predictions_data
-        ]
-
-        bids_data = row[9] if row[9] else []
-        bids = [
-            Bid(
-                team_id=b["team_id"],
-                bid_points=b["bid_points"],
-                expected_roi=b.get("expected_roi", 0.0),
-            )
-            for b in bids_data
-        ]
-
-        entries.append(Entry(
-            id=str(row[0]),
-            investment_model_id=str(row[1]),
-            calcutta_id=str(row[2]),
-            game_outcome_kind=row[3],
-            game_outcome_params=row[4] if row[4] else {},
-            optimizer_kind=row[5],
-            optimizer_params=row[6] if row[6] else {},
-            starting_state_key=row[7],
-            predictions=predictions,
-            bids=bids,
-            created_at=row[10],
-        ))
-
-    return entries
+    return [_row_to_entry(row) for row in rows]

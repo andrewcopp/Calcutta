@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -206,8 +207,8 @@ export function EntryTeamsPage() {
       const pointsB = portfolioTeamB?.actualPoints || 0;
       const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
       const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-      const bidA = a.bid || 0;
-      const bidB = b.bid || 0;
+      const bidA = a.bid;
+      const bidB = b.bid;
 
       if (sortBy === 'points') {
         if (pointsB !== pointsA) return pointsB - pointsA;
@@ -246,10 +247,9 @@ export function EntryTeamsPage() {
   }
 
   if (dashboardQuery.isError) {
-    const message = dashboardQuery.error instanceof Error ? dashboardQuery.error.message : 'Failed to fetch data';
     return (
       <PageContainer>
-        <Alert variant="error">{message}</Alert>
+        <ErrorState error={dashboardQuery.error} onRetry={() => dashboardQuery.refetch()} />
       </PageContainer>
     );
   }

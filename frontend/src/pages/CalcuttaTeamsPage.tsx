@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Card } from '../components/ui/Card';
 import { CalcuttaTeamsSkeleton } from '../components/skeletons/CalcuttaTeamsSkeleton';
@@ -42,7 +43,7 @@ export function CalcuttaTeamsPage() {
         seed: team.seed,
         region: team.region,
         totalInvestment: 0,
-        points: team.wins || 0,
+        points: team.wins,
         roi: 0,
       });
     }
@@ -51,7 +52,7 @@ export function CalcuttaTeamsPage() {
       if (!entryTeam.team) continue;
       const existing = teamStatsMap.get(entryTeam.teamId);
       if (!existing) continue;
-      existing.totalInvestment += entryTeam.bid || 0;
+      existing.totalInvestment += entryTeam.bid;
     }
 
     for (const team of teamStatsMap.values()) {
@@ -82,10 +83,9 @@ export function CalcuttaTeamsPage() {
   }
 
   if (dashboardQuery.isError) {
-    const message = dashboardQuery.error instanceof Error ? dashboardQuery.error.message : 'Failed to fetch team data';
     return (
       <PageContainer>
-        <Alert variant="error">{message}</Alert>
+        <ErrorState error={dashboardQuery.error} onRetry={() => dashboardQuery.refetch()} />
       </PageContainer>
     );
   }

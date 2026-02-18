@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
-	"time"
-
 	"os"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
@@ -141,8 +141,14 @@ func (w *BundleImportWorker) processBundleUpload(ctx context.Context, uploadID s
 			return err
 		}
 
-		impJSON, _ := json.Marshal(impReport)
-		verJSON, _ := json.Marshal(verReport)
+		impJSON, err := json.Marshal(impReport)
+		if err != nil {
+			return fmt.Errorf("marshal import report: %w", err)
+		}
+		verJSON, err := json.Marshal(verReport)
+		if err != nil {
+			return fmt.Errorf("marshal verify report: %w", err)
+		}
 
 		err = q.MarkBundleUploadSucceeded(ctx, sqlc.MarkBundleUploadSucceededParams{
 			UploadID:     uploadID,

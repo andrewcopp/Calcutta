@@ -51,7 +51,7 @@ export const InvestmentsTab: React.FC<{
     }
 
     for (const entryTeam of allEntryTeams) {
-      const amount = entryTeam.bid || 0;
+      const amount = entryTeam.bid;
       if (amount <= 0) continue;
 
       const row = byTeam.get(entryTeam.teamId);

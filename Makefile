@@ -12,7 +12,7 @@ DC_PROD = docker compose -f docker-compose.local-prod.yml -p $(DOCKER_PROJECT)
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test
-.PHONY: register-models import-bundles seed-simulations dry-run
+.PHONY: register-models import-bundles import-bundles-apply seed-simulations dry-run
 
 env-init:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -182,6 +182,9 @@ register-models:
 		python scripts/register_investment_models.py
 
 import-bundles:
+	@$(ENV) go run ./backend/cmd/tools/import-bundles -in=./backend/exports/bundles -dry-run=true
+
+import-bundles-apply:
 	@$(ENV) go run ./backend/cmd/tools/import-bundles -in=./backend/exports/bundles -dry-run=false
 
 seed-simulations:

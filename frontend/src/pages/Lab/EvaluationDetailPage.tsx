@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { Alert } from '../../components/ui/Alert';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
@@ -45,7 +45,7 @@ export function EvaluationDetailPage() {
   if (evaluationQuery.isError || !evaluation) {
     return (
       <PageContainer>
-        <Alert variant="error">Failed to load evaluation.</Alert>
+        <ErrorState error={evaluationQuery.error ?? 'Failed to load evaluation.'} onRetry={() => evaluationQuery.refetch()} />
       </PageContainer>
     );
   }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
@@ -10,19 +10,17 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { SettingsSkeleton } from '../components/skeletons/SettingsSkeleton';
+import { useFlashMessage } from '../hooks/useFlashMessage';
+import { formatDate } from '../utils/format';
 
 export function CalcuttaSettingsPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const { user } = useUser();
   const queryClient = useQueryClient();
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const successTimerRef = useRef<ReturnType<typeof setTimeout>>();
-
-  useEffect(() => {
-    return () => { clearTimeout(successTimerRef.current); };
-  }, []);
+  const [successMessage, flash] = useFlashMessage();
 
   const calcuttaQuery = useQuery({
     queryKey: queryKeys.calcuttas.settings(calcuttaId),
@@ -76,8 +74,7 @@ export function CalcuttaSettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.payouts(calcuttaId) });
-      setSuccessMessage('Payouts saved successfully.');
-      successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000);
+      flash('Payouts saved successfully.');
     },
   });
 
@@ -87,8 +84,7 @@ export function CalcuttaSettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.settings(calcuttaId) });
-      setSuccessMessage('Settings saved successfully.');
-      successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000);
+      flash('Settings saved successfully.');
     },
   });
 
@@ -115,10 +111,9 @@ export function CalcuttaSettingsPage() {
   }
 
   if (calcuttaQuery.isError) {
-    const message = calcuttaQuery.error instanceof Error ? calcuttaQuery.error.message : 'Failed to load settings';
     return (
       <PageContainer>
-        <Alert variant="error">{message}</Alert>
+        <ErrorState error={calcuttaQuery.error} onRetry={() => calcuttaQuery.refetch()} />
       </PageContainer>
     );
   }
@@ -226,7 +221,7 @@ export function CalcuttaSettingsPage() {
 
           {calcutta?.biddingLockedAt && (
             <p className="text-sm text-gray-500">
-              Bidding locked at: {new Date(calcutta.biddingLockedAt).toLocaleString()}
+              Bidding locked at: {formatDate(calcutta.biddingLockedAt, true)}
             </p>
           )}
 

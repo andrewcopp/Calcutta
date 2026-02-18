@@ -7,19 +7,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-type BracketBuilder struct{}
-
-func NewBracketBuilder() *BracketBuilder {
-	return &BracketBuilder{}
-}
-
-func (b *BracketBuilder) BuildBracket(tournamentID string, teams []*models.TournamentTeam, finalFour *models.FinalFourConfig) (*models.BracketStructure, error) {
-	return BuildBracketStructure(tournamentID, teams, finalFour)
-}
-
 func BuildBracketStructure(tournamentID string, teams []*models.TournamentTeam, finalFour *models.FinalFourConfig) (*models.BracketStructure, error) {
-	b := &BracketBuilder{}
-
 	if len(teams) != 68 {
 		return nil, fmt.Errorf("expected 68 teams, got %d", len(teams))
 	}
@@ -39,26 +27,26 @@ func BuildBracketStructure(tournamentID string, teams []*models.TournamentTeam, 
 	regionalChampionGameIDs := make(map[string]string)
 	for _, region := range bracket.Regions {
 		regionTeams := teamsByRegion[region]
-		championGameID, err := b.buildRegionalBracket(bracket, region, regionTeams)
+		championGameID, err := buildRegionalBracket(bracket, region, regionTeams)
 		if err != nil {
 			return nil, fmt.Errorf("error building %s region: %w", region, err)
 		}
 		regionalChampionGameIDs[region] = championGameID
 	}
 
-	if err := b.buildFinalFour(bracket, regionalChampionGameIDs, finalFour); err != nil {
+	if err := buildFinalFour(bracket, regionalChampionGameIDs, finalFour); err != nil {
 		return nil, fmt.Errorf("error building Final Four: %w", err)
 	}
 
 	return bracket, nil
 }
 
-func (b *BracketBuilder) buildRegionalBracket(bracket *models.BracketStructure, region string, teams []*models.TournamentTeam) (string, error) {
+func buildRegionalBracket(bracket *models.BracketStructure, region string, teams []*models.TournamentTeam) (string, error) {
 	sort.Slice(teams, func(i, j int) bool {
 		return teams[i].Seed < teams[j].Seed
 	})
 
-	firstFourTeams := b.identifyFirstFourTeams(teams)
+	firstFourTeams := identifyFirstFourTeams(teams)
 
 	firstFourWinners := make(map[int]string)
 	for seed, seedTeams := range firstFourTeams {
@@ -68,27 +56,27 @@ func (b *BracketBuilder) buildRegionalBracket(bracket *models.BracketStructure, 
 				GameID:    gameID,
 				Round:     models.RoundFirstFour,
 				Region:    region,
-				Team1:     b.toBracketTeam(seedTeams[0]),
-				Team2:     b.toBracketTeam(seedTeams[1]),
-				SortOrder: b.getSortOrder(models.RoundFirstFour, region, seed),
+				Team1:     toBracketTeam(seedTeams[0]),
+				Team2:     toBracketTeam(seedTeams[1]),
+				SortOrder: getSortOrder(models.RoundFirstFour, region, seed),
 			}
 			bracket.Games[gameID] = game
 			firstFourWinners[seed] = gameID
 		}
 	}
 
-	round64Games := b.buildRoundOf64(bracket, region, teams, firstFourWinners)
-	round32Games := b.buildRegionalRound(bracket, region, models.RoundOf32, round64Games, 9)
-	sweet16Games := b.buildRegionalRound(bracket, region, models.RoundSweet16, round32Games, 5)
-	elite8Games := b.buildRegionalRound(bracket, region, models.RoundElite8, sweet16Games, 3)
-	championGameID := b.buildRegionalChampionship(bracket, region, elite8Games)
+	round64Games := buildRoundOf64(bracket, region, teams, firstFourWinners)
+	round32Games := buildRegionalRound(bracket, region, models.RoundOf32, round64Games, 9)
+	sweet16Games := buildRegionalRound(bracket, region, models.RoundSweet16, round32Games, 5)
+	elite8Games := buildRegionalRound(bracket, region, models.RoundElite8, sweet16Games, 3)
+	championGameID := buildRegionalChampionship(bracket, region, elite8Games)
 
 	return championGameID, nil
 }
 
-func (b *BracketBuilder) buildRoundOf64(bracket *models.BracketStructure, region string, teams []*models.TournamentTeam, firstFourWinners map[int]string) map[int]string {
+func buildRoundOf64(bracket *models.BracketStructure, region string, teams []*models.TournamentTeam, firstFourWinners map[int]string) map[int]string {
 	round64Games := make(map[int]string)
-	teamsWithByes := b.getTeamsWithByes(teams, b.identifyFirstFourTeams(teams))
+	teamsWithByes := getTeamsWithByes(teams, identifyFirstFourTeams(teams))
 
 	processed := make(map[int]bool)
 	for _, team := range teamsWithByes {
@@ -110,31 +98,31 @@ func (b *BracketBuilder) buildRoundOf64(bracket *models.BracketStructure, region
 			GameID:    gameID,
 			Round:     models.RoundOf64,
 			Region:    region,
-			SortOrder: b.getSortOrder(models.RoundOf64, region, team.Seed),
+			SortOrder: getSortOrder(models.RoundOf64, region, team.Seed),
 		}
 
 		if team.Seed < opponentSeed {
-			game.Team1 = b.toBracketTeam(team)
+			game.Team1 = toBracketTeam(team)
 			if firstFourGameID, isFirstFour := firstFourWinners[opponentSeed]; isFirstFour {
 				bracket.Games[firstFourGameID].NextGameID = gameID
 				bracket.Games[firstFourGameID].NextGameSlot = 2
 			} else {
 				for _, t := range teamsWithByes {
 					if t.Seed == opponentSeed {
-						game.Team2 = b.toBracketTeam(t)
+						game.Team2 = toBracketTeam(t)
 						break
 					}
 				}
 			}
 		} else {
-			game.Team2 = b.toBracketTeam(team)
+			game.Team2 = toBracketTeam(team)
 			if firstFourGameID, isFirstFour := firstFourWinners[opponentSeed]; isFirstFour {
 				bracket.Games[firstFourGameID].NextGameID = gameID
 				bracket.Games[firstFourGameID].NextGameSlot = 1
 			} else {
 				for _, t := range teamsWithByes {
 					if t.Seed == opponentSeed {
-						game.Team1 = b.toBracketTeam(t)
+						game.Team1 = toBracketTeam(t)
 						break
 					}
 				}
@@ -151,7 +139,7 @@ func (b *BracketBuilder) buildRoundOf64(bracket *models.BracketStructure, region
 	return round64Games
 }
 
-func (b *BracketBuilder) buildRegionalRound(bracket *models.BracketStructure, region string, round models.BracketRound, previousGames map[int]string, targetSum int) map[int]string {
+func buildRegionalRound(bracket *models.BracketStructure, region string, round models.BracketRound, previousGames map[int]string, targetSum int) map[int]string {
 	newGames := make(map[int]string)
 
 	lowestSeeds := make([]int, 0, len(previousGames))
@@ -181,7 +169,7 @@ func (b *BracketBuilder) buildRegionalRound(bracket *models.BracketStructure, re
 			GameID:    gameID,
 			Round:     round,
 			Region:    region,
-			SortOrder: b.getSortOrder(round, region, gameIndex),
+			SortOrder: getSortOrder(round, region, gameIndex),
 		}
 
 		bracket.Games[previousGames[lowestSeed1]].NextGameID = gameID
@@ -201,13 +189,13 @@ func (b *BracketBuilder) buildRegionalRound(bracket *models.BracketStructure, re
 	return newGames
 }
 
-func (b *BracketBuilder) buildRegionalChampionship(bracket *models.BracketStructure, region string, elite8Games map[int]string) string {
+func buildRegionalChampionship(bracket *models.BracketStructure, region string, elite8Games map[int]string) string {
 	gameID := fmt.Sprintf("%s-elite_8-1", region)
 	game := &models.BracketGame{
 		GameID:    gameID,
 		Round:     models.RoundElite8,
 		Region:    region,
-		SortOrder: b.getSortOrder(models.RoundElite8, region, 0),
+		SortOrder: getSortOrder(models.RoundElite8, region, 0),
 	}
 
 	seeds := make([]int, 0, len(elite8Games))
@@ -228,7 +216,7 @@ func (b *BracketBuilder) buildRegionalChampionship(bracket *models.BracketStruct
 	return gameID
 }
 
-func (b *BracketBuilder) buildFinalFour(bracket *models.BracketStructure, regionalChampions map[string]string, config *models.FinalFourConfig) error {
+func buildFinalFour(bracket *models.BracketStructure, regionalChampions map[string]string, config *models.FinalFourConfig) error {
 	semifinal1ID := "final_four-1"
 	semifinal1 := &models.BracketGame{
 		GameID:    semifinal1ID,
@@ -277,7 +265,7 @@ func (b *BracketBuilder) buildFinalFour(bracket *models.BracketStructure, region
 	return nil
 }
 
-func (b *BracketBuilder) identifyFirstFourTeams(teams []*models.TournamentTeam) map[int][]*models.TournamentTeam {
+func identifyFirstFourTeams(teams []*models.TournamentTeam) map[int][]*models.TournamentTeam {
 	seedCounts := make(map[int][]*models.TournamentTeam)
 	for _, team := range teams {
 		seedCounts[team.Seed] = append(seedCounts[team.Seed], team)
@@ -292,7 +280,7 @@ func (b *BracketBuilder) identifyFirstFourTeams(teams []*models.TournamentTeam) 
 	return firstFour
 }
 
-func (b *BracketBuilder) getTeamsWithByes(teams []*models.TournamentTeam, firstFourTeams map[int][]*models.TournamentTeam) []*models.TournamentTeam {
+func getTeamsWithByes(teams []*models.TournamentTeam, firstFourTeams map[int][]*models.TournamentTeam) []*models.TournamentTeam {
 	result := make([]*models.TournamentTeam, 0)
 	for _, team := range teams {
 		if _, isFirstFour := firstFourTeams[team.Seed]; !isFirstFour {
@@ -302,7 +290,7 @@ func (b *BracketBuilder) getTeamsWithByes(teams []*models.TournamentTeam, firstF
 	return result
 }
 
-func (b *BracketBuilder) toBracketTeam(team *models.TournamentTeam) *models.BracketTeam {
+func toBracketTeam(team *models.TournamentTeam) *models.BracketTeam {
 	name := ""
 	if team.School != nil {
 		name = team.School.Name
@@ -317,7 +305,7 @@ func (b *BracketBuilder) toBracketTeam(team *models.TournamentTeam) *models.Brac
 	}
 }
 
-func (b *BracketBuilder) getSortOrder(round models.BracketRound, region string, index int) int {
+func getSortOrder(round models.BracketRound, region string, index int) int {
 	regionOrder := map[string]int{
 		"East":    0,
 		"West":    1,

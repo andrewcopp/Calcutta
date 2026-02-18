@@ -150,8 +150,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, err
 	}
 
-	builder := appbracket.NewBracketBuilder()
-	br, err := builder.BuildBracket(coreTournamentID, teams, ff)
+	br, err := appbracket.BuildBracketStructure(coreTournamentID, teams, ff)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}

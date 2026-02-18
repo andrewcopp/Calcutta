@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -17,19 +17,16 @@ import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { Modal, ModalActions } from '../components/ui/Modal';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { useFlashMessage } from '../hooks/useFlashMessage';
+import { formatDate } from '../utils/format';
 
 export const TournamentViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [addEmail, setAddEmail] = useState('');
-  const [modSuccess, setModSuccess] = useState<string | null>(null);
+  const [modSuccess, flashModSuccess] = useFlashMessage();
   const [modError, setModError] = useState<string | null>(null);
-  const successTimerRef = useRef<ReturnType<typeof setTimeout>>();
-
-  useEffect(() => {
-    return () => { clearTimeout(successTimerRef.current); };
-  }, []);
 
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
@@ -69,8 +66,7 @@ export const TournamentViewPage: React.FC = () => {
       setShowAddModal(false);
       setAddEmail('');
       setModError(null);
-      setModSuccess('Moderator added successfully.');
-      successTimerRef.current = setTimeout(() => setModSuccess(null), 3000);
+      flashModSuccess('Moderator added successfully.');
     },
     onError: (err) => {
       setModError(err instanceof Error ? err.message : 'Failed to add moderator');
@@ -81,8 +77,7 @@ export const TournamentViewPage: React.FC = () => {
     mutationFn: (userId: string) => tournamentService.revokeTournamentModerator(id!, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.moderators(id) });
-      setModSuccess('Moderator removed successfully.');
-      successTimerRef.current = setTimeout(() => setModSuccess(null), 3000);
+      flashModSuccess('Moderator removed successfully.');
     },
     onError: (err) => {
       setModError(err instanceof Error ? err.message : 'Failed to remove moderator');
@@ -182,7 +177,7 @@ export const TournamentViewPage: React.FC = () => {
       />
       <PageHeader
         title={tournament.name}
-        subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
+        subtitle={`${tournament.rounds} rounds • Created ${formatDate(tournament.created)}`}
         actions={
           <div className="flex gap-2">
             <Link to={`/admin/tournaments/${id}/bracket`}>

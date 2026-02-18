@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Calcutta, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam } from '../types/calcutta';
 import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
@@ -112,7 +113,7 @@ export function CalcuttaEntriesPage() {
   const schools = useMemo(() => dashboardData?.schools ?? [], [dashboardData?.schools]);
   const tournamentTeams = useMemo(() => dashboardData?.tournamentTeams ?? [], [dashboardData?.tournamentTeams]);
 
-  const totalInvestment = useMemo(() => allEntryTeams.reduce((sum, et) => sum + (et.bid || 0), 0), [allEntryTeams]);
+  const totalInvestment = useMemo(() => allEntryTeams.reduce((sum, et) => sum + et.bid, 0), [allEntryTeams]);
 
   const totalReturns = useMemo(() => entries.reduce((sum, e) => sum + (e.totalPoints || 0), 0), [entries]);
 
@@ -138,12 +139,12 @@ export function CalcuttaEntriesPage() {
       // Calculate total investment for this team
       const teamInvestment = allEntryTeams
         .filter((et) => et.teamId === team.id)
-        .reduce((sum, et) => sum + (et.bid || 0), 0);
+        .reduce((sum, et) => sum + et.bid, 0);
 
       // Calculate total points for this team
       const teamPoints = allCalcuttaPortfolioTeams
         .filter((pt) => pt.teamId === team.id)
-        .reduce((sum, pt) => sum + (pt.actualPoints || 0), 0);
+        .reduce((sum, pt) => sum + pt.actualPoints, 0);
 
       // Calculate ROI with +$1 to avoid division by zero
       const roi = teamPoints / (teamInvestment + 1);
@@ -181,10 +182,9 @@ export function CalcuttaEntriesPage() {
   }
 
   if (dashboardQuery.isError) {
-    const message = dashboardQuery.error instanceof Error ? dashboardQuery.error.message : 'Failed to fetch data';
     return (
       <PageContainer>
-        <Alert variant="error">{message}</Alert>
+        <ErrorState error={dashboardQuery.error} onRetry={() => dashboardQuery.refetch()} />
       </PageContainer>
     );
   }

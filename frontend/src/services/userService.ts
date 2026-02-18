@@ -29,7 +29,8 @@ export const userService = {
     if (!userStr) return null;
     try {
       return JSON.parse(userStr) as User;
-    } catch {
+    } catch (e) {
+      console.error('Failed to parse stored user data', e);
       localStorage.removeItem('user');
       return null;
     }

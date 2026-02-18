@@ -37,6 +37,8 @@ from moneyball.db.lab_helpers import (
     get_expected_points_map,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def get_actual_market_shares(
     calcutta_id: str,
@@ -150,8 +152,10 @@ def create_oracle_predictions_for_calcutta(
 
         expected_points = expected_points_map.get(team_slug)
         if expected_points is None:
-            logging.warning("No expected points for team %s, using default 10.0", team_slug)
-            expected_points = 10.0
+            raise ValueError(
+                f"No expected points for team {team_slug}. "
+                "Run tournament simulations before generating predictions."
+            )
 
         predictions.append(Prediction(
             team_id=team_id,
@@ -160,7 +164,7 @@ def create_oracle_predictions_for_calcutta(
         ))
 
     if skipped_slugs:
-        logging.warning(
+        logger.warning(
             "Skipped %d teams with no ID mapping: %s",
             len(skipped_slugs),
             skipped_slugs,

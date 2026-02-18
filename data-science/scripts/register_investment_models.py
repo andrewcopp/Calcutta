@@ -53,7 +53,8 @@ INVESTMENT_MODELS: List[ModelSpec] = [
     ModelSpec(
         name="ridge-v1-recent",
         kind="ridge",
-        params={"feature_set": "optimal", "train_years_window": 3},
+        params={"feature_set": "optimal"},
+        # TODO: implement train_years_window in training pipeline before re-adding param
         notes="Ridge Regression V1 with recent training window (3 years)",
     ),
     ModelSpec(

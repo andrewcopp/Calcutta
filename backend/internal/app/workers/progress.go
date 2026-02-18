@@ -43,6 +43,7 @@ func (w *DBProgressWriter) Update(ctx context.Context, runKind string, runID str
 	payload := runProgressPayload{Percent: percent, Phase: phase, Message: message}
 	b, err := json.Marshal(payload)
 	if err != nil {
+		slog.Error("run_job_progress_marshal_failed", "run_kind", runKind, "run_id", runID, "error", err)
 		return
 	}
 

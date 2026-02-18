@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 
-import { Alert } from '../../components/ui/Alert';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
@@ -42,7 +42,7 @@ export function EntryProfilePage() {
   if (profileQuery.isError || !profile) {
     return (
       <PageContainer>
-        <Alert variant="error">Failed to load entry profile.</Alert>
+        <ErrorState error={profileQuery.error ?? 'Failed to load entry profile.'} onRetry={() => profileQuery.refetch()} />
       </PageContainer>
     );
   }

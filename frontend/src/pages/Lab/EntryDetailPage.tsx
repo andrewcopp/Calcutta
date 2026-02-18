@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import { Alert } from '../../components/ui/Alert';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer } from '../../components/ui/Page';
@@ -135,7 +136,7 @@ export function EntryDetailPage() {
   if (entryQuery.isError || !entry) {
     return (
       <PageContainer>
-        <Alert variant="error">Failed to load entry.</Alert>
+        <ErrorState error={entryQuery.error ?? 'Failed to load entry.'} onRetry={() => entryQuery.refetch()} />
       </PageContainer>
     );
   }

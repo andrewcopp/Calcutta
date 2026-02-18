@@ -17,13 +17,11 @@ type TournamentRepo interface {
 
 type Service struct {
 	tournamentRepo TournamentRepo
-	builder        *BracketBuilder
 }
 
 func New(tournamentRepo TournamentRepo) *Service {
 	return &Service{
 		tournamentRepo: tournamentRepo,
-		builder:        NewBracketBuilder(),
 	}
 }
 
@@ -63,7 +61,7 @@ func (s *Service) GetBracket(ctx context.Context, tournamentID string) (*models.
 		finalFour.BottomRightRegion = "Midwest"
 	}
 
-	bracket, err := s.builder.BuildBracket(tournamentID, teams, finalFour)
+	bracket, err := BuildBracketStructure(tournamentID, teams, finalFour)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}

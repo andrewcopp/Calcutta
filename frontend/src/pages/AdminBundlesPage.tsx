@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { API_URL, apiClient } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -44,12 +44,15 @@ type ImportStatusResponse = {
   };
 };
 
+const MAX_POLL_ATTEMPTS = 120;
+
 export const AdminBundlesPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportStatusResponse | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
+  const pollAttemptsRef = useRef(0);
 
   useEffect(() => {
     if (!uploadId) return;
@@ -57,11 +60,18 @@ export const AdminBundlesPage: React.FC = () => {
 
     let cancelled = false;
     let timeoutId: number | undefined;
+    pollAttemptsRef.current = 0;
 
     const poll = async () => {
+      pollAttemptsRef.current += 1;
+      if (pollAttemptsRef.current > MAX_POLL_ATTEMPTS) {
+        setError('Import timed out after too many poll attempts');
+        setBusy(false);
+        return;
+      }
       try {
         const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import/${uploadId}`, { credentials: 'include' });
-        const body = (await res.json().catch(() => undefined)) as ImportStatusResponse | undefined;
+        const body = (await res.json().catch((e: unknown) => { console.error('Failed to parse poll response', e); return undefined; })) as ImportStatusResponse | undefined;
         if (!res.ok) {
           const maybeError = body && typeof body === 'object' ? (body as Record<string, unknown>).error : undefined;
           const rawMsg =

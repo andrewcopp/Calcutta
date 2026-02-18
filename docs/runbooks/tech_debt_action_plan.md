@@ -132,22 +132,22 @@ Prioritized checklist of PR-sized work items surfaced by backend, frontend, data
 - **Fix:** Delete both files
 
 ### 20. Drop dead database views
-- [ ] `derived.calcuttas` — zero references in app code
-- [ ] `derived.teams` — zero references in app code
-- [ ] `derived.tournaments` — zero references in app code
-- [ ] `derived.v_algorithms` — zero references in app code
-- [ ] `derived.v_strategy_generation_run_bids` — zero references in app code
-- **Fix:** Create a migration that drops all 5 views
+- [x] `derived.calcuttas` — zero references in app code
+- [x] `derived.teams` — zero references in app code
+- [x] `derived.tournaments` — zero references in app code
+- [x] `derived.v_algorithms` — zero references in app code
+- [x] `derived.v_strategy_generation_run_bids` — zero references in app code
+- **Fix:** ~~Create a migration that drops all 5 views~~ Done in migrations `20260216000007` and `20260216000008`
 
 ### 21. Drop orphan trigger functions
-- [ ] `derived.enqueue_run_job_for_entry_evaluation_request()` — no `CREATE TRIGGER` references it
-- [ ] `derived.enqueue_run_job_for_market_share_run()` — no `CREATE TRIGGER` references it
-- [ ] `derived.enqueue_run_job_for_strategy_generation_run()` — no `CREATE TRIGGER` references it
-- **Fix:** Create a migration that drops all 3 functions
+- [x] `derived.enqueue_run_job_for_entry_evaluation_request()` — no `CREATE TRIGGER` references it
+- [x] `derived.enqueue_run_job_for_market_share_run()` — no `CREATE TRIGGER` references it
+- [x] `derived.enqueue_run_job_for_strategy_generation_run()` — no `CREATE TRIGGER` references it
+- **Fix:** ~~Create a migration that drops all 3 functions~~ Done in migration `20260216000007`
 
 ### 22. Drop orphan column on simulated_entries
-- [ ] **`derived.simulated_entries.source_candidate_id`** — references the dropped `candidates` table
-- **Fix:** Create a migration: `ALTER TABLE derived.simulated_entries DROP COLUMN source_candidate_id;`
+- [x] **`derived.simulated_entries.source_candidate_id`** — references the dropped `candidates` table
+- **Fix:** ~~Create a migration~~ Done in migration `20260216000008` (also updated `source_kind` check constraint)
 
 ---
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { ModelLeaderboardCard } from '../components/Lab/ModelLeaderboardCard';
@@ -32,6 +33,21 @@ export function LabPage() {
   const isLoading = leaderboardQuery.isLoading || calcuttasQuery.isLoading;
   const isError = leaderboardQuery.isError || calcuttasQuery.isError;
 
+  if (isError) {
+    const firstError = leaderboardQuery.error ?? calcuttasQuery.error;
+    return (
+      <PageContainer>
+        <ErrorState
+          error={firstError}
+          onRetry={() => {
+            if (leaderboardQuery.isError) leaderboardQuery.refetch();
+            if (calcuttasQuery.isError) calcuttasQuery.refetch();
+          }}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -41,15 +57,13 @@ export function LabPage() {
 
       {isLoading ? <LoadingState label="Loading leaderboard..." layout="inline" /> : null}
 
-      {isError ? <Alert variant="error">Failed to load leaderboard.</Alert> : null}
-
-      {!isLoading && !isError && items.length === 0 ? (
+      {!isLoading && items.length === 0 ? (
         <Alert variant="info">
           No models found. Register investment models via Python to see them here.
         </Alert>
       ) : null}
 
-      {!isLoading && !isError && items.length > 0 ? (
+      {!isLoading && items.length > 0 ? (
         <div className="space-y-3">
           {items.map((entry, index) => (
             <ModelLeaderboardCard

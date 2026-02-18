@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Tournament } from '../types/calcutta';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
-import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -49,7 +49,14 @@ export const TournamentListPage: React.FC = () => {
   });
 
   const tournaments = tournamentsQuery.data || [];
-  const error = tournamentsQuery.isError ? 'Failed to load tournaments' : null;
+
+  if (tournamentsQuery.isError) {
+    return (
+      <PageContainer>
+        <ErrorState error={tournamentsQuery.error} onRetry={() => tournamentsQuery.refetch()} />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
@@ -65,8 +72,6 @@ export const TournamentListPage: React.FC = () => {
           <Button onClick={() => navigate('/admin/tournaments/create')}>Create Tournament</Button>
         }
       />
-
-      {error ? <Alert variant="error">{error}</Alert> : null}
 
       {tournamentsQuery.isLoading ? <LoadingState label="Loading tournaments..." /> : null}
 
@@ -109,7 +114,7 @@ export const TournamentListPage: React.FC = () => {
             </Link>
           ))}
 
-          {tournaments.length === 0 && !error ? (
+          {tournaments.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No tournaments found. Create your first tournament to get started.
             </div>

@@ -28,9 +28,8 @@ func (s *Spec) Normalize() {
 
 func (s *Spec) Validate() error {
 	if s == nil {
-		return nil
+		return errors.New("spec must not be nil")
 	}
-	s.Normalize()
 	if s.Kind != "kenpom" {
 		return errors.New("unsupported game outcome spec kind")
 	}
@@ -41,9 +40,5 @@ func (s *Spec) Validate() error {
 }
 
 func (s *Spec) WinProb(net1 float64, net2 float64) float64 {
-	if s == nil {
-		return 0.5
-	}
-	s.Normalize()
 	return mathutil.Sigmoid((net1 - net2) / s.Sigma)
 }

@@ -8,6 +8,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { CalcuttaListSkeleton } from '../components/skeletons/CalcuttaListSkeleton';
 import { CalcuttaWithRanking } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
+import { formatDate } from '../utils/format';
 import { useUser } from '../contexts/useUser';
 import { queryKeys } from '../queryKeys';
 
@@ -37,10 +38,9 @@ export function CalcuttaListPage() {
   }
 
   if (calcuttasQuery.isError) {
-    const message = calcuttasQuery.error instanceof Error ? calcuttasQuery.error.message : 'Failed to fetch calcuttas';
     return (
       <PageContainer>
-        <ErrorState error={message} onRetry={() => calcuttasQuery.refetch()} />
+        <ErrorState error={calcuttasQuery.error} onRetry={() => calcuttasQuery.refetch()} />
       </PageContainer>
     );
   }
@@ -69,7 +69,7 @@ export function CalcuttaListPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-                    <p className="text-gray-600">Created: {new Date(calcutta.created).toLocaleDateString()}</p>
+                    <p className="text-gray-600">Created: {formatDate(calcutta.created)}</p>
                   </div>
                   {ranking ? (
                     <div className="text-right">

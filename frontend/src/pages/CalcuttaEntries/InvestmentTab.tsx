@@ -45,7 +45,7 @@ export const InvestmentTab: React.FC<{
     }
 
     for (const entryTeam of allEntryTeams) {
-      const amount = entryTeam.bid || 0;
+      const amount = entryTeam.bid;
       if (amount <= 0) continue;
 
       const teamId = entryTeam.teamId;

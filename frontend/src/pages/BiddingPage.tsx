@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
@@ -6,6 +6,7 @@ import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Alert } from '../components/ui/Alert';
+import { ErrorState } from '../components/ui/ErrorState';
 import { BiddingSkeleton } from '../components/skeletons/BiddingSkeleton';
 import { Button } from '../components/ui/Button';
 import { BudgetTracker } from '../components/Bidding/BudgetTracker';
@@ -35,6 +36,7 @@ export function BiddingPage() {
   const [unbidOnly, setUnbidOnly] = useState(false);
   const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(new Set());
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const initializedRef = useRef(false);
 
   const biddingQuery = useQuery({
     queryKey: queryKeys.bidding.page(calcuttaId, entryId),
@@ -80,8 +82,9 @@ export function BiddingPage() {
   const MAX_BID = calcutta?.maxBid ?? 50;
 
   React.useEffect(() => {
-    if (biddingQuery.data?.initialBids) {
+    if (biddingQuery.data?.initialBids && !initializedRef.current) {
       setBidsByTeamId(biddingQuery.data.initialBids);
+      initializedRef.current = true;
     }
   }, [biddingQuery.data?.initialBids]);
 
@@ -232,10 +235,9 @@ export function BiddingPage() {
   }
 
   if (biddingQuery.isError) {
-    const message = biddingQuery.error instanceof Error ? biddingQuery.error.message : 'Failed to fetch data';
     return (
       <PageContainer>
-        <Alert variant="error">{message}</Alert>
+        <ErrorState error={biddingQuery.error} onRetry={() => biddingQuery.refetch()} />
       </PageContainer>
     );
   }

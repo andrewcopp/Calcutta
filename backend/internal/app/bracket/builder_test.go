@@ -57,11 +57,10 @@ func TestThatBuildBracketStructurePreservesFinalFourConfigPointer(t *testing.T) 
 }
 
 func TestThatRegionWithNoDuplicateSeedsCreatesZeroFirstFourGames(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -74,11 +73,10 @@ func TestThatRegionWithNoDuplicateSeedsCreatesZeroFirstFourGames(t *testing.T) {
 }
 
 func TestThatRegionWithOneDuplicateSeedCreatesOneFirstFourGame(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"East"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "East", []int{11})
 
-	_, err := builder.buildRegionalBracket(bracket, "East", teams)
+	_, err := buildRegionalBracket(bracket, "East", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -91,11 +89,10 @@ func TestThatRegionWithOneDuplicateSeedCreatesOneFirstFourGame(t *testing.T) {
 }
 
 func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"East"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "East", []int{11})
 
-	_, err := builder.buildRegionalBracket(bracket, "East", teams)
+	_, err := buildRegionalBracket(bracket, "East", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -107,11 +104,10 @@ func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
 }
 
 func TestThatFirstFourGameLinksToCorrectRoundOfSixtyFourGame(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"East"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "East", []int{11})
 
-	_, err := builder.buildRegionalBracket(bracket, "East", teams)
+	_, err := buildRegionalBracket(bracket, "East", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -129,11 +125,10 @@ func TestThatFirstFourGameLinksToCorrectRoundOfSixtyFourGame(t *testing.T) {
 }
 
 func TestThatRoundOfSixtyFourGameForOneSeedHasDeterministicID(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -145,11 +140,10 @@ func TestThatRoundOfSixtyFourGameForOneSeedHasDeterministicID(t *testing.T) {
 }
 
 func TestThatRoundOfSixtyFourMatchesOneSeedAgainstSixteenSeed(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -172,11 +166,10 @@ type matchupSeeds struct {
 }
 
 func TestThatRoundOfSixtyFourSeedsSumToSeventeen(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -202,11 +195,10 @@ func TestThatRoundOfSixtyFourSeedsSumToSeventeen(t *testing.T) {
 }
 
 func TestThatRoundOfThirtyTwoGameHasDeterministicIDBasedOnLowestSeed(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -218,11 +210,10 @@ func TestThatRoundOfThirtyTwoGameHasDeterministicIDBasedOnLowestSeed(t *testing.
 }
 
 func TestThatSweetSixteenGameHasDeterministicIDBasedOnLowestSeed(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -234,11 +225,10 @@ func TestThatSweetSixteenGameHasDeterministicIDBasedOnLowestSeed(t *testing.T) {
 }
 
 func TestThatEliteEightGameHasDeterministicIDForRegionalFinal(t *testing.T) {
-	builder := NewBracketBuilder()
 	bracket := &models.BracketStructure{TournamentID: "t", Regions: []string{"West"}, Games: make(map[string]*models.BracketGame)}
 	teams := createRegionTeams("t", "West", nil)
 
-	_, err := builder.buildRegionalBracket(bracket, "West", teams)
+	_, err := buildRegionalBracket(bracket, "West", teams)
 	if err != nil {
 		t.Fatalf("failed to build regional bracket: %v", err)
 	}
@@ -250,10 +240,9 @@ func TestThatEliteEightGameHasDeterministicIDForRegionalFinal(t *testing.T) {
 }
 
 func TestThatBracketTeamInitiallyHasLowestSeedSeenEqualToOwnSeed(t *testing.T) {
-	builder := NewBracketBuilder()
 	team := &models.TournamentTeam{ID: "x", SchoolID: "s", TournamentID: "t", Seed: 5, Region: "West"}
 
-	got := builder.toBracketTeam(team)
+	got := toBracketTeam(team)
 
 	lowest := -1
 	if got != nil {
@@ -265,12 +254,11 @@ func TestThatBracketTeamInitiallyHasLowestSeedSeenEqualToOwnSeed(t *testing.T) {
 }
 
 func TestThatBracketBuilderGeneratesSameGameIDsAcrossMultipleBuilds(t *testing.T) {
-	builder := NewBracketBuilder()
 	teams := createFullTournamentTeams("t")
 	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 
-	bracket1, err1 := builder.BuildBracket("t", teams, ff)
-	bracket2, err2 := builder.BuildBracket("t", teams, ff)
+	bracket1, err1 := BuildBracketStructure("t", teams, ff)
+	bracket2, err2 := BuildBracketStructure("t", teams, ff)
 
 	ids1 := sortedGameIDs(bracket1)
 	ids2 := sortedGameIDs(bracket2)
@@ -287,11 +275,10 @@ func TestThatBracketBuilderGeneratesSameGameIDsAcrossMultipleBuilds(t *testing.T
 }
 
 func TestThatFinalFourSemifinalOneHasDeterministicID(t *testing.T) {
-	builder := NewBracketBuilder()
 	teams := createFullTournamentTeams("t")
 	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 
-	bracket, err := builder.BuildBracket("t", teams, ff)
+	bracket, err := BuildBracketStructure("t", teams, ff)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)
 	}
@@ -303,11 +290,10 @@ func TestThatFinalFourSemifinalOneHasDeterministicID(t *testing.T) {
 }
 
 func TestThatFinalFourSemifinalTwoHasDeterministicID(t *testing.T) {
-	builder := NewBracketBuilder()
 	teams := createFullTournamentTeams("t")
 	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 
-	bracket, err := builder.BuildBracket("t", teams, ff)
+	bracket, err := BuildBracketStructure("t", teams, ff)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)
 	}
@@ -319,11 +305,10 @@ func TestThatFinalFourSemifinalTwoHasDeterministicID(t *testing.T) {
 }
 
 func TestThatChampionshipGameHasDeterministicID(t *testing.T) {
-	builder := NewBracketBuilder()
 	teams := createFullTournamentTeams("t")
 	ff := &models.FinalFourConfig{TopLeftRegion: "East", BottomLeftRegion: "West", TopRightRegion: "South", BottomRightRegion: "Midwest"}
 
-	bracket, err := builder.BuildBracket("t", teams, ff)
+	bracket, err := BuildBracketStructure("t", teams, ff)
 	if err != nil {
 		t.Fatalf("failed to build bracket: %v", err)
 	}

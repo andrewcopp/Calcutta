@@ -36,6 +36,8 @@ from moneyball.db.lab_helpers import (
     get_expected_points_map,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def create_naive_ev_predictions_for_calcutta(
     model_id: str,
@@ -78,7 +80,7 @@ def create_naive_ev_predictions_for_calcutta(
         ))
 
     if skipped_slugs:
-        logging.warning(
+        logger.warning(
             "Skipped %d teams with no ID mapping: %s",
             len(skipped_slugs),
             skipped_slugs,
