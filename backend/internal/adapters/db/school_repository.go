@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,7 +42,7 @@ func (r *SchoolRepository) GetByID(ctx context.Context, id string) (*models.Scho
 	row, err := r.q.GetSchoolByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, &apperrors.NotFoundError{Resource: "school", ID: id}
 		}
 		return nil, err
 	}

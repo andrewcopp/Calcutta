@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,7 +76,7 @@ func (w *LabPipelineWorker) Run(ctx context.Context) {
 // RunWithOptions starts the worker loop with custom poll interval and stale threshold.
 func (w *LabPipelineWorker) RunWithOptions(ctx context.Context, pollInterval time.Duration, staleAfter time.Duration) {
 	if w == nil || w.pool == nil {
-		log.Printf("lab pipeline worker disabled: database pool not available")
+		slog.Warn("lab pipeline worker disabled: database pool not available")
 		<-ctx.Done()
 		return
 	}
@@ -109,7 +109,7 @@ func (w *LabPipelineWorker) RunWithOptions(ctx context.Context, pollInterval tim
 				job, ok, err := w.claimNextLabPipelineJob(ctx, workerID, staleAfter)
 				if err != nil {
 					<-w.sem
-					log.Printf("Error claiming next lab pipeline job: %v", err)
+					slog.Warn("failed to claim lab pipeline job", "error", err)
 					continue
 				}
 				if !ok {
@@ -138,7 +138,7 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 		LIMIT 5
 	`)
 	if err != nil {
-		log.Printf("lab_pipeline_worker check_pending error=%v", err)
+		slog.Warn("lab_pipeline_worker check_pending", "error", err)
 		return
 	}
 	defer rows.Close()
@@ -149,7 +149,7 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 		var optimizerKind string
 		var excludedEntryName *string
 		if err := rows.Scan(&pipelineRunID, &modelID, &budgetPoints, &optimizerKind, &nSims, &seed, &excludedEntryName); err != nil {
-			log.Printf("lab_pipeline_worker scan error=%v", err)
+			slog.Warn("lab_pipeline_worker scan", "error", err)
 			continue
 		}
 
@@ -160,7 +160,7 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 			WHERE id = $1::uuid AND status = 'pending'
 		`, pipelineRunID)
 		if err != nil {
-			log.Printf("lab_pipeline_worker update_running error=%v", err)
+			slog.Warn("lab_pipeline_worker update_running", "error", err)
 			continue
 		}
 
@@ -171,7 +171,7 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 			WHERE pipeline_run_id = $1::uuid AND status = 'pending'
 		`, pipelineRunID)
 		if err != nil {
-			log.Printf("lab_pipeline_worker get_calcuttas error=%v", err)
+			slog.Warn("lab_pipeline_worker get_calcuttas", "error", err)
 			continue
 		}
 
@@ -197,7 +197,7 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 			}
 			paramsJSON, err := json.Marshal(params)
 			if err != nil {
-				log.Printf("lab_pipeline_worker marshal_params error=%v", err)
+				slog.Warn("lab_pipeline_worker marshal_params", "error", err)
 				continue
 			}
 
@@ -209,18 +209,20 @@ func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
 				RETURNING run_id::text
 			`, pcrID, paramsJSON).Scan(&jobID)
 			if err != nil {
-				log.Printf("lab_pipeline_worker enqueue_job error=%v", err)
+				slog.Warn("lab_pipeline_worker enqueue_job", "error", err)
 				continue
 			}
 
 			// Update calcutta run with job ID
-			_, _ = w.pool.Exec(ctx, `
+			if _, err := w.pool.Exec(ctx, `
 				UPDATE lab.pipeline_calcutta_runs
 				SET predictions_job_id = $2::uuid, status = 'running', started_at = NOW(), updated_at = NOW()
 				WHERE id = $1::uuid
-			`, pcrID, jobID)
+			`, pcrID, jobID); err != nil {
+				slog.Warn("lab_pipeline_worker update_calcutta_run_predictions", "error", err)
+			}
 
-			log.Printf("lab_pipeline_worker enqueued_predictions pipeline_run=%s calcutta_run=%s job_id=%s", pipelineRunID, pcrID, jobID)
+			slog.Info("lab_pipeline_worker enqueued_predictions", "pipeline_run", pipelineRunID, "calcutta_run", pcrID, "job_id", jobID)
 		}
 		calcuttaRows.Close()
 	}
@@ -327,7 +329,7 @@ func (w *LabPipelineWorker) processLabPipelineJob(ctx context.Context, workerID 
 		return false
 	}
 
-	log.Printf("lab_pipeline_worker start worker_id=%s run_kind=%s run_id=%s", workerID, job.RunKind, job.RunID)
+	slog.Info("lab_pipeline_worker start", "worker_id", workerID, "run_kind", job.RunKind, "run_id", job.RunID)
 
 	var params labPipelineJobParams
 	if err := json.Unmarshal(job.Params, &params); err != nil {
@@ -412,7 +414,7 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 			errMsg = err.Error()
 		}
 		w.failLabPipelineJob(ctx, job, errors.New(errMsg))
-		log.Printf("lab_pipeline_worker predictions_fail worker_id=%s run_id=%s dur_ms=%d err=%s", workerID, job.RunID, dur.Milliseconds(), errMsg)
+		slog.Warn("lab_pipeline_worker predictions_fail", "worker_id", workerID, "run_id", job.RunID, "dur_ms", dur.Milliseconds(), "error", errMsg)
 		return false
 	}
 
@@ -437,11 +439,13 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 	w.succeedLabPipelineJob(ctx, job)
 
 	// Update calcutta run and enqueue next stage
-	_, _ = w.pool.Exec(ctx, `
+	if _, err := w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_calcutta_runs
 		SET entry_id = $2::uuid, stage = 'optimization', progress = 0.33, updated_at = NOW()
 		WHERE id = $1::uuid
-	`, params.PipelineCalcuttaRunID, result.EntryID)
+	`, params.PipelineCalcuttaRunID, result.EntryID); err != nil {
+		slog.Warn("lab_pipeline_worker update_calcutta_run_optimization", "error", err)
+	}
 
 	// Enqueue optimization job
 	nextParams := params
@@ -455,16 +459,18 @@ func (w *LabPipelineWorker) processPredictionsJob(ctx context.Context, workerID 
 		RETURNING run_id::text
 	`, params.PipelineCalcuttaRunID, nextParamsJSON).Scan(&nextJobID)
 	if err != nil {
-		log.Printf("lab_pipeline_worker enqueue_optimization error=%v", err)
+		slog.Warn("lab_pipeline_worker enqueue_optimization", "error", err)
 	} else {
-		_, _ = w.pool.Exec(ctx, `
+		if _, err := w.pool.Exec(ctx, `
 			UPDATE lab.pipeline_calcutta_runs
 			SET optimization_job_id = $2::uuid, updated_at = NOW()
 			WHERE id = $1::uuid
-		`, params.PipelineCalcuttaRunID, nextJobID)
+		`, params.PipelineCalcuttaRunID, nextJobID); err != nil {
+			slog.Warn("lab_pipeline_worker update_optimization_job_id", "error", err)
+		}
 	}
 
-	log.Printf("lab_pipeline_worker predictions_success worker_id=%s run_id=%s entry_id=%s dur_ms=%d", workerID, job.RunID, result.EntryID, dur.Milliseconds())
+	slog.Info("lab_pipeline_worker predictions_success", "worker_id", workerID, "run_id", job.RunID, "entry_id", result.EntryID, "dur_ms", dur.Milliseconds())
 	return true
 }
 
@@ -514,7 +520,7 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 	if err != nil {
 		// Use sensible defaults if calcutta not found
 		minTeams, maxTeams, maxPerTeam = 3, 10, 50
-		log.Printf("lab_pipeline_worker optimization_warn using default constraints: %v", err)
+		slog.Warn("lab_pipeline_worker using default constraints", "error", err)
 	}
 
 	// Get total pool budget (number of entries × budget per entry)
@@ -528,9 +534,8 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		GROUP BY c.budget_points
 	`, params.CalcuttaID).Scan(&totalPoolBudget)
 	if err != nil || totalPoolBudget <= 0 {
-		// Fallback: estimate from number of entries * budget_points
-		totalPoolBudget = 4200 // reasonable default for ~42 entries * 100 budget
-		log.Printf("lab_pipeline_worker optimization_warn using default total pool budget: %v", err)
+		totalPoolBudget = models.DefaultTotalPoolBudget
+		slog.Warn("lab_pipeline_worker using default total pool budget", "error", err)
 	}
 
 	// Build teams for allocator
@@ -648,11 +653,13 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 	w.succeedLabPipelineJob(ctx, job)
 
 	// Update calcutta run and enqueue evaluation
-	_, _ = w.pool.Exec(ctx, `
+	if _, err := w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_calcutta_runs
 		SET stage = 'evaluation', progress = 0.66, updated_at = NOW()
 		WHERE id = $1::uuid
-	`, params.PipelineCalcuttaRunID)
+	`, params.PipelineCalcuttaRunID); err != nil {
+		slog.Warn("lab_pipeline_worker update_calcutta_run_evaluation", "error", err)
+	}
 
 	// Enqueue evaluation job
 	nextParamsJSON, _ := json.Marshal(params)
@@ -663,16 +670,18 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		RETURNING run_id::text
 	`, params.PipelineCalcuttaRunID, nextParamsJSON).Scan(&nextJobID)
 	if err != nil {
-		log.Printf("lab_pipeline_worker enqueue_evaluation error=%v", err)
+		slog.Warn("lab_pipeline_worker enqueue_evaluation", "error", err)
 	} else {
-		_, _ = w.pool.Exec(ctx, `
+		if _, err := w.pool.Exec(ctx, `
 			UPDATE lab.pipeline_calcutta_runs
 			SET evaluation_job_id = $2::uuid, updated_at = NOW()
 			WHERE id = $1::uuid
-		`, params.PipelineCalcuttaRunID, nextJobID)
+		`, params.PipelineCalcuttaRunID, nextJobID); err != nil {
+			slog.Warn("lab_pipeline_worker update_evaluation_job_id", "error", err)
+		}
 	}
 
-	log.Printf("lab_pipeline_worker optimization_success worker_id=%s run_id=%s teams=%d total_bid=%d dur_ms=%d", workerID, job.RunID, numTeams, totalBid, dur.Milliseconds())
+	slog.Info("lab_pipeline_worker optimization_success", "worker_id", workerID, "run_id", job.RunID, "teams", numTeams, "total_bid", totalBid, "dur_ms", dur.Milliseconds())
 	return true
 }
 
@@ -763,9 +772,11 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 	}
 	{
 		// Delete existing results for this evaluation (in case of re-run)
-		_, _ = w.pool.Exec(ctx, `
+		if _, err := w.pool.Exec(ctx, `
 			DELETE FROM lab.evaluation_entry_results WHERE evaluation_id = $1::uuid
-		`, evaluationID)
+		`, evaluationID); err != nil {
+			slog.Warn("lab_pipeline_worker delete_old_entry_results", "error", err)
+		}
 
 		// Insert all entry results
 		for _, entry := range result.AllEntryResults {
@@ -786,15 +797,16 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 	w.succeedLabPipelineJob(ctx, job)
 
 	// Update calcutta run as completed
-	_, _ = w.pool.Exec(ctx, `
+	if _, err := w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_calcutta_runs
 		SET stage = 'completed', status = 'succeeded', progress = 1.0,
 		    evaluation_id = $2::uuid, finished_at = NOW(), updated_at = NOW()
 		WHERE id = $1::uuid
-	`, params.PipelineCalcuttaRunID, evaluationID)
+	`, params.PipelineCalcuttaRunID, evaluationID); err != nil {
+		slog.Warn("lab_pipeline_worker update_calcutta_run_completed", "error", err)
+	}
 
-	log.Printf("lab_pipeline_worker evaluation_success worker_id=%s run_id=%s evaluation_id=%s n_sims=%d mean_payout=%.4f p_top1=%.4f dur_ms=%d",
-		workerID, job.RunID, evaluationID, result.NSims, result.MeanNormalizedPayout, result.PTop1, dur.Milliseconds())
+	slog.Info("lab_pipeline_worker evaluation_success", "worker_id", workerID, "run_id", job.RunID, "evaluation_id", evaluationID, "n_sims", result.NSims, "mean_payout", result.MeanNormalizedPayout, "p_top1", result.PTop1, "dur_ms", dur.Milliseconds())
 	return true
 }
 
@@ -811,7 +823,7 @@ func (w *LabPipelineWorker) checkPipelineCompletion(ctx context.Context, pipelin
 		WHERE pipeline_run_id = $1::uuid
 	`, pipelineRunID).Scan(&pending, &running, &failed, &succeeded)
 	if err != nil {
-		log.Printf("lab_pipeline_worker check_completion error=%v", err)
+		slog.Warn("lab_pipeline_worker check_completion", "error", err)
 		return
 	}
 
@@ -827,13 +839,15 @@ func (w *LabPipelineWorker) checkPipelineCompletion(ctx context.Context, pipelin
 		status = "succeeded" // Partial success
 	}
 
-	_, _ = w.pool.Exec(ctx, `
+	if _, err := w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_runs
 		SET status = $2, finished_at = NOW(), updated_at = NOW()
 		WHERE id = $1::uuid AND status = 'running'
-	`, pipelineRunID, status)
+	`, pipelineRunID, status); err != nil {
+		slog.Warn("lab_pipeline_worker update_pipeline_status", "error", err)
+	}
 
-	log.Printf("lab_pipeline_worker pipeline_complete pipeline_run=%s status=%s succeeded=%d failed=%d", pipelineRunID, status, succeeded, failed)
+	slog.Info("lab_pipeline_worker pipeline_complete", "pipeline_run", pipelineRunID, "status", status, "succeeded", succeeded, "failed", failed)
 }
 
 func (w *LabPipelineWorker) updateProgress(ctx context.Context, runKind, runID, pcrID string, percent float64, phase, message string) {
@@ -843,20 +857,24 @@ func (w *LabPipelineWorker) updateProgress(ctx context.Context, runKind, runID, 
 
 	// Also update pipeline_calcutta_runs progress
 	if pcrID != "" {
-		_, _ = w.pool.Exec(ctx, `
+		if _, err := w.pool.Exec(ctx, `
 			UPDATE lab.pipeline_calcutta_runs
 			SET progress = $2, progress_message = $3, updated_at = NOW()
 			WHERE id = $1::uuid
-		`, pcrID, percent, message)
+		`, pcrID, percent, message); err != nil {
+			slog.Warn("lab_pipeline_worker update_progress", "error", err)
+		}
 	}
 }
 
 func (w *LabPipelineWorker) succeedLabPipelineJob(ctx context.Context, job *labPipelineJob) {
-	_, _ = w.pool.Exec(ctx, `
+	if _, err := w.pool.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET status = 'succeeded', finished_at = NOW(), error_message = NULL, updated_at = NOW()
 		WHERE run_kind = $1 AND run_id = $2::uuid
-	`, job.RunKind, job.RunID)
+	`, job.RunKind, job.RunID); err != nil {
+		slog.Warn("lab_pipeline_worker succeed_job", "error", err)
+	}
 }
 
 func (w *LabPipelineWorker) failLabPipelineJob(ctx context.Context, job *labPipelineJob, err error) {
@@ -865,20 +883,24 @@ func (w *LabPipelineWorker) failLabPipelineJob(ctx context.Context, job *labPipe
 		msg = err.Error()
 	}
 
-	_, _ = w.pool.Exec(ctx, `
+	if _, execErr := w.pool.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET status = 'failed', finished_at = NOW(), error_message = $3, updated_at = NOW()
 		WHERE run_kind = $1 AND run_id = $2::uuid
-	`, job.RunKind, job.RunID, msg)
+	`, job.RunKind, job.RunID, msg); execErr != nil {
+		slog.Warn("lab_pipeline_worker fail_job", "error", execErr)
+	}
 
 	// Also update pipeline_calcutta_runs
 	var params labPipelineJobParams
-	if err := json.Unmarshal(job.Params, &params); err == nil && params.PipelineCalcuttaRunID != "" {
-		_, _ = w.pool.Exec(ctx, `
+	if unmarshalErr := json.Unmarshal(job.Params, &params); unmarshalErr == nil && params.PipelineCalcuttaRunID != "" {
+		if _, execErr := w.pool.Exec(ctx, `
 			UPDATE lab.pipeline_calcutta_runs
 			SET status = 'failed', error_message = $2, finished_at = NOW(), updated_at = NOW()
 			WHERE id = $1::uuid
-		`, params.PipelineCalcuttaRunID, msg)
+		`, params.PipelineCalcuttaRunID, msg); execErr != nil {
+			slog.Warn("lab_pipeline_worker fail_calcutta_run", "error", execErr)
+		}
 	}
 
 	if w.progress != nil {

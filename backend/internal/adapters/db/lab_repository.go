@@ -489,7 +489,7 @@ func (r *LabRepository) GetEntryEnriched(ctx context.Context, id string) (*model
 	`
 	if err := r.pool.QueryRow(ctx, poolBudgetQuery, result.CalcuttaID).Scan(&totalPoolBudget); err != nil || totalPoolBudget <= 0 {
 		// Fallback: reasonable default
-		totalPoolBudget = 4200
+		totalPoolBudget = models.DefaultTotalPoolBudget
 	}
 
 	// Calculate total budget from our bids (for naive allocation comparison)
