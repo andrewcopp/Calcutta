@@ -106,9 +106,10 @@ else
 fi
 
 echo "Database row counts..."
-SCHOOLS_COUNT=$(make query SQL="SELECT COUNT(*) FROM core.schools" 2>/dev/null | grep -oE '[0-9]+' | head -1)
-TOURNAMENTS_COUNT=$(make query SQL="SELECT COUNT(*) FROM core.tournaments" 2>/dev/null | grep -oE '[0-9]+' | head -1)
-CALCUTTAS_COUNT=$(make query SQL="SELECT COUNT(*) FROM core.calcuttas" 2>/dev/null | grep -oE '[0-9]+' | head -1)
+PROD_PSQL="docker compose -f docker-compose.local-prod.yml exec -T db psql -U ${DB_USER} -d ${DB_NAME} -tAc"
+SCHOOLS_COUNT=$($PROD_PSQL "SELECT COUNT(*) FROM core.schools" 2>/dev/null | tr -d '[:space:]')
+TOURNAMENTS_COUNT=$($PROD_PSQL "SELECT COUNT(*) FROM core.tournaments" 2>/dev/null | tr -d '[:space:]')
+CALCUTTAS_COUNT=$($PROD_PSQL "SELECT COUNT(*) FROM core.calcuttas" 2>/dev/null | tr -d '[:space:]')
 
 echo "  Schools: $SCHOOLS_COUNT"
 echo "  Tournaments: $TOURNAMENTS_COUNT"

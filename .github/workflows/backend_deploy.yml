@@ -79,7 +79,7 @@ jobs:
             > taskdef.json
 
           jq 'del(.taskDefinitionArn,.requiresAttributes,.compatibilities,.revision,.status,.registeredAt,.registeredBy) \
-            | .containerDefinitions[0].image = env.IMAGE_URI' taskdef.json > taskdef.updated.json
+            | .containerDefinitions |= map(if .name == "backend" then .image = env.IMAGE_URI else . end)' taskdef.json > taskdef.updated.json
 
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.updated.json --query 'taskDefinition.taskDefinitionArn' --output text)
 
@@ -135,7 +135,7 @@ jobs:
             > taskdef.json
 
           jq 'del(.taskDefinitionArn,.requiresAttributes,.compatibilities,.revision,.status,.registeredAt,.registeredBy) \
-            | .containerDefinitions[0].image = env.IMAGE_URI' taskdef.json > taskdef.updated.json
+            | .containerDefinitions |= map(if .name == "backend" then .image = env.IMAGE_URI else . end)' taskdef.json > taskdef.updated.json
 
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.updated.json --query 'taskDefinition.taskDefinitionArn' --output text)
 
