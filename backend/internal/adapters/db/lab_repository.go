@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -487,9 +488,11 @@ func (r *LabRepository) GetEntryEnriched(ctx context.Context, id string) (*model
 		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
 		GROUP BY c.budget_points
 	`
-	if err := r.pool.QueryRow(ctx, poolBudgetQuery, result.CalcuttaID).Scan(&totalPoolBudget); err != nil || totalPoolBudget <= 0 {
-		// Fallback: reasonable default
-		totalPoolBudget = models.DefaultTotalPoolBudget
+	if err := r.pool.QueryRow(ctx, poolBudgetQuery, result.CalcuttaID).Scan(&totalPoolBudget); err != nil {
+		return nil, fmt.Errorf("failed to load total pool budget for calcutta %s: %w", result.CalcuttaID, err)
+	}
+	if totalPoolBudget <= 0 {
+		return nil, fmt.Errorf("total pool budget is non-positive (%d) for calcutta %s", totalPoolBudget, result.CalcuttaID)
 	}
 
 	// Calculate total budget from our bids (for naive allocation comparison)

@@ -518,9 +518,9 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		WHERE id = $1::uuid AND deleted_at IS NULL
 	`, params.CalcuttaID).Scan(&minTeams, &maxTeams, &maxPerTeam)
 	if err != nil {
-		// Use sensible defaults if calcutta not found
-		minTeams, maxTeams, maxPerTeam = 3, 10, 50
-		slog.Warn("lab_pipeline_worker using default constraints", "error", err)
+		slog.Error("lab_pipeline_worker failed to load calcutta constraints", "calcutta_id", params.CalcuttaID, "error", err)
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to load calcutta constraints: %w", err))
+		return false
 	}
 
 	// Get total pool budget (number of entries × budget per entry)
@@ -533,9 +533,15 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
 		GROUP BY c.budget_points
 	`, params.CalcuttaID).Scan(&totalPoolBudget)
-	if err != nil || totalPoolBudget <= 0 {
-		totalPoolBudget = models.DefaultTotalPoolBudget
-		slog.Warn("lab_pipeline_worker using default total pool budget", "error", err)
+	if err != nil {
+		slog.Error("lab_pipeline_worker failed to load total pool budget", "calcutta_id", params.CalcuttaID, "error", err)
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to load total pool budget: %w", err))
+		return false
+	}
+	if totalPoolBudget <= 0 {
+		slog.Error("lab_pipeline_worker total pool budget is non-positive", "calcutta_id", params.CalcuttaID, "total_pool_budget", totalPoolBudget)
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("total pool budget is non-positive: %d", totalPoolBudget))
+		return false
 	}
 
 	// Build teams for allocator

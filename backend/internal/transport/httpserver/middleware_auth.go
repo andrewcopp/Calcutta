@@ -85,7 +85,7 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 							http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 							return
 						}
-						user, _ = s.userRepo.GetByEmail(r.Context(), email)
+						user = created
 					}
 					if err == nil && user != nil {
 						active, err := s.isUserActive(r.Context(), user.ID)
