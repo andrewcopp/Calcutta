@@ -11,6 +11,7 @@ import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
+import { formatDate } from '../utils/format';
 
 export const AdminApiKeysPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -135,9 +136,9 @@ export const AdminApiKeysPage: React.FC = () => {
               {keys.map((k) => (
                 <TableRow key={k.id}>
                   <TableCell>{k.label || '-'}</TableCell>
-                  <TableCell>{k.created_at}</TableCell>
-                  <TableCell>{k.last_used_at || '-'}</TableCell>
-                  <TableCell>{k.revoked_at || '-'}</TableCell>
+                  <TableCell>{formatDate(k.created_at)}</TableCell>
+                  <TableCell>{k.last_used_at ? formatDate(k.last_used_at) : '-'}</TableCell>
+                  <TableCell>{k.revoked_at ? formatDate(k.revoked_at) : '-'}</TableCell>
                   <TableCell>
                     <Button
                       onClick={() => handleRevoke(k.id)}

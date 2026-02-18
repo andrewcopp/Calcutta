@@ -10,6 +10,7 @@ import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
+import { formatDate } from '../utils/format';
 
 export const AdminUsersPage: React.FC = () => {
   const usersQuery = useQuery({
@@ -68,7 +69,7 @@ export const AdminUsersPage: React.FC = () => {
               <TableRow key={u.id} className="align-top">
                 <TableCell className="whitespace-nowrap">{u.email}</TableCell>
                 <TableCell className="whitespace-nowrap">{u.first_name} {u.last_name}</TableCell>
-                <TableCell className="whitespace-nowrap">{u.created_at}</TableCell>
+                <TableCell className="whitespace-nowrap">{formatDate(u.created_at)}</TableCell>
                 <TableCell>
                   {(u.labels ?? []).length > 0 ? (
                     <div className="flex flex-wrap gap-2">

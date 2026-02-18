@@ -1,3 +1,14 @@
+/** Format a date string for display. Optionally includes time. */
+export function formatDate(dateStr: string, includeTime = false): string {
+  const d = new Date(dateStr);
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  if (includeTime) {
+    opts.hour = '2-digit';
+    opts.minute = '2-digit';
+  }
+  return d.toLocaleDateString('en-US', opts);
+}
+
 /**
  * Formats a value in cents to a dollar string (e.g., 1050 -> "$10.50").
  * Handles negative values, zero, and undefined.

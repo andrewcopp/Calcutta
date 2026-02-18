@@ -36,8 +36,8 @@ export function CreateCalcuttaPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() });
       navigate('/calcuttas');
     },
-    onError: () => {
-      setError('Failed to create calcutta');
+    onError: (error) => {
+      setError(error instanceof Error ? error.message : 'Failed to create calcutta');
     },
   });
 

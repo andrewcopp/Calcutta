@@ -53,8 +53,8 @@ export const TournamentAddTeamsPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(id) });
       navigate(`/admin/tournaments/${id}`);
     },
-    onError: () => {
-      setError('Failed to create teams');
+    onError: (error) => {
+      setError(error instanceof Error ? error.message : 'Failed to create teams');
     },
   });
 

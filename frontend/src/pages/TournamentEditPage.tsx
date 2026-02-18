@@ -66,11 +66,11 @@ export const TournamentEditPage: React.FC = () => {
 
       return { previousTeams };
     },
-    onError: (_err, _vars, context) => {
+    onError: (error, _vars, context) => {
       if (context?.previousTeams) {
         queryClient.setQueryData(queryKeys.tournaments.teams(id), context.previousTeams);
       }
-      setError('Failed to update team');
+      setError(error instanceof Error ? error.message : 'Failed to update team');
     },
     onSuccess: (updatedTeam) => {
       queryClient.setQueryData<TournamentTeam[]>(queryKeys.tournaments.teams(id), (current) => {
@@ -99,8 +99,8 @@ export const TournamentEditPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(id) });
       navigate(`/admin/tournaments/${id}`);
     },
-    onError: () => {
-      setError('Failed to save changes');
+    onError: (error) => {
+      setError(error instanceof Error ? error.message : 'Failed to save changes');
     },
   });
 
@@ -118,7 +118,7 @@ export const TournamentEditPage: React.FC = () => {
     try {
       await saveAllMutation.mutateAsync();
     } catch (err) {
-      setError('Failed to save changes');
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
     } finally {
       setIsSaving(false);
     }
