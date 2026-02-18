@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../api/apiClient';
+import { adminService } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -11,25 +11,10 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 
-type AdminUserListItem = {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  created_at: string;
-  updated_at: string;
-  labels: string[];
-  permissions: string[];
-};
-
-type AdminUsersListResponse = {
-  items: AdminUserListItem[];
-};
-
 export const AdminUsersPage: React.FC = () => {
   const usersQuery = useQuery({
     queryKey: queryKeys.admin.users(),
-    queryFn: () => apiClient.get<AdminUsersListResponse>('/admin/users'),
+    queryFn: () => adminService.listUsers(),
   });
 
   const users = usersQuery.data?.items ?? [];

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../api/apiClient';
+import { adminService, CreateAPIKeyResponse } from '../services/adminService';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -12,29 +12,6 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 
-type CreateAPIKeyRequest = {
-  label?: string;
-};
-
-type CreateAPIKeyResponse = {
-  id: string;
-  key: string;
-  label?: string;
-  created_at: string;
-};
-
-type APIKeyListItem = {
-  id: string;
-  label?: string;
-  created_at: string;
-  revoked_at?: string;
-  last_used_at?: string;
-};
-
-type ListAPIKeysResponse = {
-  items: APIKeyListItem[];
-};
-
 export const AdminApiKeysPage: React.FC = () => {
   const queryClient = useQueryClient();
 
@@ -43,15 +20,11 @@ export const AdminApiKeysPage: React.FC = () => {
 
   const keysQuery = useQuery({
     queryKey: queryKeys.admin.apiKeys(),
-    queryFn: () => apiClient.get<ListAPIKeysResponse>('/admin/api-keys'),
+    queryFn: () => adminService.listApiKeys(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (trimmedLabel: string) => {
-      const body: CreateAPIKeyRequest = {};
-      if (trimmedLabel) body.label = trimmedLabel;
-      return apiClient.post<CreateAPIKeyResponse>('/admin/api-keys', body);
-    },
+    mutationFn: (trimmedLabel: string) => adminService.createApiKey(trimmedLabel),
     onSuccess: (data) => {
       setCreated(data);
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.apiKeys() });
@@ -59,7 +32,7 @@ export const AdminApiKeysPage: React.FC = () => {
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete<void>(`/admin/api-keys/${id}`),
+    mutationFn: (id: string) => adminService.revokeApiKey(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.apiKeys() });
     },
@@ -74,6 +47,12 @@ export const AdminApiKeysPage: React.FC = () => {
       await navigator.clipboard.writeText(value);
     } catch (e) {
       // Clipboard errors are non-critical; silently ignored
+    }
+  };
+
+  const handleRevoke = (id: string) => {
+    if (window.confirm('Are you sure you want to revoke this API key? This cannot be undone.')) {
+      revokeMutation.mutate(id);
     }
   };
 
@@ -161,7 +140,7 @@ export const AdminApiKeysPage: React.FC = () => {
                   <TableCell>{k.revoked_at || '-'}</TableCell>
                   <TableCell>
                     <Button
-                      onClick={() => revokeMutation.mutate(k.id)}
+                      onClick={() => handleRevoke(k.id)}
                       disabled={busy || Boolean(k.revoked_at)}
                       variant="secondary"
                       size="sm"
