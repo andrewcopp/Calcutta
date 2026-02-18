@@ -27,7 +27,7 @@ func (s *Server) listTournamentModeratorsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	userIDs, err := s.authzRepo.ListGrantsByScope(r.Context(), "tournament_operator", "tournament", tournamentID)
+	userIDs, err := s.authzRepo.ListGrantsByScope(r.Context(), "tournament_admin", "tournament", tournamentID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
@@ -81,7 +81,7 @@ func (s *Server) grantTournamentModeratorHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := s.authzRepo.GrantLabel(r.Context(), user.ID, "tournament_operator", "tournament", tournamentID); err != nil {
+	if err := s.authzRepo.GrantLabel(r.Context(), user.ID, "tournament_admin", "tournament", tournamentID); err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
@@ -109,7 +109,7 @@ func (s *Server) revokeTournamentModeratorHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := s.authzRepo.RevokeGrant(r.Context(), userID, "tournament_operator", "tournament", tournamentID); err != nil {
+	if err := s.authzRepo.RevokeGrant(r.Context(), userID, "tournament_admin", "tournament", tournamentID); err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}

@@ -1,6 +1,10 @@
 import { User, LoginRequest, SignupRequest, AuthResponse } from '../types/user';
 import { apiClient } from '../api/apiClient';
 
+interface PermissionsResponse {
+  permissions: string[];
+}
+
 export const userService = {
   async login(request: LoginRequest): Promise<User> {
     const res = await apiClient.post<AuthResponse>('/auth/login', request, { credentials: 'include' });
@@ -21,6 +25,7 @@ export const userService = {
       console.error('Logout failed', err);
     });
     localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
     apiClient.setAccessToken(null);
   },
 
@@ -33,6 +38,30 @@ export const userService = {
       console.error('Failed to parse stored user data', e);
       localStorage.removeItem('user');
       return null;
+    }
+  },
+
+  async fetchPermissions(): Promise<string[]> {
+    try {
+      const res = await apiClient.get<PermissionsResponse>('/me/permissions');
+      const permissions = res.permissions ?? [];
+      localStorage.setItem('permissions', JSON.stringify(permissions));
+      return permissions;
+    } catch (e) {
+      console.error('Failed to fetch permissions', e);
+      return [];
+    }
+  },
+
+  getStoredPermissions(): string[] {
+    const permStr = localStorage.getItem('permissions');
+    if (!permStr) return [];
+    try {
+      return JSON.parse(permStr) as string[];
+    } catch (e) {
+      console.error('Failed to parse stored permissions', e);
+      localStorage.removeItem('permissions');
+      return [];
     }
   },
 };

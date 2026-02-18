@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../contexts/useUser';
+import { useHasPermission } from '../hooks/useHasPermission';
 import { UserMenu } from './Header/UserMenu';
 
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user } = useUser();
+  const canAccessLab = useHasPermission('lab.read');
 
   return (
     <header className="bg-white shadow-md">
@@ -19,9 +21,11 @@ export const Header: React.FC = () => {
               <Link to="/calcuttas" className="text-gray-600 hover:text-gray-800">
                 Calcuttas
               </Link>
-              <Link to="/lab" className="text-gray-600 hover:text-gray-800">
-                Lab
-              </Link>
+              {canAccessLab && (
+                <Link to="/lab" className="text-gray-600 hover:text-gray-800">
+                  Lab
+                </Link>
+              )}
               <Link to="/rules" className="text-gray-600 hover:text-gray-800">
                 How It Works
               </Link>
@@ -65,13 +69,15 @@ export const Header: React.FC = () => {
             >
               Calcuttas
             </Link>
-            <Link
-              to="/lab"
-              className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Lab
-            </Link>
+            {canAccessLab && (
+              <Link
+                to="/lab"
+                className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Lab
+              </Link>
+            )}
             <Link
               to="/rules"
               className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"

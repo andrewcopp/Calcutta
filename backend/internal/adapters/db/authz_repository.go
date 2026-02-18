@@ -13,7 +13,7 @@ const grantGlobalAdminSQL = `
 INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
 SELECT $1, 'global', NULL, l.id
 FROM core.labels l
-WHERE l.key = 'global_admin'
+WHERE l.key = 'site_admin'
   AND l.deleted_at IS NULL
   AND NOT EXISTS (
     SELECT 1
@@ -22,7 +22,7 @@ WHERE l.key = 'global_admin'
     WHERE g.user_id = $1
       AND g.scope_type = 'global'
       AND g.revoked_at IS NULL
-      AND l2.key = 'global_admin'
+      AND l2.key = 'site_admin'
       AND l2.deleted_at IS NULL
   );
 `
@@ -95,6 +95,40 @@ func (r *AuthorizationRepository) RevokeGrant(ctx context.Context, userID, label
 	`
 	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, labelKey)
 	return err
+}
+
+// ListUserGlobalPermissions returns all permission keys a user has via global grants.
+func (r *AuthorizationRepository) ListUserGlobalPermissions(ctx context.Context, userID string) ([]string, error) {
+	query := `
+		SELECT DISTINCT COALESCE(p_direct.key, p_label.key) AS permission_key
+		FROM core.grants g
+		LEFT JOIN core.permissions p_direct ON g.permission_id = p_direct.id AND p_direct.deleted_at IS NULL
+		LEFT JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+		LEFT JOIN core.label_permissions lp ON lp.label_id = l.id AND lp.deleted_at IS NULL
+		LEFT JOIN core.permissions p_label ON lp.permission_id = p_label.id AND p_label.deleted_at IS NULL
+		WHERE g.user_id = $1
+		  AND g.deleted_at IS NULL
+		  AND g.revoked_at IS NULL
+		  AND (g.expires_at IS NULL OR g.expires_at > NOW())
+		  AND g.scope_type = 'global'
+		  AND (p_direct.key IS NOT NULL OR p_label.key IS NOT NULL)
+		ORDER BY permission_key
+	`
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var permissions []string
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, key)
+	}
+	return permissions, rows.Err()
 }
 
 // ListGrantsByScope returns user IDs with a given label for a scope.

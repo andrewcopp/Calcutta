@@ -31,6 +31,7 @@ import { Header } from './components/Header';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PermissionProtectedRoute } from './components/PermissionProtectedRoute';
 import { UserProvider } from './contexts/UserContext';
 
 const AppLayout: React.FC = () => {
@@ -46,15 +47,15 @@ const AppLayout: React.FC = () => {
         <Route path="/rules" element={<RouteErrorBoundary><RulesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas" element={<RouteErrorBoundary><CalcuttaListPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/create" element={<ProtectedRoute><RouteErrorBoundary><CreateCalcuttaPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/lab" element={<RouteErrorBoundary><LabPage /></RouteErrorBoundary>} />
-        <Route path="/lab/models/:modelId" element={<RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary>} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary>} />
-        <Route path="/lab/entries/:entryId" element={<RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary>} />
-        <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary>} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary>} />
+        <Route path="/lab" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><LabPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/entries/:entryId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         {/* Legacy evaluation route redirect */}
-        <Route path="/lab/evaluations/:evaluationId" element={<RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary>} />
-        <Route path="/lab/entry-results/:entryResultId" element={<RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary>} />
+        <Route path="/lab/evaluations/:evaluationId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/entry-results/:entryResultId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/api-keys" element={<ProtectedRoute><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/bundles" element={<ProtectedRoute><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></ProtectedRoute>} />

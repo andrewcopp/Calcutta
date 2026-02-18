@@ -106,3 +106,22 @@ func (s *Server) clearRefreshCookie(w http.ResponseWriter) {
 		SameSite: s.cookieSameSite,
 	})
 }
+
+func (s *Server) mePermissionsHandler(w http.ResponseWriter, r *http.Request) {
+	userID := authUserID(r.Context())
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	permissions, err := s.authzRepo.ListUserGlobalPermissions(r.Context(), userID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, authUserID)
+		return
+	}
+	if permissions == nil {
+		permissions = []string{}
+	}
+
+	response.WriteJSON(w, http.StatusOK, map[string]any{"permissions": permissions})
+}
