@@ -5,6 +5,8 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/gorilla/mux"
 )
 
@@ -12,56 +14,56 @@ func (s *Server) portfolioTeamsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	portfolioID := vars["id"]
 	if portfolioID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Portfolio ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Portfolio ID is required", "id")
 		return
 	}
 
 	userID := authUserID(r.Context())
 	if userID == "" {
-		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 		return
 	}
 
 	portfolio, err := s.app.Calcutta.GetPortfolio(r.Context(), portfolioID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	if portfolio == nil {
-		writeError(w, r, http.StatusNotFound, "not_found", "portfolio not found", "")
+		httperr.Write(w, r, http.StatusNotFound, "not_found", "portfolio not found", "")
 		return
 	}
 
 	entry, err := s.app.Calcutta.GetEntry(r.Context(), portfolio.EntryID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	if entry == nil {
-		writeError(w, r, http.StatusNotFound, "not_found", "entry not found", "")
+		httperr.Write(w, r, http.StatusNotFound, "not_found", "entry not found", "")
 		return
 	}
 
 	calcutta, err := s.app.Calcutta.GetCalcuttaByID(r.Context(), entry.CalcuttaID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	decision, err := policy.CanViewEntryData(r.Context(), s.authzRepo, userID, entry, calcutta)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	if !decision.Allowed {
-		writeError(w, r, decision.Status, decision.Code, decision.Message, "")
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
 		return
 	}
 
 	teams, err := s.app.Calcutta.GetPortfolioTeams(r.Context(), portfolioID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
-	writeJSON(w, http.StatusOK, dtos.NewPortfolioTeamListResponse(teams))
+	response.WriteJSON(w, http.StatusOK, dtos.NewPortfolioTeamListResponse(teams))
 }

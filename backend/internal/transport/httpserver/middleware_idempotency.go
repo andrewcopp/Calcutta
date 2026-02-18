@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 )
 
 // idempotencyWriter captures the response for later caching.
@@ -46,7 +47,7 @@ func idempotencyMiddleware(repo *dbadapters.IdempotencyRepository, next http.Han
 		// Check for cached response
 		rec, err := repo.Get(r.Context(), key, userID)
 		if err != nil {
-			writeErrorFromErr(w, r, err)
+			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
 		if rec != nil {
@@ -60,12 +61,12 @@ func idempotencyMiddleware(repo *dbadapters.IdempotencyRepository, next http.Han
 		// Reserve the key
 		reserved, err := repo.Reserve(r.Context(), key, userID)
 		if err != nil {
-			writeErrorFromErr(w, r, err)
+			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
 		if !reserved {
 			// Key exists but no response yet – concurrent request in progress
-			writeError(w, r, http.StatusConflict, "idempotency_conflict", "A request with this idempotency key is already being processed", "")
+			httperr.Write(w, r, http.StatusConflict, "idempotency_conflict", "A request with this idempotency key is already being processed", "")
 			return
 		}
 

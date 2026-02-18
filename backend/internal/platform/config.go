@@ -247,10 +247,14 @@ func LoadConfigFromEnv() (Config, error) {
 
 	authMode := strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_MODE")))
 	if authMode == "" {
-		authMode = "legacy"
+		authMode = "jwt"
 	}
-	if authMode != "legacy" && authMode != "cognito" && authMode != "dev" {
-		return Config{}, fmt.Errorf("invalid AUTH_MODE %q (expected legacy, cognito, dev)", authMode)
+	// Support "legacy" as alias for "jwt" for backwards compatibility
+	if authMode == "legacy" {
+		authMode = "jwt"
+	}
+	if authMode != "jwt" && authMode != "cognito" && authMode != "dev" {
+		return Config{}, fmt.Errorf("invalid AUTH_MODE %q (expected jwt, cognito, dev)", authMode)
 	}
 	if authMode == "dev" && env != "development" {
 		return Config{}, fmt.Errorf("AUTH_MODE=dev is only allowed when NODE_ENV=development")
@@ -411,7 +415,7 @@ func LoadConfigFromEnv() (Config, error) {
 		}
 	}
 	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.BootstrapAdminEmail) != "" && strings.TrimSpace(cfg.BootstrapAdminPassword) == "" {
-		return Config{}, fmt.Errorf("BOOTSTRAP_ADMIN_PASSWORD must be set when BOOTSTRAP_ADMIN_EMAIL is set in legacy/dev auth modes")
+		return Config{}, fmt.Errorf("BOOTSTRAP_ADMIN_PASSWORD must be set when BOOTSTRAP_ADMIN_EMAIL is set in jwt/dev auth modes")
 	}
 	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.JWTSecret) == "" {
 		return Config{}, fmt.Errorf("JWT_SECRET environment variable is not set")

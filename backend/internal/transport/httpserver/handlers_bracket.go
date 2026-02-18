@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/gorilla/mux"
 )
 
@@ -12,17 +14,17 @@ func (s *Server) getBracketHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tournamentID := vars["id"]
 	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
 		return
 	}
 
 	bracket, err := s.app.Bracket.GetBracket(r.Context(), tournamentID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
+	response.WriteJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
 
 func (s *Server) selectWinnerHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,32 +33,32 @@ func (s *Server) selectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 	gameID := vars["gameId"]
 
 	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 	if gameID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Game ID is required", "gameId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Game ID is required", "gameId")
 		return
 	}
 
 	var req dtos.SelectWinnerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 
 	if err := req.Validate(); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	bracket, err := s.app.Bracket.SelectWinner(r.Context(), tournamentID, gameID, req.WinnerTeamID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
+	response.WriteJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
 
 func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
@@ -65,41 +67,41 @@ func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 	gameID := vars["gameId"]
 
 	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 	if gameID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Game ID is required", "gameId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Game ID is required", "gameId")
 		return
 	}
 
 	bracket, err := s.app.Bracket.UnselectWinner(r.Context(), tournamentID, gameID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
+	response.WriteJSON(w, http.StatusOK, dtos.NewBracketResponse(bracket))
 }
 
 func (s *Server) validateBracketSetupHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tournamentID := vars["id"]
 	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
 		return
 	}
 
 	err := s.app.Bracket.ValidateBracketSetup(r.Context(), tournamentID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		response.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"valid":  false,
 			"errors": []string{err.Error()},
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	response.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"valid":  true,
 		"errors": []string{},
 	})

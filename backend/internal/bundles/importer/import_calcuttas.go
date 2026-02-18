@@ -170,7 +170,7 @@ func ensureUser(ctx context.Context, tx pgx.Tx, u *bundles.UserRef, fallbackKey 
 		}
 	}
 	if email == "" {
-		email = fmt.Sprintf("owner+%s@local", strings.ReplaceAll(fallbackKey, " ", "-"))
+		return "", fmt.Errorf("user has no email address (fallbackKey=%q); cannot create unusable account", fallbackKey)
 	}
 	if first == "" {
 		first = "Unknown"

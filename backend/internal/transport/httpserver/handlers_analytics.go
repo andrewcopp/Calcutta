@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 )
 
 func (s *Server) analyticsHandler(w http.ResponseWriter, r *http.Request) {
@@ -11,13 +13,13 @@ func (s *Server) analyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.app.Analytics.GetAllAnalytics(ctx)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToAnalyticsResponse(result)
+	resp := dtos.ToAnalyticsResponse(result)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) hofBestTeamsHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,13 +29,13 @@ func (s *Server) hofBestTeamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.app.Analytics.GetBestInvestments(ctx, limit)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToBestTeamsResponse(results)
+	resp := dtos.ToBestTeamsResponse(results)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) hofBestInvestmentsHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,13 +45,13 @@ func (s *Server) hofBestInvestmentsHandler(w http.ResponseWriter, r *http.Reques
 
 	results, err := s.app.Analytics.GetBestInvestmentBids(ctx, limit)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToInvestmentLeaderboardResponse(results)
+	resp := dtos.ToInvestmentLeaderboardResponse(results)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) hofBestEntriesHandler(w http.ResponseWriter, r *http.Request) {
@@ -59,13 +61,13 @@ func (s *Server) hofBestEntriesHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.app.Analytics.GetBestEntries(ctx, limit)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToEntryLeaderboardResponse(results)
+	resp := dtos.ToEntryLeaderboardResponse(results)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) hofBestCareersHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,13 +77,13 @@ func (s *Server) hofBestCareersHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.app.Analytics.GetBestCareers(ctx, limit)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToCareerLeaderboardResponse(results)
+	resp := dtos.ToCareerLeaderboardResponse(results)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) bestInvestmentsHandler(w http.ResponseWriter, r *http.Request) {
@@ -91,13 +93,13 @@ func (s *Server) bestInvestmentsHandler(w http.ResponseWriter, r *http.Request) 
 
 	results, err := s.app.Analytics.GetBestInvestments(ctx, limit)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToBestInvestmentsResponse(results)
+	resp := dtos.ToBestInvestmentsResponse(results)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) seedInvestmentDistributionHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,13 +107,13 @@ func (s *Server) seedInvestmentDistributionHandler(w http.ResponseWriter, r *htt
 
 	distribution, err := s.app.Analytics.GetSeedInvestmentDistribution(ctx)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.ToSeedInvestmentDistributionResponse(distribution)
+	resp := dtos.ToSeedInvestmentDistributionResponse(distribution)
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) seedAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +121,7 @@ func (s *Server) seedAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	seedAnalytics, totalPoints, totalInvestment, err := s.app.Analytics.GetSeedAnalytics(ctx)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -128,14 +130,14 @@ func (s *Server) seedAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 		baselineROI = totalPoints / totalInvestment
 	}
 
-	response := dtos.AnalyticsResponse{
+	resp := dtos.AnalyticsResponse{
 		TotalPoints:     totalPoints,
 		TotalInvestment: totalInvestment,
 		BaselineROI:     baselineROI,
 	}
-	response.SeedAnalytics = make([]dtos.SeedAnalytics, len(seedAnalytics))
+	resp.SeedAnalytics = make([]dtos.SeedAnalytics, len(seedAnalytics))
 	for i, sa := range seedAnalytics {
-		response.SeedAnalytics[i] = dtos.SeedAnalytics{
+		resp.SeedAnalytics[i] = dtos.SeedAnalytics{
 			Seed:                 sa.Seed,
 			TotalPoints:          sa.TotalPoints,
 			TotalInvestment:      sa.TotalInvestment,
@@ -148,7 +150,7 @@ func (s *Server) seedAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) regionAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +158,7 @@ func (s *Server) regionAnalyticsHandler(w http.ResponseWriter, r *http.Request) 
 
 	regionAnalytics, totalPoints, totalInvestment, err := s.app.Analytics.GetRegionAnalytics(ctx)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -165,14 +167,14 @@ func (s *Server) regionAnalyticsHandler(w http.ResponseWriter, r *http.Request) 
 		baselineROI = totalPoints / totalInvestment
 	}
 
-	response := dtos.AnalyticsResponse{
+	resp := dtos.AnalyticsResponse{
 		TotalPoints:     totalPoints,
 		TotalInvestment: totalInvestment,
 		BaselineROI:     baselineROI,
 	}
-	response.RegionAnalytics = make([]dtos.RegionAnalytics, len(regionAnalytics))
+	resp.RegionAnalytics = make([]dtos.RegionAnalytics, len(regionAnalytics))
 	for i, ra := range regionAnalytics {
-		response.RegionAnalytics[i] = dtos.RegionAnalytics{
+		resp.RegionAnalytics[i] = dtos.RegionAnalytics{
 			Region:               ra.Region,
 			TotalPoints:          ra.TotalPoints,
 			TotalInvestment:      ra.TotalInvestment,
@@ -185,7 +187,7 @@ func (s *Server) regionAnalyticsHandler(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) teamAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
@@ -193,16 +195,16 @@ func (s *Server) teamAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	teamAnalytics, baselineROI, err := s.app.Analytics.GetTeamAnalytics(ctx)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.AnalyticsResponse{
+	resp := dtos.AnalyticsResponse{
 		BaselineROI: baselineROI,
 	}
-	response.TeamAnalytics = make([]dtos.TeamAnalytics, len(teamAnalytics))
+	resp.TeamAnalytics = make([]dtos.TeamAnalytics, len(teamAnalytics))
 	for i, ta := range teamAnalytics {
-		response.TeamAnalytics[i] = dtos.TeamAnalytics{
+		resp.TeamAnalytics[i] = dtos.TeamAnalytics{
 			SchoolID:          ta.SchoolID,
 			SchoolName:        ta.SchoolName,
 			TotalPoints:       ta.TotalPoints,
@@ -215,7 +217,7 @@ func (s *Server) teamAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) seedVarianceAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
@@ -223,14 +225,14 @@ func (s *Server) seedVarianceAnalyticsHandler(w http.ResponseWriter, r *http.Req
 
 	varianceAnalytics, err := s.app.Analytics.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	response := dtos.AnalyticsResponse{}
-	response.SeedVarianceAnalytics = make([]dtos.SeedVarianceAnalytics, len(varianceAnalytics))
+	resp := dtos.AnalyticsResponse{}
+	resp.SeedVarianceAnalytics = make([]dtos.SeedVarianceAnalytics, len(varianceAnalytics))
 	for i, sv := range varianceAnalytics {
-		response.SeedVarianceAnalytics[i] = dtos.SeedVarianceAnalytics{
+		resp.SeedVarianceAnalytics[i] = dtos.SeedVarianceAnalytics{
 			Seed:             sv.Seed,
 			InvestmentStdDev: sv.InvestmentStdDev,
 			PointsStdDev:     sv.PointsStdDev,
@@ -243,5 +245,5 @@ func (s *Server) seedVarianceAnalyticsHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	writeJSON(w, http.StatusOK, response)
+	response.WriteJSON(w, http.StatusOK, resp)
 }

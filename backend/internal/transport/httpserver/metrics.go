@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -164,7 +165,7 @@ func writePGXPoolPrometheus(w io.Writer, pool *pgxpool.Pool) {
 
 func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.cfg.MetricsEnabled {
-		writeError(w, r, http.StatusNotFound, "not_found", "Not Found", "")
+		httperr.Write(w, r, http.StatusNotFound, "not_found", "Not Found", "")
 		return
 	}
 	if s.cfg.MetricsAuthToken != "" {
@@ -177,7 +178,7 @@ func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if tok == "" || tok != s.cfg.MetricsAuthToken {
-			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+			httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 			return
 		}
 	}

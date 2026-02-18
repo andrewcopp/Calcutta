@@ -12,6 +12,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 )
 
@@ -29,7 +30,7 @@ func TestThatWriteErrorFromErrReturns500ForNilError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, nil)
+	httperr.WriteFromErr(w, r, nil, authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusInternalServerError
@@ -43,7 +44,7 @@ func TestThatWriteErrorFromErrReturnsInternalErrorCodeForUnknownError(t *testing
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, errors.New("boom"))
+	httperr.WriteFromErr(w, r, errors.New("boom"), authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -62,7 +63,7 @@ func TestThatWriteErrorFromErrIncludesRequestIDInResponse(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, errors.New("boom"))
+	httperr.WriteFromErr(w, r, errors.New("boom"), authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -88,7 +89,7 @@ func TestThatWriteErrorFromErrLogsStructuredJSONForUnknownError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, errors.New("boom"))
+	httperr.WriteFromErr(w, r, errors.New("boom"), authUserID)
 
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	if len(lines) < 1 {
@@ -126,7 +127,7 @@ func TestThatWriteErrorFromErrReturnsUnauthorizedCodeForUnauthorizedError(t *tes
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.UnauthorizedError{})
+	httperr.WriteFromErr(w, r, &apperrors.UnauthorizedError{}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -145,7 +146,7 @@ func TestThatWriteErrorFromErrReturnsNotFoundCodeForNotFoundError(t *testing.T) 
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"})
+	httperr.WriteFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -164,7 +165,7 @@ func TestThatWriteErrorFromErrReturns409ForAlreadyExistsError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
+	httperr.WriteFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"}, authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusConflict
@@ -178,7 +179,7 @@ func TestThatWriteErrorFromErrReturnsConflictCodeForAlreadyExistsError(t *testin
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
+	httperr.WriteFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -197,7 +198,7 @@ func TestThatWriteErrorFromErrReturnsConflictFieldForAlreadyExistsError(t *testi
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"})
+	httperr.WriteFromErr(w, r, &apperrors.AlreadyExistsError{Resource: "thing", Field: "name", Value: "x"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -216,7 +217,7 @@ func TestThatWriteErrorFromErrReturnsValidationErrorCodeForValidationError(t *te
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+	httperr.WriteFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -235,7 +236,7 @@ func TestThatWriteErrorFromErrReturnsValidationErrorMessageForValidationError(t 
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+	httperr.WriteFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -254,7 +255,7 @@ func TestThatWriteErrorFromErrReturnsValidationErrorFieldForValidationError(t *t
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+	httperr.WriteFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -273,7 +274,7 @@ func TestThatWriteErrorFromErrReturns400ForValidationError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"})
+	httperr.WriteFromErr(w, r, &dtos.ValidationError{Field: "name", Message: "bad"}, authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusBadRequest
@@ -287,7 +288,7 @@ func TestThatWriteErrorFromErrReturnsInvalidArgumentCodeForInvalidArgumentError(
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
+	httperr.WriteFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -306,7 +307,7 @@ func TestThatWriteErrorFromErrReturns400ForInvalidArgumentError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
+	httperr.WriteFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"}, authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusBadRequest
@@ -320,7 +321,7 @@ func TestThatWriteErrorFromErrReturnsInvalidArgumentFieldForInvalidArgumentError
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"})
+	httperr.WriteFromErr(w, r, &apperrors.InvalidArgumentError{Field: "seed", Message: "invalid"}, authUserID)
 
 	var env apiErrorEnvelopeForTest
 	if err := json.NewDecoder(w.Result().Body).Decode(&env); err != nil {
@@ -339,7 +340,7 @@ func TestThatWriteErrorFromErrReturns404ForNotFoundError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"})
+	httperr.WriteFromErr(w, r, &apperrors.NotFoundError{Resource: "thing", ID: "id"}, authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusNotFound
@@ -353,7 +354,7 @@ func TestThatWriteErrorFromErrReturns401ForUnauthorizedError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, &apperrors.UnauthorizedError{})
+	httperr.WriteFromErr(w, r, &apperrors.UnauthorizedError{}, authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusUnauthorized
@@ -367,7 +368,7 @@ func TestThatWriteErrorFromErrReturns500ForUnknownError(t *testing.T) {
 	r = r.WithContext(requestctx.WithRequestID(r.Context(), "req-1"))
 	w := httptest.NewRecorder()
 
-	writeErrorFromErr(w, r, errors.New("boom"))
+	httperr.WriteFromErr(w, r, errors.New("boom"), authUserID)
 
 	got := w.Result().StatusCode
 	want := http.StatusInternalServerError

@@ -7,10 +7,10 @@ import (
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
-	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -34,20 +34,18 @@ func (h *Handler) HandleListTournaments(w http.ResponseWriter, r *http.Request) 
 	resp := make([]*dtos.TournamentResponse, 0, len(tournaments))
 	for _, tournament := range tournaments {
 		tournament := tournament
+		winnerName := ""
+
 		team, err := h.app.Tournament.GetWinningTeam(r.Context(), tournament.ID)
 		if err != nil {
 			slog.Error("get_winning_team_failed", "tournament_id", tournament.ID, "error", err)
-			continue
-		}
-
-		winnerName := ""
-		if team != nil {
+			// Include tournament with empty winner on error instead of skipping
+		} else if team != nil {
 			school, err := h.app.School.GetByID(r.Context(), team.SchoolID)
 			if err != nil {
 				slog.Error("get_school_failed", "team_id", team.ID, "error", err)
-				continue
-			}
-			if school != nil {
+				// Include tournament with empty winner on error instead of skipping
+			} else if school != nil {
 				winnerName = school.Name
 			}
 		}

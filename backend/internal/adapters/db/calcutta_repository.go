@@ -132,7 +132,7 @@ func (r *CalcuttaRepository) GetDistinctUserIDsByCalcutta(ctx context.Context, c
 	}
 	out := make([]string, 0, len(uuids))
 	for _, u := range uuids {
-		s := UUIDToPtrString(u)
+		s := uuidToPtrString(u)
 		if s != nil {
 			out = append(out, *s)
 		}
@@ -439,7 +439,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 		out = append(out, &models.CalcuttaEntry{
 			ID:          row.ID,
 			Name:        row.Name,
-			UserID:      UUIDToPtrString(row.UserID),
+			UserID:      uuidToPtrString(row.UserID),
 			CalcuttaID:  row.CalcuttaID,
 			TotalPoints: row.TotalPoints,
 			Created:     row.CreatedAt.Time,
@@ -462,7 +462,7 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 	return &models.CalcuttaEntry{
 		ID:         row.ID,
 		Name:       row.Name,
-		UserID:     UUIDToPtrString(row.UserID),
+		UserID:     uuidToPtrString(row.UserID),
 		CalcuttaID: row.CalcuttaID,
 		Created:    row.CreatedAt.Time,
 		Updated:    row.UpdatedAt.Time,

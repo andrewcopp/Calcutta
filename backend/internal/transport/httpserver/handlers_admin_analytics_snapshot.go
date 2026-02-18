@@ -7,6 +7,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/analytics_snapshot"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/gorilla/mux"
 )
 
@@ -16,30 +17,30 @@ func (s *Server) registerAdminAnalyticsRoutes(r *mux.Router) {
 
 func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
 	}
 
 	tournamentID := r.URL.Query().Get("tournamentId")
 	calcuttaID := r.URL.Query().Get("calcuttaId")
 	if tournamentID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "tournamentId is required", "tournamentId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "tournamentId is required", "tournamentId")
 		return
 	}
 	if calcuttaID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "calcuttaId is required", "calcuttaId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "calcuttaId is required", "calcuttaId")
 		return
 	}
 
 	bracket, err := s.app.Bracket.GetBracket(r.Context(), tournamentID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	tmpDir, err := os.MkdirTemp("", "calcutta-analytics-snapshot-*")
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	defer os.RemoveAll(tmpDir)
@@ -55,13 +56,13 @@ func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Requ
 		analytics_snapshot.ExportInputs{Bracket: bracket},
 	)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	zipBytes, err := archive.ZipDir(tmpDir)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 

@@ -8,7 +8,7 @@ This folder contains the canonical project documentation, organized by intent.
 - `docs/standards/engineering.md`
 - `docs/standards/bracket_testing_guidelines.md`
 - `docs/reference/rules.md`
-- `docs/runbooks/data_science_sandbox.md`
+- `docs/runbooks/moneyball_pipeline_usage.md`
 
 ## Structure
 
@@ -23,6 +23,3 @@ Operational guides (“how to run X”).
 
 ### `docs/design/`
 Architecture/design notes and plans.
-
-### `docs/archive/`
-Historical notes, experiments, and superseded plans.

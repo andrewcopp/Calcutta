@@ -8,16 +8,18 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 )
 
 func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var req dtos.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -25,50 +27,50 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var unauthorizedErr *apperrors.UnauthorizedError
 		if errors.As(err, &unauthorizedErr) {
-			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Invalid credentials", "")
+			httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Invalid credentials", "")
 			return
 		}
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
-	writeJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
+	response.WriteJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
 func (s *Server) signupHandler(w http.ResponseWriter, r *http.Request) {
 	var req dtos.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	res, err := s.app.Auth.Signup(r.Context(), req.Email, req.FirstName, req.LastName, req.Password, r.UserAgent(), r.RemoteAddr, time.Now())
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
-	writeJSON(w, http.StatusCreated, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
+	response.WriteJSON(w, http.StatusCreated, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
 func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("refresh_token")
 	if err != nil || c.Value == "" {
-		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Refresh token missing", "")
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Refresh token missing", "")
 		return
 	}
 
 	res, err := s.app.Auth.Refresh(r.Context(), c.Value, time.Now())
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
-	writeJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
+	response.WriteJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
 func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {

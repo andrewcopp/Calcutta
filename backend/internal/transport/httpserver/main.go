@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/middleware"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/gorilla/mux"
@@ -64,7 +65,7 @@ func Run() error {
 			"method", r.Method,
 			"path", r.URL.Path,
 		)
-		writeError(w, r, http.StatusNotFound, "not_found", "Not Found", "")
+		httperr.Write(w, r, http.StatusNotFound, "not_found", "Not Found", "")
 	})
 
 	port := cfg.Port

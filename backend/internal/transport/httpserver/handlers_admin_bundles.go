@@ -14,6 +14,8 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/exporter"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/verifier"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/gorilla/mux"
 )
 
@@ -46,26 +48,26 @@ func (s *Server) registerAdminBundleRoutes(r *mux.Router) {
 
 func (s *Server) adminBundlesExportHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
 	}
 
 	tmpDir, err := os.MkdirTemp("", "calcutta-bundles-export-*")
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	defer os.RemoveAll(tmpDir)
 
 	generatedAt := time.Now().UTC()
 	if err := exporter.ExportToDir(r.Context(), s.pool, tmpDir, generatedAt); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	zipBytes, err := archive.ZipDir(tmpDir)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -78,24 +80,24 @@ func (s *Server) adminBundlesExportHandler(w http.ResponseWriter, r *http.Reques
 
 func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
 	}
 
 	if err := r.ParseMultipartForm(64 << 20); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid multipart form", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid multipart form", "")
 		return
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "file is required", "file")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "file is required", "file")
 		return
 	}
 	defer file.Close()
 
 	zipBytes, err := io.ReadAll(file)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -110,30 +112,30 @@ func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Reques
 		Archive:   zipBytes,
 	})
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	writeJSON(w, http.StatusAccepted, adminBundlesImportResponse{UploadID: uploadID, Status: "pending", Filename: header.Filename, SHA256: sha, SizeBytes: len(zipBytes)})
+	response.WriteJSON(w, http.StatusAccepted, adminBundlesImportResponse{UploadID: uploadID, Status: "pending", Filename: header.Filename, SHA256: sha, SizeBytes: len(zipBytes)})
 }
 
 func (s *Server) adminBundlesImportStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
 	}
 
 	vars := mux.Vars(r)
 	uploadID := vars["uploadId"]
 	if uploadID == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "Upload ID is required", "uploadId")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Upload ID is required", "uploadId")
 		return
 	}
 
 	q := sqlc.New(s.pool)
 	row, err := q.GetBundleUploadStatus(r.Context(), uploadID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -162,5 +164,5 @@ func (s *Server) adminBundlesImportStatusHandler(w http.ResponseWriter, r *http.
 		}
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, resp)
 }

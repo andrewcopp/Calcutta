@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -44,13 +45,13 @@ func (r *LabRepository) ListInvestmentModels(ctx context.Context, filter models.
 	argIdx := 1
 
 	if filter.Kind != nil && *filter.Kind != "" {
-		query += ` AND im.kind = $` + labItoa(argIdx)
+		query += ` AND im.kind = $` + strconv.Itoa(argIdx)
 		args = append(args, *filter.Kind)
 		argIdx++
 	}
 
 	query += ` ORDER BY im.created_at DESC`
-	query += ` LIMIT $` + labItoa(argIdx) + ` OFFSET $` + labItoa(argIdx+1)
+	query += ` LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
 	args = append(args, page.Limit, page.Offset)
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -187,23 +188,23 @@ func (r *LabRepository) ListEntries(ctx context.Context, filter models.LabListEn
 	argIdx := 1
 
 	if filter.InvestmentModelID != nil && *filter.InvestmentModelID != "" {
-		query += ` AND e.investment_model_id = $` + labItoa(argIdx) + `::uuid`
+		query += ` AND e.investment_model_id = $` + strconv.Itoa(argIdx) + `::uuid`
 		args = append(args, *filter.InvestmentModelID)
 		argIdx++
 	}
 	if filter.CalcuttaID != nil && *filter.CalcuttaID != "" {
-		query += ` AND e.calcutta_id = $` + labItoa(argIdx) + `::uuid`
+		query += ` AND e.calcutta_id = $` + strconv.Itoa(argIdx) + `::uuid`
 		args = append(args, *filter.CalcuttaID)
 		argIdx++
 	}
 	if filter.StartingStateKey != nil && *filter.StartingStateKey != "" {
-		query += ` AND e.starting_state_key = $` + labItoa(argIdx)
+		query += ` AND e.starting_state_key = $` + strconv.Itoa(argIdx)
 		args = append(args, *filter.StartingStateKey)
 		argIdx++
 	}
 
 	query += ` ORDER BY e.created_at DESC`
-	query += ` LIMIT $` + labItoa(argIdx) + ` OFFSET $` + labItoa(argIdx+1)
+	query += ` LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
 	args = append(args, page.Limit, page.Offset)
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -274,23 +275,23 @@ func (r *LabRepository) ListEvaluations(ctx context.Context, filter models.LabLi
 	argIdx := 1
 
 	if filter.EntryID != nil && *filter.EntryID != "" {
-		query += ` AND ev.entry_id = $` + labItoa(argIdx) + `::uuid`
+		query += ` AND ev.entry_id = $` + strconv.Itoa(argIdx) + `::uuid`
 		args = append(args, *filter.EntryID)
 		argIdx++
 	}
 	if filter.InvestmentModelID != nil && *filter.InvestmentModelID != "" {
-		query += ` AND e.investment_model_id = $` + labItoa(argIdx) + `::uuid`
+		query += ` AND e.investment_model_id = $` + strconv.Itoa(argIdx) + `::uuid`
 		args = append(args, *filter.InvestmentModelID)
 		argIdx++
 	}
 	if filter.CalcuttaID != nil && *filter.CalcuttaID != "" {
-		query += ` AND e.calcutta_id = $` + labItoa(argIdx) + `::uuid`
+		query += ` AND e.calcutta_id = $` + strconv.Itoa(argIdx) + `::uuid`
 		args = append(args, *filter.CalcuttaID)
 		argIdx++
 	}
 
 	query += ` ORDER BY ev.mean_normalized_payout DESC NULLS LAST, ev.created_at DESC`
-	query += ` LIMIT $` + labItoa(argIdx) + ` OFFSET $` + labItoa(argIdx+1)
+	query += ` LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
 	args = append(args, page.Limit, page.Offset)
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -510,6 +511,12 @@ func (r *LabRepository) GetEntryEnriched(ctx context.Context, id string) (*model
 		}
 	} else {
 		// Fallback: seed-based estimates (only used when no predictions exist)
+		// Log warning so we can track when this happens - predictions should exist for completed entries
+		slog.Warn("lab_entry_using_seed_fallback",
+			"entry_id", result.ID,
+			"model_name", result.ModelName,
+			"calcutta_name", result.CalcuttaName,
+		)
 		seedExpectedPoints := map[int]float64{
 			1: 320, 2: 240, 3: 160, 4: 120, 5: 80, 6: 64, 7: 48, 8: 40,
 			9: 32, 10: 24, 11: 20, 12: 16, 13: 8, 14: 4, 15: 2, 16: 1,
@@ -832,9 +839,4 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 	}
 
 	return &profile, rows.Err()
-}
-
-// labItoa converts int to string for building parameterized queries.
-func labItoa(i int) string {
-	return strconv.Itoa(i)
 }

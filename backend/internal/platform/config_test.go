@@ -7,7 +7,7 @@ import (
 func TestThatLoadConfigFromEnvDefaultsJWTSecretInDevelopment(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "development")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 
@@ -26,7 +26,7 @@ func TestThatLoadConfigFromEnvDefaultsJWTSecretInDevelopment(t *testing.T) {
 func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -43,10 +43,10 @@ func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testi
 	}
 }
 
-func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInLegacyOutsideDevelopment(t *testing.T) {
+func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInJWTModeOutsideDevelopment(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -63,7 +63,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInLegacyOutsideDev
 func TestThatLoadConfigFromEnvParsesHTTPTimeoutsAndMaxBodyWhenValid(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -88,7 +88,7 @@ func TestThatLoadConfigFromEnvParsesHTTPTimeoutsAndMaxBodyWhenValid(t *testing.T
 func TestThatLoadConfigFromEnvUsesDefaultHTTPTimeoutsWhenInvalid(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -113,7 +113,7 @@ func TestThatLoadConfigFromEnvUsesDefaultHTTPTimeoutsWhenInvalid(t *testing.T) {
 func TestThatLoadConfigFromEnvParsesPGXPoolSettingsWhenValid(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -137,7 +137,7 @@ func TestThatLoadConfigFromEnvParsesPGXPoolSettingsWhenValid(t *testing.T) {
 func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -156,7 +156,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T)
 func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -177,7 +177,7 @@ func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
 func TestThatLoadConfigFromEnvAllowsMetricsWithoutTokenInDevelopment(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "development")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("METRICS_ENABLED", "true")
@@ -198,7 +198,7 @@ func TestThatLoadConfigFromEnvAllowsMetricsWithoutTokenInDevelopment(t *testing.
 func TestThatLoadConfigFromEnvReturnsErrorWhenMetricsEnabledInProductionWithoutToken(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "https://example.com")
@@ -372,7 +372,7 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 	t.Setenv("ALLOWED_ORIGINS", "")
 	t.Setenv("PORT", "")
 	t.Setenv("NODE_ENV", "development")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "")
 
 	// WHEN
@@ -390,7 +390,7 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 func TestThatLoadConfigFromEnvReturnsErrorWhenCorsAllowlistMissingInProduction(t *testing.T) {
 	// GIVEN
 	t.Setenv("NODE_ENV", "production")
-	t.Setenv("AUTH_MODE", "legacy")
+	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ALLOWED_ORIGIN", "")

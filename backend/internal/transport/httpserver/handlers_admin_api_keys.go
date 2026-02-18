@@ -8,6 +8,8 @@ import (
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/auth"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/gorilla/mux"
 )
 
@@ -42,19 +44,19 @@ func (s *Server) registerAdminAPIKeyRoutes(r *mux.Router) {
 
 func (s *Server) adminAPIKeysCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if s.apiKeysRepo == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "api keys repo not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "api keys repo not available", "")
 		return
 	}
 
 	userID := authUserID(r.Context())
 	if userID == "" {
-		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 		return
 	}
 
 	var req adminAPIKeyCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 
@@ -69,35 +71,35 @@ func (s *Server) adminAPIKeysCreateHandler(w http.ResponseWriter, r *http.Reques
 
 	raw, err := auth.NewAPIKey()
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	keyHash := dbadapters.HashAPIKey(raw)
 
 	apiKey, err := s.apiKeysRepo.Create(r.Context(), userID, keyHash, req.Label, time.Now().UTC())
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, adminAPIKeyCreateResponse{ID: apiKey.ID, Key: raw, Label: apiKey.Label, CreatedAt: apiKey.CreatedAt.Format(time.RFC3339)})
+	response.WriteJSON(w, http.StatusCreated, adminAPIKeyCreateResponse{ID: apiKey.ID, Key: raw, Label: apiKey.Label, CreatedAt: apiKey.CreatedAt.Format(time.RFC3339)})
 }
 
 func (s *Server) adminAPIKeysListHandler(w http.ResponseWriter, r *http.Request) {
 	if s.apiKeysRepo == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "api keys repo not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "api keys repo not available", "")
 		return
 	}
 
 	userID := authUserID(r.Context())
 	if userID == "" {
-		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 		return
 	}
 
 	keys, err := s.apiKeysRepo.ListByUser(r.Context(), userID)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -106,30 +108,30 @@ func (s *Server) adminAPIKeysListHandler(w http.ResponseWriter, r *http.Request)
 		items = append(items, adminAPIKeyListItem{ID: k.ID, Label: k.Label, CreatedAt: k.CreatedAt, RevokedAt: k.RevokedAt, LastUsedAt: k.LastUsedAt})
 	}
 
-	writeJSON(w, http.StatusOK, adminAPIKeyListResponse{Items: items})
+	response.WriteJSON(w, http.StatusOK, adminAPIKeyListResponse{Items: items})
 }
 
 func (s *Server) adminAPIKeysRevokeHandler(w http.ResponseWriter, r *http.Request) {
 	if s.apiKeysRepo == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "api keys repo not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "api keys repo not available", "")
 		return
 	}
 
 	userID := authUserID(r.Context())
 	if userID == "" {
-		writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 		return
 	}
 
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_error", "API key ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "API key ID is required", "id")
 		return
 	}
 
 	if err := s.apiKeysRepo.Revoke(r.Context(), id, userID, time.Now().UTC()); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 

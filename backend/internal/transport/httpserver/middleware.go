@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/middleware"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 )
@@ -23,7 +24,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func rateLimitMiddleware(rpm int) func(http.Handler) http.Handler {
-	return middleware.RateLimitMiddleware(rpm, clientIP, writeError)
+	return middleware.RateLimitMiddleware(rpm, clientIP, httperr.Write)
 }
 
 func clientIP(r *http.Request) string {

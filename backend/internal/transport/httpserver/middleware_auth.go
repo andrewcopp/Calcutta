@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
@@ -213,7 +214,7 @@ func (s *Server) isUserActive(ctx context.Context, userID string) (bool, error) 
 func (s *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if authUserID(r.Context()) == "" {
-			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+			httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -224,17 +225,17 @@ func (s *Server) requirePermission(permissionKey string, next http.HandlerFunc) 
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := authUserID(r.Context())
 		if userID == "" {
-			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+			httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 			return
 		}
 
 		ok, err := s.authzRepo.HasPermission(r.Context(), userID, "global", "", permissionKey)
 		if err != nil {
-			writeErrorFromErr(w, r, err)
+			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
 		if !ok {
-			writeError(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
+			httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
 			return
 		}
 
@@ -248,14 +249,14 @@ func (s *Server) requirePermissionWithScope(permissionKey, pathVar string, next 
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := authUserID(r.Context())
 		if userID == "" {
-			writeError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+			httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 			return
 		}
 
 		// Check global permission first.
 		ok, err := s.authzRepo.HasPermission(r.Context(), userID, "global", "", permissionKey)
 		if err != nil {
-			writeErrorFromErr(w, r, err)
+			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
 		if ok {
@@ -268,7 +269,7 @@ func (s *Server) requirePermissionWithScope(permissionKey, pathVar string, next 
 		if scopeID != "" {
 			ok, err = s.authzRepo.HasPermission(r.Context(), userID, "tournament", scopeID, permissionKey)
 			if err != nil {
-				writeErrorFromErr(w, r, err)
+				httperr.WriteFromErr(w, r, err, authUserID)
 				return
 			}
 			if ok {
@@ -277,6 +278,6 @@ func (s *Server) requirePermissionWithScope(permissionKey, pathVar string, next 
 			}
 		}
 
-		writeError(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
+		httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
 	}
 }

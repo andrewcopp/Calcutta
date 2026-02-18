@@ -104,6 +104,24 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		calcutta.MaxBid = 50
 	}
 
+	// Validate constraints
+	if calcutta.MinTeams < 1 || calcutta.MinTeams > 68 {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "MinTeams must be between 1 and 68", "minTeams")
+		return
+	}
+	if calcutta.MaxTeams < 1 || calcutta.MaxTeams > 68 {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "MaxTeams must be between 1 and 68", "maxTeams")
+		return
+	}
+	if calcutta.MinTeams > calcutta.MaxTeams {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "MinTeams cannot exceed MaxTeams", "minTeams")
+		return
+	}
+	if calcutta.MaxBid < 1 {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "MaxBid must be at least 1", "maxBid")
+		return
+	}
+
 	if err := h.app.Calcutta.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return

@@ -9,27 +9,29 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
 	}
 	if s.app == nil || s.app.Auth == nil {
-		writeError(w, r, http.StatusInternalServerError, "internal_error", "auth service not available", "")
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "auth service not available", "")
 		return
 	}
 
 	var req dtos.AcceptInviteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
@@ -38,7 +40,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := s.pool.Begin(r.Context())
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	defer tx.Rollback(r.Context())
@@ -57,20 +59,20 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 	`, h, now).Scan(&userID, &email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			writeErrorFromErr(w, r, &apperrors.UnauthorizedError{Message: "invalid or expired invite token"})
+			httperr.WriteFromErr(w, r, &apperrors.UnauthorizedError{Message: "invalid or expired invite token"}, authUserID)
 			return
 		}
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	if email == nil || *email == "" {
-		writeError(w, r, http.StatusBadRequest, "invalid_state", "User has no email set", "")
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_state", "User has no email set", "")
 		return
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 	hashStr := string(hash)
@@ -87,21 +89,21 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1 AND deleted_at IS NULL
 	`, userID, hashStr, now)
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	res, err := s.app.Auth.Login(r.Context(), *email, req.Password, r.UserAgent(), r.RemoteAddr, time.Now())
 	if err != nil {
-		writeErrorFromErr(w, r, err)
+		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
 	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
-	writeJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
+	response.WriteJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
