@@ -19,7 +19,6 @@ SELECT
     cpt.ownership_percentage::float8 AS ownership_percentage,
     cpt.actual_points::float8 AS actual_points,
     cpt.expected_points::float8 AS expected_points,
-    cpt.predicted_points::float8 AS predicted_points,
     cpt.created_at::timestamptz AS created_at,
     cpt.updated_at::timestamptz AS updated_at,
     cpt.deleted_at::timestamptz AS deleted_at,
@@ -47,7 +46,6 @@ type ListPortfolioTeamsByPortfolioIDRow struct {
 	OwnershipPercentage float64
 	ActualPoints        float64
 	ExpectedPoints      float64
-	PredictedPoints     float64
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           pgtype.Timestamptz
 	DeletedAt           pgtype.Timestamptz
@@ -80,7 +78,6 @@ func (q *Queries) ListPortfolioTeamsByPortfolioID(ctx context.Context, portfolio
 			&i.OwnershipPercentage,
 			&i.ActualPoints,
 			&i.ExpectedPoints,
-			&i.PredictedPoints,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,

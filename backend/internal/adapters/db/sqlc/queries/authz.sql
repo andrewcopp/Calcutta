@@ -1,19 +1,3 @@
--- name: EnsureBootstrapGlobalAdmin :exec
-INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
-SELECT $1, 'global', NULL, l.id
-FROM core.labels l
-WHERE l.key = 'global_admin'
-  AND l.deleted_at IS NULL
-  AND NOT EXISTS (
-    SELECT 1
-    FROM core.grants g
-    JOIN core.labels l2 ON g.label_id = l2.id
-    WHERE g.scope_type = 'global'
-      AND g.revoked_at IS NULL
-      AND l2.key = 'global_admin'
-      AND l2.deleted_at IS NULL
-  );
-
 -- name: HasPermission :one
 SELECT 1
 FROM core.grants g

@@ -61,7 +61,6 @@ export interface CalcuttaPortfolioTeam {
   ownershipPercentage: number;
   actualPoints: number;
   expectedPoints: number;
-  predictedPoints: number;
   created: string;
   updated: string;
   team?: {

@@ -10,7 +10,6 @@ type CalcuttaPortfolioTeam struct {
 	OwnershipPercentage float64         `json:"ownershipPercentage"`
 	ActualPoints        float64         `json:"actualPoints"`
 	ExpectedPoints      float64         `json:"expectedPoints"`
-	PredictedPoints     float64         `json:"predictedPoints"`
 	Created             time.Time       `json:"created"`
 	Updated             time.Time       `json:"updated"`
 	Deleted             *time.Time      `json:"deleted,omitempty"`

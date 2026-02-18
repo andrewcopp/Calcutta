@@ -35,9 +35,6 @@ const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaP
                   <div className="text-sm text-gray-500">
                     Expected: {team.expectedPoints.toFixed(2)}
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Predicted: {team.predictedPoints.toFixed(2)}
-                  </div>
                 </div>
               </div>
             ))}

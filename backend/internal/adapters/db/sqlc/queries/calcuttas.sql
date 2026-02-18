@@ -26,12 +26,6 @@ SET tournament_id = $1,
     updated_at = $9
 WHERE id = $10 AND deleted_at IS NULL;
 
--- name: DeleteCalcutta :execrows
-UPDATE core.calcuttas
-SET deleted_at = $1,
-    updated_at = $2
-WHERE id = $3 AND deleted_at IS NULL;
-
 -- name: GetCalcuttasByTournament :many
 SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at, deleted_at
 FROM core.calcuttas

@@ -6,7 +6,6 @@ SELECT
     cpt.ownership_percentage::float8 AS ownership_percentage,
     cpt.actual_points::float8 AS actual_points,
     cpt.expected_points::float8 AS expected_points,
-    cpt.predicted_points::float8 AS predicted_points,
     cpt.created_at::timestamptz AS created_at,
     cpt.updated_at::timestamptz AS updated_at,
     cpt.deleted_at::timestamptz AS deleted_at,

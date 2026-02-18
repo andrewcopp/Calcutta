@@ -43,27 +43,6 @@ func (q *Queries) CreateCalcutta(ctx context.Context, arg CreateCalcuttaParams) 
 	return err
 }
 
-const deleteCalcutta = `-- name: DeleteCalcutta :execrows
-UPDATE core.calcuttas
-SET deleted_at = $1,
-    updated_at = $2
-WHERE id = $3 AND deleted_at IS NULL
-`
-
-type DeleteCalcuttaParams struct {
-	DeletedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	ID        string
-}
-
-func (q *Queries) DeleteCalcutta(ctx context.Context, arg DeleteCalcuttaParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteCalcutta, arg.DeletedAt, arg.UpdatedAt, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const getCalcuttaByID = `-- name: GetCalcuttaByID :one
 SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at
 FROM core.calcuttas

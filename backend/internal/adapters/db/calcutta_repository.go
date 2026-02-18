@@ -538,7 +538,6 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			OwnershipPercentage: row.OwnershipPercentage,
 			ActualPoints:        row.ActualPoints,
 			ExpectedPoints:      row.ExpectedPoints,
-			PredictedPoints:     row.PredictedPoints,
 			Created:             row.CreatedAt.Time,
 			Updated:             row.UpdatedAt.Time,
 			Deleted:             timestamptzToPtrTime(row.DeletedAt),
