@@ -3,16 +3,14 @@ ENV_DOCKER = set -a; [ -f .env ] && . ./.env; set +a;
 
 DOCKER_PROJECT ?= calcutta
 DC = docker compose -p $(DOCKER_PROJECT)
-DC_PROD = docker compose -f docker-compose.local-prod.yml -p $(DOCKER_PROJECT)
 
 .PHONY: env-init bootstrap dev up-d logs ps stats
-.PHONY: prod-up prod-down prod-reset prod-ops-migrate
 .PHONY: up down reset ops-migrate backend-test sqlc-generate
 .PHONY: db-shell db-query db query query-file query-csv
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test
-.PHONY: register-models import-bundles import-bundles-apply dry-run
+.PHONY: register-models export-bundles import-bundles
 
 env-init:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -72,18 +70,6 @@ down:
 
 reset:
 	$(ENV_DOCKER) $(DC) down -v
-
-prod-up:
-	$(ENV_DOCKER) $(DC_PROD) up -d --build
-
-prod-down:
-	$(ENV_DOCKER) $(DC_PROD) down
-
-prod-reset:
-	$(ENV_DOCKER) $(DC_PROD) down -v
-
-prod-ops-migrate:
-	$(ENV_DOCKER) $(DC_PROD) --profile ops run --rm migrate
 
 ops-migrate:
 	$(ENV_DOCKER) $(DC) --profile ops run --rm migrate
@@ -181,11 +167,9 @@ register-models:
 		. .venv/bin/activate && \
 		python scripts/register_investment_models.py
 
+export-bundles:
+	@$(ENV) cd backend && go run ./cmd/tools/export-bundles -out=./exports/bundles
+
 import-bundles:
-	@$(ENV) go run ./backend/cmd/tools/import-bundles -in=./backend/exports/bundles -dry-run=true
-
-import-bundles-apply:
-	@$(ENV) go run ./backend/cmd/tools/import-bundles -in=./backend/exports/bundles -dry-run=false
-
-dry-run:
-	@./scripts/dry-run-local.sh
+	@DRY_RUN=$${DRY_RUN:-true}; \
+	$(ENV) cd backend && go run ./cmd/tools/import-bundles -in=./exports/bundles -dry-run=$$DRY_RUN

@@ -1,6 +1,6 @@
 -- Create prediction_batches table (parent table for prediction runs)
 CREATE TABLE derived.prediction_batches (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_id UUID NOT NULL REFERENCES core.tournaments(id),
     probability_source_key TEXT NOT NULL DEFAULT 'kenpom',
     game_outcome_spec_json JSONB,
@@ -18,7 +18,7 @@ COMMENT ON COLUMN derived.prediction_batches.game_outcome_spec_json IS 'Paramete
 
 -- Create predicted_team_values table (child table with per-team predictions)
 CREATE TABLE derived.predicted_team_values (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     prediction_batch_id UUID NOT NULL REFERENCES derived.prediction_batches(id),
     tournament_id UUID NOT NULL REFERENCES core.tournaments(id),
     team_id UUID NOT NULL REFERENCES core.teams(id),

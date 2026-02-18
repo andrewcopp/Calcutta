@@ -199,13 +199,24 @@ func ensureUserByEmail(ctx context.Context, tx pgx.Tx, email string, fullName *s
 		first = "Unknown"
 	}
 
+	// Check if user exists by email
 	var id string
 	err := tx.QueryRow(ctx, `
-		INSERT INTO core.users (email, first_name, last_name)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (email)
-		DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, updated_at = NOW()
-		RETURNING id
-	`, email, first, last).Scan(&id)
+		SELECT id FROM core.users WHERE email = $1 AND deleted_at IS NULL
+	`, email).Scan(&id)
+	if err != nil {
+		// User doesn't exist, insert
+		err = tx.QueryRow(ctx, `
+			INSERT INTO core.users (email, first_name, last_name)
+			VALUES ($1, $2, $3)
+			RETURNING id
+		`, email, first, last).Scan(&id)
+		return id, err
+	}
+	// User exists, update
+	_, err = tx.Exec(ctx, `
+		UPDATE core.users SET first_name = $2, last_name = $3, updated_at = NOW()
+		WHERE id = $1
+	`, id, first, last)
 	return id, err
 }

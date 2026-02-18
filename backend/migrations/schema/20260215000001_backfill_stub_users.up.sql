@@ -5,7 +5,7 @@
 -- We create stubs for entries where the name doesn't match the linked user's actual name
 INSERT INTO core.users (id, email, first_name, last_name, status, created_at, updated_at)
 SELECT
-    uuid_generate_v4(),
+    gen_random_uuid(),
     NULL,
     CASE
         WHEN position(' ' in e.name) > 0 THEN left(e.name, length(e.name) - length(reverse(split_part(reverse(e.name), ' ', 1))) - 1)

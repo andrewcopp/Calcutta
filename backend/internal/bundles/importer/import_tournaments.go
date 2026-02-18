@@ -25,72 +25,71 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 			return 0, 0, err
 		}
 
-		var tournamentID string
+		// Ensure competition exists
+		var competitionID string
 		err := tx.QueryRow(ctx, `
-			WITH year_ctx AS (
-				SELECT CAST(SUBSTRING($2 FROM '[0-9]{4}') AS INTEGER) AS year
-			),
-			competition_ins AS (
-				INSERT INTO core.competitions (name)
-				VALUES ('NCAA Men''s')
-				ON CONFLICT (name) DO NOTHING
-				RETURNING id
-			),
-			competition AS (
-				SELECT id FROM competition_ins
-				UNION ALL
-				SELECT id FROM core.competitions WHERE name = 'NCAA Men''s'
-				LIMIT 1
-			),
-			season_ins AS (
-				INSERT INTO core.seasons (year)
-				SELECT year FROM year_ctx
-				ON CONFLICT (year) DO NOTHING
-				RETURNING id
-			),
-			season AS (
-				SELECT id FROM season_ins
-				UNION ALL
-				SELECT id FROM core.seasons WHERE year = (SELECT year FROM year_ctx)
-				LIMIT 1
-			)
-			INSERT INTO core.tournaments (
-				id,
-				competition_id,
-				season_id,
-				name,
-				import_key,
-				rounds,
-				final_four_top_left,
-				final_four_bottom_left,
-				final_four_top_right,
-				final_four_bottom_right
-			)
-			SELECT
-				$1::uuid,
-				(SELECT id FROM competition),
-				(SELECT id FROM season),
-				$2,
-				$3,
-				$4,
-				NULLIF($5, ''),
-				NULLIF($6, ''),
-				NULLIF($7, ''),
-				NULLIF($8, '')
-			ON CONFLICT (import_key) WHERE deleted_at IS NULL
-			DO UPDATE SET
-				name = EXCLUDED.name,
-				rounds = EXCLUDED.rounds,
-				final_four_top_left = EXCLUDED.final_four_top_left,
-				final_four_bottom_left = EXCLUDED.final_four_bottom_left,
-				final_four_top_right = EXCLUDED.final_four_top_right,
-				final_four_bottom_right = EXCLUDED.final_four_bottom_right,
-				updated_at = NOW(),
-				deleted_at = NULL
+			INSERT INTO core.competitions (name)
+			VALUES ('NCAA Men''s')
+			ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
 			RETURNING id
-		`, uuid.New().String(), b.Tournament.Name, b.Tournament.ImportKey, b.Tournament.Rounds, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft, b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
+		`).Scan(&competitionID)
 		if err != nil {
-			return 0, 0, err
+			return 0, 0, fmt.Errorf("failed to upsert competition: %w", err)
+		}
+
+		// Extract year from tournament name and ensure season exists
+		year := 0
+		fmt.Sscanf(b.Tournament.ImportKey, "ncaa-tournament-%d", &year)
+		if year == 0 {
+			// Try extracting from name
+			fmt.Sscanf(b.Tournament.Name, "NCAA Tournament %d", &year)
+		}
+		var seasonID string
+		err = tx.QueryRow(ctx, `
+			INSERT INTO core.seasons (year)
+			VALUES ($1)
+			ON CONFLICT (year) DO UPDATE SET year = EXCLUDED.year
+			RETURNING id
+		`, year).Scan(&seasonID)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to upsert season for year %d: %w", year, err)
+		}
+
+		// Check if tournament exists
+		var tournamentID string
+		err = tx.QueryRow(ctx, `
+			SELECT id FROM core.tournaments WHERE import_key = $1 AND deleted_at IS NULL
+		`, b.Tournament.ImportKey).Scan(&tournamentID)
+		if err != nil {
+			// Tournament doesn't exist, insert it
+			err = tx.QueryRow(ctx, `
+				INSERT INTO core.tournaments (
+					id, competition_id, season_id, name, import_key, rounds,
+					final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right
+				)
+				VALUES ($1::uuid, $2, $3, $4, $5, $6, NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''))
+				RETURNING id
+			`, uuid.New().String(), competitionID, seasonID, b.Tournament.Name, b.Tournament.ImportKey,
+				b.Tournament.Rounds, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft,
+				b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
+			if err != nil {
+				return 0, 0, fmt.Errorf("failed to insert tournament %s: %w", b.Tournament.ImportKey, err)
+			}
+		} else {
+			// Tournament exists, update it
+			_, err = tx.Exec(ctx, `
+				UPDATE core.tournaments SET
+					name = $2, rounds = $3,
+					final_four_top_left = NULLIF($4, ''), final_four_bottom_left = NULLIF($5, ''),
+					final_four_top_right = NULLIF($6, ''), final_four_bottom_right = NULLIF($7, ''),
+					updated_at = NOW(), deleted_at = NULL
+				WHERE id = $1
+			`, tournamentID, b.Tournament.Name, b.Tournament.Rounds,
+				b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft,
+				b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight)
+			if err != nil {
+				return 0, 0, fmt.Errorf("failed to update tournament %s: %w", b.Tournament.ImportKey, err)
+			}
 		}
 
 		for _, team := range b.Teams {
