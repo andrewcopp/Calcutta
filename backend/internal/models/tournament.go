@@ -29,7 +29,7 @@ const (
 	TournamentEditDeniedReasonTournamentStarted = "tournament_started"
 )
 
-func (t *Tournament) CanEditCalcutta(now time.Time, isAdmin bool) (bool, string) {
+func (t *Tournament) CanEditBids(now time.Time, isAdmin bool) (bool, string) {
 	if t == nil {
 		return false, TournamentEditDeniedReasonTournamentMissing
 	}
@@ -40,8 +40,4 @@ func (t *Tournament) CanEditCalcutta(now time.Time, isAdmin bool) (bool, string)
 		return true, ""
 	}
 	return false, TournamentEditDeniedReasonTournamentStarted
-}
-
-func (t *Tournament) CanEditBids(now time.Time, isAdmin bool) (bool, string) {
-	return t.CanEditCalcutta(now, isAdmin)
 }

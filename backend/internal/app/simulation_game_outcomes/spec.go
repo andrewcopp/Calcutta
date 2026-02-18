@@ -45,8 +45,5 @@ func (s *Spec) WinProb(net1 float64, net2 float64) float64 {
 		return 0.5
 	}
 	s.Normalize()
-	if s.Sigma <= 0 {
-		return 0.5
-	}
 	return mathutil.Sigmoid((net1 - net2) / s.Sigma)
 }
