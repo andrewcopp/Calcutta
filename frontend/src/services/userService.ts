@@ -17,7 +17,9 @@ export const userService = {
   },
 
   logout(): void {
-    void apiClient.post<void>('/auth/logout', undefined, { credentials: 'include' }).catch(() => undefined);
+    void apiClient.post<void>('/auth/logout', undefined, { credentials: 'include' }).catch((err) => {
+      console.error('Logout failed', err);
+    });
     localStorage.removeItem('user');
     apiClient.setAccessToken(null);
   },

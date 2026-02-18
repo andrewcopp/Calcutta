@@ -65,7 +65,8 @@ async function refreshAccessToken(): Promise<string | null> {
       }
 
       return tok;
-    } catch {
+    } catch (err) {
+      console.error('Failed to refresh access token', err);
       return null;
     } finally {
       refreshInFlight = null;
@@ -154,8 +155,12 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
   const isJson = contentType.includes('application/json');
 
   const parseBody = async () => {
-    if (isJson) return response.json().catch(() => undefined);
-    return response.text().catch(() => undefined);
+    if (!response.ok) {
+      if (isJson) return response.json().catch(() => undefined);
+      return response.text().catch(() => undefined);
+    }
+    if (isJson) return response.json();
+    return response.text();
   };
 
   const body = await parseBody();

@@ -25,7 +25,10 @@ export function CalcuttaEntriesPage() {
   const dashboardData = dashboardQuery.data;
 
   const calcutta: Calcutta | undefined = dashboardData?.calcutta;
-  const calcuttaName = calcutta?.name || '';
+  if (dashboardData && !calcutta) {
+    console.warn('CalcuttaEntriesPage: dashboard loaded but calcutta is missing', { calcuttaId });
+  }
+  const calcuttaName = calcutta?.name ?? '';
 
   const { entries, totalEntries, allCalcuttaPortfolios, allCalcuttaPortfolioTeams, allEntryTeams, seedInvestmentData } = useMemo(() => {
     if (!dashboardData) {
