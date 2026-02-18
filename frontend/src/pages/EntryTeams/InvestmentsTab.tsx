@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { CalcuttaEntryTeam, TournamentTeam } from '../../types/calcutta';
 import { School } from '../../types/school';
+import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 export const InvestmentsTab: React.FC<{
   entryId: string;
@@ -132,8 +133,8 @@ export const InvestmentsTab: React.FC<{
         </label>
         <label className="text-sm text-gray-600">
           Sort by
-          <select
-            className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+          <Select
+            className="ml-2 w-auto"
             value={investmentsSortBy}
             onChange={(e) => setInvestmentsSortBy(e.target.value as 'total' | 'seed' | 'region' | 'team')}
           >
@@ -141,7 +142,7 @@ export const InvestmentsTab: React.FC<{
             <option value="seed">Seed</option>
             <option value="region">Region</option>
             <option value="team">Team</option>
-          </select>
+          </Select>
         </label>
       </div>
 

@@ -170,19 +170,19 @@ export function ModelDetailPage() {
 
       {startPipelineMutation.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to start pipeline: {(startPipelineMutation.error as Error)?.message || 'Unknown error'}
+          Failed to start pipeline: {startPipelineMutation.error instanceof Error ? startPipelineMutation.error.message : 'Unknown error'}
         </Alert>
       )}
 
       {cancelPipelineMutation.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to cancel pipeline: {(cancelPipelineMutation.error as Error)?.message || 'Unknown error'}
+          Failed to cancel pipeline: {cancelPipelineMutation.error instanceof Error ? cancelPipelineMutation.error.message : 'Unknown error'}
         </Alert>
       )}
 
       {rerunAllMutation.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to re-run pipeline: {(rerunAllMutation.error as Error)?.message || 'Unknown error'}
+          Failed to re-run pipeline: {rerunAllMutation.error instanceof Error ? rerunAllMutation.error.message : 'Unknown error'}
         </Alert>
       )}
 

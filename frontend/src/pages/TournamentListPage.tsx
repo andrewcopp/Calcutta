@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { formatDate } from '../utils/format';
 
 type TournamentStatus = 'Complete' | 'In Progress';
 
@@ -78,7 +79,7 @@ export const TournamentListPage: React.FC = () => {
                   <div>
                     <h2 className="text-xl font-semibold mb-2">{tournament.name}</h2>
                     <p className="text-gray-600">
-                      {tournament.rounds} rounds • Created {new Date(tournament.created).toLocaleDateString()}
+                      {tournament.rounds} rounds • Created {formatDate(tournament.created)}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">

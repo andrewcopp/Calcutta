@@ -1,5 +1,6 @@
 import { CalcuttaEntryTeam, CalcuttaPortfolioTeam, TournamentTeam } from '../../types/calcutta';
 import { School } from '../../types/school';
+import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 
 export const ReturnsTab: React.FC<{
@@ -39,15 +40,15 @@ export const ReturnsTab: React.FC<{
         </label>
         <label className="text-sm text-gray-600">
           Sort by
-          <select
-            className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+          <Select
+            className="ml-2 w-auto"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bid')}
           >
             <option value="points">Points</option>
             <option value="ownership">Ownership</option>
             <option value="bid">Bid Amount</option>
-          </select>
+          </Select>
         </label>
       </div>
 

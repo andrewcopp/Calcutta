@@ -15,6 +15,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
+import { formatDate } from '../utils/format';
 
 export const TournamentEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -197,7 +198,7 @@ export const TournamentEditPage: React.FC = () => {
       />
       <PageHeader
         title={`Edit Tournament: ${tournament.name}`}
-        subtitle={`${tournament.rounds} rounds • Created ${new Date(tournament.created).toLocaleDateString()}`}
+        subtitle={`${tournament.rounds} rounds • Created ${formatDate(tournament.created)}`}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate(`/admin/tournaments/${id}`)}>
