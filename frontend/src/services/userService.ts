@@ -20,6 +20,13 @@ export const userService = {
     return res.user;
   },
 
+  async acceptInvite(token: string, password: string): Promise<User> {
+    const res = await apiClient.post<AuthResponse>('/auth/invite/accept', { token, password }, { credentials: 'include' });
+    localStorage.setItem('user', JSON.stringify(res.user));
+    apiClient.setAccessToken(res.accessToken);
+    return res.user;
+  },
+
   logout(): void {
     void apiClient.post<void>('/auth/logout', undefined, { credentials: 'include' }).catch((err) => {
       console.error('Logout failed', err);

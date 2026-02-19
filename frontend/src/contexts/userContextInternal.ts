@@ -8,6 +8,7 @@ export interface UserContextType {
   permissionsLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
+  acceptInvite: (token: string, password: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
 }

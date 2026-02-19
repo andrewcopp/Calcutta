@@ -2,9 +2,14 @@ import { apiClient } from '../api/apiClient';
 
 export type AdminUserListItem = {
   id: string;
-  email: string;
+  email: string | null;
   first_name: string;
   last_name: string;
+  status: string;
+  invited_at: string | null;
+  last_invite_sent_at: string | null;
+  invite_expires_at: string | null;
+  invite_consumed_at: string | null;
   created_at: string;
   updated_at: string;
   labels: string[];
@@ -38,9 +43,34 @@ export type ListAPIKeysResponse = {
   items: APIKeyListItem[];
 };
 
+export type AdminInviteUserResponse = {
+  userId: string;
+  email: string;
+  inviteToken: string;
+  inviteExpiresAt: string;
+  status: string;
+};
+
+export type UserResponse = {
+  id: string;
+  email: string | null;
+  first_name: string;
+  last_name: string;
+  status: string;
+};
+
 export const adminService = {
-  async listUsers(): Promise<AdminUsersListResponse> {
-    return apiClient.get<AdminUsersListResponse>('/admin/users');
+  async listUsers(status?: string): Promise<AdminUsersListResponse> {
+    const params = status ? `?status=${encodeURIComponent(status)}` : '';
+    return apiClient.get<AdminUsersListResponse>(`/admin/users${params}`);
+  },
+
+  async setUserEmail(userId: string, email: string): Promise<UserResponse> {
+    return apiClient.patch<UserResponse>(`/admin/users/${userId}/email`, { email });
+  },
+
+  async sendInvite(userId: string): Promise<AdminInviteUserResponse> {
+    return apiClient.post<AdminInviteUserResponse>(`/admin/users/${userId}/invite/send`);
   },
 
   async listApiKeys(): Promise<ListAPIKeysResponse> {

@@ -1,6 +1,6 @@
 export const queryKeys = {
   admin: {
-    users: () => ['admin', 'users'] as const,
+    users: (status?: string) => ['admin', 'users', status ?? null] as const,
     apiKeys: () => ['admin', 'apiKeys'] as const,
   },
   hallOfFame: {

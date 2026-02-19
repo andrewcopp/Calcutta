@@ -18,6 +18,7 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { RulesPage } from './pages/RulesPage';
 import { CreateCalcuttaPage } from './pages/CreateCalcuttaPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -44,6 +45,7 @@ const AppLayout: React.FC = () => {
       <Routes>
         <Route path="/" element={<RouteErrorBoundary><HomePage /></RouteErrorBoundary>} />
         <Route path="/login" element={<RouteErrorBoundary><LoginPage /></RouteErrorBoundary>} />
+        <Route path="/invite" element={<RouteErrorBoundary><AcceptInvitePage /></RouteErrorBoundary>} />
         <Route path="/rules" element={<RouteErrorBoundary><RulesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas" element={<RouteErrorBoundary><CalcuttaListPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/create" element={<ProtectedRoute><RouteErrorBoundary><CreateCalcuttaPage /></RouteErrorBoundary></ProtectedRoute>} />

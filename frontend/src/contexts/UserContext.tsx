@@ -40,6 +40,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await fetchPermissions();
   };
 
+  const acceptInvite = async (token: string, password: string) => {
+    const acceptedUser = await userService.acceptInvite(token, password);
+    setUser(acceptedUser);
+    await fetchPermissions();
+  };
+
   const logout = () => {
     userService.logout();
     setUser(null);
@@ -52,7 +58,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   return (
-    <UserContext.Provider value={{ user, permissions, permissionsLoading, login, signup, logout, hasPermission }}>
+    <UserContext.Provider value={{ user, permissions, permissionsLoading, login, signup, acceptInvite, logout, hasPermission }}>
       {children}
     </UserContext.Provider>
   );
