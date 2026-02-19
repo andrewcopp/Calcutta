@@ -40,6 +40,8 @@ services:
       - AUTH_MODE=${AUTH_MODE:-legacy}
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
+      - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL}
+      - BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -103,10 +105,12 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
       - DOTENV_ENABLED=false
+      - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL}
+      - BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "go run ./cmd/migrate -up"
+    command: sh -c "go run ./cmd/migrate -up -bootstrap"
 
 volumes:
   postgres_data:

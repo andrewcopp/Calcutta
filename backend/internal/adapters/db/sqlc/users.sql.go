@@ -12,19 +12,21 @@ import (
 )
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO core.users (id, email, first_name, last_name, status, password_hash, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO core.users (id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type CreateUserParams struct {
-	ID           string
-	Email        *string
-	FirstName    string
-	LastName     string
-	Status       string
-	PasswordHash *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	Status             string
+	PasswordHash       *string
+	ExternalProvider   *string
+	ExternalProviderID *string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -35,6 +37,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.LastName,
 		arg.Status,
 		arg.PasswordHash,
+		arg.ExternalProvider,
+		arg.ExternalProviderID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -42,21 +46,23 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, first_name, last_name, status, password_hash, created_at, updated_at, deleted_at
+SELECT id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at, deleted_at
 FROM core.users
 WHERE email = $1 AND deleted_at IS NULL
 `
 
 type GetUserByEmailRow struct {
-	ID           string
-	Email        *string
-	FirstName    string
-	LastName     string
-	Status       string
-	PasswordHash *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	Status             string
+	PasswordHash       *string
+	ExternalProvider   *string
+	ExternalProviderID *string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (GetUserByEmailRow, error) {
@@ -69,6 +75,52 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (GetUserByE
 		&i.LastName,
 		&i.Status,
 		&i.PasswordHash,
+		&i.ExternalProvider,
+		&i.ExternalProviderID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserByExternalProvider = `-- name: GetUserByExternalProvider :one
+SELECT id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at, deleted_at
+FROM core.users
+WHERE external_provider = $1 AND external_provider_id = $2 AND deleted_at IS NULL
+`
+
+type GetUserByExternalProviderParams struct {
+	ExternalProvider   *string
+	ExternalProviderID *string
+}
+
+type GetUserByExternalProviderRow struct {
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	Status             string
+	PasswordHash       *string
+	ExternalProvider   *string
+	ExternalProviderID *string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByExternalProvider(ctx context.Context, arg GetUserByExternalProviderParams) (GetUserByExternalProviderRow, error) {
+	row := q.db.QueryRow(ctx, getUserByExternalProvider, arg.ExternalProvider, arg.ExternalProviderID)
+	var i GetUserByExternalProviderRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.Status,
+		&i.PasswordHash,
+		&i.ExternalProvider,
+		&i.ExternalProviderID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -77,21 +129,23 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (GetUserByE
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, first_name, last_name, status, password_hash, created_at, updated_at, deleted_at
+SELECT id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at, deleted_at
 FROM core.users
 WHERE id = $1 AND deleted_at IS NULL
 `
 
 type GetUserByIDRow struct {
-	ID           string
-	Email        *string
-	FirstName    string
-	LastName     string
-	Status       string
-	PasswordHash *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	Status             string
+	PasswordHash       *string
+	ExternalProvider   *string
+	ExternalProviderID *string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, error) {
@@ -104,6 +158,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 		&i.LastName,
 		&i.Status,
 		&i.PasswordHash,
+		&i.ExternalProvider,
+		&i.ExternalProviderID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -119,20 +175,24 @@ SET
   last_name = $4,
   status = $5,
   password_hash = $6,
-  updated_at = $7,
-  deleted_at = $8
+  external_provider = $7,
+  external_provider_id = $8,
+  updated_at = $9,
+  deleted_at = $10
 WHERE id = $1
 `
 
 type UpdateUserParams struct {
-	ID           string
-	Email        *string
-	FirstName    string
-	LastName     string
-	Status       string
-	PasswordHash *string
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	Status             string
+	PasswordHash       *string
+	ExternalProvider   *string
+	ExternalProviderID *string
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
@@ -143,6 +203,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.LastName,
 		arg.Status,
 		arg.PasswordHash,
+		arg.ExternalProvider,
+		arg.ExternalProviderID,
 		arg.UpdatedAt,
 		arg.DeletedAt,
 	)

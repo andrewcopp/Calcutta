@@ -67,13 +67,27 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 		if s.cfg.AuthMode == "cognito" && s.cognitoJWT != nil {
 			claims, err := s.cognitoJWT.Verify(tok, time.Now())
 			if err == nil {
-				email := strings.TrimSpace(claims.Email)
-				if email != "" && s.userRepo != nil {
-					user, err := s.userRepo.GetByEmail(r.Context(), email)
-					if err == nil && user == nil && s.cfg.CognitoAutoProvision {
-						id := strings.TrimSpace(claims.Sub)
+				cognitoSub := strings.TrimSpace(claims.Sub)
+				if cognitoSub != "" && s.userRepo != nil {
+					// Look up user by external_provider_id (Cognito sub) first
+					user, err := s.userRepo.GetByExternalProvider(r.Context(), "cognito", cognitoSub)
+					if err != nil {
+						slog.Error("auth_cognito_user_lookup_failed", "cognito_sub", cognitoSub, "error", err)
+						http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+						return
+					}
+
+					// Auto-provision if enabled and user not found
+					if user == nil && s.cfg.CognitoAutoProvision {
+						id := cognitoSub
 						if _, err := uuid.Parse(id); err != nil {
 							id = uuid.NewString()
+						}
+
+						email := strings.TrimSpace(claims.Email)
+						var emailPtr *string
+						if email != "" {
+							emailPtr = &email
 						}
 
 						first := strings.TrimSpace(claims.GivenName)
@@ -85,19 +99,24 @@ func (s *Server) authenticateMiddleware(next http.Handler) http.Handler {
 							last = "User"
 						}
 
-						created := &models.User{ID: id, Email: &email, FirstName: first, LastName: last, Status: "active"}
+						provider := "cognito"
+						created := &models.User{
+							ID:                 id,
+							Email:              emailPtr,
+							FirstName:          first,
+							LastName:           last,
+							Status:             "active",
+							ExternalProvider:   &provider,
+							ExternalProviderID: &cognitoSub,
+						}
 						if err := s.userRepo.Create(r.Context(), created); err != nil {
-							slog.Error("cognito_auto_provision_failed", "email", email, "error", err)
+							slog.Error("cognito_auto_provision_failed", "cognito_sub", cognitoSub, "error", err)
 							http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 							return
 						}
 						user = created
 					}
-					if err != nil {
-						slog.Error("auth_cognito_user_lookup_failed", "email", email, "error", err)
-						http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-						return
-					}
+
 					if user != nil {
 						active, err := s.isUserActive(r.Context(), user.ID)
 						if err != nil {

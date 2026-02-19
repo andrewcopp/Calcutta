@@ -31,14 +31,16 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	user.Updated = now
 
 	return r.q.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:           user.ID,
-		Email:        user.Email,
-		FirstName:    user.FirstName,
-		LastName:     user.LastName,
-		Status:       user.Status,
-		PasswordHash: user.PasswordHash,
-		CreatedAt:    pgtype.Timestamptz{Time: user.Created, Valid: true},
-		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
+		ID:                 user.ID,
+		Email:              user.Email,
+		FirstName:          user.FirstName,
+		LastName:           user.LastName,
+		Status:             user.Status,
+		PasswordHash:       user.PasswordHash,
+		ExternalProvider:   user.ExternalProvider,
+		ExternalProviderID: user.ExternalProviderID,
+		CreatedAt:          pgtype.Timestamptz{Time: user.Created, Valid: true},
+		UpdatedAt:          pgtype.Timestamptz{Time: user.Updated, Valid: true},
 	})
 }
 
@@ -50,7 +52,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		}
 		return nil, err
 	}
-	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
+	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, error) {
@@ -61,7 +63,21 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 		}
 		return nil, err
 	}
-	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
+	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
+}
+
+func (r *UserRepository) GetByExternalProvider(ctx context.Context, provider, providerID string) (*models.User, error) {
+	row, err := r.q.GetUserByExternalProvider(ctx, sqlc.GetUserByExternalProviderParams{
+		ExternalProvider:   &provider,
+		ExternalProviderID: &providerID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
@@ -78,32 +94,36 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 	}
 
 	return r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
-		ID:           user.ID,
-		Email:        user.Email,
-		FirstName:    user.FirstName,
-		LastName:     user.LastName,
-		Status:       user.Status,
-		PasswordHash: user.PasswordHash,
-		UpdatedAt:    pgtype.Timestamptz{Time: user.Updated, Valid: true},
-		DeletedAt:    deletedAt,
+		ID:                 user.ID,
+		Email:              user.Email,
+		FirstName:          user.FirstName,
+		LastName:           user.LastName,
+		Status:             user.Status,
+		PasswordHash:       user.PasswordHash,
+		ExternalProvider:   user.ExternalProvider,
+		ExternalProviderID: user.ExternalProviderID,
+		UpdatedAt:          pgtype.Timestamptz{Time: user.Updated, Valid: true},
+		DeletedAt:          deletedAt,
 	})
 }
 
-func userFromRow(id string, email *string, firstName, lastName, status string, passwordHash *string, createdAt, updatedAt, deletedAt pgtype.Timestamptz) *models.User {
+func userFromRow(id string, email *string, firstName, lastName, status string, passwordHash, externalProvider, externalProviderID *string, createdAt, updatedAt, deletedAt pgtype.Timestamptz) *models.User {
 	var deleted *time.Time
 	if deletedAt.Valid {
 		t := deletedAt.Time
 		deleted = &t
 	}
 	return &models.User{
-		ID:           id,
-		Email:        email,
-		FirstName:    firstName,
-		LastName:     lastName,
-		Status:       status,
-		PasswordHash: passwordHash,
-		Created:      createdAt.Time,
-		Updated:      updatedAt.Time,
-		Deleted:      deleted,
+		ID:                 id,
+		Email:              email,
+		FirstName:          firstName,
+		LastName:           lastName,
+		Status:             status,
+		PasswordHash:       passwordHash,
+		ExternalProvider:   externalProvider,
+		ExternalProviderID: externalProviderID,
+		Created:            createdAt.Time,
+		Updated:            updatedAt.Time,
+		Deleted:            deleted,
 	}
 }

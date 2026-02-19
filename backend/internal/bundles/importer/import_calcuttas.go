@@ -108,6 +108,13 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 					return 0, 0, 0, 0, 0, err
 				}
 				entryUserID = &uid
+			} else {
+				// No email - create a stub user from the entry name
+				uid, err := ensureStubUserByName(ctx, tx, e.Name)
+				if err != nil {
+					return 0, 0, 0, 0, 0, err
+				}
+				entryUserID = &uid
 			}
 
 			var entryID string
@@ -169,9 +176,16 @@ func ensureUser(ctx context.Context, tx pgx.Tx, u *bundles.UserRef, fallbackKey 
 			last = strings.TrimSpace(*u.LastName)
 		}
 	}
+
+	// If no email, create a stub user from name
 	if email == "" {
-		return "", fmt.Errorf("user has no email address (fallbackKey=%q); cannot create unusable account", fallbackKey)
+		fullName := strings.TrimSpace(first + " " + last)
+		if fullName == "" {
+			fullName = fallbackKey
+		}
+		return ensureStubUserByName(ctx, tx, fullName)
 	}
+
 	if first == "" {
 		first = "Unknown"
 	}
@@ -205,10 +219,10 @@ func ensureUserByEmail(ctx context.Context, tx pgx.Tx, email string, fullName *s
 		SELECT id FROM core.users WHERE email = $1 AND deleted_at IS NULL
 	`, email).Scan(&id)
 	if err != nil {
-		// User doesn't exist, insert
+		// User doesn't exist, insert with external_provider = 'local'
 		err = tx.QueryRow(ctx, `
-			INSERT INTO core.users (email, first_name, last_name)
-			VALUES ($1, $2, $3)
+			INSERT INTO core.users (email, first_name, last_name, status, external_provider)
+			VALUES ($1, $2, $3, 'active', 'local')
 			RETURNING id
 		`, email, first, last).Scan(&id)
 		return id, err
@@ -218,5 +232,41 @@ func ensureUserByEmail(ctx context.Context, tx pgx.Tx, email string, fullName *s
 		UPDATE core.users SET first_name = $2, last_name = $3, updated_at = NOW()
 		WHERE id = $1
 	`, id, first, last)
+	return id, err
+}
+
+func ensureStubUserByName(ctx context.Context, tx pgx.Tx, name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = "Unknown"
+	}
+
+	parts := strings.Fields(name)
+	first := parts[0]
+	last := ""
+	if len(parts) > 1 {
+		last = strings.Join(parts[1:], " ")
+	}
+
+	// Check if stub user already exists with this name
+	var id string
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM core.users 
+		WHERE external_provider = 'historical' 
+		  AND first_name = $1 
+		  AND COALESCE(last_name, '') = $2 
+		  AND deleted_at IS NULL
+	`, first, last).Scan(&id)
+	if err == nil {
+		// Stub user already exists
+		return id, nil
+	}
+
+	// Create new stub user
+	err = tx.QueryRow(ctx, `
+		INSERT INTO core.users (first_name, last_name, status, external_provider)
+		VALUES ($1, $2, 'stub', 'historical')
+		RETURNING id
+	`, first, last).Scan(&id)
 	return id, err
 }

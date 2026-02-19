@@ -1,9 +1,0 @@
-DROP INDEX IF EXISTS core.idx_users_active;
-DROP INDEX IF EXISTS core.idx_calcuttas_active;
-DROP INDEX IF EXISTS core.idx_entries_active;
-DROP INDEX IF EXISTS core.idx_entry_teams_active;
-DROP INDEX IF EXISTS core.idx_teams_active;
-DROP INDEX IF EXISTS core.idx_payouts_active;
-DROP INDEX IF EXISTS core.idx_calcutta_scoring_rules_active;
-DROP INDEX IF EXISTS core.idx_calcutta_invitations_active;
-DROP INDEX IF EXISTS core.idx_tournaments_active;

@@ -234,20 +234,22 @@ type CoreTournament struct {
 }
 
 type CoreUser struct {
-	ID               string
-	Email            *string
-	FirstName        string
-	LastName         string
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	DeletedAt        pgtype.Timestamptz
-	PasswordHash     *string
-	Status           string
-	InviteTokenHash  *string
-	InviteExpiresAt  pgtype.Timestamptz
-	InviteConsumedAt pgtype.Timestamptz
-	InvitedAt        pgtype.Timestamptz
-	LastInviteSentAt pgtype.Timestamptz
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
+	PasswordHash       *string
+	Status             string
+	InviteTokenHash    *string
+	InviteExpiresAt    pgtype.Timestamptz
+	InviteConsumedAt   pgtype.Timestamptz
+	InvitedAt          pgtype.Timestamptz
+	LastInviteSentAt   pgtype.Timestamptz
+	ExternalProvider   *string
+	ExternalProviderID *string
 }
 
 type DerivedGameOutcomeRun struct {
@@ -296,6 +298,48 @@ type DerivedPredictedGameOutcome struct {
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
 	RunID        pgtype.UUID
+}
+
+// Stores predicted expected points and round probabilities for each team (analogous to simulated_teams for simulations)
+type DerivedPredictedTeamValue struct {
+	ID                string
+	PredictionBatchID string
+	TournamentID      string
+	TeamID            string
+	// Expected tournament points for 100% ownership of this team
+	ExpectedPoints float64
+	VariancePoints *float64
+	StdPoints      *float64
+	// Probability of winning first game (First Four or Round of 64)
+	PRound1 *float64
+	// Probability of reaching Round of 32
+	PRound2 *float64
+	// Probability of reaching Sweet 16
+	PRound3 *float64
+	// Probability of reaching Elite 8
+	PRound4 *float64
+	// Probability of reaching Final Four
+	PRound5 *float64
+	// Probability of reaching Championship game
+	PRound6 *float64
+	// Probability of winning Championship
+	PRound7   *float64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+}
+
+// Stores metadata for prediction generation runs (analogous to simulated_tournaments for simulations)
+type DerivedPredictionBatch struct {
+	ID           string
+	TournamentID string
+	// Identifier for the probability model used (e.g., kenpom)
+	ProbabilitySourceKey string
+	// Parameters for the game outcome model (e.g., {"kind": "kenpom", "sigma": 10.0})
+	GameOutcomeSpecJson []byte
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	DeletedAt           pgtype.Timestamptz
 }
 
 type DerivedRunJob struct {

@@ -40,9 +40,7 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("server_init_failed: %w", err)
 	}
-	if err := server.bootstrapAdmin(context.Background()); err != nil {
-		return fmt.Errorf("bootstrap_admin_failed: %w", err)
-	}
+	// Admin bootstrap is now handled by the migrate command with -bootstrap flag
 
 	// Router
 	r := mux.NewRouter()
