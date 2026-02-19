@@ -9,16 +9,19 @@ export function AcceptInvitePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
-  const { user, acceptInvite } = useUser();
+  const { user, acceptInvite, logout } = useUser();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-    if (user) navigate('/calcuttas');
-  }, [navigate, user]);
+    if (user && token) {
+      setShowLogoutConfirm(true);
+    }
+  }, [user, token]);
 
   const passwordValid = password.length >= 8;
   const passwordsMatch = password === confirmPassword;
@@ -70,6 +73,44 @@ export function AcceptInvitePage() {
             <Alert variant="error">
               Invalid invite link. Please contact your pool admin for a new invite.
             </Alert>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showLogoutConfirm && user) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <div className="container mx-auto px-4 py-10">
+          <div className="mb-6">
+            <Link to="/" className="text-blue-600 hover:text-blue-800">
+              ← Back to Home
+            </Link>
+          </div>
+          <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-xl font-bold mb-4 text-center">You're Already Logged In</h2>
+            <p className="text-gray-600 mb-6 text-center">
+              You're currently logged in as <strong>{user.email}</strong>. To accept this invite for a different account, you'll need to log out first.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => navigate('/calcuttas')}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  logout();
+                  setShowLogoutConfirm(false);
+                }}
+              >
+                Log Out & Continue
+              </Button>
+            </div>
           </div>
         </div>
       </div>
