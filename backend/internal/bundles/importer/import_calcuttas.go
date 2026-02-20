@@ -64,8 +64,8 @@ func importCalcuttas(ctx context.Context, tx pgx.Tx, inDir string) (int, int, in
 
 		var calcuttaID string
 		err = tx.QueryRow(ctx, `
-			INSERT INTO core.calcuttas (tournament_id, owner_id, name)
-			VALUES ($1, $2, $3)
+			INSERT INTO core.calcuttas (tournament_id, owner_id, created_by, name)
+			VALUES ($1, $2, $2, $3)
 			RETURNING id
 		`, tournamentID, ownerID, b.Calcutta.Name).Scan(&calcuttaID)
 		if err != nil {
