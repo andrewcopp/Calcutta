@@ -1,26 +1,36 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { type ColumnDef } from '@tanstack/react-table';
-import { TournamentTeam } from '../types/calcutta';
-import { School } from '../types/school';
+import { ROUND_LABELS, ROUND_ORDER } from '../types/bracket';
 import { tournamentService } from '../services/tournamentService';
-import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
+import { useBracket } from '../hooks/useBracket';
+import { BracketGameCard } from '../components/BracketGameCard';
 import { Alert } from '../components/ui/Alert';
-import { Badge } from '../components/ui/Badge';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { DataTable } from '../components/ui/DataTable';
+import { ErrorState } from '../components/ui/ErrorState';
+import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
-import { formatDate } from '../utils/format';
-import { TeamStatsCards } from './Tournament/TeamStatsCards';
+import { formatDate, toDatetimeLocalValue } from '../utils/format';
 import { ModeratorsSection } from './Tournament/ModeratorsSection';
 
 export const TournamentViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const [editingStartTime, setEditingStartTime] = useState(false);
+  const [startTimeValue, setStartTimeValue] = useState('');
+
+  const startTimeMutation = useMutation({
+    mutationFn: (startingAt: string) =>
+      tournamentService.updateTournament(id!, { startingAt: new Date(startingAt).toISOString() }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(id) });
+      setEditingStartTime(false);
+    },
+  });
 
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
@@ -28,45 +38,17 @@ export const TournamentViewPage: React.FC = () => {
     queryFn: () => tournamentService.getTournament(id!),
   });
 
-  const teamsQuery = useQuery({
-    queryKey: queryKeys.tournaments.teams(id),
-    enabled: Boolean(id),
-    queryFn: () => tournamentService.getTournamentTeams(id!),
-  });
-
-  const schoolsQuery = useQuery({
-    queryKey: queryKeys.schools.all(),
-    queryFn: () => schoolService.getSchools(),
-  });
-
-  const schools = useMemo(() => {
-    const schoolsData = schoolsQuery.data || [];
-    return schoolsData.reduce((acc, school) => {
-      acc[school.id] = school;
-      return acc;
-    }, {} as Record<string, School>);
-  }, [schoolsQuery.data]);
-
-  const teamColumns = useMemo<ColumnDef<TournamentTeam, unknown>[]>(() => [
-    { accessorKey: 'seed', header: 'Seed' },
-    {
-      id: 'school',
-      header: 'School',
-      accessorFn: (row) => schools[row.schoolId]?.name || 'Unknown School',
-    },
-    { accessorKey: 'byes', header: 'Byes' },
-    { accessorKey: 'wins', header: 'Wins' },
-    {
-      id: 'status',
-      header: 'Status',
-      accessorFn: (row) => (row.eliminated ? 1 : 0),
-      cell: ({ row }) => row.original.eliminated ? (
-        <Badge variant="destructive">Eliminated</Badge>
-      ) : (
-        <Badge variant="success">Active</Badge>
-      ),
-    },
-  ], [schools]);
+  const {
+    validationErrors,
+    validationLoading,
+    bracketLoading,
+    gamesByRound,
+    error: bracketError,
+    actionLoading,
+    handleSelectWinner,
+    handleUnselectWinner,
+    loadData,
+  } = useBracket(id);
 
   if (!id) {
     return (
@@ -76,7 +58,7 @@ export const TournamentViewPage: React.FC = () => {
     );
   }
 
-  if (tournamentQuery.isLoading || teamsQuery.isLoading || schoolsQuery.isLoading) {
+  if (tournamentQuery.isLoading || validationLoading) {
     return (
       <PageContainer>
         <LoadingState label="Loading tournament..." />
@@ -84,43 +66,15 @@ export const TournamentViewPage: React.FC = () => {
     );
   }
 
-  if (tournamentQuery.isError || teamsQuery.isError || schoolsQuery.isError) {
-    const tournamentMessage = tournamentQuery.error instanceof Error ? tournamentQuery.error.message : 'Failed to load tournament';
-    const teamsMessage = teamsQuery.error instanceof Error ? teamsQuery.error.message : 'Failed to load teams';
-    const schoolsMessage = schoolsQuery.error instanceof Error ? schoolsQuery.error.message : 'Failed to load schools';
-
+  if (tournamentQuery.isError) {
     return (
       <PageContainer>
-        <Alert variant="error">
-          <div className="font-semibold mb-1">Failed to load tournament data</div>
-          {tournamentQuery.isError ? <div className="text-sm">Tournament: {tournamentMessage}</div> : null}
-          {teamsQuery.isError ? <div className="text-sm">Teams: {teamsMessage}</div> : null}
-          {schoolsQuery.isError ? <div className="text-sm">Schools: {schoolsMessage}</div> : null}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {tournamentQuery.isError ? (
-              <Button size="sm" onClick={() => tournamentQuery.refetch()}>
-                Retry tournament
-              </Button>
-            ) : null}
-            {teamsQuery.isError ? (
-              <Button size="sm" variant="secondary" onClick={() => teamsQuery.refetch()}>
-                Retry teams
-              </Button>
-            ) : null}
-            {schoolsQuery.isError ? (
-              <Button size="sm" variant="secondary" onClick={() => schoolsQuery.refetch()}>
-                Retry schools
-              </Button>
-            ) : null}
-          </div>
-        </Alert>
+        <ErrorState error={tournamentQuery.error} onRetry={() => tournamentQuery.refetch()} />
       </PageContainer>
     );
   }
 
   const tournament = tournamentQuery.data || null;
-  const teams: TournamentTeam[] = teamsQuery.data || [];
 
   if (!tournament) {
     return (
@@ -140,45 +94,134 @@ export const TournamentViewPage: React.FC = () => {
       />
       <PageHeader
         title={tournament.name}
-        subtitle={`${tournament.rounds} rounds • Created ${formatDate(tournament.created)}`}
+        subtitle={`${tournament.rounds} rounds • ${tournament.startingAt ? `Starts ${formatDate(tournament.startingAt, true)}` : 'No start time set'}`}
         actions={
           <div className="flex gap-2">
-            <Link to={`/admin/tournaments/${id}/bracket`}>
-              <Button variant="outline">Manage Bracket</Button>
-            </Link>
-            <Link to={`/admin/tournaments/${id}/edit`}>
-              <Button variant="secondary">Edit Tournament</Button>
-            </Link>
             <Link to={`/admin/tournaments/${id}/teams/setup`}>
-              <Button variant="secondary">Setup Teams</Button>
+              <Button variant="secondary">Edit Field</Button>
             </Link>
-            <Link to={`/admin/tournaments/${id}/teams/add`}>
-              <Button>Add Teams</Button>
-            </Link>
+            <Button variant="outline" onClick={loadData} disabled={actionLoading}>
+              Refresh
+            </Button>
           </div>
         }
       />
 
-      {teams.length > 0 && <TeamStatsCards teams={teams} />}
-
-      {teams.length === 0 ? (
-        <Card className="text-center">
-          <p className="text-gray-500 mb-4">No teams have been added to this tournament yet.</p>
-          <Link to={`/admin/tournaments/${id}/teams/add`}>
-            <Button>Add Teams</Button>
-          </Link>
-        </Card>
-      ) : (
-        <Card className="p-0 overflow-hidden">
-          <DataTable
-            columns={teamColumns}
-            data={teams}
-            initialSorting={[{ id: 'seed', desc: false }]}
-          />
-        </Card>
-      )}
+      <Card>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-700">Start Time</span>
+          {editingStartTime ? (
+            <>
+              <Input
+                type="datetime-local"
+                value={startTimeValue}
+                onChange={(e) => setStartTimeValue(e.target.value)}
+                className="w-auto"
+              />
+              <Button
+                size="sm"
+                disabled={!startTimeValue || startTimeMutation.isPending}
+                loading={startTimeMutation.isPending}
+                onClick={() => startTimeMutation.mutate(startTimeValue)}
+              >
+                Save
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditingStartTime(false)}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-gray-600">
+                {tournament.startingAt ? formatDate(tournament.startingAt, true) : 'Not set'}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setStartTimeValue(tournament.startingAt ? toDatetimeLocalValue(tournament.startingAt) : '');
+                  setEditingStartTime(true);
+                }}
+              >
+                {tournament.startingAt ? 'Change' : 'Set'}
+              </Button>
+            </>
+          )}
+        </div>
+        {startTimeMutation.isError && (
+          <Alert variant="error" className="mt-2">
+            {startTimeMutation.error instanceof Error ? startTimeMutation.error.message : 'Failed to update start time'}
+          </Alert>
+        )}
+      </Card>
 
       <ModeratorsSection tournamentId={id} />
+
+      {validationErrors.length > 0 && (
+        <Alert variant="warning">
+          <div className="font-semibold mb-1">Bracket setup incomplete</div>
+          <ul className="list-disc list-inside text-sm space-y-1">
+            {validationErrors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+          <div className="mt-2">
+            <Link to={`/admin/tournaments/${id}/teams/setup`}>
+              <Button size="sm" variant="outline">Setup Teams</Button>
+            </Link>
+          </div>
+        </Alert>
+      )}
+
+      {bracketError && (
+        <Alert variant="error">
+          {bracketError}
+        </Alert>
+      )}
+
+      {bracketLoading && <LoadingState label="Loading bracket..." />}
+
+      {actionLoading && (
+        <Alert variant="info">
+          <LoadingState layout="inline" label="Updating bracket..." />
+        </Alert>
+      )}
+
+      {gamesByRound && (
+        <div className="space-y-8">
+          {ROUND_ORDER.map((round) => {
+            const games = gamesByRound[round];
+            if (games.length === 0) return null;
+
+            return (
+              <Card key={round} className="bg-gray-50">
+                <h2 className="text-2xl font-bold mb-4 text-gray-800">
+                  {ROUND_LABELS[round]}
+                  <span className="ml-3 text-sm font-normal text-gray-500">
+                    ({games.length} {games.length === 1 ? 'game' : 'games'})
+                  </span>
+                </h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {games.map((game) => (
+                    <BracketGameCard
+                      key={game.gameId}
+                      game={game}
+                      onSelectWinner={handleSelectWinner}
+                      onUnselectWinner={handleUnselectWinner}
+                      isLoading={actionLoading}
+                    />
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </PageContainer>
   );
 };

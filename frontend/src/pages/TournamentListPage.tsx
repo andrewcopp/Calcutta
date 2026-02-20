@@ -103,7 +103,7 @@ export const TournamentListPage: React.FC = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        navigate(`/admin/tournaments/${tournament.id}/edit`);
+                        navigate(`/admin/tournaments/${tournament.id}/teams/setup`);
                       }}
                     >
                       Edit

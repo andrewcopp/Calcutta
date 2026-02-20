@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
-import type { Tournament } from '../types/calcutta';
+import type { Tournament, TournamentTeam } from '../types/calcutta';
 import type { School } from '../types/school';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -48,23 +48,61 @@ function getRegionList(tournament: Tournament): string[] {
   ];
 }
 
+function createRegionsFromTeams(
+  regionNames: string[],
+  teams: TournamentTeam[],
+  schools: School[]
+): Record<string, RegionState> {
+  const regions = createInitialRegions(regionNames);
+  const schoolMap = new Map(schools.map((s) => [s.id, s.name]));
+
+  for (const team of teams) {
+    const regionState = regions[team.region];
+    if (!regionState) continue;
+
+    const slot: TeamSlot = {
+      schoolId: team.schoolId,
+      searchText: schoolMap.get(team.schoolId) || '',
+    };
+
+    const slots = regionState[team.seed];
+    if (!slots) continue;
+
+    // First slot empty — fill it
+    if (!slots[0].schoolId) {
+      slots[0] = slot;
+    } else {
+      // Play-in: add a second slot
+      slots.push(slot);
+    }
+  }
+
+  return regions;
+}
+
 interface TournamentSetupTeamsFormProps {
   tournament: Tournament;
   schools: School[];
   schoolOptions: { id: string; label: string }[];
+  initialTeams?: TournamentTeam[];
 }
 
 const TournamentSetupTeamsForm: React.FC<TournamentSetupTeamsFormProps> = ({
   tournament,
   schools,
   schoolOptions,
+  initialTeams,
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const regionList = useMemo(() => getRegionList(tournament), [tournament]);
 
-  const [regions, setRegions] = useState(() => createInitialRegions(regionList));
+  const [regions, setRegions] = useState(() =>
+    initialTeams && initialTeams.length > 0
+      ? createRegionsFromTeams(regionList, initialTeams, schools)
+      : createInitialRegions(regionList)
+  );
   const [activeTab, setActiveTab] = useState(() => regionList[0]);
   const [errors, setErrors] = useState<string[]>([]);
   const [flashingSlots, setFlashingSlots] = useState<Record<string, boolean>>({});
@@ -323,6 +361,12 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     queryFn: () => schoolService.getSchools(),
   });
 
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.tournaments.teams(id),
+    enabled: Boolean(id),
+    queryFn: () => tournamentService.getTournamentTeams(id!),
+  });
+
   if (!id) {
     return (
       <PageContainer>
@@ -331,7 +375,7 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     );
   }
 
-  if (tournamentQuery.isLoading || schoolsQuery.isLoading) {
+  if (tournamentQuery.isLoading || schoolsQuery.isLoading || teamsQuery.isLoading) {
     return (
       <PageContainer>
         <LoadingState label="Loading..." />
@@ -350,6 +394,9 @@ export const TournamentSetupTeamsPage: React.FC = () => {
 
   const schools = schoolsQuery.data || [];
   const schoolOptions = schools.map((s) => ({ id: s.id, label: s.name }));
+  const existingTeams = teamsQuery.data || [];
+  const isEditing = existingTeams.length > 0;
+  const pageTitle = isEditing ? 'Edit Field' : 'Setup Teams';
 
   return (
     <PageContainer>
@@ -357,11 +404,11 @@ export const TournamentSetupTeamsPage: React.FC = () => {
         items={[
           { label: 'Tournaments', href: '/admin/tournaments' },
           { label: tournament.name, href: `/admin/tournaments/${id}` },
-          { label: 'Setup Teams' },
+          { label: pageTitle },
         ]}
       />
       <PageHeader
-        title="Setup Teams"
+        title={pageTitle}
         subtitle={tournament.name}
         actions={
           <Button variant="outline" onClick={() => navigate(`/admin/tournaments/${id}`)}>
@@ -374,6 +421,7 @@ export const TournamentSetupTeamsPage: React.FC = () => {
         tournament={tournament}
         schools={schools}
         schoolOptions={schoolOptions}
+        initialTeams={existingTeams}
       />
     </PageContainer>
   );

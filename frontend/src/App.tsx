@@ -7,10 +7,7 @@ import { EntryTeamsPage } from './pages/EntryTeamsPage';
 import { BiddingPage } from './pages/BiddingPage';
 import { TournamentListPage } from './pages/TournamentListPage';
 import { TournamentViewPage } from './pages/TournamentViewPage';
-import { TournamentEditPage } from './pages/TournamentEditPage';
 import { TournamentCreatePage } from './pages/TournamentCreatePage';
-import { TournamentAddTeamsPage } from './pages/TournamentAddTeamsPage';
-import { TournamentBracketPage } from './pages/TournamentBracketPage';
 import { TournamentSetupTeamsPage } from './pages/TournamentSetupTeamsPage';
 import { AdminPage } from './pages/AdminPage';
 import { AdminBundlesPage } from './pages/AdminBundlesPage';
@@ -67,10 +64,7 @@ const AppLayout: React.FC = () => {
         <Route path="/admin/tournaments" element={<ProtectedRoute><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/tournaments/create" element={<ProtectedRoute><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/tournaments/:id" element={<ProtectedRoute><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/edit" element={<ProtectedRoute><RouteErrorBoundary><TournamentEditPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/teams/add" element={<ProtectedRoute><RouteErrorBoundary><TournamentAddTeamsPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/tournaments/:id/teams/setup" element={<ProtectedRoute><RouteErrorBoundary><TournamentSetupTeamsPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/bracket" element={<ProtectedRoute><RouteErrorBoundary><TournamentBracketPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId" element={<RouteErrorBoundary><CalcuttaEntriesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/:calcuttaId/settings" element={<ProtectedRoute><RouteErrorBoundary><CalcuttaSettingsPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId/teams" element={<RouteErrorBoundary><CalcuttaTeamsPage /></RouteErrorBoundary>} />
