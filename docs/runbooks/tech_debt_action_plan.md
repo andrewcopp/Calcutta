@@ -15,32 +15,19 @@ Prioritized checklist of PR-sized work items surfaced by backend, frontend, data
 ## P0 — Bugs and Runtime Crashes
 
 ### 1. Fix variable shadowing bug in calcutta evaluations batch ID
-- [ ] **`backend/internal/app/calcutta_evaluations/service.go:83`**
-- `:=` shadows the outer `batchID` declared at line 77, causing an empty string to propagate downstream
-- **Fix:** Change `batchID, ok, err := s.getLatestTournamentSimulationBatchID(...)` to `batchID, ok, err = ...` (plain `=` assignment)
+- [x] **Resolved** — `service.go` was restructured; batchID logic moved to `run_resolver.go` with no shadowing
 
 ### 2. Fix broken `minlp` strategy imports in Python
-- [ ] **`data-science/moneyball/models/portfolio_strategies.py:637`**
-- [ ] **`data-science/moneyball/models/recommended_entry_bids_db.py:51`**
-- Both files import `optimize_portfolio_gekko` from `moneyball.lab.portfolio_research`, which was removed on 2026-02-13
-- Calling `allocate_minlp()` or using `strategy="minlp"` will crash with `ImportError`
-- **Fix:** Remove the `allocate_minlp` function and the `minlp` branch entirely, or re-implement using a supported optimizer. Guard the pipeline so this code path cannot be reached.
+- [x] **Resolved** — Both `portfolio_strategies.py` and `recommended_entry_bids_db.py` were deleted in cleanup
 
 ### 3. Fix hardcoded year `2025` in predicted game outcomes
-- [ ] **`data-science/moneyball/models/predicted_game_outcomes.py:238-239`**
-- Team keys are built as `f"ncaa-tournament-2025:{slug}"` — will produce wrong keys for 2026 and beyond
-- **Fix:** Accept `year` as a parameter (or derive from tournament data) and interpolate it into the key template
+- [x] **Resolved** — `predicted_game_outcomes.py` was deleted in cleanup
 
 ### 4. Fix non-existent worker flags in local-prod compose
-- [ ] **`docker-compose.local-prod.yml:40-46`**
-- References flags `-entry-eval-worker`, `-strategy-generation-worker`, `-suite-eval-worker`
-- The worker binary (`backend/cmd/workers/main.go`) only supports: `bundle-import-worker`, `market-share-worker`, `game-outcome-worker`, `calcutta-eval-worker`, `simulation-worker`, `lab-pipeline-worker`
-- **Fix:** Replace the three dead flags with the correct flag names from the worker binary
+- [x] **Resolved** — `docker-compose.local-prod.yml` was deleted in cleanup
 
 ### 5. Fix setState during render in CalcuttaSettingsPage
-- [ ] **`frontend/src/pages/CalcuttaSettingsPage.tsx:39-47, 60-62`**
-- Direct `setForm()` and `setPayoutRows()` calls during the render phase cause infinite re-render loops in React 18 strict mode
-- **Fix:** Move both state initializations into `useEffect` hooks or derive the values with `useMemo`
+- [x] **Resolved** — Both state initializations now use `useEffect` hooks with proper dependency arrays
 
 ---
 

@@ -72,6 +72,8 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		CreateInvitation:          cHandler.HandleCreateInvitation,
 		ListInvitations:           cHandler.HandleListInvitations,
 		AcceptInvitation:          cHandler.HandleAcceptInvitation,
+		RevokeInvitation:          cHandler.HandleRevokeInvitation,
+		ListMyInvitations:         cHandler.HandleListMyInvitations,
 		ListEntryTeams:            cHandler.HandleListEntryTeams,
 		ListEntryPortfolios:       cHandler.HandleListEntryPortfolios,
 		UpdateEntry:               idempotencyMiddleware(s.idempotencyRepo, cHandler.HandleUpdateEntry),

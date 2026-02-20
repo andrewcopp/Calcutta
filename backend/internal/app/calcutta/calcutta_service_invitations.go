@@ -21,3 +21,15 @@ func (s *Service) AcceptInvitation(ctx context.Context, id string) error {
 func (s *Service) GetInvitationByCalcuttaAndUser(ctx context.Context, calcuttaID, userID string) (*models.CalcuttaInvitation, error) {
 	return s.ports.InvitationReader.GetInvitationByCalcuttaAndUser(ctx, calcuttaID, userID)
 }
+
+func (s *Service) GetPendingInvitationByCalcuttaAndUser(ctx context.Context, calcuttaID, userID string) (*models.CalcuttaInvitation, error) {
+	return s.ports.InvitationReader.GetPendingInvitationByCalcuttaAndUser(ctx, calcuttaID, userID)
+}
+
+func (s *Service) RevokeInvitation(ctx context.Context, id string) error {
+	return s.ports.InvitationWriter.RevokeInvitation(ctx, id)
+}
+
+func (s *Service) ListPendingInvitationsByUserID(ctx context.Context, userID string) ([]*models.CalcuttaInvitation, error) {
+	return s.ports.InvitationReader.ListPendingInvitationsByUserID(ctx, userID)
+}

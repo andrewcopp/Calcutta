@@ -84,6 +84,33 @@ func (r *CalcuttaInvitationRepository) GetInvitationByCalcuttaAndUser(ctx contex
 	return inv, nil
 }
 
+func (r *CalcuttaInvitationRepository) GetPendingInvitationByCalcuttaAndUser(ctx context.Context, calcuttaID, userID string) (*models.CalcuttaInvitation, error) {
+	row, err := r.q.GetPendingCalcuttaInvitationByCalcuttaAndUser(ctx, sqlc.GetPendingCalcuttaInvitationByCalcuttaAndUserParams{
+		CalcuttaID: calcuttaID,
+		UserID:     userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, &apperrors.NotFoundError{Resource: "invitation", ID: calcuttaID + "/" + userID}
+		}
+		return nil, err
+	}
+	inv := &models.CalcuttaInvitation{
+		ID:         row.ID,
+		CalcuttaID: row.CalcuttaID,
+		UserID:     row.UserID,
+		InvitedBy:  row.InvitedBy,
+		Status:     row.Status,
+		Created:    row.CreatedAt.Time,
+		Updated:    row.UpdatedAt.Time,
+	}
+	if row.RevokedAt.Valid {
+		t := row.RevokedAt.Time
+		inv.RevokedAt = &t
+	}
+	return inv, nil
+}
+
 func (r *CalcuttaInvitationRepository) AcceptInvitation(ctx context.Context, id string) error {
 	affected, err := r.q.AcceptCalcuttaInvitation(ctx, id)
 	if err != nil {

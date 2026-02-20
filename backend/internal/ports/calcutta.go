@@ -55,11 +55,14 @@ type PayoutWriter interface {
 type CalcuttaInvitationReader interface {
 	ListInvitations(ctx context.Context, calcuttaID string) ([]*models.CalcuttaInvitation, error)
 	GetInvitationByCalcuttaAndUser(ctx context.Context, calcuttaID, userID string) (*models.CalcuttaInvitation, error)
+	GetPendingInvitationByCalcuttaAndUser(ctx context.Context, calcuttaID, userID string) (*models.CalcuttaInvitation, error)
+	ListPendingInvitationsByUserID(ctx context.Context, userID string) ([]*models.CalcuttaInvitation, error)
 }
 
 type CalcuttaInvitationWriter interface {
 	CreateInvitation(ctx context.Context, invitation *models.CalcuttaInvitation) error
 	AcceptInvitation(ctx context.Context, id string) error
+	RevokeInvitation(ctx context.Context, id string) error
 }
 
 type TournamentTeamReader interface {

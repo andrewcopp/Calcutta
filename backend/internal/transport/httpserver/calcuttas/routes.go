@@ -18,6 +18,8 @@ type Handlers struct {
 	CreateInvitation          http.HandlerFunc
 	ListInvitations           http.HandlerFunc
 	AcceptInvitation          http.HandlerFunc
+	RevokeInvitation          http.HandlerFunc
+	ListMyInvitations         http.HandlerFunc
 	ListEntryTeams            http.HandlerFunc
 	ListEntryPortfolios       http.HandlerFunc
 	UpdateEntry               http.HandlerFunc
@@ -40,6 +42,8 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations", h.CreateInvitation).Methods("POST")
 	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations", h.ListInvitations).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations/{invitationId:"+uuidPattern+"}/accept", h.AcceptInvitation).Methods("POST")
+	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/invitations/{invitationId:"+uuidPattern+"}/revoke", h.RevokeInvitation).Methods("POST")
+	r.HandleFunc("/api/me/invitations", h.ListMyInvitations).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/reinvite", h.Reinvite).Methods("POST")
 	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/payouts", h.ListPayouts).Methods("GET")
 	r.HandleFunc("/api/calcuttas/{id:"+uuidPattern+"}/payouts", h.ReplacePayouts).Methods("PUT")

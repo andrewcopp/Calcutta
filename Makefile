@@ -4,7 +4,7 @@ ENV_DOCKER = set -a; [ -f .env ] && . ./.env; set +a;
 DOCKER_PROJECT ?= calcutta
 DC = docker compose -p $(DOCKER_PROJECT)
 
-.PHONY: env-init bootstrap dev up-d logs ps stats
+.PHONY: env-init bootstrap bootstrap-admin dev up-d logs ps stats
 .PHONY: up down reset ops-migrate backend-test sqlc-generate
 .PHONY: db-shell db-query db query query-file query-csv
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
@@ -24,6 +24,9 @@ env-init:
 dev: up-d ops-migrate
 
 bootstrap: env-init dev
+
+bootstrap-admin:
+	$(ENV_DOCKER) $(DC) --profile ops run --rm migrate -bootstrap
 
 logs:
 	$(ENV_DOCKER) $(DC) logs -f

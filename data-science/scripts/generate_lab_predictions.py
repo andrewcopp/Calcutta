@@ -164,10 +164,10 @@ def create_predictions_for_calcutta(
         ))
 
     if skipped_slugs:
-        logger.warning(
-            "Skipped %d teams with no ID mapping: %s",
-            len(skipped_slugs),
-            skipped_slugs,
+        raise ValueError(
+            f"Slug mismatch: {len(skipped_slugs)} teams in model output "
+            f"have no team_id mapping: {skipped_slugs}. "
+            "Check school slug consistency between model training data and core.schools."
         )
 
     if not predictions:

@@ -54,9 +54,56 @@ When creating new migrations:
 
 If you need to create multiple migrations quickly, you can generate a base timestamp and then increment it manually for subsequent migrations (e.g. `...70000`, `...70001`, `...70002`).
 
+## Baseline Migration
+
+The baseline migration (`20260220000000_baseline.up.sql`) is a `pg_dump` snapshot that replaces all prior incremental migrations. It allows new environments to bootstrap the schema from a single file instead of replaying hundreds of individual migrations.
+
+### How the baseline was generated
+
+```bash
+# Against a fully-migrated local database:
+docker exec $(docker compose -p calcutta ps -q db) \
+  pg_dump -U "$DB_USER" -d "$DB_NAME" \
+    --schema-only \
+    --no-owner \
+    --no-privileges \
+    --no-comments \
+    --no-tablespaces \
+  > backend/migrations/schema/20260220000000_baseline.up.sql
+```
+
+Key flags:
+- `--schema-only` — DDL only, no data (data seeding is handled by `-bootstrap`)
+- `--no-owner` / `--no-privileges` — portable across environments
+- `--no-comments` / `--no-tablespaces` — reduce noise
+
+### When to regenerate
+
+Regenerate the baseline after a **migration squash** — when you delete old incremental migrations and want a fresh starting point. This should be rare (once or twice a year).
+
+### How to verify consistency
+
+After regenerating, confirm the baseline produces the same schema as the incremental migrations:
+
+```bash
+# 1. Start fresh containers
+make reset && make up-d
+
+# 2. Run migrations (applies baseline + any incrementals after it)
+make ops-migrate
+
+# 3. Dump the resulting schema
+docker exec $(docker compose -p calcutta ps -q db) \
+  pg_dump -U "$DB_USER" -d "$DB_NAME" --schema-only --no-owner --no-privileges \
+  > /tmp/after_migrate.sql
+
+# 4. Compare against a known-good database (e.g., staging)
+diff <(sort /tmp/after_migrate.sql) <(sort /tmp/staging_schema.sql)
+```
+
 ## Best Practices
 
 - Keep migrations small and focused
 - Make sure down migrations properly clean up what up migrations create
 - Test both up and down migrations before committing
-- Never modify existing migration files after they've been applied to a database 
+- Never modify existing migration files after they've been applied to a database
