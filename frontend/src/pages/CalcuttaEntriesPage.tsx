@@ -197,11 +197,6 @@ export function CalcuttaEntriesPage() {
                       <p className={`text-2xl font-bold ${pointsClass}`}>
                         {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
                       </p>
-                      {index > 0 && entries[0].totalPoints > 0 && (
-                        <p className="text-xs text-gray-500">
-                          {((entry.totalPoints || 0) - (entries[0].totalPoints || 0)).toFixed(2)} pts
-                        </p>
-                      )}
                     </div>
                   </div>
                 </Link>
