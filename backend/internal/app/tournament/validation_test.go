@@ -211,8 +211,8 @@ func TestThatBracketSetupReturnsMultipleErrors(t *testing.T) {
 	}
 }
 
-func TestThatBracketSetupReturnsErrorForEmptyRegion(t *testing.T) {
-	// GIVEN a bracket with no East teams (all moved to a non-standard region)
+func TestThatBracketSetupAcceptsCustomRegionNames(t *testing.T) {
+	// GIVEN a bracket with East renamed to North (still 4 distinct regions)
 	teams := createValidTeams(nil)
 	for i, team := range teams {
 		if team.Region == "East" {
@@ -223,9 +223,41 @@ func TestThatBracketSetupReturnsErrorForEmptyRegion(t *testing.T) {
 	// WHEN validating
 	errs := ValidateBracketSetup(teams)
 
-	// THEN an error about East region is returned
-	if !containsError(errs, "East") {
-		t.Errorf("expected East region error, got %v", errs)
+	// THEN no errors are returned
+	if len(errs) != 0 {
+		t.Errorf("expected no errors with custom region names, got %v", errs)
+	}
+}
+
+func TestThatBracketSetupReturnsErrorForWrongRegionCount(t *testing.T) {
+	// GIVEN a bracket where East and West are merged into one region
+	teams := createValidTeams(nil)
+	for i, team := range teams {
+		if team.Region == "West" {
+			teams[i].Region = "East"
+		}
+	}
+
+	// WHEN validating
+	errs := ValidateBracketSetup(teams)
+
+	// THEN an error about region count is returned
+	if !containsError(errs, "must have exactly 4 regions") {
+		t.Errorf("expected region count error, got %v", errs)
+	}
+}
+
+func TestThatBracketSetupReturnsErrorForEmptyRegionName(t *testing.T) {
+	// GIVEN a bracket with an empty region name
+	teams := createValidTeams(nil)
+	teams[0].Region = ""
+
+	// WHEN validating
+	errs := ValidateBracketSetup(teams)
+
+	// THEN an error about empty region is returned
+	if !containsError(errs, "has empty region") {
+		t.Errorf("expected empty region error, got %v", errs)
 	}
 }
 

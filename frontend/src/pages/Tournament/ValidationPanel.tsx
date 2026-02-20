@@ -1,8 +1,6 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
 
-const REGIONS = ['East', 'West', 'South', 'Midwest'] as const;
-
 interface ValidationStats {
   total: number;
   playIns: number;
@@ -12,9 +10,10 @@ interface ValidationStats {
 
 interface ValidationPanelProps {
   stats: ValidationStats;
+  regionNames: string[];
 }
 
-export const ValidationPanel: React.FC<ValidationPanelProps> = ({ stats }) => {
+export const ValidationPanel: React.FC<ValidationPanelProps> = ({ stats, regionNames }) => {
   return (
     <Card className="mb-6">
       <div className="flex flex-wrap gap-6 text-sm">
@@ -24,7 +23,7 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({ stats }) => {
             {stats.total}/68
           </span>
         </div>
-        {REGIONS.map((region) => {
+        {regionNames.map((region) => {
           const count = stats.perRegion[region] || 0;
           return (
             <div key={region}>

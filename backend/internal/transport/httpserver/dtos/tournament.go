@@ -33,24 +33,32 @@ func (r *CreateTournamentRequest) DerivedName() string {
 }
 
 type TournamentResponse struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	Rounds     int        `json:"rounds"`
-	Winner     string     `json:"winner,omitempty"`
-	StartingAt *time.Time `json:"startingAt,omitempty"`
-	Created    time.Time  `json:"created"`
-	Updated    time.Time  `json:"updated"`
+	ID                   string     `json:"id"`
+	Name                 string     `json:"name"`
+	Rounds               int        `json:"rounds"`
+	Winner               string     `json:"winner,omitempty"`
+	FinalFourTopLeft     string     `json:"finalFourTopLeft,omitempty"`
+	FinalFourBottomLeft  string     `json:"finalFourBottomLeft,omitempty"`
+	FinalFourTopRight    string     `json:"finalFourTopRight,omitempty"`
+	FinalFourBottomRight string     `json:"finalFourBottomRight,omitempty"`
+	StartingAt           *time.Time `json:"startingAt,omitempty"`
+	Created              time.Time  `json:"created"`
+	Updated              time.Time  `json:"updated"`
 }
 
 func NewTournamentResponse(t *models.Tournament, winner string) *TournamentResponse {
 	return &TournamentResponse{
-		ID:         t.ID,
-		Name:       t.Name,
-		Rounds:     t.Rounds,
-		Winner:     winner,
-		StartingAt: t.StartingAt,
-		Created:    t.Created,
-		Updated:    t.Updated,
+		ID:                   t.ID,
+		Name:                 t.Name,
+		Rounds:               t.Rounds,
+		Winner:               winner,
+		FinalFourTopLeft:     t.FinalFourTopLeft,
+		FinalFourBottomLeft:  t.FinalFourBottomLeft,
+		FinalFourTopRight:    t.FinalFourTopRight,
+		FinalFourBottomRight: t.FinalFourBottomRight,
+		StartingAt:           t.StartingAt,
+		Created:              t.Created,
+		Updated:              t.Updated,
 	}
 }
 
@@ -76,14 +84,18 @@ func (nt *NullableTime) UnmarshalJSON(b []byte) error {
 }
 
 type UpdateTournamentRequest struct {
-	StartingAt NullableTime `json:"startingAt"`
+	StartingAt           NullableTime `json:"startingAt"`
+	FinalFourTopLeft     *string      `json:"finalFourTopLeft,omitempty"`
+	FinalFourBottomLeft  *string      `json:"finalFourBottomLeft,omitempty"`
+	FinalFourTopRight    *string      `json:"finalFourTopRight,omitempty"`
+	FinalFourBottomRight *string      `json:"finalFourBottomRight,omitempty"`
 }
 
 func (r *UpdateTournamentRequest) Validate() error {
-	if !r.StartingAt.Present {
-		return ErrFieldRequired("startingAt")
+	if r.StartingAt.Present || r.FinalFourTopLeft != nil || r.FinalFourBottomLeft != nil || r.FinalFourTopRight != nil || r.FinalFourBottomRight != nil {
+		return nil
 	}
-	return nil
+	return ErrFieldRequired("at least one field")
 }
 
 type CreateTournamentTeamRequest struct {

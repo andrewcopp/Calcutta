@@ -27,6 +27,19 @@ export const tournamentService = {
     return apiClient.post<TournamentTeam>(`/tournaments/${tournamentId}/teams`, { schoolId, seed, region });
   },
 
+  async updateTournament(
+    id: string,
+    updates: {
+      startingAt?: string | null;
+      finalFourTopLeft?: string;
+      finalFourBottomLeft?: string;
+      finalFourTopRight?: string;
+      finalFourBottomRight?: string;
+    }
+  ): Promise<Tournament> {
+    return apiClient.patch<Tournament>(`/tournaments/${id}`, updates);
+  },
+
   async replaceTeams(
     tournamentId: string,
     teams: { schoolId: string; seed: number; region: string }[]

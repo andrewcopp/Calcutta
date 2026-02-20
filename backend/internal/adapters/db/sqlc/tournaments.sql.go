@@ -252,6 +252,40 @@ func (q *Queries) ListTournaments(ctx context.Context) ([]ListTournamentsRow, er
 	return items, nil
 }
 
+const updateCoreTournamentFinalFour = `-- name: UpdateCoreTournamentFinalFour :execrows
+UPDATE core.tournaments
+SET final_four_top_left = $1,
+    final_four_bottom_left = $2,
+    final_four_top_right = $3,
+    final_four_bottom_right = $4,
+    updated_at = $5
+WHERE id = $6 AND deleted_at IS NULL
+`
+
+type UpdateCoreTournamentFinalFourParams struct {
+	FinalFourTopLeft     *string
+	FinalFourBottomLeft  *string
+	FinalFourTopRight    *string
+	FinalFourBottomRight *string
+	UpdatedAt            pgtype.Timestamptz
+	ID                   string
+}
+
+func (q *Queries) UpdateCoreTournamentFinalFour(ctx context.Context, arg UpdateCoreTournamentFinalFourParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateCoreTournamentFinalFour,
+		arg.FinalFourTopLeft,
+		arg.FinalFourBottomLeft,
+		arg.FinalFourTopRight,
+		arg.FinalFourBottomRight,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateCoreTournamentStartingAt = `-- name: UpdateCoreTournamentStartingAt :execrows
 UPDATE core.tournaments
 SET starting_at = $1,

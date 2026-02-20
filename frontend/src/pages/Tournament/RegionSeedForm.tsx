@@ -9,17 +9,21 @@ interface TeamSlot {
   searchText: string;
 }
 
-type Region = 'East' | 'West' | 'South' | 'Midwest';
-
 interface RegionSeedFormProps {
-  region: Region;
+  region: string;
   regionState: Record<number, TeamSlot[]>;
   schoolOptions: ComboboxOption[];
   schools: School[];
   usedSchoolIds: Set<string>;
-  updateSlot: (region: Region, seed: number, slotIndex: number, update: Partial<TeamSlot>) => void;
-  addPlayIn: (region: Region, seed: number) => void;
-  removePlayIn: (region: Region, seed: number) => void;
+  updateSlot: (region: string, seed: number, slotIndex: number, update: Partial<TeamSlot>) => void;
+  addPlayIn: (region: string, seed: number) => void;
+  removePlayIn: (region: string, seed: number) => void;
+  onSlotBlur?: (region: string, seed: number, slotIndex: number) => void;
+  slotValidation?: Record<string, 'none' | 'valid' | 'error'>;
+}
+
+function slotKey(seed: number, slotIndex: number): string {
+  return `${seed}-${slotIndex}`;
 }
 
 export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
@@ -31,6 +35,8 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
   updateSlot,
   addPlayIn,
   removePlayIn,
+  onSlotBlur,
+  slotValidation,
 }) => {
   return (
     <div className="space-y-3">
@@ -55,6 +61,8 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
                     placeholder="Search for a school..."
                     excludeIds={usedSchoolIds}
                     className="flex-1"
+                    onBlur={onSlotBlur ? () => onSlotBlur(region, seed, slotIndex) : undefined}
+                    validationState={slotValidation?.[slotKey(seed, slotIndex)] ?? 'none'}
                   />
                   {slotIndex === 1 && (
                     <Button

@@ -2,6 +2,8 @@ package tournament
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
@@ -38,17 +40,32 @@ func ValidateBracketSetup(teams []*models.TournamentTeam) []string {
 		}
 	}
 
+	// Derive regions from submitted teams
+	regionSet := make(map[string]bool)
+	for _, team := range teams {
+		if strings.TrimSpace(team.Region) == "" {
+			errs = append(errs, fmt.Sprintf("team %s has empty region", team.SchoolID))
+		} else {
+			regionSet[team.Region] = true
+		}
+	}
+	expectedRegions := make([]string, 0, len(regionSet))
+	for r := range regionSet {
+		expectedRegions = append(expectedRegions, r)
+	}
+	sort.Strings(expectedRegions)
+	if len(expectedRegions) != 4 {
+		errs = append(errs, fmt.Sprintf("must have exactly 4 regions, found %d", len(expectedRegions)))
+	}
+
 	// Check region counts
-	expectedRegions := []string{"East", "West", "South", "Midwest"}
 	regionCounts := make(map[string]int)
 	for _, team := range teams {
 		regionCounts[team.Region]++
 	}
 	for _, region := range expectedRegions {
 		count := regionCounts[region]
-		if count == 0 {
-			errs = append(errs, fmt.Sprintf("region %s has no teams", region))
-		} else if count < 16 {
+		if count < 16 {
 			errs = append(errs, fmt.Sprintf("region %s must have at least 16 teams, has %d", region, count))
 		}
 	}

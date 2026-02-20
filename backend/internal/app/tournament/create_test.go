@@ -68,6 +68,10 @@ func (m *mockRepo) ReplaceTeams(context.Context, string, []*models.TournamentTea
 	panic("ReplaceTeams not implemented")
 }
 
+func (m *mockRepo) UpdateFinalFour(context.Context, string, string, string, string, string) error {
+	panic("UpdateFinalFour not implemented")
+}
+
 func TestThatCreateReturnsNewTournamentWithCorrectName(t *testing.T) {
 	// GIVEN a service with a mock repo
 	repo := &mockRepo{}

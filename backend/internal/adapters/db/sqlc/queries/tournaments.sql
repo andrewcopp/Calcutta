@@ -83,3 +83,12 @@ UPDATE core.tournaments
 SET starting_at = $1,
     updated_at = $2
 WHERE id = $3 AND deleted_at IS NULL;
+
+-- name: UpdateCoreTournamentFinalFour :execrows
+UPDATE core.tournaments
+SET final_four_top_left = $1,
+    final_four_bottom_left = $2,
+    final_four_top_right = $3,
+    final_four_bottom_right = $4,
+    updated_at = $5
+WHERE id = $6 AND deleted_at IS NULL;

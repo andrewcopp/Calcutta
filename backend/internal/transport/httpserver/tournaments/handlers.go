@@ -132,9 +132,44 @@ func (h *Handler) HandleUpdateTournament(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.app.Tournament.UpdateStartingAt(r.Context(), tournamentID, req.StartingAt.Value); err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
+	if req.StartingAt.Present {
+		if err := h.app.Tournament.UpdateStartingAt(r.Context(), tournamentID, req.StartingAt.Value); err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+	}
+
+	if req.FinalFourTopLeft != nil || req.FinalFourBottomLeft != nil || req.FinalFourTopRight != nil || req.FinalFourBottomRight != nil {
+		// Fetch current tournament to fill in any unspecified fields
+		current, err := h.app.Tournament.GetByID(r.Context(), tournamentID)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		if current == nil {
+			httperr.Write(w, r, http.StatusNotFound, "not_found", "Tournament not found", "id")
+			return
+		}
+		tl := current.FinalFourTopLeft
+		bl := current.FinalFourBottomLeft
+		tr := current.FinalFourTopRight
+		br := current.FinalFourBottomRight
+		if req.FinalFourTopLeft != nil {
+			tl = *req.FinalFourTopLeft
+		}
+		if req.FinalFourBottomLeft != nil {
+			bl = *req.FinalFourBottomLeft
+		}
+		if req.FinalFourTopRight != nil {
+			tr = *req.FinalFourTopRight
+		}
+		if req.FinalFourBottomRight != nil {
+			br = *req.FinalFourBottomRight
+		}
+		if err := h.app.Tournament.UpdateFinalFour(r.Context(), tournamentID, tl, bl, tr, br); err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
 	}
 
 	tournament, err := h.app.Tournament.GetByID(r.Context(), tournamentID)

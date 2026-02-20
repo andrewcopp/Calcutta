@@ -203,6 +203,38 @@ func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentI
 	return nil
 }
 
+func (r *TournamentRepository) UpdateFinalFour(ctx context.Context, tournamentID, topLeft, bottomLeft, topRight, bottomRight string) error {
+	now := time.Now()
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	params := sqlc.UpdateCoreTournamentFinalFourParams{
+		FinalFourTopLeft:     &topLeft,
+		FinalFourBottomLeft:  &bottomLeft,
+		FinalFourTopRight:    &topRight,
+		FinalFourBottomRight: &bottomRight,
+		UpdatedAt:            pgtype.Timestamptz{Time: now, Valid: true},
+		ID:                   tournamentID,
+	}
+	if _, err = qtx.UpdateCoreTournamentFinalFour(ctx, params); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
 	rows, err := r.q.ListTeamsByTournamentID(ctx, tournamentID)
 	if err != nil {

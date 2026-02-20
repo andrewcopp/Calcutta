@@ -78,6 +78,10 @@ export interface Tournament {
   name: string;
   rounds: number;
   winner?: string;
+  finalFourTopLeft?: string;
+  finalFourBottomLeft?: string;
+  finalFourTopRight?: string;
+  finalFourBottomRight?: string;
   startingAt?: string;
   created: string;
   updated: string;

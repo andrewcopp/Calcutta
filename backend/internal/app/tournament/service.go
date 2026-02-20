@@ -15,6 +15,7 @@ type TournamentRepo interface {
 	GetByID(ctx context.Context, id string) (*models.Tournament, error)
 	Create(ctx context.Context, tournament *models.Tournament) error
 	UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error
+	UpdateFinalFour(ctx context.Context, tournamentID, topLeft, bottomLeft, topRight, bottomRight string) error
 	GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error)
 	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
 	CreateTeam(ctx context.Context, team *models.TournamentTeam) error
@@ -67,6 +68,10 @@ func (s *Service) GetWinningTeam(ctx context.Context, tournamentID string) (*mod
 
 func (s *Service) UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error {
 	return s.repo.UpdateStartingAt(ctx, tournamentID, startingAt)
+}
+
+func (s *Service) UpdateFinalFour(ctx context.Context, tournamentID, topLeft, bottomLeft, topRight, bottomRight string) error {
+	return s.repo.UpdateFinalFour(ctx, tournamentID, topLeft, bottomLeft, topRight, bottomRight)
 }
 
 func (s *Service) ListCompetitions(ctx context.Context) ([]models.Competition, error) {

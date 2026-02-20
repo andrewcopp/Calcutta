@@ -15,6 +15,8 @@ interface ComboboxProps {
   disabled?: boolean;
   excludeIds?: Set<string>;
   className?: string;
+  onBlur?: () => void;
+  validationState?: 'none' | 'valid' | 'error';
 }
 
 export const Combobox: React.FC<ComboboxProps> = ({
@@ -26,6 +28,8 @@ export const Combobox: React.FC<ComboboxProps> = ({
   disabled = false,
   excludeIds,
   className,
+  onBlur,
+  validationState,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -115,10 +119,22 @@ export const Combobox: React.FC<ComboboxProps> = ({
           setIsOpen(true);
           setHighlightIndex(0);
         }}
+        onBlur={() => {
+          if (onBlur) {
+            setTimeout(onBlur, 150);
+          }
+        }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
-        className="h-10 w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:opacity-50"
+        className={cn(
+          'h-10 w-full rounded-lg border bg-surface px-4 py-2 text-sm text-text outline-none disabled:opacity-50',
+          validationState === 'valid'
+            ? 'border-green-500 ring-2 ring-green-200'
+            : validationState === 'error'
+              ? 'border-red-500 ring-2 ring-red-200'
+              : 'border-border focus:ring-2 focus:ring-primary focus:border-primary'
+        )}
       />
       {isOpen && filtered.length > 0 && (
         <ul
