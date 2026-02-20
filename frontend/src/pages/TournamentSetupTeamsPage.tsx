@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
+import type { Tournament } from '../types/calcutta';
+import type { School } from '../types/school';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
@@ -37,53 +39,35 @@ function createInitialRegions(regionNames: string[]): Record<string, RegionState
   return result;
 }
 
-export const TournamentSetupTeamsPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+function getRegionList(tournament: Tournament): string[] {
+  return [
+    tournament.finalFourTopLeft || 'East',
+    tournament.finalFourBottomLeft || 'West',
+    tournament.finalFourTopRight || 'South',
+    tournament.finalFourBottomRight || 'Midwest',
+  ];
+}
+
+interface TournamentSetupTeamsFormProps {
+  tournament: Tournament;
+  schools: School[];
+  schoolOptions: { id: string; label: string }[];
+}
+
+const TournamentSetupTeamsForm: React.FC<TournamentSetupTeamsFormProps> = ({
+  tournament,
+  schools,
+  schoolOptions,
+}) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [regions, setRegions] = useState<Record<string, RegionState>>({});
+  const regionList = useMemo(() => getRegionList(tournament), [tournament]);
+
+  const [regions, setRegions] = useState(() => createInitialRegions(regionList));
+  const [activeTab, setActiveTab] = useState(() => regionList[0]);
   const [errors, setErrors] = useState<string[]>([]);
   const [flashingSlots, setFlashingSlots] = useState<Record<string, boolean>>({});
-  const [initialized, setInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('');
-
-  const tournamentQuery = useQuery({
-    queryKey: queryKeys.tournaments.detail(id),
-    enabled: Boolean(id),
-    queryFn: () => tournamentService.getTournament(id!),
-  });
-
-  const schoolsQuery = useQuery({
-    queryKey: queryKeys.schools.all(),
-    queryFn: () => schoolService.getSchools(),
-  });
-
-  // Derive region names from tournament data (read-only)
-  const regionList = useMemo(() => {
-    const t = tournamentQuery.data;
-    if (!t) return ['East', 'West', 'South', 'Midwest'];
-    return [
-      t.finalFourTopLeft || 'East',
-      t.finalFourBottomLeft || 'West',
-      t.finalFourTopRight || 'South',
-      t.finalFourBottomRight || 'Midwest',
-    ];
-  }, [tournamentQuery.data]);
-
-  // Initialize regions state once after tournament loads
-  useEffect(() => {
-    if (initialized || !tournamentQuery.data) return;
-    setRegions(createInitialRegions(regionList));
-    setActiveTab(regionList[0]);
-    setInitialized(true);
-  }, [tournamentQuery.data, initialized, regionList]);
-
-  const schools = useMemo(() => schoolsQuery.data || [], [schoolsQuery.data]);
-  const schoolOptions = useMemo(
-    () => schools.map((s) => ({ id: s.id, label: s.name })),
-    [schools]
-  );
 
   // Collect all used school IDs for exclusion
   const usedSchoolIds = useMemo(() => {
@@ -205,28 +189,31 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     });
   }, []);
 
-  // Use a ref to access current regions for blur checking without stale closure
-  const regionsRef = useRef(regions);
-  regionsRef.current = regions;
-
   const handleSlotBlur = useCallback(
     (region: string, seed: number, slotIndex: number) => {
-      const regionState = regionsRef.current[region];
-      if (!regionState) return;
-      const slot = regionState[seed][slotIndex];
-      if (!slot.searchText || slot.schoolId) return;
+      setRegions((prev) => {
+        const regionState = prev[region];
+        if (!regionState) return prev;
+        const slot = regionState[seed][slotIndex];
+        if (!slot.searchText || slot.schoolId) return prev;
 
-      // Clear the orphaned search text
-      updateSlot(region, seed, slotIndex, { searchText: '' });
+        // Clear the orphaned search text
+        const updated = { ...regionState };
+        const slots = [...updated[seed]];
+        slots[slotIndex] = { ...slots[slotIndex], searchText: '' };
+        updated[seed] = slots;
 
-      // Flash red briefly
-      const flashKey = `${region}-${seed}-${slotIndex}`;
-      setFlashingSlots((prev) => ({ ...prev, [flashKey]: true }));
-      setTimeout(() => {
-        setFlashingSlots((prev) => ({ ...prev, [flashKey]: false }));
-      }, 1000);
+        // Flash red briefly
+        const flashKey = `${region}-${seed}-${slotIndex}`;
+        setFlashingSlots((f) => ({ ...f, [flashKey]: true }));
+        setTimeout(() => {
+          setFlashingSlots((f) => ({ ...f, [flashKey]: false }));
+        }, 1000);
+
+        return { ...prev, [region]: updated };
+      });
     },
-    [updateSlot]
+    []
   );
 
   const replaceTeamsMutation = useMutation({
@@ -243,11 +230,11 @@ export const TournamentSetupTeamsPage: React.FC = () => {
           }
         }
       }
-      return tournamentService.replaceTeams(id!, teams);
+      return tournamentService.replaceTeams(tournament.id, teams);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(id) });
-      navigate(`/admin/tournaments/${id}`);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(tournament.id) });
+      navigate(`/admin/tournaments/${tournament.id}`);
     },
     onError: (err: unknown) => {
       const apiErr = err as { body?: { errors?: string[] } };
@@ -264,50 +251,8 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     replaceTeamsMutation.mutate();
   };
 
-  if (!id) {
-    return (
-      <PageContainer>
-        <Alert variant="error">Missing tournament ID</Alert>
-      </PageContainer>
-    );
-  }
-
-  if (tournamentQuery.isLoading || schoolsQuery.isLoading) {
-    return (
-      <PageContainer>
-        <LoadingState label="Loading..." />
-      </PageContainer>
-    );
-  }
-
-  const tournament = tournamentQuery.data;
-  if (!tournament) {
-    return (
-      <PageContainer>
-        <Alert variant="error">Tournament not found</Alert>
-      </PageContainer>
-    );
-  }
-
   return (
-    <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Tournaments', href: '/admin/tournaments' },
-          { label: tournament.name, href: `/admin/tournaments/${id}` },
-          { label: 'Setup Teams' },
-        ]}
-      />
-      <PageHeader
-        title="Setup Teams"
-        subtitle={tournament.name}
-        actions={
-          <Button variant="outline" onClick={() => navigate(`/admin/tournaments/${id}`)}>
-            Cancel
-          </Button>
-        }
-      />
-
+    <>
       {errors.length > 0 && (
         <Alert variant="error" className="mb-4">
           <div className="font-semibold mb-1">Validation Errors</div>
@@ -359,6 +304,77 @@ export const TournamentSetupTeamsPage: React.FC = () => {
           {replaceTeamsMutation.isPending ? 'Saving...' : 'Save Teams'}
         </Button>
       </div>
+    </>
+  );
+};
+
+export const TournamentSetupTeamsPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const tournamentQuery = useQuery({
+    queryKey: queryKeys.tournaments.detail(id),
+    enabled: Boolean(id),
+    queryFn: () => tournamentService.getTournament(id!),
+  });
+
+  const schoolsQuery = useQuery({
+    queryKey: queryKeys.schools.all(),
+    queryFn: () => schoolService.getSchools(),
+  });
+
+  if (!id) {
+    return (
+      <PageContainer>
+        <Alert variant="error">Missing tournament ID</Alert>
+      </PageContainer>
+    );
+  }
+
+  if (tournamentQuery.isLoading || schoolsQuery.isLoading) {
+    return (
+      <PageContainer>
+        <LoadingState label="Loading..." />
+      </PageContainer>
+    );
+  }
+
+  const tournament = tournamentQuery.data;
+  if (!tournament) {
+    return (
+      <PageContainer>
+        <Alert variant="error">Tournament not found</Alert>
+      </PageContainer>
+    );
+  }
+
+  const schools = schoolsQuery.data || [];
+  const schoolOptions = schools.map((s) => ({ id: s.id, label: s.name }));
+
+  return (
+    <PageContainer>
+      <Breadcrumb
+        items={[
+          { label: 'Tournaments', href: '/admin/tournaments' },
+          { label: tournament.name, href: `/admin/tournaments/${id}` },
+          { label: 'Setup Teams' },
+        ]}
+      />
+      <PageHeader
+        title="Setup Teams"
+        subtitle={tournament.name}
+        actions={
+          <Button variant="outline" onClick={() => navigate(`/admin/tournaments/${id}`)}>
+            Cancel
+          </Button>
+        }
+      />
+
+      <TournamentSetupTeamsForm
+        tournament={tournament}
+        schools={schools}
+        schoolOptions={schoolOptions}
+      />
     </PageContainer>
   );
 };
