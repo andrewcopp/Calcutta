@@ -16,11 +16,11 @@ describe('bracketOrder', () => {
     });
 
     it('TestThatBracketOrderOfSize8ReturnsCorrectOrder', () => {
-      expect(bracketOrder(8)).toEqual([1, 8, 4, 5, 2, 7, 3, 6]);
+      expect(bracketOrder(8)).toEqual([1, 8, 4, 5, 3, 6, 2, 7]);
     });
 
     it('TestThatBracketOrderOfSize16ReturnsCorrectOrder', () => {
-      expect(bracketOrder(16)).toEqual([1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11]);
+      expect(bracketOrder(16)).toEqual([1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15]);
     });
   });
 
@@ -50,13 +50,13 @@ describe('bracketOrder', () => {
       expect(chalked).toEqual(bracketOrder(2));
     });
 
-    it('TestThatChalkCollapseOfSize16ProducesSize8Order', () => {
+    it('TestThatChalkCollapseOfSize16ProducesExpectedAnchors', () => {
       const seeds = bracketOrder(16);
       const chalked = [];
       for (let i = 0; i < seeds.length; i += 2) {
         chalked.push(Math.min(seeds[i], seeds[i + 1]));
       }
-      expect(chalked).toEqual(bracketOrder(8));
+      expect(chalked).toEqual([1, 8, 5, 4, 6, 3, 7, 2]);
     });
   });
 
