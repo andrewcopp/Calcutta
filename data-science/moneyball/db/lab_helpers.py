@@ -132,6 +132,7 @@ def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
                         COUNT(*)::float AS sim_count
                     FROM derived.simulated_teams st
                     WHERE st.tournament_id = (SELECT tournament_id FROM calcutta_ctx)
+                      AND st.deleted_at IS NULL
                     GROUP BY st.team_id, st.wins, st.byes
                 ),
                 team_totals AS (

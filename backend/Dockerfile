@@ -33,6 +33,35 @@ USER nonroot:nonroot
 # Run the built binary
 CMD ["/app/bin/api"]
 
+FROM golang:1.24 AS worker-builder
+
+WORKDIR /app
+
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+COPY backend/ .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/workers ./cmd/workers \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
+
+FROM python:3.12-slim AS worker-prod
+
+WORKDIR /app
+
+COPY --from=worker-builder /out/workers /app/bin/workers
+COPY --from=worker-builder /out/migrate /app/bin/migrate
+COPY --from=worker-builder /app/migrations /app/migrations
+
+COPY data-science/requirements.txt /app/data-science/requirements.txt
+RUN pip install --no-cache-dir -r /app/data-science/requirements.txt
+
+COPY data-science/ /app/data-science/
+
+RUN useradd --create-home --shell /bin/bash appuser
+USER appuser
+
+CMD ["/app/bin/workers"]
+
 FROM golang:1.24 AS dev
 
 WORKDIR /app

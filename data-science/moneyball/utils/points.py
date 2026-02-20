@@ -63,15 +63,3 @@ def team_points_from_scoring_rules(
             points_by_win_index.get(int(i), 0.0)
         )
     return total
-
-
-def team_points_fixed(progress: int) -> float:
-    if _DEFAULT_POINTS_BY_WIN_INDEX is None:
-        raise ValueError(
-            "Default scoring rules not set; "
-            "call set_default_points_by_win_index(...)"
-        )
-    return team_points_from_scoring_rules(
-        int(progress),
-        _DEFAULT_POINTS_BY_WIN_INDEX,
-    )

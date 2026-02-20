@@ -110,6 +110,7 @@ def read_ridge_team_dataset_for_year(
                 %s::text AS snapshot,
                 %s::text AS tournament_key,
                 %s::text AS calcutta_key,
+                %s::text AS tournament_id,
                 (%s::text || ':' || s.slug)::text AS team_key,
                 s.name::text AS school_name,
                 s.slug::text AS school_slug,
@@ -143,6 +144,7 @@ def read_ridge_team_dataset_for_year(
                 snapshot,
                 tournament_key,
                 str(calcutta_id),
+                str(tournament_id),
                 tournament_key,
                 str(tournament_id),
             ]
@@ -153,6 +155,7 @@ def read_ridge_team_dataset_for_year(
             %s::text AS snapshot,
             %s::text AS tournament_key,
             NULL::text AS calcutta_key,
+            %s::text AS tournament_id,
             (%s::text || ':' || s.slug)::text AS team_key,
             s.name::text AS school_name,
             s.slug::text AS school_slug,
@@ -176,6 +179,7 @@ def read_ridge_team_dataset_for_year(
         params = (
             snapshot,
             tournament_key,
+            str(tournament_id),
             tournament_key,
             str(tournament_id),
         )
