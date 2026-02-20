@@ -206,12 +206,14 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
     """Create a 68-team field with all required columns for auction prediction."""
     teams = []
     regions = ["East", "West", "South", "Midwest"]
-    # Fake tournament_id for optimal_v3 tests (DB query will return empty)
+    # Fake tournament_id kept for column-shape compatibility
     fake_tournament_id = "00000000-0000-0000-0000-000000000000"
 
     for region in regions:
         for seed in range(1, 17):
             kenpom_net = 25 - (seed - 1) * 2.2
+            champ_prob = max(0.001, 0.20 - (seed - 1) * 0.013)
+            expected_pts = max(0.5, 12.0 - (seed - 1) * 0.75)
             teams.append({
                 "id": f"{region}-{seed}",
                 "team_key": f"{region}-{seed}",
@@ -223,6 +225,8 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
                 "kenpom_adj_t": 68 + seed * 0.1,
                 "school_slug": f"school-{region.lower()}-{seed}",
                 "tournament_id": fake_tournament_id,
+                "analytical_p_championship": champ_prob,
+                "analytical_expected_points": expected_pts,
             })
 
     # First Four teams
@@ -233,6 +237,8 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
         ("Midwest", 11, 4.0),
     ]
     for region, seed, kenpom in first_four:
+        champ_prob = max(0.001, 0.20 - (seed - 1) * 0.013)
+        expected_pts = max(0.5, 12.0 - (seed - 1) * 0.75)
         teams.append({
             "id": f"{region}-{seed}-FF",
             "team_key": f"{region}-{seed}-FF",
@@ -244,6 +250,8 @@ def _create_68_team_field_for_auction() -> pd.DataFrame:
             "kenpom_adj_t": 68 + seed * 0.1,
             "school_slug": f"school-{region.lower()}-{seed}-ff",
             "tournament_id": fake_tournament_id,
+            "analytical_p_championship": champ_prob,
+            "analytical_expected_points": expected_pts,
         })
 
     return pd.DataFrame(teams)
