@@ -19,7 +19,7 @@ WHERE id = $1 AND deleted_at IS NULL;
 WITH season_year AS (
   SELECT COALESCE(
     substring($2 from '([0-9]{4})')::int,
-    EXTRACT(YEAR FROM $8)::int,
+    EXTRACT(YEAR FROM $8::timestamptz)::int,
     EXTRACT(YEAR FROM NOW())::int
   ) AS year
 ),

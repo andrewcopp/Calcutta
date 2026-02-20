@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -130,6 +132,10 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		UpdatedAt:            pgtype.Timestamptz{Time: tournament.Updated, Valid: true},
 	}
 	if err = qtx.CreateCoreTournament(ctx, params); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return &apperrors.AlreadyExistsError{Resource: "tournament", Field: "competition_season"}
+		}
 		return err
 	}
 
