@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '../../components/ui/Button';
 import { Combobox, type ComboboxOption } from '../../components/ui/Combobox';
 import { School } from '../../types/school';
+import { bracketOrder } from '../../utils/bracketOrder';
 
 interface TeamSlot {
   schoolId: string;
@@ -33,7 +34,7 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
 }) => {
   return (
     <div className="space-y-3">
-      {Array.from({ length: 16 }, (_, i) => i + 1).map((seed) => {
+      {bracketOrder(16).map((seed) => {
         const slots = regionState[seed];
         return (
           <div key={seed} className="flex items-start gap-3">
