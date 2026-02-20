@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useUser } from '../contexts/useUser';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -8,7 +8,9 @@ import { Alert } from '../components/ui/Alert';
 export function AcceptInvitePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const token = searchParams.get('token') ?? '';
+  const from = (location.state as { from?: string })?.from ?? '/calcuttas';
   const { user, acceptInvite, logout } = useUser();
 
   const [password, setPassword] = useState('');
@@ -16,12 +18,13 @@ export function AcceptInvitePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [inviteConsumed, setInviteConsumed] = useState(false);
 
   useEffect(() => {
-    if (user && token) {
+    if (user && token && !inviteConsumed) {
       setShowLogoutConfirm(true);
     }
-  }, [user, token]);
+  }, [user, token, inviteConsumed]);
 
   const passwordValid = password.length >= 8;
   const passwordsMatch = password === confirmPassword;
@@ -48,6 +51,8 @@ export function AcceptInvitePage() {
     setLoading(true);
     try {
       await acceptInvite(token, password);
+      setInviteConsumed(true);
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to accept invite. Please try again.';
       if (message.toLowerCase().includes('expired') || message.toLowerCase().includes('invalid')) {
@@ -97,7 +102,7 @@ export function AcceptInvitePage() {
               <Button
                 variant="secondary"
                 className="flex-1"
-                onClick={() => navigate('/calcuttas')}
+                onClick={() => navigate(from)}
               >
                 Cancel
               </Button>
