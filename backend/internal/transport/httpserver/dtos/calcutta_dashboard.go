@@ -1,5 +1,7 @@
 package dtos
 
+import "time"
+
 type CalcuttaDashboardResponse struct {
 	Calcutta        *CalcuttaResponse        `json:"calcutta"`
 	Entries         []*EntryResponse          `json:"entries"`
@@ -12,7 +14,9 @@ type CalcuttaDashboardResponse struct {
 
 type CalcuttaWithRankingResponse struct {
 	*CalcuttaResponse
-	Ranking *CalcuttaRankingResponse `json:"ranking,omitempty"`
+	HasEntry              bool                    `json:"hasEntry"`
+	TournamentStartingAt  *time.Time              `json:"tournamentStartingAt,omitempty"`
+	Ranking               *CalcuttaRankingResponse `json:"ranking,omitempty"`
 }
 
 type CalcuttaRankingResponse struct {

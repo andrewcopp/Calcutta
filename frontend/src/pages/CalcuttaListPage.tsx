@@ -69,16 +69,24 @@ export function CalcuttaListPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-                    <p className="text-gray-600">Created: {formatDate(calcutta.created)}</p>
+                    <p className="text-gray-600">
+                      {calcutta.tournamentStartingAt
+                        ? `Tournament starts ${formatDate(calcutta.tournamentStartingAt)}`
+                        : `Created ${formatDate(calcutta.created)}`}
+                    </p>
                   </div>
                   {ranking ? (
                     <div className="text-right">
                       <div className="text-lg font-semibold text-blue-600">
                         #{ranking.rank} of {ranking.totalEntries}
                       </div>
-                      <div className="text-sm text-gray-500">{ranking.points} points</div>
+                      <div className="text-sm text-gray-500">Entry Submitted</div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-amber-600">Awaiting Submission</div>
+                    </div>
+                  )}
                 </div>
               </Card>
             </Link>

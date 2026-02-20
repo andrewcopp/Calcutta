@@ -121,6 +121,13 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 			CalcuttaResponse: dtos.NewCalcuttaResponse(calcutta),
 		}
 
+		tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		item.TournamentStartingAt = tournament.StartingAt
+
 		entries, err := h.app.Calcutta.GetEntries(r.Context(), calcutta.ID)
 		if err != nil {
 			httperr.WriteFromErr(w, r, err, h.authUserID)
@@ -136,6 +143,8 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 		}
 
 		if userEntry != nil {
+			item.HasEntry = true
+
 			sorted := make([]*models.CalcuttaEntry, len(entries))
 			copy(sorted, entries)
 			sort.Slice(sorted, func(i, j int) bool {

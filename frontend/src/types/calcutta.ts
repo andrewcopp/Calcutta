@@ -135,5 +135,7 @@ export interface CalcuttaRanking {
 }
 
 export interface CalcuttaWithRanking extends Calcutta {
+  hasEntry: boolean;
+  tournamentStartingAt?: string;
   ranking?: CalcuttaRanking;
 } 
