@@ -1033,7 +1033,7 @@ func (w *LabPipelineWorker) checkPipelineCompletion(ctx context.Context, pipelin
 	if failed > 0 && succeeded == 0 {
 		status = "failed"
 	} else if failed > 0 {
-		status = "succeeded" // Partial success
+		status = "partial"
 	}
 
 	if _, err := w.pool.Exec(ctx, `

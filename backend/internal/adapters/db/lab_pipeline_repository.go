@@ -147,7 +147,7 @@ func (r *LabRepository) UpdatePipelineRunStatus(ctx context.Context, id string, 
 	if status == "running" {
 		startedAt = &now
 	}
-	if status == "succeeded" || status == "failed" || status == "cancelled" {
+	if status == "succeeded" || status == "failed" || status == "cancelled" || status == "partial" {
 		finishedAt = &now
 	}
 

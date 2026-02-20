@@ -37,7 +37,8 @@ make sqlc-generate      # Regenerate SQL type-safe wrappers from queries
 ### Data Science
 ```bash
 source data-science/.venv/bin/activate
-python scripts/ingest_snapshot.py --base-url http://localhost:8080 ...
+python scripts/register_investment_models.py   # Register models in lab schema
+python scripts/generate_lab_predictions.py     # Generate market predictions for a model
 ```
 
 ### Developer Productivity
@@ -66,12 +67,12 @@ make api-test ENDPOINT="/api/..."    # Test endpoint (supports METHOD, DATA)
 
 ### Directory Structure
 - `backend/cmd/` - Runnable binaries (api, migrate, workers, tools)
-- `backend/internal/app/` - Feature services (~25 domains: bracket, calcutta, scoring, analytics, etc.)
+- `backend/internal/app/` - Feature services (~15 domains: bracket, calcutta, scoring, analytics, etc.)
 - `backend/internal/adapters/` - Database and external API implementations
 - `backend/internal/transport/httpserver/` - HTTP handlers (`handlers_*.go`)
 - `backend/migrations/schema/` - Versioned SQL migrations (YYYYMMDDHHMMSS format)
 - `frontend/src/` - React components, pages, hooks, services
-- `data-science/moneyball/` - ML models, datasets, evaluation, pipeline
+- `data-science/moneyball/` - db, lab, models, utils
 - `data-science/scripts/` - Standalone Python scripts
 
 ### Layering (dependency direction)
@@ -145,4 +146,4 @@ Use prefixes to distinguish data types:
 - `docs/standards/engineering.md` - Architecture principles
 - `docs/standards/bracket_testing_guidelines.md` - Testing conventions (required reading)
 - `docs/reference/rules.md` - Business logic and game rules
-- `docs/runbooks/data_science_sandbox.md` - Data science workflow
+- `docs/runbooks/moneyball_pipeline_usage.md` - Data science workflow

@@ -57,7 +57,7 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
-      - ./data-science:/data-science
+      - ./data-science:/app/data-science
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
@@ -71,7 +71,7 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
-    command: sh -c "pip install --break-system-packages -r /data-science/requirements.txt && go run ./cmd/workers -bundle-import-worker=false -lab-pipeline-worker=true"
+    command: sh -c "pip install --break-system-packages -r /app/data-science/requirements.txt && go run ./cmd/workers -bundle-import-worker=false -lab-pipeline-worker=true"
 
   db:
     image: postgres:16-alpine
