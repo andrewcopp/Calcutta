@@ -1,4 +1,4 @@
-import { Tournament, TournamentTeam, TournamentModerator } from '../types/calcutta';
+import { Tournament, TournamentTeam, TournamentModerator, Competition, Season } from '../types/calcutta';
 import { apiClient } from '../api/apiClient';
 
 export const tournamentService = {
@@ -14,8 +14,8 @@ export const tournamentService = {
     return apiClient.get<TournamentTeam[]>(`/tournaments/${id}/teams`);
   },
 
-  async createTournament(name: string, rounds: number): Promise<Tournament> {
-    return apiClient.post<Tournament>('/tournaments', { name, rounds });
+  async createTournament(competition: string, year: number, rounds: number): Promise<Tournament> {
+    return apiClient.post<Tournament>('/tournaments', { competition, year, rounds });
   },
 
   async createTournamentTeam(
@@ -27,12 +27,27 @@ export const tournamentService = {
     return apiClient.post<TournamentTeam>(`/tournaments/${tournamentId}/teams`, { schoolId, seed, region });
   },
 
+  async replaceTeams(
+    tournamentId: string,
+    teams: { schoolId: string; seed: number; region: string }[]
+  ): Promise<TournamentTeam[]> {
+    return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/teams`, { teams });
+  },
+
   async updateTournamentTeam(
     tournamentId: string,
     teamId: string,
     updates: Partial<TournamentTeam>
   ): Promise<TournamentTeam> {
     return apiClient.patch<TournamentTeam>(`/tournaments/${tournamentId}/teams/${teamId}`, updates);
+  },
+
+  async getCompetitions(): Promise<Competition[]> {
+    return apiClient.get<Competition[]>('/competitions');
+  },
+
+  async getSeasons(): Promise<Season[]> {
+    return apiClient.get<Season[]>('/seasons');
   },
 
   async getTournamentModerators(tournamentId: string): Promise<TournamentModerator[]> {
@@ -48,4 +63,4 @@ export const tournamentService = {
   async revokeTournamentModerator(tournamentId: string, userId: string): Promise<void> {
     await apiClient.delete(`/tournaments/${tournamentId}/moderators/${userId}`);
   },
-}; 
+};

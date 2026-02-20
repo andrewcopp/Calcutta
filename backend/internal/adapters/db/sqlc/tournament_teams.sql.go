@@ -260,6 +260,26 @@ func (q *Queries) ListTeamsByTournamentID(ctx context.Context, tournamentID stri
 	return items, nil
 }
 
+const softDeleteTeamsByTournamentID = `-- name: SoftDeleteTeamsByTournamentID :execrows
+UPDATE core.teams
+SET deleted_at = $1,
+    updated_at = $1
+WHERE tournament_id = $2 AND deleted_at IS NULL
+`
+
+type SoftDeleteTeamsByTournamentIDParams struct {
+	DeletedAt    pgtype.Timestamptz
+	TournamentID string
+}
+
+func (q *Queries) SoftDeleteTeamsByTournamentID(ctx context.Context, arg SoftDeleteTeamsByTournamentIDParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteTeamsByTournamentID, arg.DeletedAt, arg.TournamentID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateTeam = `-- name: UpdateTeam :exec
 UPDATE core.teams
 SET wins = $1,

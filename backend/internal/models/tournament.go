@@ -2,6 +2,18 @@ package models
 
 import "time"
 
+// Competition represents a named competition (e.g. "NCAA Men's")
+type Competition struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// Season represents a year/season
+type Season struct {
+	ID   string `json:"id"`
+	Year int    `json:"year"`
+}
+
 // Tournament represents a basketball tournament in the real world
 type Tournament struct {
 	ID                   string     `json:"id"`

@@ -133,6 +133,70 @@ func (q *Queries) GetTournamentByID(ctx context.Context, id string) (GetTourname
 	return i, err
 }
 
+const listCompetitions = `-- name: ListCompetitions :many
+SELECT id, name
+FROM core.competitions
+WHERE deleted_at IS NULL
+ORDER BY name
+`
+
+type ListCompetitionsRow struct {
+	ID   string
+	Name string
+}
+
+func (q *Queries) ListCompetitions(ctx context.Context) ([]ListCompetitionsRow, error) {
+	rows, err := q.db.Query(ctx, listCompetitions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCompetitionsRow
+	for rows.Next() {
+		var i ListCompetitionsRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSeasons = `-- name: ListSeasons :many
+SELECT id, year
+FROM core.seasons
+WHERE deleted_at IS NULL
+ORDER BY year DESC
+`
+
+type ListSeasonsRow struct {
+	ID   string
+	Year int32
+}
+
+func (q *Queries) ListSeasons(ctx context.Context) ([]ListSeasonsRow, error) {
+	rows, err := q.db.Query(ctx, listSeasons)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSeasonsRow
+	for rows.Next() {
+		var i ListSeasonsRow
+		if err := rows.Scan(&i.ID, &i.Year); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTournaments = `-- name: ListTournaments :many
 SELECT id, name, rounds,
        final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right,

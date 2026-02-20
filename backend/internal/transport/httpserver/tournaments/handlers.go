@@ -3,10 +3,12 @@ package tournaments
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
+	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
@@ -103,7 +105,8 @@ func (h *Handler) HandleCreateTournament(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tournament, err := h.app.Tournament.Create(r.Context(), req.Name, req.Rounds)
+	name := req.DerivedName()
+	tournament, err := h.app.Tournament.Create(r.Context(), name, req.Rounds)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
@@ -285,4 +288,82 @@ func (h *Handler) HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.WriteJSON(w, http.StatusOK, dtos.NewTournamentTeamResponse(responseTeam, school))
+}
+
+func (h *Handler) HandleListCompetitions(w http.ResponseWriter, r *http.Request) {
+	competitions, err := h.app.Tournament.ListCompetitions(r.Context())
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	resp := make([]dtos.CompetitionResponse, 0, len(competitions))
+	for _, c := range competitions {
+		resp = append(resp, dtos.CompetitionResponse{ID: c.ID, Name: c.Name})
+	}
+	response.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) HandleListSeasons(w http.ResponseWriter, r *http.Request) {
+	seasons, err := h.app.Tournament.ListSeasons(r.Context())
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	resp := make([]dtos.SeasonResponse, 0, len(seasons))
+	for _, s := range seasons {
+		resp = append(resp, dtos.SeasonResponse{ID: s.ID, Year: s.Year})
+	}
+	response.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) HandleReplaceTeams(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	tournamentID := vars["id"]
+	if tournamentID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		return
+	}
+
+	var req dtos.ReplaceTeamsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
+		return
+	}
+
+	if errs := req.Validate(); len(errs) > 0 {
+		response.WriteJSON(w, http.StatusBadRequest, dtos.BracketValidationErrorResponse{
+			Code:   "validation_error",
+			Errors: errs,
+		})
+		return
+	}
+
+	inputs := make([]apptournament.ReplaceTeamsInput, 0, len(req.Teams))
+	for _, t := range req.Teams {
+		inputs = append(inputs, apptournament.ReplaceTeamsInput{
+			SchoolID: t.SchoolID,
+			Seed:     t.Seed,
+			Region:   t.Region,
+		})
+	}
+
+	teams, err := h.app.Tournament.ReplaceTeams(r.Context(), tournamentID, inputs)
+	if err != nil {
+		var bve *apptournament.BracketValidationError
+		if errors.As(err, &bve) {
+			response.WriteJSON(w, http.StatusBadRequest, dtos.BracketValidationErrorResponse{
+				Code:   "bracket_validation_error",
+				Errors: bve.Errors,
+			})
+			return
+		}
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	resp := make([]*dtos.TournamentTeamResponse, 0, len(teams))
+	for _, team := range teams {
+		resp = append(resp, dtos.NewTournamentTeamResponse(team, team.School))
+	}
+	response.WriteJSON(w, http.StatusOK, resp)
 }

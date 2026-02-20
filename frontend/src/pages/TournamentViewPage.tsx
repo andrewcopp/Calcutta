@@ -186,6 +186,9 @@ export const TournamentViewPage: React.FC = () => {
             <Link to={`/admin/tournaments/${id}/edit`}>
               <Button variant="secondary">Edit Tournament</Button>
             </Link>
+            <Link to={`/admin/tournaments/${id}/teams/setup`}>
+              <Button variant="secondary">Setup Teams</Button>
+            </Link>
             <Link to={`/admin/tournaments/${id}/teams/add`}>
               <Button>Add Teams</Button>
             </Link>

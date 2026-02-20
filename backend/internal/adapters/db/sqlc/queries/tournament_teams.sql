@@ -66,6 +66,12 @@ INSERT INTO core.teams (
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
+-- name: SoftDeleteTeamsByTournamentID :execrows
+UPDATE core.teams
+SET deleted_at = $1,
+    updated_at = $1
+WHERE tournament_id = $2 AND deleted_at IS NULL;
+
 -- name: GetWinningTeam :one
 SELECT
   tt.id,

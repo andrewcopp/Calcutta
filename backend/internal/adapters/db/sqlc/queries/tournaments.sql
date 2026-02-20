@@ -67,6 +67,18 @@ SELECT
 FROM competition
 CROSS JOIN season;
 
+-- name: ListCompetitions :many
+SELECT id, name
+FROM core.competitions
+WHERE deleted_at IS NULL
+ORDER BY name;
+
+-- name: ListSeasons :many
+SELECT id, year
+FROM core.seasons
+WHERE deleted_at IS NULL
+ORDER BY year DESC;
+
 -- name: UpdateCoreTournamentStartingAt :execrows
 UPDATE core.tournaments
 SET starting_at = $1,

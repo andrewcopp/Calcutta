@@ -21,6 +21,30 @@ func NewTournamentRepository(pool *pgxpool.Pool) *TournamentRepository {
 	return &TournamentRepository{pool: pool, q: sqlc.New(pool)}
 }
 
+func (r *TournamentRepository) GetCompetitions(ctx context.Context) ([]models.Competition, error) {
+	rows, err := r.q.ListCompetitions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]models.Competition, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, models.Competition{ID: row.ID, Name: row.Name})
+	}
+	return out, nil
+}
+
+func (r *TournamentRepository) GetSeasons(ctx context.Context) ([]models.Season, error) {
+	rows, err := r.q.ListSeasons(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]models.Season, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, models.Season{ID: row.ID, Year: int(row.Year)})
+	}
+	return out, nil
+}
+
 func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament, error) {
 	rows, err := r.q.ListTournaments(ctx)
 	if err != nil {
@@ -300,6 +324,56 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 		team.KenPom = &models.KenPomStats{NetRtg: row.NetRtg, ORtg: row.ORtg, DRtg: row.DRtg, AdjT: row.AdjT}
 	}
 	return team, nil
+}
+
+func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID string, teams []*models.TournamentTeam) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	now := time.Now()
+
+	if _, err = qtx.SoftDeleteTeamsByTournamentID(ctx, sqlc.SoftDeleteTeamsByTournamentIDParams{
+		DeletedAt:    pgtype.Timestamptz{Time: now, Valid: true},
+		TournamentID: tournamentID,
+	}); err != nil {
+		return err
+	}
+
+	for _, team := range teams {
+		if team == nil {
+			continue
+		}
+		team.Created = now
+		team.Updated = now
+		params := sqlc.CreateTeamParams{
+			ID:           team.ID,
+			TournamentID: team.TournamentID,
+			SchoolID:     team.SchoolID,
+			Seed:         int32(team.Seed),
+			Region:       team.Region,
+			Byes:         int32(team.Byes),
+			Wins:         int32(team.Wins),
+			Eliminated:   team.Eliminated,
+			CreatedAt:    pgtype.Timestamptz{Time: team.Created, Valid: true},
+			UpdatedAt:    pgtype.Timestamptz{Time: team.Updated, Valid: true},
+		}
+		if err = qtx.CreateTeam(ctx, params); err != nil {
+			return err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region string, byes, wins int32, eliminated bool, createdAt, updatedAt pgtype.Timestamptz, netRtg, oRtg, dRtg, adjT *float64, schoolName *string) *models.TournamentTeam {

@@ -2,6 +2,7 @@ package dtos
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -9,18 +10,26 @@ import (
 )
 
 type CreateTournamentRequest struct {
-	Name   string `json:"name"`
-	Rounds int    `json:"rounds"`
+	Competition string `json:"competition"`
+	Year        int    `json:"year"`
+	Rounds      int    `json:"rounds"`
 }
 
 func (r *CreateTournamentRequest) Validate() error {
-	if strings.TrimSpace(r.Name) == "" {
-		return ErrFieldRequired("name")
+	if strings.TrimSpace(r.Competition) == "" {
+		return ErrFieldRequired("competition")
+	}
+	if r.Year <= 2000 {
+		return ErrFieldInvalid("year", "must be greater than 2000")
 	}
 	if r.Rounds <= 0 {
 		return ErrFieldInvalid("rounds", "must be greater than 0")
 	}
 	return nil
+}
+
+func (r *CreateTournamentRequest) DerivedName() string {
+	return fmt.Sprintf("%s %d", r.Competition, r.Year)
 }
 
 type TournamentResponse struct {
@@ -130,4 +139,67 @@ func NewTournamentTeamResponse(t *models.TournamentTeam, school *models.School) 
 		resp.School = NewSchoolResponse(school)
 	}
 	return resp
+}
+
+// ReplaceTeamsRequest is the request body for PUT /api/tournaments/{id}/teams
+type ReplaceTeamsRequest struct {
+	Teams []ReplaceTeamEntry `json:"teams"`
+}
+
+// ReplaceTeamEntry represents a single team in the bulk replace request.
+type ReplaceTeamEntry struct {
+	SchoolID string `json:"schoolId"`
+	Seed     int    `json:"seed"`
+	Region   string `json:"region"`
+}
+
+// Validate returns all validation errors found in the request.
+func (r *ReplaceTeamsRequest) Validate() []string {
+	var errs []string
+
+	if len(r.Teams) == 0 {
+		errs = append(errs, "teams array is required")
+		return errs
+	}
+
+	schoolIDs := make(map[string]int)
+	for i, t := range r.Teams {
+		if strings.TrimSpace(t.SchoolID) == "" {
+			errs = append(errs, fmt.Sprintf("teams[%d]: schoolId is required", i))
+		} else {
+			schoolIDs[t.SchoolID]++
+		}
+		if t.Seed < 1 || t.Seed > 16 {
+			errs = append(errs, fmt.Sprintf("teams[%d]: seed must be between 1 and 16", i))
+		}
+		if strings.TrimSpace(t.Region) == "" {
+			errs = append(errs, fmt.Sprintf("teams[%d]: region is required", i))
+		}
+	}
+
+	for schoolID, count := range schoolIDs {
+		if count > 1 {
+			errs = append(errs, fmt.Sprintf("school %s appears %d times", schoolID, count))
+		}
+	}
+
+	return errs
+}
+
+// BracketValidationErrorResponse is the error response for bracket validation failures.
+type BracketValidationErrorResponse struct {
+	Code   string   `json:"code"`
+	Errors []string `json:"errors"`
+}
+
+// CompetitionResponse is the response for a competition.
+type CompetitionResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// SeasonResponse is the response for a season.
+type SeasonResponse struct {
+	ID   string `json:"id"`
+	Year int    `json:"year"`
 }
