@@ -45,6 +45,9 @@ export function CreateCalcuttaPage() {
   const [name, setName] = useState('');
   const [tournamentId, setTournamentId] = useState('');
   const [scoringRules, setScoringRules] = useState<ScoringRule[]>([]);
+  const [minTeams, setMinTeams] = useState(3);
+  const [maxTeams, setMaxTeams] = useState(10);
+  const [maxBid, setMaxBid] = useState(50);
 
   const tournamentsQuery = useQuery({
     queryKey: queryKeys.tournaments.all(),
@@ -52,8 +55,8 @@ export function CreateCalcuttaPage() {
   });
 
   const createCalcuttaMutation = useMutation({
-    mutationFn: async (params: { name: string; tournamentId: string; scoringRules: ScoringRule[] }) => {
-      return calcuttaService.createCalcutta(params.name, params.tournamentId, params.scoringRules);
+    mutationFn: async (params: { name: string; tournamentId: string; scoringRules: ScoringRule[]; minTeams: number; maxTeams: number; maxBid: number }) => {
+      return calcuttaService.createCalcutta(params.name, params.tournamentId, params.scoringRules, params.minTeams, params.maxTeams, params.maxBid);
     },
     onSuccess: async () => {
       await Promise.all([
@@ -94,6 +97,9 @@ export function CreateCalcuttaPage() {
       name,
       tournamentId,
       scoringRules,
+      minTeams,
+      maxTeams,
+      maxBid,
     });
   };
 
@@ -171,6 +177,57 @@ export function CreateCalcuttaPage() {
                   ))}
                 </Select>
                 <p className="mt-1 text-sm text-gray-500">Select the tournament this Calcutta will be based on</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Pool Settings
+                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label htmlFor="minTeams" className="text-sm text-gray-600 w-44 shrink-0">
+                      Min Teams per Entry
+                    </label>
+                    <Input
+                      type="number"
+                      id="minTeams"
+                      min={1}
+                      max={68}
+                      value={minTeams}
+                      onChange={(e) => setMinTeams(parseInt(e.target.value, 10) || 0)}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label htmlFor="maxTeams" className="text-sm text-gray-600 w-44 shrink-0">
+                      Max Teams per Entry
+                    </label>
+                    <Input
+                      type="number"
+                      id="maxTeams"
+                      min={1}
+                      max={68}
+                      value={maxTeams}
+                      onChange={(e) => setMaxTeams(parseInt(e.target.value, 10) || 0)}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label htmlFor="maxBid" className="text-sm text-gray-600 w-44 shrink-0">
+                      Max Bid per Team
+                    </label>
+                    <Input
+                      type="number"
+                      id="maxBid"
+                      min={1}
+                      value={maxBid}
+                      onChange={(e) => setMaxBid(parseInt(e.target.value, 10) || 0)}
+                      className="w-28"
+                    />
+                    <span className="text-sm text-gray-500">pts</span>
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-gray-500">Constraints for each participant's entry</p>
               </div>
 
               {scoringRules.length > 0 ? (

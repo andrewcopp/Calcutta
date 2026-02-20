@@ -16,6 +16,9 @@ type ScoringRuleInput struct {
 type CreateCalcuttaRequest struct {
 	Name         string             `json:"name"`
 	TournamentID string             `json:"tournamentId"`
+	MinTeams     int                `json:"minTeams"`
+	MaxTeams     int                `json:"maxTeams"`
+	MaxBid       int                `json:"maxBid"`
 	ScoringRules []ScoringRuleInput `json:"scoringRules"`
 }
 
@@ -49,6 +52,9 @@ func (r *CreateCalcuttaRequest) ToModel() *models.Calcutta {
 	return &models.Calcutta{
 		Name:         r.Name,
 		TournamentID: r.TournamentID,
+		MinTeams:     r.MinTeams,
+		MaxTeams:     r.MaxTeams,
+		MaxBid:       r.MaxBid,
 	}
 }
 
