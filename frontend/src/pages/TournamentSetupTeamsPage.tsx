@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { tournamentService } from '../services/tournamentService';
@@ -13,23 +13,6 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { ValidationPanel } from './Tournament/ValidationPanel';
 import { RegionSeedForm } from './Tournament/RegionSeedForm';
-
-const POSITIONS = ['topLeft', 'bottomLeft', 'topRight', 'bottomRight'] as const;
-type Position = (typeof POSITIONS)[number];
-
-const DEFAULT_NAMES: Record<Position, string> = {
-  topLeft: 'East',
-  bottomLeft: 'West',
-  topRight: 'South',
-  bottomRight: 'Midwest',
-};
-
-const POSITION_LABELS: Record<Position, string> = {
-  topLeft: 'Top Left',
-  bottomLeft: 'Bottom Left',
-  topRight: 'Top Right',
-  bottomRight: 'Bottom Right',
-};
 
 interface TeamSlot {
   schoolId: string;
@@ -59,15 +42,11 @@ export const TournamentSetupTeamsPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [regionNames, setRegionNames] = useState<Record<Position, string>>({ ...DEFAULT_NAMES });
-  const [regions, setRegions] = useState<Record<string, RegionState>>(() =>
-    createInitialRegions(Object.values(DEFAULT_NAMES))
-  );
+  const [regions, setRegions] = useState<Record<string, RegionState>>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [flashingSlots, setFlashingSlots] = useState<Record<string, boolean>>({});
   const [initialized, setInitialized] = useState(false);
-
-  const regionList = useMemo(() => POSITIONS.map((p) => regionNames[p]), [regionNames]);
+  const [activeTab, setActiveTab] = useState<string>('');
 
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournaments.detail(id),
@@ -80,20 +59,25 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     queryFn: () => schoolService.getSchools(),
   });
 
-  // Initialize region names from tournament data
+  // Derive region names from tournament data (read-only)
+  const regionList = useMemo(() => {
+    const t = tournamentQuery.data;
+    if (!t) return ['East', 'West', 'South', 'Midwest'];
+    return [
+      t.finalFourTopLeft || 'East',
+      t.finalFourBottomLeft || 'West',
+      t.finalFourTopRight || 'South',
+      t.finalFourBottomRight || 'Midwest',
+    ];
+  }, [tournamentQuery.data]);
+
+  // Initialize regions state once after tournament loads
   useEffect(() => {
     if (initialized || !tournamentQuery.data) return;
-    const t = tournamentQuery.data;
-    const names: Record<Position, string> = {
-      topLeft: t.finalFourTopLeft || DEFAULT_NAMES.topLeft,
-      bottomLeft: t.finalFourBottomLeft || DEFAULT_NAMES.bottomLeft,
-      topRight: t.finalFourTopRight || DEFAULT_NAMES.topRight,
-      bottomRight: t.finalFourBottomRight || DEFAULT_NAMES.bottomRight,
-    };
-    setRegionNames(names);
-    setRegions(createInitialRegions(POSITIONS.map((p) => names[p])));
+    setRegions(createInitialRegions(regionList));
+    setActiveTab(regionList[0]);
     setInitialized(true);
-  }, [tournamentQuery.data, initialized]);
+  }, [tournamentQuery.data, initialized, regionList]);
 
   const schools = useMemo(() => schoolsQuery.data || [], [schoolsQuery.data]);
   const schoolOptions = useMemo(
@@ -152,6 +136,7 @@ export const TournamentSetupTeamsPage: React.FC = () => {
   }, [regions, schools, regionList]);
 
   // Slot validation state per region
+  // schoolId takes priority over flash — a valid selection never shows red
   const slotValidation = useMemo(() => {
     const result: Record<string, Record<string, 'none' | 'valid' | 'error'>> = {};
     for (const regionName of regionList) {
@@ -163,10 +148,10 @@ export const TournamentSetupTeamsPage: React.FC = () => {
         slots.forEach((slot, slotIndex) => {
           const key = `${seed}-${slotIndex}`;
           const flashKey = `${regionName}-${key}`;
-          if (flashingSlots[flashKey]) {
-            regionResult[key] = 'error';
-          } else if (slot.schoolId) {
+          if (slot.schoolId) {
             regionResult[key] = 'valid';
+          } else if (flashingSlots[flashKey]) {
+            regionResult[key] = 'error';
           } else {
             regionResult[key] = 'none';
           }
@@ -176,27 +161,6 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     }
     return result;
   }, [regions, flashingSlots, regionList]);
-
-  const handleRegionNameChange = useCallback((position: Position, newName: string) => {
-    setRegionNames((prev) => {
-      const oldName = prev[position];
-      const updated = { ...prev, [position]: newName };
-
-      // Re-key the regions state if the name actually changed
-      if (oldName !== newName) {
-        setRegions((prevRegions) => {
-          const newRegions = { ...prevRegions };
-          if (newRegions[oldName]) {
-            newRegions[newName] = newRegions[oldName];
-            delete newRegions[oldName];
-          }
-          return newRegions;
-        });
-      }
-
-      return updated;
-    });
-  }, []);
 
   const updateSlot = useCallback(
     (region: string, seed: number, slotIndex: number, update: Partial<TeamSlot>) => {
@@ -241,44 +205,32 @@ export const TournamentSetupTeamsPage: React.FC = () => {
     });
   }, []);
 
+  // Use a ref to access current regions for blur checking without stale closure
+  const regionsRef = useRef(regions);
+  regionsRef.current = regions;
+
   const handleSlotBlur = useCallback(
     (region: string, seed: number, slotIndex: number) => {
-      setRegions((prev) => {
-        const regionState = prev[region];
-        if (!regionState) return prev;
-        const slot = regionState[seed][slotIndex];
-        if (slot.searchText && !slot.schoolId) {
-          // Clear the search text and flash
-          const updated = { ...regionState };
-          const slots = [...updated[seed]];
-          slots[slotIndex] = { ...slots[slotIndex], searchText: '' };
-          updated[seed] = slots;
+      const regionState = regionsRef.current[region];
+      if (!regionState) return;
+      const slot = regionState[seed][slotIndex];
+      if (!slot.searchText || slot.schoolId) return;
 
-          const flashKey = `${region}-${seed}-${slotIndex}`;
-          setFlashingSlots((prev) => ({ ...prev, [flashKey]: true }));
-          setTimeout(() => {
-            setFlashingSlots((prev) => ({ ...prev, [flashKey]: false }));
-          }, 1000);
+      // Clear the orphaned search text
+      updateSlot(region, seed, slotIndex, { searchText: '' });
 
-          return { ...prev, [region]: updated };
-        }
-        return prev;
-      });
+      // Flash red briefly
+      const flashKey = `${region}-${seed}-${slotIndex}`;
+      setFlashingSlots((prev) => ({ ...prev, [flashKey]: true }));
+      setTimeout(() => {
+        setFlashingSlots((prev) => ({ ...prev, [flashKey]: false }));
+      }, 1000);
     },
-    []
+    [updateSlot]
   );
 
   const replaceTeamsMutation = useMutation({
     mutationFn: async () => {
-      // Save region names first
-      await tournamentService.updateTournament(id!, {
-        finalFourTopLeft: regionNames.topLeft,
-        finalFourBottomLeft: regionNames.bottomLeft,
-        finalFourTopRight: regionNames.topRight,
-        finalFourBottomRight: regionNames.bottomRight,
-      });
-
-      // Then save teams
       const teams: { schoolId: string; seed: number; region: string }[] = [];
       for (const regionName of regionList) {
         const regionState = regions[regionName];
@@ -367,28 +319,9 @@ export const TournamentSetupTeamsPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Region Name Inputs */}
-      <Card className="mb-6">
-        <div className="text-sm font-semibold text-gray-700 mb-3">Region Names (Final Four Bracket Positions)</div>
-        <div className="grid grid-cols-2 gap-4">
-          {POSITIONS.map((position) => (
-            <div key={position}>
-              <label className="block text-xs text-gray-500 mb-1">{POSITION_LABELS[position]}</label>
-              <input
-                type="text"
-                value={regionNames[position]}
-                onChange={(e) => handleRegionNameChange(position, e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-surface px-3 py-1 text-sm text-text outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
-
       <ValidationPanel stats={stats} regionNames={regionList} />
 
-      {/* Region Tabs */}
-      <Tabs defaultValue={regionList[0]}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           {regionList.map((regionName) => (
             <TabsTrigger key={regionName} value={regionName}>

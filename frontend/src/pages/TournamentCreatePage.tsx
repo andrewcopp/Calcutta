@@ -20,6 +20,12 @@ export const TournamentCreatePage: React.FC = () => {
   const [year, setYear] = useState('');
   const [newYear, setNewYear] = useState('');
   const [rounds, setRounds] = useState(7);
+  const [regionNames, setRegionNames] = useState({
+    topLeft: 'East',
+    bottomLeft: 'West',
+    topRight: 'South',
+    bottomRight: 'Midwest',
+  });
   const [error, setError] = useState<string | null>(null);
 
   const competitionsQuery = useQuery({
@@ -45,7 +51,14 @@ export const TournamentCreatePage: React.FC = () => {
 
   const createTournamentMutation = useMutation({
     mutationFn: async () => {
-      return tournamentService.createTournament(resolvedCompetition, resolvedYear, rounds);
+      const tournament = await tournamentService.createTournament(resolvedCompetition, resolvedYear, rounds);
+      await tournamentService.updateTournament(tournament.id, {
+        finalFourTopLeft: regionNames.topLeft,
+        finalFourBottomLeft: regionNames.bottomLeft,
+        finalFourTopRight: regionNames.topRight,
+        finalFourBottomRight: regionNames.bottomRight,
+      });
+      return tournament;
     },
     onSuccess: async (tournament) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all() });
@@ -184,6 +197,29 @@ export const TournamentCreatePage: React.FC = () => {
                 <span className="text-sm font-semibold text-blue-700">{derivedName}</span>
               </div>
             )}
+          </Card>
+
+          <Card>
+            <h2 className="text-xl font-semibold mb-4">Region Names</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {([
+                ['topLeft', 'Top Left'],
+                ['bottomLeft', 'Bottom Left'],
+                ['topRight', 'Top Right'],
+                ['bottomRight', 'Bottom Right'],
+              ] as const).map(([key, label]) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {label}
+                  </label>
+                  <Input
+                    type="text"
+                    value={regionNames[key]}
+                    onChange={(e) => setRegionNames(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
           </Card>
 
           <div className="flex justify-end">
