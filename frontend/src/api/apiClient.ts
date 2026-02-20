@@ -10,7 +10,7 @@ class ApiError extends Error {
   }
 }
 
-function normalizeBaseUrl(v: string): string {
+export function normalizeBaseUrl(v: string): string {
   return v.replace(/\/+$/, '');
 }
 
@@ -82,7 +82,7 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshInFlight;
 }
 
-function isAuthUrl(url: string): boolean {
+export function isAuthUrl(url: string): boolean {
   return url.includes('/api/auth/');
 }
 

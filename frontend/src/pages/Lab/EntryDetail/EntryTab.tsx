@@ -33,7 +33,7 @@ interface EntryRow {
   adj_roi: number;          // pred_performance / (pred_investment + our_investment)
 }
 
-function getRoiColor(roi: number): string {
+export function getRoiColor(roi: number): string {
   if (roi >= 2.0) return 'text-green-700 font-bold';
   if (roi >= 1.5) return 'text-green-600';
   if (roi >= 1.0) return 'text-gray-900';
@@ -41,7 +41,7 @@ function getRoiColor(roi: number): string {
   return 'text-red-600';
 }
 
-function formatRoi(roi: number): string {
+export function formatRoi(roi: number): string {
   if (!isFinite(roi) || isNaN(roi)) return '—';
   return `${roi.toFixed(2)}x`;
 }
