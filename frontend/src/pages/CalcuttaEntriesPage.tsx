@@ -13,14 +13,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { useUser } from '../contexts/useUser';
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useCalcuttaEntriesData } from '../hooks/useCalcuttaEntriesData';
 import { formatDollarsFromCents } from '../utils/format';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
-  const { user } = useUser();
   const [activeTab, setActiveTab] = useState('leaderboard');
 
   const dashboardQuery = useCalcuttaDashboard(calcuttaId);
@@ -85,7 +83,7 @@ export function CalcuttaEntriesPage() {
       <PageHeader
         title={calcuttaName}
         actions={
-          user?.id === calcutta?.ownerId ? (
+          dashboardData?.abilities?.canEditSettings ? (
             <Link to={`/calcuttas/${calcuttaId}/settings`}>
               <Button variant="outline" size="sm">Settings</Button>
             </Link>

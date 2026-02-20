@@ -188,6 +188,10 @@ func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID str
 	return s.ports.CalcuttaReader.GetCalcuttasByTournament(ctx, tournamentID)
 }
 
+func (s *Service) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
+	return s.ports.EntryReader.GetDistinctUserIDsByCalcutta(ctx, calcuttaID)
+}
+
 func (s *Service) GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error) {
 	return s.ports.PayoutReader.GetPayouts(ctx, calcuttaID)
 }

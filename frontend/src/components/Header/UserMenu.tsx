@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../contexts/useUser';
+import { useHasAnyPermission } from '../../hooks/useHasAnyPermission';
+import { ADMIN_PERMISSIONS } from '../../constants/permissions';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,6 +14,7 @@ import {
 
 export const UserMenu: React.FC = () => {
   const { user, logout } = useUser();
+  const canAccessAdmin = useHasAnyPermission(ADMIN_PERMISSIONS);
 
   if (!user) {
     return null;
@@ -35,9 +38,11 @@ export const UserMenu: React.FC = () => {
           {user.firstName} {user.lastName}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/admin">Admin Console</Link>
-        </DropdownMenuItem>
+        {canAccessAdmin && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin">Admin Console</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           className="text-red-600 focus:text-red-600"
           onSelect={() => logout()}

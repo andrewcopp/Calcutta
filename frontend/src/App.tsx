@@ -56,15 +56,15 @@ const AppLayout: React.FC = () => {
         {/* Legacy evaluation route redirect */}
         <Route path="/lab/evaluations/:evaluationId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/lab/entry-results/:entryResultId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/api-keys" element={<ProtectedRoute><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/bundles" element={<ProtectedRoute><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/users" element={<ProtectedRoute><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/hall-of-fame" element={<ProtectedRoute><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments" element={<ProtectedRoute><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments/create" element={<ProtectedRoute><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id" element={<ProtectedRoute><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/teams/setup" element={<ProtectedRoute><RouteErrorBoundary><TournamentSetupTeamsPage /></RouteErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin" element={<PermissionProtectedRoute permission="admin"><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/api-keys" element={<PermissionProtectedRoute permission="admin.api_keys.write"><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/bundles" element={<PermissionProtectedRoute permission="admin.bundles.export"><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/users" element={<PermissionProtectedRoute permission="admin.users.read"><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/hall-of-fame" element={<PermissionProtectedRoute permission="admin.hof.read"><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments/create" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments/:id" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/teams/setup" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentSetupTeamsPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId" element={<RouteErrorBoundary><CalcuttaEntriesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/:calcuttaId/settings" element={<ProtectedRoute><RouteErrorBoundary><CalcuttaSettingsPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId/teams" element={<RouteErrorBoundary><CalcuttaTeamsPage /></RouteErrorBoundary>} />

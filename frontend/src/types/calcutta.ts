@@ -7,6 +7,7 @@ export interface Calcutta {
   maxTeams: number;
   maxBid: number;
   budgetPoints: number;
+  abilities?: CalcuttaAbilities;
   created: string;
   updated: string;
 }
@@ -116,9 +117,17 @@ export interface TournamentModerator {
   lastName: string;
 }
 
+export interface CalcuttaAbilities {
+  canEditSettings: boolean;
+  canInviteUsers: boolean;
+  canEditEntries: boolean;
+  canManageCoManagers: boolean;
+}
+
 export interface CalcuttaDashboard {
   calcutta: Calcutta;
   tournamentStartingAt?: string;
+  abilities?: CalcuttaAbilities;
   entries: CalcuttaEntry[];
   entryTeams: CalcuttaEntryTeam[];
   portfolios: CalcuttaPortfolio[];

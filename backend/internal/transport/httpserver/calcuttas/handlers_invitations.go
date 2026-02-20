@@ -144,6 +144,9 @@ func (h *Handler) HandleAcceptInvitation(w http.ResponseWriter, r *http.Request)
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
+	if h.granter != nil {
+		_ = h.granter.GrantLabel(r.Context(), userID, "player", "calcutta", calcuttaID)
+	}
 
 	invitation.Status = "accepted"
 	response.WriteJSON(w, http.StatusOK, dtos.NewInvitationResponse(invitation))

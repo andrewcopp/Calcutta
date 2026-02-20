@@ -7,7 +7,8 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-func CanInviteToCalcutta(
+// CanManageCalcutta checks if a user can modify calcutta settings, payouts, etc.
+func CanManageCalcutta(
 	ctx context.Context,
 	authz AuthorizationChecker,
 	userID string,
@@ -26,7 +27,7 @@ func CanInviteToCalcutta(
 	}
 
 	if !isAdmin {
-		return Decision{Allowed: false, IsAdmin: false, Status: http.StatusForbidden, Code: "forbidden", Message: "Only the commissioner can invite users"}, nil
+		return Decision{Allowed: false, IsAdmin: false, Status: http.StatusForbidden, Code: "forbidden", Message: "Insufficient permissions"}, nil
 	}
 
 	return Decision{Allowed: true, IsAdmin: isAdmin}, nil

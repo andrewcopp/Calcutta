@@ -5,6 +5,7 @@ import "time"
 type CalcuttaDashboardResponse struct {
 	Calcutta              *CalcuttaResponse        `json:"calcutta"`
 	TournamentStartingAt  *time.Time               `json:"tournamentStartingAt,omitempty"`
+	Abilities             *CalcuttaAbilities        `json:"abilities,omitempty"`
 	Entries               []*EntryResponse          `json:"entries"`
 	EntryTeams            []*EntryTeamResponse      `json:"entryTeams"`
 	Portfolios            []*PortfolioResponse      `json:"portfolios"`

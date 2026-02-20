@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
@@ -65,17 +66,14 @@ func (h *Handler) HandleReplacePayouts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only owner or admin can modify payouts
-	if calcutta.OwnerID != userID {
-		ok, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		if !ok {
-			httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
-			return
-		}
+	decision, err := policy.CanManageCalcutta(r.Context(), h.authz, userID, calcutta)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
 	}
 
 	var req replacePayoutsRequest
@@ -128,22 +126,20 @@ func (h *Handler) HandleReinvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check ownership or admin
 	source, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), sourceCalcuttaID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	if source.OwnerID != userID {
-		ok, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		if !ok {
-			httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
-			return
-		}
+
+	decision, err := policy.CanManageCalcutta(r.Context(), h.authz, userID, source)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
 	}
 
 	var req dtos.ReinviteRequest

@@ -46,25 +46,13 @@ func CanEditEntryBids(
 		return Decision{Allowed: false, Status: http.StatusBadRequest, Code: "tournament_missing", Message: "Tournament not found"}, nil
 	}
 
-	isAdmin := false
-	if authz != nil {
-		ok, err := authz.HasPermission(ctx, userID, "global", "", permissionAdminOverride)
-		if err != nil {
-			return Decision{}, err
-		}
-		if ok {
-			isAdmin = true
-		}
+	isAdmin, err := isCalcuttaAdminOrOwner(ctx, authz, userID, calcutta)
+	if err != nil {
+		return Decision{}, err
 	}
 
-	authorized := false
+	authorized := isAdmin
 	if entry.UserID != nil && *entry.UserID == userID {
-		authorized = true
-	}
-	if calcutta.OwnerID == userID {
-		authorized = true
-	}
-	if isAdmin {
 		authorized = true
 	}
 	if !authorized {
@@ -99,15 +87,9 @@ func CanViewEntryData(
 		return Decision{Allowed: false, Status: http.StatusBadRequest, Code: "calcutta_missing", Message: "Calcutta not found"}, nil
 	}
 
-	isAdmin := false
-	if authz != nil {
-		ok, err := authz.HasPermission(ctx, userID, "global", "", permissionAdminOverride)
-		if err != nil {
-			return Decision{}, err
-		}
-		if ok {
-			isAdmin = true
-		}
+	isAdmin, err := isCalcuttaAdminOrOwner(ctx, authz, userID, calcutta)
+	if err != nil {
+		return Decision{}, err
 	}
 
 	authorized := IsEntryOwnerOrCalcuttaOwner(userID, entry, calcutta) || isAdmin

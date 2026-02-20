@@ -16,14 +16,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// LabelGranter assigns labels to users with scope.
+type LabelGranter interface {
+	GrantLabel(ctx context.Context, userID, labelKey, scopeType, scopeID string) error
+}
+
 type Handler struct {
 	app        *app.App
 	authz      policy.AuthorizationChecker
+	granter    LabelGranter
 	authUserID func(context.Context) string
 }
 
-func NewHandlerWithAuthUserID(a *app.App, authz policy.AuthorizationChecker, authUserID func(context.Context) string) *Handler {
-	return &Handler{app: a, authz: authz, authUserID: authUserID}
+func NewHandlerWithAuthUserID(a *app.App, authz policy.AuthorizationChecker, granter LabelGranter, authUserID func(context.Context) string) *Handler {
+	return &Handler{app: a, authz: authz, granter: granter, authUserID: authUserID}
 }
 
 func (h *Handler) HandleListCalcuttas(w http.ResponseWriter, r *http.Request) {
@@ -125,6 +131,9 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
+	if h.granter != nil {
+		_ = h.granter.GrantLabel(r.Context(), calcutta.OwnerID, "calcutta_admin", "calcutta", calcutta.ID)
+	}
 	slog.Info("calcutta_created", "calcutta_id", calcutta.ID)
 	response.WriteJSON(w, http.StatusCreated, dtos.NewCalcuttaResponse(calcutta))
 }
@@ -143,7 +152,13 @@ func (h *Handler) HandleGetCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewCalcuttaResponse(calcutta))
+	resp := dtos.NewCalcuttaResponse(calcutta)
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	resp.Abilities = computeAbilities(r.Context(), h.authz, userID, calcutta)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) HandleUpdateCalcutta(w http.ResponseWriter, r *http.Request) {
@@ -169,16 +184,14 @@ func (h *Handler) HandleUpdateCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if calcutta.OwnerID != userID {
-		ok, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		if !ok {
-			httperr.Write(w, r, http.StatusForbidden, "forbidden", "Insufficient permissions", "")
-			return
-		}
+	decision, err := policy.CanManageCalcutta(r.Context(), h.authz, userID, calcutta)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
 	}
 
 	var req dtos.UpdateCalcuttaRequest

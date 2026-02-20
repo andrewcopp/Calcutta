@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useUser } from '../contexts/useUser';
 import { useHasPermission } from '../hooks/useHasPermission';
+import { useHasAnyPermission } from '../hooks/useHasAnyPermission';
+import { PERMISSIONS, ADMIN_PERMISSIONS } from '../constants/permissions';
 import { UserMenu } from './Header/UserMenu';
 
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user } = useUser();
-  const canAccessLab = useHasPermission('lab.read');
+  const canAccessLab = useHasPermission(PERMISSIONS.LAB_READ);
+  const canAccessAdmin = useHasAnyPermission(ADMIN_PERMISSIONS);
 
   return (
     <header className="bg-white shadow-md">
@@ -29,7 +30,7 @@ export const Header: React.FC = () => {
               <Link to="/rules" className="text-gray-600 hover:text-gray-800">
                 How It Works
               </Link>
-              {user && (
+              {canAccessAdmin && (
                 <Link to="/admin" className="text-gray-600 hover:text-gray-800">
                   Admin
                 </Link>
@@ -85,7 +86,7 @@ export const Header: React.FC = () => {
             >
               How It Works
             </Link>
-            {user && (
+            {canAccessAdmin && (
               <Link
                 to="/admin"
                 className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"

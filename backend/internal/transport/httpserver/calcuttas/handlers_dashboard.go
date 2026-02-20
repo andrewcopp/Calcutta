@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
@@ -22,6 +23,27 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+
+	participantIDs, err := h.app.Calcutta.GetDistinctUserIDsByCalcutta(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanViewCalcutta(r.Context(), h.authz, userID, calcutta, participantIDs)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
 		return
 	}
 
@@ -85,6 +107,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 	resp := &dtos.CalcuttaDashboardResponse{
 		Calcutta:             dtos.NewCalcuttaResponse(calcutta),
 		TournamentStartingAt: tournament.StartingAt,
+		Abilities:            computeAbilities(r.Context(), h.authz, userID, calcutta),
 		Entries:              dtos.NewEntryListResponse(entries),
 		EntryTeams:           dtos.NewEntryTeamListResponse(allEntryTeams),
 		Portfolios:           dtos.NewPortfolioListResponse(allPortfolios),

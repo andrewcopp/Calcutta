@@ -91,6 +91,33 @@ func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+
+	participantIDs, err := h.app.Calcutta.GetDistinctUserIDsByCalcutta(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanViewCalcutta(r.Context(), h.authz, userID, calcutta, participantIDs)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
 	entries, err := h.app.Calcutta.GetEntries(r.Context(), calcuttaID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)

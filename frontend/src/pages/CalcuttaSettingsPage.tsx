@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
-import { useUser } from '../contexts/useUser';
 import { queryKeys } from '../queryKeys';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -18,7 +17,6 @@ import { useFlashMessage } from '../hooks/useFlashMessage';
 
 export function CalcuttaSettingsPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
-  const { user } = useUser();
   const queryClient = useQueryClient();
   const [successMessage, flash] = useFlashMessage();
 
@@ -116,10 +114,10 @@ export function CalcuttaSettingsPage() {
     );
   }
 
-  if (calcutta && user?.id !== calcutta.ownerId) {
+  if (calcutta && !calcutta.abilities?.canEditSettings) {
     return (
       <PageContainer>
-        <Alert variant="error">Only the pool owner can access settings.</Alert>
+        <Alert variant="error">You do not have permission to access settings.</Alert>
       </PageContainer>
     );
   }

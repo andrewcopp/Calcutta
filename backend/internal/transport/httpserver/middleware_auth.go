@@ -323,8 +323,8 @@ func (s *Server) requirePermission(permissionKey string, next http.HandlerFunc) 
 }
 
 // requirePermissionWithScope checks global grants first, then falls back to
-// a tournament-scoped grant extracted from the URL path variable.
-func (s *Server) requirePermissionWithScope(permissionKey, pathVar string, next http.HandlerFunc) http.HandlerFunc {
+// a scoped grant extracted from the URL path variable.
+func (s *Server) requirePermissionWithScope(permissionKey, scopeType, pathVar string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := authUserID(r.Context())
 		if userID == "" {
@@ -343,10 +343,10 @@ func (s *Server) requirePermissionWithScope(permissionKey, pathVar string, next 
 			return
 		}
 
-		// Fall back to tournament-scoped permission.
+		// Fall back to scoped permission.
 		scopeID := mux.Vars(r)[pathVar]
 		if scopeID != "" {
-			ok, err = s.authzRepo.HasPermission(r.Context(), userID, "tournament", scopeID, permissionKey)
+			ok, err = s.authzRepo.HasPermission(r.Context(), userID, scopeType, scopeID, permissionKey)
 			if err != nil {
 				httperr.WriteFromErr(w, r, err, authUserID)
 				return

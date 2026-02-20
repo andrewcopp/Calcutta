@@ -69,17 +69,25 @@ func (r *CreateCalcuttaRequest) ToScoringRules() []*models.CalcuttaRound {
 	return rounds
 }
 
+type CalcuttaAbilities struct {
+	CanEditSettings     bool `json:"canEditSettings"`
+	CanInviteUsers      bool `json:"canInviteUsers"`
+	CanEditEntries      bool `json:"canEditEntries"`
+	CanManageCoManagers bool `json:"canManageCoManagers"`
+}
+
 type CalcuttaResponse struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	TournamentID string    `json:"tournamentId"`
-	OwnerID      string    `json:"ownerId"`
-	MinTeams     int       `json:"minTeams"`
-	MaxTeams     int       `json:"maxTeams"`
-	MaxBid       int       `json:"maxBid"`
-	Visibility   string    `json:"visibility"`
-	Created      time.Time `json:"created"`
-	Updated      time.Time `json:"updated"`
+	ID           string             `json:"id"`
+	Name         string             `json:"name"`
+	TournamentID string             `json:"tournamentId"`
+	OwnerID      string             `json:"ownerId"`
+	MinTeams     int                `json:"minTeams"`
+	MaxTeams     int                `json:"maxTeams"`
+	MaxBid       int                `json:"maxBid"`
+	Visibility   string             `json:"visibility"`
+	Created      time.Time          `json:"created"`
+	Updated      time.Time          `json:"updated"`
+	Abilities    *CalcuttaAbilities `json:"abilities,omitempty"`
 }
 
 func NewCalcuttaResponse(c *models.Calcutta) *CalcuttaResponse {
