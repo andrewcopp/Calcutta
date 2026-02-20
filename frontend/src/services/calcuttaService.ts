@@ -10,10 +10,11 @@ export const calcuttaService = {
     return apiClient.get<Calcutta>(`/calcuttas/${id}`);
   },
 
-  async createCalcutta(name: string, tournamentId: string): Promise<Calcutta> {
+  async createCalcutta(name: string, tournamentId: string, scoringRules: Array<{ winIndex: number; pointsAwarded: number }>): Promise<Calcutta> {
     return apiClient.post<Calcutta>('/calcuttas', {
       name,
       tournamentId,
+      scoringRules,
     });
   },
 

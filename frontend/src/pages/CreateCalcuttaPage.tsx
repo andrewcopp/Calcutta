@@ -14,14 +14,37 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
+const ROUND_LABELS: Record<number, string> = {
+  1: 'First Four Win',
+  2: 'Round of 64 Win',
+  3: 'Round of 32 Win',
+  4: 'Sweet 16 Win',
+  5: 'Elite 8 Win',
+  6: 'Final Four Win',
+  7: 'Championship Win',
+};
+
+const DEFAULT_POINTS = [0, 50, 100, 150, 200, 250, 300];
+
+interface ScoringRule {
+  winIndex: number;
+  pointsAwarded: number;
+}
+
+function buildDefaultScoringRules(roundCount: number): ScoringRule[] {
+  return Array.from({ length: roundCount }, (_, i) => ({
+    winIndex: i + 1,
+    pointsAwarded: DEFAULT_POINTS[i] ?? (i + 1) * 50,
+  }));
+}
+
 export function CreateCalcuttaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [newCalcutta, setNewCalcutta] = useState({
-    name: '',
-    tournamentId: '',
-  });
+  const [name, setName] = useState('');
+  const [tournamentId, setTournamentId] = useState('');
+  const [scoringRules, setScoringRules] = useState<ScoringRule[]>([]);
 
   const tournamentsQuery = useQuery({
     queryKey: queryKeys.tournaments.all(),
@@ -29,11 +52,14 @@ export function CreateCalcuttaPage() {
   });
 
   const createCalcuttaMutation = useMutation({
-    mutationFn: async ({ name, tournamentId }: { name: string; tournamentId: string }) => {
-      return calcuttaService.createCalcutta(name, tournamentId);
+    mutationFn: async (params: { name: string; tournamentId: string; scoringRules: ScoringRule[] }) => {
+      return calcuttaService.createCalcutta(params.name, params.tournamentId, params.scoringRules);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() }),
+        queryClient.invalidateQueries({ queryKey: ['calcuttasWithRankings'] }),
+      ]);
       navigate('/calcuttas');
     },
     onError: (error) => {
@@ -41,13 +67,33 @@ export function CreateCalcuttaPage() {
     },
   });
 
+  const handleTournamentChange = (newTournamentId: string) => {
+    setTournamentId(newTournamentId);
+    if (!newTournamentId) {
+      setScoringRules([]);
+      return;
+    }
+    const tournament = tournaments.find((t) => t.id === newTournamentId);
+    const roundCount = tournament?.rounds ?? 7;
+    setScoringRules(buildDefaultScoringRules(roundCount));
+  };
+
+  const handlePointsChange = (winIndex: number, value: string) => {
+    const points = parseInt(value, 10);
+    if (isNaN(points) || points < 0) return;
+    setScoringRules((prev) =>
+      prev.map((rule) => (rule.winIndex === winIndex ? { ...rule, pointsAwarded: points } : rule))
+    );
+  };
+
   const handleCreateCalcutta = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     createCalcuttaMutation.mutate({
-      name: newCalcutta.name,
-      tournamentId: newCalcutta.tournamentId,
+      name,
+      tournamentId,
+      scoringRules,
     });
   };
 
@@ -100,8 +146,8 @@ export function CreateCalcuttaPage() {
                 <Input
                   type="text"
                   id="name"
-                  value={newCalcutta.name}
-                  onChange={(e) => setNewCalcutta({ ...newCalcutta, name: e.target.value })}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Enter a name for your Calcutta"
                   required
                 />
@@ -113,8 +159,8 @@ export function CreateCalcuttaPage() {
                 </label>
                 <Select
                   id="tournament"
-                  value={newCalcutta.tournamentId}
-                  onChange={(e) => setNewCalcutta({ ...newCalcutta, tournamentId: e.target.value })}
+                  value={tournamentId}
+                  onChange={(e) => handleTournamentChange(e.target.value)}
                   required
                 >
                   <option value="">Select a tournament</option>
@@ -127,6 +173,36 @@ export function CreateCalcuttaPage() {
                 <p className="mt-1 text-sm text-gray-500">Select the tournament this Calcutta will be based on</p>
               </div>
 
+              {scoringRules.length > 0 ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Scoring Rules
+                  </label>
+                  <div className="space-y-3">
+                    {scoringRules.map((rule) => (
+                      <div key={rule.winIndex} className="flex items-center gap-3">
+                        <label
+                          htmlFor={`scoring-${rule.winIndex}`}
+                          className="text-sm text-gray-600 w-44 shrink-0"
+                        >
+                          {ROUND_LABELS[rule.winIndex] ?? `Win ${rule.winIndex}`}
+                        </label>
+                        <Input
+                          type="number"
+                          id={`scoring-${rule.winIndex}`}
+                          min={0}
+                          value={rule.pointsAwarded}
+                          onChange={(e) => handlePointsChange(rule.winIndex, e.target.value)}
+                          className="w-28"
+                        />
+                        <span className="text-sm text-gray-500">pts</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">Points awarded for each win in the tournament</p>
+                </div>
+              ) : null}
+
               <div className="pt-2">
                 <Button type="submit" className="w-full" loading={createCalcuttaMutation.isPending}>
                   Create Calcutta
@@ -138,5 +214,4 @@ export function CreateCalcuttaPage() {
       </div>
     </PageContainer>
   );
- }
- 
+}

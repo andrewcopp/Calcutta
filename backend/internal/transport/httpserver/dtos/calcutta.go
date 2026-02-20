@@ -1,15 +1,22 @@
 package dtos
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
+type ScoringRuleInput struct {
+	WinIndex      int `json:"winIndex"`
+	PointsAwarded int `json:"pointsAwarded"`
+}
+
 type CreateCalcuttaRequest struct {
-	Name         string `json:"name"`
-	TournamentID string `json:"tournamentId"`
+	Name         string             `json:"name"`
+	TournamentID string             `json:"tournamentId"`
+	ScoringRules []ScoringRuleInput `json:"scoringRules"`
 }
 
 func (r *CreateCalcuttaRequest) Validate() error {
@@ -19,6 +26,22 @@ func (r *CreateCalcuttaRequest) Validate() error {
 	if r.TournamentID == "" {
 		return ErrFieldRequired("tournamentId")
 	}
+	if len(r.ScoringRules) == 0 {
+		return ErrFieldRequired("scoringRules")
+	}
+	seen := make(map[int]bool, len(r.ScoringRules))
+	for _, rule := range r.ScoringRules {
+		if rule.WinIndex < 1 {
+			return ErrFieldInvalid("scoringRules", fmt.Sprintf("winIndex must be >= 1, got %d", rule.WinIndex))
+		}
+		if rule.PointsAwarded < 0 {
+			return ErrFieldInvalid("scoringRules", fmt.Sprintf("pointsAwarded must be >= 0, got %d", rule.PointsAwarded))
+		}
+		if seen[rule.WinIndex] {
+			return ErrFieldInvalid("scoringRules", fmt.Sprintf("duplicate winIndex %d", rule.WinIndex))
+		}
+		seen[rule.WinIndex] = true
+	}
 	return nil
 }
 
@@ -27,6 +50,17 @@ func (r *CreateCalcuttaRequest) ToModel() *models.Calcutta {
 		Name:         r.Name,
 		TournamentID: r.TournamentID,
 	}
+}
+
+func (r *CreateCalcuttaRequest) ToScoringRules() []*models.CalcuttaRound {
+	rounds := make([]*models.CalcuttaRound, len(r.ScoringRules))
+	for i, rule := range r.ScoringRules {
+		rounds[i] = &models.CalcuttaRound{
+			Round:  rule.WinIndex,
+			Points: rule.PointsAwarded,
+		}
+	}
+	return rounds
 }
 
 type CalcuttaResponse struct {

@@ -121,7 +121,8 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.app.Calcutta.CreateCalcuttaWithRounds(r.Context(), calcutta); err != nil {
+	rounds := req.ToScoringRules()
+	if err := h.app.Calcutta.CreateCalcuttaWithRounds(r.Context(), calcutta, rounds); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}

@@ -24,7 +24,12 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 		newCalcutta.MaxBid = source.MaxBid
 	}
 
-	if err := s.CreateCalcuttaWithRounds(ctx, newCalcutta); err != nil {
+	sourceRounds, err := s.ports.RoundReader.GetRounds(ctx, sourceCalcuttaID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := s.CreateCalcuttaWithRounds(ctx, newCalcutta, sourceRounds); err != nil {
 		return nil, nil, err
 	}
 
