@@ -20,12 +20,16 @@ make ops-migrate        # Run database migrations
 
 ### Testing
 ```bash
+make test                                            # All tests (backend + frontend + data science)
 make backend-test                                    # All Go tests
+make frontend-test                                   # All frontend tests (vitest)
+make ds-test                                         # All Python tests (pytest)
 go -C backend test ./...                             # Alternative
 go -C backend test -v ./internal/app/bracket/...    # Specific package
 go -C backend test -v ./internal/app/bracket/ -run TestThatBracketBuilderGeneratesSameGameIDs  # Single test
 
 cd data-science && source .venv/bin/activate && pytest  # Python tests
+cd frontend && npm test                                  # Frontend tests
 cd frontend && npm run lint                              # Frontend linting
 ```
 

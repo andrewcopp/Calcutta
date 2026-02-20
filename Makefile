@@ -5,7 +5,7 @@ DOCKER_PROJECT ?= calcutta
 DC = docker compose -p $(DOCKER_PROJECT)
 
 .PHONY: env-init bootstrap bootstrap-admin dev up-d logs ps stats
-.PHONY: up down reset ops-migrate backend-test sqlc-generate
+.PHONY: up down reset ops-migrate backend-test frontend-test ds-test test sqlc-generate
 .PHONY: db-shell db-query db query query-file query-csv
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
@@ -58,6 +58,14 @@ stats:
 
 backend-test:
 	$(ENV) go -C backend test ./...
+
+frontend-test:
+	cd frontend && npm test
+
+ds-test:
+	cd data-science && . .venv/bin/activate && pytest
+
+test: backend-test frontend-test ds-test
 
 sqlc-generate:
 	$(ENV) sqlc generate -f backend/sqlc.yaml
