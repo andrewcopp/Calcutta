@@ -1,0 +1,120 @@
+package db
+
+import (
+	"context"
+	"errors"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/jackc/pgx/v5"
+)
+
+func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error) {
+	row, err := r.q.GetPortfolioByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, &apperrors.NotFoundError{Resource: "portfolio", ID: id}
+		}
+		return nil, err
+	}
+
+	return &models.CalcuttaPortfolio{
+		ID:            row.ID,
+		EntryID:       row.EntryID,
+		MaximumPoints: row.MaximumPoints,
+		Created:       row.CreatedAt.Time,
+		Updated:       row.UpdatedAt.Time,
+		Deleted:       TimestamptzToPtrTime(row.DeletedAt),
+	}, nil
+}
+
+func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error) {
+	rows, err := r.q.ListPortfolioTeamsByPortfolioID(ctx, portfolioID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*models.CalcuttaPortfolioTeam, 0, len(rows))
+	for _, row := range rows {
+		pt := &models.CalcuttaPortfolioTeam{
+			ID:                  row.ID,
+			PortfolioID:         row.PortfolioID,
+			TeamID:              row.TeamID,
+			OwnershipPercentage: row.OwnershipPercentage,
+			ActualPoints:        row.ActualPoints,
+			ExpectedPoints:      row.ExpectedPoints,
+			Created:             row.CreatedAt.Time,
+			Updated:             row.UpdatedAt.Time,
+			Deleted:             TimestamptzToPtrTime(row.DeletedAt),
+		}
+
+		tt := &models.TournamentTeam{
+			ID:           row.TournamentTeamID,
+			SchoolID:     row.SchoolID,
+			TournamentID: row.TournamentID,
+			Seed:         int(row.Seed),
+			Region:       row.Region,
+			Byes:         int(row.Byes),
+			Wins:         int(row.Wins),
+			Eliminated:   row.Eliminated,
+			Created:      row.TeamCreatedAt.Time,
+			Updated:      row.TeamUpdatedAt.Time,
+		}
+		if row.SchoolName != nil {
+			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
+		}
+		pt.Team = tt
+
+		out = append(out, pt)
+	}
+	return out, nil
+}
+
+func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
+	rows, err := r.q.ListPortfoliosByEntryID(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*models.CalcuttaPortfolio, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &models.CalcuttaPortfolio{
+			ID:      row.ID,
+			EntryID: row.EntryID,
+			Created: row.CreatedAt.Time,
+			Updated: row.UpdatedAt.Time,
+			Deleted: TimestamptzToPtrTime(row.DeletedAt),
+		})
+	}
+	return out, nil
+}
+
+func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error) {
+	row, err := r.q.GetTeamByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, &apperrors.NotFoundError{Resource: "tournament team", ID: id}
+		}
+		return nil, err
+	}
+
+	team := &models.TournamentTeam{
+		ID:           row.ID,
+		TournamentID: row.TournamentID,
+		SchoolID:     row.SchoolID,
+		Seed:         int(row.Seed),
+		Region:       row.Region,
+		Byes:         int(row.Byes),
+		Wins:         int(row.Wins),
+		Eliminated:   row.Eliminated,
+		Created:      row.CreatedAt.Time,
+		Updated:      row.UpdatedAt.Time,
+	}
+	if row.NetRtg != nil || row.ORtg != nil || row.DRtg != nil || row.AdjT != nil {
+		team.KenPom = &models.KenPomStats{NetRtg: row.NetRtg, ORtg: row.ORtg, DRtg: row.DRtg, AdjT: row.AdjT}
+	}
+	if row.SchoolName != nil {
+		team.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
+	}
+	return team, nil
+}

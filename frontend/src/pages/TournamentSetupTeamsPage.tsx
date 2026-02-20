@@ -8,10 +8,11 @@ import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Combobox } from '../components/ui/Combobox';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
+import { ValidationPanel } from './Tournament/ValidationPanel';
+import { RegionSeedForm } from './Tournament/RegionSeedForm';
 
 const REGIONS = ['East', 'West', 'South', 'Midwest'] as const;
 type Region = (typeof REGIONS)[number];
@@ -239,40 +240,7 @@ export const TournamentSetupTeamsPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Validation Panel */}
-      <Card className="mb-6">
-        <div className="flex flex-wrap gap-6 text-sm">
-          <div>
-            <span className="text-gray-600">Total: </span>
-            <span className={stats.total === 68 ? 'font-bold text-green-600' : 'font-bold text-amber-600'}>
-              {stats.total}/68
-            </span>
-          </div>
-          {REGIONS.map((region) => {
-            const count = stats.perRegion[region] || 0;
-            const target = region === 'East' || region === 'West' || region === 'South' || region === 'Midwest' ? 17 : 16;
-            return (
-              <div key={region}>
-                <span className="text-gray-600">{region}: </span>
-                <span className={count >= 16 ? 'font-semibold text-green-600' : 'font-semibold text-amber-600'}>
-                  {count}
-                </span>
-              </div>
-            );
-          })}
-          <div>
-            <span className="text-gray-600">Play-ins: </span>
-            <span className={stats.playIns === 4 ? 'font-bold text-green-600' : 'font-bold text-amber-600'}>
-              {stats.playIns}/4
-            </span>
-          </div>
-          {stats.duplicates.length > 0 && (
-            <div className="text-red-600 font-semibold">
-              Duplicates: {stats.duplicates.join(', ')}
-            </div>
-          )}
-        </div>
-      </Card>
+      <ValidationPanel stats={stats} />
 
       {/* Region Tabs */}
       <Tabs defaultValue="East">
@@ -287,59 +255,16 @@ export const TournamentSetupTeamsPage: React.FC = () => {
         {REGIONS.map((region) => (
           <TabsContent key={region} value={region}>
             <Card>
-              <div className="space-y-3">
-                {Array.from({ length: 16 }, (_, i) => i + 1).map((seed) => {
-                  const slots = regions[region][seed];
-                  return (
-                    <div key={seed} className="flex items-start gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 text-sm font-bold text-gray-700 shrink-0">
-                        {seed}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        {slots.map((slot, slotIndex) => (
-                          <div key={slotIndex} className="flex items-center gap-2">
-                            <Combobox
-                              options={schoolOptions}
-                              value={slot.searchText}
-                              onChange={(text) => updateSlot(region, seed, slotIndex, { searchText: text, schoolId: '' })}
-                              onSelect={(schoolId) => {
-                                const school = schools.find((s) => s.id === schoolId);
-                                updateSlot(region, seed, slotIndex, { schoolId, searchText: school?.name || '' });
-                              }}
-                              placeholder="Search for a school..."
-                              excludeIds={usedSchoolIds}
-                              className="flex-1"
-                            />
-                            {slotIndex === 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removePlayIn(region, seed)}
-                                className="text-red-500 hover:text-red-700 shrink-0"
-                              >
-                                -
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {slots.length === 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addPlayIn(region, seed)}
-                          className="shrink-0"
-                          title="Add play-in team"
-                        >
-                          +
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <RegionSeedForm
+                region={region}
+                regionState={regions[region]}
+                schoolOptions={schoolOptions}
+                schools={schools}
+                usedSchoolIds={usedSchoolIds}
+                updateSlot={updateSlot}
+                addPlayIn={addPlayIn}
+                removePlayIn={removePlayIn}
+              />
             </Card>
           </TabsContent>
         ))}

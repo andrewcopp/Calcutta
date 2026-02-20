@@ -28,3 +28,18 @@ export function getPayoutColor(payout?: number | null): string {
   if (payout >= 0.9) return 'text-yellow-700';
   return 'text-red-700';
 }
+
+/** Return Tailwind color classes based on an ROI multiplier value. */
+export function getRoiColor(roi: number): string {
+  if (roi >= 2.0) return 'text-green-700 font-bold';
+  if (roi >= 1.5) return 'text-green-600';
+  if (roi >= 1.0) return 'text-gray-900';
+  if (roi >= 0.5) return 'text-yellow-600';
+  return 'text-red-600';
+}
+
+/** Format an ROI value as a multiplier string (e.g. "1.57x"). Returns em dash for non-finite values. */
+export function formatRoi(roi: number): string {
+  if (!isFinite(roi) || isNaN(roi)) return '\u2014';
+  return `${roi.toFixed(2)}x`;
+}

@@ -66,12 +66,20 @@ func (s *Service) ListEntries(ctx context.Context, filter models.LabListEntriesF
 
 // GetEntryEnriched returns a single entry with enriched bids (team names, seeds, naive allocation).
 func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*models.LabEntryDetailEnriched, error) {
-	return s.repo.GetEntryEnriched(ctx, id)
+	raw, err := s.repo.GetEntryRaw(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return EnrichEntry(raw), nil
 }
 
 // GetEntryEnrichedByModelAndCalcutta returns an enriched entry for a model/calcutta pair.
 func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
-	return s.repo.GetEntryEnrichedByModelAndCalcutta(ctx, modelName, calcuttaID, startingStateKey)
+	entryID, err := s.repo.GetEntryIDByModelAndCalcutta(ctx, modelName, calcuttaID, startingStateKey)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetEntryEnriched(ctx, entryID)
 }
 
 // ListEvaluations returns evaluations matching the filter.

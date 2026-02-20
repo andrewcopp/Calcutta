@@ -11,6 +11,7 @@ import { Select } from '../../components/ui/Select';
 import { getEntryColorById } from '../../utils/entryColors';
 import { OwnershipPieChart } from '../../components/charts/OwnershipPieChart';
 import { LoadingState } from '../../components/ui/LoadingState';
+import { createTeamSortComparator } from '../../utils/teamSort';
 
 interface OwnershipSlice {
   name: string;
@@ -96,38 +97,16 @@ export const OwnershipTab: React.FC<{
   const ownershipSortedTeams = useMemo(() => {
     const cards = ownershipTeamsData.slice();
 
-    const seedA = (seed: number) => seed;
-    const regionA = (region: string) => region || '';
-    const teamA = (name: string) => name || '';
-
-    cards.sort((a, b) => {
-      if (ownershipSortBy === 'investment') {
+    if (ownershipSortBy === 'investment') {
+      cards.sort((a, b) => {
         if (b.totalSpend !== a.totalSpend) return b.totalSpend - a.totalSpend;
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        const seedDiff = a.seed - b.seed;
         if (seedDiff !== 0) return seedDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      if (ownershipSortBy === 'seed') {
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
-        if (seedDiff !== 0) return seedDiff;
-        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
-        if (regionDiff !== 0) return regionDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      if (ownershipSortBy === 'region') {
-        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
-        if (regionDiff !== 0) return regionDiff;
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
-        if (seedDiff !== 0) return seedDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      const nameDiff = teamA(a.teamName).localeCompare(teamA(b.teamName));
-      if (nameDiff !== 0) return nameDiff;
-      return seedA(a.seed) - seedA(b.seed);
-    });
+        return (a.teamName || '').localeCompare(b.teamName || '');
+      });
+    } else {
+      cards.sort(createTeamSortComparator(ownershipSortBy));
+    }
 
     return cards;
   }, [ownershipSortBy, ownershipTeamsData]);

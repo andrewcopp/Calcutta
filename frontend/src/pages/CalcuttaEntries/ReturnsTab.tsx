@@ -4,6 +4,7 @@ import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
+import { createTeamSortComparator } from '../../utils/teamSort';
 
 export const ReturnsTab: React.FC<{
   entries: CalcuttaEntry[];
@@ -114,39 +115,18 @@ export const ReturnsTab: React.FC<{
 
   const returnsSortedRows = useMemo(() => {
     const rows = returnsRows.rows.slice();
-    const seedA = (seed: number | undefined) => seed ?? 999;
-    const regionA = (region: string) => region || '';
-    const teamA = (name: string) => name || '';
 
-    rows.sort((a, b) => {
-      if (returnsSortBy === 'points') {
+    if (returnsSortBy === 'points') {
+      rows.sort((a, b) => {
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
         if (b.totalPossible !== a.totalPossible) return b.totalPossible - a.totalPossible;
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
+        const seedDiff = (a.seed ?? 999) - (b.seed ?? 999);
         if (seedDiff !== 0) return seedDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      if (returnsSortBy === 'seed') {
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
-        if (seedDiff !== 0) return seedDiff;
-        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
-        if (regionDiff !== 0) return regionDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      if (returnsSortBy === 'region') {
-        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
-        if (regionDiff !== 0) return regionDiff;
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
-        if (seedDiff !== 0) return seedDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      const nameDiff = teamA(a.teamName).localeCompare(teamA(b.teamName));
-      if (nameDiff !== 0) return nameDiff;
-      return seedA(a.seed) - seedA(b.seed);
-    });
+        return (a.teamName || '').localeCompare(b.teamName || '');
+      });
+    } else {
+      rows.sort(createTeamSortComparator(returnsSortBy));
+    }
 
     return rows;
   }, [returnsRows.rows, returnsSortBy]);

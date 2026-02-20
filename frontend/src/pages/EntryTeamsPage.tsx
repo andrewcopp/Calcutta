@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
+import { CalcuttaEntryTeam } from '../types/calcutta';
 import { Alert } from '../components/ui/Alert';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
@@ -10,41 +10,10 @@ import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
 import { StatisticsTab } from './EntryTeams/StatisticsTab';
+import { PortfolioScores } from './EntryTeams/PortfolioScores';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
-
-// Add a new section to display portfolio scores
-const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }> = ({
-  portfolio,
-  teams,
-}) => {
-  return (
-    <div className="bg-white shadow rounded-lg p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4">Portfolio Scores</h3>
-      <div className="grid grid-cols-1 gap-4">
-        <div className="flex justify-between items-center">
-          <span className="text-gray-600">Maximum Possible Score:</span>
-          <span className="font-medium">{portfolio.maximumPoints.toFixed(2)}</span>
-        </div>
-        <div className="border-t pt-4">
-          <h4 className="text-md font-medium mb-2">Team Scores</h4>
-          <div className="space-y-2">
-            {teams.map((team) => (
-              <div key={team.id} className="flex justify-between items-center">
-                <span className="text-gray-600">{team.team?.school?.name || 'Unknown Team'}</span>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">
-                    Expected: {team.expectedPoints.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { useEntryTeamsData } from '../hooks/useEntryTeamsData';
 
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
@@ -58,91 +27,6 @@ export function EntryTeamsPage() {
 
   const dashboardQuery = useCalcuttaDashboard(calcuttaId);
 
-  const enrichedData = useMemo(() => {
-    if (!dashboardQuery.data || !entryId) {
-      return {
-        calcuttaName: '',
-        entryName: '',
-        teams: [] as CalcuttaEntryTeam[],
-        schools: [] as { id: string; name: string }[],
-        portfolios: [] as CalcuttaPortfolio[],
-        portfolioTeams: [] as CalcuttaPortfolioTeam[],
-        tournamentTeams: dashboardQuery.data?.tournamentTeams ?? [],
-        allEntryTeams: [] as CalcuttaEntryTeam[],
-        allCalcuttaPortfolios: [] as (CalcuttaPortfolio & { entryName?: string })[],
-        allCalcuttaPortfolioTeams: [] as CalcuttaPortfolioTeam[],
-      };
-    }
-
-    const { calcutta, entries, entryTeams, portfolios, portfolioTeams, schools, tournamentTeams } = dashboardQuery.data;
-    const schoolMap = new Map(schools.map((s) => [s.id, s]));
-    const entryNameMap = new Map(entries.map((e) => [e.id, e.name]));
-
-    const currentEntry = entries.find((e) => e.id === entryId);
-    const entryName = currentEntry?.name || '';
-
-    // Filter entry teams for this entry
-    const thisEntryTeams = entryTeams.filter((et) => et.entryId === entryId);
-
-    // Enrich entry teams with school info
-    const teamsWithSchools: CalcuttaEntryTeam[] = thisEntryTeams.map((team) => ({
-      ...team,
-      team: team.team
-        ? {
-            ...team.team,
-            school: schoolMap.get(team.team.schoolId),
-          }
-        : undefined,
-    }));
-
-    // Filter portfolios for this entry
-    const thisEntryPortfolios = portfolios.filter((p) => p.entryId === entryId);
-
-    // Filter portfolio teams for this entry's portfolios
-    const thisPortfolioIds = new Set(thisEntryPortfolios.map((p) => p.id));
-    const thisPortfolioTeams: CalcuttaPortfolioTeam[] = portfolioTeams
-      .filter((pt) => thisPortfolioIds.has(pt.portfolioId))
-      .map((pt) => ({
-        ...pt,
-        team: pt.team
-          ? {
-              ...pt.team,
-              school: schoolMap.get(pt.team.schoolId),
-            }
-          : undefined,
-      }));
-
-    // Enrich all portfolios with entry names
-    const allPortfoliosWithNames: (CalcuttaPortfolio & { entryName?: string })[] = portfolios.map((p) => ({
-      ...p,
-      entryName: entryNameMap.get(p.entryId),
-    }));
-
-    // Enrich all portfolio teams with school info
-    const allPortfolioTeamsWithSchools: CalcuttaPortfolioTeam[] = portfolioTeams.map((pt) => ({
-      ...pt,
-      team: pt.team
-        ? {
-            ...pt.team,
-            school: schoolMap.get(pt.team.schoolId),
-          }
-        : undefined,
-    }));
-
-    return {
-      calcuttaName: calcutta.name,
-      entryName,
-      teams: teamsWithSchools,
-      schools,
-      portfolios: thisEntryPortfolios,
-      portfolioTeams: thisPortfolioTeams,
-      tournamentTeams,
-      allEntryTeams: entryTeams,
-      allCalcuttaPortfolios: allPortfoliosWithNames,
-      allCalcuttaPortfolioTeams: allPortfolioTeamsWithSchools,
-    };
-  }, [dashboardQuery.data, entryId]);
-
   const {
     calcuttaName,
     entryName,
@@ -154,7 +38,7 @@ export function EntryTeamsPage() {
     allEntryTeams,
     allCalcuttaPortfolios,
     allCalcuttaPortfolioTeams,
-  } = enrichedData;
+  } = useEntryTeamsData(dashboardQuery.data, entryId);
 
   // Helper function to find portfolio team data for a given team ID
   const getPortfolioTeamData = useCallback(

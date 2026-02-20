@@ -87,6 +87,36 @@ type LabEnrichedBid struct {
 	ExpectedROI *float64 `json:"expected_roi,omitempty"`
 }
 
+// LabTeamInfo holds team metadata used during enrichment.
+type LabTeamInfo struct {
+	Name   string
+	Seed   int
+	Region string
+}
+
+// LabEntryRaw holds the raw entry data fetched from the database before enrichment.
+type LabEntryRaw struct {
+	ID                    string
+	InvestmentModelID     string
+	CalcuttaID            string
+	GameOutcomeKind       string
+	GameOutcomeParamsJSON json.RawMessage
+	OptimizerKind         string
+	OptimizerParamsJSON   json.RawMessage
+	StartingStateKey      string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	ModelName             string
+	ModelKind             string
+	CalcuttaName          string
+	NEvaluations          int
+	HasPredictions        bool
+	Predictions           []LabPrediction
+	Bids                  []LabEntryBid
+	Teams                 map[string]LabTeamInfo
+	TotalPoolBudget       int
+}
+
 // LabEntryDetailEnriched is LabEntryDetail with enriched predictions and bids.
 type LabEntryDetailEnriched struct {
 	ID                    string                 `json:"id"`

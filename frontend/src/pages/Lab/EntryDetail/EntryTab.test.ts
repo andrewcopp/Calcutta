@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getRoiColor, formatRoi } from './EntryTab';
+import { getRoiColor, formatRoi } from '../../../utils/labFormatters';
 
 describe('getRoiColor', () => {
   it('returns green bold for roi >= 2.0', () => {

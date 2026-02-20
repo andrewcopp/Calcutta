@@ -1,12 +1,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
-from moneyball.db.connection import get_db_connection
+from moneyball.db.readers import (
+    enrich_with_analytical_probabilities as _enrich_with_analytical_probabilities,
+)
+from moneyball.models.features import (
+    prepare_optimal_features,
+    prepare_optimal_v2_features,
+    prepare_optimal_v3_features,
+)
+from moneyball.models.market_priors import (
+    compute_program_priors,
+    compute_seed_priors,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,103 +29,6 @@ FEATURE_SETS = [
 ]
 
 DEFAULT_FEATURE_SET = "optimal"
-
-
-def _get_analytical_values_from_db(
-    tournament_id: str,
-) -> Dict[str, Tuple[float, float]]:
-    """
-    Get analytical values from Go-generated predictions in the database.
-
-    Returns:
-        Dict mapping team_id -> (p_championship, expected_points)
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                WITH latest_batch AS (
-                    SELECT pb.id
-                    FROM derived.prediction_batches pb
-                    WHERE pb.tournament_id = %s::uuid
-                        AND pb.deleted_at IS NULL
-                    ORDER BY pb.created_at DESC
-                    LIMIT 1
-                )
-                SELECT
-                    ptv.team_id::text,
-                    COALESCE(ptv.p_round_7, 0)::float AS p_championship,
-                    COALESCE(ptv.expected_points, 0)::float AS expected_points
-                FROM derived.predicted_team_values ptv
-                WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
-                    AND ptv.deleted_at IS NULL
-            """, (tournament_id,))
-            return {
-                str(row[0]): (float(row[1]), float(row[2]))
-                for row in cur.fetchall()
-            }
-
-
-def _enrich_with_analytical_probabilities(
-    df: pd.DataFrame,
-    kenpom_scale: float = 10.0,
-) -> pd.DataFrame:
-    """
-    Enrich team dataset with analytical championship probabilities.
-
-    Reads from Go-generated predictions in derived.predicted_team_values.
-    Requires predictions to be pre-generated for the tournament.
-
-    Args:
-        df: Team dataset with id/team_key and tournament_id
-        kenpom_scale: Ignored (kept for API compatibility)
-
-    Returns:
-        DataFrame with added analytical_p_championship and
-        analytical_expected_points columns
-    """
-    # Use team_key or id as identifier
-    id_col = "team_key" if "team_key" in df.columns else "id"
-    if id_col not in df.columns:
-        raise ValueError("team_dataset must have 'team_key' or 'id' column")
-
-    # Get tournament_id from the dataframe
-    if "tournament_id" in df.columns:
-        tournament_id = str(df["tournament_id"].iloc[0])
-    elif "tournament_key" in df.columns:
-        tournament_id = str(df["tournament_key"].iloc[0])
-    else:
-        raise ValueError(
-            "team_dataset must have 'tournament_id' or 'tournament_key' column"
-        )
-
-    # Get analytical values from database
-    analytical_values = _get_analytical_values_from_db(tournament_id)
-
-    if not analytical_values:
-        logger.warning(
-            "No Go predictions found for tournament %s. "
-            "Setting analytical values to 0.",
-            tournament_id,
-        )
-
-    # Add columns to dataframe
-    result = df.copy()
-    result["analytical_p_championship"] = result[id_col].astype(str).map(
-        lambda tid: analytical_values.get(tid, (0.0, 0.0))[0]
-    )
-    result["analytical_expected_points"] = result[id_col].astype(str).map(
-        lambda tid: analytical_values.get(tid, (0.0, 0.0))[1]
-    )
-
-    # Ensure numeric types
-    result["analytical_p_championship"] = pd.to_numeric(
-        result["analytical_p_championship"], errors="coerce"
-    ).fillna(0.0)
-    result["analytical_expected_points"] = pd.to_numeric(
-        result["analytical_expected_points"], errors="coerce"
-    ).fillna(0.0)
-
-    return result
 
 
 def _prepare_features_set(
@@ -158,237 +72,20 @@ def _prepare_features_set(
             errors="coerce",
         )
 
-    # Optimal feature set (data-driven from systematic feature testing)
-    # Updated to use z-score normalization for better value detection
     if fs == "optimal":
-        # 1. Championship equity (smart seed encoding)
-        seed_title_prob = {
-            1: 0.20, 2: 0.12, 3: 0.08, 4: 0.05, 5: 0.03, 6: 0.02,
-            7: 0.01, 8: 0.01, 9: 0.005, 10: 0.003, 11: 0.002,
-            12: 0.001, 13: 0.0005, 14: 0.0002, 15: 0.0001,
-            16: 0.00001
-        }
-        base["champ_equity"] = base["seed"].map(seed_title_prob)
-
-        # 2. KenPom z-score (captures magnitude of differences)
-        kenpom_mean = base["kenpom_net"].mean()
-        kenpom_std = base["kenpom_net"].std()
-        base["kenpom_net_zscore"] = (
-            (base["kenpom_net"] - kenpom_mean) / kenpom_std
-        )
-
-        # 3. KenPom z-score squared (emphasizes elite teams)
-        base["kenpom_net_zscore_sq"] = base["kenpom_net_zscore"] ** 2
-
-        # 4. KenPom z-score cubed (non-linear effect for extremes)
-        base["kenpom_net_zscore_cubed"] = base["kenpom_net_zscore"] ** 3
-
-        # 5. KenPom balance (offensive/defensive imbalance)
-        kenpom_o_pct = base["kenpom_o"].rank(pct=True)
-        kenpom_d_pct = base["kenpom_d"].rank(pct=True)
-        base["kenpom_balance"] = np.abs(kenpom_o_pct - kenpom_d_pct)
-
-        # 6. Points per equity (value play indicator)
-        seed_expected_points = {
-            1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
-            9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3,
-            15: 0.2, 16: 0.1
-        }
-        base["expected_points"] = base["seed"].map(seed_expected_points)
-        base["points_per_equity"] = (
-            base["expected_points"] / (base["champ_equity"] + 0.001)
-        )
+        base = prepare_optimal_features(df, base)
 
     if fs == "optimal_v2":
-        seed_expected_points = {
-            1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
-            9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3,
-            15: 0.2, 16: 0.1
-        }
-        base["expected_points"] = base["seed"].map(seed_expected_points)
-
-        if seed_prior_by_seed:
-            base["seed_market_prior"] = base["seed"].apply(
-                lambda s: float(seed_prior_by_seed.get(int(s), 0.0))
-                if pd.notna(s)
-                else 0.0
-            )
-        else:
-            base["seed_market_prior"] = 0.0
-
-        kenpom_mean = base["kenpom_net"].mean()
-        kenpom_std = base["kenpom_net"].std()
-        base["kenpom_net_zscore"] = (
-            (base["kenpom_net"] - kenpom_mean) / kenpom_std
+        base = prepare_optimal_v2_features(
+            df,
+            base,
+            seed_prior_by_seed=seed_prior_by_seed,
+            program_share_mean_by_slug=program_share_mean_by_slug,
+            program_share_count_by_slug=program_share_count_by_slug,
         )
-        base["kenpom_net_zscore_sq"] = base["kenpom_net_zscore"] ** 2
-        base["kenpom_net_zscore_cubed"] = base["kenpom_net_zscore"] ** 3
-
-        ko = pd.to_numeric(base["kenpom_o"], errors="coerce").fillna(0.0)
-        kd = pd.to_numeric(base["kenpom_d"], errors="coerce").fillna(0.0)
-        ko_std = float(ko.std() or 0.0)
-        ko_z = (ko - float(ko.mean() or 0.0)) / (
-            ko_std if ko_std > 0 else 1.0
-        )
-        kd_inv = -kd
-        kd_inv_std = float(kd_inv.std() or 0.0)
-        kd_z = (kd_inv - float(kd_inv.mean() or 0.0)) / (
-            kd_inv_std if kd_inv_std > 0 else 1.0
-        )
-        base["kenpom_balance"] = np.abs(ko_z - kd_z)
-
-        base["points_per_seed_market_prior"] = (
-            base["expected_points"] / (base["seed_market_prior"] + 0.001)
-        )
-
-        slug = (
-            df.get("school_slug")
-            if "school_slug" in df.columns
-            else pd.Series([""] * len(df), index=df.index)
-        )
-        slug = slug.astype(str).str.lower()
-        if program_share_mean_by_slug:
-            base["program_share_mean"] = slug.apply(
-                lambda s: float(program_share_mean_by_slug.get(str(s), 0.0))
-            )
-        else:
-            base["program_share_mean"] = 0.0
-
-        if program_share_count_by_slug:
-            base["program_share_count"] = slug.apply(
-                lambda s: float(program_share_count_by_slug.get(str(s), 0))
-            )
-        else:
-            base["program_share_count"] = 0.0
 
     if fs == "optimal_v3":
-        # Use analytical KenPom-based probabilities (NOT hard-coded seed tables)
-        # Requires analytical_p_championship and analytical_expected_points
-        # to be pre-computed via _enrich_with_analytical_probabilities()
-
-        # 1. Championship probability from analytical calculation
-        if "analytical_p_championship" not in df.columns:
-            raise ValueError(
-                "optimal_v3 requires analytical_p_championship column. "
-                "Call _enrich_with_analytical_probabilities() first."
-            )
-        base["p_championship"] = pd.to_numeric(
-            df["analytical_p_championship"], errors="coerce"
-        ).fillna(0.0)
-
-        # 2. Expected points from analytical calculation
-        if "analytical_expected_points" not in df.columns:
-            raise ValueError(
-                "optimal_v3 requires analytical_expected_points column. "
-                "Call _enrich_with_analytical_probabilities() first."
-            )
-        base["expected_points"] = pd.to_numeric(
-            df["analytical_expected_points"], errors="coerce"
-        ).fillna(0.0)
-
-        # 3. KenPom z-scores (same as optimal)
-        kenpom_mean = base["kenpom_net"].mean()
-        kenpom_std = base["kenpom_net"].std()
-        if kenpom_std > 0:
-            base["kenpom_net_zscore"] = (
-                (base["kenpom_net"] - kenpom_mean) / kenpom_std
-            )
-        else:
-            base["kenpom_net_zscore"] = 0.0
-        base["kenpom_net_zscore_sq"] = base["kenpom_net_zscore"] ** 2
-        base["kenpom_net_zscore_cubed"] = base["kenpom_net_zscore"] ** 3
-
-        # 4. KenPom balance (offensive/defensive imbalance)
-        ko = pd.to_numeric(base["kenpom_o"], errors="coerce").fillna(0.0)
-        kd = pd.to_numeric(base["kenpom_d"], errors="coerce").fillna(0.0)
-        ko_std = float(ko.std() or 0.0)
-        ko_z = (ko - float(ko.mean() or 0.0)) / (
-            ko_std if ko_std > 0 else 1.0
-        )
-        kd_inv = -kd
-        kd_inv_std = float(kd_inv.std() or 0.0)
-        kd_z = (kd_inv - float(kd_inv.mean() or 0.0)) / (
-            kd_inv_std if kd_inv_std > 0 else 1.0
-        )
-        base["kenpom_balance"] = np.abs(ko_z - kd_z)
-
-        # 5. Points per championship probability (value play indicator)
-        base["points_per_p_champ"] = (
-            base["expected_points"] / (base["p_championship"] + 1e-9)
-        )
-
-        # 6. Seed interactions (same as optimal_v2)
-        base["seed_sq"] = base["seed"] ** 2
-        base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
-
-        # 7. Market behavior features (upset chic, within-seed ranking)
-        base["is_upset_seed"] = base["seed"].apply(
-            lambda x: 1 if 10 <= x <= 12 else 0
-        )
-
-        base["kenpom_rank_within_seed"] = df.groupby("seed")[
-            "kenpom_net"
-        ].rank(ascending=False, method="dense")
-        base["kenpom_rank_within_seed_norm"] = base.groupby("seed")[
-            "kenpom_rank_within_seed"
-        ].transform(
-            lambda x: (x - 1) / (x.max() - 1) if x.max() > 1 else 0
-        )
-        base["kenpom_rank_within_seed_norm"] = base[
-            "kenpom_rank_within_seed_norm"
-        ].fillna(0.0)
-        base = base.drop(columns=["kenpom_rank_within_seed"])
-
-    if fs in (
-        "optimal",
-        "optimal_v2",
-    ):
-        # Add KenPom interaction features (27.7% improvement)
-        base["seed_sq"] = base["seed"] ** 2
-        base["kenpom_x_seed"] = base["kenpom_net"] * base["seed"]
-
-        # Add market behavior features
-
-        if fs != "optimal_v2":
-            blue_bloods = {
-                "duke",
-                "north-carolina",
-                "kentucky",
-                "kansas",
-                "villanova",
-                "michigan-state",
-                "louisville",
-                "connecticut",
-                "ucla",
-                "indiana",
-                "gonzaga",
-                "arizona",
-            }
-            base["is_blue_blood"] = df["school_slug"].apply(
-                lambda x: 1 if str(x).lower() in blue_bloods else 0
-            )
-
-        # 2. Upset chic: seeds 10-12 systematically overbid (+1.6%)
-        base["is_upset_seed"] = base["seed"].apply(
-            lambda x: 1 if 10 <= x <= 12 else 0
-        )
-
-        # 3. Within-seed ranking: 3rd/4th teams undervalued (+3.6%)
-        base["kenpom_rank_within_seed"] = df.groupby("seed")[
-            "kenpom_net"
-        ].rank(ascending=False, method="dense")
-        # Normalize to 0-1 within each seed (higher = worse rank)
-        base["kenpom_rank_within_seed_norm"] = base.groupby("seed")[
-            "kenpom_rank_within_seed"
-        ].transform(
-            lambda x: (x - 1) / (x.max() - 1) if x.max() > 1 else 0
-        )
-        base["kenpom_rank_within_seed_norm"] = base[
-            "kenpom_rank_within_seed_norm"
-        ].fillna(0.0)
-
-        # Drop the intermediate rank column
-        base = base.drop(columns=["kenpom_rank_within_seed"])
+        base = prepare_optimal_v3_features(df, base)
 
     X = pd.get_dummies(base, columns=["region"], dummy_na=True)
     return X
@@ -480,71 +177,17 @@ def predict_auction_share_of_pool(
     program_share_count_by_slug: Optional[Dict[str, int]] = None
 
     if fs == "optimal_v2":
-        y_train_raw = pd.to_numeric(
-            train_team_dataset["team_share_of_pool"],
-            errors="coerce",
+        seed_prior_by_seed = compute_seed_priors(
+            train_team_dataset,
+            seed_prior_k=seed_prior_k,
+            seed_prior_monotone=seed_prior_monotone,
         )
-        tmp_y = train_team_dataset.assign(_y=y_train_raw).dropna(
-            subset=["seed", "_y"]
+        program_share_mean_by_slug, program_share_count_by_slug = (
+            compute_program_priors(
+                train_team_dataset,
+                program_prior_k=program_prior_k,
+            )
         )
-        y_global_mean = float(tmp_y["_y"].mean() or 0.0)
-
-        seed_agg = tmp_y.groupby("seed")["_y"].agg(["sum", "count"])
-        seed_prior_k_f = float(seed_prior_k or 0.0)
-        vals: List[float] = []
-        for i in range(1, 17):
-            if i in seed_agg.index:
-                s = float(seed_agg.loc[i, "sum"])
-                c = float(seed_agg.loc[i, "count"])
-            else:
-                s = 0.0
-                c = 0.0
-
-            if seed_prior_k_f > 0.0:
-                denom = c + seed_prior_k_f
-                vals.append(
-                    float((s + seed_prior_k_f * y_global_mean) / denom)
-                    if denom > 0.0
-                    else 0.0
-                )
-            else:
-                vals.append(float(s / c) if c > 0.0 else 0.0)
-
-        use_monotone = (
-            bool(seed_prior_monotone)
-            if seed_prior_monotone is not None
-            else True
-        )
-        if use_monotone and vals:
-            vals = list(np.minimum.accumulate(np.asarray(vals, dtype=float)))
-        seed_prior_by_seed = {i: float(vals[i - 1]) for i in range(1, 17)}
-
-        if "school_slug" in train_team_dataset.columns:
-            tmp = train_team_dataset.copy()
-            tmp["_y"] = y_train_raw
-            tmp["school_slug"] = tmp["school_slug"].astype(str).str.lower()
-            tmp = tmp.dropna(subset=["_y"])
-            grp = tmp.groupby("school_slug")["_y"]
-            program_share_count_by_slug = grp.size().to_dict()
-
-            program_prior_k_f = float(program_prior_k or 0.0)
-            if program_prior_k_f > 0.0:
-                program_sum_by_slug = grp.sum().to_dict()
-                program_share_mean_by_slug = {
-                    str(slug): float(
-                        (
-                            float(program_sum_by_slug.get(slug, 0.0))
-                            + program_prior_k_f * y_global_mean
-                        )
-                        / (
-                            float(program_share_count_by_slug.get(slug, 0))
-                            + program_prior_k_f
-                        )
-                    )
-                    for slug in program_share_count_by_slug.keys()
-                }
-            else:
-                program_share_mean_by_slug = grp.mean().to_dict()
 
     # Enrich with analytical probabilities for optimal_v3
     # IMPORTANT: Must process each year/snapshot separately since the analytical

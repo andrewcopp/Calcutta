@@ -5,12 +5,15 @@ This module provides functions to read data from the analytics database.
 """
 from __future__ import annotations
 
-from typing import Optional, Dict, Any, List
+import logging
+from typing import Optional, Dict, Any, List, Tuple
 import pandas as pd
 from psycopg2.extras import RealDictCursor
 
 from moneyball.db.connection import get_db_connection
 from moneyball.utils import points
+
+logger = logging.getLogger(__name__)
 
 
 def _read_latest_core_tournament_id_for_year(conn, year: int) -> Optional[str]:
@@ -53,6 +56,90 @@ def _read_latest_core_calcutta_id_for_tournament(
         return str(row[0]) if row and row[0] else None
 
 
+def _build_team_dataset_query(
+    *,
+    include_target: bool,
+    exclude_clause: str = "",
+) -> str:
+    """
+    Build the SQL query for reading a ridge team dataset.
+
+    The shared FROM/JOIN/WHERE/ORDER BY clause is defined once; the
+    target variant prepends CTEs and adds a team_share_of_pool column.
+
+    Args:
+        include_target: When True, include team_bids CTEs and the
+            team_share_of_pool computed column.
+        exclude_clause: Optional SQL fragment for filtering entries
+            (only relevant when include_target is True).
+
+    Returns:
+        A parameterized SQL query string.
+    """
+    ctes = ""
+    extra_select = ""
+    extra_join = ""
+    calcutta_key_expr = "NULL::text"
+
+    if include_target:
+        ctes = f"""
+            WITH team_bids AS (
+                SELECT
+                    cet.team_id,
+                    SUM(cet.bid_points)::float8 AS total_bid
+                FROM core.entry_teams cet
+                JOIN core.entries ce
+                  ON ce.id = cet.entry_id
+                 AND ce.deleted_at IS NULL
+                WHERE ce.calcutta_id = %s
+                  AND cet.deleted_at IS NULL
+                  {exclude_clause}
+                GROUP BY cet.team_id
+            ),
+            total AS (
+                SELECT COALESCE(SUM(total_bid), 0)::float8 AS total_bid
+                FROM team_bids
+            )
+        """
+        extra_select = """,
+                CASE
+                    WHEN (SELECT total_bid FROM total) > 0 THEN
+                        COALESCE(tb.total_bid, 0)::float8
+                        / (SELECT total_bid FROM total)
+                    ELSE NULL
+                END AS team_share_of_pool"""
+        extra_join = "\n            LEFT JOIN team_bids tb ON tb.team_id = tt.id"
+        calcutta_key_expr = "%s::text"
+
+    return f"""
+        {ctes}
+        SELECT
+            %s::text AS snapshot,
+            %s::text AS tournament_key,
+            {calcutta_key_expr} AS calcutta_key,
+            %s::text AS tournament_id,
+            (%s::text || ':' || s.slug)::text AS team_key,
+            s.name::text AS school_name,
+            s.slug::text AS school_slug,
+            tt.seed::int AS seed,
+            tt.region::text AS region,
+            COALESCE(k.net_rtg, 0)::float8 AS kenpom_net,
+            COALESCE(k.o_rtg, 0)::float8 AS kenpom_o,
+            COALESCE(k.d_rtg, 0)::float8 AS kenpom_d,
+            COALESCE(k.adj_t, 0)::float8 AS kenpom_adj_t{extra_select}
+        FROM core.teams tt
+        JOIN core.schools s
+          ON s.id = tt.school_id
+         AND s.deleted_at IS NULL
+        LEFT JOIN core.team_kenpom_stats k
+          ON k.team_id = tt.id
+         AND k.deleted_at IS NULL{extra_join}
+        WHERE tt.tournament_id = %s
+          AND tt.deleted_at IS NULL
+        ORDER BY tt.seed ASC, s.name ASC;
+    """
+
+
 def read_ridge_team_dataset_for_year(
     year: int,
     exclude_entry_names: Optional[List[str]] = None,
@@ -83,64 +170,17 @@ def read_ridge_team_dataset_for_year(
                 if str(n).strip()
             ]
             exclude_clause = ""
-            params: List[Any] = [calcutta_id]
+            cte_params: List[Any] = [calcutta_id]
             if exclude:
                 exclude_clause = " AND ce.name <> ALL(%s::text[]) "
-                params.append(exclude)
+                cte_params.append(exclude)
 
-            query = f"""
-            WITH team_bids AS (
-                SELECT
-                    cet.team_id,
-                    SUM(cet.bid_points)::float8 AS total_bid
-                FROM core.entry_teams cet
-                JOIN core.entries ce
-                  ON ce.id = cet.entry_id
-                 AND ce.deleted_at IS NULL
-                WHERE ce.calcutta_id = %s
-                  AND cet.deleted_at IS NULL
-                  {exclude_clause}
-                GROUP BY cet.team_id
-            ),
-            total AS (
-                SELECT COALESCE(SUM(total_bid), 0)::float8 AS total_bid
-                FROM team_bids
+            query = _build_team_dataset_query(
+                include_target=True,
+                exclude_clause=exclude_clause,
             )
-            SELECT
-                %s::text AS snapshot,
-                %s::text AS tournament_key,
-                %s::text AS calcutta_key,
-                %s::text AS tournament_id,
-                (%s::text || ':' || s.slug)::text AS team_key,
-                s.name::text AS school_name,
-                s.slug::text AS school_slug,
-                tt.seed::int AS seed,
-                tt.region::text AS region,
-                COALESCE(k.net_rtg, 0)::float8 AS kenpom_net,
-                COALESCE(k.o_rtg, 0)::float8 AS kenpom_o,
-                COALESCE(k.d_rtg, 0)::float8 AS kenpom_d,
-                COALESCE(k.adj_t, 0)::float8 AS kenpom_adj_t,
-                CASE
-                    WHEN (SELECT total_bid FROM total) > 0 THEN
-                        COALESCE(tb.total_bid, 0)::float8
-                        / (SELECT total_bid FROM total)
-                    ELSE NULL
-                END AS team_share_of_pool
-            FROM core.teams tt
-            JOIN core.schools s
-              ON s.id = tt.school_id
-             AND s.deleted_at IS NULL
-            LEFT JOIN core.team_kenpom_stats k
-              ON k.team_id = tt.id
-             AND k.deleted_at IS NULL
-            LEFT JOIN team_bids tb ON tb.team_id = tt.id
-            WHERE tt.tournament_id = %s
-              AND tt.deleted_at IS NULL
-            ORDER BY tt.seed ASC, s.name ASC;
-            """
-
-            params = [
-                *params,
+            params: List[Any] = [
+                *cte_params,
                 snapshot,
                 tournament_key,
                 str(calcutta_id),
@@ -150,40 +190,15 @@ def read_ridge_team_dataset_for_year(
             ]
             return pd.read_sql_query(query, conn, params=tuple(params))
 
-        query = """
-        SELECT
-            %s::text AS snapshot,
-            %s::text AS tournament_key,
-            NULL::text AS calcutta_key,
-            %s::text AS tournament_id,
-            (%s::text || ':' || s.slug)::text AS team_key,
-            s.name::text AS school_name,
-            s.slug::text AS school_slug,
-            tt.seed::int AS seed,
-            tt.region::text AS region,
-            COALESCE(k.net_rtg, 0)::float8 AS kenpom_net,
-            COALESCE(k.o_rtg, 0)::float8 AS kenpom_o,
-            COALESCE(k.d_rtg, 0)::float8 AS kenpom_d,
-            COALESCE(k.adj_t, 0)::float8 AS kenpom_adj_t
-        FROM core.teams tt
-        JOIN core.schools s
-          ON s.id = tt.school_id
-         AND s.deleted_at IS NULL
-        LEFT JOIN core.team_kenpom_stats k
-          ON k.team_id = tt.id
-         AND k.deleted_at IS NULL
-        WHERE tt.tournament_id = %s
-          AND tt.deleted_at IS NULL
-        ORDER BY tt.seed ASC, s.name ASC;
-        """
-        params = (
+        query = _build_team_dataset_query(include_target=False)
+        params_tuple = (
             snapshot,
             tournament_key,
             str(tournament_id),
             tournament_key,
             str(tournament_id),
         )
-        return pd.read_sql_query(query, conn, params=params)
+        return pd.read_sql_query(query, conn, params=params_tuple)
 
 
 def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
@@ -230,3 +245,100 @@ def initialize_default_scoring_rules_for_year(year: int) -> Dict[int, float]:
     pbwi = read_points_by_win_index_for_year(year)
     points.set_default_points_by_win_index(pbwi)
     return pbwi
+
+
+def read_analytical_values_from_db(
+    tournament_id: str,
+) -> Dict[str, Tuple[float, float]]:
+    """
+    Get analytical values from Go-generated predictions in the database.
+
+    Returns:
+        Dict mapping team_id -> (p_championship, expected_points)
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                WITH latest_batch AS (
+                    SELECT pb.id
+                    FROM derived.prediction_batches pb
+                    WHERE pb.tournament_id = %s::uuid
+                        AND pb.deleted_at IS NULL
+                    ORDER BY pb.created_at DESC
+                    LIMIT 1
+                )
+                SELECT
+                    ptv.team_id::text,
+                    COALESCE(ptv.p_round_7, 0)::float AS p_championship,
+                    COALESCE(ptv.expected_points, 0)::float AS expected_points
+                FROM derived.predicted_team_values ptv
+                WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
+                    AND ptv.deleted_at IS NULL
+            """, (tournament_id,))
+            return {
+                str(row[0]): (float(row[1]), float(row[2]))
+                for row in cur.fetchall()
+            }
+
+
+def enrich_with_analytical_probabilities(
+    df: pd.DataFrame,
+    kenpom_scale: float = 10.0,
+) -> pd.DataFrame:
+    """
+    Enrich team dataset with analytical championship probabilities.
+
+    Reads from Go-generated predictions in derived.predicted_team_values.
+    Requires predictions to be pre-generated for the tournament.
+
+    Args:
+        df: Team dataset with id/team_key and tournament_id
+        kenpom_scale: Ignored (kept for API compatibility)
+
+    Returns:
+        DataFrame with added analytical_p_championship and
+        analytical_expected_points columns
+    """
+    # Use team_key or id as identifier
+    id_col = "team_key" if "team_key" in df.columns else "id"
+    if id_col not in df.columns:
+        raise ValueError("team_dataset must have 'team_key' or 'id' column")
+
+    # Get tournament_id from the dataframe
+    if "tournament_id" in df.columns:
+        tournament_id = str(df["tournament_id"].iloc[0])
+    elif "tournament_key" in df.columns:
+        tournament_id = str(df["tournament_key"].iloc[0])
+    else:
+        raise ValueError(
+            "team_dataset must have 'tournament_id' or 'tournament_key' column"
+        )
+
+    # Get analytical values from database
+    analytical_values = read_analytical_values_from_db(tournament_id)
+
+    if not analytical_values:
+        logger.warning(
+            "No Go predictions found for tournament %s. "
+            "Setting analytical values to 0.",
+            tournament_id,
+        )
+
+    # Add columns to dataframe
+    result = df.copy()
+    result["analytical_p_championship"] = result[id_col].astype(str).map(
+        lambda tid: analytical_values.get(tid, (0.0, 0.0))[0]
+    )
+    result["analytical_expected_points"] = result[id_col].astype(str).map(
+        lambda tid: analytical_values.get(tid, (0.0, 0.0))[1]
+    )
+
+    # Ensure numeric types
+    result["analytical_p_championship"] = pd.to_numeric(
+        result["analytical_p_championship"], errors="coerce"
+    ).fillna(0.0)
+    result["analytical_expected_points"] = pd.to_numeric(
+        result["analytical_expected_points"], errors="coerce"
+    ).fillna(0.0)
+
+    return result

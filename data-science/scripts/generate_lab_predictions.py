@@ -185,69 +185,68 @@ def create_predictions_for_calcutta(
     return entry
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Generate market predictions for a model")
-    parser.add_argument("--model-name", help="Lab model name (e.g., ridge-v1)")
-    parser.add_argument("--model-id", help="Lab model ID (alternative to --model-name)")
-    parser.add_argument("--calcutta-id", help="Process only this specific calcutta (for pipeline worker)")
-    parser.add_argument("--excluded-entry", default=os.environ.get("EXCLUDED_ENTRY_NAME"), help="Entry name to exclude from training (default: $EXCLUDED_ENTRY_NAME)")
-    parser.add_argument("--years", type=str, help="Comma-separated years to process (default: all)")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
-    parser.add_argument("--json-output", action="store_true", help="Output machine-readable JSON result")
+def parse_args(argv=None) -> argparse.Namespace:
+    """Parse command-line arguments for the generate_lab_predictions script."""
+    parser = argparse.ArgumentParser(
+        description="Generate market predictions for a model",
+    )
+    parser.add_argument(
+        "--model-name",
+        help="Lab model name (e.g., ridge-v1)",
+    )
+    parser.add_argument(
+        "--model-id",
+        help="Lab model ID (alternative to --model-name)",
+    )
+    parser.add_argument(
+        "--calcutta-id",
+        help="Process only this specific calcutta (for pipeline worker)",
+    )
+    parser.add_argument(
+        "--excluded-entry",
+        default=os.environ.get("EXCLUDED_ENTRY_NAME"),
+        help="Entry name to exclude from training (default: $EXCLUDED_ENTRY_NAME)",
+    )
+    parser.add_argument(
+        "--years",
+        type=str,
+        help="Comma-separated years to process (default: all)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without writing",
+    )
+    parser.add_argument(
+        "--json-output",
+        action="store_true",
+        help="Output machine-readable JSON result",
+    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not args.model_name and not args.model_id:
         parser.error("Either --model-name or --model-id is required")
 
+    return args
+
+
+def process_calcuttas(model, calcuttas, args):
+    """
+    Iterate over calcuttas, generate predictions, and create lab entries.
+
+    Args:
+        model: The investment model object (has .id, .name).
+        calcuttas: List of HistoricalCalcutta to process.
+        args: Parsed CLI arguments.
+
+    Returns:
+        Tuple of (entries_created, last_entry_id, errors).
+    """
     # Helper for logging (suppressed when --json-output)
     def log(msg):
         if not args.json_output:
             print(msg)
-
-    from moneyball.lab.models import get_investment_model, get_investment_model_by_id
-
-    # Load model by ID or name
-    if args.model_id:
-        model = get_investment_model_by_id(args.model_id)
-    else:
-        model = get_investment_model(args.model_name)
-
-    if not model:
-        if args.json_output:
-            print(json.dumps({"ok": False, "entries_created": 0, "errors": ["Model not found"]}))
-            sys.exit(1)
-        else:
-            print("Error: Model not found")
-            sys.exit(1)
-
-    log(f"Model: {model.name} ({model.kind})")
-    log(f"Params: {model.params}")
-    log(f"Excluded entry: {args.excluded_entry}")
-    log("")
-
-    calcuttas = get_historical_calcuttas()
-    log(f"Found {len(calcuttas)} historical calcuttas")
-
-    # Filter by calcutta_id if specified (for pipeline worker)
-    if args.calcutta_id:
-        calcuttas = [c for c in calcuttas if c.id == args.calcutta_id]
-        if not calcuttas:
-            if args.json_output:
-                print(json.dumps({"ok": False, "entry_id": None, "error": f"Calcutta {args.calcutta_id} not found"}))
-                sys.exit(1)
-            else:
-                print(f"Error: Calcutta {args.calcutta_id} not found")
-                sys.exit(1)
-        log(f"Processing single calcutta: {calcuttas[0].name}")
-
-    # Filter by years if specified
-    if args.years:
-        target_years = [int(y.strip()) for y in args.years.split(",")]
-        calcuttas = [c for c in calcuttas if c.year in target_years]
-        log(f"Filtered to {len(calcuttas)} calcuttas for years: {target_years}")
-
-    log("")
 
     entries_created = 0
     errors = []
@@ -298,6 +297,65 @@ def main():
                 last_entry_id = entry.id
             else:
                 log(f"  No entry created (no valid predictions)")
+
+    return entries_created, last_entry_id, errors
+
+
+def main():
+    args = parse_args()
+
+    # Helper for logging (suppressed when --json-output)
+    def log(msg):
+        if not args.json_output:
+            print(msg)
+
+    from moneyball.lab.models import get_investment_model, get_investment_model_by_id
+
+    # Load model by ID or name
+    if args.model_id:
+        model = get_investment_model_by_id(args.model_id)
+    else:
+        model = get_investment_model(args.model_name)
+
+    if not model:
+        if args.json_output:
+            print(json.dumps({"ok": False, "entries_created": 0, "errors": ["Model not found"]}))
+            sys.exit(1)
+        else:
+            print("Error: Model not found")
+            sys.exit(1)
+
+    log(f"Model: {model.name} ({model.kind})")
+    log(f"Params: {model.params}")
+    log(f"Excluded entry: {args.excluded_entry}")
+    log("")
+
+    calcuttas = get_historical_calcuttas()
+    log(f"Found {len(calcuttas)} historical calcuttas")
+
+    # Filter by calcutta_id if specified (for pipeline worker)
+    if args.calcutta_id:
+        calcuttas = [c for c in calcuttas if c.id == args.calcutta_id]
+        if not calcuttas:
+            if args.json_output:
+                print(json.dumps({"ok": False, "entry_id": None, "error": f"Calcutta {args.calcutta_id} not found"}))
+                sys.exit(1)
+            else:
+                print(f"Error: Calcutta {args.calcutta_id} not found")
+                sys.exit(1)
+        log(f"Processing single calcutta: {calcuttas[0].name}")
+
+    # Filter by years if specified
+    if args.years:
+        target_years = [int(y.strip()) for y in args.years.split(",")]
+        calcuttas = [c for c in calcuttas if c.year in target_years]
+        log(f"Filtered to {len(calcuttas)} calcuttas for years: {target_years}")
+
+    log("")
+
+    entries_created, last_entry_id, errors = process_calcuttas(
+        model, calcuttas, args,
+    )
 
     log("")
     log("Done!")

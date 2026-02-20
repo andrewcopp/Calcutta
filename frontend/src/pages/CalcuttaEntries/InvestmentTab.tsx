@@ -4,6 +4,7 @@ import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
+import { createTeamSortComparator } from '../../utils/teamSort';
 
 export const InvestmentTab: React.FC<{
   entries: CalcuttaEntry[];
@@ -104,36 +105,14 @@ export const InvestmentTab: React.FC<{
   const investmentSortedRows = useMemo(() => {
     const rows = investmentRows.rows.slice();
 
-    const seedA = (seed: number | undefined) => seed ?? 999;
-    const regionA = (region: string) => region || '';
-    const teamA = (name: string) => name || '';
-
-    rows.sort((a, b) => {
-      if (investmentSortBy === 'total') {
+    if (investmentSortBy === 'total') {
+      rows.sort((a, b) => {
         if (b.totalInvestment !== a.totalInvestment) return b.totalInvestment - a.totalInvestment;
-        return seedA(a.seed) - seedA(b.seed);
-      }
-
-      if (investmentSortBy === 'seed') {
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
-        if (seedDiff !== 0) return seedDiff;
-        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
-        if (regionDiff !== 0) return regionDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      if (investmentSortBy === 'region') {
-        const regionDiff = regionA(a.region).localeCompare(regionA(b.region));
-        if (regionDiff !== 0) return regionDiff;
-        const seedDiff = seedA(a.seed) - seedA(b.seed);
-        if (seedDiff !== 0) return seedDiff;
-        return teamA(a.teamName).localeCompare(teamA(b.teamName));
-      }
-
-      const nameDiff = teamA(a.teamName).localeCompare(teamA(b.teamName));
-      if (nameDiff !== 0) return nameDiff;
-      return seedA(a.seed) - seedA(b.seed);
-    });
+        return (a.seed ?? 999) - (b.seed ?? 999);
+      });
+    } else {
+      rows.sort(createTeamSortComparator(investmentSortBy));
+    }
 
     return rows;
   }, [investmentRows.rows, investmentSortBy]);
