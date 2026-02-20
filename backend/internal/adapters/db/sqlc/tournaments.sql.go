@@ -15,7 +15,6 @@ const createCoreTournament = `-- name: CreateCoreTournament :exec
 WITH season_year AS (
   SELECT COALESCE(
     substring($2 from '([0-9]{4})')::int,
-    EXTRACT(YEAR FROM $8::timestamptz)::int,
     EXTRACT(YEAR FROM NOW())::int
   ) AS year
 ),
@@ -51,7 +50,6 @@ SELECT
   competition.id,
   season.id,
   $2,
-  core.calcutta_slugify($2) || '-' || left(md5($1::text), 6),
   $3,
   $4,
   $5,
@@ -59,7 +57,8 @@ SELECT
   $7,
   $8,
   $9,
-  $10
+  $10,
+  $11
 FROM competition
 CROSS JOIN season
 `
@@ -67,6 +66,7 @@ CROSS JOIN season
 type CreateCoreTournamentParams struct {
 	ID                   string
 	Name                 string
+	ImportKey            string
 	Rounds               int32
 	FinalFourTopLeft     *string
 	FinalFourBottomLeft  *string
@@ -81,6 +81,7 @@ func (q *Queries) CreateCoreTournament(ctx context.Context, arg CreateCoreTourna
 	_, err := q.db.Exec(ctx, createCoreTournament,
 		arg.ID,
 		arg.Name,
+		arg.ImportKey,
 		arg.Rounds,
 		arg.FinalFourTopLeft,
 		arg.FinalFourBottomLeft,

@@ -2,7 +2,11 @@ package db
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
+	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -13,6 +17,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var nonAlphanumeric = regexp.MustCompile(`[^a-z0-9]+`)
+
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = nonAlphanumeric.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	return s
+}
+
+func computeImportKeySuffix(id string) string {
+	hash := md5.Sum([]byte(id))
+	return fmt.Sprintf("%x", hash)[:6]
+}
 
 type TournamentRepository struct {
 	pool *pgxpool.Pool
@@ -119,9 +137,11 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	}()
 
 	qtx := r.q.WithTx(tx)
+	importKey := slugify(tournament.Name) + "-" + computeImportKeySuffix(tournament.ID)
 	params := sqlc.CreateCoreTournamentParams{
 		ID:                   tournament.ID,
 		Name:                 tournament.Name,
+		ImportKey:            importKey,
 		Rounds:               int32(tournament.Rounds),
 		FinalFourTopLeft:     &fftl,
 		FinalFourBottomLeft:  &ffbl,
@@ -136,7 +156,7 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return &apperrors.AlreadyExistsError{Resource: "tournament", Field: "competition_season"}
 		}
-		return err
+		return fmt.Errorf("create tournament: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {

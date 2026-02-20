@@ -19,7 +19,6 @@ WHERE id = $1 AND deleted_at IS NULL;
 WITH season_year AS (
   SELECT COALESCE(
     substring($2 from '([0-9]{4})')::int,
-    EXTRACT(YEAR FROM $8::timestamptz)::int,
     EXTRACT(YEAR FROM NOW())::int
   ) AS year
 ),
@@ -55,7 +54,6 @@ SELECT
   competition.id,
   season.id,
   $2,
-  core.calcutta_slugify($2) || '-' || left(md5($1::text), 6),
   $3,
   $4,
   $5,
@@ -63,7 +61,8 @@ SELECT
   $7,
   $8,
   $9,
-  $10
+  $10,
+  $11
 FROM competition
 CROSS JOIN season;
 
