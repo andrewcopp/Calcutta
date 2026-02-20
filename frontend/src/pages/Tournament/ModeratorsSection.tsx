@@ -55,7 +55,7 @@ export const ModeratorsSection: React.FC<ModeratorsSectionProps> = ({ tournament
 
   return (
     <>
-      <Card className="mt-8">
+      <Card className="mt-8 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Moderators</h3>
           <Button size="sm" onClick={() => { setShowAddModal(true); setModError(null); }}>

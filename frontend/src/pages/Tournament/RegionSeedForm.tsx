@@ -78,18 +78,20 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
                 </div>
               ))}
             </div>
-            {slots.length === 1 && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => addPlayIn(region, seed)}
-                className="shrink-0"
-                title="Add play-in team"
-              >
-                +
-              </Button>
-            )}
+            <div className="w-8 shrink-0">
+              {slots.length === 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addPlayIn(region, seed)}
+                  className="shrink-0"
+                  title="Add play-in team"
+                >
+                  +
+                </Button>
+              )}
+            </div>
           </div>
         );
       })}

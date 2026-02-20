@@ -5,8 +5,16 @@ export function formatDate(dateStr: string, includeTime = false): string {
   if (includeTime) {
     opts.hour = '2-digit';
     opts.minute = '2-digit';
+    opts.timeZoneName = 'short';
   }
   return d.toLocaleDateString('en-US', opts);
+}
+
+/** Convert an ISO date string to a value suitable for <input type="datetime-local">. */
+export function toDatetimeLocalValue(isoStr: string): string {
+  const d = new Date(isoStr);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /**
