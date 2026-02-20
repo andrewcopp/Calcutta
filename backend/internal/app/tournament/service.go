@@ -13,7 +13,7 @@ import (
 type TournamentRepo interface {
 	GetAll(ctx context.Context) ([]models.Tournament, error)
 	GetByID(ctx context.Context, id string) (*models.Tournament, error)
-	Create(ctx context.Context, tournament *models.Tournament) error
+	Create(ctx context.Context, tournament *models.Tournament, competitionName string, year int) error
 	UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error
 	UpdateFinalFour(ctx context.Context, tournamentID, topLeft, bottomLeft, topRight, bottomRight string) error
 	GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error)
@@ -42,9 +42,10 @@ func (s *Service) GetByID(ctx context.Context, id string) (*models.Tournament, e
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) Create(ctx context.Context, name string, rounds int) (*models.Tournament, error) {
+func (s *Service) Create(ctx context.Context, competitionName string, year int, rounds int) (*models.Tournament, error) {
+	name := fmt.Sprintf("%s (%d)", competitionName, year)
 	t := &models.Tournament{ID: uuid.New().String(), Name: name, Rounds: rounds}
-	if err := s.repo.Create(ctx, t); err != nil {
+	if err := s.repo.Create(ctx, t, competitionName, year); err != nil {
 		return nil, err
 	}
 	return t, nil

@@ -12,14 +12,18 @@ import (
 // mockRepo implements TournamentRepo with only Create wired up.
 // All other methods panic to catch unintended calls.
 type mockRepo struct {
-	createFn   func(ctx context.Context, t *models.Tournament) error
-	lastCreate *models.Tournament
+	createFn            func(ctx context.Context, t *models.Tournament, competitionName string, year int) error
+	lastCreate          *models.Tournament
+	lastCompetitionName string
+	lastYear            int
 }
 
-func (m *mockRepo) Create(ctx context.Context, t *models.Tournament) error {
+func (m *mockRepo) Create(ctx context.Context, t *models.Tournament, competitionName string, year int) error {
 	m.lastCreate = t
+	m.lastCompetitionName = competitionName
+	m.lastYear = year
 	if m.createFn != nil {
-		return m.createFn(ctx, t)
+		return m.createFn(ctx, t, competitionName, year)
 	}
 	return nil
 }
@@ -77,15 +81,15 @@ func TestThatCreateReturnsNewTournamentWithCorrectName(t *testing.T) {
 	repo := &mockRepo{}
 	svc := New(repo)
 
-	// WHEN creating a tournament with name "NCAA Men's 2026"
-	result, err := svc.Create(context.Background(), "NCAA Men's 2026", 6)
+	// WHEN creating a tournament with competition "NCAA Tournament" and year 2026
+	result, err := svc.Create(context.Background(), "NCAA Tournament", 2026, 6)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN the returned tournament has the correct name
-	if result.Name != "NCAA Men's 2026" {
-		t.Errorf("expected name %q, got %q", "NCAA Men's 2026", result.Name)
+	// THEN the returned tournament has the derived name
+	if result.Name != "NCAA Tournament (2026)" {
+		t.Errorf("expected name %q, got %q", "NCAA Tournament (2026)", result.Name)
 	}
 }
 
@@ -95,7 +99,7 @@ func TestThatCreateReturnsNewTournamentWithCorrectRounds(t *testing.T) {
 	svc := New(repo)
 
 	// WHEN creating a tournament with 6 rounds
-	result, err := svc.Create(context.Background(), "NCAA Men's 2026", 6)
+	result, err := svc.Create(context.Background(), "NCAA Tournament", 2026, 6)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,7 +116,7 @@ func TestThatCreateReturnsNewTournamentWithNonEmptyID(t *testing.T) {
 	svc := New(repo)
 
 	// WHEN creating a tournament
-	result, err := svc.Create(context.Background(), "NCAA Men's 2026", 6)
+	result, err := svc.Create(context.Background(), "NCAA Tournament", 2026, 6)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -126,14 +130,14 @@ func TestThatCreateReturnsNewTournamentWithNonEmptyID(t *testing.T) {
 func TestThatCreateReturnsErrorWhenRepoFails(t *testing.T) {
 	// GIVEN a repo that returns an error on Create
 	repo := &mockRepo{
-		createFn: func(_ context.Context, _ *models.Tournament) error {
+		createFn: func(_ context.Context, _ *models.Tournament, _ string, _ int) error {
 			return errors.New("database connection failed")
 		},
 	}
 	svc := New(repo)
 
 	// WHEN creating a tournament
-	_, err := svc.Create(context.Background(), "NCAA Men's 2026", 6)
+	_, err := svc.Create(context.Background(), "NCAA Tournament", 2026, 6)
 
 	// THEN the error is propagated
 	if err == nil {
@@ -146,17 +150,17 @@ func TestThatCreatePassesTournamentToRepo(t *testing.T) {
 	repo := &mockRepo{}
 	svc := New(repo)
 
-	// WHEN creating a tournament with name "Big East 2025"
-	_, err := svc.Create(context.Background(), "Big East 2025", 4)
+	// WHEN creating a tournament with competition "Big East" and year 2025
+	_, err := svc.Create(context.Background(), "Big East", 2025, 4)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN the repo received a tournament with the correct name
+	// THEN the repo received a tournament with the correct derived name
 	if repo.lastCreate == nil {
 		t.Fatal("expected repo.Create to be called")
 	}
-	if repo.lastCreate.Name != "Big East 2025" {
-		t.Errorf("expected repo to receive name %q, got %q", "Big East 2025", repo.lastCreate.Name)
+	if repo.lastCreate.Name != "Big East (2025)" {
+		t.Errorf("expected repo to receive name %q, got %q", "Big East (2025)", repo.lastCreate.Name)
 	}
 }

@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Competition represents a named competition (e.g. "NCAA Men's")
+// Competition represents a named competition (e.g. "NCAA Tournament")
 type Competition struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`

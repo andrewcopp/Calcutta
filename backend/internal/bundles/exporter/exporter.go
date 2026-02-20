@@ -71,14 +71,18 @@ func exportSchools(ctx context.Context, pool *pgxpool.Pool, outDir string, gener
 
 func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time) error {
 	r, err := pool.Query(ctx, `
-		SELECT id, import_key, name, rounds, starting_at,
-		       COALESCE(final_four_top_left, ''),
-		       COALESCE(final_four_bottom_left, ''),
-		       COALESCE(final_four_top_right, ''),
-		       COALESCE(final_four_bottom_right, '')
-		FROM core.tournaments
-		WHERE deleted_at IS NULL
-		ORDER BY name ASC
+		SELECT t.id, t.import_key,
+		       comp.name || ' (' || seas.year || ')' AS name,
+		       t.rounds, t.starting_at,
+		       COALESCE(t.final_four_top_left, ''),
+		       COALESCE(t.final_four_bottom_left, ''),
+		       COALESCE(t.final_four_top_right, ''),
+		       COALESCE(t.final_four_bottom_right, '')
+		FROM core.tournaments t
+		JOIN core.competitions comp ON comp.id = t.competition_id
+		JOIN core.seasons seas ON seas.id = t.season_id
+		WHERE t.deleted_at IS NULL
+		ORDER BY seas.year ASC
 	`)
 	if err != nil {
 		return err
@@ -182,15 +186,17 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 			c.name,
 			c.owner_id,
 			t.import_key,
-			t.name,
+			comp.name || ' (' || seas.year || ')' AS tournament_name,
 			COALESCE(u.email, ''),
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
 		FROM core.calcuttas c
 		JOIN core.tournaments t ON t.id = c.tournament_id
+		JOIN core.competitions comp ON comp.id = t.competition_id
+		JOIN core.seasons seas ON seas.id = t.season_id
 		JOIN core.users u ON u.id = c.owner_id
 		WHERE c.deleted_at IS NULL AND t.deleted_at IS NULL AND u.deleted_at IS NULL
-		ORDER BY t.name ASC, c.created_at ASC
+		ORDER BY seas.year ASC, c.created_at ASC
 	`)
 	if err != nil {
 		return err

@@ -164,9 +164,11 @@ func writeCSV(path string, header []string, rows [][]string) error {
 
 func loadTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (key string, name string, rounds int, err error) {
 	err = pool.QueryRow(ctx, `
-		SELECT import_key, name, rounds
-		FROM core.tournaments
-		WHERE id = $1 AND deleted_at IS NULL
+		SELECT t.import_key, comp.name || ' (' || seas.year || ')' AS name, t.rounds
+		FROM core.tournaments t
+		JOIN core.competitions comp ON comp.id = t.competition_id
+		JOIN core.seasons seas ON seas.id = t.season_id
+		WHERE t.id = $1 AND t.deleted_at IS NULL
 	`, tournamentID).Scan(&key, &name, &rounds)
 	return
 }

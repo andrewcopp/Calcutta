@@ -143,7 +143,7 @@ ORDER BY total_points DESC;
 WITH team_bids AS (
   SELECT
     tt.seed,
-    t.name AS tournament_name,
+    (comp.name || ' (' || seas.year || ')')::text AS tournament_name,
     seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     tt.id AS team_id,
@@ -153,12 +153,13 @@ WITH team_bids AS (
   JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.competitions comp ON comp.id = t.competition_id
   JOIN core.seasons seas ON seas.id = t.season_id
   JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
     AND (tt.byes > 0 OR tt.wins > 0)
-  GROUP BY tt.seed, t.name, tournament_year, c.id, tt.id, s.name
+  GROUP BY tt.seed, comp.name, tournament_year, c.id, tt.id, s.name
 )
 SELECT
   seed,

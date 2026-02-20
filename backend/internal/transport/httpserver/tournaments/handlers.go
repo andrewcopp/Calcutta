@@ -105,8 +105,7 @@ func (h *Handler) HandleCreateTournament(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	name := req.DerivedName()
-	tournament, err := h.app.Tournament.Create(r.Context(), name, req.Rounds)
+	tournament, err := h.app.Tournament.Create(r.Context(), req.Competition, req.Year, req.Rounds)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return

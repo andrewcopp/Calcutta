@@ -64,6 +64,7 @@ type CoreCalcutta struct {
 	DeletedAt    pgtype.Timestamptz
 	BudgetPoints int32
 	Visibility   string
+	CreatedBy    string
 }
 
 type CoreCalcuttaInvitation struct {
@@ -129,6 +130,7 @@ type CoreGrant struct {
 	ExpiresAt    pgtype.Timestamptz
 	RevokedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
+	GrantedBy    pgtype.UUID
 }
 
 type CoreIdempotencyKey struct {
@@ -221,7 +223,6 @@ type CoreTournament struct {
 	ID                   string
 	CompetitionID        string
 	SeasonID             string
-	Name                 string
 	ImportKey            string
 	Rounds               int32
 	StartingAt           pgtype.Timestamptz

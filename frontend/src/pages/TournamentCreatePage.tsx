@@ -48,7 +48,7 @@ export const TournamentCreatePage: React.FC = () => {
   const resolvedCompetition = isAddNewCompetition ? newCompetition.trim() : competitions.find(c => c.id === competition)?.name || '';
   const resolvedYear = isAddNewYear ? parseInt(newYear) : seasons.find(s => s.id === year)?.year || 0;
 
-  const derivedName = resolvedCompetition && resolvedYear > 0 ? `${resolvedCompetition} ${resolvedYear}` : '';
+  const derivedName = resolvedCompetition && resolvedYear > 0 ? `${resolvedCompetition} (${resolvedYear})` : '';
 
   const createTournamentMutation = useMutation({
     mutationFn: async () => {

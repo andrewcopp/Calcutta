@@ -115,8 +115,8 @@ func TestThatDerivedNameFormatsCompetitionAndYear(t *testing.T) {
 	// WHEN deriving the name
 	name := req.DerivedName()
 
-	// THEN the name is "NCAA Men's 2026"
-	if name != "NCAA Men's 2026" {
-		t.Errorf("expected \"NCAA Men's 2026\", got %q", name)
+	// THEN the name is "NCAA Men's (2026)"
+	if name != "NCAA Men's (2026)" {
+		t.Errorf("expected \"NCAA Men's (2026)\", got %q", name)
 	}
 }

@@ -111,7 +111,7 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 	}, nil
 }
 
-func (r *TournamentRepository) Create(ctx context.Context, tournament *models.Tournament) error {
+func (r *TournamentRepository) Create(ctx context.Context, tournament *models.Tournament, competitionName string, year int) error {
 	now := time.Now()
 	tournament.Created = now
 	tournament.Updated = now
@@ -137,10 +137,12 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	}()
 
 	qtx := r.q.WithTx(tx)
-	importKey := slugify(tournament.Name) + "-" + computeImportKeySuffix(tournament.ID)
+	derivedName := fmt.Sprintf("%s (%d)", competitionName, year)
+	importKey := slugify(derivedName) + "-" + computeImportKeySuffix(tournament.ID)
 	params := sqlc.CreateCoreTournamentParams{
 		ID:                   tournament.ID,
-		Name:                 tournament.Name,
+		Year:                 int32(year),
+		Name:                 competitionName,
 		ImportKey:            importKey,
 		Rounds:               int32(tournament.Rounds),
 		FinalFourTopLeft:     &fftl,

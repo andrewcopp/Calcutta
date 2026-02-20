@@ -29,7 +29,7 @@ func (r *CreateTournamentRequest) Validate() error {
 }
 
 func (r *CreateTournamentRequest) DerivedName() string {
-	return fmt.Sprintf("%s %d", r.Competition, r.Year)
+	return fmt.Sprintf("%s (%d)", r.Competition, r.Year)
 }
 
 type TournamentResponse struct {

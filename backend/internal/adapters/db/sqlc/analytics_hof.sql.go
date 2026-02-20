@@ -224,7 +224,7 @@ func (q *Queries) GetBestCareers(ctx context.Context, dollar_1 int32) ([]GetBest
 const getBestEntries = `-- name: GetBestEntries :many
 WITH entry_points AS (
   SELECT
-    t.name AS tournament_name,
+    (comp.name || ' (' || seas.year || ')')::text AS tournament_name,
     seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     ce.id AS entry_id,
@@ -243,6 +243,7 @@ WITH entry_points AS (
   FROM core.entries ce
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.competitions comp ON comp.id = t.competition_id
   JOIN core.seasons seas ON seas.id = t.season_id
   LEFT JOIN core.entry_teams cet ON cet.entry_id = ce.id AND cet.deleted_at IS NULL
   LEFT JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
@@ -256,7 +257,7 @@ WITH entry_points AS (
       AND cet2.deleted_at IS NULL
   ) team_bids ON true
   WHERE ce.deleted_at IS NULL
-  GROUP BY t.name, tournament_year, c.id, ce.id, ce.name
+  GROUP BY comp.name, tournament_year, c.id, ce.id, ce.name
 ),
 enriched AS (
   SELECT
@@ -330,7 +331,7 @@ func (q *Queries) GetBestEntries(ctx context.Context, dollar_1 int32) ([]GetBest
 const getBestInvestmentBids = `-- name: GetBestInvestmentBids :many
 WITH bid_points AS (
   SELECT
-    t.name AS tournament_name,
+    (comp.name || ' (' || seas.year || ')')::text AS tournament_name,
     seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     ce.id AS entry_id,
@@ -347,6 +348,7 @@ WITH bid_points AS (
   JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.competitions comp ON comp.id = t.competition_id
   JOIN core.seasons seas ON seas.id = t.season_id
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
@@ -444,7 +446,7 @@ func (q *Queries) GetBestInvestmentBids(ctx context.Context, dollar_1 int32) ([]
 const getBestInvestments = `-- name: GetBestInvestments :many
 WITH team_bids AS (
   SELECT
-    t.name AS tournament_name,
+    (comp.name || ' (' || seas.year || ')')::text AS tournament_name,
     seas.year::int AS tournament_year,
     c.id AS calcutta_id,
     tt.id AS team_id,
@@ -457,11 +459,12 @@ WITH team_bids AS (
   JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
   JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+  JOIN core.competitions comp ON comp.id = t.competition_id
   JOIN core.seasons seas ON seas.id = t.season_id
   JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
   WHERE cet.deleted_at IS NULL
-  GROUP BY t.name, tournament_year, c.id, tt.id, s.name, tt.seed, tt.region, team_points
+  GROUP BY comp.name, tournament_year, c.id, tt.id, s.name, tt.seed, tt.region, team_points
 ),
 calcutta_enriched AS (
   SELECT

@@ -29,7 +29,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 		var competitionID string
 		err := tx.QueryRow(ctx, `
 			INSERT INTO core.competitions (name)
-			VALUES ('NCAA Men''s')
+			VALUES ('NCAA Tournament')
 			ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
 			RETURNING id
 		`).Scan(&competitionID)
@@ -64,12 +64,12 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 			// Tournament doesn't exist, insert it
 			err = tx.QueryRow(ctx, `
 				INSERT INTO core.tournaments (
-					id, competition_id, season_id, name, import_key, rounds, starting_at,
+					id, competition_id, season_id, import_key, rounds, starting_at,
 					final_four_top_left, final_four_bottom_left, final_four_top_right, final_four_bottom_right
 				)
-				VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''))
+				VALUES ($1::uuid, $2, $3, $4, $5, $6, NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''))
 				RETURNING id
-			`, uuid.New().String(), competitionID, seasonID, b.Tournament.Name, b.Tournament.ImportKey,
+			`, uuid.New().String(), competitionID, seasonID, b.Tournament.ImportKey,
 				b.Tournament.Rounds, b.Tournament.StartingAt, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft,
 				b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
 			if err != nil {
@@ -79,12 +79,12 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 			// Tournament exists, update it
 			_, err = tx.Exec(ctx, `
 				UPDATE core.tournaments SET
-					name = $2, rounds = $3, starting_at = $4,
-					final_four_top_left = NULLIF($5, ''), final_four_bottom_left = NULLIF($6, ''),
-					final_four_top_right = NULLIF($7, ''), final_four_bottom_right = NULLIF($8, ''),
+					rounds = $2, starting_at = $3,
+					final_four_top_left = NULLIF($4, ''), final_four_bottom_left = NULLIF($5, ''),
+					final_four_top_right = NULLIF($6, ''), final_four_bottom_right = NULLIF($7, ''),
 					updated_at = NOW(), deleted_at = NULL
 				WHERE id = $1
-			`, tournamentID, b.Tournament.Name, b.Tournament.Rounds, b.Tournament.StartingAt,
+			`, tournamentID, b.Tournament.Rounds, b.Tournament.StartingAt,
 				b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft,
 				b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight)
 			if err != nil {
