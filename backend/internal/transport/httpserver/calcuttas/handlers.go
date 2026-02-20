@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -209,17 +208,6 @@ func (h *Handler) HandleUpdateCalcutta(w http.ResponseWriter, r *http.Request) {
 	if req.MaxBid != nil {
 		calcutta.MaxBid = *req.MaxBid
 	}
-	if req.BiddingOpen != nil {
-		calcutta.BiddingOpen = *req.BiddingOpen
-		if !*req.BiddingOpen && calcutta.BiddingLockedAt == nil {
-			now := time.Now()
-			calcutta.BiddingLockedAt = &now
-		}
-		if *req.BiddingOpen {
-			calcutta.BiddingLockedAt = nil
-		}
-	}
-
 	if err := h.app.Calcutta.UpdateCalcutta(r.Context(), calcutta); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return

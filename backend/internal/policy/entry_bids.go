@@ -71,10 +71,6 @@ func CanEditEntryBids(
 		return Decision{Allowed: false, IsAdmin: isAdmin, Status: http.StatusForbidden, Code: "forbidden", Message: "Insufficient permissions"}, nil
 	}
 
-	if !calcutta.BiddingOpen && !isAdmin {
-		return Decision{Allowed: false, IsAdmin: isAdmin, Status: http.StatusLocked, Code: "bidding_closed", Message: "Bidding is closed"}, nil
-	}
-
 	if ok, reason := tournament.CanEditBids(now, isAdmin); !ok {
 		code := "tournament_locked"
 		if reason != "" {

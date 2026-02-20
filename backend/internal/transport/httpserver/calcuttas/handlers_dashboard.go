@@ -76,14 +76,21 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		tournamentTeamResponses = append(tournamentTeamResponses, dtos.NewTournamentTeamResponse(team, team.School))
 	}
 
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
 	resp := &dtos.CalcuttaDashboardResponse{
-		Calcutta:        dtos.NewCalcuttaResponse(calcutta),
-		Entries:         dtos.NewEntryListResponse(entries),
-		EntryTeams:      dtos.NewEntryTeamListResponse(allEntryTeams),
-		Portfolios:      dtos.NewPortfolioListResponse(allPortfolios),
-		PortfolioTeams:  dtos.NewPortfolioTeamListResponse(allPortfolioTeams),
-		Schools:         dtos.NewSchoolListResponse(schools),
-		TournamentTeams: tournamentTeamResponses,
+		Calcutta:             dtos.NewCalcuttaResponse(calcutta),
+		TournamentStartingAt: tournament.StartingAt,
+		Entries:              dtos.NewEntryListResponse(entries),
+		EntryTeams:           dtos.NewEntryTeamListResponse(allEntryTeams),
+		Portfolios:           dtos.NewPortfolioListResponse(allPortfolios),
+		PortfolioTeams:       dtos.NewPortfolioTeamListResponse(allPortfolioTeams),
+		Schools:              dtos.NewSchoolListResponse(schools),
+		TournamentTeams:      tournamentTeamResponses,
 	}
 	response.WriteJSON(w, http.StatusOK, resp)
 }

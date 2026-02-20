@@ -14,7 +14,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { SettingsSkeleton } from '../components/skeletons/SettingsSkeleton';
 import { useFlashMessage } from '../hooks/useFlashMessage';
-import { formatDate } from '../utils/format';
+
 
 export function CalcuttaSettingsPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
@@ -33,7 +33,6 @@ export function CalcuttaSettingsPage() {
     minTeams: number;
     maxTeams: number;
     maxBid: number;
-    biddingOpen: boolean;
   } | null>(null);
 
   const calcutta = calcuttaQuery.data;
@@ -46,7 +45,6 @@ export function CalcuttaSettingsPage() {
         minTeams: calcutta.minTeams,
         maxTeams: calcutta.maxTeams,
         maxBid: calcutta.maxBid,
-        biddingOpen: calcutta.biddingOpen,
       });
     }
   }, [calcutta, form]);
@@ -205,25 +203,6 @@ export function CalcuttaSettingsPage() {
               />
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              id="biddingOpen"
-              type="checkbox"
-              checked={form.biddingOpen}
-              onChange={(e) => setForm({ ...form, biddingOpen: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="biddingOpen" className="text-sm font-medium text-gray-700">
-              Bidding Open
-            </label>
-          </div>
-
-          {calcutta?.biddingLockedAt && (
-            <p className="text-sm text-gray-500">
-              Bidding locked at: {formatDate(calcutta.biddingLockedAt, true)}
-            </p>
-          )}
 
           <div className="pt-2">
             <Button type="submit" loading={updateMutation.isPending}>

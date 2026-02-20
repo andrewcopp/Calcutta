@@ -28,7 +28,7 @@ export const calcuttaService = {
     });
   },
 
-  async updateCalcutta(id: string, updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBid' | 'biddingOpen'>>): Promise<Calcutta> {
+  async updateCalcutta(id: string, updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBid'>>): Promise<Calcutta> {
     return apiClient.patch<Calcutta>(`/calcuttas/${id}`, updates);
   },
 

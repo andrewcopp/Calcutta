@@ -32,19 +32,17 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 	out := make([]*models.Calcutta, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &models.Calcutta{
-			ID:              row.ID,
-			TournamentID:    row.TournamentID,
-			OwnerID:         row.OwnerID,
-			Name:            row.Name,
-			MinTeams:        int(row.MinTeams),
-			MaxTeams:        int(row.MaxTeams),
-			MaxBid:          int(row.MaxBid),
-			BiddingOpen:     row.BiddingOpen,
-			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
-			Visibility:      row.Visibility,
-			Created:         row.CreatedAt.Time,
-			Updated:         row.UpdatedAt.Time,
-			Deleted:         nil,
+			ID:           row.ID,
+			TournamentID: row.TournamentID,
+			OwnerID:      row.OwnerID,
+			Name:         row.Name,
+			MinTeams:     int(row.MinTeams),
+			MaxTeams:     int(row.MaxTeams),
+			MaxBid:       int(row.MaxBid),
+			Visibility:   row.Visibility,
+			Created:      row.CreatedAt.Time,
+			Updated:      row.UpdatedAt.Time,
+			Deleted:      nil,
 		})
 	}
 	return out, nil
@@ -59,18 +57,16 @@ func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]
 	out := make([]*models.Calcutta, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &models.Calcutta{
-			ID:              row.ID,
-			TournamentID:    row.TournamentID,
-			OwnerID:         row.OwnerID,
-			Name:            row.Name,
-			MinTeams:        int(row.MinTeams),
-			MaxTeams:        int(row.MaxTeams),
-			MaxBid:          int(row.MaxBid),
-			BiddingOpen:     row.BiddingOpen,
-			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
-			Visibility:      row.Visibility,
-			Created:         row.CreatedAt.Time,
-			Updated:         row.UpdatedAt.Time,
+			ID:           row.ID,
+			TournamentID: row.TournamentID,
+			OwnerID:      row.OwnerID,
+			Name:         row.Name,
+			MinTeams:     int(row.MinTeams),
+			MaxTeams:     int(row.MaxTeams),
+			MaxBid:       int(row.MaxBid),
+			Visibility:   row.Visibility,
+			Created:      row.CreatedAt.Time,
+			Updated:      row.UpdatedAt.Time,
 		})
 	}
 	return out, nil
@@ -100,19 +96,17 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		return nil, err
 	}
 	return &models.Calcutta{
-		ID:              row.ID,
-		TournamentID:    row.TournamentID,
-		OwnerID:         row.OwnerID,
-		Name:            row.Name,
-		MinTeams:        int(row.MinTeams),
-		MaxTeams:        int(row.MaxTeams),
-		MaxBid:          int(row.MaxBid),
-		BiddingOpen:     row.BiddingOpen,
-		BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
-		Visibility:      row.Visibility,
-		Created:         row.CreatedAt.Time,
-		Updated:         row.UpdatedAt.Time,
-		Deleted:         nil,
+		ID:           row.ID,
+		TournamentID: row.TournamentID,
+		OwnerID:      row.OwnerID,
+		Name:         row.Name,
+		MinTeams:     int(row.MinTeams),
+		MaxTeams:     int(row.MaxTeams),
+		MaxBid:       int(row.MaxBid),
+		Visibility:   row.Visibility,
+		Created:      row.CreatedAt.Time,
+		Updated:      row.UpdatedAt.Time,
+		Deleted:      nil,
 	}, nil
 }
 
@@ -125,19 +119,17 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 	out := make([]*models.Calcutta, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &models.Calcutta{
-			ID:              row.ID,
-			TournamentID:    row.TournamentID,
-			OwnerID:         row.OwnerID,
-			Name:            row.Name,
-			MinTeams:        int(row.MinTeams),
-			MaxTeams:        int(row.MaxTeams),
-			MaxBid:          int(row.MaxBid),
-			BiddingOpen:     row.BiddingOpen,
-			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
-			Visibility:      row.Visibility,
-			Created:         row.CreatedAt.Time,
-			Updated:         row.UpdatedAt.Time,
-			Deleted:         TimestamptzToPtrTime(row.DeletedAt),
+			ID:           row.ID,
+			TournamentID: row.TournamentID,
+			OwnerID:      row.OwnerID,
+			Name:         row.Name,
+			MinTeams:     int(row.MinTeams),
+			MaxTeams:     int(row.MaxTeams),
+			MaxBid:       int(row.MaxBid),
+			Visibility:   row.Visibility,
+			Created:      row.CreatedAt.Time,
+			Updated:      row.UpdatedAt.Time,
+			Deleted:      TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -199,22 +191,16 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 	}()
 
 	qtx := r.q.WithTx(tx)
-	var biddingLockedAt pgtype.Timestamptz
-	if calcutta.BiddingLockedAt != nil {
-		biddingLockedAt = pgtype.Timestamptz{Time: *calcutta.BiddingLockedAt, Valid: true}
-	}
 	params := sqlc.UpdateCalcuttaParams{
-		TournamentID:    calcutta.TournamentID,
-		OwnerID:         calcutta.OwnerID,
-		Name:            calcutta.Name,
-		MinTeams:        int32(calcutta.MinTeams),
-		MaxTeams:        int32(calcutta.MaxTeams),
-		MaxBid:          int32(calcutta.MaxBid),
-		BiddingOpen:     calcutta.BiddingOpen,
-		BiddingLockedAt: biddingLockedAt,
-		Visibility:      calcutta.Visibility,
-		UpdatedAt:       pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
-		ID:              calcutta.ID,
+		TournamentID: calcutta.TournamentID,
+		OwnerID:      calcutta.OwnerID,
+		Name:         calcutta.Name,
+		MinTeams:     int32(calcutta.MinTeams),
+		MaxTeams:     int32(calcutta.MaxTeams),
+		MaxBid:       int32(calcutta.MaxBid),
+		Visibility:   calcutta.Visibility,
+		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
+		ID:           calcutta.ID,
 	}
 	affected, err := qtx.UpdateCalcutta(ctx, params)
 	if err != nil {

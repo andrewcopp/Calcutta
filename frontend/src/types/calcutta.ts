@@ -7,8 +7,6 @@ export interface Calcutta {
   maxTeams: number;
   maxBid: number;
   budgetPoints: number;
-  biddingOpen: boolean;
-  biddingLockedAt?: string;
   created: string;
   updated: string;
 }
@@ -120,6 +118,7 @@ export interface TournamentModerator {
 
 export interface CalcuttaDashboard {
   calcutta: Calcutta;
+  tournamentStartingAt?: string;
   entries: CalcuttaEntry[];
   entryTeams: CalcuttaEntryTeam[];
   portfolios: CalcuttaPortfolio[];

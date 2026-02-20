@@ -93,12 +93,10 @@ export function CalcuttaEntriesPage() {
         }
       />
 
-      {calcutta && (
+      {dashboardData && (
         <div className="mb-4">
-          {calcutta.biddingOpen ? (
+          {dashboardData.tournamentStartingAt && new Date(dashboardData.tournamentStartingAt) > new Date() ? (
             <Badge variant="success">Bidding Open</Badge>
-          ) : calcutta.biddingLockedAt ? (
-            <Badge variant="warning">Bidding Locked</Badge>
           ) : (
             <Badge variant="secondary">Bidding Closed</Badge>
           )}

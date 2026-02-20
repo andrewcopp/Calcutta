@@ -3,13 +3,14 @@ package dtos
 import "time"
 
 type CalcuttaDashboardResponse struct {
-	Calcutta        *CalcuttaResponse        `json:"calcutta"`
-	Entries         []*EntryResponse          `json:"entries"`
-	EntryTeams      []*EntryTeamResponse      `json:"entryTeams"`
-	Portfolios      []*PortfolioResponse      `json:"portfolios"`
-	PortfolioTeams  []*PortfolioTeamResponse  `json:"portfolioTeams"`
-	Schools         []*SchoolResponse         `json:"schools"`
-	TournamentTeams []*TournamentTeamResponse `json:"tournamentTeams"`
+	Calcutta              *CalcuttaResponse        `json:"calcutta"`
+	TournamentStartingAt  *time.Time               `json:"tournamentStartingAt,omitempty"`
+	Entries               []*EntryResponse          `json:"entries"`
+	EntryTeams            []*EntryTeamResponse      `json:"entryTeams"`
+	Portfolios            []*PortfolioResponse      `json:"portfolios"`
+	PortfolioTeams        []*PortfolioTeamResponse  `json:"portfolioTeams"`
+	Schools               []*SchoolResponse         `json:"schools"`
+	TournamentTeams       []*TournamentTeamResponse `json:"tournamentTeams"`
 }
 
 type CalcuttaWithRankingResponse struct {

@@ -13,7 +13,6 @@ function makeCalcutta(
     maxTeams: 64,
     maxBid: 100,
     budgetPoints: 1000,
-    biddingOpen: false,
     created: '2025-01-01T00:00:00Z',
     updated: '2025-01-01T00:00:00Z',
     hasEntry: false,
