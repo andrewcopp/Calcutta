@@ -53,8 +53,11 @@ export const BracketGameCard: React.FC<BracketGameCardProps> = ({
   const renderTeam = (team?: BracketTeam) => {
     if (!team) {
       return (
-        <div className="flex items-center justify-between p-3 rounded transition-all bg-gray-100 text-gray-400 cursor-not-allowed">
-          <span className="text-sm">TBD</span>
+        <div className="flex items-center justify-between p-3 rounded transition-all bg-gray-100 border-2 border-gray-200 text-gray-400 cursor-not-allowed">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-400 w-6">&ndash;</span>
+            <span className="font-medium">TBD</span>
+          </div>
         </div>
       );
     }

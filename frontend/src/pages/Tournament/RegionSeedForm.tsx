@@ -17,7 +17,7 @@ interface RegionSeedFormProps {
   usedSchoolIds: Set<string>;
   updateSlot: (region: string, seed: number, slotIndex: number, update: Partial<TeamSlot>) => void;
   addPlayIn: (region: string, seed: number) => void;
-  removePlayIn: (region: string, seed: number) => void;
+  removePlayIn: (region: string, seed: number, slotIndex: number) => void;
   onSlotBlur?: (region: string, seed: number, slotIndex: number) => void;
   slotValidation?: Record<string, 'none' | 'valid' | 'error'>;
 }
@@ -64,33 +64,31 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
                     onBlur={onSlotBlur ? () => onSlotBlur(region, seed, slotIndex) : undefined}
                     validationState={slotValidation?.[slotKey(seed, slotIndex)] ?? 'none'}
                   />
-                  {slotIndex === 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removePlayIn(region, seed)}
-                      className="text-red-500 hover:text-red-700 shrink-0"
-                    >
-                      -
-                    </Button>
-                  )}
+                  <div className="w-8 shrink-0">
+                    {slots.length === 1 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addPlayIn(region, seed)}
+                        title="Add play-in team"
+                      >
+                        +
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePlayIn(region, seed, slotIndex)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        -
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
-            </div>
-            <div className="w-8 shrink-0">
-              {slots.length === 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => addPlayIn(region, seed)}
-                  className="shrink-0"
-                  title="Add play-in team"
-                >
-                  +
-                </Button>
-              )}
             </div>
           </div>
         );

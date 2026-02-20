@@ -213,16 +213,16 @@ const TournamentSetupTeamsForm: React.FC<TournamentSetupTeamsFormProps> = ({
     });
   }, []);
 
-  const removePlayIn = useCallback((region: string, seed: number) => {
+  const removePlayIn = useCallback((region: string, seed: number, slotIndex: number) => {
     setRegions((prev) => {
       const regionState = prev[region];
       if (!regionState) return prev;
       const updated = { ...regionState };
       const slots = [...updated[seed]];
       if (slots.length > 1) {
-        slots.pop();
+        const keepIndex = slotIndex === 0 ? 1 : 0;
+        updated[seed] = [slots[keepIndex]];
       }
-      updated[seed] = slots;
       return { ...prev, [region]: updated };
     });
   }, []);
