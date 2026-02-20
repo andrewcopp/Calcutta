@@ -71,7 +71,7 @@ func exportSchools(ctx context.Context, pool *pgxpool.Pool, outDir string, gener
 
 func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time) error {
 	r, err := pool.Query(ctx, `
-		SELECT id, import_key, name, rounds,
+		SELECT id, import_key, name, rounds, starting_at,
 		       COALESCE(final_four_top_left, ''),
 		       COALESCE(final_four_bottom_left, ''),
 		       COALESCE(final_four_top_right, ''),
@@ -88,8 +88,9 @@ func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, g
 	for r.Next() {
 		var tournamentID, importKey, name string
 		var rounds int
+		var startingAt *time.Time
 		var f1, f2, f3, f4 string
-		if err := r.Scan(&tournamentID, &importKey, &name, &rounds, &f1, &f2, &f3, &f4); err != nil {
+		if err := r.Scan(&tournamentID, &importKey, &name, &rounds, &startingAt, &f1, &f2, &f3, &f4); err != nil {
 			return err
 		}
 
@@ -105,6 +106,7 @@ func exportTournaments(ctx context.Context, pool *pgxpool.Pool, outDir string, g
 				ImportKey:            importKey,
 				Name:                 name,
 				Rounds:               rounds,
+				StartingAt:           startingAt,
 				FinalFourTopLeft:     f1,
 				FinalFourBottomLeft:  f2,
 				FinalFourTopRight:    f3,

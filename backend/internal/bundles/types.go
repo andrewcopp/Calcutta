@@ -21,13 +21,14 @@ type TournamentBundle struct {
 }
 
 type TournamentRecord struct {
-	ImportKey            string `json:"import_key"`
-	Name                 string `json:"name"`
-	Rounds               int    `json:"rounds"`
-	FinalFourTopLeft     string `json:"final_four_top_left"`
-	FinalFourBottomLeft  string `json:"final_four_bottom_left"`
-	FinalFourTopRight    string `json:"final_four_top_right"`
-	FinalFourBottomRight string `json:"final_four_bottom_right"`
+	ImportKey            string     `json:"import_key"`
+	Name                 string     `json:"name"`
+	Rounds               int        `json:"rounds"`
+	StartingAt           *time.Time `json:"starting_at,omitempty"`
+	FinalFourTopLeft     string     `json:"final_four_top_left"`
+	FinalFourBottomLeft  string     `json:"final_four_bottom_left"`
+	FinalFourTopRight    string     `json:"final_four_top_right"`
+	FinalFourBottomRight string     `json:"final_four_bottom_right"`
 }
 
 type TeamRecord struct {
