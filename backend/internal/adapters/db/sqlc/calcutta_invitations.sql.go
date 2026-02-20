@@ -51,7 +51,7 @@ func (q *Queries) CreateCalcuttaInvitation(ctx context.Context, arg CreateCalcut
 }
 
 const getCalcuttaInvitationByCalcuttaAndUser = `-- name: GetCalcuttaInvitationByCalcuttaAndUser :one
-SELECT id, calcutta_id, user_id, invited_by, status, created_at, updated_at
+SELECT id, calcutta_id, user_id, invited_by, status, revoked_at, created_at, updated_at
 FROM core.calcutta_invitations
 WHERE calcutta_id = $1 AND user_id = $2 AND deleted_at IS NULL
 `
@@ -67,6 +67,7 @@ type GetCalcuttaInvitationByCalcuttaAndUserRow struct {
 	UserID     string
 	InvitedBy  string
 	Status     string
+	RevokedAt  pgtype.Timestamptz
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 }
@@ -80,6 +81,45 @@ func (q *Queries) GetCalcuttaInvitationByCalcuttaAndUser(ctx context.Context, ar
 		&i.UserID,
 		&i.InvitedBy,
 		&i.Status,
+		&i.RevokedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getPendingCalcuttaInvitationByCalcuttaAndUser = `-- name: GetPendingCalcuttaInvitationByCalcuttaAndUser :one
+SELECT id, calcutta_id, user_id, invited_by, status, revoked_at, created_at, updated_at
+FROM core.calcutta_invitations
+WHERE calcutta_id = $1 AND user_id = $2 AND status = 'pending' AND deleted_at IS NULL
+`
+
+type GetPendingCalcuttaInvitationByCalcuttaAndUserParams struct {
+	CalcuttaID string
+	UserID     string
+}
+
+type GetPendingCalcuttaInvitationByCalcuttaAndUserRow struct {
+	ID         string
+	CalcuttaID string
+	UserID     string
+	InvitedBy  string
+	Status     string
+	RevokedAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) GetPendingCalcuttaInvitationByCalcuttaAndUser(ctx context.Context, arg GetPendingCalcuttaInvitationByCalcuttaAndUserParams) (GetPendingCalcuttaInvitationByCalcuttaAndUserRow, error) {
+	row := q.db.QueryRow(ctx, getPendingCalcuttaInvitationByCalcuttaAndUser, arg.CalcuttaID, arg.UserID)
+	var i GetPendingCalcuttaInvitationByCalcuttaAndUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.CalcuttaID,
+		&i.UserID,
+		&i.InvitedBy,
+		&i.Status,
+		&i.RevokedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -87,7 +127,7 @@ func (q *Queries) GetCalcuttaInvitationByCalcuttaAndUser(ctx context.Context, ar
 }
 
 const listCalcuttaInvitationsByCalcuttaID = `-- name: ListCalcuttaInvitationsByCalcuttaID :many
-SELECT id, calcutta_id, user_id, invited_by, status, created_at, updated_at
+SELECT id, calcutta_id, user_id, invited_by, status, revoked_at, created_at, updated_at
 FROM core.calcutta_invitations
 WHERE calcutta_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
@@ -99,6 +139,7 @@ type ListCalcuttaInvitationsByCalcuttaIDRow struct {
 	UserID     string
 	InvitedBy  string
 	Status     string
+	RevokedAt  pgtype.Timestamptz
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 }
@@ -118,6 +159,7 @@ func (q *Queries) ListCalcuttaInvitationsByCalcuttaID(ctx context.Context, calcu
 			&i.UserID,
 			&i.InvitedBy,
 			&i.Status,
+			&i.RevokedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -129,4 +171,67 @@ func (q *Queries) ListCalcuttaInvitationsByCalcuttaID(ctx context.Context, calcu
 		return nil, err
 	}
 	return items, nil
+}
+
+const listPendingInvitationsByUserID = `-- name: ListPendingInvitationsByUserID :many
+SELECT id, calcutta_id, user_id, invited_by, status, revoked_at, created_at, updated_at
+FROM core.calcutta_invitations
+WHERE user_id = $1 AND status = 'pending' AND deleted_at IS NULL
+ORDER BY created_at DESC
+`
+
+type ListPendingInvitationsByUserIDRow struct {
+	ID         string
+	CalcuttaID string
+	UserID     string
+	InvitedBy  string
+	Status     string
+	RevokedAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) ListPendingInvitationsByUserID(ctx context.Context, userID string) ([]ListPendingInvitationsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listPendingInvitationsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingInvitationsByUserIDRow
+	for rows.Next() {
+		var i ListPendingInvitationsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CalcuttaID,
+			&i.UserID,
+			&i.InvitedBy,
+			&i.Status,
+			&i.RevokedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeCalcuttaInvitation = `-- name: RevokeCalcuttaInvitation :execrows
+UPDATE core.calcutta_invitations
+SET status = 'revoked',
+    revoked_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL AND status = 'pending'
+`
+
+func (q *Queries) RevokeCalcuttaInvitation(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeCalcuttaInvitation, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

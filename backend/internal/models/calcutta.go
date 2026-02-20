@@ -13,6 +13,7 @@ type Calcutta struct {
 	MaxBid          int        `json:"maxBid"`
 	BiddingOpen     bool       `json:"biddingOpen"`
 	BiddingLockedAt *time.Time `json:"biddingLockedAt,omitempty"`
+	Visibility      string     `json:"visibility"`
 	Created         time.Time  `json:"created"`
 	Updated         time.Time  `json:"updated"`
 	Deleted         *time.Time `json:"deleted,omitempty"`

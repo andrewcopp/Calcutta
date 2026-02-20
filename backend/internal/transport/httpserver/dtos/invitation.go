@@ -19,13 +19,14 @@ func (r *CreateInvitationRequest) Validate() error {
 }
 
 type InvitationResponse struct {
-	ID         string    `json:"id"`
-	CalcuttaID string    `json:"calcuttaId"`
-	UserID     string    `json:"userId"`
-	InvitedBy  string    `json:"invitedBy"`
-	Status     string    `json:"status"`
-	Created    time.Time `json:"created"`
-	Updated    time.Time `json:"updated"`
+	ID         string     `json:"id"`
+	CalcuttaID string     `json:"calcuttaId"`
+	UserID     string     `json:"userId"`
+	InvitedBy  string     `json:"invitedBy"`
+	Status     string     `json:"status"`
+	RevokedAt  *time.Time `json:"revokedAt,omitempty"`
+	Created    time.Time  `json:"created"`
+	Updated    time.Time  `json:"updated"`
 }
 
 func NewInvitationResponse(i *models.CalcuttaInvitation) *InvitationResponse {
@@ -35,6 +36,7 @@ func NewInvitationResponse(i *models.CalcuttaInvitation) *InvitationResponse {
 		UserID:     i.UserID,
 		InvitedBy:  i.InvitedBy,
 		Status:     i.Status,
+		RevokedAt:  i.RevokedAt,
 		Created:    i.Created,
 		Updated:    i.Updated,
 	}

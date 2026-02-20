@@ -65,6 +65,7 @@ type CoreCalcutta struct {
 	BudgetPoints    int32
 	BiddingOpen     bool
 	BiddingLockedAt pgtype.Timestamptz
+	Visibility      string
 }
 
 type CoreCalcuttaInvitation struct {
@@ -76,6 +77,7 @@ type CoreCalcuttaInvitation struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
+	RevokedAt  pgtype.Timestamptz
 }
 
 type CoreCalcuttaScoringRule struct {
@@ -104,6 +106,7 @@ type CoreEntry struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
+	Status     string
 }
 
 type CoreEntryTeam struct {
@@ -250,6 +253,7 @@ type CoreUser struct {
 	LastInviteSentAt   pgtype.Timestamptz
 	ExternalProvider   *string
 	ExternalProviderID *string
+	InvitedBy          pgtype.UUID
 }
 
 type DerivedGameOutcomeRun struct {

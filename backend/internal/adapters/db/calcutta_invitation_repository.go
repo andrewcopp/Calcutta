@@ -39,7 +39,7 @@ func (r *CalcuttaInvitationRepository) ListInvitations(ctx context.Context, calc
 	}
 	out := make([]*models.CalcuttaInvitation, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, &models.CalcuttaInvitation{
+		inv := &models.CalcuttaInvitation{
 			ID:         row.ID,
 			CalcuttaID: row.CalcuttaID,
 			UserID:     row.UserID,
@@ -47,7 +47,12 @@ func (r *CalcuttaInvitationRepository) ListInvitations(ctx context.Context, calc
 			Status:     row.Status,
 			Created:    row.CreatedAt.Time,
 			Updated:    row.UpdatedAt.Time,
-		})
+		}
+		if row.RevokedAt.Valid {
+			t := row.RevokedAt.Time
+			inv.RevokedAt = &t
+		}
+		out = append(out, inv)
 	}
 	return out, nil
 }
@@ -63,7 +68,7 @@ func (r *CalcuttaInvitationRepository) GetInvitationByCalcuttaAndUser(ctx contex
 		}
 		return nil, err
 	}
-	return &models.CalcuttaInvitation{
+	inv := &models.CalcuttaInvitation{
 		ID:         row.ID,
 		CalcuttaID: row.CalcuttaID,
 		UserID:     row.UserID,
@@ -71,7 +76,12 @@ func (r *CalcuttaInvitationRepository) GetInvitationByCalcuttaAndUser(ctx contex
 		Status:     row.Status,
 		Created:    row.CreatedAt.Time,
 		Updated:    row.UpdatedAt.Time,
-	}, nil
+	}
+	if row.RevokedAt.Valid {
+		t := row.RevokedAt.Time
+		inv.RevokedAt = &t
+	}
+	return inv, nil
 }
 
 func (r *CalcuttaInvitationRepository) AcceptInvitation(ctx context.Context, id string) error {
@@ -83,4 +93,35 @@ func (r *CalcuttaInvitationRepository) AcceptInvitation(ctx context.Context, id 
 		return &apperrors.NotFoundError{Resource: "invitation", ID: id}
 	}
 	return nil
+}
+
+func (r *CalcuttaInvitationRepository) RevokeInvitation(ctx context.Context, id string) error {
+	affected, err := r.q.RevokeCalcuttaInvitation(ctx, id)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return &apperrors.NotFoundError{Resource: "invitation", ID: id}
+	}
+	return nil
+}
+
+func (r *CalcuttaInvitationRepository) ListPendingInvitationsByUserID(ctx context.Context, userID string) ([]*models.CalcuttaInvitation, error) {
+	rows, err := r.q.ListPendingInvitationsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*models.CalcuttaInvitation, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &models.CalcuttaInvitation{
+			ID:         row.ID,
+			CalcuttaID: row.CalcuttaID,
+			UserID:     row.UserID,
+			InvitedBy:  row.InvitedBy,
+			Status:     row.Status,
+			Created:    row.CreatedAt.Time,
+			Updated:    row.UpdatedAt.Time,
+		})
+	}
+	return out, nil
 }

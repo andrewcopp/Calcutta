@@ -39,6 +39,7 @@ type CalcuttaResponse struct {
 	MaxBid          int        `json:"maxBid"`
 	BiddingOpen     bool       `json:"biddingOpen"`
 	BiddingLockedAt *time.Time `json:"biddingLockedAt,omitempty"`
+	Visibility      string     `json:"visibility"`
 	Created         time.Time  `json:"created"`
 	Updated         time.Time  `json:"updated"`
 }
@@ -54,6 +55,7 @@ func NewCalcuttaResponse(c *models.Calcutta) *CalcuttaResponse {
 		MaxBid:          c.MaxBid,
 		BiddingOpen:     c.BiddingOpen,
 		BiddingLockedAt: c.BiddingLockedAt,
+		Visibility:      c.Visibility,
 		Created:         c.Created,
 		Updated:         c.Updated,
 	}
@@ -102,7 +104,7 @@ func (r *ReinviteRequest) Validate() error {
 }
 
 type ReinviteResponse struct {
-	Calcutta    *CalcuttaResponse    `json:"calcutta"`
+	Calcutta    *CalcuttaResponse     `json:"calcutta"`
 	Invitations []*InvitationResponse `json:"invitations"`
 }
 

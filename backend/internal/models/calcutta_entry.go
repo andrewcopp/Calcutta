@@ -8,6 +8,7 @@ type CalcuttaEntry struct {
 	Name           string     `json:"name"`             // Name of the participant (required for historical data)
 	UserID         *string    `json:"userId,omitempty"` // Optional reference to a User (null for historical data)
 	CalcuttaID     string     `json:"calcuttaId"`
+	Status         string     `json:"status"`
 	TotalPoints    float64    `json:"totalPoints"`
 	FinishPosition int        `json:"finishPosition"`
 	InTheMoney     bool       `json:"inTheMoney"`

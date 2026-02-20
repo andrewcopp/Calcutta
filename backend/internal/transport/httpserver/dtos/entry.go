@@ -12,6 +12,7 @@ type EntryResponse struct {
 	Name           string    `json:"name"`
 	UserID         *string   `json:"userId,omitempty"`
 	CalcuttaID     string    `json:"calcuttaId"`
+	Status         string    `json:"status"`
 	TotalPoints    float64   `json:"totalPoints"`
 	FinishPosition int       `json:"finishPosition"`
 	InTheMoney     bool      `json:"inTheMoney"`
@@ -27,6 +28,7 @@ func NewEntryResponse(e *models.CalcuttaEntry) *EntryResponse {
 		Name:           e.Name,
 		UserID:         e.UserID,
 		CalcuttaID:     e.CalcuttaID,
+		Status:         e.Status,
 		TotalPoints:    e.TotalPoints,
 		FinishPosition: e.FinishPosition,
 		InTheMoney:     e.InTheMoney,

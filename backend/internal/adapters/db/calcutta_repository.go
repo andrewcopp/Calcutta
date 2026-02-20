@@ -42,6 +42,7 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 			MaxBid:          int(row.MaxBid),
 			BiddingOpen:     row.BiddingOpen,
 			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
+			Visibility:      row.Visibility,
 			Created:         row.CreatedAt.Time,
 			Updated:         row.UpdatedAt.Time,
 			Deleted:         nil,
@@ -118,6 +119,7 @@ func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]
 			MaxBid:          int(row.MaxBid),
 			BiddingOpen:     row.BiddingOpen,
 			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
+			Visibility:      row.Visibility,
 			Created:         row.CreatedAt.Time,
 			Updated:         row.UpdatedAt.Time,
 		})
@@ -158,6 +160,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		MaxBid:          int(row.MaxBid),
 		BiddingOpen:     row.BiddingOpen,
 		BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
+		Visibility:      row.Visibility,
 		Created:         row.CreatedAt.Time,
 		Updated:         row.UpdatedAt.Time,
 		Deleted:         nil,
@@ -182,6 +185,7 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 			MaxBid:          int(row.MaxBid),
 			BiddingOpen:     row.BiddingOpen,
 			BiddingLockedAt: TimestamptzToPtrTime(row.BiddingLockedAt),
+			Visibility:      row.Visibility,
 			Created:         row.CreatedAt.Time,
 			Updated:         row.UpdatedAt.Time,
 			Deleted:         TimestamptzToPtrTime(row.DeletedAt),
@@ -207,6 +211,9 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 	}()
 
 	qtx := r.q.WithTx(tx)
+	if calcutta.Visibility == "" {
+		calcutta.Visibility = "private"
+	}
 	params := sqlc.CreateCalcuttaParams{
 		ID:           calcutta.ID,
 		TournamentID: calcutta.TournamentID,
@@ -215,6 +222,7 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 		MinTeams:     int32(calcutta.MinTeams),
 		MaxTeams:     int32(calcutta.MaxTeams),
 		MaxBid:       int32(calcutta.MaxBid),
+		Visibility:   calcutta.Visibility,
 		CreatedAt:    pgtype.Timestamptz{Time: calcutta.Created, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
 	}
@@ -255,6 +263,7 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 		MaxBid:          int32(calcutta.MaxBid),
 		BiddingOpen:     calcutta.BiddingOpen,
 		BiddingLockedAt: biddingLockedAt,
+		Visibility:      calcutta.Visibility,
 		UpdatedAt:       pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
 		ID:              calcutta.ID,
 	}
@@ -412,11 +421,15 @@ func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.Calc
 		userID = pgtype.UUID{Bytes: parsed, Valid: true}
 	}
 
+	if entry.Status == "" {
+		entry.Status = "draft"
+	}
 	params := sqlc.CreateEntryParams{
 		ID:         entry.ID,
 		Name:       entry.Name,
 		UserID:     userID,
 		CalcuttaID: entry.CalcuttaID,
+		Status:     entry.Status,
 	}
 	if err := r.q.CreateEntry(ctx, params); err != nil {
 		var pgErr *pgconn.PgError
@@ -441,6 +454,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 			Name:        row.Name,
 			UserID:      uuidToPtrString(row.UserID),
 			CalcuttaID:  row.CalcuttaID,
+			Status:      row.Status,
 			TotalPoints: row.TotalPoints,
 			Created:     row.CreatedAt.Time,
 			Updated:     row.UpdatedAt.Time,
@@ -464,10 +478,25 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 		Name:       row.Name,
 		UserID:     uuidToPtrString(row.UserID),
 		CalcuttaID: row.CalcuttaID,
+		Status:     row.Status,
 		Created:    row.CreatedAt.Time,
 		Updated:    row.UpdatedAt.Time,
 		Deleted:    TimestamptzToPtrTime(row.DeletedAt),
 	}, nil
+}
+
+func (r *CalcuttaRepository) UpdateEntryStatus(ctx context.Context, id string, status string) error {
+	affected, err := r.q.UpdateEntryStatus(ctx, sqlc.UpdateEntryStatusParams{
+		ID:     id,
+		Status: status,
+	})
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return &apperrors.NotFoundError{Resource: "entry", ID: id}
+	}
+	return nil
 }
 
 func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {

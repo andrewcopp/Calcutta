@@ -1,17 +1,17 @@
 -- name: ListCalcuttas :many
-SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, visibility, created_at, updated_at
 FROM core.calcuttas
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: GetCalcuttaByID :one
-SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, visibility, created_at, updated_at
 FROM core.calcuttas
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: CreateCalcutta :exec
-INSERT INTO core.calcuttas (id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+INSERT INTO core.calcuttas (id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, visibility, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: UpdateCalcutta :execrows
 UPDATE core.calcuttas
@@ -23,19 +23,22 @@ SET tournament_id = $1,
     max_bid = $6,
     bidding_open = $7,
     bidding_locked_at = $8,
-    updated_at = $9
-WHERE id = $10 AND deleted_at IS NULL;
+    visibility = $9,
+    updated_at = $10
+WHERE id = $11 AND deleted_at IS NULL;
 
 -- name: GetCalcuttasByTournament :many
-SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, created_at, updated_at, deleted_at
+SELECT id, tournament_id, owner_id, name, min_teams, max_teams, max_bid, bidding_open, bidding_locked_at, visibility, created_at, updated_at, deleted_at
 FROM core.calcuttas
 WHERE tournament_id = $1 AND deleted_at IS NULL;
 
 -- name: ListCalcuttasByUserID :many
-SELECT DISTINCT c.id, c.tournament_id, c.owner_id, c.name, c.min_teams, c.max_teams, c.max_bid, c.bidding_open, c.bidding_locked_at, c.created_at, c.updated_at
+SELECT DISTINCT c.id, c.tournament_id, c.owner_id, c.name, c.min_teams, c.max_teams, c.max_bid, c.bidding_open, c.bidding_locked_at, c.visibility, c.created_at, c.updated_at
 FROM core.calcuttas c
 WHERE c.deleted_at IS NULL
   AND (c.owner_id = $1
        OR EXISTS (SELECT 1 FROM core.entries e
-                  WHERE e.calcutta_id = c.id AND e.user_id = $1 AND e.deleted_at IS NULL))
+                  WHERE e.calcutta_id = c.id AND e.user_id = $1 AND e.deleted_at IS NULL)
+       OR EXISTS (SELECT 1 FROM core.calcutta_invitations ci
+                  WHERE ci.calcutta_id = c.id AND ci.user_id = $1 AND ci.status = 'pending' AND ci.deleted_at IS NULL))
 ORDER BY c.created_at DESC;
