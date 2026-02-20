@@ -75,18 +75,46 @@ export function CalcuttaListPage() {
                         : `Created ${formatDate(calcutta.created)}`}
                     </p>
                   </div>
-                  {ranking ? (
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-blue-600">
-                        #{ranking.rank} of {ranking.totalEntries}
+                  {(() => {
+                    const tournamentStarted = calcutta.tournamentStartingAt
+                      ? new Date(calcutta.tournamentStartingAt) <= new Date()
+                      : false;
+
+                    if (!tournamentStarted) {
+                      return (
+                        <div className="text-right">
+                          <div className={`text-sm font-medium ${calcutta.hasEntry ? 'text-green-600' : 'text-amber-600'}`}>
+                            {calcutta.hasEntry ? 'Entry Submitted' : 'Awaiting Entry'}
+                          </div>
+                          {calcutta.tournamentStartingAt && (
+                            <div className="text-sm text-gray-500">
+                              Tournament starts {formatDate(calcutta.tournamentStartingAt, true)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (ranking) {
+                      return (
+                        <div className="text-right">
+                          <div className="text-lg font-semibold text-blue-600">
+                            #{ranking.rank} of {ranking.totalEntries}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {ranking.points.toFixed(2)} points
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-400">No Entry</div>
+                        <div className="text-sm text-gray-500">0.00 points</div>
                       </div>
-                      <div className="text-sm text-gray-500">Entry Submitted</div>
-                    </div>
-                  ) : (
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-amber-600">Awaiting Submission</div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </Card>
             </Link>
