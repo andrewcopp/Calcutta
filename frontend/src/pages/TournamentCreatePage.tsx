@@ -20,6 +20,7 @@ export const TournamentCreatePage: React.FC = () => {
   const [year, setYear] = useState('');
   const [newYear, setNewYear] = useState('');
   const [rounds, setRounds] = useState(7);
+  const [startingAt, setStartingAt] = useState('');
   const [regionNames, setRegionNames] = useState({
     topLeft: 'East',
     bottomLeft: 'West',
@@ -57,6 +58,7 @@ export const TournamentCreatePage: React.FC = () => {
         finalFourBottomLeft: regionNames.bottomLeft,
         finalFourTopRight: regionNames.topRight,
         finalFourBottomRight: regionNames.bottomRight,
+        ...(startingAt ? { startingAt: new Date(startingAt).toISOString() } : {}),
       });
       return tournament;
     },
@@ -188,6 +190,19 @@ export const TournamentCreatePage: React.FC = () => {
                   max={7}
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Time
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={startingAt}
+                  onChange={(e) => setStartingAt(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Used to auto-lock bidding when the tournament starts
+                </p>
               </div>
             </div>
 
