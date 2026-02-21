@@ -32,6 +32,10 @@ export const calcuttaService = {
     return apiClient.patch<Calcutta>(`/calcuttas/${id}`, updates);
   },
 
+  async createEntry(calcuttaId: string, name: string): Promise<CalcuttaEntry> {
+    return apiClient.post<CalcuttaEntry>(`/calcuttas/${calcuttaId}/entries`, { name });
+  },
+
   async getEntryTeams(entryId: string, calcuttaId: string): Promise<CalcuttaEntryTeam[]> {
     return apiClient.get<CalcuttaEntryTeam[]>(`/calcuttas/${calcuttaId}/entries/${entryId}/teams`);
   },

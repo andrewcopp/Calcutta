@@ -16,6 +16,7 @@ export interface CalcuttaEntry {
   id: string;
   name: string;
   calcuttaId: string;
+  status?: string;
   totalPoints?: number;
   finishPosition?: number;
   inTheMoney?: boolean;
@@ -127,6 +128,9 @@ export interface CalcuttaAbilities {
 export interface CalcuttaDashboard {
   calcutta: Calcutta;
   tournamentStartingAt?: string;
+  biddingOpen: boolean;
+  totalEntries: number;
+  currentUserEntry?: CalcuttaEntry;
   abilities?: CalcuttaAbilities;
   entries: CalcuttaEntry[];
   entryTeams: CalcuttaEntryTeam[];

@@ -173,6 +173,8 @@ function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; s
 function makeDashboard(overrides: Partial<CalcuttaDashboard> = {}): CalcuttaDashboard {
   return {
     calcutta: makeCalcutta(),
+    biddingOpen: false,
+    totalEntries: 0,
     entries: [],
     entryTeams: [],
     portfolios: [],

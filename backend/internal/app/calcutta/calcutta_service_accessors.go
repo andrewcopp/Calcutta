@@ -168,6 +168,10 @@ func (s *Service) ReplaceEntryTeams(ctx context.Context, entryID string, teams [
 	return s.ports.EntryWriter.ReplaceEntryTeams(ctx, entryID, teams)
 }
 
+func (s *Service) UpdateEntryStatus(ctx context.Context, id string, status string) error {
+	return s.ports.EntryWriter.UpdateEntryStatus(ctx, id, status)
+}
+
 func (s *Service) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	return s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entryID)
 }

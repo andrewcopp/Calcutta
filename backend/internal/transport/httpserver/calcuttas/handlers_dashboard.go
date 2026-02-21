@@ -3,6 +3,7 @@ package calcuttas
 import (
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
@@ -53,6 +54,12 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
 	schools, err := h.app.School.List(r.Context())
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
@@ -65,56 +72,75 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var allEntryTeams []*models.CalcuttaEntryTeam
-	var allPortfolios []*models.CalcuttaPortfolio
-	for _, entry := range entries {
-		entryTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), entry.ID)
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		allEntryTeams = append(allEntryTeams, entryTeams...)
-
-		portfolios, err := h.app.Calcutta.GetPortfoliosByEntry(r.Context(), entry.ID)
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		allPortfolios = append(allPortfolios, portfolios...)
-	}
-
-	var allPortfolioTeams []*models.CalcuttaPortfolioTeam
-	for _, portfolio := range allPortfolios {
-		portfolioTeams, err := h.app.Calcutta.GetPortfolioTeams(r.Context(), portfolio.ID)
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		allPortfolioTeams = append(allPortfolioTeams, portfolioTeams...)
-	}
-
 	tournamentTeamResponses := make([]*dtos.TournamentTeamResponse, 0, len(tournamentTeams))
 	for _, team := range tournamentTeams {
 		tournamentTeamResponses = append(tournamentTeamResponses, dtos.NewTournamentTeamResponse(team, team.School))
 	}
 
-	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
-	if err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
+	biddingOpen := !tournament.HasStarted(time.Now())
+
+	var currentUserEntry *models.CalcuttaEntry
+	for _, entry := range entries {
+		if entry.UserID != nil && *entry.UserID == userID {
+			currentUserEntry = entry
+			break
+		}
 	}
 
 	resp := &dtos.CalcuttaDashboardResponse{
 		Calcutta:             dtos.NewCalcuttaResponse(calcutta),
 		TournamentStartingAt: tournament.StartingAt,
+		BiddingOpen:          biddingOpen,
+		TotalEntries:         len(entries),
 		Abilities:            computeAbilities(r.Context(), h.authz, userID, calcutta),
-		Entries:              dtos.NewEntryListResponse(entries),
-		EntryTeams:           dtos.NewEntryTeamListResponse(allEntryTeams),
-		Portfolios:           dtos.NewPortfolioListResponse(allPortfolios),
-		PortfolioTeams:       dtos.NewPortfolioTeamListResponse(allPortfolioTeams),
 		Schools:              dtos.NewSchoolListResponse(schools),
 		TournamentTeams:      tournamentTeamResponses,
 	}
+
+	if currentUserEntry != nil {
+		resp.CurrentUserEntry = dtos.NewEntryResponse(currentUserEntry)
+	}
+
+	if biddingOpen {
+		resp.Entries = []*dtos.EntryResponse{}
+		resp.EntryTeams = []*dtos.EntryTeamResponse{}
+		resp.Portfolios = []*dtos.PortfolioResponse{}
+		resp.PortfolioTeams = []*dtos.PortfolioTeamResponse{}
+	} else {
+		var allEntryTeams []*models.CalcuttaEntryTeam
+		var allPortfolios []*models.CalcuttaPortfolio
+		for _, entry := range entries {
+			entryTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), entry.ID)
+			if err != nil {
+				httperr.WriteFromErr(w, r, err, h.authUserID)
+				return
+			}
+			allEntryTeams = append(allEntryTeams, entryTeams...)
+
+			portfolios, err := h.app.Calcutta.GetPortfoliosByEntry(r.Context(), entry.ID)
+			if err != nil {
+				httperr.WriteFromErr(w, r, err, h.authUserID)
+				return
+			}
+			allPortfolios = append(allPortfolios, portfolios...)
+		}
+
+		var allPortfolioTeams []*models.CalcuttaPortfolioTeam
+		for _, portfolio := range allPortfolios {
+			portfolioTeams, err := h.app.Calcutta.GetPortfolioTeams(r.Context(), portfolio.ID)
+			if err != nil {
+				httperr.WriteFromErr(w, r, err, h.authUserID)
+				return
+			}
+			allPortfolioTeams = append(allPortfolioTeams, portfolioTeams...)
+		}
+
+		resp.Entries = dtos.NewEntryListResponse(entries)
+		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
+		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
+		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
+	}
+
 	response.WriteJSON(w, http.StatusOK, resp)
 }
 
