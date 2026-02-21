@@ -1,10 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { tournamentService } from '../services/tournamentService';
-import { queryKeys } from '../queryKeys';
 import type { Tournament, TournamentTeam } from '../types/tournament';
 import type { School } from '../types/school';
+import { useTeamSetupMutations } from './useTeamSetupMutations';
 
 export interface TeamSlot {
   schoolId: string;
@@ -277,9 +274,6 @@ interface UseTeamSetupFormParams {
 }
 
 export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamSetupFormParams): TeamSetupFormState {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
   const regionList = useMemo(() => getRegionList(tournament), [tournament]);
 
   const [regions, setRegions] = useState(() =>
@@ -288,7 +282,6 @@ export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamS
       : createInitialRegions(regionList)
   );
   const [activeTab, setActiveTab] = useState(() => regionList[0]);
-  const [errors, setErrors] = useState<string[]>([]);
   const [flashingSlots, setFlashingSlots] = useState<Record<string, boolean>>({});
 
   const usedSchoolIds = useMemo(() => deriveUsedSchoolIds(regionList, regions), [regions, regionList]);
@@ -329,29 +322,11 @@ export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamS
     []
   );
 
-  const replaceTeamsMutation = useMutation({
-    mutationFn: async () => {
-      const teams = collectTeamsForSubmission(regionList, regions);
-      return tournamentService.replaceTeams(tournament.id, teams);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.teams(tournament.id) });
-      navigate(`/admin/tournaments/${tournament.id}`);
-    },
-    onError: (err: unknown) => {
-      const apiErr = err as { body?: { errors?: string[] } };
-      if (apiErr?.body?.errors) {
-        setErrors(apiErr.body.errors);
-      } else {
-        setErrors([err instanceof Error ? err.message : 'Failed to save teams']);
-      }
-    },
+  const { errors, handleSubmit, isPending } = useTeamSetupMutations({
+    tournamentId: tournament.id,
+    regionList,
+    regions,
   });
-
-  const handleSubmit = useCallback(() => {
-    setErrors([]);
-    replaceTeamsMutation.mutate();
-  }, [replaceTeamsMutation]);
 
   return {
     regionList,
@@ -367,7 +342,7 @@ export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamS
     removePlayIn,
     handleSlotBlur,
     handleSubmit,
-    isPending: replaceTeamsMutation.isPending,
+    isPending,
     createEmptyRegion,
   };
 }

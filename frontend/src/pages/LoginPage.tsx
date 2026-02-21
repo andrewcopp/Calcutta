@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { AuthForm } from '../components/Auth/AuthForm';
-import { useUser } from '../contexts/useUser';
+import { useUser } from '../contexts/UserContext';
 import { Alert } from '../components/ui/Alert';
 
 export function LoginPage() {

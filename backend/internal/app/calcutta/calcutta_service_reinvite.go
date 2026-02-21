@@ -8,7 +8,7 @@ import (
 
 // ReinviteFromCalcutta creates a new calcutta and invites all participants from a source calcutta.
 func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID string, newCalcutta *models.Calcutta, invitedBy string) (*models.Calcutta, []*models.CalcuttaInvitation, error) {
-	source, err := s.ports.CalcuttaReader.GetByID(ctx, sourceCalcuttaID)
+	source, err := s.ports.Calcuttas.GetByID(ctx, sourceCalcuttaID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -24,7 +24,7 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 		newCalcutta.MaxBidPoints = source.MaxBidPoints
 	}
 
-	sourceRounds, err := s.ports.RoundReader.GetRounds(ctx, sourceCalcuttaID)
+	sourceRounds, err := s.ports.Rounds.GetRounds(ctx, sourceCalcuttaID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -33,7 +33,7 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 		return nil, nil, err
 	}
 
-	userIDs, err := s.ports.EntryReader.GetDistinctUserIDsByCalcutta(ctx, sourceCalcuttaID)
+	userIDs, err := s.ports.Entries.GetDistinctUserIDsByCalcutta(ctx, sourceCalcuttaID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -45,7 +45,7 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 			UserID:     uid,
 			InvitedBy:  invitedBy,
 		}
-		if err := s.ports.InvitationWriter.CreateInvitation(ctx, inv); err != nil {
+		if err := s.ports.Invitations.CreateInvitation(ctx, inv); err != nil {
 			return nil, nil, err
 		}
 		invitations = append(invitations, inv)

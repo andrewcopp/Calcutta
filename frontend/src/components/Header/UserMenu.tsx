@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useUser } from '../../contexts/useUser';
+import { useUser } from '../../contexts/UserContext';
 import { useHasAnyPermission } from '../../hooks/useHasAnyPermission';
 import { ADMIN_PERMISSIONS } from '../../constants/permissions';
 import {

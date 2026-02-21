@@ -21,8 +21,8 @@ type Service struct {
 	cfg          ServiceConfig
 }
 
-// NewWithPipelineRepo creates a new lab service with pipeline repository support.
-func NewWithPipelineRepo(repo ports.LabPipelineRepository, cfg ServiceConfig) *Service {
+// New creates a new lab service.
+func New(repo ports.LabPipelineRepository, cfg ServiceConfig) *Service {
 	return &Service{repo: repo, pipelineRepo: repo, cfg: cfg}
 }
 

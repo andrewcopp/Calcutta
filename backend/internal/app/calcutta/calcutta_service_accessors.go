@@ -9,24 +9,24 @@ import (
 )
 
 func (s *Service) GetAllCalcuttas(ctx context.Context) ([]*models.Calcutta, error) {
-	return s.ports.CalcuttaReader.GetAll(ctx)
+	return s.ports.Calcuttas.GetAll(ctx)
 }
 
 func (s *Service) GetCalcuttaByID(ctx context.Context, id string) (*models.Calcutta, error) {
-	return s.ports.CalcuttaReader.GetByID(ctx, id)
+	return s.ports.Calcuttas.GetByID(ctx, id)
 }
 
 func (s *Service) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta) error {
-	return s.ports.CalcuttaWriter.Update(ctx, calcutta)
+	return s.ports.Calcuttas.Update(ctx, calcutta)
 }
 
 func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
-	entries, err := s.ports.EntryReader.GetEntries(ctx, calcuttaID)
+	entries, err := s.ports.Entries.GetEntries(ctx, calcuttaID)
 	if err != nil {
 		return nil, err
 	}
 
-	payouts, err := s.ports.PayoutReader.GetPayouts(ctx, calcuttaID)
+	payouts, err := s.ports.Payouts.GetPayouts(ctx, calcuttaID)
 	if err != nil {
 		return nil, err
 	}
@@ -153,23 +153,23 @@ func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts [
 }
 
 func (s *Service) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {
-	return s.ports.EntryReader.GetEntryTeams(ctx, entryID)
+	return s.ports.Entries.GetEntryTeams(ctx, entryID)
 }
 
 func (s *Service) GetEntryTeamsByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaEntryTeam, error) {
-	return s.ports.EntryReader.GetEntryTeamsByEntryIDs(ctx, entryIDs)
+	return s.ports.Entries.GetEntryTeamsByEntryIDs(ctx, entryIDs)
 }
 
 func (s *Service) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {
-	return s.ports.EntryReader.GetEntry(ctx, id)
+	return s.ports.Entries.GetEntry(ctx, id)
 }
 
 func (s *Service) CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error {
-	return s.ports.EntryWriter.CreateEntry(ctx, entry)
+	return s.ports.Entries.CreateEntry(ctx, entry)
 }
 
 func (s *Service) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
-	return s.ports.EntryWriter.ReplaceEntryTeams(ctx, entryID, teams)
+	return s.ports.Entries.ReplaceEntryTeams(ctx, entryID, teams)
 }
 
 func (s *Service) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
@@ -193,21 +193,21 @@ func (s *Service) GetTournamentTeam(ctx context.Context, id string) (*models.Tou
 }
 
 func (s *Service) GetCalcuttasByUser(ctx context.Context, userID string) ([]*models.Calcutta, error) {
-	return s.ports.CalcuttaReader.GetByUserID(ctx, userID)
+	return s.ports.Calcuttas.GetByUserID(ctx, userID)
 }
 
 func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
-	return s.ports.CalcuttaReader.GetCalcuttasByTournament(ctx, tournamentID)
+	return s.ports.Calcuttas.GetCalcuttasByTournament(ctx, tournamentID)
 }
 
 func (s *Service) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
-	return s.ports.EntryReader.GetDistinctUserIDsByCalcutta(ctx, calcuttaID)
+	return s.ports.Entries.GetDistinctUserIDsByCalcutta(ctx, calcuttaID)
 }
 
 func (s *Service) GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error) {
-	return s.ports.PayoutReader.GetPayouts(ctx, calcuttaID)
+	return s.ports.Payouts.GetPayouts(ctx, calcuttaID)
 }
 
 func (s *Service) ReplacePayouts(ctx context.Context, calcuttaID string, payouts []*models.CalcuttaPayout) error {
-	return s.ports.PayoutWriter.ReplacePayouts(ctx, calcuttaID, payouts)
+	return s.ports.Payouts.ReplacePayouts(ctx, calcuttaID, payouts)
 }

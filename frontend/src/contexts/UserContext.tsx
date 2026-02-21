@@ -1,7 +1,28 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { User } from '../types/user';
 import { userService } from '../services/userService';
-import { UserContext } from './userContextInternal';
+
+export interface UserContextType {
+  user: User | null;
+  permissions: string[];
+  permissionsLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
+  acceptInvite: (token: string, password: string) => Promise<void>;
+  logout: () => void;
+  hasPermission: (permission: string) => boolean;
+}
+
+const UserContext = createContext<UserContextType | undefined>(undefined);
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useUser = () => {
+  const context = useContext(UserContext);
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
+};
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

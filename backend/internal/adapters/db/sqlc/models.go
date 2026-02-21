@@ -137,6 +137,7 @@ type CoreIdempotencyKey struct {
 	CreatedAt      pgtype.Timestamptz
 	ResponseStatus *int32
 	ResponseBody   []byte
+	ExpiresAt      pgtype.Timestamptz
 }
 
 type CoreLabel struct {

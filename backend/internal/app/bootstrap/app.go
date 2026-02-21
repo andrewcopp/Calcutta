@@ -34,25 +34,20 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)
 	invitationRepo := dbadapters.NewCalcuttaInvitationRepository(pool)
 	calcuttaService := appcalcutta.New(appcalcutta.Ports{
-		CalcuttaReader:   calcuttaRepo,
-		CalcuttaWriter:   calcuttaRepo,
-		EntryReader:      calcuttaRepo,
-		EntryWriter:      calcuttaRepo,
-		PayoutReader:     calcuttaRepo,
-		PayoutWriter:     calcuttaRepo,
-		PortfolioReader:  calcuttaRepo,
-		RoundReader:      calcuttaRepo,
-		RoundWriter:      calcuttaRepo,
-		TeamReader:       calcuttaRepo,
-		InvitationReader: invitationRepo,
-		InvitationWriter: invitationRepo,
+		Calcuttas:       calcuttaRepo,
+		Entries:         calcuttaRepo,
+		Payouts:         calcuttaRepo,
+		PortfolioReader: calcuttaRepo,
+		Rounds:          calcuttaRepo,
+		TeamReader:      calcuttaRepo,
+		Invitations:     invitationRepo,
 	})
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
 	analyticsService := appanalytics.New(analyticsRepo)
 
 	labRepo := dbadapters.NewLabRepository(pool)
-	labService := applab.NewWithPipelineRepo(labRepo, applab.ServiceConfig{
+	labService := applab.New(labRepo, applab.ServiceConfig{
 		DefaultNSims:      cfg.DefaultNSims,
 		ExcludedEntryName: cfg.ExcludedEntryName,
 	})

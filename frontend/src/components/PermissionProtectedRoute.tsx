@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useUser } from '../contexts/useUser';
+import { useUser } from '../contexts/UserContext';
 import { ADMIN_PERMISSIONS } from '../constants/permissions';
 
 interface Props {

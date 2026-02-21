@@ -19,7 +19,7 @@ import { Button } from '../components/ui/Button';
 
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useCalcuttaEntriesData } from '../hooks/useCalcuttaEntriesData';
-import { useUser } from '../contexts/useUser';
+import { useUser } from '../contexts/UserContext';
 import { calcuttaService } from '../services/calcuttaService';
 
 import { formatDate } from '../utils/format';

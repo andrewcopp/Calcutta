@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useUser } from '../../contexts/useUser';
+import { useUser } from '../../contexts/UserContext';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';

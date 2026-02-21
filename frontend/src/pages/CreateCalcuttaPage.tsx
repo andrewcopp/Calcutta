@@ -13,23 +13,10 @@ import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
-
-const WIN_INDEX_LABELS: Record<number, string> = {
-  1: 'First Four Win',
-  2: 'Round of 64 Win',
-  3: 'Round of 32 Win',
-  4: 'Sweet 16 Win',
-  5: 'Elite 8 Win',
-  6: 'Final Four Win',
-  7: 'Championship Win',
-};
+import { ScoringRulesForm } from '../components/CreateCalcutta/ScoringRulesForm';
+import type { ScoringRule } from '../components/CreateCalcutta/ScoringRulesForm';
 
 const DEFAULT_POINTS = [0, 50, 100, 150, 200, 250, 300];
-
-interface ScoringRule {
-  winIndex: number;
-  pointsAwarded: number;
-}
 
 function buildDefaultScoringRules(roundCount: number): ScoringRule[] {
   return Array.from({ length: roundCount }, (_, i) => ({
@@ -230,35 +217,7 @@ export function CreateCalcuttaPage() {
                 <p className="mt-2 text-sm text-gray-500">Constraints for each participant's entry</p>
               </div>
 
-              {scoringRules.length > 0 ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Scoring Rules
-                  </label>
-                  <div className="space-y-3">
-                    {scoringRules.map((rule) => (
-                      <div key={rule.winIndex} className="flex items-center gap-3">
-                        <label
-                          htmlFor={`scoring-${rule.winIndex}`}
-                          className="text-sm text-gray-600 w-44 shrink-0"
-                        >
-                          {WIN_INDEX_LABELS[rule.winIndex] ?? `Win ${rule.winIndex}`}
-                        </label>
-                        <Input
-                          type="number"
-                          id={`scoring-${rule.winIndex}`}
-                          min={0}
-                          value={rule.pointsAwarded}
-                          onChange={(e) => handlePointsChange(rule.winIndex, e.target.value)}
-                          className="w-28"
-                        />
-                        <span className="text-sm text-gray-500">pts</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">Points awarded for each win in the tournament</p>
-                </div>
-              ) : null}
+              <ScoringRulesForm scoringRules={scoringRules} onPointsChange={handlePointsChange} />
 
               <div className="pt-2">
                 <Button type="submit" className="w-full" loading={createCalcuttaMutation.isPending}>

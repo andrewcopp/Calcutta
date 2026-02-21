@@ -18,6 +18,11 @@ type CalcuttaWriter interface {
 	Update(ctx context.Context, calcutta *models.Calcutta) error
 }
 
+type CalcuttaRepository interface {
+	CalcuttaReader
+	CalcuttaWriter
+}
+
 type EntryReader interface {
 	GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error)
 	GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error)
@@ -29,6 +34,11 @@ type EntryReader interface {
 type EntryWriter interface {
 	CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error
 	ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error
+}
+
+type EntryRepository interface {
+	EntryReader
+	EntryWriter
 }
 
 type PortfolioReader interface {
@@ -47,12 +57,22 @@ type RoundWriter interface {
 	CreateRound(ctx context.Context, round *models.CalcuttaRound) error
 }
 
+type RoundRepository interface {
+	RoundReader
+	RoundWriter
+}
+
 type PayoutReader interface {
 	GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error)
 }
 
 type PayoutWriter interface {
 	ReplacePayouts(ctx context.Context, calcuttaID string, payouts []*models.CalcuttaPayout) error
+}
+
+type PayoutRepository interface {
+	PayoutReader
+	PayoutWriter
 }
 
 type CalcuttaInvitationReader interface {
@@ -66,6 +86,11 @@ type CalcuttaInvitationWriter interface {
 	CreateInvitation(ctx context.Context, invitation *models.CalcuttaInvitation) error
 	AcceptInvitation(ctx context.Context, id string) error
 	RevokeInvitation(ctx context.Context, id string) error
+}
+
+type CalcuttaInvitationRepository interface {
+	CalcuttaInvitationReader
+	CalcuttaInvitationWriter
 }
 
 type TournamentTeamReader interface {

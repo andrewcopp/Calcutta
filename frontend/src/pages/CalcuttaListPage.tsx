@@ -11,7 +11,7 @@ import { CalcuttaWithRanking } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { formatDate } from '../utils/format';
 import { groupCalcuttas } from '../utils/calcuttaListHelpers';
-import { useUser } from '../contexts/useUser';
+import { useUser } from '../contexts/UserContext';
 import { queryKeys } from '../queryKeys';
 
 export function CalcuttaListPage() {
