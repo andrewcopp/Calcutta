@@ -37,7 +37,6 @@ SELECT
     ce.name,
     ce.user_id,
     ce.calcutta_id,
-    ce.status,
     ce.created_at,
     ce.updated_at,
     ce.deleted_at,
@@ -53,7 +52,6 @@ SELECT
     name,
     user_id,
     calcutta_id,
-    status,
     created_at,
     updated_at,
     deleted_at
@@ -61,14 +59,8 @@ FROM core.entries
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: CreateEntry :exec
-INSERT INTO core.entries (id, name, user_id, calcutta_id, status, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW());
-
--- name: UpdateEntryStatus :execrows
-UPDATE core.entries
-SET status = $2,
-    updated_at = NOW()
-WHERE id = $1 AND deleted_at IS NULL;
+INSERT INTO core.entries (id, name, user_id, calcutta_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW());
 
 -- name: ListDistinctUserIDsByCalcuttaID :many
 SELECT DISTINCT user_id

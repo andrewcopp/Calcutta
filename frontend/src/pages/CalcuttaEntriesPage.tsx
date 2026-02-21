@@ -95,16 +95,14 @@ export function CalcuttaEntriesPage() {
   };
 
   if (biddingOpen) {
+    const statusLabelMap: Record<string, string> = { empty: 'Empty', invalid: 'Invalid', valid: 'Valid', accepted: 'Accepted', rejected: 'Rejected' };
+    const statusVariantMap: Record<string, string> = { empty: 'secondary', invalid: 'warning', valid: 'default', accepted: 'success', rejected: 'destructive' };
     const entryStatusLabel = !currentUserEntry
       ? 'Not Started'
-      : currentUserEntry.status === 'final'
-        ? 'Accepted'
-        : 'Draft';
+      : statusLabelMap[currentUserEntry.status] ?? currentUserEntry.status;
     const entryStatusVariant = !currentUserEntry
       ? 'secondary'
-      : currentUserEntry.status === 'final'
-        ? 'success'
-        : 'warning';
+      : statusVariantMap[currentUserEntry.status] ?? 'secondary';
 
     return (
       <PageContainer>
@@ -214,9 +212,9 @@ export function CalcuttaEntriesPage() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-gray-900">Your Bid</h3>
-                <Badge variant={currentUserEntry.status === 'final' ? 'success' : 'warning'}>
-                  {currentUserEntry.status === 'final' ? 'Accepted' : 'Draft'}
+                <h3 className="text-lg font-semibold text-gray-900">Your Entry</h3>
+                <Badge variant={(({ empty: 'secondary', invalid: 'warning', valid: 'default', accepted: 'success', rejected: 'destructive' } as Record<string, 'secondary' | 'success' | 'warning' | 'default' | 'destructive'>)[currentUserEntry.status]) ?? 'secondary'}>
+                  {({ empty: 'Empty', invalid: 'Invalid', valid: 'Valid', accepted: 'Accepted', rejected: 'Rejected' } as Record<string, string>)[currentUserEntry.status] ?? currentUserEntry.status}
                 </Badge>
                 <span className="text-sm text-gray-500">{userTeams.length} teams &middot; {totalSpent} / {budgetPoints} pts</span>
               </div>

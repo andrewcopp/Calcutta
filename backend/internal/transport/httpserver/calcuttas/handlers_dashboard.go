@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	calcuttaapp "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -98,6 +99,12 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentUserEntry != nil {
+		userTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), currentUserEntry.ID)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		currentUserEntry.Status = calcuttaapp.DeriveEntryStatus(userTeams, biddingOpen)
 		resp.CurrentUserEntry = dtos.NewEntryResponse(currentUserEntry)
 	}
 
@@ -133,6 +140,11 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			allPortfolioTeams = append(allPortfolioTeams, portfolioTeams...)
+		}
+
+		for _, entry := range entries {
+			entryTeams := filterEntryTeams(allEntryTeams, entry.ID)
+			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeams, biddingOpen)
 		}
 
 		resp.Entries = dtos.NewEntryListResponse(entries)
@@ -226,4 +238,14 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 	}
 
 	response.WriteJSON(w, http.StatusOK, results)
+}
+
+func filterEntryTeams(allTeams []*models.CalcuttaEntryTeam, entryID string) []*models.CalcuttaEntryTeam {
+	var out []*models.CalcuttaEntryTeam
+	for _, t := range allTeams {
+		if t.EntryID == entryID {
+			out = append(out, t)
+		}
+	}
+	return out
 }

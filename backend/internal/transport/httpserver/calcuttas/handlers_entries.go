@@ -290,11 +290,6 @@ func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.app.Calcutta.UpdateEntryStatus(r.Context(), entryID, "final"); err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
-	}
-
 	updatedTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), entryID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)

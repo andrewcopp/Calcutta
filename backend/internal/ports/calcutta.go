@@ -28,7 +28,6 @@ type EntryReader interface {
 type EntryWriter interface {
 	CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error
 	ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error
-	UpdateEntryStatus(ctx context.Context, id string, status string) error
 }
 
 type PortfolioReader interface {

@@ -6,6 +6,24 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
+// DeriveEntryStatus computes the entry status from its teams and the bidding state.
+func DeriveEntryStatus(teams []*models.CalcuttaEntryTeam, biddingOpen bool) string {
+	if len(teams) == 0 {
+		return "empty"
+	}
+	isValid := ValidateEntry(nil, teams) == nil
+	if biddingOpen {
+		if isValid {
+			return "valid"
+		}
+		return "invalid"
+	}
+	if isValid {
+		return "accepted"
+	}
+	return "rejected"
+}
+
 // ValidateEntry validates all bids for an entry according to the rules.
 // This is a pure function that can be tested without mocking repositories.
 func ValidateEntry(entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {
