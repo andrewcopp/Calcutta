@@ -31,6 +31,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PermissionProtectedRoute } from './components/PermissionProtectedRoute';
+import { PERMISSIONS } from './constants/permissions';
 import { UserProvider } from './contexts/UserContext';
 
 const AppLayout: React.FC = () => {
@@ -47,21 +48,20 @@ const AppLayout: React.FC = () => {
         <Route path="/rules" element={<RouteErrorBoundary><RulesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas" element={<RouteErrorBoundary><CalcuttaListPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/create" element={<ProtectedRoute><RouteErrorBoundary><CreateCalcuttaPage /></RouteErrorBoundary></ProtectedRoute>} />
-        <Route path="/lab" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><LabPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/lab/models/:modelId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/lab/entries/:entryId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><LabPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelId" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><ModelDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin" element={<PermissionProtectedRoute permission="admin"><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/api-keys" element={<PermissionProtectedRoute permission="admin.api_keys.write"><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/bundles" element={<PermissionProtectedRoute permission="admin.bundles.export"><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/users" element={<PermissionProtectedRoute permission="admin.users.read"><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/hall-of-fame" element={<PermissionProtectedRoute permission="admin.hof.read"><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/tournaments" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/tournaments/create" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/tournaments/:id" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/tournaments/:id/teams/setup" element={<PermissionProtectedRoute permission="tournament.game.write"><RouteErrorBoundary><TournamentSetupTeamsPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/api-keys" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_API_KEYS_WRITE}><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/bundles" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_BUNDLES_EXPORT}><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/users" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/hall-of-fame" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_HOF_READ}><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments/create" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments/:id" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournaments/:id/teams/setup" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentSetupTeamsPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId" element={<RouteErrorBoundary><CalcuttaEntriesPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/:calcuttaId/settings" element={<ProtectedRoute><RouteErrorBoundary><CalcuttaSettingsPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/calcuttas/:calcuttaId/teams" element={<RouteErrorBoundary><CalcuttaTeamsPage /></RouteErrorBoundary>} />

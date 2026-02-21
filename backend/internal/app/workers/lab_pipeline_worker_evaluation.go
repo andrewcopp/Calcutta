@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	appcalcuttaevaluations "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta_evaluations"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
@@ -54,7 +55,9 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.75, "evaluation", "Running "+fmt.Sprintf("%d", params.NSims)+" simulations")
 
 	// Run evaluation using calcutta_evaluations service
-	evalService := appcalcuttaevaluations.New(w.pool)
+	evalService := appcalcuttaevaluations.New(w.pool,
+		appcalcuttaevaluations.WithTournamentResolver(dbadapters.NewTournamentQueryRepository(w.pool)),
+	)
 	result, err := evalService.EvaluateLabEntry(ctx, calcuttaID, labEntryBids, params.ExcludedEntryName)
 	if err != nil {
 		w.failLabPipelineJob(ctx, job, fmt.Errorf("evaluation failed: %w", err))

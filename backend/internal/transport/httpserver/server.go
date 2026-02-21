@@ -3,7 +3,6 @@ package httpserver
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
@@ -84,7 +83,7 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 }
 
 func computeCookieSettings(cfg platform.Config) (secure bool, sameSite http.SameSite) {
-	env := os.Getenv("APP_ENV")
+	env := cfg.AppEnv
 	if env == "" {
 		env = "production"
 	}

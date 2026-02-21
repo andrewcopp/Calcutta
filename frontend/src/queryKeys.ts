@@ -45,7 +45,6 @@ export const queryKeys = {
         ['lab', 'models', modelId ?? null, 'pipeline-progress'] as const,
     },
     entries: {
-      detail: (entryId: string | null | undefined) => ['lab', 'entries', entryId ?? null] as const,
       byModelAndCalcutta: (modelName: string | null | undefined, calcuttaId: string | null | undefined) =>
         ['lab', 'entries', 'by-model-calcutta', modelName ?? null, calcuttaId ?? null] as const,
     },

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 VALID_MODEL_KINDS = {"ridge", "naive_ev", "oracle"}
 
 VALID_PARAMS_BY_KIND: Dict[str, set] = {
-    "ridge": {"feature_set", "seed_prior_k", "program_prior_k", "seed_prior_monotone", "target_transform"},
+    "ridge": {"alpha", "feature_set", "seed_prior_k", "program_prior_k", "seed_prior_monotone", "target_transform"},
     "naive_ev": set(),
     "oracle": set(),
 }
@@ -136,25 +136,16 @@ def create_investment_model(
     )
 
 
-def get_investment_model(name: str) -> Optional[InvestmentModel]:
-    """
-    Get an investment model by name.
-
-    Args:
-        name: Model name to look up
-
-    Returns:
-        InvestmentModel if found, None otherwise
-    """
+def _fetch_investment_model(where_clause: str, param: str) -> Optional[InvestmentModel]:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT id, name, kind, params_json, notes, created_at
                 FROM lab.investment_models
-                WHERE name = %s AND deleted_at IS NULL
+                WHERE {where_clause} AND deleted_at IS NULL
                 """,
-                (name,),
+                (param,),
             )
             row = cur.fetchone()
 
@@ -169,41 +160,16 @@ def get_investment_model(name: str) -> Optional[InvestmentModel]:
         notes=row[4],
         created_at=row[5],
     )
+
+
+def get_investment_model(name: str) -> Optional[InvestmentModel]:
+    """Get an investment model by name."""
+    return _fetch_investment_model("name = %s", name)
 
 
 def get_investment_model_by_id(model_id: str) -> Optional[InvestmentModel]:
-    """
-    Get an investment model by ID.
-
-    Args:
-        model_id: Model UUID to look up
-
-    Returns:
-        InvestmentModel if found, None otherwise
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, name, kind, params_json, notes, created_at
-                FROM lab.investment_models
-                WHERE id = %s AND deleted_at IS NULL
-                """,
-                (model_id,),
-            )
-            row = cur.fetchone()
-
-    if not row:
-        return None
-
-    return InvestmentModel(
-        id=str(row[0]),
-        name=row[1],
-        kind=row[2],
-        params=row[3] if row[3] else {},
-        notes=row[4],
-        created_at=row[5],
-    )
+    """Get an investment model by ID."""
+    return _fetch_investment_model("id = %s", model_id)
 
 
 def get_or_create_investment_model(

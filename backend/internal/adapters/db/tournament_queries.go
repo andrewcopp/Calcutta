@@ -7,6 +7,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// TournamentQueryRepository implements ports.TournamentResolver.
+type TournamentQueryRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewTournamentQueryRepository(pool *pgxpool.Pool) *TournamentQueryRepository {
+	return &TournamentQueryRepository{pool: pool}
+}
+
+func (r *TournamentQueryRepository) ResolveCoreTournamentID(ctx context.Context, season int) (string, error) {
+	return ResolveCoreTournamentID(ctx, r.pool, season)
+}
+
+func (r *TournamentQueryRepository) ResolveSeasonFromTournamentID(ctx context.Context, tournamentID string) (int, error) {
+	return ResolveSeasonFromTournamentID(ctx, r.pool, tournamentID)
+}
+
+func (r *TournamentQueryRepository) LoadFinalFourConfig(ctx context.Context, coreTournamentID string) (*models.FinalFourConfig, error) {
+	return LoadFinalFourConfig(ctx, r.pool, coreTournamentID)
+}
+
 // ResolveCoreTournamentID finds the core tournament ID for a given season year.
 func ResolveCoreTournamentID(ctx context.Context, pool *pgxpool.Pool, season int) (string, error) {
 	var id string

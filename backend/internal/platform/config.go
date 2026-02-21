@@ -61,6 +61,9 @@ type Config struct {
 	RunJobsMaxAttempts int
 	WorkerID           string
 
+	// Environment
+	AppEnv string // "development" or "production"
+
 	// Cookie settings
 	CookieSecure   *bool  // nil = auto (secure in production)
 	CookieSameSite string // "none", "lax", "strict", or "" for auto
@@ -224,16 +227,15 @@ func isGoTestProcess() bool {
 	return false
 }
 
-func LoadConfigFromEnv() (Config, error) {
-	if !isGoTestProcess() && envBool("DOTENV_ENABLED", true) {
-		loadDotEnvFiles()
-	}
-
+func loadAppEnv() string {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "production"
 	}
+	return env
+}
 
+func loadAllowedOrigins(env string) []string {
 	allowedOriginsEnv := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS"))
 	if allowedOriginsEnv == "" {
 		allowedOriginsEnv = strings.TrimSpace(os.Getenv("ALLOWED_ORIGIN"))
@@ -248,8 +250,11 @@ func LoadConfigFromEnv() (Config, error) {
 			allowedOrigins = append(allowedOrigins, trimmed)
 		}
 	}
+	return allowedOrigins
+}
 
-	authMode := strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_MODE")))
+func loadAuthConfig(env string) (authMode string, accessTTLSeconds int, refreshTTLHours int, err error) {
+	authMode = strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_MODE")))
 	if authMode == "" {
 		authMode = "jwt"
 	}
@@ -258,88 +263,193 @@ func LoadConfigFromEnv() (Config, error) {
 		authMode = "jwt"
 	}
 	if authMode != "jwt" && authMode != "cognito" && authMode != "dev" {
-		return Config{}, fmt.Errorf("invalid AUTH_MODE %q (expected jwt, cognito, dev)", authMode)
+		return "", 0, 0, fmt.Errorf("invalid AUTH_MODE %q (expected jwt, cognito, dev)", authMode)
 	}
 	if authMode == "dev" && env != "development" {
-		return Config{}, fmt.Errorf("AUTH_MODE=dev is only allowed when APP_ENV=development")
+		return "", 0, 0, fmt.Errorf("AUTH_MODE=dev is only allowed when APP_ENV=development")
 	}
 
-	accessTTLSeconds := 900
+	accessTTLSeconds = 900
 	if v := os.Getenv("ACCESS_TOKEN_TTL_SECONDS"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
 			accessTTLSeconds = parsed
 		}
 	}
 
-	refreshTTLHours := 24 * 30
+	refreshTTLHours = 24 * 30
 	if v := os.Getenv("REFRESH_TOKEN_TTL_HOURS"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
 			refreshTTLHours = parsed
 		}
 	}
 
-	httpReadTimeoutSeconds := envInt("HTTP_READ_TIMEOUT_SECONDS", 15, 1)
-	httpWriteTimeoutSeconds := envInt("HTTP_WRITE_TIMEOUT_SECONDS", 15, 1)
-	httpIdleTimeoutSeconds := envInt("HTTP_IDLE_TIMEOUT_SECONDS", 60, 1)
-	httpReadHeaderTimeoutSeconds := envInt("HTTP_READ_HEADER_TIMEOUT_SECONDS", 5, 1)
-	httpMaxBodyBytes := envInt64("HTTP_MAX_BODY_BYTES", 2*1024*1024, 1)
-	rateLimitRPM := envInt("RATE_LIMIT_RPM", 600, 0)
-	metricsEnabled := envBool("METRICS_ENABLED", false)
-	metricsAuthToken := strings.TrimSpace(os.Getenv("METRICS_AUTH_TOKEN"))
+	return authMode, accessTTLSeconds, refreshTTLHours, nil
+}
 
-	smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-	smtpPort := envInt("SMTP_PORT", 587, 0)
-	smtpUsername := strings.TrimSpace(os.Getenv("SMTP_USERNAME"))
-	smtpPassword := os.Getenv("SMTP_PASSWORD")
-	smtpFromEmail := strings.TrimSpace(os.Getenv("SMTP_FROM_EMAIL"))
-	smtpFromName := strings.TrimSpace(os.Getenv("SMTP_FROM_NAME"))
-	smtpStartTLS := envBool("SMTP_STARTTLS", true)
+func loadHTTPConfig() (readTimeout, writeTimeout, idleTimeout, readHeaderTimeout, rateLimitRPM int,
+	maxBodyBytes int64, metricsEnabled bool, metricsAuthToken string) {
+	readTimeout = envInt("HTTP_READ_TIMEOUT_SECONDS", 15, 1)
+	writeTimeout = envInt("HTTP_WRITE_TIMEOUT_SECONDS", 15, 1)
+	idleTimeout = envInt("HTTP_IDLE_TIMEOUT_SECONDS", 60, 1)
+	readHeaderTimeout = envInt("HTTP_READ_HEADER_TIMEOUT_SECONDS", 5, 1)
+	maxBodyBytes = envInt64("HTTP_MAX_BODY_BYTES", 2*1024*1024, 1)
+	rateLimitRPM = envInt("RATE_LIMIT_RPM", 600, 0)
+	metricsEnabled = envBool("METRICS_ENABLED", false)
+	metricsAuthToken = strings.TrimSpace(os.Getenv("METRICS_AUTH_TOKEN"))
+	return
+}
 
-	inviteBaseURL := strings.TrimSpace(os.Getenv("INVITE_BASE_URL"))
-	inviteResendMinSeconds := envInt("INVITE_RESEND_MIN_SECONDS", 60, 0)
+func loadSMTPConfig() (host string, port int, username, password, fromEmail, fromName string,
+	startTLS bool, inviteBaseURL string, inviteResendMinSeconds int) {
+	host = strings.TrimSpace(os.Getenv("SMTP_HOST"))
+	port = envInt("SMTP_PORT", 587, 0)
+	username = strings.TrimSpace(os.Getenv("SMTP_USERNAME"))
+	password = os.Getenv("SMTP_PASSWORD")
+	fromEmail = strings.TrimSpace(os.Getenv("SMTP_FROM_EMAIL"))
+	fromName = strings.TrimSpace(os.Getenv("SMTP_FROM_NAME"))
+	startTLS = envBool("SMTP_STARTTLS", true)
+	inviteBaseURL = strings.TrimSpace(os.Getenv("INVITE_BASE_URL"))
+	inviteResendMinSeconds = envInt("INVITE_RESEND_MIN_SECONDS", 60, 0)
+	return
+}
 
-	pgxPoolMaxConns := envInt("PGX_POOL_MAX_CONNS", 10, 1)
-	pgxPoolMinConns := envInt("PGX_POOL_MIN_CONNS", 0, 0)
-	pgxPoolMaxConnLifetimeSeconds := envInt("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", 1800, 0)
-	pgxPoolHealthCheckPeriodSeconds := envInt("PGX_POOL_HEALTH_CHECK_PERIOD_SECONDS", 30, 0)
+func loadPoolConfig() (maxConns, minConns, maxConnLifetimeSeconds, healthCheckPeriodSeconds,
+	statementTimeoutMS, lockTimeoutMS int) {
+	maxConns = envInt("PGX_POOL_MAX_CONNS", 10, 1)
+	minConns = envInt("PGX_POOL_MIN_CONNS", 0, 0)
+	maxConnLifetimeSeconds = envInt("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", 1800, 0)
+	healthCheckPeriodSeconds = envInt("PGX_POOL_HEALTH_CHECK_PERIOD_SECONDS", 30, 0)
+	statementTimeoutMS = envInt("STATEMENT_TIMEOUT_MS", 0, 0)
+	lockTimeoutMS = envInt("LOCK_TIMEOUT_MS", 0, 0)
+	return
+}
 
-	statementTimeoutMS := envInt("STATEMENT_TIMEOUT_MS", 0, 0)
-	lockTimeoutMS := envInt("LOCK_TIMEOUT_MS", 0, 0)
-
+func loadDatabaseURL() string {
 	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		dbUser := os.Getenv("DB_USER")
-		dbPassword := os.Getenv("DB_PASSWORD")
-		dbName := os.Getenv("DB_NAME")
-		dbHost := os.Getenv("DB_HOST")
-		dbPort := os.Getenv("DB_PORT")
-		dbSSLMode := os.Getenv("DB_SSLMODE")
-		if dbSSLMode == "" {
-			dbSSLMode = "require"
-		}
+	if databaseURL != "" {
+		return databaseURL
+	}
 
-		if dbUser != "" && dbName != "" && dbHost != "" && dbPort != "" {
-			u := &url.URL{
-				Scheme: "postgresql",
-				Host:   net.JoinHostPort(dbHost, dbPort),
-				Path:   "/" + dbName,
-			}
-			if dbPassword != "" {
-				u.User = url.UserPassword(dbUser, dbPassword)
-			} else {
-				u.User = url.User(dbUser)
-			}
-			q := u.Query()
-			q.Set("sslmode", dbSSLMode)
-			u.RawQuery = q.Encode()
-			databaseURL = u.String()
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbSSLMode := os.Getenv("DB_SSLMODE")
+	if dbSSLMode == "" {
+		dbSSLMode = "require"
+	}
+
+	if dbUser != "" && dbName != "" && dbHost != "" && dbPort != "" {
+		u := &url.URL{
+			Scheme: "postgresql",
+			Host:   net.JoinHostPort(dbHost, dbPort),
+			Path:   "/" + dbName,
+		}
+		if dbPassword != "" {
+			u.User = url.UserPassword(dbUser, dbPassword)
+		} else {
+			u.User = url.User(dbUser)
+		}
+		q := u.Query()
+		q.Set("sslmode", dbSSLMode)
+		u.RawQuery = q.Encode()
+		return u.String()
+	}
+
+	return ""
+}
+
+func loadWorkerConfig() (defaultNSims int, excludedEntryName, pythonBin string, runJobsMaxAttempts int, workerID string) {
+	defaultNSims = envInt("DEFAULT_N_SIMS", 10000, 1)
+	excludedEntryName = strings.TrimSpace(os.Getenv("EXCLUDED_ENTRY_NAME"))
+	pythonBin = envString("PYTHON_BIN", "python3")
+	runJobsMaxAttempts = envInt("RUN_JOBS_MAX_ATTEMPTS", 5, 1)
+	workerID = envString("HOSTNAME", "worker")
+	return
+}
+
+func loadCookieConfig() (*bool, string) {
+	secure := envBoolPtr("COOKIE_SECURE")
+	sameSite := strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE")))
+	return secure, sameSite
+}
+
+func validateConfig(cfg Config) error {
+	if cfg.AppEnv != "development" {
+		if len(cfg.AllowedOrigins) == 0 {
+			return fmt.Errorf("ALLOWED_ORIGINS or ALLOWED_ORIGIN must be set")
 		}
 	}
 
+	if cfg.MetricsEnabled && cfg.AppEnv != "development" && strings.TrimSpace(cfg.MetricsAuthToken) == "" {
+		return fmt.Errorf("METRICS_AUTH_TOKEN must be set when METRICS_ENABLED=true outside development")
+	}
+
+	if cfg.PGXPoolMinConns > cfg.PGXPoolMaxConns {
+		return fmt.Errorf("PGX_POOL_MIN_CONNS cannot exceed PGX_POOL_MAX_CONNS")
+	}
+
+	if cfg.DatabaseURL == "" {
+		return fmt.Errorf("DATABASE_URL environment variable is not set")
+	}
+
+	if cfg.AuthMode == "cognito" {
+		if strings.TrimSpace(cfg.CognitoRegion) == "" {
+			return fmt.Errorf("COGNITO_REGION environment variable is not set")
+		}
+		if strings.TrimSpace(cfg.CognitoUserPoolID) == "" {
+			return fmt.Errorf("COGNITO_USER_POOL_ID environment variable is not set")
+		}
+		if strings.TrimSpace(cfg.CognitoAppClientID) == "" {
+			return fmt.Errorf("COGNITO_APP_CLIENT_ID environment variable is not set")
+		}
+	}
+	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.BootstrapAdminEmail) != "" && strings.TrimSpace(cfg.BootstrapAdminPassword) == "" {
+		return fmt.Errorf("BOOTSTRAP_ADMIN_PASSWORD must be set when BOOTSTRAP_ADMIN_EMAIL is set in jwt/dev auth modes")
+	}
+	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.JWTSecret) == "" {
+		return fmt.Errorf("JWT_SECRET environment variable is not set")
+	}
+
+	return nil
+}
+
+func LoadConfigFromEnv() (Config, error) {
+	if !isGoTestProcess() && envBool("DOTENV_ENABLED", true) {
+		loadDotEnvFiles()
+	}
+
+	env := loadAppEnv()
+
+	authMode, accessTTLSeconds, refreshTTLHours, err := loadAuthConfig(env)
+	if err != nil {
+		return Config{}, err
+	}
+
+	readTimeout, writeTimeout, idleTimeout, readHeaderTimeout, rateLimitRPM,
+		maxBodyBytes, metricsEnabled, metricsAuthToken := loadHTTPConfig()
+
+	smtpHost, smtpPort, smtpUsername, smtpPassword, smtpFromEmail, smtpFromName,
+		smtpStartTLS, inviteBaseURL, inviteResendMinSeconds := loadSMTPConfig()
+
+	maxConns, minConns, maxConnLifetimeSeconds, healthCheckPeriodSeconds,
+		statementTimeoutMS, lockTimeoutMS := loadPoolConfig()
+
+	defaultNSims, excludedEntryName, pythonBin, runJobsMaxAttempts, workerID := loadWorkerConfig()
+
+	cookieSecure, cookieSameSite := loadCookieConfig()
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	cfg := Config{
-		DatabaseURL:                     databaseURL,
-		AllowedOrigins:                  allowedOrigins,
-		Port:                            os.Getenv("PORT"),
+		AppEnv:                          env,
+		DatabaseURL:                     loadDatabaseURL(),
+		AllowedOrigins:                  loadAllowedOrigins(env),
+		Port:                            port,
 		BootstrapAdminEmail:             strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")),
 		BootstrapAdminPassword:          os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
 		SMTPHost:                        smtpHost,
@@ -353,16 +463,16 @@ func LoadConfigFromEnv() (Config, error) {
 		InviteResendMinSeconds:          inviteResendMinSeconds,
 		MetricsEnabled:                  metricsEnabled,
 		MetricsAuthToken:                metricsAuthToken,
-		HTTPReadTimeoutSeconds:          httpReadTimeoutSeconds,
-		HTTPWriteTimeoutSeconds:         httpWriteTimeoutSeconds,
-		HTTPIdleTimeoutSeconds:          httpIdleTimeoutSeconds,
-		HTTPReadHeaderTimeoutSeconds:    httpReadHeaderTimeoutSeconds,
-		HTTPMaxBodyBytes:                httpMaxBodyBytes,
+		HTTPReadTimeoutSeconds:          readTimeout,
+		HTTPWriteTimeoutSeconds:         writeTimeout,
+		HTTPIdleTimeoutSeconds:          idleTimeout,
+		HTTPReadHeaderTimeoutSeconds:    readHeaderTimeout,
+		HTTPMaxBodyBytes:                maxBodyBytes,
 		RateLimitRPM:                    rateLimitRPM,
-		PGXPoolMaxConns:                 int32(pgxPoolMaxConns),
-		PGXPoolMinConns:                 int32(pgxPoolMinConns),
-		PGXPoolMaxConnLifetimeSeconds:   pgxPoolMaxConnLifetimeSeconds,
-		PGXPoolHealthCheckPeriodSeconds: pgxPoolHealthCheckPeriodSeconds,
+		PGXPoolMaxConns:                 int32(maxConns),
+		PGXPoolMinConns:                 int32(minConns),
+		PGXPoolMaxConnLifetimeSeconds:   maxConnLifetimeSeconds,
+		PGXPoolHealthCheckPeriodSeconds: healthCheckPeriodSeconds,
 		StatementTimeoutMS:              statementTimeoutMS,
 		LockTimeoutMS:                   lockTimeoutMS,
 		AuthMode:                        authMode,
@@ -375,55 +485,17 @@ func LoadConfigFromEnv() (Config, error) {
 		CognitoAppClientID:              os.Getenv("COGNITO_APP_CLIENT_ID"),
 		CognitoAutoProvision:            envBool("COGNITO_AUTO_PROVISION", false),
 		CognitoAllowUnprovisioned:       envBool("COGNITO_ALLOW_UNPROVISIONED", false),
-
-		// Lab/Worker settings
-		DefaultNSims:       envInt("DEFAULT_N_SIMS", 10000, 1),
-		ExcludedEntryName:  strings.TrimSpace(os.Getenv("EXCLUDED_ENTRY_NAME")),
-		PythonBin:          envString("PYTHON_BIN", "python3"),
-		RunJobsMaxAttempts: envInt("RUN_JOBS_MAX_ATTEMPTS", 5, 1),
-		WorkerID:           envString("HOSTNAME", "worker"),
-
-		// Cookie settings
-		CookieSecure:   envBoolPtr("COOKIE_SECURE"),
-		CookieSameSite: strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))),
-	}
-	if env != "development" {
-		if len(cfg.AllowedOrigins) == 0 {
-			return Config{}, fmt.Errorf("ALLOWED_ORIGINS or ALLOWED_ORIGIN must be set")
-		}
-	}
-	if cfg.Port == "" {
-		cfg.Port = "8080"
+		DefaultNSims:                    defaultNSims,
+		ExcludedEntryName:               excludedEntryName,
+		PythonBin:                       pythonBin,
+		RunJobsMaxAttempts:              runJobsMaxAttempts,
+		WorkerID:                        workerID,
+		CookieSecure:                    cookieSecure,
+		CookieSameSite:                  cookieSameSite,
 	}
 
-	if cfg.MetricsEnabled && env != "development" && strings.TrimSpace(cfg.MetricsAuthToken) == "" {
-		return Config{}, fmt.Errorf("METRICS_AUTH_TOKEN must be set when METRICS_ENABLED=true outside development")
-	}
-
-	if cfg.PGXPoolMinConns > cfg.PGXPoolMaxConns {
-		return Config{}, fmt.Errorf("PGX_POOL_MIN_CONNS cannot exceed PGX_POOL_MAX_CONNS")
-	}
-
-	if cfg.DatabaseURL == "" {
-		return Config{}, fmt.Errorf("DATABASE_URL environment variable is not set")
-	}
-
-	if cfg.AuthMode == "cognito" {
-		if strings.TrimSpace(cfg.CognitoRegion) == "" {
-			return Config{}, fmt.Errorf("COGNITO_REGION environment variable is not set")
-		}
-		if strings.TrimSpace(cfg.CognitoUserPoolID) == "" {
-			return Config{}, fmt.Errorf("COGNITO_USER_POOL_ID environment variable is not set")
-		}
-		if strings.TrimSpace(cfg.CognitoAppClientID) == "" {
-			return Config{}, fmt.Errorf("COGNITO_APP_CLIENT_ID environment variable is not set")
-		}
-	}
-	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.BootstrapAdminEmail) != "" && strings.TrimSpace(cfg.BootstrapAdminPassword) == "" {
-		return Config{}, fmt.Errorf("BOOTSTRAP_ADMIN_PASSWORD must be set when BOOTSTRAP_ADMIN_EMAIL is set in jwt/dev auth modes")
-	}
-	if cfg.AuthMode != "cognito" && strings.TrimSpace(cfg.JWTSecret) == "" {
-		return Config{}, fmt.Errorf("JWT_SECRET environment variable is not set")
+	if err := validateConfig(cfg); err != nil {
+		return Config{}, err
 	}
 
 	return cfg, nil

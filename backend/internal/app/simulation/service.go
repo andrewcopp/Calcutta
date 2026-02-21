@@ -8,18 +8,35 @@ import (
 	"strings"
 	"time"
 
-	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Service struct {
-	pool *pgxpool.Pool
+// TournamentResolver resolves tournament metadata without importing adapters.
+type TournamentResolver interface {
+	ResolveCoreTournamentID(ctx context.Context, season int) (string, error)
+	LoadFinalFourConfig(ctx context.Context, coreTournamentID string) (*models.FinalFourConfig, error)
 }
 
-func New(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+type Service struct {
+	pool               *pgxpool.Pool
+	tournamentResolver TournamentResolver
+}
+
+func New(pool *pgxpool.Pool, opts ...Option) *Service {
+	s := &Service{pool: pool}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
+}
+
+type Option func(*Service)
+
+func WithTournamentResolver(r TournamentResolver) Option {
+	return func(s *Service) { s.tournamentResolver = r }
 }
 
 type RunParams struct {
@@ -46,17 +63,61 @@ type RunResult struct {
 }
 
 func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
+	if err := validateAndDefaultParams(&p); err != nil {
+		return nil, err
+	}
+
+	overallStart := time.Now()
+
+	// Phase 1: Load data and build bracket/probabilities.
+	loadStart := time.Now()
+	setup, err := s.loadBracketAndProbabilities(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	loadDur := time.Since(loadStart)
+
+	// Phase 2: Persist snapshot and batch records.
+	snapshotID, batchID, err := s.createSnapshotAndBatch(ctx, setup.coreTournamentID, setup.bracket, setup.teams, p)
+	if err != nil {
+		return nil, err
+	}
+
+	// Phase 3: Run simulation batches and write results.
+	simStart := time.Now()
+	rowsWritten, err := s.runSimulationBatches(ctx, setup.bracket, setup.provider, setup.probs, batchID, setup.coreTournamentID, p)
+	if err != nil {
+		return nil, err
+	}
+	simDur := time.Since(simStart)
+
+	overallDur := time.Since(overallStart)
+	return &RunResult{
+		CoreTournamentID:            setup.coreTournamentID,
+		TournamentStateSnapshotID:   snapshotID,
+		TournamentSimulationBatchID: batchID,
+		NSims:                       p.NSims,
+		RowsWritten:                 rowsWritten,
+		LoadDuration:                loadDur,
+		SimulateWriteDuration:       simDur,
+		OverallDuration:             overallDur,
+	}, nil
+}
+
+// validateAndDefaultParams validates required fields and fills in defaults for
+// optional fields. It modifies p in place.
+func validateAndDefaultParams(p *RunParams) error {
 	if p.Season <= 0 {
-		return nil, errors.New("Season must be positive")
+		return errors.New("Season must be positive")
 	}
 	if p.NSims <= 0 {
-		return nil, errors.New("NSims must be positive")
+		return errors.New("NSims must be positive")
 	}
 	if p.Seed == 0 {
-		return nil, errors.New("Seed must be non-zero")
+		return errors.New("Seed must be non-zero")
 	}
 	if p.BatchSize <= 0 {
-		return nil, errors.New("BatchSize must be positive")
+		return errors.New("BatchSize must be positive")
 	}
 	if p.Workers <= 0 {
 		p.Workers = runtime.GOMAXPROCS(0)
@@ -71,18 +132,30 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		p.StartingStateKey = "current"
 	}
 	if p.StartingStateKey != "current" && p.StartingStateKey != "post_first_four" {
-		return nil, errors.New("StartingStateKey must be 'current' or 'post_first_four'")
+		return errors.New("StartingStateKey must be 'current' or 'post_first_four'")
 	}
+	return nil
+}
 
-	overallStart := time.Now()
+// setupResult holds the outputs of the data-loading phase.
+type setupResult struct {
+	coreTournamentID string
+	teams            []*models.TournamentTeam
+	bracket          *models.BracketStructure
+	provider         ProbabilityProvider
+	probs            map[MatchupKey]float64
+}
 
-	loadStart := time.Now()
-	coreTournamentID, err := dbadapter.ResolveCoreTournamentID(ctx, s.pool, p.Season)
+// loadBracketAndProbabilities resolves the tournament, loads teams, builds the
+// bracket structure, and resolves the probability source (KenPom or predicted
+// game outcomes).
+func (s *Service) loadBracketAndProbabilities(ctx context.Context, p RunParams) (*setupResult, error) {
+	coreTournamentID, err := s.tournamentResolver.ResolveCoreTournamentID(ctx, p.Season)
 	if err != nil {
 		return nil, err
 	}
 
-	ff, err := dbadapter.LoadFinalFourConfig(ctx, s.pool, coreTournamentID)
+	ff, err := s.tournamentResolver.LoadFinalFourConfig(ctx, coreTournamentID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,69 +170,124 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to build bracket: %w", err)
 	}
 
-	var provider ProbabilityProvider
-	var probs map[MatchupKey]float64
-	if p.GameOutcomeSpec != nil {
-		p.GameOutcomeSpec.Normalize()
-		if err := p.GameOutcomeSpec.Validate(); err != nil {
-			return nil, err
-		}
-		netByTeamID, err := s.loadKenPomNetByTeamID(ctx, coreTournamentID)
-		if err != nil {
-			return nil, err
-		}
-		if len(netByTeamID) == 0 {
-			return nil, errors.New("no kenpom ratings available for tournament")
-		}
-		overrides := make(map[MatchupKey]float64)
-		if p.StartingStateKey == "post_first_four" {
-			if err := s.lockInFirstFourResults(ctx, br, overrides); err != nil {
-				return nil, err
-			}
-		}
-		provider = kenPomProvider{spec: p.GameOutcomeSpec, netByTeamID: netByTeamID, overrides: overrides}
-	} else {
-		selectedGameOutcomeRunID, loaded, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
-		if err != nil {
-			return nil, err
-		}
-		if nPredRows == 0 {
-			if selectedGameOutcomeRunID != nil {
-				return nil, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *selectedGameOutcomeRunID)
-			}
-			return nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
-		}
-		probs = loaded
-		if p.StartingStateKey == "post_first_four" {
-			if err := s.lockInFirstFourResults(ctx, br, probs); err != nil {
-				return nil, err
-			}
-		}
-		provider = nil
-	}
-
-	loadDur := time.Since(loadStart)
-
-	snapshotID := ""
-	if p.StartingStateKey == "post_first_four" {
-		created, err := s.createTournamentStateSnapshotFromBracket(ctx, coreTournamentID, br, teams)
-		if err != nil {
-			return nil, err
-		}
-		snapshotID = created
-	} else {
-		created, err := s.createTournamentStateSnapshot(ctx, coreTournamentID)
-		if err != nil {
-			return nil, err
-		}
-		snapshotID = created
-	}
-	batchID, err := s.createTournamentSimulationBatch(ctx, coreTournamentID, snapshotID, p.NSims, p.Seed, p.ProbabilitySourceKey)
+	provider, probs, err := s.resolveProbabilities(ctx, coreTournamentID, br, p)
 	if err != nil {
 		return nil, err
 	}
 
-	simStart := time.Now()
+	return &setupResult{
+		coreTournamentID: coreTournamentID,
+		teams:            teams,
+		bracket:          br,
+		provider:         provider,
+		probs:            probs,
+	}, nil
+}
+
+// resolveProbabilities builds either a KenPom-based provider or loads predicted
+// game outcome probabilities from the database.
+func (s *Service) resolveProbabilities(
+	ctx context.Context,
+	coreTournamentID string,
+	br *models.BracketStructure,
+	p RunParams,
+) (ProbabilityProvider, map[MatchupKey]float64, error) {
+	if p.GameOutcomeSpec != nil {
+		return s.resolveKenPomProbabilities(ctx, coreTournamentID, br, p)
+	}
+	return s.resolvePredictedProbabilities(ctx, coreTournamentID, br, p)
+}
+
+func (s *Service) resolveKenPomProbabilities(
+	ctx context.Context,
+	coreTournamentID string,
+	br *models.BracketStructure,
+	p RunParams,
+) (ProbabilityProvider, map[MatchupKey]float64, error) {
+	p.GameOutcomeSpec.Normalize()
+	if err := p.GameOutcomeSpec.Validate(); err != nil {
+		return nil, nil, err
+	}
+	netByTeamID, err := s.loadKenPomNetByTeamID(ctx, coreTournamentID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(netByTeamID) == 0 {
+		return nil, nil, errors.New("no kenpom ratings available for tournament")
+	}
+	overrides := make(map[MatchupKey]float64)
+	if p.StartingStateKey == "post_first_four" {
+		if err := s.lockInFirstFourResults(ctx, br, overrides); err != nil {
+			return nil, nil, err
+		}
+	}
+	provider := kenPomProvider{spec: p.GameOutcomeSpec, netByTeamID: netByTeamID, overrides: overrides}
+	return provider, nil, nil
+}
+
+func (s *Service) resolvePredictedProbabilities(
+	ctx context.Context,
+	coreTournamentID string,
+	br *models.BracketStructure,
+	p RunParams,
+) (ProbabilityProvider, map[MatchupKey]float64, error) {
+	selectedGameOutcomeRunID, loaded, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if nPredRows == 0 {
+		if selectedGameOutcomeRunID != nil {
+			return nil, nil, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *selectedGameOutcomeRunID)
+		}
+		return nil, nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
+	}
+	if p.StartingStateKey == "post_first_four" {
+		if err := s.lockInFirstFourResults(ctx, br, loaded); err != nil {
+			return nil, nil, err
+		}
+	}
+	return nil, loaded, nil
+}
+
+// createSnapshotAndBatch persists the tournament state snapshot and creates the
+// simulation batch record.
+func (s *Service) createSnapshotAndBatch(
+	ctx context.Context,
+	coreTournamentID string,
+	br *models.BracketStructure,
+	teams []*models.TournamentTeam,
+	p RunParams,
+) (string, string, error) {
+	var snapshotID string
+	var err error
+	if p.StartingStateKey == "post_first_four" {
+		snapshotID, err = s.createTournamentStateSnapshotFromBracket(ctx, coreTournamentID, br, teams)
+	} else {
+		snapshotID, err = s.createTournamentStateSnapshot(ctx, coreTournamentID)
+	}
+	if err != nil {
+		return "", "", err
+	}
+
+	batchID, err := s.createTournamentSimulationBatch(ctx, coreTournamentID, snapshotID, p.NSims, p.Seed, p.ProbabilitySourceKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return snapshotID, batchID, nil
+}
+
+// runSimulationBatches runs simulations in chunks of BatchSize, writing each
+// chunk to the database via COPY. It returns the total number of rows written.
+func (s *Service) runSimulationBatches(
+	ctx context.Context,
+	br *models.BracketStructure,
+	provider ProbabilityProvider,
+	probs map[MatchupKey]float64,
+	batchID string,
+	coreTournamentID string,
+	p RunParams,
+) (int64, error) {
 	rowsWritten := int64(0)
 
 	for offset := 0; offset < p.NSims; offset += p.BatchSize {
@@ -170,33 +298,22 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 
 		batchSeed := int64(p.Seed) + int64(offset)*1_000_003
 		var results []TeamSimulationResult
+		var err error
 		if provider != nil {
 			results, err = SimulateWithProvider(br, provider, n, batchSeed, Options{Workers: p.Workers})
 		} else {
 			results, err = Simulate(br, probs, n, batchSeed, Options{Workers: p.Workers})
 		}
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 
 		inserted, err := s.copyInsertSimulatedTournaments(ctx, batchID, coreTournamentID, offset, results)
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 		rowsWritten += inserted
 	}
 
-	simDur := time.Since(simStart)
-	overallDur := time.Since(overallStart)
-
-	return &RunResult{
-		CoreTournamentID:            coreTournamentID,
-		TournamentStateSnapshotID:   snapshotID,
-		TournamentSimulationBatchID: batchID,
-		NSims:                       p.NSims,
-		RowsWritten:                 rowsWritten,
-		LoadDuration:                loadDur,
-		SimulateWriteDuration:       simDur,
-		OverallDuration:             overallDur,
-	}, nil
+	return rowsWritten, nil
 }

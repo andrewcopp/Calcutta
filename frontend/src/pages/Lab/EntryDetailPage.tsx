@@ -20,13 +20,9 @@ import { EvaluationsTab } from './EntryDetail/EvaluationsTab';
 type EntryDetailTabId = 'predictions' | 'entry' | 'evaluations';
 
 export function EntryDetailPage() {
-  // Support both URL patterns:
-  // - /lab/models/:modelName/calcutta/:calcuttaId (new)
-  // - /lab/entries/:entryId (legacy)
-  const { entryId, modelName, calcuttaId } = useParams<{
-    entryId?: string;
-    modelName?: string;
-    calcuttaId?: string;
+  const { modelName, calcuttaId } = useParams<{
+    modelName: string;
+    calcuttaId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -52,21 +48,10 @@ export function EntryDetailPage() {
   const [bidSortDir, setBidSortDir] = useState<SortDir>('desc');
   const [showOnlyInvested, setShowOnlyInvested] = useState(false);
 
-  // Determine which API to call based on URL params
-  const useNewEndpoint = Boolean(modelName && calcuttaId);
-  const queryKey = useNewEndpoint
-    ? queryKeys.lab.entries.byModelAndCalcutta(modelName, calcuttaId)
-    : queryKeys.lab.entries.detail(entryId);
-
   const entryQuery = useQuery<EntryDetail | null>({
-    queryKey,
-    queryFn: () => {
-      if (useNewEndpoint) {
-        return labService.getEntryByModelAndCalcutta(modelName!, calcuttaId!);
-      }
-      return entryId ? labService.getEntry(entryId) : Promise.resolve(null);
-    },
-    enabled: Boolean(useNewEndpoint || entryId),
+    queryKey: queryKeys.lab.entries.byModelAndCalcutta(modelName, calcuttaId),
+    queryFn: () => labService.getEntryByModelAndCalcutta(modelName!, calcuttaId!),
+    enabled: Boolean(modelName && calcuttaId),
   });
 
   // For evaluations, we need the entry ID from the loaded entry

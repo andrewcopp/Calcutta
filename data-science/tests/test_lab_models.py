@@ -117,6 +117,15 @@ class TestThatValidateModelParamsRejectsInvalidInput(unittest.TestCase):
         # THEN no exception is raised
         validate_model_params("ridge", params)
 
+    def test_that_alpha_param_is_accepted_for_ridge(self) -> None:
+        """Ridge alpha hyperparameter should be a valid param."""
+        # GIVEN ridge params with alpha
+        params = {"alpha": 5.0}
+
+        # WHEN validating
+        # THEN no exception is raised
+        validate_model_params("ridge", params)
+
     def test_that_empty_params_pass_for_any_kind(self) -> None:
         """Empty params should be valid for any known kind."""
         # GIVEN empty params

@@ -52,6 +52,11 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
                 user=os.getenv("DB_USER", "calcutta"),
                 password=password,
                 connect_timeout=connect_timeout,
+                sslmode=os.getenv("DB_SSLMODE", "prefer"),
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=3,
             )
     return _pool
 

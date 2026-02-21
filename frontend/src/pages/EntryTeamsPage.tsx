@@ -11,7 +11,6 @@ import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
 import { StatisticsTab } from './EntryTeams/StatisticsTab';
-import { PortfolioScores } from './EntryTeams/PortfolioScores';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useEntryTeamsData } from '../hooks/useEntryTeamsData';
@@ -198,7 +197,7 @@ export function EntryTeamsPage() {
 
         {!biddingOpen && (
           <TabsContent value="statistics">
-            <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
+            <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} />
           </TabsContent>
         )}
       </Tabs>

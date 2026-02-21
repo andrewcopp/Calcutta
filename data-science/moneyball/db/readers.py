@@ -1,8 +1,8 @@
 """
 Database readers for loading data from PostgreSQL.
 
-This module re-exports from readers_ridge and readers_predictions for
-backwards compatibility. New code should import from the specific module.
+Re-exports from readers_ridge and readers_predictions so callers can
+import everything from this single module.
 """
 from moneyball.db.readers_ridge import (  # noqa: F401
     read_ridge_team_dataset_for_year,

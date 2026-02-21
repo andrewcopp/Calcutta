@@ -8,7 +8,6 @@ import (
 	"sort"
 	"sync"
 
-	dbadapter "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -252,12 +251,12 @@ func (s *Service) resolveSimulationBatchID(ctx context.Context, tournamentID str
 		return batchID, nil
 	}
 
-	season, err := dbadapter.ResolveSeasonFromTournamentID(ctx, s.pool, tournamentID)
+	season, err := s.tournamentResolver.ResolveSeasonFromTournamentID(ctx, tournamentID)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve season from tournament: %w", err)
 	}
 
-	simSvc := simulation.New(s.pool)
+	simSvc := simulation.New(s.pool, simulation.WithTournamentResolver(s.tournamentResolver))
 	result, err := simSvc.Run(ctx, simulation.RunParams{
 		Season:               season,
 		NSims:                10000,

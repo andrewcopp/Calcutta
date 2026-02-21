@@ -23,10 +23,6 @@ export const labService = {
     return apiClient.get<LeaderboardResponse>('/lab/models/leaderboard');
   },
 
-  async getEntry(id: string): Promise<EntryDetail> {
-    return apiClient.get<EntryDetail>(`/lab/entries/${encodeURIComponent(id)}`);
-  },
-
   async getEntryByModelAndCalcutta(
     modelName: string,
     calcuttaId: string,

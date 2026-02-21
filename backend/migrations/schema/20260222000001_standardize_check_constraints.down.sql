@@ -1,0 +1,21 @@
+-- Rollback: restore original CHECK constraint names
+
+ALTER TABLE core.payouts RENAME CONSTRAINT ck_core_payouts_position_positive TO chk_payouts_position_positive;
+ALTER TABLE core.payouts RENAME CONSTRAINT ck_core_payouts_amount_nonneg TO chk_payouts_amount_nonneg;
+
+ALTER TABLE core.entry_teams RENAME CONSTRAINT ck_core_entry_teams_bid_positive TO chk_entry_teams_bid_positive;
+
+ALTER TABLE core.calcutta_invitations RENAME CONSTRAINT ck_core_calcutta_invitations_status TO ck_calcutta_invitations_status;
+
+ALTER TABLE core.calcutta_scoring_rules RENAME CONSTRAINT ck_core_calcutta_scoring_rules_win_index_nonneg TO chk_scoring_rules_win_index_nonneg;
+ALTER TABLE core.calcutta_scoring_rules RENAME CONSTRAINT ck_core_calcutta_scoring_rules_points_nonneg TO chk_scoring_rules_points_nonneg;
+
+ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_visibility TO ck_calcuttas_visibility;
+ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_min_teams TO chk_calcuttas_min_teams;
+ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_max_teams_gte_min TO chk_calcuttas_max_teams_gte_min;
+ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_max_bid_points_positive TO chk_calcuttas_max_bid_points_positive;
+ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_budget_positive TO chk_calcuttas_budget_positive;
+
+ALTER TABLE core.teams RENAME CONSTRAINT ck_core_teams_wins_range TO chk_teams_wins_range;
+ALTER TABLE core.teams RENAME CONSTRAINT ck_core_teams_byes_range TO chk_teams_byes_range;
+ALTER TABLE core.teams RENAME CONSTRAINT ck_core_teams_seed_range TO chk_teams_seed_range;

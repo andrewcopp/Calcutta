@@ -290,20 +290,22 @@ func (r *LabRepository) SoftDeleteModelArtifacts(ctx context.Context, modelID st
 	}
 	defer tx.Rollback(ctx)
 
-	// 1. Hard-delete evaluation_entry_results (no deleted_at column)
+	// 1. Soft-delete evaluation_entry_results
 	// These are linked to evaluations which are linked to entries
 	_, err = tx.Exec(ctx, `
-		DELETE FROM lab.evaluation_entry_results
-		WHERE evaluation_id IN (
-			SELECT ev.id FROM lab.evaluations ev
-			JOIN lab.entries e ON e.id = ev.entry_id
-			WHERE e.investment_model_id = $1::uuid
-				AND e.deleted_at IS NULL
-				AND ev.deleted_at IS NULL
-		)
+		UPDATE lab.evaluation_entry_results
+		SET deleted_at = NOW()
+		WHERE deleted_at IS NULL
+			AND evaluation_id IN (
+				SELECT ev.id FROM lab.evaluations ev
+				JOIN lab.entries e ON e.id = ev.entry_id
+				WHERE e.investment_model_id = $1::uuid
+					AND e.deleted_at IS NULL
+					AND ev.deleted_at IS NULL
+			)
 	`, modelID)
 	if err != nil {
-		return fmt.Errorf("failed to delete evaluation_entry_results: %w", err)
+		return fmt.Errorf("failed to soft-delete evaluation_entry_results: %w", err)
 	}
 
 	// 2. Soft-delete evaluations

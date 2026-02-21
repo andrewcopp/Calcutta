@@ -11,77 +11,42 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/recommended_entry_bids"
 )
 
+type optimizationPrediction struct {
+	TeamID               string  `json:"teamId"`
+	PredictedMarketShare float64 `json:"predictedMarketShare"`
+	ExpectedPoints       float64 `json:"expectedPoints"`
+}
+
+type optimizationBidRow struct {
+	TeamID      string  `json:"teamId"`
+	BidPoints   int     `json:"bidPoints"`
+	ExpectedROI float64 `json:"expectedRoi"`
+}
+
+type optimizationConstraints struct {
+	MinTeams        int32
+	MaxTeams        int32
+	MaxPerTeam      int32
+	TotalPoolBudget int
+}
+
 func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID string, job *labPipelineJob, params labPipelineJobParams) bool {
 	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 0.4, "optimization", "Optimizing bids with DP allocator")
 
 	start := time.Now()
 
-	// Fetch predictions from database
-	var predictionsJSON []byte
-	err := w.pool.QueryRow(ctx, `
-		SELECT predictions_json FROM lab.entries
-		WHERE id = $1::uuid AND deleted_at IS NULL
-	`, params.EntryID).Scan(&predictionsJSON)
+	predictions, err := w.fetchAndParsePredictions(ctx, params.EntryID)
 	if err != nil {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to fetch predictions: %w", err))
-		return false
-	}
-	if len(predictionsJSON) == 0 {
-		w.failLabPipelineJob(ctx, job, errors.New("entry has no predictions - cannot optimize"))
+		w.failLabPipelineJob(ctx, job, err)
 		return false
 	}
 
-	// Parse predictions
-	type prediction struct {
-		TeamID               string  `json:"teamId"`
-		PredictedMarketShare float64 `json:"predictedMarketShare"`
-		ExpectedPoints       float64 `json:"expectedPoints"`
-	}
-	var predictions []prediction
-	if err := json.Unmarshal(predictionsJSON, &predictions); err != nil {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to parse predictions: %w", err))
-		return false
-	}
-	if len(predictions) == 0 {
-		w.failLabPipelineJob(ctx, job, errors.New("predictions array is empty - cannot optimize"))
-		return false
-	}
-
-	// Get calcutta rules for constraints
-	var minTeams, maxTeams, maxPerTeam int32
-	err = w.pool.QueryRow(ctx, `
-		SELECT min_teams, max_teams, max_bid
-		FROM core.calcuttas
-		WHERE id = $1::uuid AND deleted_at IS NULL
-	`, params.CalcuttaID).Scan(&minTeams, &maxTeams, &maxPerTeam)
+	constraints, err := w.fetchOptimizationConstraints(ctx, params.CalcuttaID)
 	if err != nil {
-		slog.Error("lab_pipeline_worker failed to load calcutta constraints", "calcutta_id", params.CalcuttaID, "error", err)
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to load calcutta constraints: %w", err))
+		w.failLabPipelineJob(ctx, job, err)
 		return false
 	}
 
-	// Get total pool budget (number of entries x budget per entry)
-	// This is needed because predicted_market_share is a fraction of the TOTAL pool
-	var totalPoolBudget int
-	err = w.pool.QueryRow(ctx, `
-		SELECT c.budget_points * COUNT(e.id)::int
-		FROM core.calcuttas c
-		LEFT JOIN core.entries e ON e.calcutta_id = c.id AND e.deleted_at IS NULL
-		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
-		GROUP BY c.budget_points
-	`, params.CalcuttaID).Scan(&totalPoolBudget)
-	if err != nil {
-		slog.Error("lab_pipeline_worker failed to load total pool budget", "calcutta_id", params.CalcuttaID, "error", err)
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to load total pool budget: %w", err))
-		return false
-	}
-	if totalPoolBudget <= 0 {
-		slog.Error("lab_pipeline_worker total pool budget is non-positive", "calcutta_id", params.CalcuttaID, "total_pool_budget", totalPoolBudget)
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("total pool budget is non-positive: %d", totalPoolBudget))
-		return false
-	}
-
-	// Build teams for allocator
 	budgetPoints := params.BudgetPoints
 	if budgetPoints <= 0 {
 		budgetPoints = 100
@@ -92,17 +57,16 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		teams[i] = recommended_entry_bids.Team{
 			ID:             pred.TeamID,
 			ExpectedPoints: pred.ExpectedPoints,
-			MarketPoints:   pred.PredictedMarketShare * float64(totalPoolBudget),
+			MarketPoints:   pred.PredictedMarketShare * float64(constraints.TotalPoolBudget),
 		}
 	}
 
-	// Run the Go DP allocator
 	allocParams := recommended_entry_bids.AllocationParams{
 		BudgetPoints: budgetPoints,
-		MinTeams:     int(minTeams),
-		MaxTeams:     int(maxTeams),
+		MinTeams:     int(constraints.MinTeams),
+		MaxTeams:     int(constraints.MaxTeams),
 		MinBidPoints: 1,
-		MaxBidPoints: int(maxPerTeam),
+		MaxBidPoints: int(constraints.MaxPerTeam),
 	}
 	result, err := recommended_entry_bids.AllocateBids(teams, allocParams)
 	if err != nil {
@@ -110,42 +74,123 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		return false
 	}
 
-	// FAIL FAST: Validate the allocation
+	if err := validateAllocation(result.Bids, budgetPoints, constraints); err != nil {
+		w.failLabPipelineJob(ctx, job, err)
+		return false
+	}
+
+	bidsJSON, err := buildBidsJSON(predictions, result.Bids, budgetPoints)
+	if err != nil {
+		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to marshal bids: %w", err))
+		return false
+	}
+
+	if err := w.persistOptimizationResult(ctx, params, bidsJSON, budgetPoints, constraints); err != nil {
+		w.failLabPipelineJob(ctx, job, err)
+		return false
+	}
+
+	dur := time.Since(start)
+	numTeams := len(result.Bids)
 	totalBid := 0
 	for _, bid := range result.Bids {
 		totalBid += bid
 	}
-	numTeams := len(result.Bids)
 
-	// Strict validation - no silent fallbacks
+	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 1.0, "optimization", "Optimization complete")
+	w.succeedLabPipelineJob(ctx, job)
+
+	w.enqueueEvaluationJob(ctx, job, params)
+
+	slog.Info("lab_pipeline_worker optimization_success", "worker_id", workerID, "run_id", job.RunID, "teams", numTeams, "total_bid", totalBid, "dur_ms", dur.Milliseconds())
+	return true
+}
+
+func (w *LabPipelineWorker) fetchAndParsePredictions(ctx context.Context, entryID string) ([]optimizationPrediction, error) {
+	var predictionsJSON []byte
+	err := w.pool.QueryRow(ctx, `
+		SELECT predictions_json FROM lab.entries
+		WHERE id = $1::uuid AND deleted_at IS NULL
+	`, entryID).Scan(&predictionsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch predictions: %w", err)
+	}
+	if len(predictionsJSON) == 0 {
+		return nil, errors.New("entry has no predictions - cannot optimize")
+	}
+
+	var predictions []optimizationPrediction
+	if err := json.Unmarshal(predictionsJSON, &predictions); err != nil {
+		return nil, fmt.Errorf("failed to parse predictions: %w", err)
+	}
+	if len(predictions) == 0 {
+		return nil, errors.New("predictions array is empty - cannot optimize")
+	}
+
+	return predictions, nil
+}
+
+func (w *LabPipelineWorker) fetchOptimizationConstraints(ctx context.Context, calcuttaID string) (optimizationConstraints, error) {
+	var c optimizationConstraints
+
+	err := w.pool.QueryRow(ctx, `
+		SELECT min_teams, max_teams, max_bid
+		FROM core.calcuttas
+		WHERE id = $1::uuid AND deleted_at IS NULL
+	`, calcuttaID).Scan(&c.MinTeams, &c.MaxTeams, &c.MaxPerTeam)
+	if err != nil {
+		slog.Error("lab_pipeline_worker failed to load calcutta constraints", "calcutta_id", calcuttaID, "error", err)
+		return c, fmt.Errorf("failed to load calcutta constraints: %w", err)
+	}
+
+	err = w.pool.QueryRow(ctx, `
+		SELECT c.budget_points * COUNT(e.id)::int
+		FROM core.calcuttas c
+		LEFT JOIN core.entries e ON e.calcutta_id = c.id AND e.deleted_at IS NULL
+		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
+		GROUP BY c.budget_points
+	`, calcuttaID).Scan(&c.TotalPoolBudget)
+	if err != nil {
+		slog.Error("lab_pipeline_worker failed to load total pool budget", "calcutta_id", calcuttaID, "error", err)
+		return c, fmt.Errorf("failed to load total pool budget: %w", err)
+	}
+	if c.TotalPoolBudget <= 0 {
+		slog.Error("lab_pipeline_worker total pool budget is non-positive", "calcutta_id", calcuttaID, "total_pool_budget", c.TotalPoolBudget)
+		return c, fmt.Errorf("total pool budget is non-positive: %d", c.TotalPoolBudget)
+	}
+
+	return c, nil
+}
+
+func validateAllocation(bids map[string]int, budgetPoints int, constraints optimizationConstraints) error {
+	totalBid := 0
+	for _, bid := range bids {
+		totalBid += bid
+	}
+	numTeams := len(bids)
+
 	if totalBid > budgetPoints {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated budget constraint: total=%d > budget=%d", totalBid, budgetPoints))
-		return false
+		return fmt.Errorf("CRITICAL: allocator violated budget constraint: total=%d > budget=%d", totalBid, budgetPoints)
 	}
-	if numTeams > 0 && numTeams < int(minTeams) {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated min_teams constraint: count=%d < min=%d", numTeams, minTeams))
-		return false
+	if numTeams > 0 && numTeams < int(constraints.MinTeams) {
+		return fmt.Errorf("CRITICAL: allocator violated min_teams constraint: count=%d < min=%d", numTeams, constraints.MinTeams)
 	}
-	if numTeams > int(maxTeams) {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated max_teams constraint: count=%d > max=%d", numTeams, maxTeams))
-		return false
+	if numTeams > int(constraints.MaxTeams) {
+		return fmt.Errorf("CRITICAL: allocator violated max_teams constraint: count=%d > max=%d", numTeams, constraints.MaxTeams)
 	}
-	for teamID, bid := range result.Bids {
-		if bid > int(maxPerTeam) {
-			w.failLabPipelineJob(ctx, job, fmt.Errorf("CRITICAL: allocator violated max_per_team constraint: team=%s bid=%d > max=%d", teamID, bid, maxPerTeam))
-			return false
+	for teamID, bid := range bids {
+		if bid > int(constraints.MaxPerTeam) {
+			return fmt.Errorf("CRITICAL: allocator violated max_per_team constraint: team=%s bid=%d > max=%d", teamID, bid, constraints.MaxPerTeam)
 		}
 	}
 
-	// Build bids JSON with expected ROI
-	type bidRow struct {
-		TeamID      string  `json:"teamId"`
-		BidPoints   int     `json:"bidPoints"`
-		ExpectedROI float64 `json:"expectedRoi"`
-	}
-	bids := make([]bidRow, 0, len(result.Bids))
+	return nil
+}
+
+func buildBidsJSON(predictions []optimizationPrediction, bids map[string]int, budgetPoints int) ([]byte, error) {
+	rows := make([]optimizationBidRow, 0, len(bids))
 	for _, pred := range predictions {
-		bid, ok := result.Bids[pred.TeamID]
+		bid, ok := bids[pred.TeamID]
 		if !ok || bid == 0 {
 			continue
 		}
@@ -154,30 +199,27 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		if (marketCost + float64(bid)) > 0 {
 			expectedROI = pred.ExpectedPoints / (marketCost + float64(bid))
 		}
-		bids = append(bids, bidRow{
+		rows = append(rows, optimizationBidRow{
 			TeamID:      pred.TeamID,
 			BidPoints:   bid,
 			ExpectedROI: expectedROI,
 		})
 	}
 
-	bidsJSON, err := json.Marshal(bids)
-	if err != nil {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to marshal bids: %w", err))
-		return false
-	}
+	return json.Marshal(rows)
+}
 
-	// Save bids to database
+func (w *LabPipelineWorker) persistOptimizationResult(ctx context.Context, params labPipelineJobParams, bidsJSON []byte, budgetPoints int, constraints optimizationConstraints) error {
 	optimizerParams := map[string]interface{}{
 		"budget_points": budgetPoints,
-		"min_teams":     minTeams,
-		"max_teams":     maxTeams,
-		"max_per_team":  maxPerTeam,
+		"min_teams":     constraints.MinTeams,
+		"max_teams":     constraints.MaxTeams,
+		"max_per_team":  constraints.MaxPerTeam,
 		"min_bid":       1,
 	}
 	optimizerParamsJSON, _ := json.Marshal(optimizerParams)
 
-	_, err = w.pool.Exec(ctx, `
+	_, err := w.pool.Exec(ctx, `
 		UPDATE lab.entries
 		SET bids_json = $2::jsonb,
 			optimizer_kind = 'dp',
@@ -186,16 +228,13 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		WHERE id = $1::uuid
 	`, params.EntryID, bidsJSON, optimizerParamsJSON)
 	if err != nil {
-		w.failLabPipelineJob(ctx, job, fmt.Errorf("failed to save bids: %w", err))
-		return false
+		return fmt.Errorf("failed to save bids: %w", err)
 	}
 
-	dur := time.Since(start)
+	return nil
+}
 
-	w.updateProgress(ctx, job.RunKind, job.RunID, params.PipelineCalcuttaRunID, 1.0, "optimization", "Optimization complete")
-	w.succeedLabPipelineJob(ctx, job)
-
-	// Update calcutta run and enqueue evaluation
+func (w *LabPipelineWorker) enqueueEvaluationJob(ctx context.Context, job *labPipelineJob, params labPipelineJobParams) {
 	if _, err := w.pool.Exec(ctx, `
 		UPDATE lab.pipeline_calcutta_runs
 		SET stage = 'evaluation', progress = 0.66, updated_at = NOW()
@@ -204,10 +243,9 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 		slog.Warn("lab_pipeline_worker update_calcutta_run_evaluation", "error", err)
 	}
 
-	// Enqueue evaluation job
 	nextParamsJSON, _ := json.Marshal(params)
 	var nextJobID string
-	err = w.pool.QueryRow(ctx, `
+	err := w.pool.QueryRow(ctx, `
 		INSERT INTO derived.run_jobs (run_kind, run_id, run_key, params_json, status)
 		VALUES ('lab_evaluation', uuid_generate_v4(), $1::uuid, $2::jsonb, 'queued')
 		RETURNING run_id::text
@@ -223,7 +261,4 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 			slog.Warn("lab_pipeline_worker update_evaluation_job_id", "error", err)
 		}
 	}
-
-	slog.Info("lab_pipeline_worker optimization_success", "worker_id", workerID, "run_id", job.RunID, "teams", numTeams, "total_bid", totalBid, "dur_ms", dur.Milliseconds())
-	return true
 }

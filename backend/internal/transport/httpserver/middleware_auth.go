@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 )
 
 type authContextKey string
@@ -102,7 +100,7 @@ func (s *Server) tryDevAuth(w http.ResponseWriter, r *http.Request) (string, boo
 	active, err := s.isUserActive(r.Context(), userID)
 	if err != nil {
 		slog.Error("auth_user_active_check_failed", "user_id", userID, "error", err)
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 		return "", true
 	}
 	if active {
@@ -128,7 +126,7 @@ func (s *Server) tryCognitoAuth(w http.ResponseWriter, r *http.Request, tok stri
 		user, err := s.userRepo.GetByExternalProvider(r.Context(), "cognito", cognitoSub)
 		if err != nil {
 			slog.Error("auth_cognito_user_lookup_failed", "cognito_sub", cognitoSub, "error", err)
-			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+			httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 			return "", true
 		}
 
@@ -166,7 +164,7 @@ func (s *Server) tryCognitoAuth(w http.ResponseWriter, r *http.Request, tok stri
 			}
 			if err := s.userRepo.Create(r.Context(), created); err != nil {
 				slog.Error("cognito_auto_provision_failed", "cognito_sub", cognitoSub, "error", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "Internal Server Error", "")
 				return "", true
 			}
 			user = created
@@ -176,7 +174,7 @@ func (s *Server) tryCognitoAuth(w http.ResponseWriter, r *http.Request, tok stri
 			active, err := s.isUserActive(r.Context(), user.ID)
 			if err != nil {
 				slog.Error("auth_user_active_check_failed", "user_id", user.ID, "error", err)
-				http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+				httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 				return "", true
 			}
 			if active {
@@ -189,13 +187,13 @@ func (s *Server) tryCognitoAuth(w http.ResponseWriter, r *http.Request, tok stri
 		active, err := s.isUserActive(r.Context(), claims.Sub)
 		if err != nil {
 			slog.Error("auth_user_active_check_failed", "user_id", claims.Sub, "error", err)
-			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+			httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 			return "", true
 		}
 		if active {
 			return claims.Sub, true
 		}
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		httperr.Write(w, r, http.StatusForbidden, "forbidden", "Forbidden", "")
 		return "", true
 	}
 
@@ -216,7 +214,7 @@ func (s *Server) trySessionAuth(w http.ResponseWriter, r *http.Request, tok stri
 	sess, err := s.authRepo.GetSessionByID(r.Context(), claims.Sid)
 	if err != nil {
 		slog.Error("auth_session_lookup_failed", "session_id", claims.Sid, "error", err)
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 		return "", "", true
 	}
 	if sess == nil || sess.RevokedAt != nil || time.Now().After(sess.ExpiresAt) || sess.UserID != claims.Sub {
@@ -225,7 +223,7 @@ func (s *Server) trySessionAuth(w http.ResponseWriter, r *http.Request, tok stri
 	active, err := s.isUserActive(r.Context(), claims.Sub)
 	if err != nil {
 		slog.Error("auth_user_active_check_failed", "user_id", claims.Sub, "error", err)
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 		return "", "", true
 	}
 	if active {
@@ -246,7 +244,7 @@ func (s *Server) tryAPIKeyAuth(w http.ResponseWriter, r *http.Request, tok strin
 	k, err := s.apiKeysRepo.GetActiveByHash(r.Context(), h, time.Now().UTC())
 	if err != nil {
 		slog.Error("auth_api_key_lookup_failed", "error", err)
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 		return "", true
 	}
 	if k == nil {
@@ -255,7 +253,7 @@ func (s *Server) tryAPIKeyAuth(w http.ResponseWriter, r *http.Request, tok strin
 	active, err := s.isUserActive(r.Context(), k.UserID)
 	if err != nil {
 		slog.Error("auth_user_active_check_failed", "user_id", k.UserID, "error", err)
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		httperr.Write(w, r, http.StatusServiceUnavailable, "service_unavailable", "Service Unavailable", "")
 		return "", true
 	}
 	if active {
@@ -272,22 +270,17 @@ func authUserID(ctx context.Context) string {
 }
 
 func (s *Server) isUserActive(ctx context.Context, userID string) (bool, error) {
-	if s.pool == nil || strings.TrimSpace(userID) == "" {
+	if s.userRepo == nil || strings.TrimSpace(userID) == "" {
 		return false, nil
 	}
-	var status string
-	err := s.pool.QueryRow(ctx, `
-		SELECT status
-		FROM core.users
-		WHERE id = $1 AND deleted_at IS NULL
-	`, userID).Scan(&status)
+	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
 		return false, err
 	}
-	return status == "active", nil
+	if user == nil {
+		return false, nil
+	}
+	return user.Status == "active", nil
 }
 
 func (s *Server) requireAuthMiddleware(next http.Handler) http.Handler {
