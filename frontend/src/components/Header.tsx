@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { useHasAnyPermission } from '../hooks/useHasAnyPermission';
 import { PERMISSIONS, ADMIN_PERMISSIONS } from '../constants/permissions';
 import { UserMenu } from './Header/UserMenu';
 
-export const Header: React.FC = () => {
+export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const canAccessLab = useHasPermission(PERMISSIONS.LAB_READ);
   const canAccessAdmin = useHasAnyPermission(ADMIN_PERMISSIONS);
@@ -103,4 +103,4 @@ export const Header: React.FC = () => {
       </div>
     </header>
   );
-};
+}

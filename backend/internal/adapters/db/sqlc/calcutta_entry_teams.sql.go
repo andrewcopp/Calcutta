@@ -42,7 +42,7 @@ SELECT
     cet.id,
     cet.entry_id,
     cet.team_id,
-    cet.bid_points AS bid,
+    cet.bid_points,
     cet.created_at,
     cet.updated_at,
     cet.deleted_at,
@@ -68,7 +68,7 @@ type ListEntryTeamsByEntryIDRow struct {
 	ID               string
 	EntryID          string
 	TeamID           string
-	Bid              int32
+	BidPoints        int32
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	DeletedAt        pgtype.Timestamptz
@@ -98,7 +98,7 @@ func (q *Queries) ListEntryTeamsByEntryID(ctx context.Context, entryID string) (
 			&i.ID,
 			&i.EntryID,
 			&i.TeamID,
-			&i.Bid,
+			&i.BidPoints,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,

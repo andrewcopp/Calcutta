@@ -12,6 +12,7 @@ type Calcutta struct {
 	MinTeams     int        `json:"minTeams"`
 	MaxTeams     int        `json:"maxTeams"`
 	MaxBid       int        `json:"maxBid"`
+	BudgetPoints int        `json:"budgetPoints"`
 	Visibility   string     `json:"visibility"`
 	Created      time.Time  `json:"created"`
 	Updated      time.Time  `json:"updated"`

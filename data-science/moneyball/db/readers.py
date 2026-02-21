@@ -65,11 +65,11 @@ def _build_team_dataset_query(
     Build the SQL query for reading a ridge team dataset.
 
     The shared FROM/JOIN/WHERE/ORDER BY clause is defined once; the
-    target variant prepends CTEs and adds a team_share_of_pool column.
+    target variant prepends CTEs and adds a observed_team_share_of_pool column.
 
     Args:
         include_target: When True, include team_bids CTEs and the
-            team_share_of_pool computed column.
+            observed_team_share_of_pool computed column.
         exclude_clause: Optional SQL fragment for filtering entries
             (only relevant when include_target is True).
 
@@ -107,7 +107,7 @@ def _build_team_dataset_query(
                         COALESCE(tb.total_bid, 0)::float8
                         / (SELECT total_bid FROM total)
                     ELSE NULL
-                END AS team_share_of_pool"""
+                END AS observed_team_share_of_pool"""
         extra_join = "\n            LEFT JOIN team_bids tb ON tb.team_id = tt.id"
         calcutta_key_expr = "%s::text"
 
@@ -242,19 +242,27 @@ def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
 
 
 def initialize_default_scoring_rules_for_year(year: int) -> Dict[int, float]:
-    pbwi = read_points_by_win_index_for_year(year)
-    points.set_default_points_by_win_index(pbwi)
-    return pbwi
+    return read_points_by_win_index_for_year(year)
 
 
-def read_analytical_values_from_db(
+def read_latest_predicted_team_values(
     tournament_id: str,
-) -> Dict[str, Tuple[float, float]]:
+) -> List[Dict[str, Any]]:
     """
-    Get analytical values from Go-generated predictions in the database.
+    Get predicted team values from the latest prediction batch for a tournament.
+
+    Queries derived.prediction_batches to find the latest batch, then returns
+    all predicted_team_values rows joined with team/school metadata.
+
+    This is the canonical function for reading prediction batch data.
+    Other modules should use this rather than querying prediction_batches directly.
+
+    Args:
+        tournament_id: The tournament UUID to look up predictions for.
 
     Returns:
-        Dict mapping team_id -> (p_championship, expected_points)
+        List of dicts with keys: team_id, team_slug, p_championship,
+        expected_points. Returns empty list if no prediction batch exists.
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -269,21 +277,44 @@ def read_analytical_values_from_db(
                 )
                 SELECT
                     ptv.team_id::text,
+                    s.slug::text AS team_slug,
                     COALESCE(ptv.p_round_7, 0)::float AS p_championship,
                     COALESCE(ptv.expected_points, 0)::float AS expected_points
                 FROM derived.predicted_team_values ptv
+                JOIN core.teams t ON t.id = ptv.team_id AND t.deleted_at IS NULL
+                JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
                 WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
                     AND ptv.deleted_at IS NULL
             """, (tournament_id,))
-            return {
-                str(row[0]): (float(row[1]), float(row[2]))
+            return [
+                {
+                    "team_id": str(row[0]),
+                    "team_slug": row[1],
+                    "p_championship": float(row[2]),
+                    "expected_points": float(row[3]),
+                }
                 for row in cur.fetchall()
-            }
+            ]
+
+
+def read_analytical_values_from_db(
+    tournament_id: str,
+) -> Dict[str, Tuple[float, float]]:
+    """
+    Get analytical values from Go-generated predictions in the database.
+
+    Returns:
+        Dict mapping team_id -> (p_championship, expected_points)
+    """
+    rows = read_latest_predicted_team_values(tournament_id)
+    return {
+        row["team_id"]: (row["p_championship"], row["expected_points"])
+        for row in rows
+    }
 
 
 def enrich_with_analytical_probabilities(
     df: pd.DataFrame,
-    kenpom_scale: float = 10.0,
 ) -> pd.DataFrame:
     """
     Enrich team dataset with analytical championship probabilities.
@@ -293,11 +324,10 @@ def enrich_with_analytical_probabilities(
 
     Args:
         df: Team dataset with id/team_key and tournament_id
-        kenpom_scale: Ignored (kept for API compatibility)
 
     Returns:
-        DataFrame with added analytical_p_championship and
-        analytical_expected_points columns
+        DataFrame with added predicted_p_championship and
+        predicted_expected_points columns
     """
     # Use team_key or id as identifier
     id_col = "team_key" if "team_key" in df.columns else "id"
@@ -326,19 +356,19 @@ def enrich_with_analytical_probabilities(
 
     # Add columns to dataframe
     result = df.copy()
-    result["analytical_p_championship"] = result[id_col].astype(str).map(
+    result["predicted_p_championship"] = result[id_col].astype(str).map(
         lambda tid: analytical_values.get(tid, (0.0, 0.0))[0]
     )
-    result["analytical_expected_points"] = result[id_col].astype(str).map(
+    result["predicted_expected_points"] = result[id_col].astype(str).map(
         lambda tid: analytical_values.get(tid, (0.0, 0.0))[1]
     )
 
     # Ensure numeric types
-    result["analytical_p_championship"] = pd.to_numeric(
-        result["analytical_p_championship"], errors="coerce"
+    result["predicted_p_championship"] = pd.to_numeric(
+        result["predicted_p_championship"], errors="coerce"
     ).fillna(0.0)
-    result["analytical_expected_points"] = pd.to_numeric(
-        result["analytical_expected_points"], errors="coerce"
+    result["predicted_expected_points"] = pd.to_numeric(
+        result["predicted_expected_points"], errors="coerce"
     ).fillna(0.0)
 
     return result

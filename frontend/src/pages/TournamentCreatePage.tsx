@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { tournamentService } from '../services/tournamentService';
@@ -12,7 +12,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
-export const TournamentCreatePage: React.FC = () => {
+export function TournamentCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [competition, setCompetition] = useState('');
@@ -71,7 +71,7 @@ export const TournamentCreatePage: React.FC = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -250,4 +250,4 @@ export const TournamentCreatePage: React.FC = () => {
       )}
     </PageContainer>
   );
-};
+}

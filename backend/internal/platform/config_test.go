@@ -4,28 +4,25 @@ import (
 	"testing"
 )
 
-func TestThatLoadConfigFromEnvDefaultsJWTSecretInDevelopment(t *testing.T) {
-	// GIVEN
-	t.Setenv("NODE_ENV", "development")
+func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInDevelopment(t *testing.T) {
+	// GIVEN development mode with no JWT secret
+	t.Setenv("APP_ENV", "development")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 
 	// WHEN
-	cfg, err := LoadConfigFromEnv()
+	_, err := LoadConfigFromEnv()
 
 	// THEN
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if cfg.JWTSecret != "dev-jwt-secret" {
-		t.Fatalf("expected JWTSecret to default to dev-jwt-secret, got %q", cfg.JWTSecret)
+	if err == nil {
+		t.Fatal("expected error when JWT_SECRET is empty in development mode")
 	}
 }
 
 func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -45,7 +42,7 @@ func TestThatLoadConfigFromEnvDoesNotDefaultJWTSecretOutsideDevelopment(t *testi
 
 func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInJWTModeOutsideDevelopment(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -62,7 +59,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenJWTSecretMissingInJWTModeOutsideDe
 
 func TestThatLoadConfigFromEnvParsesHTTPTimeoutsAndMaxBodyWhenValid(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -87,7 +84,7 @@ func TestThatLoadConfigFromEnvParsesHTTPTimeoutsAndMaxBodyWhenValid(t *testing.T
 
 func TestThatLoadConfigFromEnvUsesDefaultHTTPTimeoutsWhenInvalid(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -112,7 +109,7 @@ func TestThatLoadConfigFromEnvUsesDefaultHTTPTimeoutsWhenInvalid(t *testing.T) {
 
 func TestThatLoadConfigFromEnvParsesPGXPoolSettingsWhenValid(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -136,7 +133,7 @@ func TestThatLoadConfigFromEnvParsesPGXPoolSettingsWhenValid(t *testing.T) {
 
 func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -155,7 +152,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenPGXPoolMinExceedsMax(t *testing.T)
 
 func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -176,9 +173,9 @@ func TestThatLoadConfigFromEnvParsesRateLimitRPMWhenValid(t *testing.T) {
 
 func TestThatLoadConfigFromEnvAllowsMetricsWithoutTokenInDevelopment(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "development")
+	t.Setenv("APP_ENV", "development")
 	t.Setenv("AUTH_MODE", "jwt")
-	t.Setenv("JWT_SECRET", "")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("METRICS_ENABLED", "true")
 	t.Setenv("METRICS_AUTH_TOKEN", "")
@@ -197,7 +194,7 @@ func TestThatLoadConfigFromEnvAllowsMetricsWithoutTokenInDevelopment(t *testing.
 
 func TestThatLoadConfigFromEnvReturnsErrorWhenMetricsEnabledInProductionWithoutToken(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -216,7 +213,7 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenMetricsEnabledInProductionWithoutT
 
 func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "cognito")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -239,7 +236,7 @@ func TestThatLoadConfigFromEnvDoesNotRequireJWTSecretInCognitoMode(t *testing.T)
 
 func TestThatLoadConfigFromEnvRequiresCognitoEnvVarsInCognitoMode(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "cognito")
 	t.Setenv("JWT_SECRET", "")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -259,6 +256,9 @@ func TestThatLoadConfigFromEnvRequiresCognitoEnvVarsInCognitoMode(t *testing.T) 
 
 func TestThatLoadConfigFromEnvBuildsDatabaseURLFromDBPartsWithPassword(t *testing.T) {
 	// GIVEN
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "jwt")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "pass")
@@ -283,6 +283,9 @@ func TestThatLoadConfigFromEnvBuildsDatabaseURLFromDBPartsWithPassword(t *testin
 
 func TestThatLoadConfigFromEnvBuildsDatabaseURLFromDBPartsWithoutPassword(t *testing.T) {
 	// GIVEN
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "jwt")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "")
@@ -307,6 +310,9 @@ func TestThatLoadConfigFromEnvBuildsDatabaseURLFromDBPartsWithoutPassword(t *tes
 
 func TestThatLoadConfigFromEnvDefaultsSSLModeWhenBuildingDatabaseURL(t *testing.T) {
 	// GIVEN
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "jwt")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "")
@@ -323,7 +329,7 @@ func TestThatLoadConfigFromEnvDefaultsSSLModeWhenBuildingDatabaseURL(t *testing.
 		t.Fatalf("expected no error, got %v", err)
 	}
 	got := cfg.DatabaseURL
-	want := "postgresql://user@localhost:5432/db?sslmode=disable"
+	want := "postgresql://user@localhost:5432/db?sslmode=require"
 	if got != want {
 		t.Fatalf("expected DatabaseURL %q, got %q", want, got)
 	}
@@ -331,6 +337,9 @@ func TestThatLoadConfigFromEnvDefaultsSSLModeWhenBuildingDatabaseURL(t *testing.
 
 func TestThatLoadConfigFromEnvParsesTokenTTLsWhenValid(t *testing.T) {
 	// GIVEN
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "jwt")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ACCESS_TOKEN_TTL_SECONDS", "123")
 	t.Setenv("REFRESH_TOKEN_TTL_HOURS", "456")
@@ -349,6 +358,9 @@ func TestThatLoadConfigFromEnvParsesTokenTTLsWhenValid(t *testing.T) {
 
 func TestThatLoadConfigFromEnvKeepsDefaultTTLsWhenInvalid(t *testing.T) {
 	// GIVEN
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "jwt")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	t.Setenv("ACCESS_TOKEN_TTL_SECONDS", "-1")
 	t.Setenv("REFRESH_TOKEN_TTL_HOURS", "abc")
@@ -371,9 +383,9 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 	t.Setenv("ALLOWED_ORIGIN", "")
 	t.Setenv("ALLOWED_ORIGINS", "")
 	t.Setenv("PORT", "")
-	t.Setenv("NODE_ENV", "development")
+	t.Setenv("APP_ENV", "development")
 	t.Setenv("AUTH_MODE", "jwt")
-	t.Setenv("JWT_SECRET", "")
+	t.Setenv("JWT_SECRET", "test-secret")
 
 	// WHEN
 	cfg, err := LoadConfigFromEnv()
@@ -389,7 +401,7 @@ func TestThatLoadConfigFromEnvDefaultsAllowedOriginAndPort(t *testing.T) {
 
 func TestThatLoadConfigFromEnvReturnsErrorWhenCorsAllowlistMissingInProduction(t *testing.T) {
 	// GIVEN
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_MODE", "jwt")
 	t.Setenv("JWT_SECRET", "prod-jwt-secret")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -407,6 +419,9 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenCorsAllowlistMissingInProduction(t
 
 func TestThatLoadConfigFromEnvReturnsErrorWhenDatabaseURLCannotBeDetermined(t *testing.T) {
 	// GIVEN
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "jwt")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("DB_USER", "")
 	t.Setenv("DB_PASSWORD", "")
@@ -424,9 +439,9 @@ func TestThatLoadConfigFromEnvReturnsErrorWhenDatabaseURLCannotBeDetermined(t *t
 }
 
 func TestThatDevModeIsRejectedOutsideDevelopment(t *testing.T) {
-	// GIVEN AUTH_MODE=dev and NODE_ENV=production
+	// GIVEN AUTH_MODE=dev and APP_ENV=production
 	t.Setenv("AUTH_MODE", "dev")
-	t.Setenv("NODE_ENV", "production")
+	t.Setenv("APP_ENV", "production")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/testdb")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
 	t.Setenv("JWT_SECRET", "test-secret")
@@ -442,9 +457,9 @@ func TestThatDevModeIsRejectedOutsideDevelopment(t *testing.T) {
 }
 
 func TestThatDevModeIsAllowedInDevelopment(t *testing.T) {
-	// GIVEN AUTH_MODE=dev and NODE_ENV=development
+	// GIVEN AUTH_MODE=dev and APP_ENV=development
 	t.Setenv("AUTH_MODE", "dev")
-	t.Setenv("NODE_ENV", "development")
+	t.Setenv("APP_ENV", "development")
 	t.Setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/testdb")
 	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DOTENV_ENABLED", "false")

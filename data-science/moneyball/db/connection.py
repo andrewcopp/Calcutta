@@ -27,11 +27,14 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
         minconn = int(os.getenv("DB_MIN_CONN", "1"))
         maxconn = int(os.getenv("DB_MAX_CONN", "10"))
 
+        connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
+
         if database_url:
             _pool = psycopg2.pool.ThreadedConnectionPool(
                 minconn=minconn,
                 maxconn=maxconn,
                 dsn=database_url,
+                connect_timeout=connect_timeout,
             )
         else:
             password = os.getenv("DB_PASSWORD", "").strip()
@@ -48,6 +51,7 @@ def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
                 database=os.getenv("DB_NAME", "calcutta"),
                 user=os.getenv("DB_USER", "calcutta"),
                 password=password,
+                connect_timeout=connect_timeout,
             )
     return _pool
 

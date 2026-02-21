@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '../../components/ui/Button';
 import { Combobox, type ComboboxOption } from '../../components/ui/Combobox';
 import { School } from '../../types/school';
@@ -26,7 +25,7 @@ function slotKey(seed: number, slotIndex: number): string {
   return `${seed}-${slotIndex}`;
 }
 
-export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
+export function RegionSeedForm({
   region,
   regionState,
   schoolOptions,
@@ -37,7 +36,7 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
   removePlayIn,
   onSlotBlur,
   slotValidation,
-}) => {
+}: RegionSeedFormProps) {
   return (
     <div className="space-y-3">
       {bracketOrder(16).map((seed) => {
@@ -95,4 +94,4 @@ export const RegionSeedForm: React.FC<RegionSeedFormProps> = ({
       })}
     </div>
   );
-};
+}

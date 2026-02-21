@@ -1,11 +1,11 @@
-"""Unit tests for feature engineering pure functions in predicted_auction_share_of_pool."""
+"""Unit tests for feature engineering pure functions in predicted_market_share."""
 
 import unittest
 
 import numpy as np
 import pandas as pd
 
-from moneyball.models.predicted_auction_share_of_pool import (
+from moneyball.models.predicted_market_share import (
     _align_columns,
     _fit_ridge,
     _predict_ridge,

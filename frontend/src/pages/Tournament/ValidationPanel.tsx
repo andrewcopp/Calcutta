@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card } from '../../components/ui/Card';
 
 interface ValidationStats {
@@ -13,7 +12,7 @@ interface ValidationPanelProps {
   regionNames: string[];
 }
 
-export const ValidationPanel: React.FC<ValidationPanelProps> = ({ stats, regionNames }) => {
+export function ValidationPanel({ stats, regionNames }: ValidationPanelProps) {
   return (
     <Card className="mb-6">
       <div className="flex flex-wrap gap-6 text-sm">
@@ -48,4 +47,4 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({ stats, regionN
       </div>
     </Card>
   );
-};
+}

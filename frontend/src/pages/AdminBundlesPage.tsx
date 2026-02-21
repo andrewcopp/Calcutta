@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { API_URL, apiClient } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -46,7 +46,7 @@ type ImportStatusResponse = {
 
 const MAX_POLL_ATTEMPTS = 120;
 
-export const AdminBundlesPage: React.FC = () => {
+export function AdminBundlesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -281,4 +281,4 @@ export const AdminBundlesPage: React.FC = () => {
       </Card>
     </PageContainer>
   );
-};
+}

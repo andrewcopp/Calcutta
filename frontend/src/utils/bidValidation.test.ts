@@ -1,95 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { getSeedVariant } from './useBidding';
+import {
+  computeBudgetRemaining,
+  computeTeamCount,
+  computeValidationErrors,
+  type BidValidationConfig,
+  type BidTeamLookup,
+} from './bidValidation';
 
 // ---------------------------------------------------------------------------
-// The useBidding hook is deeply entangled with React Router (useParams,
-// useNavigate), React Query (useQuery, useMutation), and React state hooks.
-// Testing the hook as a whole would require a full jsdom environment plus
-// mocked providers for Router, QueryClient, and service modules.
-//
-// Instead, we test the exported pure functions and constants that contain
-// meaningful logic:
-//   - getSeedVariant: maps a seed number to a UI variant string
-//
-// We also test the validation and budget computation logic by extracting it
-// into pure functions that mirror the hook's useMemo bodies.
+// Tests for the extracted bid-validation pure functions used by useBidding.
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Extracted pure validation logic (mirrors the useMemo in the hook)
-// ---------------------------------------------------------------------------
-
-const MIN_BID = 1;
-
-interface ValidationConfig {
-  minTeams: number;
-  maxTeams: number;
-  maxBid: number;
-  budget: number;
-}
-
-interface TeamLookup {
-  id: string;
-  schoolName: string;
-}
-
-function computeBudgetRemaining(bidsByTeamId: Record<string, number>, budget: number): number {
-  const spent = Object.values(bidsByTeamId).reduce((sum, bid) => sum + bid, 0);
-  return budget - spent;
-}
-
-function computeTeamCount(bidsByTeamId: Record<string, number>): number {
-  return Object.keys(bidsByTeamId).length;
-}
-
-function computeValidationErrors(
-  bidsByTeamId: Record<string, number>,
-  config: ValidationConfig,
-  teams: TeamLookup[],
-): string[] {
-  const teamCount = computeTeamCount(bidsByTeamId);
-  const budgetRemaining = computeBudgetRemaining(bidsByTeamId, config.budget);
-  const errors: string[] = [];
-
-  if (teamCount < config.minTeams) {
-    errors.push(`Select at least ${config.minTeams} teams`);
-  }
-
-  if (teamCount > config.maxTeams) {
-    errors.push(`Select at most ${config.maxTeams} teams`);
-  }
-
-  if (budgetRemaining < 0) {
-    errors.push(`Over budget by ${Math.abs(budgetRemaining).toFixed(2)} pts`);
-  }
-
-  Object.entries(bidsByTeamId).forEach(([teamId, bid]) => {
-    if (bid < MIN_BID) {
-      errors.push(`All bids must be at least ${MIN_BID} pts`);
-    }
-    if (bid > config.maxBid) {
-      const team = teams.find((t) => t.id === teamId);
-      errors.push(`Bid on ${team?.schoolName || 'team'} exceeds max ${config.maxBid} pts`);
-    }
-  });
-
-  return errors;
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('getSeedVariant', () => {
-  it('returns "secondary" for uniform styling', () => {
-    // GIVEN any seed
-    // WHEN getting the variant
-    // THEN it returns "secondary" (uniform styling for all seeds)
-    expect(getSeedVariant()).toBe('secondary');
-  });
-});
-
-describe('budget computation', () => {
+describe('computeBudgetRemaining', () => {
   it('returns full budget when no bids are placed', () => {
     // GIVEN no bids and a budget of 100
     // WHEN computing budget remaining
@@ -120,9 +42,20 @@ describe('budget computation', () => {
     // THEN remaining is -20
     expect(remaining).toBe(-20);
   });
+
+  it('returns zero when bids exactly equal budget', () => {
+    // GIVEN bids totaling exactly 100 and a budget of 100
+    const bids = { t1: 50, t2: 50 };
+
+    // WHEN computing budget remaining
+    const remaining = computeBudgetRemaining(bids, 100);
+
+    // THEN remaining is 0
+    expect(remaining).toBe(0);
+  });
 });
 
-describe('team count', () => {
+describe('computeTeamCount', () => {
   it('returns zero when no bids exist', () => {
     // GIVEN no bids
     // WHEN computing team count
@@ -144,8 +77,8 @@ describe('team count', () => {
   });
 });
 
-describe('validation errors', () => {
-  const defaultConfig: ValidationConfig = {
+describe('computeValidationErrors', () => {
+  const defaultConfig: BidValidationConfig = {
     minTeams: 3,
     maxTeams: 10,
     maxBid: 50,
@@ -202,7 +135,7 @@ describe('validation errors', () => {
   it('reports bid exceeds max with team name when available', () => {
     // GIVEN a bid of 60 exceeding maxBid of 50, with a known team name
     const bids = { t1: 60, t2: 10, t3: 10 };
-    const teams: TeamLookup[] = [{ id: 't1', schoolName: 'Duke' }];
+    const teams: BidTeamLookup[] = [{ id: 't1', schoolName: 'Duke' }];
 
     // WHEN computing validation errors
     const errors = computeValidationErrors(bids, defaultConfig, teams);
@@ -242,5 +175,64 @@ describe('validation errors', () => {
 
     // THEN there are no errors
     expect(errors).toEqual([]);
+  });
+
+  it('reports multiple errors simultaneously', () => {
+    // GIVEN a single team with a bid of 0 (too few teams + bid below minimum)
+    const bids = { t1: 0 };
+
+    // WHEN computing validation errors
+    const errors = computeValidationErrors(bids, defaultConfig, []);
+
+    // THEN both the min-teams and min-bid errors are present
+    expect(errors).toContain('Select at least 3 teams');
+    expect(errors).toContain('All bids must be at least 1 pts');
+  });
+
+  it('does not report over-budget at exact zero remaining', () => {
+    // GIVEN bids that sum to exactly the budget with exactly minTeams
+    const bids = { t1: 34, t2: 33, t3: 33 };
+
+    // WHEN computing validation errors
+    const errors = computeValidationErrors(bids, defaultConfig, []);
+
+    // THEN no over-budget error is present
+    expect(errors.some((e) => e.includes('Over budget'))).toBe(false);
+  });
+
+  it('accepts bids at exactly the max bid limit', () => {
+    // GIVEN a bid at exactly maxBid of 50
+    const bids = { t1: 50, t2: 25, t3: 25 };
+
+    // WHEN computing validation errors
+    const errors = computeValidationErrors(bids, defaultConfig, []);
+
+    // THEN no max-bid error is present
+    expect(errors.some((e) => e.includes('exceeds max'))).toBe(false);
+  });
+
+  it('accepts exactly the minimum number of teams', () => {
+    // GIVEN exactly 3 teams (the minimum)
+    const bids = { t1: 10, t2: 10, t3: 10 };
+
+    // WHEN computing validation errors
+    const errors = computeValidationErrors(bids, defaultConfig, []);
+
+    // THEN no min-teams error is present
+    expect(errors.some((e) => e.includes('at least'))).toBe(false);
+  });
+
+  it('accepts exactly the maximum number of teams', () => {
+    // GIVEN exactly 10 teams (the maximum)
+    const bids: Record<string, number> = {};
+    for (let i = 1; i <= 10; i++) {
+      bids[`t${i}`] = 10;
+    }
+
+    // WHEN computing validation errors
+    const errors = computeValidationErrors(bids, defaultConfig, []);
+
+    // THEN no max-teams error is present
+    expect(errors.some((e) => e.includes('at most'))).toBe(false);
   });
 });

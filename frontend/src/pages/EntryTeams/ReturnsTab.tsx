@@ -1,20 +1,10 @@
-import { CalcuttaEntryTeam, CalcuttaPortfolioTeam, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntryTeam, CalcuttaPortfolioTeam } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
 import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 
-export const ReturnsTab: React.FC<{
-  entryId: string;
-  returnsShowAllTeams: boolean;
-  setReturnsShowAllTeams: (value: boolean) => void;
-  sortBy: 'points' | 'ownership' | 'bid';
-  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
-  tournamentTeams: TournamentTeam[];
-  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
-  teams: CalcuttaEntryTeam[];
-  schools: School[];
-  getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
-}> = ({
+export function ReturnsTab({
   entryId,
   returnsShowAllTeams,
   setReturnsShowAllTeams,
@@ -25,7 +15,18 @@ export const ReturnsTab: React.FC<{
   teams,
   schools,
   getPortfolioTeamData,
-}) => {
+}: {
+  entryId: string;
+  returnsShowAllTeams: boolean;
+  setReturnsShowAllTeams: (value: boolean) => void;
+  sortBy: 'points' | 'ownership' | 'bid';
+  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
+  tournamentTeams: TournamentTeam[];
+  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
+  teams: CalcuttaEntryTeam[];
+  schools: School[];
+  getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
+}) {
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -184,4 +185,4 @@ export const ReturnsTab: React.FC<{
       </div>
     </>
   );
-};
+}

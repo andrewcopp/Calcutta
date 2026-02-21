@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactNode, type KeyboardEvent } from 'react';
 import { cn } from '../../lib/cn';
 
 export interface ComboboxOption {
@@ -17,10 +17,10 @@ interface ComboboxProps {
   className?: string;
   onBlur?: () => void;
   validationState?: 'none' | 'valid' | 'error';
-  renderOption?: (option: ComboboxOption, isHighlighted: boolean) => React.ReactNode;
+  renderOption?: (option: ComboboxOption, isHighlighted: boolean) => ReactNode;
 }
 
-export const Combobox: React.FC<ComboboxProps> = ({
+export function Combobox({
   options,
   value,
   onChange,
@@ -32,7 +32,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   onBlur,
   validationState,
   renderOption,
-}) => {
+}: ComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [dropAbove, setDropAbove] = useState(false);
@@ -55,7 +55,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
     [onChange, onSelect]
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (!isOpen) {
       if (e.key === 'ArrowDown' || e.key === 'Enter') {
         setIsOpen(true);
@@ -183,4 +183,4 @@ export const Combobox: React.FC<ComboboxProps> = ({
       )}
     </div>
   );
-};
+}

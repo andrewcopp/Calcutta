@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../contexts/useUser';
 import { useHasAnyPermission } from '../../hooks/useHasAnyPermission';
@@ -12,7 +11,7 @@ import {
   DropdownMenuLabel,
 } from '../ui/DropdownMenu';
 
-export const UserMenu: React.FC = () => {
+export function UserMenu() {
   const { user, logout } = useUser();
   const canAccessAdmin = useHasAnyPermission(ADMIN_PERMISSIONS);
 
@@ -52,4 +51,4 @@ export const UserMenu: React.FC = () => {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
+}

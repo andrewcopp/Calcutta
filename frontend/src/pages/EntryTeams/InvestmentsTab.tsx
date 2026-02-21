@@ -1,19 +1,12 @@
 import { useMemo } from 'react';
-import { CalcuttaEntryTeam, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntryTeam } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
 import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { createTeamSortComparator } from '../../utils/teamSort';
-export const InvestmentsTab: React.FC<{
-  entryId: string;
-  tournamentTeams: TournamentTeam[];
-  allEntryTeams: CalcuttaEntryTeam[];
-  schools: School[];
-  investmentsSortBy: 'total' | 'seed' | 'region' | 'team';
-  setInvestmentsSortBy: (value: 'total' | 'seed' | 'region' | 'team') => void;
-  showAllTeams: boolean;
-  setShowAllTeams: (value: boolean) => void;
-}> = ({
+
+export function InvestmentsTab({
   entryId,
   tournamentTeams,
   allEntryTeams,
@@ -22,7 +15,16 @@ export const InvestmentsTab: React.FC<{
   setInvestmentsSortBy,
   showAllTeams,
   setShowAllTeams,
-}) => {
+}: {
+  entryId: string;
+  tournamentTeams: TournamentTeam[];
+  allEntryTeams: CalcuttaEntryTeam[];
+  schools: School[];
+  investmentsSortBy: 'total' | 'seed' | 'region' | 'team';
+  setInvestmentsSortBy: (value: 'total' | 'seed' | 'region' | 'team') => void;
+  showAllTeams: boolean;
+  setShowAllTeams: (value: boolean) => void;
+}) {
   const schoolNameById = useMemo(() => new Map(schools.map((school) => [school.id, school.name])), [schools]);
 
   const investmentRows = useMemo(() => {
@@ -188,4 +190,4 @@ export const InvestmentsTab: React.FC<{
       </div>
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { ROUND_LABELS, ROUND_ORDER } from '../types/bracket';
@@ -17,7 +17,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { formatDate, toDatetimeLocalValue } from '../utils/format';
 import { ModeratorsSection } from './Tournament/ModeratorsSection';
 
-export const TournamentViewPage: React.FC = () => {
+export function TournamentViewPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [editingStartTime, setEditingStartTime] = useState(false);
@@ -224,4 +224,4 @@ export const TournamentViewPage: React.FC = () => {
       )}
     </PageContainer>
   );
-};
+}

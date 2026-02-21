@@ -10,7 +10,7 @@ from moneyball.db.readers import (
     enrich_with_analytical_probabilities as _enrich_with_analytical_probabilities,
 )
 from moneyball.models.features import (
-    prepare_optimal_features,
+    prepare_optimal_v1_features,
     prepare_optimal_v2_features,
     prepare_optimal_v3_features,
 )
@@ -73,7 +73,7 @@ def _prepare_features_set(
         )
 
     if fs == "optimal":
-        base = prepare_optimal_features(df, base)
+        base = prepare_optimal_v1_features(df, base)
 
     if fs == "optimal_v2":
         base = prepare_optimal_v2_features(
@@ -137,7 +137,7 @@ def _predict_ridge(X: pd.DataFrame, coef: np.ndarray) -> np.ndarray:
     return Xv @ coef
 
 
-def predict_auction_share_of_pool(
+def predict_market_share(
     *,
     train_team_dataset: pd.DataFrame,
     predict_team_dataset: pd.DataFrame,
@@ -147,15 +147,14 @@ def predict_auction_share_of_pool(
     seed_prior_monotone: Optional[bool] = None,
     seed_prior_k: float = 0.0,
     program_prior_k: float = 0.0,
-    kenpom_scale: float = 10.0,
 ) -> pd.DataFrame:
     if train_team_dataset.empty:
         raise ValueError("train_team_dataset must not be empty")
     if predict_team_dataset.empty:
         raise ValueError("predict_team_dataset must not be empty")
 
-    if "team_share_of_pool" not in train_team_dataset.columns:
-        raise ValueError("train team_dataset missing team_share_of_pool")
+    if "observed_team_share_of_pool" not in train_team_dataset.columns:
+        raise ValueError("train team_dataset missing observed_team_share_of_pool")
 
     fs = str(feature_set)
     tt = str(target_transform or "none").strip().lower()
@@ -194,8 +193,8 @@ def predict_auction_share_of_pool(
     # calculation expects a single 68-team tournament, not concatenated multi-year data
     # Skip enrichment when columns already exist (e.g. pre-populated by tests)
     if fs == "optimal_v3":
-        train_needs = "analytical_p_championship" not in train_team_dataset.columns
-        pred_needs = "analytical_p_championship" not in predict_team_dataset.columns
+        train_needs = "predicted_p_championship" not in train_team_dataset.columns
+        pred_needs = "predicted_p_championship" not in predict_team_dataset.columns
 
         if train_needs:
             if "snapshot" in train_team_dataset.columns:
@@ -203,18 +202,18 @@ def predict_auction_share_of_pool(
                 enriched_frames = []
                 for snapshot, group in train_team_dataset.groupby("snapshot"):
                     enriched = _enrich_with_analytical_probabilities(
-                        group.copy(), kenpom_scale=kenpom_scale
+                        group.copy()
                     )
                     enriched_frames.append(enriched)
                 train_team_dataset = pd.concat(enriched_frames, ignore_index=True)
             else:
                 # Single tournament - process directly
                 train_team_dataset = _enrich_with_analytical_probabilities(
-                    train_team_dataset, kenpom_scale=kenpom_scale
+                    train_team_dataset
                 )
         if pred_needs:
             predict_team_dataset = _enrich_with_analytical_probabilities(
-                predict_team_dataset, kenpom_scale=kenpom_scale
+                predict_team_dataset
             )
 
     X_train = _prepare_features_set(
@@ -225,7 +224,7 @@ def predict_auction_share_of_pool(
         program_share_count_by_slug=program_share_count_by_slug,
     )
     y_train = pd.to_numeric(
-        train_team_dataset["team_share_of_pool"],
+        train_team_dataset["observed_team_share_of_pool"],
         errors="coerce",
     )
 
@@ -263,7 +262,7 @@ def predict_auction_share_of_pool(
         yhat = np.ones_like(yhat, dtype=float) / float(len(yhat))
 
     out = predict_team_dataset.copy()
-    out["predicted_auction_share_of_pool"] = yhat.astype(float)
+    out["predicted_market_share"] = yhat.astype(float)
 
     cols = [
         c
@@ -277,7 +276,7 @@ def predict_auction_share_of_pool(
             "seed",
             "region",
             "kenpom_net",
-            "predicted_auction_share_of_pool",
+            "predicted_market_share",
         ]
         if c in out.columns
     ]

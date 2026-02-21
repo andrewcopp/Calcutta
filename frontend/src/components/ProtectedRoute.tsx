@@ -1,12 +1,12 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../contexts/useUser';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const ProtectedRoute: React.FC<Props> = ({ children }) => {
+export function ProtectedRoute({ children }: Props) {
   const { user } = useUser();
   const location = useLocation();
 
@@ -15,4 +15,4 @@ export const ProtectedRoute: React.FC<Props> = ({ children }) => {
   }
 
   return <>{children}</>;
-};
+}

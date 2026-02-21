@@ -14,7 +14,7 @@ def _make_train_data() -> pd.DataFrame:
     """Create minimal training data with seeds 1-5 and market shares."""
     return pd.DataFrame({
         "seed": [1, 2, 3, 4, 5],
-        "team_share_of_pool": [0.30, 0.25, 0.20, 0.15, 0.10],
+        "observed_team_share_of_pool": [0.30, 0.25, 0.20, 0.15, 0.10],
         "school_slug": ["duke", "north-carolina", "kentucky", "kansas", "gonzaga"],
     })
 

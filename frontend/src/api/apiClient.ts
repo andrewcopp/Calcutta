@@ -10,15 +10,15 @@ class ApiError extends Error {
   }
 }
 
-export function normalizeBaseUrl(v: string): string {
+function normalizeBaseUrl(v: string): string {
   return v.replace(/\/+$/, '');
 }
 
 function resolveApiUrl(): string {
-  const configured = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL) as string | undefined;
+  const configured = import.meta.env.VITE_API_URL as string | undefined;
   if (configured && configured.trim() !== '') return normalizeBaseUrl(configured);
   if (import.meta.env.DEV) return 'http://localhost:8080';
-  throw new Error('Missing required frontend env var: VITE_API_URL (or VITE_API_BASE_URL)');
+  throw new Error('Missing required frontend env var: VITE_API_URL');
 }
 
 export const API_URL = resolveApiUrl();
@@ -82,7 +82,7 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshInFlight;
 }
 
-export function isAuthUrl(url: string): boolean {
+function isAuthUrl(url: string): boolean {
   return url.includes('/api/auth/');
 }
 

@@ -1,7 +1,7 @@
 """
 Feature engineering helpers for auction share prediction.
 
-Extracted from predicted_auction_share_of_pool.py to reduce file size
+Extracted from predicted_market_share.py to reduce file size
 and enable independent testing.
 """
 from __future__ import annotations
@@ -132,7 +132,7 @@ def compute_market_behavior_features(
 
 # -- Per-set assemblers -------------------------------------------------------
 
-def prepare_optimal_features(
+def prepare_optimal_v1_features(
     df: pd.DataFrame,
     base: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -268,7 +268,7 @@ def prepare_optimal_v3_features(
     Assemble the 'optimal_v3' feature set.
 
     Uses analytical KenPom-based probabilities (NOT hard-coded seed tables).
-    Requires analytical_p_championship and analytical_expected_points to be
+    Requires predicted_p_championship and predicted_expected_points to be
     pre-computed via _enrich_with_analytical_probabilities().
 
     Args:
@@ -280,23 +280,23 @@ def prepare_optimal_v3_features(
         Updated base dataframe with optimal_v3 features added.
     """
     # 1. Championship probability from analytical calculation
-    if "analytical_p_championship" not in df.columns:
+    if "predicted_p_championship" not in df.columns:
         raise ValueError(
-            "optimal_v3 requires analytical_p_championship column. "
+            "optimal_v3 requires predicted_p_championship column. "
             "Call _enrich_with_analytical_probabilities() first."
         )
     base["p_championship"] = pd.to_numeric(
-        df["analytical_p_championship"], errors="coerce"
+        df["predicted_p_championship"], errors="coerce"
     ).fillna(0.0)
 
     # 2. Expected points from analytical calculation
-    if "analytical_expected_points" not in df.columns:
+    if "predicted_expected_points" not in df.columns:
         raise ValueError(
-            "optimal_v3 requires analytical_expected_points column. "
+            "optimal_v3 requires predicted_expected_points column. "
             "Call _enrich_with_analytical_probabilities() first."
         )
     base["expected_points"] = pd.to_numeric(
-        df["analytical_expected_points"], errors="coerce"
+        df["predicted_expected_points"], errors="coerce"
     ).fillna(0.0)
 
     # 3. KenPom z-scores

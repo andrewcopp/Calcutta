@@ -26,17 +26,23 @@ func NewWithPipelineRepo(repo ports.LabPipelineRepository, cfg ServiceConfig) *S
 	return &Service{repo: repo, pipelineRepo: repo, cfg: cfg}
 }
 
+// clampPagination enforces default and maximum bounds on pagination parameters.
+func clampPagination(limit, offset int) (int, int) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
+
 // ListInvestmentModels returns investment models matching the filter.
 func (s *Service) ListInvestmentModels(ctx context.Context, filter models.LabListModelsFilter, page models.LabPagination) ([]models.InvestmentModel, error) {
-	if page.Limit <= 0 {
-		page.Limit = 50
-	}
-	if page.Limit > 200 {
-		page.Limit = 200
-	}
-	if page.Offset < 0 {
-		page.Offset = 0
-	}
+	page.Limit, page.Offset = clampPagination(page.Limit, page.Offset)
 	return s.repo.ListInvestmentModels(ctx, filter, page)
 }
 
@@ -52,15 +58,7 @@ func (s *Service) GetModelLeaderboard(ctx context.Context) ([]models.LabLeaderbo
 
 // ListEntries returns entries matching the filter.
 func (s *Service) ListEntries(ctx context.Context, filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error) {
-	if page.Limit <= 0 {
-		page.Limit = 50
-	}
-	if page.Limit > 200 {
-		page.Limit = 200
-	}
-	if page.Offset < 0 {
-		page.Offset = 0
-	}
+	page.Limit, page.Offset = clampPagination(page.Limit, page.Offset)
 	return s.repo.ListEntries(ctx, filter, page)
 }
 
@@ -84,15 +82,7 @@ func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelN
 
 // ListEvaluations returns evaluations matching the filter.
 func (s *Service) ListEvaluations(ctx context.Context, filter models.LabListEvaluationsFilter, page models.LabPagination) ([]models.LabEvaluationDetail, error) {
-	if page.Limit <= 0 {
-		page.Limit = 50
-	}
-	if page.Limit > 200 {
-		page.Limit = 200
-	}
-	if page.Offset < 0 {
-		page.Offset = 0
-	}
+	page.Limit, page.Offset = clampPagination(page.Limit, page.Offset)
 	return s.repo.ListEvaluations(ctx, filter, page)
 }
 

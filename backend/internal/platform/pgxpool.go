@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -44,6 +45,32 @@ func OpenPGXPool(ctx context.Context, cfg Config, opts *PGXPoolOptions) (*pgxpoo
 		}
 		if opts.HealthCheckPeriod > 0 {
 			pcfg.HealthCheckPeriod = opts.HealthCheckPeriod
+		}
+	}
+
+	// Set statement_timeout and lock_timeout on each new connection.
+	// These are session-level settings, so they apply to every query
+	// run on the connection without affecting migrations or other tools
+	// that use their own connection strings.
+	if cfg.StatementTimeoutMS > 0 || cfg.LockTimeoutMS > 0 {
+		existingAfterConnect := pcfg.AfterConnect
+		pcfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+			if existingAfterConnect != nil {
+				if err := existingAfterConnect(ctx, conn); err != nil {
+					return err
+				}
+			}
+			if cfg.StatementTimeoutMS > 0 {
+				if _, err := conn.Exec(ctx, fmt.Sprintf("SET statement_timeout = %d", cfg.StatementTimeoutMS)); err != nil {
+					return fmt.Errorf("set statement_timeout: %w", err)
+				}
+			}
+			if cfg.LockTimeoutMS > 0 {
+				if _, err := conn.Exec(ctx, fmt.Sprintf("SET lock_timeout = %d", cfg.LockTimeoutMS)); err != nil {
+					return fmt.Errorf("set lock_timeout: %w", err)
+				}
+			}
+			return nil
 		}
 	}
 

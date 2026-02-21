@@ -14,7 +14,7 @@ from moneyball.models.features import (
     compute_kenpom_net_zscore,
     compute_market_behavior_features,
     compute_seed_interactions,
-    prepare_optimal_features,
+    prepare_optimal_v1_features,
     prepare_optimal_v2_features,
     prepare_optimal_v3_features,
 )
@@ -183,8 +183,8 @@ class TestThatConstantsAreComplete(unittest.TestCase):
 class TestThatPrepareOptimalV3RaisesWithoutAnalyticalColumns(unittest.TestCase):
     """Tests for prepare_optimal_v3_features validation."""
 
-    def test_that_missing_analytical_p_championship_raises(self) -> None:
-        # GIVEN a dataframe without analytical_p_championship
+    def test_that_missing_predicted_p_championship_raises(self) -> None:
+        # GIVEN a dataframe without predicted_p_championship
         df = pd.DataFrame({
             "seed": [1],
             "kenpom_net": [25.0],
@@ -197,7 +197,7 @@ class TestThatPrepareOptimalV3RaisesWithoutAnalyticalColumns(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             prepare_optimal_v3_features(df, base)
 
-        self.assertIn("analytical_p_championship", str(ctx.exception))
+        self.assertIn("predicted_p_championship", str(ctx.exception))
 
 
 if __name__ == "__main__":

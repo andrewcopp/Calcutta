@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminService, AdminUserListItem } from '../services/adminService';
+import { adminService } from '../services/adminService';
+import type { AdminUserListItem } from '../types/admin';
 import { queryKeys } from '../queryKeys';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -56,7 +57,7 @@ function formatStatusLabel(status: string): string {
   }
 }
 
-export const AdminUsersPage: React.FC = () => {
+export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -236,4 +237,4 @@ export const AdminUsersPage: React.FC = () => {
       )}
     </PageContainer>
   );
-};
+}

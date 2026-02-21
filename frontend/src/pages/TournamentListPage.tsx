@@ -1,7 +1,6 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Tournament } from '../types/calcutta';
+import { Tournament } from '../types/tournament';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -20,7 +19,7 @@ interface TournamentWithStatus extends Tournament {
   eliminatedTeams: number;
 }
 
-export const TournamentListPage: React.FC = () => {
+export function TournamentListPage() {
   const navigate = useNavigate();
   const tournamentsQuery = useQuery({
     queryKey: queryKeys.tournaments.all(),
@@ -123,4 +122,4 @@ export const TournamentListPage: React.FC = () => {
       ) : null}
     </PageContainer>
   );
- };
+ }

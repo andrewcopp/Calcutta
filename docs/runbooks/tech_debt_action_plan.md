@@ -232,11 +232,10 @@ Prioritized checklist of PR-sized work items surfaced by backend, frontend, data
 - [ ] **`docker-compose.local-prod.yml`** — same
 - **Fix:** Add `healthcheck` blocks (HTTP check for backend/frontend, process check for workers) and `restart: unless-stopped` to all services
 
-### 38. Remove meaningless NODE_ENV from Go services
-- [ ] **`docker-compose.yml:15, 28, 62, 86`**
-- [ ] **`docker-compose.local-prod.yml:21, 33`**
-- `NODE_ENV` is passed to Go backend and worker services where it has no effect
-- **Fix:** Remove `NODE_ENV` from Go service environment blocks. Keep it only on the frontend service.
+### 38. ~~Remove meaningless NODE_ENV from Go services~~ (RESOLVED)
+- [x] Renamed `NODE_ENV` to `APP_ENV` in Go backend. Default changed from `development` to `production`.
+- [x] `APP_ENV=development` is now explicitly set in docker-compose.yml for backend and worker services.
+- Frontend retains `NODE_ENV` as it is a standard Node.js convention.
 
 ### 39. Bake pip install into Docker image instead of running at startup
 - [ ] **`docker-compose.yml:52, 73`**

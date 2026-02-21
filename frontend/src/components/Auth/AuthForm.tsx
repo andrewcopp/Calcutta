@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useUser } from '../../contexts/useUser';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 
-export const AuthForm: React.FC = () => {
+export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,7 +13,7 @@ export const AuthForm: React.FC = () => {
   const [error, setError] = useState('');
   const { login, signup } = useUser();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -111,4 +111,4 @@ export const AuthForm: React.FC = () => {
       </form>
     </div>
   );
-};
+}

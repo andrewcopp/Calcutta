@@ -7,7 +7,7 @@ This guide explains how to run the Moneyball pipeline stages, understand artifac
 The Moneyball pipeline consists of four stages that run sequentially:
 
 1. **`predicted_game_outcomes`** - Monte Carlo simulation of tournament bracket outcomes
-2. **`predicted_auction_share_of_pool`** - Ridge regression model predicting market bid distribution
+2. **`predicted_market_share`** - Ridge regression model predicting market bid distribution
 3. **`recommended_entry_bids`** - Greedy portfolio optimizer for bid allocation
 4. **`simulated_entry_outcomes`** - Monte Carlo simulation of entry performance vs market
 
@@ -98,7 +98,7 @@ Predicts market bid distribution using ridge regression trained on historical sn
   - `payouts.parquet`
 
 **Outputs:**
-- `predicted_auction_share_of_pool.parquet`
+- `predicted_market_share.parquet`
 
 **Parameters:**
 - `--train-snapshot` - Training snapshot names (repeatable, e.g., `--train-snapshot 2023 --train-snapshot 2024`)
@@ -123,7 +123,7 @@ Generates optimal bid allocation using greedy portfolio optimization.
 
 **Inputs:**
 - `predicted_game_outcomes.parquet` (from stage 1)
-- `predicted_auction_share_of_pool.parquet` (from stage 2)
+- `predicted_market_share.parquet` (from stage 2)
 
 **Outputs:**
 - `recommended_entry_bids.parquet`
@@ -205,7 +205,7 @@ The pipeline uses content-based caching to avoid redundant computation:
 Each stage has different cache dependencies:
 
 - **predicted_game_outcomes**: `games.parquet`, `teams.parquet`, `kenpom_scale`, `n_sims`, `seed`
-- **predicted_auction_share_of_pool**: training snapshots, `ridge_alpha`, `feature_set`, `exclude_entry_names`
+- **predicted_market_share**: training snapshots, `ridge_alpha`, `feature_set`, `exclude_entry_names`
 - **recommended_entry_bids**: upstream artifacts, budget constraints
 - **simulated_entry_outcomes**: upstream artifacts, snapshot files, `n_sims`, `seed`, `budget_dollars`
 
@@ -249,7 +249,7 @@ For example:
 out/artifacts/main/2025-01-15T10-30-00Z/
 ├── manifest.json
 ├── predicted_game_outcomes.parquet
-├── predicted_auction_share_of_pool.parquet
+├── predicted_market_share.parquet
 ├── recommended_entry_bids.parquet
 └── simulated_entry_outcomes.parquet
 ```

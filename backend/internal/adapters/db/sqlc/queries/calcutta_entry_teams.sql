@@ -3,7 +3,7 @@ SELECT
     cet.id,
     cet.entry_id,
     cet.team_id,
-    cet.bid_points AS bid,
+    cet.bid_points,
     cet.created_at,
     cet.updated_at,
     cet.deleted_at,

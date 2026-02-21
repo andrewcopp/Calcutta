@@ -23,9 +23,9 @@ func (w *slogWriter) Write(p []byte) (int, error) {
 }
 
 func InitLogger() {
-	env := strings.TrimSpace(os.Getenv("NODE_ENV"))
+	env := strings.TrimSpace(os.Getenv("APP_ENV"))
 	if env == "" {
-		env = "development"
+		env = "production"
 	}
 
 	var handler slog.Handler

@@ -6,6 +6,7 @@ import { Alert } from '../components/ui/Alert';
 import { ErrorState } from '../components/ui/ErrorState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
+import { LeaderboardTab } from './CalcuttaEntries/LeaderboardTab';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
@@ -21,7 +22,7 @@ import { useCalcuttaEntriesData } from '../hooks/useCalcuttaEntriesData';
 import { useUser } from '../contexts/useUser';
 import { calcuttaService } from '../services/calcuttaService';
 
-import { formatDollarsFromCents, formatDate } from '../utils/format';
+import { formatDate } from '../utils/format';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
@@ -236,55 +237,7 @@ export function CalcuttaEntriesPage() {
         </TabsList>
 
         <TabsContent value="leaderboard">
-          <div className="grid gap-4">
-            {entries.map((entry, index) => {
-              const displayPosition = entry.finishPosition || index + 1;
-              const isInTheMoney = Boolean(entry.inTheMoney);
-              const payoutText = entry.payoutCents ? `(${formatDollarsFromCents(entry.payoutCents)})` : '';
-
-              const rowClass = isInTheMoney
-                ? displayPosition === 1
-                  ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400'
-                  : displayPosition === 2
-                    ? 'bg-gradient-to-r from-slate-50 to-slate-200 border-2 border-slate-400'
-                    : displayPosition === 3
-                      ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-500'
-                      : 'bg-gradient-to-r from-slate-50 to-blue-50 border-2 border-slate-300'
-                : 'bg-white';
-
-              const pointsClass = isInTheMoney
-                ? displayPosition === 1
-                  ? 'text-yellow-700'
-                  : displayPosition === 2
-                    ? 'text-slate-700'
-                    : displayPosition === 3
-                      ? 'text-amber-700'
-                      : 'text-slate-700'
-                : 'text-blue-600';
-
-              return (
-                <Link
-                  key={entry.id}
-                  to={`/calcuttas/${calcuttaId}/entries/${entry.id}`}
-                  className={`block p-4 rounded-lg shadow hover:shadow-md transition-shadow ${rowClass}`}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h2 className="text-xl font-semibold">
-                        {displayPosition}. {entry.name}
-                        {isInTheMoney && payoutText && <span className="ml-2 text-sm text-gray-700">{payoutText}</span>}
-                      </h2>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-2xl font-bold ${pointsClass}`}>
-                        {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <LeaderboardTab calcuttaId={calcuttaId} entries={entries} />
         </TabsContent>
 
         <TabsContent value="investment">

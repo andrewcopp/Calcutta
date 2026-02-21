@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam, CalcuttaEntry, CalcuttaDashboard, TournamentTeam } from '../types/calcutta';
+import { CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaEntryTeam, CalcuttaEntry, CalcuttaDashboard } from '../types/calcutta';
+import type { TournamentTeam } from '../types/tournament';
 
 interface SeedInvestmentDatum {
   seed: number;

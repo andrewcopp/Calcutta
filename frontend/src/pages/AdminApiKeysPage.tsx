@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminService, CreateAPIKeyResponse } from '../services/adminService';
+import { adminService } from '../services/adminService';
+import type { CreateAPIKeyResponse } from '../types/admin';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -13,7 +14,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { formatDate } from '../utils/format';
 
-export const AdminApiKeysPage: React.FC = () => {
+export function AdminApiKeysPage() {
   const queryClient = useQueryClient();
 
   const [label, setLabel] = useState('python-ds');
@@ -176,4 +177,4 @@ export const AdminApiKeysPage: React.FC = () => {
       </Card>
     </PageContainer>
   );
-};
+}

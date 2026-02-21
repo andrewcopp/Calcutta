@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -109,7 +109,7 @@ const bestCareersColumns: ColumnDef<CareerLeaderboardRow, unknown>[] = [
   },
 ];
 
-export const HallOfFamePage: React.FC = () => {
+export function HallOfFamePage() {
   const [hideInactiveCareers, setHideInactiveCareers] = useState<boolean>(false);
 
   const bestTeamsQuery = useQuery({
@@ -289,4 +289,4 @@ export const HallOfFamePage: React.FC = () => {
       </Tabs>
     </PageContainer>
   );
-};
+}

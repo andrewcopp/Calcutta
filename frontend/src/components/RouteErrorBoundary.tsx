@@ -1,7 +1,8 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
 
-const RouteErrorFallback: React.FC = () => (
+function RouteErrorFallback() {
+  return (
   <div className="flex items-center justify-center py-24">
     <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
       <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
@@ -16,10 +17,13 @@ const RouteErrorFallback: React.FC = () => (
       </button>
     </div>
   </div>
-);
+  );
+}
 
-export const RouteErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ErrorBoundary fallback={<RouteErrorFallback />}>
-    {children}
-  </ErrorBoundary>
-);
+export function RouteErrorBoundary({ children }: { children: ReactNode }) {
+  return (
+    <ErrorBoundary fallback={<RouteErrorFallback />}>
+      {children}
+    </ErrorBoundary>
+  );
+}

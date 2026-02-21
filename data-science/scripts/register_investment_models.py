@@ -11,13 +11,9 @@ Usage:
 
 import logging
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, NamedTuple
 
-_PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-
+# moneyball must be installed: pip install -e . from the data-science directory
 from moneyball.lab.models import get_or_create_investment_model
 
 logging.basicConfig(
@@ -105,7 +101,6 @@ INVESTMENT_MODELS: List[ModelSpec] = [
         kind="ridge",
         params={
             "feature_set": "optimal_v3",
-            "kenpom_scale": 10.0,
         },
         notes="Ridge Regression V3 with analytical KenPom championship probabilities",
     ),

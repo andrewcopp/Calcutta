@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TournamentModerator } from '../../types/calcutta';
+import { TournamentModerator } from '../../types/tournament';
 import { tournamentService } from '../../services/tournamentService';
 import { queryKeys } from '../../queryKeys';
 import { Alert } from '../../components/ui/Alert';
@@ -15,7 +15,7 @@ interface ModeratorsSectionProps {
   tournamentId: string;
 }
 
-export const ModeratorsSection: React.FC<ModeratorsSectionProps> = ({ tournamentId }) => {
+export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [addEmail, setAddEmail] = useState('');
@@ -129,4 +129,4 @@ export const ModeratorsSection: React.FC<ModeratorsSectionProps> = ({ tournament
       </Modal>
     </>
   );
-};
+}

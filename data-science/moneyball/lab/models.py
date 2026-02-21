@@ -204,6 +204,30 @@ def get_or_create_investment_model(
     return create_investment_model(name, kind, params, notes), True
 
 
+def serialize_predictions(predictions: List[Prediction]) -> List[Dict[str, Any]]:
+    """
+    Serialize Prediction objects to JSON-ready dicts.
+
+    This is the canonical serialization format used when writing predictions
+    to lab.entries.predictions_json. Extracted as a pure function so it can
+    be tested independently of the database.
+
+    Args:
+        predictions: List of Prediction objects
+
+    Returns:
+        List of dicts with team_id, predicted_market_share, expected_points
+    """
+    return [
+        {
+            "team_id": p.team_id,
+            "predicted_market_share": p.predicted_market_share,
+            "expected_points": p.expected_points,
+        }
+        for p in predictions
+    ]
+
+
 def create_entry_with_predictions(
     investment_model_id: str,
     calcutta_id: str,
@@ -233,14 +257,7 @@ def create_entry_with_predictions(
     entry_id = str(uuid.uuid4())
     game_outcome_params = game_outcome_params or {}
 
-    predictions_json = [
-        {
-            "team_id": p.team_id,
-            "predicted_market_share": p.predicted_market_share,
-            "expected_points": p.expected_points,
-        }
-        for p in predictions
-    ]
+    predictions_json = serialize_predictions(predictions)
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:

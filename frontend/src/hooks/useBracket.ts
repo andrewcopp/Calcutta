@@ -1,20 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BracketGame, BracketRound, ROUND_ORDER } from '../types/bracket';
 import { bracketService } from '../services/bracketService';
 import { queryKeys } from '../queryKeys';
-
-function groupGamesByRound(games: BracketGame[]): Record<BracketRound, BracketGame[]> {
-  const grouped = {} as Record<BracketRound, BracketGame[]>;
-
-  ROUND_ORDER.forEach((round) => {
-    grouped[round] = games
-      .filter((game) => game.round === round)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-  });
-
-  return grouped;
-}
+import { groupGamesByRound } from '../utils/groupGamesByRound';
 
 export function useBracket(tournamentId: string | undefined) {
   const [error, setError] = useState<string | null>(null);

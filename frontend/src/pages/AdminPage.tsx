@@ -1,11 +1,10 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { PERMISSIONS } from '../constants/permissions';
 
-export const AdminPage: React.FC = () => {
+export function AdminPage() {
   const canTournaments = useHasPermission(PERMISSIONS.TOURNAMENT_GAME_WRITE);
   const canBundles = useHasPermission(PERMISSIONS.ADMIN_BUNDLES_EXPORT);
   const canApiKeys = useHasPermission(PERMISSIONS.ADMIN_API_KEYS_WRITE);
@@ -79,4 +78,4 @@ export const AdminPage: React.FC = () => {
       </div>
     </PageContainer>
   );
-};
+}

@@ -5,11 +5,97 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 )
+
+// ListEntries returns entries matching the filter.
+func (r *LabRepository) ListEntries(ctx context.Context, filter models.LabListEntriesFilter, page models.LabPagination) ([]models.LabEntryDetail, error) {
+
+	query := `
+		SELECT
+			e.id::text,
+			e.investment_model_id::text,
+			e.calcutta_id::text,
+			e.game_outcome_kind,
+			e.game_outcome_params_json::text,
+			e.optimizer_kind,
+			e.optimizer_params_json::text,
+			e.starting_state_key,
+			e.bids_json::text,
+			e.created_at,
+			e.updated_at,
+			im.name AS model_name,
+			im.kind AS model_kind,
+			c.name AS calcutta_name,
+			(SELECT COUNT(*) FROM lab.evaluations ev WHERE ev.entry_id = e.id AND ev.deleted_at IS NULL)::int AS n_evaluations
+		FROM lab.entries e
+		JOIN lab.investment_models im ON im.id = e.investment_model_id
+		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		WHERE e.deleted_at IS NULL
+	`
+	args := []any{}
+	argIdx := 1
+
+	if filter.InvestmentModelID != nil && *filter.InvestmentModelID != "" {
+		query += ` AND e.investment_model_id = $` + strconv.Itoa(argIdx) + `::uuid`
+		args = append(args, *filter.InvestmentModelID)
+		argIdx++
+	}
+	if filter.CalcuttaID != nil && *filter.CalcuttaID != "" {
+		query += ` AND e.calcutta_id = $` + strconv.Itoa(argIdx) + `::uuid`
+		args = append(args, *filter.CalcuttaID)
+		argIdx++
+	}
+	if filter.StartingStateKey != nil && *filter.StartingStateKey != "" {
+		query += ` AND e.starting_state_key = $` + strconv.Itoa(argIdx)
+		args = append(args, *filter.StartingStateKey)
+		argIdx++
+	}
+
+	query += ` ORDER BY e.created_at DESC`
+	query += ` LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
+	args = append(args, page.Limit, page.Offset)
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]models.LabEntryDetail, 0)
+	for rows.Next() {
+		var e models.LabEntryDetail
+		var gameOutcomeParamsStr, optimizerParamsStr, bidsStr string
+		if err := rows.Scan(
+			&e.ID,
+			&e.InvestmentModelID,
+			&e.CalcuttaID,
+			&e.GameOutcomeKind,
+			&gameOutcomeParamsStr,
+			&e.OptimizerKind,
+			&optimizerParamsStr,
+			&e.StartingStateKey,
+			&bidsStr,
+			&e.CreatedAt,
+			&e.UpdatedAt,
+			&e.ModelName,
+			&e.ModelKind,
+			&e.CalcuttaName,
+			&e.NEvaluations,
+		); err != nil {
+			return nil, err
+		}
+		e.GameOutcomeParamsJSON = json.RawMessage(gameOutcomeParamsStr)
+		e.OptimizerParamsJSON = json.RawMessage(optimizerParamsStr)
+		e.BidsJSON = json.RawMessage(bidsStr)
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
 
 // GetEntryRaw returns a single entry with raw data (bids, predictions, teams, pool budget)
 // before any enrichment calculations. The caller is responsible for enrichment.

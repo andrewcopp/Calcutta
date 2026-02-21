@@ -1,17 +1,18 @@
 import { useMemo, useState } from 'react';
-import { CalcuttaEntry, CalcuttaEntryTeam, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntry, CalcuttaEntryTeam } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
 import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
 import { createTeamSortComparator } from '../../utils/teamSort';
 
-export const InvestmentTab: React.FC<{
+export function InvestmentTab({ entries, schools, tournamentTeams, allEntryTeams }: {
   entries: CalcuttaEntry[];
   schools: School[];
   tournamentTeams: TournamentTeam[];
   allEntryTeams: CalcuttaEntryTeam[];
-}> = ({ entries, schools, tournamentTeams, allEntryTeams }) => {
+}) {
   const [investmentSortBy, setInvestmentSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
 
   const entryNameById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry.name])), [entries]);
@@ -177,4 +178,4 @@ export const InvestmentTab: React.FC<{
       </div>
     </div>
   );
-};
+}

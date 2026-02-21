@@ -156,7 +156,7 @@ Tested gradient boosting (sklearn), random forest, and Ridge regression:
 
 ## Implementation Details
 
-**File**: `moneyball/models/predicted_auction_share_of_pool.py`
+**File**: `moneyball/models/predicted_market_share.py`
 
 **Changes**:
 1. Replaced `kenpom_net_pct` with `kenpom_net_zscore`

@@ -5,8 +5,9 @@ import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
+import { computeBudgetRemaining, computeTeamCount, computeValidationErrors } from '../utils/bidValidation';
 import type { School } from '../types/school';
-import type { TournamentTeam } from '../types/calcutta';
+import type { TournamentTeam } from '../types/tournament';
 import type { ComboboxOption } from '../components/ui/Combobox';
 
 const MIN_BID = 1;
@@ -30,10 +31,6 @@ export interface BidSlot {
 export interface TeamComboboxOption extends ComboboxOption {
   seed: number;
   region: string;
-}
-
-export function getSeedVariant(): 'default' | 'secondary' | 'outline' {
-  return 'secondary';
 }
 
 function createEmptySlot(): BidSlot {
@@ -201,41 +198,24 @@ export function useBidding() {
 
   // Budget & validation (same logic as before, derived from bidsByTeamId)
   const budgetRemaining = useMemo(() => {
-    const spent = Object.values(bidsByTeamId).reduce((sum, bid) => sum + bid, 0);
-    return BUDGET - spent;
+    return computeBudgetRemaining(bidsByTeamId, BUDGET);
   }, [bidsByTeamId, BUDGET]);
 
   const teamCount = useMemo(() => {
-    return Object.keys(bidsByTeamId).length;
+    return computeTeamCount(bidsByTeamId);
   }, [bidsByTeamId]);
 
   const validationErrors = useMemo(() => {
-    const errors: string[] = [];
-
-    if (teamCount < MIN_TEAMS) {
-      errors.push(`Select at least ${MIN_TEAMS} teams`);
-    }
-
-    if (teamCount > MAX_TEAMS) {
-      errors.push(`Select at most ${MAX_TEAMS} teams`);
-    }
-
-    if (budgetRemaining < 0) {
-      errors.push(`Over budget by ${Math.abs(budgetRemaining).toFixed(2)} pts`);
-    }
-
-    Object.entries(bidsByTeamId).forEach(([teamId, bid]) => {
-      if (bid < MIN_BID) {
-        errors.push(`All bids must be at least ${MIN_BID} pts`);
-      }
-      if (bid > MAX_BID) {
-        const team = biddingQuery.data?.teams.find((t) => t.id === teamId);
-        errors.push(`Bid on ${team?.school?.name || 'team'} exceeds max ${MAX_BID} pts`);
-      }
-    });
-
-    return errors;
-  }, [bidsByTeamId, teamCount, budgetRemaining, biddingQuery.data?.teams, MIN_TEAMS, MAX_TEAMS, MAX_BID]);
+    const teamLookups = (biddingQuery.data?.teams ?? []).map((t) => ({
+      id: t.id,
+      schoolName: t.school?.name ?? '',
+    }));
+    return computeValidationErrors(
+      bidsByTeamId,
+      { minTeams: MIN_TEAMS, maxTeams: MAX_TEAMS, maxBid: MAX_BID, budget: BUDGET },
+      teamLookups,
+    );
+  }, [bidsByTeamId, biddingQuery.data?.teams, MIN_TEAMS, MAX_TEAMS, MAX_BID, BUDGET]);
 
   const isValid = validationErrors.length === 0 && teamCount >= MIN_TEAMS && teamCount <= MAX_TEAMS;
 

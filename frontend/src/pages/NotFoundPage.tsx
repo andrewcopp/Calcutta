@@ -1,7 +1,6 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 
-export const NotFoundPage: React.FC = () => {
+export function NotFoundPage() {
   return (
     <div className="max-w-lg mx-auto mt-20 text-center">
       <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
@@ -11,4 +10,4 @@ export const NotFoundPage: React.FC = () => {
       </Link>
     </div>
   );
-};
+}

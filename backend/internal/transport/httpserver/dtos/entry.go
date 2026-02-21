@@ -97,8 +97,8 @@ type EntryTeamResponse struct {
 	ID      string                  `json:"id"`
 	EntryID string                  `json:"entryId"`
 	TeamID  string                  `json:"teamId"`
-	Bid     int                     `json:"bid"`
-	Team    *TournamentTeamResponse `json:"team,omitempty"`
+	BidPoints int                     `json:"bidPoints"`
+	Team      *TournamentTeamResponse `json:"team,omitempty"`
 }
 
 func NewEntryTeamResponse(et *models.CalcuttaEntryTeam) *EntryTeamResponse {
@@ -106,7 +106,7 @@ func NewEntryTeamResponse(et *models.CalcuttaEntryTeam) *EntryTeamResponse {
 		ID:      et.ID,
 		EntryID: et.EntryID,
 		TeamID:  et.TeamID,
-		Bid:     et.Bid,
+		BidPoints: et.BidPoints,
 	}
 	if et.Team != nil {
 		resp.Team = NewTournamentTeamResponse(et.Team, et.Team.School)

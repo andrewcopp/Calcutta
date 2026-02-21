@@ -4,8 +4,8 @@ import {
   CalcuttaEntryTeam,
   CalcuttaPortfolio,
   CalcuttaPortfolioTeam,
-  TournamentTeam,
 } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
 import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { getEntryColorById } from '../../utils/entryColors';
@@ -29,15 +29,7 @@ interface OwnershipTeamCard {
   topOwners: OwnershipSlice[];
 }
 
-export const OwnershipTab: React.FC<{
-  entries: CalcuttaEntry[];
-  schools: School[];
-  tournamentTeams: TournamentTeam[];
-  allEntryTeams: CalcuttaEntryTeam[];
-  allCalcuttaPortfolios: (CalcuttaPortfolio & { entryName?: string })[];
-  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
-  isFetching: boolean;
-}> = ({
+export function OwnershipTab({
   entries,
   schools,
   tournamentTeams,
@@ -45,7 +37,15 @@ export const OwnershipTab: React.FC<{
   allCalcuttaPortfolios,
   allCalcuttaPortfolioTeams,
   isFetching,
-}) => {
+}: {
+  entries: CalcuttaEntry[];
+  schools: School[];
+  tournamentTeams: TournamentTeam[];
+  allEntryTeams: CalcuttaEntryTeam[];
+  allCalcuttaPortfolios: (CalcuttaPortfolio & { entryName?: string })[];
+  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
+  isFetching: boolean;
+}) {
   const [ownershipSortBy, setOwnershipSortBy] = useState<'seed' | 'region' | 'team' | 'investment'>('seed');
 
   const entryNameById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry.name])), [entries]);
@@ -192,4 +192,4 @@ export const OwnershipTab: React.FC<{
       )}
     </>
   );
-};
+}

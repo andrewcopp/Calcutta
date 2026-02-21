@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from moneyball.db.connection import get_db_connection
+from moneyball.db.readers import read_latest_predicted_team_values
 
 logger = logging.getLogger(__name__)
 
@@ -77,41 +78,35 @@ def get_team_id_map(tournament_id: str) -> Dict[str, str]:
             return {row[0]: str(row[1]) for row in cur.fetchall()}
 
 
-def _get_expected_points_from_predictions(cur, calcutta_id: str) -> Dict[str, float]:
+def _get_expected_points_from_predictions(calcutta_id: str) -> Dict[str, float]:
     """
     Try to get expected points from Go-generated predictions.
 
+    Resolves calcutta_id to tournament_id, then delegates to the canonical
+    read_latest_predicted_team_values function in readers.py.
+
     Args:
-        cur: Database cursor.
         calcutta_id: The calcutta to look up.
 
     Returns:
         Dict mapping team_slug to expected_points, or empty dict
         if no predictions exist.
     """
-    cur.execute("""
-        WITH calcutta_ctx AS (
-            SELECT c.id AS calcutta_id, t.id AS tournament_id
-            FROM core.calcuttas c
-            JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-            WHERE c.id = %s AND c.deleted_at IS NULL
-        ),
-        latest_batch AS (
-            SELECT pb.id
-            FROM derived.prediction_batches pb
-            WHERE pb.tournament_id = (SELECT tournament_id FROM calcutta_ctx)
-                AND pb.deleted_at IS NULL
-            ORDER BY pb.created_at DESC
-            LIMIT 1
-        )
-        SELECT s.slug AS team_slug, ptv.expected_points::float
-        FROM derived.predicted_team_values ptv
-        JOIN core.teams t ON t.id = ptv.team_id AND t.deleted_at IS NULL
-        JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-        WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
-            AND ptv.deleted_at IS NULL
-    """, (calcutta_id,))
-    return {row[0]: row[1] for row in cur.fetchall()}
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT t.id
+                FROM core.calcuttas c
+                JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
+                WHERE c.id = %s AND c.deleted_at IS NULL
+            """, (calcutta_id,))
+            row = cur.fetchone()
+            if not row:
+                return {}
+            tournament_id = str(row[0])
+
+    rows = read_latest_predicted_team_values(tournament_id)
+    return {r["team_slug"]: r["expected_points"] for r in rows}
 
 
 def _get_expected_points_from_simulations(cur, calcutta_id: str) -> Dict[str, float]:
@@ -177,28 +172,27 @@ def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
     First tries to use Go-generated predictions from derived.predicted_team_values.
     Falls back to simulation-based calculation if no predictions exist.
     """
+    result = _get_expected_points_from_predictions(calcutta_id)
+    if result:
+        logger.info(
+            "Using Go-generated predictions for calcutta %s (%d teams)",
+            calcutta_id,
+            len(result),
+        )
+        return result
+
+    logger.warning(
+        "No prediction batch found for calcutta %s, falling back to simulation query",
+        calcutta_id,
+    )
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            result = _get_expected_points_from_predictions(cur, calcutta_id)
-            if result:
-                logger.info(
-                    "Using Go-generated predictions for calcutta %s (%d teams)",
-                    calcutta_id,
-                    len(result),
-                )
-                return result
-
-            logger.info(
-                "No Go predictions found, falling back to simulation-based "
-                "calculation for calcutta %s",
-                calcutta_id,
-            )
             result = _get_expected_points_from_simulations(cur, calcutta_id)
 
-            if not result:
-                raise ValueError(
-                    f"No prediction or simulation data for calcutta {calcutta_id}. "
-                    "Run predictions or simulations before generating market predictions."
-                )
+    if not result:
+        raise ValueError(
+            f"No prediction or simulation data for calcutta {calcutta_id}. "
+            "Run predictions or simulations before generating market predictions."
+        )
 
-            return result
+    return result

@@ -7,7 +7,7 @@ type CalcuttaEntryTeam struct {
 	ID      string          `json:"id"`
 	EntryID string          `json:"entryId"` // References CalcuttaEntry
 	TeamID  string          `json:"teamId"`  // References TournamentTeam
-	Bid     int             `json:"bid"`
+	BidPoints int             `json:"bidPoints"`
 	Created time.Time       `json:"created"`
 	Updated time.Time       `json:"updated"`
 	Deleted *time.Time      `json:"deleted,omitempty"`

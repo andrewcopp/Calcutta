@@ -205,46 +205,6 @@ class TestThatExpectedValueCalculationIsCorrect(unittest.TestCase):
         return float(ev)
 
 
-class TestThatProbabilitiesAreNormalized(unittest.TestCase):
-    """Test that probabilities are properly normalized."""
-
-    def test_that_probabilities_sum_to_one(self) -> None:
-        """All win probabilities for a team should sum to 1.0."""
-        # Simulate a team's win distribution
-        wins_distribution = {
-            0: 0.05,
-            1: 0.15,
-            2: 0.25,
-            3: 0.25,
-            4: 0.15,
-            5: 0.10,
-            6: 0.05,
-        }
-        
-        total = sum(wins_distribution.values())
-        self.assertAlmostEqual(total, 1.0, places=6)
-    
-    def test_that_no_probability_exceeds_one(self) -> None:
-        """No single outcome should have probability > 1.0."""
-        wins_distribution = {
-            0: 0.1,
-            1: 0.2,
-            2: 0.3,
-            3: 0.2,
-            4: 0.1,
-            5: 0.05,
-            6: 0.05,
-        }
-        
-        for wins, prob in wins_distribution.items():
-            self.assertLessEqual(
-                prob, 1.0, f"Probability for {wins} wins exceeds 1.0"
-            )
-            self.assertGreaterEqual(
-                prob, 0.0, f"Probability for {wins} wins is negative"
-            )
-
-
 class TestThatNCAAPointValuesAreCorrect(unittest.TestCase):
     """Test that NCAA tournament point values are correct."""
 

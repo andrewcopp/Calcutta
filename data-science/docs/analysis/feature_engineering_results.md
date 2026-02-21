@@ -55,7 +55,7 @@ Successfully identified, tested, and implemented three market behavior features 
 
 ## Implementation
 
-Added new feature set `"expanded_last_year_expected_with_market_features"` to `predicted_auction_share_of_pool.py`:
+Added new feature set `"expanded_last_year_expected_with_market_features"` to `predicted_market_share.py`:
 
 ```python
 # 1. Brand tax

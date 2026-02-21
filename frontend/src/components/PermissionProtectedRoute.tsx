@@ -1,19 +1,19 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUser } from '../contexts/useUser';
 import { ADMIN_PERMISSIONS } from '../constants/permissions';
 
 interface Props {
   permission: string;
-  children: React.ReactNode;
+  children: ReactNode;
   redirectTo?: string;
 }
 
-export const PermissionProtectedRoute: React.FC<Props> = ({
+export function PermissionProtectedRoute({
   permission,
   children,
   redirectTo = '/',
-}) => {
+}: Props) {
   const { user, hasPermission, permissionsLoading } = useUser();
 
   if (!user) {
@@ -37,4 +37,4 @@ export const PermissionProtectedRoute: React.FC<Props> = ({
   }
 
   return <>{children}</>;
-};
+}

@@ -22,7 +22,7 @@ Uses `backend/internal/platform.LoadConfigFromEnv()`.
 Auth:
 
 - `AUTH_MODE` (`legacy` | `cognito` | `dev`; default: `legacy`)
-- If `AUTH_MODE != cognito`: `JWT_SECRET` (defaults to `dev-jwt-secret` when `NODE_ENV=development`)
+- If `AUTH_MODE != cognito`: `JWT_SECRET` (required in all environments)
 - If `AUTH_MODE = cognito`: `COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `COGNITO_APP_CLIENT_ID`
 
 Token TTLs:

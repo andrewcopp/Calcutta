@@ -49,16 +49,16 @@ A bracket-consistent set of matchup probabilities, including:
 - `<snapshot_dir>/games.parquet`
 - `<snapshot_dir>/teams.parquet`
 
-## Artifact: predicted_auction_share_of_pool
+## Artifact: predicted_market_share
 
 ### What it represents
 A normalized market-belief distribution over teams: predicted share of total auction spend.
 
 ### File
-- `predicted_auction_share_of_pool.parquet`
+- `predicted_market_share.parquet`
 
 ### Required columns
-- `predicted_auction_share_of_pool`
+- `predicted_market_share`
 
 Optional identity columns (if present they are carried through)
 - `snapshot`
@@ -72,9 +72,9 @@ Optional identity columns (if present they are carried through)
 - `kenpom_net`
 
 ### Invariants
-- `predicted_auction_share_of_pool` is finite
-- `predicted_auction_share_of_pool` is non-negative
-- `predicted_auction_share_of_pool` sums to 1 across all rows (within tolerance)
+- `predicted_market_share` is finite
+- `predicted_market_share` is non-negative
+- `predicted_market_share` sums to 1 across all rows (within tolerance)
 
 ### Upstream inputs
 - Uses the Option-A `out_root` layout (snapshot directory names).
@@ -108,7 +108,7 @@ team value estimates and outputs a concrete portfolio.
 Optional modeling/debug columns (if present they are carried through)
 - `expected_team_points`
 - `predicted_team_total_bids`
-- `predicted_auction_share_of_pool`
+- `predicted_market_share`
 - `score`
 
 ### Invariants
@@ -125,7 +125,7 @@ runner/optimizer rather than the static artifact contract):
 
 ### Upstream inputs
 - `predicted_game_outcomes.parquet`
-- `predicted_auction_share_of_pool.parquet`
+- `predicted_market_share.parquet`
 
 ## Artifact: simulated_entry_outcomes
 
@@ -203,6 +203,6 @@ performance into actionable investment insights.
 ### Upstream inputs
 - Artifacts:
   - `predicted_game_outcomes.parquet`
-  - `predicted_auction_share_of_pool.parquet`
+  - `predicted_market_share.parquet`
   - `recommended_entry_bids.parquet`
   - `simulated_entry_outcomes.parquet`

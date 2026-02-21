@@ -4,19 +4,7 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { Select } from '../../components/ui/Select';
 import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
 
-export const OwnershipsTab: React.FC<{
-  ownershipShowAllTeams: boolean;
-  setOwnershipShowAllTeams: (value: boolean) => void;
-  sortBy: 'points' | 'ownership' | 'bid';
-  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
-  ownershipLoading: boolean;
-  ownershipTeamsData: CalcuttaEntryTeam[];
-  getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
-  getInvestorRanking: (teamId: string) => { rank: number; total: number };
-  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
-  allCalcuttaPortfolios: (CalcuttaPortfolio & { entryName?: string })[];
-  portfolios: CalcuttaPortfolio[];
-}> = ({
+export function OwnershipsTab({
   ownershipShowAllTeams,
   setOwnershipShowAllTeams,
   sortBy,
@@ -28,7 +16,19 @@ export const OwnershipsTab: React.FC<{
   allCalcuttaPortfolioTeams,
   allCalcuttaPortfolios,
   portfolios,
-}) => {
+}: {
+  ownershipShowAllTeams: boolean;
+  setOwnershipShowAllTeams: (value: boolean) => void;
+  sortBy: 'points' | 'ownership' | 'bid';
+  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
+  ownershipLoading: boolean;
+  ownershipTeamsData: CalcuttaEntryTeam[];
+  getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
+  getInvestorRanking: (teamId: string) => { rank: number; total: number };
+  allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
+  allCalcuttaPortfolios: (CalcuttaPortfolio & { entryName?: string })[];
+  portfolios: CalcuttaPortfolio[];
+}) {
   const currentPortfolioId = portfolios[0]?.id;
 
   const portfolioNameById = useMemo(() => {
@@ -156,4 +156,4 @@ export const OwnershipsTab: React.FC<{
       )}
     </>
   );
-};
+}

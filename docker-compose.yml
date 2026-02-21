@@ -27,6 +27,7 @@ services:
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
+      - APP_ENV=development
       - DOTENV_ENABLED=false
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
@@ -61,6 +62,7 @@ services:
     working_dir: /app
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}
+      - APP_ENV=development
       - DOTENV_ENABLED=false
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
@@ -74,7 +76,7 @@ services:
     command: sh -c "pip install --break-system-packages -r /app/data-science/requirements.txt && go run ./cmd/workers -bundle-import-worker=false -lab-pipeline-worker=true"
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16.12-alpine
     ports:
       - "5432:5432"
     environment:
@@ -90,7 +92,7 @@ services:
       retries: 5
 
   mailpit:
-    image: axllent/mailpit:v1.21
+    image: axllent/mailpit:v1.28.0
     ports:
       - "1025:1025"
       - "8025:8025"

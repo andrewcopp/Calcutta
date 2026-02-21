@@ -99,7 +99,7 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			ID:      row.ID,
 			EntryID: row.EntryID,
 			TeamID:  row.TeamID,
-			Bid:     int(row.Bid),
+			BidPoints: int(row.BidPoints),
 			Created: row.CreatedAt.Time,
 			Updated: row.UpdatedAt.Time,
 			Deleted: TimestamptzToPtrTime(row.DeletedAt),
@@ -162,7 +162,7 @@ func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID stri
 			ID:        id,
 			EntryID:   entryID,
 			TeamID:    t.TeamID,
-			BidPoints: int32(t.Bid),
+			BidPoints: int32(t.BidPoints),
 			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		}

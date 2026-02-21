@@ -277,10 +277,10 @@ func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 
 	teams := make([]*models.CalcuttaEntryTeam, 0, len(req.Teams))
 	for _, t := range req.Teams {
-		teams = append(teams, &models.CalcuttaEntryTeam{EntryID: entryID, TeamID: t.TeamID, Bid: t.Bid})
+		teams = append(teams, &models.CalcuttaEntryTeam{EntryID: entryID, TeamID: t.TeamID, BidPoints: t.Bid})
 	}
 
-	if err := calcuttaapp.ValidateEntry(entry, teams); err != nil {
+	if err := calcuttaapp.ValidateEntry(calcutta, entry, teams); err != nil {
 		httperr.Write(w, r, http.StatusBadRequest, "validation_error", err.Error(), "teams")
 		return
 	}

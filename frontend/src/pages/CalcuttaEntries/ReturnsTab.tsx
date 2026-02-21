@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
-import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam, TournamentTeam } from '../../types/calcutta';
+import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
 import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
 import { createTeamSortComparator } from '../../utils/teamSort';
 
-export const ReturnsTab: React.FC<{
+export function ReturnsTab({ entries, schools, tournamentTeams, allCalcuttaPortfolios, allCalcuttaPortfolioTeams }: {
   entries: CalcuttaEntry[];
   schools: School[];
   tournamentTeams: TournamentTeam[];
   allCalcuttaPortfolios: (CalcuttaPortfolio & { entryName?: string })[];
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
-}> = ({ entries, schools, tournamentTeams, allCalcuttaPortfolios, allCalcuttaPortfolioTeams }) => {
+}) {
   const [returnsSortBy, setReturnsSortBy] = useState<'points' | 'seed' | 'region' | 'team'>('points');
 
   const entryNameById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry.name])), [entries]);
@@ -192,4 +193,4 @@ export const ReturnsTab: React.FC<{
       </div>
     </div>
   );
-};
+}

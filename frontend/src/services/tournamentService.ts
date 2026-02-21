@@ -1,4 +1,4 @@
-import { Tournament, TournamentTeam, TournamentModerator, Competition, Season } from '../types/calcutta';
+import { Tournament, TournamentTeam, TournamentModerator, Competition, Season } from '../types/tournament';
 import { apiClient } from '../api/apiClient';
 
 export const tournamentService = {

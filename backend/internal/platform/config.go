@@ -50,6 +50,10 @@ type Config struct {
 	CognitoAutoProvision            bool
 	CognitoAllowUnprovisioned       bool
 
+	// Database query safety (0 = no limit)
+	StatementTimeoutMS int
+	LockTimeoutMS      int
+
 	// Lab/Worker settings
 	DefaultNSims       int
 	ExcludedEntryName  string
@@ -225,9 +229,9 @@ func LoadConfigFromEnv() (Config, error) {
 		loadDotEnvFiles()
 	}
 
-	env := os.Getenv("NODE_ENV")
+	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = "development"
+		env = "production"
 	}
 
 	allowedOriginsEnv := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS"))
@@ -257,7 +261,7 @@ func LoadConfigFromEnv() (Config, error) {
 		return Config{}, fmt.Errorf("invalid AUTH_MODE %q (expected jwt, cognito, dev)", authMode)
 	}
 	if authMode == "dev" && env != "development" {
-		return Config{}, fmt.Errorf("AUTH_MODE=dev is only allowed when NODE_ENV=development")
+		return Config{}, fmt.Errorf("AUTH_MODE=dev is only allowed when APP_ENV=development")
 	}
 
 	accessTTLSeconds := 900
@@ -299,6 +303,9 @@ func LoadConfigFromEnv() (Config, error) {
 	pgxPoolMaxConnLifetimeSeconds := envInt("PGX_POOL_MAX_CONN_LIFETIME_SECONDS", 1800, 0)
 	pgxPoolHealthCheckPeriodSeconds := envInt("PGX_POOL_HEALTH_CHECK_PERIOD_SECONDS", 30, 0)
 
+	statementTimeoutMS := envInt("STATEMENT_TIMEOUT_MS", 0, 0)
+	lockTimeoutMS := envInt("LOCK_TIMEOUT_MS", 0, 0)
+
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		dbUser := os.Getenv("DB_USER")
@@ -308,7 +315,7 @@ func LoadConfigFromEnv() (Config, error) {
 		dbPort := os.Getenv("DB_PORT")
 		dbSSLMode := os.Getenv("DB_SSLMODE")
 		if dbSSLMode == "" {
-			dbSSLMode = "disable"
+			dbSSLMode = "require"
 		}
 
 		if dbUser != "" && dbName != "" && dbHost != "" && dbPort != "" {
@@ -356,6 +363,8 @@ func LoadConfigFromEnv() (Config, error) {
 		PGXPoolMinConns:                 int32(pgxPoolMinConns),
 		PGXPoolMaxConnLifetimeSeconds:   pgxPoolMaxConnLifetimeSeconds,
 		PGXPoolHealthCheckPeriodSeconds: pgxPoolHealthCheckPeriodSeconds,
+		StatementTimeoutMS:              statementTimeoutMS,
+		LockTimeoutMS:                   lockTimeoutMS,
 		AuthMode:                        authMode,
 		JWTSecret:                       os.Getenv("JWT_SECRET"),
 		AccessTokenTTLSeconds:           accessTTLSeconds,
@@ -378,10 +387,6 @@ func LoadConfigFromEnv() (Config, error) {
 		CookieSecure:   envBoolPtr("COOKIE_SECURE"),
 		CookieSameSite: strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SAMESITE"))),
 	}
-	if env == "development" && cfg.AuthMode != "cognito" && cfg.JWTSecret == "" {
-		cfg.JWTSecret = "dev-jwt-secret"
-	}
-
 	if env != "development" {
 		if len(cfg.AllowedOrigins) == 0 {
 			return Config{}, fmt.Errorf("ALLOWED_ORIGINS or ALLOWED_ORIGIN must be set")

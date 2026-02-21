@@ -1,7 +1,7 @@
 """
 Market prior computation helpers for auction share prediction.
 
-Extracted from predict_auction_share_of_pool() to reduce function size
+Extracted from predict_market_share() to reduce function size
 and enable independent testing.
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ def compute_seed_priors(
     Compute shrinkage-regularized seed-level market share priors.
 
     Args:
-        train_team_dataset: Training data with 'seed' and 'team_share_of_pool'.
+        train_team_dataset: Training data with 'seed' and 'observed_team_share_of_pool'.
         seed_prior_k: Shrinkage strength toward the global mean.
         seed_prior_monotone: If True (default), enforce monotonically
             non-increasing priors from seed 1 to 16.
@@ -31,7 +31,7 @@ def compute_seed_priors(
         Dict mapping seed (1-16) to prior market share.
     """
     y_train_raw = pd.to_numeric(
-        train_team_dataset["team_share_of_pool"],
+        train_team_dataset["observed_team_share_of_pool"],
         errors="coerce",
     )
     tmp_y = train_team_dataset.assign(_y=y_train_raw).dropna(
@@ -80,7 +80,7 @@ def compute_program_priors(
 
     Args:
         train_team_dataset: Training data with 'school_slug' and
-            'team_share_of_pool'.
+            'observed_team_share_of_pool'.
         program_prior_k: Shrinkage strength toward the global mean.
 
     Returns:
@@ -91,7 +91,7 @@ def compute_program_priors(
         return None, None
 
     y_train_raw = pd.to_numeric(
-        train_team_dataset["team_share_of_pool"],
+        train_team_dataset["observed_team_share_of_pool"],
         errors="coerce",
     )
     tmp = train_team_dataset.copy()

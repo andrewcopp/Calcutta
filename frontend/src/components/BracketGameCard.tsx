@@ -1,4 +1,3 @@
-import React from 'react';
 import { BracketGame, BracketTeam } from '../types/bracket';
 
 interface BracketGameCardProps {
@@ -8,12 +7,12 @@ interface BracketGameCardProps {
   isLoading?: boolean;
 }
 
-export const BracketGameCard: React.FC<BracketGameCardProps> = ({
+export function BracketGameCard({
   game,
   onSelectWinner,
   onUnselectWinner,
   isLoading = false,
-}) => {
+}: BracketGameCardProps) {
   const handleTeamClick = (team: BracketTeam) => {
     if (isLoading) return;
     
@@ -95,4 +94,4 @@ export const BracketGameCard: React.FC<BracketGameCardProps> = ({
       )}
     </div>
   );
-};
+}

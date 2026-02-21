@@ -1,10 +1,6 @@
-import React from 'react';
 import { CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
 
-export const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }> = ({
-  portfolio,
-  teams,
-}) => {
+export function PortfolioScores({ portfolio, teams }: { portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }) {
   return (
     <div className="bg-white shadow rounded-lg p-6 mb-6">
       <h3 className="text-lg font-semibold mb-4">Portfolio Scores</h3>
@@ -31,4 +27,4 @@ export const PortfolioScores: React.FC<{ portfolio: CalcuttaPortfolio; teams: Ca
       </div>
     </div>
   );
-};
+}

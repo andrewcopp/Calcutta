@@ -3,15 +3,12 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -20,9 +17,6 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type adminUserListItem struct {
@@ -54,7 +48,7 @@ func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 }
 
 func (s *Server) adminUsersSetEmailHandler(w http.ResponseWriter, r *http.Request) {
-	if s.pool == nil || s.userRepo == nil {
+	if s.userRepo == nil {
 		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database not available", "")
 		return
 	}
@@ -121,8 +115,8 @@ func (s *Server) adminUsersSetEmailHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request) {
-	if s.pool == nil {
-		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+	if s.userRepo == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database not available", "")
 		return
 	}
 
@@ -155,8 +149,8 @@ func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Request) {
-	if s.pool == nil {
-		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+	if s.userRepo == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database not available", "")
 		return
 	}
 
@@ -211,12 +205,7 @@ func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err = s.pool.Exec(r.Context(), `
-		UPDATE core.users
-		SET last_invite_sent_at = $2, updated_at = $2
-		WHERE id = $1 AND deleted_at IS NULL
-	`, userID, now)
-	if err != nil {
+	if err := s.userRepo.UpdateLastInviteSentAt(r.Context(), userID, now); err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
@@ -232,98 +221,24 @@ func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *Server) generateInviteToken(ctx context.Context, userID string, now time.Time, expiresAt time.Time, setLastSent bool, lastSentOut **time.Time) (string, string, error) {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return "", "", err
-	}
-	defer tx.Rollback(ctx)
-
-	var email *string
-	var passwordHash *string
-	var lastInviteSentAt pgtype.Timestamptz
-	err = tx.QueryRow(ctx, `
-		SELECT email, password_hash, last_invite_sent_at
-		FROM core.users
-		WHERE id = $1 AND deleted_at IS NULL
-		FOR UPDATE
-	`, userID).Scan(&email, &passwordHash, &lastInviteSentAt)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", "", &apperrors.NotFoundError{Resource: "user", ID: userID}
-		}
-		return "", "", err
-	}
-	if email == nil || strings.TrimSpace(*email) == "" {
-		return "", "", &apperrors.InvalidArgumentError{Field: "email", Message: "user has no email set; assign an email first"}
-	}
-	if lastSentOut != nil {
-		if lastInviteSentAt.Valid {
-			t := lastInviteSentAt.Time.UTC()
-			*lastSentOut = &t
-		} else {
-			*lastSentOut = nil
-		}
-	}
-	if passwordHash != nil && strings.TrimSpace(*passwordHash) != "" {
-		return "", "", &apperrors.InvalidArgumentError{Field: "id", Message: "user already has a password set"}
-	}
-
-	var inviteToken string
-	var inviteHash string
-	var lastErr error
-	for i := 0; i < 3; i++ {
-		created, err := coreauth.NewInviteToken()
+	genTokenFn := func() (string, string, error) {
+		raw, err := coreauth.NewInviteToken()
 		if err != nil {
 			return "", "", err
 		}
-		createdHash := coreauth.HashInviteToken(created)
-
-		var ct pgconn.CommandTag
-		if setLastSent {
-			ct, err = tx.Exec(ctx, `
-				UPDATE core.users
-				SET
-				  status = 'requires_password_setup',
-				  invite_token_hash = $2,
-				  invite_expires_at = $3,
-				  invite_consumed_at = NULL,
-				  invited_at = COALESCE(invited_at, $4),
-				  last_invite_sent_at = $4,
-				  updated_at = $4
-				WHERE id = $1 AND deleted_at IS NULL
-			`, userID, createdHash, expiresAt, now)
-		} else {
-			ct, err = tx.Exec(ctx, `
-				UPDATE core.users
-				SET
-				  status = 'requires_password_setup',
-				  invite_token_hash = $2,
-				  invite_expires_at = $3,
-				  invite_consumed_at = NULL,
-				  invited_at = COALESCE(invited_at, $4),
-				  updated_at = $4
-				WHERE id = $1 AND deleted_at IS NULL
-			`, userID, createdHash, expiresAt, now)
-		}
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		if ct.RowsAffected() == 0 {
-			return "", "", &apperrors.NotFoundError{Resource: "user", ID: userID}
-		}
-		inviteToken = created
-		inviteHash = createdHash
-		break
-	}
-	if inviteToken == "" || inviteHash == "" {
-		return "", "", fmt.Errorf("failed to generate invite token after 3 attempts: %w", lastErr)
+		return raw, coreauth.HashInviteToken(raw), nil
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	result, err := s.userRepo.GenerateInviteToken(ctx, userID, now, expiresAt, setLastSent, genTokenFn)
+	if err != nil {
 		return "", "", err
 	}
-	return inviteToken, *email, nil
+
+	if lastSentOut != nil {
+		*lastSentOut = result.LastInviteSentAt
+	}
+
+	return result.Token, result.Email, nil
 }
 
 func buildInviteURL(base string, token string) (string, error) {
@@ -352,8 +267,8 @@ func buildInviteEmail(inviteURL string, expiresAt time.Time) (string, string) {
 }
 
 func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
-	if s.pool == nil {
-		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
+	if s.userRepo == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database not available", "")
 		return
 	}
 
@@ -367,105 +282,29 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rows, err := s.pool.Query(r.Context(), `
-		WITH active_grants AS (
-			SELECT *
-			FROM core.grants g
-			WHERE g.revoked_at IS NULL
-			  AND g.scope_type = 'global'
-			  AND (g.expires_at IS NULL OR g.expires_at > NOW())
-		),
-		user_labels AS (
-			SELECT g.user_id, l.key
-			FROM active_grants g
-			JOIN core.labels l ON g.label_id = l.id
-			WHERE l.deleted_at IS NULL
-		),
-		user_permissions AS (
-			SELECT g.user_id, p.key
-			FROM active_grants g
-			JOIN core.permissions p ON g.permission_id = p.id
-			WHERE p.deleted_at IS NULL
-			UNION
-			SELECT g.user_id, p2.key
-			FROM active_grants g
-			JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-			JOIN core.label_permissions lp ON lp.label_id = l.id
-			JOIN core.permissions p2 ON lp.permission_id = p2.id AND p2.deleted_at IS NULL
-		)
-		SELECT
-			u.id::text,
-			u.email,
-			u.first_name,
-			u.last_name,
-			u.status,
-			u.invited_at,
-			u.last_invite_sent_at,
-			u.invite_expires_at,
-			u.invite_consumed_at,
-			u.created_at,
-			u.updated_at,
-			COALESCE(array_agg(DISTINCT ul.key) FILTER (WHERE ul.key IS NOT NULL), ARRAY[]::text[]) AS labels,
-			COALESCE(array_agg(DISTINCT up.key) FILTER (WHERE up.key IS NOT NULL), ARRAY[]::text[]) AS permissions
-		FROM core.users u
-		LEFT JOIN user_labels ul ON ul.user_id = u.id
-		LEFT JOIN user_permissions up ON up.user_id = u.id
-		WHERE u.deleted_at IS NULL
-		  AND ($1 = '' OR u.status = $1)
-		GROUP BY u.id, u.email, u.first_name, u.last_name, u.status, u.invited_at, u.last_invite_sent_at, u.invite_expires_at, u.invite_consumed_at, u.created_at, u.updated_at
-		ORDER BY u.created_at DESC
-	`, statusFilter)
+	rows, err := s.userRepo.ListAdminUsers(r.Context(), statusFilter)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
-	defer rows.Close()
 
-	items := make([]adminUserListItem, 0)
-	for rows.Next() {
-		var it adminUserListItem
-		var labels []string
-		var perms []string
-
-		var invitedAt pgtype.Timestamptz
-		var lastInviteSentAt pgtype.Timestamptz
-		var inviteExpiresAt pgtype.Timestamptz
-		var inviteConsumedAt pgtype.Timestamptz
-
-		if err := rows.Scan(
-			&it.ID,
-			&it.Email,
-			&it.FirstName,
-			&it.LastName,
-			&it.Status,
-			&invitedAt,
-			&lastInviteSentAt,
-			&inviteExpiresAt,
-			&inviteConsumedAt,
-			&it.CreatedAt,
-			&it.UpdatedAt,
-			&labels,
-			&perms,
-		); err != nil {
-			httperr.WriteFromErr(w, r, err, authUserID)
-			return
-		}
-
-		it.InvitedAt = db.TimestamptzToPtrTimeUTC(invitedAt)
-		it.LastInviteSentAt = db.TimestamptzToPtrTimeUTC(lastInviteSentAt)
-		it.InviteExpiresAt = db.TimestamptzToPtrTimeUTC(inviteExpiresAt)
-		it.InviteConsumedAt = db.TimestamptzToPtrTimeUTC(inviteConsumedAt)
-
-		sort.Strings(labels)
-		sort.Strings(perms)
-		it.Labels = labels
-		it.Permissions = perms
-
-		items = append(items, it)
-	}
-	if err := rows.Err(); err != nil {
-		httperr.WriteFromErr(w, r, err, authUserID)
-		return
+	items := make([]adminUserListItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, adminUserListItem{
+			ID:               row.ID,
+			Email:            row.Email,
+			FirstName:        row.FirstName,
+			LastName:         row.LastName,
+			Status:           row.Status,
+			InvitedAt:        row.InvitedAt,
+			LastInviteSentAt: row.LastInviteSentAt,
+			InviteExpiresAt:  row.InviteExpiresAt,
+			InviteConsumedAt: row.InviteConsumedAt,
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+			Labels:           row.Labels,
+			Permissions:      row.Permissions,
+		})
 	}
 
 	response.WriteJSON(w, http.StatusOK, adminUsersListResponse{Items: items})

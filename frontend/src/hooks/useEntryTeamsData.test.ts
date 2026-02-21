@@ -5,9 +5,9 @@ import type {
   CalcuttaEntryTeam,
   CalcuttaPortfolio,
   CalcuttaPortfolioTeam,
-  TournamentTeam,
   Calcutta,
 } from '../types/calcutta';
+import type { TournamentTeam } from '../types/tournament';
 import type { EntryTeamsData } from './useEntryTeamsData';
 
 // ---------------------------------------------------------------------------

@@ -1,18 +1,6 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import pandas as pd
-
-
-_DEFAULT_POINTS_BY_WIN_INDEX: Optional[Dict[int, float]] = None
-
-
-def set_default_points_by_win_index(
-    points_by_win_index: Dict[int, float],
-) -> None:
-    global _DEFAULT_POINTS_BY_WIN_INDEX
-    _DEFAULT_POINTS_BY_WIN_INDEX = {
-        int(k): float(v) for k, v in points_by_win_index.items()
-    }
 
 
 def points_by_win_index_from_scoring_rules(
