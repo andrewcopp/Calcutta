@@ -18,7 +18,9 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 		s.registerAuthRoutes(r)
 	}
 
-	// API v1 path rewrite: /api/v1/* → /api/* (both paths work identically)
+	// API v1 path rewrite: /api/v1/* → /api/* (both paths work identically).
+	// This is NOT a versioning strategy — it is a convenience alias so that
+	// clients using either prefix reach the same handlers.
 	r.PathPrefix("/api/v1/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		req.URL.Path = "/api/" + strings.TrimPrefix(req.URL.Path, "/api/v1/")
 		req.RequestURI = req.URL.RequestURI()

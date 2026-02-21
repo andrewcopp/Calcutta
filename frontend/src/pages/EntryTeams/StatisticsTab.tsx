@@ -8,5 +8,8 @@ type StatisticsTabProps = {
 };
 
 export function StatisticsTab({ portfolios, portfolioTeams }: StatisticsTabProps) {
-  return <>{portfolios.length > 0 && <PortfolioScores portfolio={portfolios[0]} teams={portfolioTeams} />}</>;
+  if (portfolios.length === 0) {
+    return <p className="text-gray-500 text-sm py-4">No portfolio statistics available yet. Statistics appear after the tournament begins.</p>;
+  }
+  return <PortfolioScores portfolio={portfolios[0]} teams={portfolioTeams} />;
 }

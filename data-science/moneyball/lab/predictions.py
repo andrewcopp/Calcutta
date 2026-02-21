@@ -24,11 +24,18 @@ from moneyball.db.lab_helpers import (
     get_team_id_map,
     HistoricalCalcutta,
 )
+from moneyball.db.readers import (
+    read_ridge_team_dataset_for_year,
+)
 from moneyball.lab.models import (
     Entry,
     InvestmentModel,
     Prediction,
     create_entry_with_predictions,
+    get_investment_model,
+)
+from moneyball.models.predicted_market_share import (
+    predict_market_share,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,10 +61,6 @@ def _load_training_data(
         concatenated DataFrame with observed_team_share_of_pool populated.
         On failure, train_df is None and error_message describes the issue.
     """
-    from moneyball.db.readers import (
-        read_ridge_team_dataset_for_year,
-    )
-
     train_frames = []
     train_failures = 0
     for y in train_years:
@@ -109,14 +112,6 @@ def generate_market_predictions(
         has columns including team_slug and predicted_market_share.
         On failure, predictions_df is None and error_message describes the issue.
     """
-    from moneyball.db.readers import (
-        read_ridge_team_dataset_for_year,
-    )
-    from moneyball.models.predicted_market_share import (
-        predict_market_share,
-    )
-    from moneyball.lab.models import get_investment_model
-
     model = get_investment_model(model_name)
     if not model:
         return None, f"Model '{model_name}' not found"

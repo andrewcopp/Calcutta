@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -18,8 +17,6 @@ from moneyball.models.market_priors import (
     compute_program_priors,
     compute_seed_priors,
 )
-
-logger = logging.getLogger(__name__)
 
 FEATURE_SETS = [
     "basic",
@@ -52,7 +49,6 @@ def _prepare_features_set(
             "kenpom_net",
             "kenpom_o",
             "kenpom_d",
-            "kenpom_adj_t",
         ]
 
     missing = [c for c in required if c not in df.columns]
@@ -67,10 +63,6 @@ def _prepare_features_set(
     if fs != "basic":
         base["kenpom_o"] = pd.to_numeric(base["kenpom_o"], errors="coerce")
         base["kenpom_d"] = pd.to_numeric(base["kenpom_d"], errors="coerce")
-        base["kenpom_adj_t"] = pd.to_numeric(
-            base["kenpom_adj_t"],
-            errors="coerce",
-        )
 
     if fs == "optimal":
         base = prepare_optimal_v1_features(df, base)

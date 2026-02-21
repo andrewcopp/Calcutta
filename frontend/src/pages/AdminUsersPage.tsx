@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import type { AdminUserListItem } from '../types/admin';
 import { queryKeys } from '../queryKeys';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -60,7 +61,7 @@ function formatStatusLabel(status: string): string {
 export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, flash] = useFlashMessage();
 
   const [emailModalUser, setEmailModalUser] = useState<AdminUserListItem | null>(null);
   const [inviteModalUser, setInviteModalUser] = useState<AdminUserListItem | null>(null);
@@ -74,16 +75,14 @@ export function AdminUsersPage() {
 
   const handleSetEmail = async (userId: string, email: string) => {
     await adminService.setUserEmail(userId, email);
-    setSuccessMessage('Email set successfully.');
+    flash('Email set successfully.');
     await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
-    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const handleSendInvite = async (userId: string) => {
     await adminService.sendInvite(userId);
-    setSuccessMessage('Invite sent successfully.');
+    flash('Invite sent successfully.');
     await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
-    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   return (

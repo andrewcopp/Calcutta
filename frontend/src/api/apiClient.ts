@@ -24,7 +24,9 @@ function resolveApiUrl(): string {
 export const API_URL = resolveApiUrl();
 const API_BASE_URL = `${API_URL}/api`;
 
-const ACCESS_TOKEN_KEY = 'accessToken';
+export const ACCESS_TOKEN_KEY = 'accessToken';
+export const USER_KEY = 'user';
+export const PERMISSIONS_KEY = 'permissions';
 
 function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -67,7 +69,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
       setAccessToken(tok);
       if (body?.user) {
-        localStorage.setItem('user', JSON.stringify(body.user));
+        localStorage.setItem(USER_KEY, JSON.stringify(body.user));
       }
 
       return tok;
@@ -102,7 +104,7 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
   const refreshed = await refreshAccessToken();
   if (!refreshed) {
     setAccessToken(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem(USER_KEY);
     if (typeof window !== 'undefined') {
       console.warn('Session expired, redirecting to login');
       window.location.href = '/login?expired=true';
@@ -116,7 +118,7 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
   const retried = await fetch(url, { ...init, headers: retryHeaders });
   if (retried.status === 401) {
     setAccessToken(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem(USER_KEY);
     if (typeof window !== 'undefined') {
       console.warn('Session expired after retry, redirecting to login');
       window.location.href = '/login?expired=true';

@@ -1,4 +1,5 @@
 export const PERMISSIONS = {
+  ADMIN: 'admin',
   ADMIN_USERS_READ: 'admin.users.read',
   ADMIN_API_KEYS_WRITE: 'admin.api_keys.write',
   ADMIN_BUNDLES_EXPORT: 'admin.bundles.export',

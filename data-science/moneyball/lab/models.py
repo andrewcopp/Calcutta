@@ -98,7 +98,7 @@ def create_investment_model(
 
     Args:
         name: Unique name for the model (e.g. "ridge-v3-shrunk")
-        kind: Model type (ridge, random_forest, xgboost, oracle, naive_ev)
+        kind: Model type (ridge, naive_ev, oracle)
         params: Model hyperparameters
         notes: Free-form notes about the model
 

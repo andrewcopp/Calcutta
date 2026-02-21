@@ -2,6 +2,26 @@ package models
 
 import "time"
 
+// Default constraints for new calcuttas.
+const (
+	DefaultMinTeams     = 3
+	DefaultMaxTeams     = 10
+	DefaultMaxBidPoints = 50
+)
+
+// ApplyDefaults fills in zero-value constraint fields with sensible defaults.
+func (c *Calcutta) ApplyDefaults() {
+	if c.MinTeams == 0 {
+		c.MinTeams = DefaultMinTeams
+	}
+	if c.MaxTeams == 0 {
+		c.MaxTeams = DefaultMaxTeams
+	}
+	if c.MaxBidPoints == 0 {
+		c.MaxBidPoints = DefaultMaxBidPoints
+	}
+}
+
 // Calcutta represents an auction system for a tournament
 type Calcutta struct {
 	ID           string     `json:"id"`

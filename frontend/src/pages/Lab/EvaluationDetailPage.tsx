@@ -189,18 +189,6 @@ export function EvaluationDetailPage() {
         )}
       </Card>
 
-      <Card>
-        <h2 className="text-lg font-semibold mb-3">Navigation</h2>
-        <div className="flex gap-4">
-          <button
-            type="button"
-            className="text-blue-600 hover:underline text-sm"
-            onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.modelName)}/calcutta/${encodeURIComponent(evaluation.calcuttaId)}`)}
-          >
-            View Entry Details
-          </button>
-        </div>
-      </Card>
     </PageContainer>
   );
 }

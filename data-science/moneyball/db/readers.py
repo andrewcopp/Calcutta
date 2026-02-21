@@ -10,6 +10,5 @@ from moneyball.db.readers_ridge import (  # noqa: F401
 from moneyball.db.readers_predictions import (  # noqa: F401
     PredictedTeamValue,
     read_latest_predicted_team_values,
-    read_analytical_values_from_db,
     enrich_with_analytical_probabilities,
 )

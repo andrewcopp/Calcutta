@@ -6,14 +6,11 @@ training/inference datasets for the ridge regression model.
 """
 from __future__ import annotations
 
-import logging
 from typing import Optional, List, Any
 
 import pandas as pd
 
 from moneyball.db.connection import get_db_connection
-
-logger = logging.getLogger(__name__)
 
 
 def _read_latest_core_tournament_id_for_year(conn, year: int) -> Optional[str]:
@@ -125,8 +122,7 @@ def _build_team_dataset_query(
             tt.region::text AS region,
             COALESCE(k.net_rtg, 0)::float8 AS kenpom_net,
             COALESCE(k.o_rtg, 0)::float8 AS kenpom_o,
-            COALESCE(k.d_rtg, 0)::float8 AS kenpom_d,
-            COALESCE(k.adj_t, 0)::float8 AS kenpom_adj_t{extra_select}
+            COALESCE(k.d_rtg, 0)::float8 AS kenpom_d{extra_select}
         FROM core.teams tt
         JOIN core.schools s
           ON s.id = tt.school_id

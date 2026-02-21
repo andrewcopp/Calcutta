@@ -308,7 +308,7 @@ func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, t
 	defer r.Close()
 
 	calcuttaKey := "calcutta-" + calcuttaID
-	header := []string{"calcutta_key", "entry_key", "team_key", "bid_amount"}
+	header := []string{"calcutta_key", "entry_key", "team_key", "bid_points"}
 	rows := make([][]string, 0)
 
 	for r.Next() {

@@ -99,15 +99,7 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if calcutta.MinTeams == 0 {
-		calcutta.MinTeams = 3
-	}
-	if calcutta.MaxTeams == 0 {
-		calcutta.MaxTeams = 10
-	}
-	if calcutta.MaxBidPoints == 0 {
-		calcutta.MaxBidPoints = 50
-	}
+	calcutta.ApplyDefaults()
 
 	// Validate constraints
 	if calcutta.MinTeams < 1 || calcutta.MinTeams > 68 {

@@ -107,6 +107,14 @@ func (w *LabPipelineWorker) failLabPipelineJob(ctx context.Context, job *labPipe
 }
 
 func (w *LabPipelineWorker) resolvePythonScript(relativePath string) string {
+	// Prefer DATA_SCIENCE_DIR env var for deterministic resolution in cloud.
+	if base := os.Getenv("DATA_SCIENCE_DIR"); base != "" {
+		abs := filepath.Join(base, relativePath)
+		if _, err := os.Stat(abs); err == nil {
+			return abs
+		}
+	}
+
 	candidates := []string{
 		relativePath,
 		"../" + relativePath,

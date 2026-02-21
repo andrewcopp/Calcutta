@@ -6,7 +6,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { EntryTab } from './EntryTeams/EntryTab';
+import { EntryRosterCard } from '../components/EntryRosterCard';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -134,7 +134,7 @@ export function EntryTeamsPage() {
         </TabsList>
 
         <TabsContent value="entry">
-          <EntryTab
+          <EntryRosterCard
             entryId={entryId!}
             calcuttaId={calcuttaId!}
             entryStatus={currentUserEntry?.status ?? 'incomplete'}

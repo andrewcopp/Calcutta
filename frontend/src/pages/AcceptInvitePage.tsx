@@ -132,7 +132,7 @@ export function AcceptInvitePage() {
         </div>
 
         <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-2 text-center">Welcome to March Markets</h2>
+          <h2 className="text-2xl font-bold mb-2 text-center">Welcome to Calcutta</h2>
           <p className="text-gray-600 mb-6 text-center">Set your password to complete your account setup.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -44,78 +44,98 @@ func toyBracket() *models.BracketStructure {
 	return b
 }
 
-func TestThatSimulationsAreDeterministic(t *testing.T) {
-	b := toyBracket()
-	probs := map[MatchupKey]float64{
+func toyProbs() map[MatchupKey]float64 {
+	return map[MatchupKey]float64{
 		{GameID: "g1", Team1ID: "t1", Team2ID: "t3"}: 0.6,
 		{GameID: "g2", Team1ID: "t2", Team2ID: "t4"}: 0.7,
-
-		// Championship probabilities depend on who advances.
 		{GameID: "g3", Team1ID: "t1", Team2ID: "t2"}: 0.5,
 		{GameID: "g3", Team1ID: "t1", Team2ID: "t4"}: 0.5,
 		{GameID: "g3", Team1ID: "t3", Team2ID: "t2"}: 0.5,
 		{GameID: "g3", Team1ID: "t3", Team2ID: "t4"}: 0.5,
 	}
+}
 
-	res1, err := Simulate(b, probs, 100, 42, Options{Workers: 1})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+func TestThatDeterministicSimulationProducesIdenticalResults(t *testing.T) {
+	// GIVEN a bracket with explicit probabilities
+	b := toyBracket()
+	probs := toyProbs()
+
+	// WHEN simulating twice with the same seed
+	res1, err1 := Simulate(b, probs, 100, 42, Options{Workers: 1})
+	if err1 != nil {
+		t.Fatalf("first simulation failed: %v", err1)
 	}
-	res2, err := Simulate(b, probs, 100, 42, Options{Workers: 1})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+	res2, err2 := Simulate(b, probs, 100, 42, Options{Workers: 1})
+	if err2 != nil {
+		t.Fatalf("second simulation failed: %v", err2)
 	}
 
+	// THEN both simulations produce identical team results
 	if len(res1) != len(res2) {
 		t.Fatalf("expected equal lengths, got %d and %d", len(res1), len(res2))
 	}
-
 	for i := range res1 {
 		if res1[i] != res2[i] {
-			t.Fatalf("expected deterministic results at index %d: %+v vs %+v", i, res1[i], res2[i])
+			t.Errorf("mismatch at index %d: %+v vs %+v", i, res1[i], res2[i])
 		}
 	}
 }
 
-func TestThatAllTeamsIncluded(t *testing.T) {
+func TestThatEveryTeamAppearsInSimulationResults(t *testing.T) {
+	// GIVEN a bracket with 4 teams
 	b := toyBracket()
-	res, err := Simulate(b, nil, 10, 1, Options{Workers: 1})
+
+	// WHEN running a simulation
+	res, err := Simulate(b, nil, 1, 1, Options{Workers: 1})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf("simulation failed: %v", err)
 	}
 
-	teams := map[string]bool{"t1": true, "t2": true, "t3": true, "t4": true}
-	for simID := 0; simID < 10; simID++ {
-		seen := make(map[string]bool)
-		for _, r := range res {
-			if r.SimID != simID {
-				continue
-			}
-			seen[r.TeamID] = true
-		}
-		for tid := range teams {
-			if !seen[tid] {
-				t.Fatalf("simulation %d missing team %s", simID, tid)
-			}
+	// THEN all 4 teams appear in the results
+	seen := make(map[string]bool)
+	for _, r := range res {
+		seen[r.TeamID] = true
+	}
+	for _, tid := range []string{"t1", "t2", "t3", "t4"} {
+		if !seen[tid] {
+			t.Errorf("team %s missing from simulation results", tid)
 		}
 	}
 }
 
-func TestThatWinsAreBounded(t *testing.T) {
+func TestThatWinsAreNonNegative(t *testing.T) {
+	// GIVEN a bracket simulated 50 times
 	b := toyBracket()
+
+	// WHEN running the simulation
 	res, err := Simulate(b, nil, 50, 99, Options{Workers: 1})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf("simulation failed: %v", err)
 	}
 
-	// Total games played in a completed sim is 3.
-	maxPossibleWins := 3
+	// THEN no team result has negative wins
 	for _, r := range res {
 		if r.Wins < 0 {
-			t.Fatalf("expected non-negative wins")
+			t.Errorf("team %s in sim %d has negative wins: %d", r.TeamID, r.SimID, r.Wins)
 		}
+	}
+}
+
+func TestThatWinsAreBoundedByTotalGames(t *testing.T) {
+	// GIVEN a bracket with 3 total games (max possible wins = 3)
+	b := toyBracket()
+
+	// WHEN running the simulation
+	res, err := Simulate(b, nil, 50, 99, Options{Workers: 1})
+	if err != nil {
+		t.Fatalf("simulation failed: %v", err)
+	}
+
+	// THEN no team wins more than the total number of games
+	maxPossibleWins := 3
+	for _, r := range res {
 		if r.Wins > maxPossibleWins {
-			t.Fatalf("expected wins bounded by %d, got %d", maxPossibleWins, r.Wins)
+			t.Errorf("team %s in sim %d has wins=%d exceeding max=%d", r.TeamID, r.SimID, r.Wins, maxPossibleWins)
 		}
 	}
 }

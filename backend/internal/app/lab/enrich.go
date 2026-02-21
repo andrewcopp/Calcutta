@@ -1,8 +1,6 @@
 package lab
 
 import (
-	"log/slog"
-
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
@@ -65,11 +63,6 @@ func buildTeamExpectedPoints(raw *models.LabEntryRaw) map[string]float64 {
 	}
 
 	// Fallback: seed-based estimates (only used when no predictions exist).
-	slog.Warn("lab_entry_using_seed_fallback",
-		"entry_id", raw.ID,
-		"model_name", raw.ModelName,
-		"calcutta_name", raw.CalcuttaName,
-	)
 	for tid, ti := range raw.Teams {
 		m[tid] = SeedExpectedPoints[ti.Seed]
 	}

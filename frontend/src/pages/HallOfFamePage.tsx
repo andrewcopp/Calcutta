@@ -18,26 +18,31 @@ import {
 } from './HallOfFame/columns';
 
 export function HallOfFamePage() {
+  const [activeTab, setActiveTab] = useState('bestTeams');
   const [hideInactiveCareers, setHideInactiveCareers] = useState<boolean>(false);
 
   const bestTeamsQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestTeams(200),
     queryFn: () => hallOfFameService.getBestTeams(200),
+    enabled: activeTab === 'bestTeams',
   });
 
   const bestInvestmentsQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestInvestments(200),
     queryFn: () => hallOfFameService.getBestInvestments(200),
+    enabled: activeTab === 'bestInvestments',
   });
 
   const bestEntriesQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestEntries(200),
     queryFn: () => hallOfFameService.getBestEntries(200),
+    enabled: activeTab === 'bestEntries',
   });
 
   const bestCareersQuery = useQuery({
     queryKey: queryKeys.hallOfFame.bestCareers(200),
     queryFn: () => hallOfFameService.getBestCareers(200),
+    enabled: activeTab === 'bestCareers',
   });
 
   const filteredCareers = useMemo(() => {
@@ -65,7 +70,7 @@ export function HallOfFamePage() {
         }
       />
 
-      <Tabs defaultValue="bestTeams">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="bestTeams">Best Teams</TabsTrigger>
           <TabsTrigger value="bestInvestments">Best Investments</TabsTrigger>

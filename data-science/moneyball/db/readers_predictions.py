@@ -84,22 +84,6 @@ def read_latest_predicted_team_values(
             ]
 
 
-def read_analytical_values_from_db(
-    tournament_id: str,
-) -> Dict[str, Tuple[float, float]]:
-    """
-    Get analytical values from Go-generated predictions in the database.
-
-    Returns:
-        Dict mapping team_id -> (p_championship, expected_points)
-    """
-    rows = read_latest_predicted_team_values(tournament_id)
-    return {
-        row.team_id: (row.p_championship, row.expected_points)
-        for row in rows
-    }
-
-
 def enrich_with_analytical_probabilities(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -132,13 +116,18 @@ def enrich_with_analytical_probabilities(
         )
 
     # Get analytical values from database
-    analytical_values = read_analytical_values_from_db(tournament_id)
+    rows = read_latest_predicted_team_values(tournament_id)
+    analytical_values: Dict[str, Tuple[float, float]] = {
+        row.team_id: (row.p_championship, row.expected_points)
+        for row in rows
+    }
 
     if not analytical_values:
-        logger.warning(
-            "No Go predictions found for tournament %s. "
-            "Setting analytical values to 0.",
-            tournament_id,
+        raise ValueError(
+            f"No Go predictions found for tournament {tournament_id}. "
+            "Run the prediction pipeline before training models that use "
+            "analytical features (derived.prediction_batches / "
+            "derived.predicted_team_values)."
         )
 
     # Add columns to dataframe

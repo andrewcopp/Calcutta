@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../../services/calcuttaService';
 import { queryKeys } from '../../queryKeys';
@@ -24,19 +24,12 @@ interface SettingsFormProps {
 export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormProps) {
   const queryClient = useQueryClient();
 
-  const [form, setForm] = useState<SettingsFormValues | null>(null);
-
-  // Initialize form when data loads
-  useEffect(() => {
-    if (calcutta && !form) {
-      setForm({
-        name: calcutta.name,
-        minTeams: calcutta.minTeams,
-        maxTeams: calcutta.maxTeams,
-        maxBidPoints: calcutta.maxBidPoints,
-      });
-    }
-  }, [calcutta, form]);
+  const [form, setForm] = useState<SettingsFormValues>({
+    name: calcutta.name,
+    minTeams: calcutta.minTeams,
+    maxTeams: calcutta.maxTeams,
+    maxBidPoints: calcutta.maxBidPoints,
+  });
 
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof calcuttaService.updateCalcutta>[1]) => {
@@ -50,11 +43,8 @@ export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form) return;
     updateMutation.mutate(form);
   };
-
-  if (!form) return null;
 
   return (
     <>
