@@ -1,15 +1,15 @@
 export type AdminUserListItem = {
   id: string;
   email: string | null;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   status: string;
-  invited_at: string | null;
-  last_invite_sent_at: string | null;
-  invite_expires_at: string | null;
-  invite_consumed_at: string | null;
-  created_at: string;
-  updated_at: string;
+  invitedAt: string | null;
+  lastInviteSentAt: string | null;
+  inviteExpiresAt: string | null;
+  inviteConsumedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
   labels: string[];
   permissions: string[];
 };
@@ -26,15 +26,15 @@ export type CreateAPIKeyResponse = {
   id: string;
   key: string;
   label?: string;
-  created_at: string;
+  createdAt: string;
 };
 
 export type APIKeyListItem = {
   id: string;
   label?: string;
-  created_at: string;
-  revoked_at?: string;
-  last_used_at?: string;
+  createdAt: string;
+  revokedAt?: string;
+  lastUsedAt?: string;
 };
 
 export type ListAPIKeysResponse = {
@@ -52,7 +52,7 @@ export type AdminInviteUserResponse = {
 export type UserResponse = {
   id: string;
   email: string | null;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   status: string;
 };

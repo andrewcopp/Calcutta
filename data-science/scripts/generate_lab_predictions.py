@@ -96,7 +96,7 @@ def main():
 
     if not model:
         if args.json_output:
-            print(json.dumps({"ok": False, "entries_created": 0, "errors": ["Model not found"]}))
+            print(json.dumps({"ok": False, "entriesCreated": 0, "errors": ["Model not found"]}))
             sys.exit(1)
         else:
             print("Error: Model not found")
@@ -115,7 +115,7 @@ def main():
         calcuttas = [c for c in calcuttas if c.id == args.calcutta_id]
         if not calcuttas:
             if args.json_output:
-                print(json.dumps({"ok": False, "entry_id": None, "error": f"Calcutta {args.calcutta_id} not found"}))
+                print(json.dumps({"ok": False, "entryId": None, "error": f"Calcutta {args.calcutta_id} not found"}))
                 sys.exit(1)
             else:
                 print(f"Error: Calcutta {args.calcutta_id} not found")
@@ -147,13 +147,13 @@ def main():
         if args.calcutta_id and entries_created == 1:
             result = {
                 "ok": True,
-                "entry_id": last_entry_id,
+                "entryId": last_entry_id,
                 "errors": errors if errors else [],
             }
         else:
             result = {
                 "ok": True,
-                "entries_created": entries_created,
+                "entriesCreated": entries_created,
                 "errors": errors if errors else [],
             }
         print(json.dumps(result))

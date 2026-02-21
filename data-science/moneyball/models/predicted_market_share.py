@@ -137,6 +137,121 @@ def _predict_ridge(X: pd.DataFrame, coef: np.ndarray) -> np.ndarray:
     return Xv @ coef
 
 
+def _compute_priors_for_feature_set(
+    train_team_dataset: pd.DataFrame,
+    feature_set: str,
+    *,
+    seed_prior_k: float,
+    seed_prior_monotone: Optional[bool],
+    program_prior_k: float,
+) -> Tuple[
+    Optional[Dict[int, float]],
+    Optional[Dict[str, float]],
+    Optional[Dict[str, int]],
+]:
+    """Compute seed and program priors for the optimal_v2 feature set.
+
+    Returns a tuple of (seed_prior_by_seed, program_share_mean_by_slug,
+    program_share_count_by_slug). All values are None for non-v2 feature sets.
+    """
+    if feature_set != "optimal_v2":
+        return None, None, None
+
+    seed_prior_by_seed = compute_seed_priors(
+        train_team_dataset,
+        seed_prior_k=seed_prior_k,
+        seed_prior_monotone=seed_prior_monotone,
+    )
+    program_share_mean_by_slug, program_share_count_by_slug = (
+        compute_program_priors(
+            train_team_dataset,
+            program_prior_k=program_prior_k,
+        )
+    )
+    return seed_prior_by_seed, program_share_mean_by_slug, program_share_count_by_slug
+
+
+def _enrich_datasets_for_v3(
+    train_team_dataset: pd.DataFrame,
+    predict_team_dataset: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Enrich training and prediction datasets with analytical probabilities for v3.
+
+    The analytical calculation expects a single 68-team tournament, so multi-year
+    training data must be processed per-snapshot. Columns that already exist
+    (e.g. pre-populated by tests) are left untouched.
+
+    Returns copies of both datasets with analytical probability columns added.
+    """
+    train_needs = "predicted_p_championship" not in train_team_dataset.columns
+    pred_needs = "predicted_p_championship" not in predict_team_dataset.columns
+
+    if train_needs:
+        if "snapshot" in train_team_dataset.columns:
+            enriched_frames = []
+            for _snapshot, group in train_team_dataset.groupby("snapshot"):
+                enriched = _enrich_with_analytical_probabilities(group.copy())
+                enriched_frames.append(enriched)
+            train_team_dataset = pd.concat(enriched_frames, ignore_index=True)
+        else:
+            train_team_dataset = _enrich_with_analytical_probabilities(
+                train_team_dataset
+            )
+
+    if pred_needs:
+        predict_team_dataset = _enrich_with_analytical_probabilities(
+            predict_team_dataset
+        )
+
+    return train_team_dataset, predict_team_dataset
+
+
+def _postprocess_predictions(
+    yhat: np.ndarray,
+    predict_team_dataset: pd.DataFrame,
+    target_transform: str,
+) -> pd.DataFrame:
+    """Post-process raw ridge predictions into normalized market share output.
+
+    Applies inverse transform (if log), clamps to non-negative, normalizes to
+    sum to 1.0, and selects the standard output columns.
+    """
+    yhat = np.asarray(yhat, dtype=float)
+    yhat = np.where(np.isfinite(yhat), yhat, 0.0)
+
+    if target_transform == "log":
+        yhat = np.exp(np.clip(yhat, -20.0, 20.0))
+
+    yhat = np.maximum(yhat, 0.0)
+
+    s = float(yhat.sum())
+    if s > 0:
+        yhat = yhat / s
+    else:
+        yhat = np.ones_like(yhat, dtype=float) / float(len(yhat))
+
+    out = predict_team_dataset.copy()
+    out["predicted_market_share"] = yhat.astype(float)
+
+    cols = [
+        c
+        for c in [
+            "snapshot",
+            "tournament_key",
+            "calcutta_key",
+            "team_key",
+            "school_name",
+            "school_slug",
+            "seed",
+            "region",
+            "kenpom_net",
+            "predicted_market_share",
+        ]
+        if c in out.columns
+    ]
+    return out[cols].copy()
+
+
 def predict_market_share(
     *,
     train_team_dataset: pd.DataFrame,
@@ -171,50 +286,20 @@ def predict_market_share(
             "Recommended: seed_prior_k=20, program_prior_k=50."
         )
 
-    seed_prior_by_seed: Optional[Dict[int, float]] = None
-    program_share_mean_by_slug: Optional[Dict[str, float]] = None
-    program_share_count_by_slug: Optional[Dict[str, int]] = None
-
-    if fs == "optimal_v2":
-        seed_prior_by_seed = compute_seed_priors(
+    seed_prior_by_seed, program_share_mean_by_slug, program_share_count_by_slug = (
+        _compute_priors_for_feature_set(
             train_team_dataset,
+            fs,
             seed_prior_k=seed_prior_k,
             seed_prior_monotone=seed_prior_monotone,
+            program_prior_k=program_prior_k,
         )
-        program_share_mean_by_slug, program_share_count_by_slug = (
-            compute_program_priors(
-                train_team_dataset,
-                program_prior_k=program_prior_k,
-            )
-        )
+    )
 
-    # Enrich with analytical probabilities for optimal_v3
-    # IMPORTANT: Must process each year/snapshot separately since the analytical
-    # calculation expects a single 68-team tournament, not concatenated multi-year data
-    # Skip enrichment when columns already exist (e.g. pre-populated by tests)
     if fs == "optimal_v3":
-        train_needs = "predicted_p_championship" not in train_team_dataset.columns
-        pred_needs = "predicted_p_championship" not in predict_team_dataset.columns
-
-        if train_needs:
-            if "snapshot" in train_team_dataset.columns:
-                # Process each year separately, then concatenate
-                enriched_frames = []
-                for snapshot, group in train_team_dataset.groupby("snapshot"):
-                    enriched = _enrich_with_analytical_probabilities(
-                        group.copy()
-                    )
-                    enriched_frames.append(enriched)
-                train_team_dataset = pd.concat(enriched_frames, ignore_index=True)
-            else:
-                # Single tournament - process directly
-                train_team_dataset = _enrich_with_analytical_probabilities(
-                    train_team_dataset
-                )
-        if pred_needs:
-            predict_team_dataset = _enrich_with_analytical_probabilities(
-                predict_team_dataset
-            )
+        train_team_dataset, predict_team_dataset = _enrich_datasets_for_v3(
+            train_team_dataset, predict_team_dataset
+        )
 
     X_train = _prepare_features_set(
         train_team_dataset,
@@ -247,38 +332,6 @@ def predict_market_share(
         raise ValueError("not enough valid training rows to fit model")
 
     yhat = _predict_ridge(X_pred, coef)
-    yhat = np.asarray(yhat, dtype=float)
-    yhat = np.where(np.isfinite(yhat), yhat, 0.0)
 
-    if tt == "log":
-        yhat = np.exp(np.clip(yhat, -20.0, 20.0))
-
-    yhat = np.maximum(yhat, 0.0)
-
-    s = float(yhat.sum())
-    if s > 0:
-        yhat = yhat / s
-    else:
-        yhat = np.ones_like(yhat, dtype=float) / float(len(yhat))
-
-    out = predict_team_dataset.copy()
-    out["predicted_market_share"] = yhat.astype(float)
-
-    cols = [
-        c
-        for c in [
-            "snapshot",
-            "tournament_key",
-            "calcutta_key",
-            "team_key",
-            "school_name",
-            "school_slug",
-            "seed",
-            "region",
-            "kenpom_net",
-            "predicted_market_share",
-        ]
-        if c in out.columns
-    ]
-    return out[cols].copy()
+    return _postprocess_predictions(yhat, predict_team_dataset, tt)
 

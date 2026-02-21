@@ -22,15 +22,15 @@ import (
 type adminUserListItem struct {
 	ID               string     `json:"id"`
 	Email            *string    `json:"email"`
-	FirstName        string     `json:"first_name"`
-	LastName         string     `json:"last_name"`
+	FirstName        string     `json:"firstName"`
+	LastName         string     `json:"lastName"`
 	Status           string     `json:"status"`
-	InvitedAt        *time.Time `json:"invited_at"`
-	LastInviteSentAt *time.Time `json:"last_invite_sent_at"`
-	InviteExpiresAt  *time.Time `json:"invite_expires_at"`
-	InviteConsumedAt *time.Time `json:"invite_consumed_at"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	InvitedAt        *time.Time `json:"invitedAt"`
+	LastInviteSentAt *time.Time `json:"lastInviteSentAt"`
+	InviteExpiresAt  *time.Time `json:"inviteExpiresAt"`
+	InviteConsumedAt *time.Time `json:"inviteConsumedAt"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
 	Labels           []string   `json:"labels"`
 	Permissions      []string   `json:"permissions"`
 }

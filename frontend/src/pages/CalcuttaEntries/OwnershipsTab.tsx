@@ -29,7 +29,7 @@ interface OwnershipTeamCard {
   topOwners: OwnershipSlice[];
 }
 
-export function OwnershipTab({
+export function OwnershipsTab({
   entries,
   schools,
   tournamentTeams,

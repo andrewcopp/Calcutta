@@ -90,3 +90,48 @@ func (q *Queries) ListPortfoliosByEntryID(ctx context.Context, entryID string) (
 	}
 	return items, nil
 }
+
+const listPortfoliosByEntryIDs = `-- name: ListPortfoliosByEntryIDs :many
+SELECT
+    id,
+    entry_id,
+    created_at::timestamptz AS created_at,
+    updated_at::timestamptz AS updated_at,
+    deleted_at::timestamptz AS deleted_at
+FROM derived.portfolios
+WHERE entry_id = ANY($1::uuid[]) AND deleted_at IS NULL
+`
+
+type ListPortfoliosByEntryIDsRow struct {
+	ID        string
+	EntryID   string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+}
+
+func (q *Queries) ListPortfoliosByEntryIDs(ctx context.Context, entryIds []string) ([]ListPortfoliosByEntryIDsRow, error) {
+	rows, err := q.db.Query(ctx, listPortfoliosByEntryIDs, entryIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPortfoliosByEntryIDsRow
+	for rows.Next() {
+		var i ListPortfoliosByEntryIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntryID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

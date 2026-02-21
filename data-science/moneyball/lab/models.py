@@ -216,13 +216,13 @@ def serialize_predictions(predictions: List[Prediction]) -> List[Dict[str, Any]]
         predictions: List of Prediction objects
 
     Returns:
-        List of dicts with team_id, predicted_market_share, expected_points
+        List of dicts with teamId, predictedMarketShare, expectedPoints
     """
     return [
         {
-            "team_id": p.team_id,
-            "predicted_market_share": p.predicted_market_share,
-            "expected_points": p.expected_points,
+            "teamId": p.team_id,
+            "predictedMarketShare": p.predicted_market_share,
+            "expectedPoints": p.expected_points,
         }
         for p in predictions
     ]

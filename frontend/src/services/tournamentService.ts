@@ -18,15 +18,6 @@ export const tournamentService = {
     return apiClient.post<Tournament>('/tournaments', { competition, year, rounds });
   },
 
-  async createTournamentTeam(
-    tournamentId: string,
-    schoolId: string,
-    seed: number,
-    region: string = 'Unknown'
-  ): Promise<TournamentTeam> {
-    return apiClient.post<TournamentTeam>(`/tournaments/${tournamentId}/teams`, { schoolId, seed, region });
-  },
-
   async updateTournament(
     id: string,
     updates: {
@@ -45,14 +36,6 @@ export const tournamentService = {
     teams: { schoolId: string; seed: number; region: string }[]
   ): Promise<TournamentTeam[]> {
     return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/teams`, { teams });
-  },
-
-  async updateTournamentTeam(
-    tournamentId: string,
-    teamId: string,
-    updates: Partial<TournamentTeam>
-  ): Promise<TournamentTeam> {
-    return apiClient.patch<TournamentTeam>(`/tournaments/${tournamentId}/teams/${teamId}`, updates);
   },
 
   async getCompetitions(): Promise<Competition[]> {

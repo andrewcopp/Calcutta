@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Card } from '../../../components/ui/Card';
 
 interface SeedAllocationChartProps {
-  investedRows: Array<{ seed: number; our_investment: number }>;
+  investedRows: Array<{ seed: number; ourInvestment: number }>;
   totalOurInvestment: number;
 }
 
@@ -19,7 +19,7 @@ export function SeedAllocationChart({ investedRows, totalOurInvestment }: SeedAl
     return groups.map(({ name, seeds, color }) => {
       const amount = investedRows
         .filter((r) => seeds.includes(r.seed))
-        .reduce((sum, r) => sum + r.our_investment, 0);
+        .reduce((sum, r) => sum + r.ourInvestment, 0);
       return { name, amount, color, pct: totalOurInvestment > 0 ? (amount / totalOurInvestment * 100) : 0 };
     });
   }, [investedRows, totalOurInvestment]);

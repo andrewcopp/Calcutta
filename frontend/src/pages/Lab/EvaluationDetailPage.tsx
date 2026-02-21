@@ -11,7 +11,8 @@ import { labService } from '../../services/labService';
 import type { EvaluationDetail, EvaluationEntryResult } from '../../types/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
-import { formatDate, formatPayoutX, formatPct } from '../../utils/labFormatters';
+import { formatPayoutX, formatPct } from '../../utils/labFormatters';
+import { formatDate } from '../../utils/format';
 
 export function EvaluationDetailPage() {
   const { evaluationId } = useParams<{
@@ -56,13 +57,13 @@ export function EvaluationDetailPage() {
         items={[
           { label: 'Lab', href: '/lab' },
           { label: 'Evaluations', href: '/lab?tab=evaluations' },
-          { label: `${evaluation.model_name} / ${evaluation.calcutta_name}` },
+          { label: `${evaluation.modelName} / ${evaluation.calcuttaName}` },
         ]}
       />
 
       <PageHeader
         title="Evaluation Results"
-        subtitle={`${evaluation.model_name} on ${evaluation.calcutta_name}`}
+        subtitle={`${evaluation.modelName} on ${evaluation.calcuttaName}`}
       />
 
       <Card className="mb-6">
@@ -74,24 +75,24 @@ export function EvaluationDetailPage() {
               <button
                 type="button"
                 className="text-blue-600 hover:underline"
-                onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.model_name)}/calcutta/${encodeURIComponent(evaluation.calcutta_id)}`)}
+                onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.modelName)}/calcutta/${encodeURIComponent(evaluation.calcuttaId)}`)}
               >
-                {evaluation.model_name}
+                {evaluation.modelName}
               </button>
-              <span className="text-gray-500 ml-1">({evaluation.model_kind})</span>
+              <span className="text-gray-500 ml-1">({evaluation.modelKind})</span>
             </dd>
           </div>
           <div>
             <dt className="text-gray-500">Calcutta</dt>
-            <dd className="font-medium">{evaluation.calcutta_name}</dd>
+            <dd className="font-medium">{evaluation.calcuttaName}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Starting State</dt>
-            <dd className="font-medium">{evaluation.starting_state_key}</dd>
+            <dd className="font-medium">{evaluation.startingStateKey}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Simulations</dt>
-            <dd className="font-medium">{evaluation.n_sims.toLocaleString()}</dd>
+            <dd className="font-medium">{evaluation.nSims.toLocaleString()}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Seed</dt>
@@ -99,7 +100,7 @@ export function EvaluationDetailPage() {
           </div>
           <div>
             <dt className="text-gray-500">Created</dt>
-            <dd className="font-medium">{formatDate(evaluation.created_at, true)}</dd>
+            <dd className="font-medium">{formatDate(evaluation.createdAt, true)}</dd>
           </div>
         </dl>
       </Card>
@@ -110,36 +111,36 @@ export function EvaluationDetailPage() {
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">Mean Normalized Payout</div>
             <div className="text-2xl font-bold text-gray-900">
-              {formatPayoutX(evaluation.mean_normalized_payout, 4)}
+              {formatPayoutX(evaluation.meanNormalizedPayout, 4)}
             </div>
             <div className="text-xs text-gray-500 mt-1">The key metric</div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">Median Normalized Payout</div>
             <div className="text-2xl font-bold text-gray-700">
-              {formatPayoutX(evaluation.median_normalized_payout, 4)}
+              {formatPayoutX(evaluation.medianNormalizedPayout, 4)}
             </div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">P(Top 1)</div>
             <div className="text-2xl font-bold text-gray-700">
-              {formatPct(evaluation.p_top1, 2)}
+              {formatPct(evaluation.pTop1, 2)}
             </div>
             <div className="text-xs text-gray-500 mt-1">Probability of winning</div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">P(In Money)</div>
             <div className="text-2xl font-bold text-gray-700">
-              {formatPct(evaluation.p_in_money, 2)}
+              {formatPct(evaluation.pInMoney, 2)}
             </div>
             <div className="text-xs text-gray-500 mt-1">Probability of payout</div>
           </div>
         </div>
 
-        {evaluation.our_rank != null ? (
+        {evaluation.ourRank != null ? (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg text-center">
             <div className="text-sm text-blue-600 mb-1">Our Rank (median)</div>
-            <div className="text-2xl font-bold text-blue-900">#{evaluation.our_rank}</div>
+            <div className="text-2xl font-bold text-blue-900">#{evaluation.ourRank}</div>
           </div>
         ) : null}
       </Card>
@@ -164,21 +165,21 @@ export function EvaluationDetailPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {entryResults.map((entry) => {
-                  const isOurStrategy = entry.entry_name === 'Our Strategy';
+                  const isOurStrategy = entry.entryName === 'Our Strategy';
                   return (
                     <tr
-                      key={entry.entry_name}
+                      key={entry.entryName}
                       className={cn(
                         isOurStrategy && 'bg-blue-50 font-semibold'
                       )}
                     >
                       <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
                       <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
-                        {entry.entry_name}
+                        {entry.entryName}
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.mean_normalized_payout, 4)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_top1, 2)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.p_in_money, 2)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.meanNormalizedPayout, 4)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.pTop1, 2)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.pInMoney, 2)}</td>
                     </tr>
                   );
                 })}
@@ -194,7 +195,7 @@ export function EvaluationDetailPage() {
           <button
             type="button"
             className="text-blue-600 hover:underline text-sm"
-            onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.model_name)}/calcutta/${encodeURIComponent(evaluation.calcutta_id)}`)}
+            onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.modelName)}/calcutta/${encodeURIComponent(evaluation.calcuttaId)}`)}
           >
             View Entry Details
           </button>

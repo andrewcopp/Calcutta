@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { type ColumnDef } from '@tanstack/react-table';
 import { queryKeys } from '../queryKeys';
 import { hallOfFameService } from '../services/hallOfFameService';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -12,102 +11,11 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import {
-  BestTeam,
-  CareerLeaderboardRow,
-  EntryLeaderboardRow,
-  InvestmentLeaderboardRow,
-} from '../types/hallOfFame';
-import { formatDollarsFromCents } from '../utils/format';
-
-const bestTeamsColumns: ColumnDef<BestTeam, unknown>[] = [
-  { id: 'rank', header: 'Rank', cell: ({ row }) => row.index + 1, enableSorting: false },
-  { accessorKey: 'tournamentYear', header: 'Year' },
-  { accessorKey: 'seed', header: 'Seed' },
-  { accessorKey: 'schoolName', header: 'Team' },
-  { accessorKey: 'teamPoints', header: 'Points', cell: ({ row }) => row.original.teamPoints.toFixed(0) },
-  { accessorKey: 'totalBid', header: 'Total Investment', cell: ({ row }) => `${row.original.totalBid.toFixed(2)} pts` },
-  { accessorKey: 'rawROI', header: 'Raw ROI', cell: ({ row }) => row.original.rawROI.toFixed(3) },
-  {
-    accessorKey: 'normalizedROI',
-    header: 'Normalized ROI',
-    cell: ({ row }) => {
-      const val = row.original.normalizedROI;
-      return (
-        <span className={`font-semibold ${val > 1.0 ? 'text-green-600' : val < 1.0 ? 'text-red-600' : 'text-gray-500'}`}>
-          {val.toFixed(3)}
-        </span>
-      );
-    },
-  },
-];
-
-const bestInvestmentsColumns: ColumnDef<InvestmentLeaderboardRow, unknown>[] = [
-  { id: 'rank', header: 'Rank', cell: ({ row }) => row.index + 1, enableSorting: false },
-  { accessorKey: 'entryName', header: 'Entry' },
-  { accessorKey: 'tournamentYear', header: 'Year' },
-  { accessorKey: 'seed', header: 'Seed' },
-  { accessorKey: 'schoolName', header: 'Team' },
-  { accessorKey: 'investment', header: 'Investment', cell: ({ row }) => `${row.original.investment.toFixed(2)} pts` },
-  { accessorKey: 'ownershipPercentage', header: 'Ownership', cell: ({ row }) => `${(row.original.ownershipPercentage * 100).toFixed(2)}%` },
-  { accessorKey: 'rawReturns', header: 'Raw Returns', cell: ({ row }) => row.original.rawReturns.toFixed(2) },
-  {
-    accessorKey: 'normalizedReturns',
-    header: 'Normalized Returns',
-    cell: ({ row }) => {
-      const val = row.original.normalizedReturns;
-      return (
-        <span className={`font-semibold ${val > 1.0 ? 'text-green-600' : val < 1.0 ? 'text-red-600' : 'text-gray-500'}`}>
-          {val.toFixed(3)}
-        </span>
-      );
-    },
-  },
-];
-
-const bestEntriesColumns: ColumnDef<EntryLeaderboardRow, unknown>[] = [
-  { id: 'rank', header: 'Rank', cell: ({ row }) => row.index + 1, enableSorting: false },
-  { accessorKey: 'entryName', header: 'Entry' },
-  { accessorKey: 'tournamentYear', header: 'Year' },
-  { accessorKey: 'totalReturns', header: 'Total Returns', cell: ({ row }) => row.original.totalReturns.toFixed(2) },
-  { accessorKey: 'totalParticipants', header: 'Total Participants' },
-  { accessorKey: 'averageReturns', header: 'Average Returns', cell: ({ row }) => row.original.averageReturns.toFixed(2) },
-  {
-    accessorKey: 'normalizedReturns',
-    header: 'Normalized Returns',
-    cell: ({ row }) => {
-      const val = row.original.normalizedReturns;
-      return (
-        <span className={`font-semibold ${val > 1.0 ? 'text-green-600' : val < 1.0 ? 'text-red-600' : 'text-gray-500'}`}>
-          {val.toFixed(3)}
-        </span>
-      );
-    },
-  },
-];
-
-const bestCareersColumns: ColumnDef<CareerLeaderboardRow, unknown>[] = [
-  { id: 'rank', header: 'Rank', cell: ({ row }) => row.index + 1, enableSorting: false },
-  {
-    accessorKey: 'entryName',
-    header: 'Name',
-    cell: ({ row }) => (
-      <span className={row.original.activeInLatestCalcutta ? 'font-bold' : 'font-medium'}>
-        {row.original.entryName}
-      </span>
-    ),
-  },
-  { accessorKey: 'years', header: 'Years' },
-  { accessorKey: 'bestFinish', header: 'Best Finish' },
-  { accessorKey: 'wins', header: 'Wins' },
-  { accessorKey: 'podiums', header: 'Podiums' },
-  { accessorKey: 'inTheMoneys', header: 'Payouts' },
-  { accessorKey: 'top10s', header: 'Top 10s' },
-  {
-    accessorKey: 'careerEarningsCents',
-    header: 'Career Earnings',
-    cell: ({ row }) => formatDollarsFromCents(row.original.careerEarningsCents),
-  },
-];
+  bestTeamsColumns,
+  bestInvestmentsColumns,
+  bestEntriesColumns,
+  bestCareersColumns,
+} from './HallOfFame/columns';
 
 export function HallOfFamePage() {
   const [hideInactiveCareers, setHideInactiveCareers] = useState<boolean>(false);

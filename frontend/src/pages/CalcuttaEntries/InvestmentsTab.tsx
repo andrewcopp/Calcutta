@@ -7,7 +7,7 @@ import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
 import { createTeamSortComparator } from '../../utils/teamSort';
 
-export function InvestmentTab({ entries, schools, tournamentTeams, allEntryTeams }: {
+export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeams }: {
   entries: CalcuttaEntry[];
   schools: School[];
   tournamentTeams: TournamentTeam[];

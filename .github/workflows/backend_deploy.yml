@@ -1,12 +1,12 @@
 name: Backend Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Backend CI"]
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend_deploy.yml"
   workflow_dispatch:
     inputs:
       environment:
@@ -31,12 +31,14 @@ concurrency:
 
 jobs:
   deploy-staging:
-    if: github.event_name == 'push'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: staging
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials (staging)
         uses: aws-actions/configure-aws-credentials@v4
@@ -59,7 +61,7 @@ jobs:
           target: prod
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -71,7 +73,7 @@ jobs:
           ECS_TASK_DEFINITION: ${{ secrets.ECS_TASK_DEFINITION_STAGING }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
 

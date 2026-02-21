@@ -22,6 +22,7 @@ type EntryReader interface {
 	GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error)
 	GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error)
 	GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error)
+	GetEntryTeamsByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaEntryTeam, error)
 	GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error)
 }
 
@@ -34,6 +35,8 @@ type PortfolioReader interface {
 	GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error)
 	GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error)
 	GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error)
+	GetPortfoliosByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaPortfolio, error)
+	GetPortfolioTeamsByPortfolioIDs(ctx context.Context, portfolioIDs []string) (map[string][]*models.CalcuttaPortfolioTeam, error)
 }
 
 type RoundReader interface {

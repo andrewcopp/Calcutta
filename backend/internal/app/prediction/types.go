@@ -34,16 +34,3 @@ type TeamInput struct {
 	Region    string
 	KenPomNet float64
 }
-
-// GenerateParams configures prediction generation.
-type GenerateParams struct {
-	TournamentID         string
-	ProbabilitySourceKey string  // e.g., "kenpom"
-	KenPomScale          float64 // Scale parameter for win probability sigmoid (default 10.0)
-}
-
-// BatchResult holds the output of a prediction batch generation.
-type BatchResult struct {
-	BatchID    string
-	TeamValues []PredictedTeamValue
-}

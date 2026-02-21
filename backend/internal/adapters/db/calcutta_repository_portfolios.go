@@ -70,6 +70,75 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 	return out, nil
 }
 
+func (r *CalcuttaRepository) GetPortfoliosByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaPortfolio, error) {
+	if len(entryIDs) == 0 {
+		return map[string][]*models.CalcuttaPortfolio{}, nil
+	}
+
+	rows, err := r.q.ListPortfoliosByEntryIDs(ctx, entryIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(map[string][]*models.CalcuttaPortfolio, len(entryIDs))
+	for _, row := range rows {
+		out[row.EntryID] = append(out[row.EntryID], &models.CalcuttaPortfolio{
+			ID:      row.ID,
+			EntryID: row.EntryID,
+			Created: row.CreatedAt.Time,
+			Updated: row.UpdatedAt.Time,
+			Deleted: TimestamptzToPtrTime(row.DeletedAt),
+		})
+	}
+	return out, nil
+}
+
+func (r *CalcuttaRepository) GetPortfolioTeamsByPortfolioIDs(ctx context.Context, portfolioIDs []string) (map[string][]*models.CalcuttaPortfolioTeam, error) {
+	if len(portfolioIDs) == 0 {
+		return map[string][]*models.CalcuttaPortfolioTeam{}, nil
+	}
+
+	rows, err := r.q.ListPortfolioTeamsByPortfolioIDs(ctx, portfolioIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(map[string][]*models.CalcuttaPortfolioTeam, len(portfolioIDs))
+	for _, row := range rows {
+		pt := &models.CalcuttaPortfolioTeam{
+			ID:                  row.ID,
+			PortfolioID:         row.PortfolioID,
+			TeamID:              row.TeamID,
+			OwnershipPercentage: row.OwnershipPercentage,
+			ActualPoints:        row.ActualPoints,
+			ExpectedPoints:      row.ExpectedPoints,
+			Created:             row.CreatedAt.Time,
+			Updated:             row.UpdatedAt.Time,
+			Deleted:             TimestamptzToPtrTime(row.DeletedAt),
+		}
+
+		tt := &models.TournamentTeam{
+			ID:           row.TournamentTeamID,
+			SchoolID:     row.SchoolID,
+			TournamentID: row.TournamentID,
+			Seed:         int(row.Seed),
+			Region:       row.Region,
+			Byes:         int(row.Byes),
+			Wins:         int(row.Wins),
+			Eliminated:   row.Eliminated,
+			Created:      row.TeamCreatedAt.Time,
+			Updated:      row.TeamUpdatedAt.Time,
+		}
+		if row.SchoolName != nil {
+			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
+		}
+		pt.Team = tt
+
+		out[row.PortfolioID] = append(out[row.PortfolioID], pt)
+	}
+	return out, nil
+}
+
 func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	rows, err := r.q.ListPortfoliosByEntryID(ctx, entryID)
 	if err != nil {

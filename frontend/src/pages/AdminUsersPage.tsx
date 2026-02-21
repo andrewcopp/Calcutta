@@ -152,18 +152,18 @@ export function AdminUsersPage() {
                 <TableCell className="whitespace-nowrap">
                   {u.email ?? <span className="text-gray-400 italic">No email</span>}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{u.first_name} {u.last_name}</TableCell>
+                <TableCell className="whitespace-nowrap">{u.firstName} {u.lastName}</TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(u.status)}>
                     {formatStatusLabel(u.status)}
                   </Badge>
-                  {u.last_invite_sent_at && (
+                  {u.lastInviteSentAt && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Invited: {formatDate(u.last_invite_sent_at)}
+                      Invited: {formatDate(u.lastInviteSentAt)}
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{formatDate(u.created_at)}</TableCell>
+                <TableCell className="whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
                 <TableCell>
                   {(u.labels ?? []).length > 0 ? (
                     <div className="flex flex-wrap gap-1">
@@ -192,7 +192,7 @@ export function AdminUsersPage() {
                         variant="outline"
                         onClick={() => setInviteModalUser(u)}
                       >
-                        {u.last_invite_sent_at ? 'Resend Invite' : 'Send Invite'}
+                        {u.lastInviteSentAt ? 'Resend Invite' : 'Send Invite'}
                       </Button>
                     )}
                     {u.status === 'active' && (
@@ -219,7 +219,7 @@ export function AdminUsersPage() {
           open={!!emailModalUser}
           onClose={() => setEmailModalUser(null)}
           userId={emailModalUser.id}
-          userName={`${emailModalUser.first_name} ${emailModalUser.last_name}`}
+          userName={`${emailModalUser.firstName} ${emailModalUser.lastName}`}
           onSubmit={handleSetEmail}
         />
       )}
@@ -229,9 +229,9 @@ export function AdminUsersPage() {
           open={!!inviteModalUser}
           onClose={() => setInviteModalUser(null)}
           userId={inviteModalUser.id}
-          userName={`${inviteModalUser.first_name} ${inviteModalUser.last_name}`}
+          userName={`${inviteModalUser.firstName} ${inviteModalUser.lastName}`}
           userEmail={inviteModalUser.email ?? ''}
-          lastInviteSentAt={inviteModalUser.last_invite_sent_at}
+          lastInviteSentAt={inviteModalUser.lastInviteSentAt}
           onConfirm={handleSendInvite}
         />
       )}

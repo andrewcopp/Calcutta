@@ -47,7 +47,7 @@ export function EntryProfilePage() {
     );
   }
 
-  const isOurStrategy = profile.entry_name === 'Our Strategy';
+  const isOurStrategy = profile.entryName === 'Our Strategy';
 
   return (
     <PageContainer>
@@ -57,15 +57,15 @@ export function EntryProfilePage() {
           ...(modelName && calcuttaId
             ? [
                 { label: decodeURIComponent(modelName), href: `/lab/models/${modelName}/calcutta/${calcuttaId}?tab=evaluations` },
-                { label: profile.entry_name },
+                { label: profile.entryName },
               ]
-            : [{ label: profile.entry_name }]),
+            : [{ label: profile.entryName }]),
         ]}
       />
 
       {/* Header with entry name and rank */}
       <div className="flex items-baseline gap-3 mb-4">
-        <h1 className="text-xl font-bold text-gray-900">{profile.entry_name}</h1>
+        <h1 className="text-xl font-bold text-gray-900">{profile.entryName}</h1>
         <span className="text-gray-500">Rank #{profile.rank}</span>
         {isOurStrategy && (
           <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">Our Strategy</span>
@@ -77,21 +77,21 @@ export function EntryProfilePage() {
         <div className="flex flex-wrap items-center gap-6">
           <div>
             <span className="text-xs text-gray-500 uppercase mr-2">Mean Payout:</span>
-            <span className={cn('font-semibold', getPayoutColor(profile.mean_normalized_payout))}>
-              {formatPayoutX(profile.mean_normalized_payout)}
+            <span className={cn('font-semibold', getPayoutColor(profile.meanNormalizedPayout))}>
+              {formatPayoutX(profile.meanNormalizedPayout)}
             </span>
           </div>
           <div>
             <span className="text-xs text-gray-500 uppercase mr-2">P(Top 1):</span>
-            <span className="font-medium">{formatPct(profile.p_top1)}</span>
+            <span className="font-medium">{formatPct(profile.pTop1)}</span>
           </div>
           <div>
             <span className="text-xs text-gray-500 uppercase mr-2">P(In Money):</span>
-            <span className="font-medium">{formatPct(profile.p_in_money)}</span>
+            <span className="font-medium">{formatPct(profile.pInMoney)}</span>
           </div>
           <div>
             <span className="text-xs text-gray-500 uppercase mr-2">Total Bid:</span>
-            <span className="font-medium">{profile.total_bid_points.toLocaleString()} pts</span>
+            <span className="font-medium">{profile.totalBidPoints.toLocaleString()} pts</span>
           </div>
         </div>
       </div>
@@ -115,11 +115,11 @@ export function EntryProfilePage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {profile.bids.map((bid) => (
-                  <tr key={bid.team_id}>
-                    <td className="px-3 py-2 text-sm text-gray-900">{bid.school_name}</td>
+                  <tr key={bid.teamId}>
+                    <td className="px-3 py-2 text-sm text-gray-900">{bid.schoolName}</td>
                     <td className="px-3 py-2 text-sm text-gray-700 text-center">{bid.seed}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{bid.region}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{bid.bid_points.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700 text-right">{bid.bidPoints.toLocaleString()}</td>
                     <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(bid.ownership)}</td>
                   </tr>
                 ))}

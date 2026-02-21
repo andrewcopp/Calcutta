@@ -127,6 +127,50 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 	return out, nil
 }
 
+func (r *CalcuttaRepository) GetEntryTeamsByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaEntryTeam, error) {
+	if len(entryIDs) == 0 {
+		return map[string][]*models.CalcuttaEntryTeam{}, nil
+	}
+
+	rows, err := r.q.ListEntryTeamsByEntryIDs(ctx, entryIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(map[string][]*models.CalcuttaEntryTeam, len(entryIDs))
+	for _, row := range rows {
+		team := &models.CalcuttaEntryTeam{
+			ID:        row.ID,
+			EntryID:   row.EntryID,
+			TeamID:    row.TeamID,
+			BidPoints: int(row.BidPoints),
+			Created:   row.CreatedAt.Time,
+			Updated:   row.UpdatedAt.Time,
+			Deleted:   TimestamptzToPtrTime(row.DeletedAt),
+		}
+
+		tt := &models.TournamentTeam{
+			ID:           row.TournamentTeamID,
+			SchoolID:     row.SchoolID,
+			TournamentID: row.TournamentID,
+			Seed:         int(row.Seed),
+			Region:       row.Region,
+			Byes:         int(row.Byes),
+			Wins:         int(row.Wins),
+			Created:      row.TeamCreatedAt.Time,
+			Updated:      row.TeamUpdatedAt.Time,
+			Deleted:      TimestamptzToPtrTime(row.TeamDeletedAt),
+		}
+		if row.SchoolName != nil {
+			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
+		}
+		team.Team = tt
+
+		out[row.EntryID] = append(out[row.EntryID], team)
+	}
+	return out, nil
+}
+
 func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {
 	// Validate that entry exists (and that caller has access is handled at higher layers)
 	if _, err := r.GetEntry(ctx, entryID); err != nil {

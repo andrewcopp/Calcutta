@@ -102,3 +102,95 @@ func (q *Queries) ListPortfolioTeamsByPortfolioID(ctx context.Context, portfolio
 	}
 	return items, nil
 }
+
+const listPortfolioTeamsByPortfolioIDs = `-- name: ListPortfolioTeamsByPortfolioIDs :many
+SELECT
+    cpt.id::text AS id,
+    cpt.portfolio_id,
+    cpt.team_id,
+    cpt.ownership_percentage::float8 AS ownership_percentage,
+    cpt.actual_points::float8 AS actual_points,
+    cpt.expected_points::float8 AS expected_points,
+    cpt.created_at::timestamptz AS created_at,
+    cpt.updated_at::timestamptz AS updated_at,
+    cpt.deleted_at::timestamptz AS deleted_at,
+    tt.id AS tournament_team_id,
+    tt.school_id,
+    tt.tournament_id,
+    tt.seed,
+    tt.region,
+    tt.byes,
+    tt.wins,
+    tt.eliminated,
+    tt.created_at AS team_created_at,
+    tt.updated_at AS team_updated_at,
+    s.name AS school_name
+FROM derived.portfolio_teams cpt
+JOIN core.teams tt ON cpt.team_id = tt.id
+LEFT JOIN core.schools s ON tt.school_id = s.id
+WHERE cpt.portfolio_id = ANY($1::uuid[]) AND cpt.deleted_at IS NULL
+`
+
+type ListPortfolioTeamsByPortfolioIDsRow struct {
+	ID                  string
+	PortfolioID         string
+	TeamID              string
+	OwnershipPercentage float64
+	ActualPoints        float64
+	ExpectedPoints      float64
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	DeletedAt           pgtype.Timestamptz
+	TournamentTeamID    string
+	SchoolID            string
+	TournamentID        string
+	Seed                int32
+	Region              string
+	Byes                int32
+	Wins                int32
+	Eliminated          bool
+	TeamCreatedAt       pgtype.Timestamptz
+	TeamUpdatedAt       pgtype.Timestamptz
+	SchoolName          *string
+}
+
+func (q *Queries) ListPortfolioTeamsByPortfolioIDs(ctx context.Context, portfolioIds []string) ([]ListPortfolioTeamsByPortfolioIDsRow, error) {
+	rows, err := q.db.Query(ctx, listPortfolioTeamsByPortfolioIDs, portfolioIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPortfolioTeamsByPortfolioIDsRow
+	for rows.Next() {
+		var i ListPortfolioTeamsByPortfolioIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PortfolioID,
+			&i.TeamID,
+			&i.OwnershipPercentage,
+			&i.ActualPoints,
+			&i.ExpectedPoints,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.TournamentTeamID,
+			&i.SchoolID,
+			&i.TournamentID,
+			&i.Seed,
+			&i.Region,
+			&i.Byes,
+			&i.Wins,
+			&i.Eliminated,
+			&i.TeamCreatedAt,
+			&i.TeamUpdatedAt,
+			&i.SchoolName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

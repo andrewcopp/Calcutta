@@ -25,42 +25,42 @@ interface EntryTabProps {
 
 // Combined row for display - joins bids with prediction data
 interface EntryRow {
-  team_id: string;
-  school_name: string;
+  teamId: string;
+  schoolName: string;
   seed: number;
   region: string;
-  pred_performance: number; // naive_points (budget-normalized expected value, same as Rational)
-  pred_investment: number;  // predicted_bid_points from predictions
-  our_investment: number;   // bid_points from bids
-  pred_roi: number;         // pred_performance / pred_investment
-  adj_roi: number;          // pred_performance / (pred_investment + our_investment)
+  predPerformance: number; // naivePoints (budget-normalized expected value, same as Rational)
+  predInvestment: number;  // predictedBidPoints from predictions
+  ourInvestment: number;   // bidPoints from bids
+  predRoi: number;         // predPerformance / predInvestment
+  adjRoi: number;          // predPerformance / (predInvestment + ourInvestment)
 }
 
 export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnlyInvested, onShowOnlyInvestedChange, optimizerKind, optimizerParams }: EntryTabProps) {
-  // Join bids with predictions by team_id
+  // Join bids with predictions by teamId
   const rows = useMemo((): EntryRow[] => {
-    const predByTeam = new Map(predictions.map(p => [p.team_id, p]));
+    const predByTeam = new Map(predictions.map(p => [p.teamId, p]));
 
     return bids.map(bid => {
-      const pred = predByTeam.get(bid.team_id);
-      // Use expected_points from predictions as pred_performance (actual expected tournament points)
-      const predPerf = pred?.expected_points ?? 0;
-      const predInv = pred?.predicted_bid_points ?? 0;
-      const ourInv = bid.bid_points;
+      const pred = predByTeam.get(bid.teamId);
+      // Use expectedPoints from predictions as predPerformance (actual expected tournament points)
+      const predPerf = pred?.expectedPoints ?? 0;
+      const predInv = pred?.predictedBidPoints ?? 0;
+      const ourInv = bid.bidPoints;
 
       const predRoi = predInv > 0 ? predPerf / predInv : 0;
       const adjRoi = (predInv + ourInv) > 0 ? predPerf / (predInv + ourInv) : 0;
 
       return {
-        team_id: bid.team_id,
-        school_name: bid.school_name,
+        teamId: bid.teamId,
+        schoolName: bid.schoolName,
         seed: bid.seed,
         region: bid.region,
-        pred_performance: predPerf,
-        pred_investment: predInv,
-        our_investment: ourInv,
-        pred_roi: predRoi,
-        adj_roi: adjRoi,
+        predPerformance: predPerf,
+        predInvestment: predInv,
+        ourInvestment: ourInv,
+        predRoi: predRoi,
+        adjRoi: adjRoi,
       };
     });
   }, [bids, predictions]);
@@ -74,22 +74,22 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
           cmp = a.seed - b.seed;
           break;
         case 'team':
-          cmp = a.school_name.localeCompare(b.school_name);
+          cmp = a.schoolName.localeCompare(b.schoolName);
           break;
         case 'pred_perf':
-          cmp = b.pred_performance - a.pred_performance;
+          cmp = b.predPerformance - a.predPerformance;
           break;
         case 'pred_inv':
-          cmp = b.pred_investment - a.pred_investment;
+          cmp = b.predInvestment - a.predInvestment;
           break;
         case 'our_inv':
-          cmp = b.our_investment - a.our_investment;
+          cmp = b.ourInvestment - a.ourInvestment;
           break;
         case 'pred_roi':
-          cmp = b.pred_roi - a.pred_roi;
+          cmp = b.predRoi - a.predRoi;
           break;
         case 'adj_roi':
-          cmp = b.adj_roi - a.adj_roi;
+          cmp = b.adjRoi - a.adjRoi;
           break;
       }
       return sortDir === 'asc' ? -cmp : cmp;
@@ -97,7 +97,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
   }, [rows, sortKey, sortDir]);
 
   // Filter if needed
-  const displayRows = showOnlyInvested ? sortedRows.filter(r => r.our_investment > 0) : sortedRows;
+  const displayRows = showOnlyInvested ? sortedRows.filter(r => r.ourInvestment > 0) : sortedRows;
 
   const SortHeader = ({ label, sortKeyValue }: { label: string; sortKeyValue: BidSortKey }) => (
     <button
@@ -114,19 +114,19 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
   );
 
   // Summary stats
-  const investedRows = rows.filter(r => r.our_investment > 0);
-  const totalOurInvestment = rows.reduce((sum, r) => sum + r.our_investment, 0);
+  const investedRows = rows.filter(r => r.ourInvestment > 0);
+  const totalOurInvestment = rows.reduce((sum, r) => sum + r.ourInvestment, 0);
 
   // Weighted average ROI (by our investment)
   const weightedPredRoi = investedRows.length > 0
-    ? investedRows.reduce((sum, r) => sum + r.pred_roi * r.our_investment, 0) / totalOurInvestment
+    ? investedRows.reduce((sum, r) => sum + r.predRoi * r.ourInvestment, 0) / totalOurInvestment
     : 0;
   const weightedAdjRoi = investedRows.length > 0
-    ? investedRows.reduce((sum, r) => sum + r.adj_roi * r.our_investment, 0) / totalOurInvestment
+    ? investedRows.reduce((sum, r) => sum + r.adjRoi * r.ourInvestment, 0) / totalOurInvestment
     : 0;
 
   // Top ROI teams we invested in
-  const topRoiInvested = [...investedRows].sort((a, b) => b.adj_roi - a.adj_roi).slice(0, 3);
+  const topRoiInvested = [...investedRows].sort((a, b) => b.adjRoi - a.adjRoi).slice(0, 3);
 
   return (
     <div className="space-y-4">
@@ -198,33 +198,33 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
               <tbody className="divide-y divide-gray-100">
                 {displayRows.map((row) => (
                   <tr
-                    key={row.team_id}
+                    key={row.teamId}
                     className={cn(
                       'hover:bg-gray-50',
-                      row.our_investment > 0 ? 'bg-blue-50' : ''
+                      row.ourInvestment > 0 ? 'bg-blue-50' : ''
                     )}
                   >
-                    <td className="px-3 py-2 text-sm font-medium text-gray-900">{row.school_name}</td>
+                    <td className="px-3 py-2 text-sm font-medium text-gray-900">{row.schoolName}</td>
                     <td className="px-3 py-2 text-sm text-gray-700 text-center">{row.seed}</td>
                     <td className="px-3 py-2 text-sm text-gray-500">{row.region}</td>
                     <td className="px-3 py-2 text-sm text-gray-900 text-right tabular-nums">
-                      {row.pred_performance.toFixed(0)}
+                      {row.predPerformance.toFixed(0)}
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-900 text-right tabular-nums">
-                      {row.pred_investment}
+                      {row.predInvestment}
                     </td>
                     <td className="px-3 py-2 text-sm text-right font-medium tabular-nums">
-                      {row.our_investment > 0 ? (
-                        <span className="text-blue-700">{row.our_investment}</span>
+                      {row.ourInvestment > 0 ? (
+                        <span className="text-blue-700">{row.ourInvestment}</span>
                       ) : (
                         <span className="text-gray-400">0</span>
                       )}
                     </td>
-                    <td className={cn('px-3 py-2 text-sm text-right tabular-nums', getRoiColor(row.pred_roi))}>
-                      {formatRoi(row.pred_roi)}
+                    <td className={cn('px-3 py-2 text-sm text-right tabular-nums', getRoiColor(row.predRoi))}>
+                      {formatRoi(row.predRoi)}
                     </td>
-                    <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getRoiColor(row.adj_roi))}>
-                      {formatRoi(row.adj_roi)}
+                    <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getRoiColor(row.adjRoi))}>
+                      {formatRoi(row.adjRoi)}
                     </td>
                   </tr>
                 ))}

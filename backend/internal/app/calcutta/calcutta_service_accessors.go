@@ -156,6 +156,10 @@ func (s *Service) GetEntryTeams(ctx context.Context, entryID string) ([]*models.
 	return s.ports.EntryReader.GetEntryTeams(ctx, entryID)
 }
 
+func (s *Service) GetEntryTeamsByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaEntryTeam, error) {
+	return s.ports.EntryReader.GetEntryTeamsByEntryIDs(ctx, entryIDs)
+}
+
 func (s *Service) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {
 	return s.ports.EntryReader.GetEntry(ctx, id)
 }
@@ -170,6 +174,14 @@ func (s *Service) ReplaceEntryTeams(ctx context.Context, entryID string, teams [
 
 func (s *Service) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	return s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entryID)
+}
+
+func (s *Service) GetPortfoliosByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaPortfolio, error) {
+	return s.ports.PortfolioReader.GetPortfoliosByEntryIDs(ctx, entryIDs)
+}
+
+func (s *Service) GetPortfolioTeamsByPortfolioIDs(ctx context.Context, portfolioIDs []string) (map[string][]*models.CalcuttaPortfolioTeam, error) {
+	return s.ports.PortfolioReader.GetPortfolioTeamsByPortfolioIDs(ctx, portfolioIDs)
 }
 
 func (s *Service) GetPortfolio(ctx context.Context, id string) (*models.CalcuttaPortfolio, error) {

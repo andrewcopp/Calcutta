@@ -24,8 +24,8 @@ export function LabPage() {
   });
 
   const items = [...(leaderboardQuery.data?.items ?? [])].sort((a, b) => {
-    const aTop1 = a.avg_p_top1 ?? 0;
-    const bTop1 = b.avg_p_top1 ?? 0;
+    const aTop1 = a.avgPTop1 ?? 0;
+    const bTop1 = b.avgPTop1 ?? 0;
     return bTop1 - aTop1;
   });
   const totalCalcuttas = calcuttasQuery.data?.length ?? 0;
@@ -67,7 +67,7 @@ export function LabPage() {
         <div className="space-y-3">
           {items.map((entry, index) => (
             <ModelLeaderboardCard
-              key={entry.investment_model_id}
+              key={entry.investmentModelId}
               entry={entry}
               rank={index + 1}
               totalCalcuttas={totalCalcuttas}

@@ -8,11 +8,11 @@ interface EntryStatsCardsProps {
   weightedPredRoi: number;
   weightedAdjRoi: number;
   topRoiInvested: Array<{
-    team_id: string;
-    school_name: string;
+    teamId: string;
+    schoolName: string;
     seed: number;
-    our_investment: number;
-    adj_roi: number;
+    ourInvestment: number;
+    adjRoi: number;
   }>;
 }
 
@@ -53,8 +53,8 @@ export function EntryStatsCards({
         <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
           <div className="text-xs text-blue-700 uppercase mb-2">Top Adj ROI Investments</div>
           {topRoiInvested.map(r => (
-            <div key={r.team_id} className="text-sm text-blue-800">
-              {r.school_name} ({r.seed}): {r.our_investment} pts {'\u2192'} {formatRoi(r.adj_roi)} adj ROI
+            <div key={r.teamId} className="text-sm text-blue-800">
+              {r.schoolName} ({r.seed}): {r.ourInvestment} pts {'\u2192'} {formatRoi(r.adjRoi)} adj ROI
             </div>
           ))}
         </div>

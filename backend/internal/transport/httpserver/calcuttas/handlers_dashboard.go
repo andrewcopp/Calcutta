@@ -114,37 +114,50 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		resp.Portfolios = []*dtos.PortfolioResponse{}
 		resp.PortfolioTeams = []*dtos.PortfolioTeamResponse{}
 	} else {
-		var allEntryTeams []*models.CalcuttaEntryTeam
-		var allPortfolios []*models.CalcuttaPortfolio
+		entryIDs := make([]string, 0, len(entries))
 		for _, entry := range entries {
-			entryTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), entry.ID)
-			if err != nil {
-				httperr.WriteFromErr(w, r, err, h.authUserID)
-				return
-			}
-			allEntryTeams = append(allEntryTeams, entryTeams...)
+			entryIDs = append(entryIDs, entry.ID)
+		}
 
-			portfolios, err := h.app.Calcutta.GetPortfoliosByEntry(r.Context(), entry.ID)
-			if err != nil {
-				httperr.WriteFromErr(w, r, err, h.authUserID)
-				return
+		entryTeamsByEntry, err := h.app.Calcutta.GetEntryTeamsByEntryIDs(r.Context(), entryIDs)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+
+		portfoliosByEntry, err := h.app.Calcutta.GetPortfoliosByEntryIDs(r.Context(), entryIDs)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+
+		var allEntryTeams []*models.CalcuttaEntryTeam
+		for _, teams := range entryTeamsByEntry {
+			allEntryTeams = append(allEntryTeams, teams...)
+		}
+
+		var allPortfolios []*models.CalcuttaPortfolio
+		portfolioIDs := make([]string, 0)
+		for _, portfolios := range portfoliosByEntry {
+			for _, p := range portfolios {
+				allPortfolios = append(allPortfolios, p)
+				portfolioIDs = append(portfolioIDs, p.ID)
 			}
-			allPortfolios = append(allPortfolios, portfolios...)
+		}
+
+		portfolioTeamsByPortfolio, err := h.app.Calcutta.GetPortfolioTeamsByPortfolioIDs(r.Context(), portfolioIDs)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
 		}
 
 		var allPortfolioTeams []*models.CalcuttaPortfolioTeam
-		for _, portfolio := range allPortfolios {
-			portfolioTeams, err := h.app.Calcutta.GetPortfolioTeams(r.Context(), portfolio.ID)
-			if err != nil {
-				httperr.WriteFromErr(w, r, err, h.authUserID)
-				return
-			}
-			allPortfolioTeams = append(allPortfolioTeams, portfolioTeams...)
+		for _, teams := range portfolioTeamsByPortfolio {
+			allPortfolioTeams = append(allPortfolioTeams, teams...)
 		}
 
 		for _, entry := range entries {
-			entryTeams := filterEntryTeams(allEntryTeams, entry.ID)
-			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeams)
+			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeamsByEntry[entry.ID])
 		}
 
 		resp.Entries = dtos.NewEntryListResponse(entries)
@@ -240,12 +253,3 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 	response.WriteJSON(w, http.StatusOK, results)
 }
 
-func filterEntryTeams(allTeams []*models.CalcuttaEntryTeam, entryID string) []*models.CalcuttaEntryTeam {
-	var out []*models.CalcuttaEntryTeam
-	for _, t := range allTeams {
-		if t.EntryID == entryID {
-			out = append(out, t)
-		}
-	}
-	return out
-}

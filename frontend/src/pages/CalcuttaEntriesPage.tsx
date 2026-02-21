@@ -8,9 +8,9 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
 import { LeaderboardTab } from './CalcuttaEntries/LeaderboardTab';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
-import { InvestmentTab } from './CalcuttaEntries/InvestmentTab';
+import { InvestmentsTab } from './CalcuttaEntries/InvestmentsTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
-import { OwnershipTab } from './CalcuttaEntries/OwnershipTab';
+import { OwnershipsTab } from './CalcuttaEntries/OwnershipsTab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Badge } from '../components/ui/Badge';
@@ -241,11 +241,11 @@ export function CalcuttaEntriesPage() {
         </TabsContent>
 
         <TabsContent value="investment">
-          <InvestmentTab entries={entries} schools={schools} tournamentTeams={tournamentTeams} allEntryTeams={allEntryTeams} />
+          <InvestmentsTab entries={entries} schools={schools} tournamentTeams={tournamentTeams} allEntryTeams={allEntryTeams} />
         </TabsContent>
 
         <TabsContent value="ownership">
-          <OwnershipTab
+          <OwnershipsTab
             entries={entries}
             schools={schools}
             tournamentTeams={tournamentTeams}

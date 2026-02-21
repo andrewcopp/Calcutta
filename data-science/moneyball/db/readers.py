@@ -6,6 +6,7 @@ This module provides functions to read data from the analytics database.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Optional, Dict, Any, List, Tuple
 import pandas as pd
 from psycopg2.extras import RealDictCursor
@@ -14,6 +15,14 @@ from moneyball.db.connection import get_db_connection
 from moneyball.utils import points
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PredictedTeamValue:
+    team_id: str
+    team_slug: str
+    p_championship: float
+    expected_points: float
 
 
 def _read_latest_core_tournament_id_for_year(conn, year: int) -> Optional[str]:
@@ -241,13 +250,9 @@ def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
         return points.points_by_win_index_from_scoring_rules(df)
 
 
-def initialize_default_scoring_rules_for_year(year: int) -> Dict[int, float]:
-    return read_points_by_win_index_for_year(year)
-
-
 def read_latest_predicted_team_values(
     tournament_id: str,
-) -> List[Dict[str, Any]]:
+) -> List[PredictedTeamValue]:
     """
     Get predicted team values from the latest prediction batch for a tournament.
 
@@ -261,8 +266,8 @@ def read_latest_predicted_team_values(
         tournament_id: The tournament UUID to look up predictions for.
 
     Returns:
-        List of dicts with keys: team_id, team_slug, p_championship,
-        expected_points. Returns empty list if no prediction batch exists.
+        List of PredictedTeamValue dataclasses. Returns empty list if no
+        prediction batch exists.
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -287,12 +292,12 @@ def read_latest_predicted_team_values(
                     AND ptv.deleted_at IS NULL
             """, (tournament_id,))
             return [
-                {
-                    "team_id": str(row[0]),
-                    "team_slug": row[1],
-                    "p_championship": float(row[2]),
-                    "expected_points": float(row[3]),
-                }
+                PredictedTeamValue(
+                    team_id=str(row[0]),
+                    team_slug=row[1],
+                    p_championship=float(row[2]),
+                    expected_points=float(row[3]),
+                )
                 for row in cur.fetchall()
             ]
 
@@ -308,7 +313,7 @@ def read_analytical_values_from_db(
     """
     rows = read_latest_predicted_team_values(tournament_id)
     return {
-        row["team_id"]: (row["p_championship"], row["expected_points"])
+        row.team_id: (row.p_championship, row.expected_points)
         for row in rows
     }
 

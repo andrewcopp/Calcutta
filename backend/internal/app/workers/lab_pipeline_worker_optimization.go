@@ -33,9 +33,9 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 
 	// Parse predictions
 	type prediction struct {
-		TeamID               string  `json:"team_id"`
-		PredictedMarketShare float64 `json:"predicted_market_share"`
-		ExpectedPoints       float64 `json:"expected_points"`
+		TeamID               string  `json:"teamId"`
+		PredictedMarketShare float64 `json:"predictedMarketShare"`
+		ExpectedPoints       float64 `json:"expectedPoints"`
 	}
 	var predictions []prediction
 	if err := json.Unmarshal(predictionsJSON, &predictions); err != nil {
@@ -139,9 +139,9 @@ func (w *LabPipelineWorker) processOptimizationJob(ctx context.Context, workerID
 
 	// Build bids JSON with expected ROI
 	type bidRow struct {
-		TeamID      string  `json:"team_id"`
-		BidPoints   int     `json:"bid_points"`
-		ExpectedROI float64 `json:"expected_roi"`
+		TeamID      string  `json:"teamId"`
+		BidPoints   int     `json:"bidPoints"`
+		ExpectedROI float64 `json:"expectedRoi"`
 	}
 	bids := make([]bidRow, 0, len(result.Bids))
 	for _, pred := range predictions {

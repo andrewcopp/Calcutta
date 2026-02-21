@@ -1,6 +1,20 @@
 package analytics
 
-import "math"
+import (
+	"math"
+	"sort"
+)
+
+// clampLimit constrains a pagination limit to the range [1, 500], defaulting to 100 when non-positive.
+func clampLimit(limit int) int {
+	if limit <= 0 {
+		return 100
+	}
+	if limit > 500 {
+		return 500
+	}
+	return limit
+}
 
 // CalculateSeedAnalyticsResults is a pure function that calculates seed analytics from raw data.
 // This can be tested without mocking repositories.
@@ -74,6 +88,122 @@ func CalculateSeedVarianceResults(data []SeedVarianceInput) []SeedVarianceResult
 	}
 
 	return results
+}
+
+// CalculateRegionAnalyticsResults is a pure function that calculates region analytics from raw data.
+// This can be tested without mocking repositories.
+func CalculateRegionAnalyticsResults(data []RegionAnalyticsInput, totalPoints, totalInvestment float64) []RegionAnalyticsResult {
+	var baselineROI float64
+	if totalInvestment > 0 {
+		baselineROI = totalPoints / totalInvestment
+	}
+
+	results := make([]RegionAnalyticsResult, len(data))
+	for i, d := range data {
+		results[i] = RegionAnalyticsResult{
+			Region:          d.Region,
+			TotalPoints:     d.TotalPoints,
+			TotalInvestment: d.TotalInvestment,
+			TeamCount:       d.TeamCount,
+		}
+
+		if totalPoints > 0 {
+			results[i].PointsPercentage = (d.TotalPoints / totalPoints) * 100
+		}
+		if totalInvestment > 0 {
+			results[i].InvestmentPercentage = (d.TotalInvestment / totalInvestment) * 100
+		}
+		if d.TeamCount > 0 {
+			results[i].AveragePoints = d.TotalPoints / float64(d.TeamCount)
+			results[i].AverageInvestment = d.TotalInvestment / float64(d.TeamCount)
+		}
+
+		if d.TotalInvestment > 0 && baselineROI > 0 {
+			actualROI := d.TotalPoints / d.TotalInvestment
+			results[i].ROI = actualROI / baselineROI
+		}
+	}
+
+	return results
+}
+
+// CalculateTeamAnalyticsResults is a pure function that calculates team analytics from raw data.
+// It returns the computed results and the baseline ROI used for normalization.
+func CalculateTeamAnalyticsResults(data []TeamAnalyticsInput) ([]TeamAnalyticsResult, float64) {
+	var totalPoints, totalInvestment float64
+	for _, d := range data {
+		totalPoints += d.TotalPoints
+		totalInvestment += d.TotalInvestment
+	}
+
+	var baselineROI float64
+	if totalInvestment > 0 {
+		baselineROI = totalPoints / totalInvestment
+	}
+
+	results := make([]TeamAnalyticsResult, len(data))
+	for i, d := range data {
+		results[i] = TeamAnalyticsResult{
+			SchoolID:        d.SchoolID,
+			SchoolName:      d.SchoolName,
+			TotalPoints:     d.TotalPoints,
+			TotalInvestment: d.TotalInvestment,
+			Appearances:     d.Appearances,
+		}
+
+		if d.Appearances > 0 {
+			results[i].AveragePoints = d.TotalPoints / float64(d.Appearances)
+			results[i].AverageInvestment = d.TotalInvestment / float64(d.Appearances)
+			results[i].AverageSeed = float64(d.TotalSeed) / float64(d.Appearances)
+		}
+
+		if d.TotalInvestment > 0 && baselineROI > 0 {
+			actualROI := d.TotalPoints / d.TotalInvestment
+			results[i].ROI = actualROI / baselineROI
+		}
+	}
+
+	return results, baselineROI
+}
+
+// CalculateSeedInvestmentSummaries computes descriptive statistics (mean, stddev, quartiles)
+// for each seed's normalized bid values. The input map keys are seed numbers and values are
+// the normalized bid amounts for that seed.
+func CalculateSeedInvestmentSummaries(bySeed map[int][]float64) []SeedInvestmentSummaryResult {
+	seeds := make([]int, 0, len(bySeed))
+	for seed := range bySeed {
+		seeds = append(seeds, seed)
+	}
+	sort.Ints(seeds)
+
+	summaries := make([]SeedInvestmentSummaryResult, 0, len(seeds))
+	for _, seed := range seeds {
+		values := make([]float64, len(bySeed[seed]))
+		copy(values, bySeed[seed])
+		sort.Float64s(values)
+
+		count := len(values)
+		if count == 0 {
+			continue
+		}
+
+		mean := meanFloat64(values)
+		stddev := stddevFloat64(values, mean)
+
+		summaries = append(summaries, SeedInvestmentSummaryResult{
+			Seed:   seed,
+			Count:  count,
+			Mean:   mean,
+			StdDev: stddev,
+			Min:    values[0],
+			Q1:     quantileSorted(values, 0.25),
+			Median: quantileSorted(values, 0.50),
+			Q3:     quantileSorted(values, 0.75),
+			Max:    values[count-1],
+		})
+	}
+
+	return summaries
 }
 
 func meanFloat64(values []float64) float64 {

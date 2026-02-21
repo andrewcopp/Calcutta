@@ -2,7 +2,6 @@ package analytics
 
 import (
 	"context"
-	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
@@ -16,12 +15,7 @@ func New(repo ports.AnalyticsRepo) *Service {
 }
 
 func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInvestmentResult, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	limit = clampLimit(limit)
 
 	data, err := s.repo.GetBestInvestments(ctx, limit)
 	if err != nil {
@@ -53,12 +47,7 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 }
 
 func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeaderboardResult, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	limit = clampLimit(limit)
 
 	data, err := s.repo.GetBestCareers(ctx, limit)
 	if err != nil {
@@ -84,12 +73,7 @@ func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeader
 }
 
 func (s *Service) GetBestInvestmentBids(ctx context.Context, limit int) ([]InvestmentLeaderboardResult, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	limit = clampLimit(limit)
 
 	data, err := s.repo.GetBestInvestmentBids(ctx, limit)
 	if err != nil {
@@ -118,12 +102,7 @@ func (s *Service) GetBestInvestmentBids(ctx context.Context, limit int) ([]Inves
 }
 
 func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderboardResult, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	limit = clampLimit(limit)
 
 	data, err := s.repo.GetBestEntries(ctx, limit)
 	if err != nil {
@@ -173,37 +152,7 @@ func (s *Service) GetSeedInvestmentDistribution(ctx context.Context) (*SeedInves
 		bySeed[d.Seed] = append(bySeed[d.Seed], d.NormalizedBid)
 	}
 
-	seeds := make([]int, 0, len(bySeed))
-	for seed := range bySeed {
-		seeds = append(seeds, seed)
-	}
-	sort.Ints(seeds)
-
-	summaries := make([]SeedInvestmentSummaryResult, 0, len(seeds))
-	for _, seed := range seeds {
-		values := bySeed[seed]
-		sort.Float64s(values)
-
-		count := len(values)
-		if count == 0 {
-			continue
-		}
-
-		mean := meanFloat64(values)
-		stddev := stddevFloat64(values, mean)
-
-		summaries = append(summaries, SeedInvestmentSummaryResult{
-			Seed:   seed,
-			Count:  count,
-			Mean:   mean,
-			StdDev: stddev,
-			Min:    values[0],
-			Q1:     quantileSorted(values, 0.25),
-			Median: quantileSorted(values, 0.50),
-			Q3:     quantileSorted(values, 0.75),
-			Max:    values[count-1],
-		})
-	}
+	summaries := CalculateSeedInvestmentSummaries(bySeed)
 
 	return &SeedInvestmentDistributionResult{Points: points, Summaries: summaries}, nil
 }
@@ -235,39 +184,18 @@ func (s *Service) GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsResu
 		return nil, 0, 0, err
 	}
 
-	// Calculate baseline ROI (overall points per dollar)
-	var baselineROI float64
-	if totalInvestment > 0 {
-		baselineROI = totalPoints / totalInvestment
-	}
-
-	results := make([]RegionAnalyticsResult, len(data))
+	// Convert ports data to input type for pure function
+	input := make([]RegionAnalyticsInput, len(data))
 	for i, d := range data {
-		results[i] = RegionAnalyticsResult{
+		input[i] = RegionAnalyticsInput{
 			Region:          d.Region,
 			TotalPoints:     d.TotalPoints,
 			TotalInvestment: d.TotalInvestment,
 			TeamCount:       d.TeamCount,
 		}
-
-		if totalPoints > 0 {
-			results[i].PointsPercentage = (d.TotalPoints / totalPoints) * 100
-		}
-		if totalInvestment > 0 {
-			results[i].InvestmentPercentage = (d.TotalInvestment / totalInvestment) * 100
-		}
-		if d.TeamCount > 0 {
-			results[i].AveragePoints = d.TotalPoints / float64(d.TeamCount)
-			results[i].AverageInvestment = d.TotalInvestment / float64(d.TeamCount)
-		}
-
-		// Calculate normalized ROI
-		if d.TotalInvestment > 0 && baselineROI > 0 {
-			actualROI := d.TotalPoints / d.TotalInvestment
-			results[i].ROI = actualROI / baselineROI
-		}
 	}
 
+	results := CalculateRegionAnalyticsResults(input, totalPoints, totalInvestment)
 	return results, totalPoints, totalInvestment, nil
 }
 
@@ -277,41 +205,20 @@ func (s *Service) GetTeamAnalytics(ctx context.Context) ([]TeamAnalyticsResult, 
 		return nil, 0, err
 	}
 
-	// Calculate baseline ROI across all teams
-	var totalPoints, totalInvestment float64
-	for _, d := range data {
-		totalPoints += d.TotalPoints
-		totalInvestment += d.TotalInvestment
-	}
-
-	var baselineROI float64
-	if totalInvestment > 0 {
-		baselineROI = totalPoints / totalInvestment
-	}
-
-	results := make([]TeamAnalyticsResult, len(data))
+	// Convert ports data to input type for pure function
+	input := make([]TeamAnalyticsInput, len(data))
 	for i, d := range data {
-		results[i] = TeamAnalyticsResult{
+		input[i] = TeamAnalyticsInput{
 			SchoolID:        d.SchoolID,
 			SchoolName:      d.SchoolName,
 			TotalPoints:     d.TotalPoints,
 			TotalInvestment: d.TotalInvestment,
 			Appearances:     d.Appearances,
-		}
-
-		if d.Appearances > 0 {
-			results[i].AveragePoints = d.TotalPoints / float64(d.Appearances)
-			results[i].AverageInvestment = d.TotalInvestment / float64(d.Appearances)
-			results[i].AverageSeed = float64(d.TotalSeed) / float64(d.Appearances)
-		}
-
-		// Calculate normalized ROI
-		if d.TotalInvestment > 0 && baselineROI > 0 {
-			actualROI := d.TotalPoints / d.TotalInvestment
-			results[i].ROI = actualROI / baselineROI
+			TotalSeed:       d.TotalSeed,
 		}
 	}
 
+	results, baselineROI := CalculateTeamAnalyticsResults(input)
 	return results, baselineROI, nil
 }
 

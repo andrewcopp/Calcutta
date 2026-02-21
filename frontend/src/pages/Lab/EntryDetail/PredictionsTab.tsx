@@ -44,7 +44,7 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
       )}
     >
       {label}
-      {sortKey === sortKeyValue ? (sortDir === 'desc' ? ' ▼' : ' ▲') : ''}
+      {sortKey === sortKeyValue ? (sortDir === 'desc' ? ' \u25BC' : ' \u25B2') : ''}
     </button>
   );
 
@@ -53,13 +53,13 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
   const excludedEntryName = optimizerParams?.excluded_entry_name as string | undefined;
 
   // Summary stats
-  const totalRational = predictions.reduce((sum, p) => sum + p.naive_points, 0);
-  const totalPredicted = predictions.reduce((sum, p) => sum + p.predicted_bid_points, 0);
+  const totalRational = predictions.reduce((sum, p) => sum + p.naivePoints, 0);
+  const totalPredicted = predictions.reduce((sum, p) => sum + p.predictedBidPoints, 0);
 
   // Find biggest edge opportunities (where market might undervalue)
-  const sortedByEdge = [...predictions].sort((a, b) => b.edge_percent - a.edge_percent);
-  const topUndervalued = sortedByEdge.filter(p => p.edge_percent > 0).slice(0, 3);
-  const topOvervalued = sortedByEdge.filter(p => p.edge_percent < 0).slice(-3).reverse();
+  const sortedByEdge = [...predictions].sort((a, b) => b.edgePercent - a.edgePercent);
+  const topUndervalued = sortedByEdge.filter(p => p.edgePercent > 0).slice(0, 3);
+  const topOvervalued = sortedByEdge.filter(p => p.edgePercent < 0).slice(-3).reverse();
 
   return (
     <div className="space-y-4">
@@ -103,8 +103,8 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
             <div className="bg-green-50 rounded-lg border border-green-200 p-3">
               <div className="text-xs text-green-700 uppercase mb-2">Potentially Undervalued</div>
               {topUndervalued.map(p => (
-                <div key={p.team_id} className="text-sm text-green-800">
-                  {p.school_name} ({p.seed}) {formatEdge(p.edge_percent)}
+                <div key={p.teamId} className="text-sm text-green-800">
+                  {p.schoolName} ({p.seed}) {formatEdge(p.edgePercent)}
                 </div>
               ))}
             </div>
@@ -113,8 +113,8 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
             <div className="bg-red-50 rounded-lg border border-red-200 p-3">
               <div className="text-xs text-red-700 uppercase mb-2">Potentially Overvalued</div>
               {topOvervalued.map(p => (
-                <div key={p.team_id} className="text-sm text-red-800">
-                  {p.school_name} ({p.seed}) {formatEdge(p.edge_percent)}
+                <div key={p.teamId} className="text-sm text-red-800">
+                  {p.schoolName} ({p.seed}) {formatEdge(p.edgePercent)}
                 </div>
               ))}
             </div>
@@ -154,14 +154,14 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
             </thead>
             <tbody className="divide-y divide-gray-100">
               {predictions.map((pred) => (
-                <tr key={pred.team_id} className={cn('hover:bg-gray-50', getEdgeColor(pred.edge_percent))}>
-                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{pred.school_name}</td>
+                <tr key={pred.teamId} className={cn('hover:bg-gray-50', getEdgeColor(pred.edgePercent))}>
+                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{pred.schoolName}</td>
                   <td className="px-3 py-2 text-sm text-gray-700 text-center">{pred.seed}</td>
                   <td className="px-3 py-2 text-sm text-gray-500">{pred.region}</td>
-                  <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.naive_points}</td>
-                  <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.predicted_bid_points}</td>
-                  <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getEdgeTextColor(pred.edge_percent))}>
-                    {formatEdge(pred.edge_percent)}
+                  <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.naivePoints}</td>
+                  <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.predictedBidPoints}</td>
+                  <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getEdgeTextColor(pred.edgePercent))}>
+                    {formatEdge(pred.edgePercent)}
                   </td>
                 </tr>
               ))}

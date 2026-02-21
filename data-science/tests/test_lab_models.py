@@ -29,9 +29,9 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
 
         # THEN the result has one dict with all three fields
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["team_id"], "team-abc")
-        self.assertAlmostEqual(result[0]["predicted_market_share"], 0.08)
-        self.assertAlmostEqual(result[0]["expected_points"], 12.5)
+        self.assertEqual(result[0]["teamId"], "team-abc")
+        self.assertAlmostEqual(result[0]["predictedMarketShare"], 0.08)
+        self.assertAlmostEqual(result[0]["expectedPoints"], 12.5)
 
     def test_that_multiple_predictions_preserve_order(self) -> None:
         """Multiple Predictions should serialize in the same order they appear."""
@@ -46,7 +46,7 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         result = serialize_predictions(predictions)
 
         # THEN the order is preserved
-        self.assertEqual([r["team_id"] for r in result], ["team-a", "team-b", "team-c"])
+        self.assertEqual([r["teamId"] for r in result], ["team-a", "team-b", "team-c"])
 
     def test_that_empty_predictions_list_produces_empty_list(self) -> None:
         """An empty predictions list should serialize to an empty list."""
@@ -74,11 +74,11 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         # THEN it round-trips cleanly through JSON
         round_tripped = json.loads(json_str)
         self.assertEqual(len(round_tripped), 2)
-        self.assertEqual(round_tripped[0]["team_id"], "team-1")
-        self.assertAlmostEqual(round_tripped[1]["expected_points"], 999.99)
+        self.assertEqual(round_tripped[0]["teamId"], "team-1")
+        self.assertAlmostEqual(round_tripped[1]["expectedPoints"], 999.99)
 
     def test_that_serialized_dict_has_exactly_three_keys(self) -> None:
-        """Each serialized prediction should have exactly team_id, predicted_market_share, expected_points."""
+        """Each serialized prediction should have exactly teamId, predictedMarketShare, expectedPoints."""
         # GIVEN a prediction
         predictions = [
             Prediction(team_id="team-x", predicted_market_share=0.05, expected_points=7.0),
@@ -88,7 +88,7 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         result = serialize_predictions(predictions)
 
         # THEN each dict has exactly the three expected keys
-        expected_keys = {"team_id", "predicted_market_share", "expected_points"}
+        expected_keys = {"teamId", "predictedMarketShare", "expectedPoints"}
         self.assertEqual(set(result[0].keys()), expected_keys)
 
     def test_that_zero_market_share_is_preserved(self) -> None:
@@ -102,7 +102,7 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         result = serialize_predictions(predictions)
 
         # THEN the zero value is preserved
-        self.assertEqual(result[0]["predicted_market_share"], 0.0)
+        self.assertEqual(result[0]["predictedMarketShare"], 0.0)
 
 
 if __name__ == "__main__":

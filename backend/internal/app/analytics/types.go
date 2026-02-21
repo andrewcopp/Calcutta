@@ -174,3 +174,23 @@ type SeedVarianceInput struct {
 	PointsMean       float64
 	TeamCount        int
 }
+
+// RegionAnalyticsInput represents the raw data needed to calculate region analytics.
+// This mirrors ports.RegionAnalyticsData but is defined here to avoid circular dependencies in tests.
+type RegionAnalyticsInput struct {
+	Region          string
+	TotalPoints     float64
+	TotalInvestment float64
+	TeamCount       int
+}
+
+// TeamAnalyticsInput represents the raw data needed to calculate team analytics.
+// This mirrors ports.TeamAnalyticsData but is defined here to avoid circular dependencies in tests.
+type TeamAnalyticsInput struct {
+	SchoolID        string
+	SchoolName      string
+	TotalPoints     float64
+	TotalInvestment float64
+	Appearances     int
+	TotalSeed       int
+}

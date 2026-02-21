@@ -37,8 +37,8 @@ export function PipelineSummary({
     );
   }
 
-  const completedCount = progress.evaluations_count;
-  const totalCount = progress.total_calcuttas;
+  const completedCount = progress.evaluationsCount;
+  const totalCount = progress.totalCalcuttas;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
@@ -94,8 +94,8 @@ export function PipelineSummary({
         <div>
           <dt className="text-gray-500">Predictions</dt>
           <dd className="font-medium flex items-center">
-            {progress.predictions_count}/{totalCount}
-            {progress.predictions_count === totalCount && (
+            {progress.predictionsCount}/{totalCount}
+            {progress.predictionsCount === totalCount && (
               <span className="ml-1 text-green-500">&#10003;</span>
             )}
           </dd>
@@ -103,8 +103,8 @@ export function PipelineSummary({
         <div>
           <dt className="text-gray-500">Entries</dt>
           <dd className="font-medium flex items-center">
-            {progress.entries_count}/{totalCount}
-            {progress.entries_count === totalCount && (
+            {progress.entriesCount}/{totalCount}
+            {progress.entriesCount === totalCount && (
               <span className="ml-1 text-green-500">&#10003;</span>
             )}
           </dd>
@@ -112,15 +112,15 @@ export function PipelineSummary({
         <div>
           <dt className="text-gray-500">Evaluations</dt>
           <dd className="font-medium flex items-center">
-            {progress.evaluations_count}/{totalCount}
-            {progress.evaluations_count === totalCount && (
+            {progress.evaluationsCount}/{totalCount}
+            {progress.evaluationsCount === totalCount && (
               <span className="ml-1 text-green-500">&#10003;</span>
             )}
           </dd>
         </div>
         <div>
           <dt className="text-gray-500">Avg Payout</dt>
-          <dd className="font-medium">{formatPayoutX(progress.avg_mean_payout)}</dd>
+          <dd className="font-medium">{formatPayoutX(progress.avgMeanPayout)}</dd>
         </div>
       </div>
     </div>

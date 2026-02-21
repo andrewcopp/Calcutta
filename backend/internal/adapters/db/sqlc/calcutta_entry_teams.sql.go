@@ -124,6 +124,93 @@ func (q *Queries) ListEntryTeamsByEntryID(ctx context.Context, entryID string) (
 	return items, nil
 }
 
+const listEntryTeamsByEntryIDs = `-- name: ListEntryTeamsByEntryIDs :many
+SELECT
+    cet.id,
+    cet.entry_id,
+    cet.team_id,
+    cet.bid_points,
+    cet.created_at,
+    cet.updated_at,
+    cet.deleted_at,
+    tt.id AS tournament_team_id,
+    tt.school_id,
+    tt.tournament_id,
+    tt.seed,
+    tt.region,
+    tt.byes,
+    tt.wins,
+    tt.created_at AS team_created_at,
+    tt.updated_at AS team_updated_at,
+    tt.deleted_at AS team_deleted_at,
+    s.name AS school_name
+FROM core.entry_teams cet
+JOIN core.teams tt ON cet.team_id = tt.id
+LEFT JOIN core.schools s ON tt.school_id = s.id
+WHERE cet.entry_id = ANY($1::uuid[]) AND cet.deleted_at IS NULL
+ORDER BY cet.created_at DESC
+`
+
+type ListEntryTeamsByEntryIDsRow struct {
+	ID               string
+	EntryID          string
+	TeamID           string
+	BidPoints        int32
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
+	TournamentTeamID string
+	SchoolID         string
+	TournamentID     string
+	Seed             int32
+	Region           string
+	Byes             int32
+	Wins             int32
+	TeamCreatedAt    pgtype.Timestamptz
+	TeamUpdatedAt    pgtype.Timestamptz
+	TeamDeletedAt    pgtype.Timestamptz
+	SchoolName       *string
+}
+
+func (q *Queries) ListEntryTeamsByEntryIDs(ctx context.Context, entryIds []string) ([]ListEntryTeamsByEntryIDsRow, error) {
+	rows, err := q.db.Query(ctx, listEntryTeamsByEntryIDs, entryIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEntryTeamsByEntryIDsRow
+	for rows.Next() {
+		var i ListEntryTeamsByEntryIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntryID,
+			&i.TeamID,
+			&i.BidPoints,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.TournamentTeamID,
+			&i.SchoolID,
+			&i.TournamentID,
+			&i.Seed,
+			&i.Region,
+			&i.Byes,
+			&i.Wins,
+			&i.TeamCreatedAt,
+			&i.TeamUpdatedAt,
+			&i.TeamDeletedAt,
+			&i.SchoolName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const softDeleteEntryTeamsByEntryID = `-- name: SoftDeleteEntryTeamsByEntryID :execrows
 UPDATE core.entry_teams
 SET deleted_at = $1,

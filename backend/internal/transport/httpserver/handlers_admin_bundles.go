@@ -20,24 +20,24 @@ import (
 )
 
 type adminBundlesImportResponse struct {
-	UploadID  string `json:"upload_id"`
+	UploadID  string `json:"uploadId"`
 	Status    string `json:"status"`
 	Filename  string `json:"filename"`
 	SHA256    string `json:"sha256"`
-	SizeBytes int    `json:"size_bytes"`
+	SizeBytes int    `json:"sizeBytes"`
 }
 
 type adminBundlesImportStatusResponse struct {
-	UploadID     string           `json:"upload_id"`
+	UploadID     string           `json:"uploadId"`
 	Filename     string           `json:"filename"`
 	SHA256       string           `json:"sha256"`
-	SizeBytes    int              `json:"size_bytes"`
+	SizeBytes    int              `json:"sizeBytes"`
 	Status       string           `json:"status"`
-	StartedAt    *time.Time       `json:"started_at,omitempty"`
-	FinishedAt   *time.Time       `json:"finished_at,omitempty"`
-	ErrorMessage *string          `json:"error_message,omitempty"`
-	ImportReport *importer.Report `json:"import_report,omitempty"`
-	VerifyReport *verifier.Report `json:"verify_report,omitempty"`
+	StartedAt    *time.Time       `json:"startedAt,omitempty"`
+	FinishedAt   *time.Time       `json:"finishedAt,omitempty"`
+	ErrorMessage *string          `json:"errorMessage,omitempty"`
+	ImportReport *importer.Report `json:"importReport,omitempty"`
+	VerifyReport *verifier.Report `json:"verifyReport,omitempty"`
 }
 
 func (s *Server) registerAdminBundleRoutes(r *mux.Router) {

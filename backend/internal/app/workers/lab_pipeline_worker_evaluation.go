@@ -30,8 +30,8 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 
 	// Parse bids into map for evaluation
 	type bidEntry struct {
-		TeamID    string `json:"team_id"`
-		BidPoints int    `json:"bid_points"`
+		TeamID    string `json:"teamId"`
+		BidPoints int    `json:"bidPoints"`
 	}
 	var bids []bidEntry
 	if err := json.Unmarshal(bidsJSON, &bids); err != nil {

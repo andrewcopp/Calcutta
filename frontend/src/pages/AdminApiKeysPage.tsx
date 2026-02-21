@@ -137,13 +137,13 @@ export function AdminApiKeysPage() {
               {keys.map((k) => (
                 <TableRow key={k.id}>
                   <TableCell>{k.label || '-'}</TableCell>
-                  <TableCell>{formatDate(k.created_at)}</TableCell>
-                  <TableCell>{k.last_used_at ? formatDate(k.last_used_at) : '-'}</TableCell>
-                  <TableCell>{k.revoked_at ? formatDate(k.revoked_at) : '-'}</TableCell>
+                  <TableCell>{formatDate(k.createdAt)}</TableCell>
+                  <TableCell>{k.lastUsedAt ? formatDate(k.lastUsedAt) : '-'}</TableCell>
+                  <TableCell>{k.revokedAt ? formatDate(k.revokedAt) : '-'}</TableCell>
                   <TableCell>
                     <Button
                       onClick={() => handleRevoke(k.id)}
-                      disabled={busy || Boolean(k.revoked_at)}
+                      disabled={busy || Boolean(k.revokedAt)}
                       variant="secondary"
                       size="sm"
                       className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600"

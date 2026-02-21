@@ -34,7 +34,7 @@ func ValidateEntry(calcutta *models.Calcutta, entry *models.CalcuttaEntry, teams
 	// Rule 4: Maximum bid on any single team
 	for _, team := range teams {
 		if team.BidPoints > calcutta.MaxBid {
-			return fmt.Errorf("maximum bid on any single team is $%d", calcutta.MaxBid)
+			return fmt.Errorf("maximum bid on any single team is %d points", calcutta.MaxBid)
 		}
 	}
 
@@ -44,13 +44,13 @@ func ValidateEntry(calcutta *models.Calcutta, entry *models.CalcuttaEntry, teams
 		totalBids += float64(team.BidPoints)
 	}
 	if totalBids > float64(calcutta.BudgetPoints) {
-		return fmt.Errorf("total bids cannot exceed starting budget of $%d", calcutta.BudgetPoints)
+		return fmt.Errorf("total bids cannot exceed starting budget of %d points", calcutta.BudgetPoints)
 	}
 
 	// Rule 6: Minimum bid on any team is $1
 	for _, team := range teams {
 		if team.BidPoints < 1 {
-			return fmt.Errorf("minimum bid on any team is $1")
+			return fmt.Errorf("minimum bid on any team is 1 point")
 		}
 	}
 

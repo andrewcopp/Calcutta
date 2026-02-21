@@ -14,77 +14,77 @@ type InvestmentModel struct {
 	ID           string          `json:"id"`
 	Name         string          `json:"name"`
 	Kind         string          `json:"kind"`
-	ParamsJSON   json.RawMessage `json:"params_json"`
+	ParamsJSON   json.RawMessage `json:"paramsJson"`
 	Notes        *string         `json:"notes,omitempty"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
-	NEntries     int             `json:"n_entries"`
-	NEvaluations int             `json:"n_evaluations"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	UpdatedAt    time.Time       `json:"updatedAt"`
+	NEntries     int             `json:"nEntries"`
+	NEvaluations int             `json:"nEvaluations"`
 }
 
 // LabEntry represents a lab.entries row.
 type LabEntry struct {
 	ID                    string          `json:"id"`
-	InvestmentModelID     string          `json:"investment_model_id"`
-	CalcuttaID            string          `json:"calcutta_id"`
-	GameOutcomeKind       string          `json:"game_outcome_kind"`
-	GameOutcomeParamsJSON json.RawMessage `json:"game_outcome_params_json"`
-	OptimizerKind         string          `json:"optimizer_kind"`
-	OptimizerParamsJSON   json.RawMessage `json:"optimizer_params_json"`
-	StartingStateKey      string          `json:"starting_state_key"`
-	PredictionsJSON       json.RawMessage `json:"predictions_json,omitempty"`
-	BidsJSON              json.RawMessage `json:"bids_json"`
-	CreatedAt             time.Time       `json:"created_at"`
-	UpdatedAt             time.Time       `json:"updated_at"`
+	InvestmentModelID     string          `json:"investmentModelId"`
+	CalcuttaID            string          `json:"calcuttaId"`
+	GameOutcomeKind       string          `json:"gameOutcomeKind"`
+	GameOutcomeParamsJSON json.RawMessage `json:"gameOutcomeParamsJson"`
+	OptimizerKind         string          `json:"optimizerKind"`
+	OptimizerParamsJSON   json.RawMessage `json:"optimizerParamsJson"`
+	StartingStateKey      string          `json:"startingStateKey"`
+	PredictionsJSON       json.RawMessage `json:"predictionsJson,omitempty"`
+	BidsJSON              json.RawMessage `json:"bidsJson"`
+	CreatedAt             time.Time       `json:"createdAt"`
+	UpdatedAt             time.Time       `json:"updatedAt"`
 }
 
 // LabEntryDetail is LabEntry with joined data for display.
 type LabEntryDetail struct {
 	LabEntry
-	ModelName    string `json:"model_name"`
-	ModelKind    string `json:"model_kind"`
-	CalcuttaName string `json:"calcutta_name"`
-	NEvaluations int    `json:"n_evaluations"`
+	ModelName    string `json:"modelName"`
+	ModelKind    string `json:"modelKind"`
+	CalcuttaName string `json:"calcuttaName"`
+	NEvaluations int    `json:"nEvaluations"`
 }
 
 // LabPrediction represents a single market prediction within predictions_json.
 type LabPrediction struct {
-	TeamID               string  `json:"team_id"`
-	PredictedMarketShare float64 `json:"predicted_market_share"`
-	ExpectedPoints       float64 `json:"expected_points"`
+	TeamID               string  `json:"teamId"`
+	PredictedMarketShare float64 `json:"predictedMarketShare"`
+	ExpectedPoints       float64 `json:"expectedPoints"`
 }
 
 // LabEnrichedPrediction is LabPrediction with team details for display.
 type LabEnrichedPrediction struct {
-	TeamID               string  `json:"team_id"`
-	SchoolName           string  `json:"school_name"`
+	TeamID               string  `json:"teamId"`
+	SchoolName           string  `json:"schoolName"`
 	Seed                 int     `json:"seed"`
 	Region               string  `json:"region"`
-	PredictedMarketShare float64 `json:"predicted_market_share"`
-	PredictedBidPoints   int     `json:"predicted_bid_points"`
-	ExpectedPoints       float64 `json:"expected_points"`
-	ExpectedROI          float64 `json:"expected_roi"`
-	NaivePoints          int     `json:"naive_points"`
-	EdgePercent          float64 `json:"edge_percent"`
+	PredictedMarketShare float64 `json:"predictedMarketShare"`
+	PredictedBidPoints   int     `json:"predictedBidPoints"`
+	ExpectedPoints       float64 `json:"expectedPoints"`
+	ExpectedROI          float64 `json:"expectedRoi"`
+	NaivePoints          int     `json:"naivePoints"`
+	EdgePercent          float64 `json:"edgePercent"`
 }
 
 // LabEntryBid represents a single optimized bid within bids_json.
 type LabEntryBid struct {
-	TeamID      string   `json:"team_id"`
-	BidPoints   int      `json:"bid_points"`
-	ExpectedROI *float64 `json:"expected_roi,omitempty"`
+	TeamID      string   `json:"teamId"`
+	BidPoints   int      `json:"bidPoints"`
+	ExpectedROI *float64 `json:"expectedRoi,omitempty"`
 }
 
 // LabEnrichedBid is LabEntryBid with team details and naive allocation for display.
 type LabEnrichedBid struct {
-	TeamID      string   `json:"team_id"`
-	SchoolName  string   `json:"school_name"`
+	TeamID      string   `json:"teamId"`
+	SchoolName  string   `json:"schoolName"`
 	Seed        int      `json:"seed"`
 	Region      string   `json:"region"`
-	BidPoints   int      `json:"bid_points"`
-	NaivePoints int      `json:"naive_points"`
-	EdgePercent float64  `json:"edge_percent"`
-	ExpectedROI *float64 `json:"expected_roi,omitempty"`
+	BidPoints   int      `json:"bidPoints"`
+	NaivePoints int      `json:"naivePoints"`
+	EdgePercent float64  `json:"edgePercent"`
+	ExpectedROI *float64 `json:"expectedRoi,omitempty"`
 }
 
 // LabTeamInfo holds team metadata used during enrichment.
@@ -120,20 +120,20 @@ type LabEntryRaw struct {
 // LabEntryDetailEnriched is LabEntryDetail with enriched predictions and bids.
 type LabEntryDetailEnriched struct {
 	ID                    string                 `json:"id"`
-	InvestmentModelID     string                 `json:"investment_model_id"`
-	CalcuttaID            string                 `json:"calcutta_id"`
-	GameOutcomeKind       string                 `json:"game_outcome_kind"`
-	GameOutcomeParamsJSON json.RawMessage        `json:"game_outcome_params_json"`
-	OptimizerKind         string                 `json:"optimizer_kind"`
-	OptimizerParamsJSON   json.RawMessage        `json:"optimizer_params_json"`
-	StartingStateKey      string                 `json:"starting_state_key"`
-	CreatedAt             time.Time              `json:"created_at"`
-	UpdatedAt             time.Time              `json:"updated_at"`
-	ModelName             string                 `json:"model_name"`
-	ModelKind             string                 `json:"model_kind"`
-	CalcuttaName          string                 `json:"calcutta_name"`
-	NEvaluations          int                    `json:"n_evaluations"`
-	HasPredictions        bool                   `json:"has_predictions"`
+	InvestmentModelID     string                 `json:"investmentModelId"`
+	CalcuttaID            string                 `json:"calcuttaId"`
+	GameOutcomeKind       string                 `json:"gameOutcomeKind"`
+	GameOutcomeParamsJSON json.RawMessage        `json:"gameOutcomeParamsJson"`
+	OptimizerKind         string                 `json:"optimizerKind"`
+	OptimizerParamsJSON   json.RawMessage        `json:"optimizerParamsJson"`
+	StartingStateKey      string                 `json:"startingStateKey"`
+	CreatedAt             time.Time              `json:"createdAt"`
+	UpdatedAt             time.Time              `json:"updatedAt"`
+	ModelName             string                 `json:"modelName"`
+	ModelKind             string                 `json:"modelKind"`
+	CalcuttaName          string                 `json:"calcuttaName"`
+	NEvaluations          int                    `json:"nEvaluations"`
+	HasPredictions        bool                   `json:"hasPredictions"`
 	Predictions           []LabEnrichedPrediction `json:"predictions,omitempty"`
 	Bids                  []LabEnrichedBid        `json:"bids"`
 }
@@ -141,75 +141,75 @@ type LabEntryDetailEnriched struct {
 // LabEvaluation represents a lab.evaluations row.
 type LabEvaluation struct {
 	ID                     string    `json:"id"`
-	EntryID                string    `json:"entry_id"`
-	NSims                  int       `json:"n_sims"`
+	EntryID                string    `json:"entryId"`
+	NSims                  int       `json:"nSims"`
 	Seed                   int       `json:"seed"`
-	MeanNormalizedPayout   *float64  `json:"mean_normalized_payout,omitempty"`
-	MedianNormalizedPayout *float64  `json:"median_normalized_payout,omitempty"`
-	PTop1                  *float64  `json:"p_top1,omitempty"`
-	PInMoney               *float64  `json:"p_in_money,omitempty"`
-	OurRank                *int      `json:"our_rank,omitempty"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
+	MeanNormalizedPayout   *float64  `json:"meanNormalizedPayout,omitempty"`
+	MedianNormalizedPayout *float64  `json:"medianNormalizedPayout,omitempty"`
+	PTop1                  *float64  `json:"pTop1,omitempty"`
+	PInMoney               *float64  `json:"pInMoney,omitempty"`
+	OurRank                *int      `json:"ourRank,omitempty"`
+	CreatedAt              time.Time `json:"createdAt"`
+	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
 // LabEvaluationDetail is LabEvaluation with joined data for display.
 type LabEvaluationDetail struct {
 	LabEvaluation
-	ModelName        string `json:"model_name"`
-	ModelKind        string `json:"model_kind"`
-	CalcuttaID       string `json:"calcutta_id"`
-	CalcuttaName     string `json:"calcutta_name"`
-	StartingStateKey string `json:"starting_state_key"`
+	ModelName        string `json:"modelName"`
+	ModelKind        string `json:"modelKind"`
+	CalcuttaID       string `json:"calcuttaId"`
+	CalcuttaName     string `json:"calcuttaName"`
+	StartingStateKey string `json:"startingStateKey"`
 }
 
 // LabEvaluationEntryResult represents a single entry's result in an evaluation.
 type LabEvaluationEntryResult struct {
 	ID                   string   `json:"id"`
-	EntryName            string   `json:"entry_name"`
-	MeanNormalizedPayout *float64 `json:"mean_normalized_payout,omitempty"`
-	PTop1                *float64 `json:"p_top1,omitempty"`
-	PInMoney             *float64 `json:"p_in_money,omitempty"`
+	EntryName            string   `json:"entryName"`
+	MeanNormalizedPayout *float64 `json:"meanNormalizedPayout,omitempty"`
+	PTop1                *float64 `json:"pTop1,omitempty"`
+	PInMoney             *float64 `json:"pInMoney,omitempty"`
 	Rank                 int      `json:"rank"`
 }
 
 // LabEvaluationEntryBid represents a single team bid within an evaluation entry.
 type LabEvaluationEntryBid struct {
-	TeamID     string  `json:"team_id"`
-	SchoolName string  `json:"school_name"`
+	TeamID     string  `json:"teamId"`
+	SchoolName string  `json:"schoolName"`
 	Seed       int     `json:"seed"`
 	Region     string  `json:"region"`
-	BidPoints  int     `json:"bid_points"`
+	BidPoints  int     `json:"bidPoints"`
 	Ownership  float64 `json:"ownership"`
 }
 
 // LabEvaluationEntryProfile represents a full entry profile with result and bids.
 type LabEvaluationEntryProfile struct {
-	EntryName            string                  `json:"entry_name"`
-	MeanNormalizedPayout *float64                `json:"mean_normalized_payout,omitempty"`
-	PTop1                *float64                `json:"p_top1,omitempty"`
-	PInMoney             *float64                `json:"p_in_money,omitempty"`
+	EntryName            string                  `json:"entryName"`
+	MeanNormalizedPayout *float64                `json:"meanNormalizedPayout,omitempty"`
+	PTop1                *float64                `json:"pTop1,omitempty"`
+	PInMoney             *float64                `json:"pInMoney,omitempty"`
 	Rank                 int                     `json:"rank"`
-	TotalBidPoints       int                     `json:"total_bid_points"`
+	TotalBidPoints       int                     `json:"totalBidPoints"`
 	Bids                 []LabEvaluationEntryBid  `json:"bids"`
 }
 
 // LabLeaderboardEntry represents a row from lab.model_leaderboard view.
 type LabLeaderboardEntry struct {
-	InvestmentModelID         string     `json:"investment_model_id"`
-	ModelName                 string     `json:"model_name"`
-	ModelKind                 string     `json:"model_kind"`
-	NEntries                  int        `json:"n_entries"`
-	NEntriesWithPredictions   int        `json:"n_entries_with_predictions"`
-	NEvaluations              int        `json:"n_evaluations"`
-	NCalcuttasWithEntries     int        `json:"n_calcuttas_with_entries"`
-	NCalcuttasWithEvaluations int        `json:"n_calcuttas_with_evaluations"`
-	AvgMeanPayout             *float64   `json:"avg_mean_payout,omitempty"`
-	AvgMedianPayout           *float64   `json:"avg_median_payout,omitempty"`
-	AvgPTop1                  *float64   `json:"avg_p_top1,omitempty"`
-	AvgPInMoney               *float64   `json:"avg_p_in_money,omitempty"`
-	FirstEvalAt               *time.Time `json:"first_eval_at,omitempty"`
-	LastEvalAt                *time.Time `json:"last_eval_at,omitempty"`
+	InvestmentModelID         string     `json:"investmentModelId"`
+	ModelName                 string     `json:"modelName"`
+	ModelKind                 string     `json:"modelKind"`
+	NEntries                  int        `json:"nEntries"`
+	NEntriesWithPredictions   int        `json:"nEntriesWithPredictions"`
+	NEvaluations              int        `json:"nEvaluations"`
+	NCalcuttasWithEntries     int        `json:"nCalcuttasWithEntries"`
+	NCalcuttasWithEvaluations int        `json:"nCalcuttasWithEvaluations"`
+	AvgMeanPayout             *float64   `json:"avgMeanPayout,omitempty"`
+	AvgMedianPayout           *float64   `json:"avgMedianPayout,omitempty"`
+	AvgPTop1                  *float64   `json:"avgPTop1,omitempty"`
+	AvgPInMoney               *float64   `json:"avgPInMoney,omitempty"`
+	FirstEvalAt               *time.Time `json:"firstEvalAt,omitempty"`
+	LastEvalAt                *time.Time `json:"lastEvalAt,omitempty"`
 }
 
 // LabListModelsFilter for filtering investment models list.

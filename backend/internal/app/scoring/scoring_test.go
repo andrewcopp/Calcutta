@@ -17,20 +17,29 @@ func TestThatPointsForProgressReturnsZeroWhenRulesEmpty(t *testing.T) {
 	}
 }
 
-func TestThatPointsForProgressReturnsZeroWhenProgressNonPositive(t *testing.T) {
+func TestThatPointsForProgressReturnsZeroWhenProgressIsZero(t *testing.T) {
 	// GIVEN
 	GIVENRules := []Rule{{WinIndex: 1, PointsAwarded: 10}}
 
 	// WHEN
-	WHENPoints0 := PointsForProgress(GIVENRules, 0, 0)
-	WHENPointsNeg := PointsForProgress(GIVENRules, -1, 0)
+	WHENPoints := PointsForProgress(GIVENRules, 0, 0)
 
 	// THEN
-	if WHENPoints0 != 0 {
-		t.Fatalf("expected 0, got %d", WHENPoints0)
+	if WHENPoints != 0 {
+		t.Fatalf("expected 0, got %d", WHENPoints)
 	}
-	if WHENPointsNeg != 0 {
-		t.Fatalf("expected 0, got %d", WHENPointsNeg)
+}
+
+func TestThatPointsForProgressReturnsZeroWhenProgressIsNegative(t *testing.T) {
+	// GIVEN
+	GIVENRules := []Rule{{WinIndex: 1, PointsAwarded: 10}}
+
+	// WHEN
+	WHENPoints := PointsForProgress(GIVENRules, -1, 0)
+
+	// THEN
+	if WHENPoints != 0 {
+		t.Fatalf("expected 0, got %d", WHENPoints)
 	}
 }
 

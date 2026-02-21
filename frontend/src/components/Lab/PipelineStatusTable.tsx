@@ -108,72 +108,72 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
             {calcuttas.map((c) => {
               const isRunning = c.status === 'running';
               const isFailed = c.status === 'failed';
-              const canNavigate = c.has_entry && c.entry_id;
+              const canNavigate = c.hasEntry && c.entryId;
 
               return (
                 <tr
-                  key={c.calcutta_id}
+                  key={c.calcuttaId}
                   className={`${
                     canNavigate ? 'hover:bg-gray-50 cursor-pointer' : ''
                   } ${isFailed ? 'bg-red-50' : ''}`}
                   onClick={() => {
                     if (canNavigate) {
-                      navigate(`/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(c.calcutta_id)}`);
+                      navigate(`/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(c.calcuttaId)}`);
                     }
                   }}
                 >
                   <td className="px-4 py-3">
-                    <div className="text-sm font-medium text-gray-900">{c.calcutta_name}</div>
-                    <div className="text-xs text-gray-500">{c.calcutta_year}</div>
+                    <div className="text-sm font-medium text-gray-900">{c.calcuttaName}</div>
+                    <div className="text-xs text-gray-500">{c.calcuttaYear}</div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusIcon
-                      completed={c.has_predictions}
+                      completed={c.hasPredictions}
                       running={isRunning && c.stage === 'predictions'}
                     />
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusIcon
-                      completed={c.has_entry}
+                      completed={c.hasEntry}
                       running={isRunning && c.stage === 'optimization'}
                     />
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusIcon
-                      completed={c.has_evaluation}
+                      completed={c.hasEvaluation}
                       running={isRunning && c.stage === 'evaluation'}
                     />
                   </td>
                   <td className="px-4 py-3">
                     {isFailed ? (
-                      <span className="text-xs text-red-600" title={c.error_message || 'Failed'}>
+                      <span className="text-xs text-red-600" title={c.errorMessage || 'Failed'}>
                         Failed
                       </span>
                     ) : isRunning ? (
                       <StageProgress stage={c.stage} />
-                    ) : c.has_evaluation ? (
+                    ) : c.hasEvaluation ? (
                       <span className="text-xs text-green-600">Complete</span>
                     ) : (
                       <span className="text-xs text-gray-400">Pending</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {c.has_evaluation ? (
+                    {c.hasEvaluation ? (
                       <span
                         className={`text-sm font-medium ${
-                          c.mean_payout && c.mean_payout >= 1 ? 'text-green-600' : 'text-gray-900'
+                          c.meanPayout && c.meanPayout >= 1 ? 'text-green-600' : 'text-gray-900'
                         }`}
                       >
-                        {formatPayoutX(c.mean_payout)}
+                        {formatPayoutX(c.meanPayout)}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {c.has_evaluation && c.our_rank != null ? (
+                    {c.hasEvaluation && c.ourRank != null ? (
                       <span className="text-sm font-medium text-gray-900">
-                        #{c.our_rank}
+                        #{c.ourRank}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>

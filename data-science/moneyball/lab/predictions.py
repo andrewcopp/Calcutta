@@ -14,7 +14,7 @@ and imports from this module.
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import pandas as pd
 
@@ -34,56 +34,30 @@ from moneyball.lab.models import (
 logger = logging.getLogger(__name__)
 
 
-def generate_market_predictions(
-    model_name: str,
-    year: int,
-    excluded_entry_name: Optional[str] = None,
+def _load_training_data(
+    train_years: List[int],
+    exclude_entry_names: Optional[List[str]],
 ) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
-    """
-    Generate market predictions for a model against a specific year.
+    """Load and concatenate training data across historical years.
 
-    Uses leave-one-year-out cross-validation: trains on all years except
-    the target year, then predicts market share for the target year.
+    Loads ridge team datasets for each training year using leave-one-year-out
+    cross-validation. Fails fast if any year cannot be loaded, since missing
+    years would silently degrade model quality.
 
     Args:
-        model_name: Name of the investment model to use.
-        year: The target year to predict market share for.
-        excluded_entry_name: Optional entry name to exclude from training data.
+        train_years: List of years to load training data for.
+        exclude_entry_names: Optional list of entry names to exclude from
+            the training data (e.g. to avoid leaking own bids).
 
     Returns:
-        Tuple of (predictions_df, error_message). On success, predictions_df
-        has columns including team_slug and predicted_market_share.
-        On failure, predictions_df is None and error_message describes the issue.
+        Tuple of (train_df, error_message). On success, train_df is a
+        concatenated DataFrame with observed_team_share_of_pool populated.
+        On failure, train_df is None and error_message describes the issue.
     """
     from moneyball.db.readers import (
-        initialize_default_scoring_rules_for_year,
         read_ridge_team_dataset_for_year,
     )
-    from moneyball.models.predicted_market_share import (
-        predict_market_share,
-    )
-    from moneyball.lab.models import get_investment_model
 
-    model = get_investment_model(model_name)
-    if not model:
-        return None, f"Model '{model_name}' not found"
-
-    ridge_alpha = model.params.get("alpha", 1.0)
-    feature_set = model.params.get("feature_set", "optimal")
-    target_transform = model.params.get("target_transform", "none")
-    seed_prior_monotone = model.params.get("seed_prior_monotone", None)
-    seed_prior_k = model.params.get("seed_prior_k", 0.0)
-    program_prior_k = model.params.get("program_prior_k", 0.0)
-
-    initialize_default_scoring_rules_for_year(year)
-
-    # Training years - derive from database instead of hardcoding
-    all_years = sorted({c.year for c in get_historical_calcuttas()})
-    train_years = [y for y in all_years if y != year]
-
-    exclude_entry_names = [excluded_entry_name] if excluded_entry_name else None
-
-    # Load training data
     train_frames = []
     train_failures = 0
     for y in train_years:
@@ -111,6 +85,59 @@ def generate_market_predictions(
     if train_ds.empty:
         return None, "No valid training rows"
 
+    return train_ds, None
+
+
+def generate_market_predictions(
+    model_name: str,
+    year: int,
+    excluded_entry_name: Optional[str] = None,
+) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
+    """
+    Generate market predictions for a model against a specific year.
+
+    Uses leave-one-year-out cross-validation: trains on all years except
+    the target year, then predicts market share for the target year.
+
+    Args:
+        model_name: Name of the investment model to use.
+        year: The target year to predict market share for.
+        excluded_entry_name: Optional entry name to exclude from training data.
+
+    Returns:
+        Tuple of (predictions_df, error_message). On success, predictions_df
+        has columns including team_slug and predicted_market_share.
+        On failure, predictions_df is None and error_message describes the issue.
+    """
+    from moneyball.db.readers import (
+        read_ridge_team_dataset_for_year,
+    )
+    from moneyball.models.predicted_market_share import (
+        predict_market_share,
+    )
+    from moneyball.lab.models import get_investment_model
+
+    model = get_investment_model(model_name)
+    if not model:
+        return None, f"Model '{model_name}' not found"
+
+    ridge_alpha = model.params.get("alpha", 1.0)
+    feature_set = model.params.get("feature_set", "optimal")
+    target_transform = model.params.get("target_transform", "none")
+    seed_prior_monotone = model.params.get("seed_prior_monotone", None)
+    seed_prior_k = model.params.get("seed_prior_k", 0.0)
+    program_prior_k = model.params.get("program_prior_k", 0.0)
+
+    # Training years - derive from database instead of hardcoding
+    all_years = sorted({c.year for c in get_historical_calcuttas()})
+    train_years = [y for y in all_years if y != year]
+
+    exclude_entry_names = [excluded_entry_name] if excluded_entry_name else None
+
+    train_ds, error = _load_training_data(train_years, exclude_entry_names)
+    if error:
+        return None, error
+
     try:
         predict_ds = read_ridge_team_dataset_for_year(
             year,
@@ -137,35 +164,33 @@ def generate_market_predictions(
     return predictions_df, None
 
 
-def create_predictions_for_calcutta(
-    model_id: str,
-    calcutta_id: str,
+def _map_predictions(
     predictions_df: pd.DataFrame,
     team_id_map: dict,
     expected_points_map: dict,
-) -> Optional[Entry]:
+) -> List[Prediction]:
     """
-    Create a lab entry with market predictions for a single calcutta.
+    Map model predictions to Prediction objects using team IDs and expected points.
 
-    Maps model predictions (by team_slug) to team IDs and expected points,
-    then writes them to the lab.entries table.
+    Iterates over predictions_df rows, resolving each team_slug to a team UUID
+    and expected tournament points. Fails fast on missing expected points and
+    collects all slug mismatches before raising.
 
     Args:
-        model_id: UUID of the investment model.
-        calcutta_id: UUID of the calcutta to create an entry for.
-        predictions_df: DataFrame with team_slug and predicted_market_share.
+        predictions_df: DataFrame with team_slug and predicted_market_share columns.
         team_id_map: Mapping from school_slug to team UUID.
         expected_points_map: Mapping from school_slug to expected tournament points.
 
     Returns:
-        The created Entry, or None if no valid predictions could be mapped.
+        List of Prediction objects, one per row in predictions_df that maps
+        successfully. Returns an empty list when predictions_df has no rows.
 
     Raises:
         ValueError: If any team_slug in predictions has no team_id mapping,
-            or if expected points are missing for a team.
+            or if expected points are missing for a mapped team.
     """
-    predictions = []
-    skipped_slugs = []
+    predictions: List[Prediction] = []
+    skipped_slugs: List[str] = []
     for _, row in predictions_df.iterrows():
         team_slug = row["team_slug"]
         predicted_share = row["predicted_market_share"]
@@ -197,6 +222,38 @@ def create_predictions_for_calcutta(
             "Check school slug consistency between model training data and core.schools."
         )
 
+    return predictions
+
+
+def create_predictions_for_calcutta(
+    model_id: str,
+    calcutta_id: str,
+    predictions_df: pd.DataFrame,
+    team_id_map: dict,
+    expected_points_map: dict,
+) -> Optional[Entry]:
+    """
+    Create a lab entry with market predictions for a single calcutta.
+
+    Maps model predictions (by team_slug) to team IDs and expected points,
+    then writes them to the lab.entries table.
+
+    Args:
+        model_id: UUID of the investment model.
+        calcutta_id: UUID of the calcutta to create an entry for.
+        predictions_df: DataFrame with team_slug and predicted_market_share.
+        team_id_map: Mapping from school_slug to team UUID.
+        expected_points_map: Mapping from school_slug to expected tournament points.
+
+    Returns:
+        The created Entry, or None if no valid predictions could be mapped.
+
+    Raises:
+        ValueError: If any team_slug in predictions has no team_id mapping,
+            or if expected points are missing for a team.
+    """
+    predictions = _map_predictions(predictions_df, team_id_map, expected_points_map)
+
     if not predictions:
         return None
 
@@ -217,7 +274,7 @@ def process_calcuttas(
     calcuttas: List[HistoricalCalcutta],
     excluded_entry: Optional[str] = None,
     dry_run: bool = False,
-    log_fn: Optional[callable] = None,
+    log_fn: Optional[Callable[..., None]] = None,
 ) -> Tuple[int, Optional[str], List[str]]:
     """
     Iterate over calcuttas, generate predictions, and create lab entries.

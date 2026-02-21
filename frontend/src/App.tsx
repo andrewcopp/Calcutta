@@ -53,9 +53,6 @@ const AppLayout: React.FC = () => {
         <Route path="/lab/entries/:entryId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/lab/models/:modelName/calcuttas/:calcuttaId/evaluations/:evaluationId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        {/* Legacy evaluation route redirect */}
-        <Route path="/lab/evaluations/:evaluationId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EvaluationDetailPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/lab/entry-results/:entryResultId" element={<PermissionProtectedRoute permission="lab.read"><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin" element={<PermissionProtectedRoute permission="admin"><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/api-keys" element={<PermissionProtectedRoute permission="admin.api_keys.write"><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/bundles" element={<PermissionProtectedRoute permission="admin.bundles.export"><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />

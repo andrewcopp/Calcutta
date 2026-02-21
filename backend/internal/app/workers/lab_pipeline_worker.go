@@ -59,16 +59,16 @@ type labPipelineJob struct {
 }
 
 type labPipelineJobParams struct {
-	PipelineRunID         string `json:"pipeline_run_id"`
-	PipelineCalcuttaRunID string `json:"pipeline_calcutta_run_id"`
-	InvestmentModelID     string `json:"investment_model_id"`
-	CalcuttaID            string `json:"calcutta_id"`
-	EntryID               string `json:"entry_id"`
-	BudgetPoints          int    `json:"budget_points"`
-	OptimizerKind         string `json:"optimizer_kind"`
-	NSims                 int    `json:"n_sims"`
+	PipelineRunID         string `json:"pipelineRunId"`
+	PipelineCalcuttaRunID string `json:"pipelineCalcuttaRunId"`
+	InvestmentModelID     string `json:"investmentModelId"`
+	CalcuttaID            string `json:"calcuttaId"`
+	EntryID               string `json:"entryId"`
+	BudgetPoints          int    `json:"budgetPoints"`
+	OptimizerKind         string `json:"optimizerKind"`
+	NSims                 int    `json:"nSims"`
 	Seed                  int    `json:"seed"`
-	ExcludedEntryName     string `json:"excluded_entry_name"`
+	ExcludedEntryName     string `json:"excludedEntryName"`
 }
 
 // Run starts the worker loop.

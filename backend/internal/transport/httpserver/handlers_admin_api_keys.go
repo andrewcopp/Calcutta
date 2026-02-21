@@ -21,15 +21,15 @@ type adminAPIKeyCreateResponse struct {
 	ID        string  `json:"id"`
 	Key       string  `json:"key"`
 	Label     *string `json:"label,omitempty"`
-	CreatedAt string  `json:"created_at"`
+	CreatedAt string  `json:"createdAt"`
 }
 
 type adminAPIKeyListItem struct {
 	ID         string     `json:"id"`
 	Label      *string    `json:"label,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
-	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
-	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	RevokedAt  *time.Time `json:"revokedAt,omitempty"`
+	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
 }
 
 type adminAPIKeyListResponse struct {

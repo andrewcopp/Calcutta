@@ -41,16 +41,16 @@ export const labService = {
   },
 
   async listEvaluations(params?: {
-    entry_id?: string;
-    investment_model_id?: string;
-    calcutta_id?: string;
+    entryId?: string;
+    investmentModelId?: string;
+    calcuttaId?: string;
     limit?: number;
     offset?: number;
   }): Promise<ListEvaluationsResponse> {
     const q = new URLSearchParams();
-    if (params?.entry_id) q.set('entry_id', params.entry_id);
-    if (params?.investment_model_id) q.set('investment_model_id', params.investment_model_id);
-    if (params?.calcutta_id) q.set('calcutta_id', params.calcutta_id);
+    if (params?.entryId) q.set('entry_id', params.entryId);
+    if (params?.investmentModelId) q.set('investment_model_id', params.investmentModelId);
+    if (params?.calcuttaId) q.set('calcutta_id', params.calcuttaId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
     const suffix = q.toString() ? `?${q.toString()}` : '';

@@ -39,3 +39,5 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_API_URL: http://localhost:8080

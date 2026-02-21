@@ -195,7 +195,7 @@ func (w *LabPipelineWorker) processPythonPredictions(ctx context.Context, worker
 	// Parse output to get entry ID
 	var result struct {
 		OK      bool   `json:"ok"`
-		EntryID string `json:"entry_id"`
+		EntryID string `json:"entryId"`
 		Error   string `json:"error"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil || !result.OK {
@@ -254,9 +254,9 @@ func (w *LabPipelineWorker) getActualMarketShare(ctx context.Context, calcuttaID
 func (w *LabPipelineWorker) createLabEntry(ctx context.Context, params labPipelineJobParams, expectedPointsMap map[string]float64, marketShareMap map[string]float64) (string, error) {
 	// Build predictions JSON
 	type predictionRow struct {
-		TeamID               string  `json:"team_id"`
-		PredictedMarketShare float64 `json:"predicted_market_share"`
-		ExpectedPoints       float64 `json:"expected_points"`
+		TeamID               string  `json:"teamId"`
+		PredictedMarketShare float64 `json:"predictedMarketShare"`
+		ExpectedPoints       float64 `json:"expectedPoints"`
 	}
 
 	var predictions []predictionRow

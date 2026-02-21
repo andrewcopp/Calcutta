@@ -73,7 +73,7 @@ export function EntryDetailPage() {
   const loadedEntryId = entryQuery.data?.id;
   const evaluationsQuery = useQuery<ListEvaluationsResponse | null>({
     queryKey: queryKeys.lab.evaluations.byEntry(loadedEntryId),
-    queryFn: () => (loadedEntryId ? labService.listEvaluations({ entry_id: loadedEntryId, limit: 1 }) : Promise.resolve(null)),
+    queryFn: () => (loadedEntryId ? labService.listEvaluations({ entryId: loadedEntryId, limit: 1 }) : Promise.resolve(null)),
     enabled: Boolean(loadedEntryId),
   });
 
@@ -91,16 +91,16 @@ export function EntryDetailPage() {
           cmp = a.seed - b.seed;
           break;
         case 'team':
-          cmp = a.school_name.localeCompare(b.school_name);
+          cmp = a.schoolName.localeCompare(b.schoolName);
           break;
         case 'rational':
-          cmp = b.naive_points - a.naive_points;
+          cmp = b.naivePoints - a.naivePoints;
           break;
         case 'predicted':
-          cmp = b.predicted_bid_points - a.predicted_bid_points;
+          cmp = b.predictedBidPoints - a.predictedBidPoints;
           break;
         case 'edge':
-          cmp = b.edge_percent - a.edge_percent;
+          cmp = b.edgePercent - a.edgePercent;
           break;
       }
       return predSortDir === 'asc' ? -cmp : cmp;
@@ -142,7 +142,7 @@ export function EntryDetailPage() {
   }
 
   // Compute stage completion status
-  const hasPredictions = entry.has_predictions && predictions.length > 0;
+  const hasPredictions = entry.hasPredictions && predictions.length > 0;
   const hasBids = bids.length > 0;
   const hasEvaluations = evaluation !== null;
 
@@ -151,8 +151,8 @@ export function EntryDetailPage() {
       <Breadcrumb
         items={[
           { label: 'Lab', href: '/lab' },
-          { label: entry.model_name, href: `/lab/models/${entry.investment_model_id}` },
-          { label: entry.calcutta_name },
+          { label: entry.modelName, href: `/lab/models/${entry.investmentModelId}` },
+          { label: entry.calcuttaName },
         ]}
       />
 
@@ -160,7 +160,7 @@ export function EntryDetailPage() {
       <div className="flex items-baseline gap-3 mb-4">
         <h1 className="text-xl font-bold text-gray-900">Entry Detail</h1>
         <span className="text-gray-500">
-          {entry.model_name} ({entry.model_kind}) → {entry.calcutta_name}
+          {entry.modelName} ({entry.modelKind}) → {entry.calcuttaName}
         </span>
       </div>
 
@@ -222,7 +222,7 @@ export function EntryDetailPage() {
               sortKey={predSortKey}
               sortDir={predSortDir}
               onSort={handlePredSort}
-              optimizerParams={entry.optimizer_params_json}
+              optimizerParams={entry.optimizerParamsJson}
             />
           ) : (
             <Alert variant="info">No predictions available for this entry.</Alert>
@@ -238,8 +238,8 @@ export function EntryDetailPage() {
             onSort={handleBidSort}
             showOnlyInvested={showOnlyInvested}
             onShowOnlyInvestedChange={setShowOnlyInvested}
-            optimizerKind={entry.optimizer_kind}
-            optimizerParams={entry.optimizer_params_json}
+            optimizerKind={entry.optimizerKind}
+            optimizerParams={entry.optimizerParamsJson}
           />
         </TabsContent>
 
@@ -247,8 +247,8 @@ export function EntryDetailPage() {
           <EvaluationsTab
             evaluation={evaluation}
             isLoading={evaluationsQuery.isLoading}
-            modelName={entry.model_name}
-            calcuttaId={entry.calcutta_id}
+            modelName={entry.modelName}
+            calcuttaId={entry.calcuttaId}
           />
         </TabsContent>
       </Tabs>

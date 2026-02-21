@@ -19,8 +19,6 @@ export function formatPct(val?: number | null, decimals = 1): string {
   return `${(val * 100).toFixed(decimals)}%`;
 }
 
-export { formatDate } from './format';
-
 /** Return Tailwind color classes based on a payout multiplier value. */
 export function getPayoutColor(payout?: number | null): string {
   if (payout == null) return 'text-gray-400';

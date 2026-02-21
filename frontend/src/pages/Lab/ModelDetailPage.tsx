@@ -15,7 +15,7 @@ import { PipelineStatusTable } from '../../components/Lab/PipelineStatusTable';
 import { labService } from '../../services/labService';
 import type { InvestmentModel, ModelPipelineProgress } from '../../types/lab';
 import { queryKeys } from '../../queryKeys';
-import { formatDate } from '../../utils/labFormatters';
+import { formatDate } from '../../utils/format';
 
 export function ModelDetailPage() {
   const { modelId } = useParams<{ modelId: string }>();
@@ -38,12 +38,12 @@ export function ModelDetailPage() {
 
   // Update pipeline running state based on query data
   useEffect(() => {
-    if (pipelineProgressQuery.data?.active_pipeline_run_id) {
+    if (pipelineProgressQuery.data?.activePipelineRunId) {
       setIsPipelineRunning(true);
     } else {
       setIsPipelineRunning(false);
     }
-  }, [pipelineProgressQuery.data?.active_pipeline_run_id]);
+  }, [pipelineProgressQuery.data?.activePipelineRunId]);
 
   const startPipelineMutation = useMutation({
     mutationFn: () => labService.startPipeline(modelId!),
@@ -54,7 +54,7 @@ export function ModelDetailPage() {
   });
 
   const rerunAllMutation = useMutation({
-    mutationFn: () => labService.startPipeline(modelId!, { force_rerun: true }),
+    mutationFn: () => labService.startPipeline(modelId!, { forceRerun: true }),
     onSuccess: () => {
       setIsPipelineRunning(true);
       queryClient.invalidateQueries({ queryKey: queryKeys.lab.models.pipelineProgress(modelId) });
@@ -63,7 +63,7 @@ export function ModelDetailPage() {
 
   const cancelPipelineMutation = useMutation({
     mutationFn: () => {
-      const runId = pipelineProgressQuery.data?.active_pipeline_run_id;
+      const runId = pipelineProgressQuery.data?.activePipelineRunId;
       if (!runId) throw new Error('No active pipeline to cancel');
       return labService.cancelPipeline(runId);
     },
@@ -80,12 +80,12 @@ export function ModelDetailPage() {
 
   // Build cross-calcutta performance data for chart
   const performanceData = (pipelineProgress?.calcuttas ?? [])
-    .filter((c) => c.has_evaluation && c.mean_payout != null)
-    .sort((a, b) => a.calcutta_year - b.calcutta_year)
+    .filter((c) => c.hasEvaluation && c.meanPayout != null)
+    .sort((a, b) => a.calcuttaYear - b.calcuttaYear)
     .map((c) => ({
-      name: String(c.calcutta_year),
-      payout: c.mean_payout ?? 0,
-      rank: c.our_rank ?? undefined,
+      name: String(c.calcuttaYear),
+      payout: c.meanPayout ?? 0,
+      rank: c.ourRank ?? undefined,
     }));
 
   if (modelQuery.isLoading) {
@@ -132,30 +132,30 @@ export function ModelDetailPage() {
           </div>
           <div>
             <dt className="text-gray-500">Created</dt>
-            <dd className="font-medium">{formatDate(model.created_at)}</dd>
+            <dd className="font-medium">{formatDate(model.createdAt)}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Entries</dt>
-            <dd className="font-medium">{model.n_entries}</dd>
+            <dd className="font-medium">{model.nEntries}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Evaluations</dt>
-            <dd className="font-medium">{model.n_evaluations}</dd>
+            <dd className="font-medium">{model.nEvaluations}</dd>
           </div>
         </dl>
 
-        {model.params_json && Object.keys(model.params_json).length > 0 && (
+        {model.paramsJson && Object.keys(model.paramsJson).length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowParams(!showParams)}
             >
-              {showParams ? '▼' : '▶'} Model Parameters ({Object.keys(model.params_json).length})
+              {showParams ? '\u25BC' : '\u25B6'} Model Parameters ({Object.keys(model.paramsJson).length})
             </Button>
             {showParams && (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-3">
-                {Object.entries(model.params_json).map(([key, value]) => (
+                {Object.entries(model.paramsJson).map(([key, value]) => (
                   <div key={key}>
                     <dt className="text-gray-500 font-mono text-xs">{key}</dt>
                     <dd className="font-medium">

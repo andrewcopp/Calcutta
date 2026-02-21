@@ -106,71 +106,12 @@ def _get_expected_points_from_predictions(calcutta_id: str) -> Dict[str, float]:
             tournament_id = str(row[0])
 
     rows = read_latest_predicted_team_values(tournament_id)
-    return {r["team_slug"]: r["expected_points"] for r in rows}
-
-
-def _get_expected_points_from_simulations(cur, calcutta_id: str) -> Dict[str, float]:
-    """
-    Compute expected points from simulation data as a fallback.
-
-    Args:
-        cur: Database cursor.
-        calcutta_id: The calcutta to look up.
-
-    Returns:
-        Dict mapping team_slug to expected_points, or empty dict
-        if no simulations exist.
-    """
-    cur.execute("""
-        WITH calcutta_ctx AS (
-            SELECT c.id AS calcutta_id, t.id AS tournament_id
-            FROM core.calcuttas c
-            JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
-            WHERE c.id = %s AND c.deleted_at IS NULL
-        ),
-        win_distribution AS (
-            SELECT
-                st.team_id,
-                st.wins,
-                st.byes,
-                COUNT(*)::float AS sim_count
-            FROM derived.simulated_teams st
-            WHERE st.tournament_id = (SELECT tournament_id FROM calcutta_ctx)
-              AND st.deleted_at IS NULL
-            GROUP BY st.team_id, st.wins, st.byes
-        ),
-        team_totals AS (
-            SELECT team_id, SUM(sim_count) AS total_sims
-            FROM win_distribution
-            GROUP BY team_id
-        ),
-        team_expected AS (
-            SELECT
-                s.slug AS team_slug,
-                SUM(
-                    wd.sim_count * core.calcutta_points_for_progress(
-                        (SELECT calcutta_id FROM calcutta_ctx),
-                        wd.wins,
-                        wd.byes
-                    )
-                ) / tt.total_sims AS expected_points
-            FROM win_distribution wd
-            JOIN team_totals tt ON tt.team_id = wd.team_id
-            JOIN core.teams t ON t.id = wd.team_id AND t.deleted_at IS NULL
-            JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
-            GROUP BY s.slug, tt.total_sims
-        )
-        SELECT team_slug, expected_points::float FROM team_expected
-    """, (calcutta_id,))
-    return {row[0]: row[1] for row in cur.fetchall()}
+    return {r.team_slug: r.expected_points for r in rows}
 
 
 def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
     """
-    Get expected tournament points for each team.
-
-    First tries to use Go-generated predictions from derived.predicted_team_values.
-    Falls back to simulation-based calculation if no predictions exist.
+    Get expected tournament points for each team from Go-generated predictions.
     """
     result = _get_expected_points_from_predictions(calcutta_id)
     if result:
@@ -181,18 +122,7 @@ def get_expected_points_map(calcutta_id: str) -> Dict[str, float]:
         )
         return result
 
-    logger.warning(
-        "No prediction batch found for calcutta %s, falling back to simulation query",
-        calcutta_id,
+    raise ValueError(
+        f"No prediction data for calcutta {calcutta_id}. "
+        "Run predictions before generating market predictions."
     )
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            result = _get_expected_points_from_simulations(cur, calcutta_id)
-
-    if not result:
-        raise ValueError(
-            f"No prediction or simulation data for calcutta {calcutta_id}. "
-            "Run predictions or simulations before generating market predictions."
-        )
-
-    return result
