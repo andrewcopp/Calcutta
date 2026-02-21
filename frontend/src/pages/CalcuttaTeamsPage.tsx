@@ -112,40 +112,7 @@ export function CalcuttaTeamsPage() {
         }
       />
 
-      {biddingOpen && tournamentStartingAt ? (
-        <BiddingOverlay tournamentStartingAt={tournamentStartingAt}>
-          <Card className="p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Seed</TableHeaderCell>
-                    <TableHeaderCell>Team</TableHeaderCell>
-                    <TableHeaderCell>Region</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Investment</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Points</TableHeaderCell>
-                    <TableHeaderCell className="text-right">ROI</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {teams.map((team) => (
-                    <TableRow key={team.teamId} className="hover:bg-gray-50">
-                      <TableCell className="font-medium text-gray-900">{team.seed}</TableCell>
-                      <TableCell className="text-gray-700">{team.schoolName}</TableCell>
-                      <TableCell className="text-gray-700">{team.region}</TableCell>
-                      <TableCell className="text-right text-gray-700">0.00 pts</TableCell>
-                      <TableCell className="text-right text-gray-700">{team.points}</TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-medium text-gray-400">--</span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
-        </BiddingOverlay>
-      ) : (
+      <BiddingOverlay tournamentStartingAt={tournamentStartingAt ?? ''} active={biddingOpen}>
         <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
@@ -166,13 +133,17 @@ export function CalcuttaTeamsPage() {
                     <TableCell className="text-gray-700">{team.schoolName}</TableCell>
                     <TableCell className="text-gray-700">{team.region}</TableCell>
                     <TableCell className="text-right text-gray-700">
-                      {team.totalInvestment.toFixed(2)} pts
+                      {biddingOpen ? '0.00 pts' : `${team.totalInvestment.toFixed(2)} pts`}
                     </TableCell>
                     <TableCell className="text-right text-gray-700">{team.points}</TableCell>
                     <TableCell className="text-right">
-                      <span className={`font-medium ${team.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {team.roi.toFixed(2)}%
-                      </span>
+                      {biddingOpen ? (
+                        <span className="font-medium text-gray-400">--</span>
+                      ) : (
+                        <span className={`font-medium ${team.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {team.roi.toFixed(2)}%
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -180,7 +151,7 @@ export function CalcuttaTeamsPage() {
             </Table>
           </div>
         </Card>
-      )}
+      </BiddingOverlay>
     </PageContainer>
   );
 }

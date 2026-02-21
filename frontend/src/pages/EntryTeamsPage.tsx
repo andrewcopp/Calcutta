@@ -176,26 +176,15 @@ export function EntryTeamsPage() {
 
       <PageHeader title={entryName || 'Entry'} />
 
-      {biddingOpen && tournamentStartingAt ? (
-        <BiddingOverlay tournamentStartingAt={tournamentStartingAt}>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="investments">Investments</TabsTrigger>
-              <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
-              <TabsTrigger value="returns">Returns</TabsTrigger>
-              <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </BiddingOverlay>
-      ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="investments">Investments</TabsTrigger>
-            <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
-            <TabsTrigger value="returns">Returns</TabsTrigger>
-            <TabsTrigger value="statistics">Statistics</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="investments">Investments</TabsTrigger>
+          <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
+          <TabsTrigger value="returns">Returns</TabsTrigger>
+          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+        </TabsList>
 
+        <BiddingOverlay tournamentStartingAt={tournamentStartingAt ?? ''} active={biddingOpen}>
           <TabsContent value="investments">
             <InvestmentsTab
               entryId={entryId!}
@@ -243,8 +232,8 @@ export function EntryTeamsPage() {
           <TabsContent value="statistics">
             <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
           </TabsContent>
-        </Tabs>
-      )}
+        </BiddingOverlay>
+      </Tabs>
     </PageContainer>
   );
 }

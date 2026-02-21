@@ -3,10 +3,13 @@ import { formatDate } from '../utils/format';
 
 interface BiddingOverlayProps {
   tournamentStartingAt: string;
+  active?: boolean;
   children: React.ReactNode;
 }
 
-export function BiddingOverlay({ tournamentStartingAt, children }: BiddingOverlayProps) {
+export function BiddingOverlay({ tournamentStartingAt, active = true, children }: BiddingOverlayProps) {
+  if (!active) return <>{children}</>;
+
   return (
     <div className="relative">
       <div className="blur-sm pointer-events-none select-none" aria-hidden="true">
