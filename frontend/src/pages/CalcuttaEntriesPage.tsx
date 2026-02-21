@@ -95,8 +95,8 @@ export function CalcuttaEntriesPage() {
   };
 
   if (biddingOpen) {
-    const statusLabelMap: Record<string, string> = { empty: 'Empty', invalid: 'Invalid', valid: 'Valid', accepted: 'Accepted', rejected: 'Rejected' };
-    const statusVariantMap: Record<string, string> = { empty: 'secondary', invalid: 'warning', valid: 'default', accepted: 'success', rejected: 'destructive' };
+    const statusLabelMap: Record<string, string> = { incomplete: 'Incomplete', accepted: 'Accepted' };
+    const statusVariantMap: Record<string, string> = { incomplete: 'secondary', accepted: 'success' };
     const entryStatusLabel = !currentUserEntry
       ? 'Not Started'
       : statusLabelMap[currentUserEntry.status] ?? currentUserEntry.status;
@@ -213,8 +213,8 @@ export function CalcuttaEntriesPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-gray-900">Your Entry</h3>
-                <Badge variant={(({ empty: 'secondary', invalid: 'warning', valid: 'default', accepted: 'success', rejected: 'destructive' } as Record<string, 'secondary' | 'success' | 'warning' | 'default' | 'destructive'>)[currentUserEntry.status]) ?? 'secondary'}>
-                  {({ empty: 'Empty', invalid: 'Invalid', valid: 'Valid', accepted: 'Accepted', rejected: 'Rejected' } as Record<string, string>)[currentUserEntry.status] ?? currentUserEntry.status}
+                <Badge variant={currentUserEntry.status === 'accepted' ? 'success' : 'secondary'}>
+                  {currentUserEntry.status === 'accepted' ? 'Accepted' : 'Incomplete'}
                 </Badge>
                 <span className="text-sm text-gray-500">{userTeams.length} teams &middot; {totalSpent} / {budgetPoints} pts</span>
               </div>

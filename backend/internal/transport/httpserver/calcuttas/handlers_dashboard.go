@@ -104,7 +104,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			httperr.WriteFromErr(w, r, err, h.authUserID)
 			return
 		}
-		currentUserEntry.Status = calcuttaapp.DeriveEntryStatus(userTeams, biddingOpen)
+		currentUserEntry.Status = calcuttaapp.DeriveEntryStatus(userTeams)
 		resp.CurrentUserEntry = dtos.NewEntryResponse(currentUserEntry)
 	}
 
@@ -144,7 +144,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 
 		for _, entry := range entries {
 			entryTeams := filterEntryTeams(allEntryTeams, entry.ID)
-			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeams, biddingOpen)
+			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeams)
 		}
 
 		resp.Entries = dtos.NewEntryListResponse(entries)

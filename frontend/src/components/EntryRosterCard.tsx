@@ -28,8 +28,8 @@ export function EntryRosterCard({
       <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">Your Entry</h3>
-          <Badge variant={({ empty: 'secondary', invalid: 'warning', valid: 'default', accepted: 'success', rejected: 'destructive' } as const)[entryStatus] ?? 'secondary'}>
-            {({ empty: 'Empty', invalid: 'Invalid', valid: 'Valid', accepted: 'Accepted', rejected: 'Rejected' } as Record<string, string>)[entryStatus] ?? entryStatus}
+          <Badge variant={entryStatus === 'accepted' ? 'success' : 'secondary'}>
+            {entryStatus === 'accepted' ? 'Accepted' : 'Incomplete'}
           </Badge>
         </div>
         {canEdit && (

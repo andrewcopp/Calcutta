@@ -6,22 +6,13 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-// DeriveEntryStatus computes the entry status from its teams and the bidding state.
-func DeriveEntryStatus(teams []*models.CalcuttaEntryTeam, biddingOpen bool) string {
+// DeriveEntryStatus computes the entry status from its teams.
+// Only two states: "incomplete" (no bids) and "accepted" (has bids, validated at save time).
+func DeriveEntryStatus(teams []*models.CalcuttaEntryTeam) string {
 	if len(teams) == 0 {
-		return "empty"
+		return "incomplete"
 	}
-	isValid := ValidateEntry(nil, teams) == nil
-	if biddingOpen {
-		if isValid {
-			return "valid"
-		}
-		return "invalid"
-	}
-	if isValid {
-		return "accepted"
-	}
-	return "rejected"
+	return "accepted"
 }
 
 // ValidateEntry validates all bids for an entry according to the rules.
