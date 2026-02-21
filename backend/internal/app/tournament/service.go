@@ -21,6 +21,7 @@ type TournamentRepo interface {
 	CreateTeam(ctx context.Context, team *models.TournamentTeam) error
 	UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error
 	GetWinningTeam(ctx context.Context, tournamentID string) (*models.TournamentTeam, error)
+	ListWinningTeams(ctx context.Context) (map[string]*models.TournamentTeam, error)
 	GetCompetitions(ctx context.Context) ([]models.Competition, error)
 	GetSeasons(ctx context.Context) ([]models.Season, error)
 	ReplaceTeams(ctx context.Context, tournamentID string, teams []*models.TournamentTeam) error
@@ -65,6 +66,10 @@ func (s *Service) UpdateTournamentTeam(ctx context.Context, team *models.Tournam
 
 func (s *Service) GetWinningTeam(ctx context.Context, tournamentID string) (*models.TournamentTeam, error) {
 	return s.repo.GetWinningTeam(ctx, tournamentID)
+}
+
+func (s *Service) ListWinningTeams(ctx context.Context) (map[string]*models.TournamentTeam, error) {
+	return s.repo.ListWinningTeams(ctx)
 }
 
 func (s *Service) UpdateStartingAt(ctx context.Context, tournamentID string, startingAt *time.Time) error {

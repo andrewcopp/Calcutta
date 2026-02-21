@@ -55,7 +55,8 @@ type CoreCalcutta struct {
 	ID           string
 	TournamentID string
 	OwnerID      string
-	Name         string
+	CreatedBy    string
+	Visibility   string
 	MinTeams     int32
 	MaxTeams     int32
 	MaxBidPoints int32
@@ -63,8 +64,7 @@ type CoreCalcutta struct {
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
 	BudgetPoints int32
-	Visibility   string
-	CreatedBy    string
+	Name         string
 }
 
 type CoreCalcuttaInvitation struct {
@@ -73,10 +73,10 @@ type CoreCalcuttaInvitation struct {
 	UserID     string
 	InvitedBy  string
 	Status     string
+	RevokedAt  pgtype.Timestamptz
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
-	RevokedAt  pgtype.Timestamptz
 }
 
 type CoreCalcuttaScoringRule struct {
@@ -129,7 +129,6 @@ type CoreGrant struct {
 	ExpiresAt    pgtype.Timestamptz
 	RevokedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
-	GrantedBy    pgtype.UUID
 }
 
 type CoreIdempotencyKey struct {
@@ -251,7 +250,6 @@ type CoreUser struct {
 	LastInviteSentAt   pgtype.Timestamptz
 	ExternalProvider   *string
 	ExternalProviderID *string
-	InvitedBy          pgtype.UUID
 }
 
 type DerivedGameOutcomeRun struct {
@@ -299,7 +297,7 @@ type DerivedPredictedGameOutcome struct {
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
-	RunID        pgtype.UUID
+	RunID        string
 }
 
 // Stores predicted expected points and round probabilities for each team (analogous to simulated_teams for simulations)
@@ -361,6 +359,7 @@ type DerivedRunJob struct {
 	ErrorMessage      *string
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
+	DeletedAt         pgtype.Timestamptz
 }
 
 type DerivedSimulatedTeam struct {
@@ -374,7 +373,7 @@ type DerivedSimulatedTeam struct {
 	CreatedAt             pgtype.Timestamptz
 	UpdatedAt             pgtype.Timestamptz
 	DeletedAt             pgtype.Timestamptz
-	SimulatedTournamentID pgtype.UUID
+	SimulatedTournamentID string
 }
 
 type DerivedSimulatedTournament struct {
@@ -453,6 +452,8 @@ type LabEvaluationEntryResult struct {
 	PInMoney             *float64
 	Rank                 *int32
 	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
 }
 
 type LabInvestmentModel struct {
@@ -501,6 +502,7 @@ type LabPipelineCalcuttaRun struct {
 	FinishedAt        pgtype.Timestamptz
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
+	DeletedAt         pgtype.Timestamptz
 }
 
 type LabPipelineRun struct {
@@ -518,4 +520,5 @@ type LabPipelineRun struct {
 	ErrorMessage      *string
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
+	DeletedAt         pgtype.Timestamptz
 }

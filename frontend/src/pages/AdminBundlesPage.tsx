@@ -1,48 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_URL, apiClient } from '../api/apiClient';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
-
-type ImportStartResponse = {
-  uploadId: string;
-  status: 'pending' | 'running' | 'succeeded' | 'failed';
-  filename: string;
-  sha256: string;
-  sizeBytes: number;
-};
-
-type ImportStatusResponse = {
-  uploadId: string;
-  filename: string;
-  sha256: string;
-  sizeBytes: number;
-  status: 'pending' | 'running' | 'succeeded' | 'failed';
-  startedAt?: string;
-  finishedAt?: string;
-  errorMessage?: string;
-  importReport?: {
-    startedAt: string;
-    finishedAt: string;
-    dryRun: boolean;
-    schools: number;
-    tournaments: number;
-    tournamentTeams: number;
-    calcuttas: number;
-    entries: number;
-    bids: number;
-    payouts: number;
-    rounds: number;
-  };
-  verifyReport?: {
-    ok: boolean;
-    mismatchCount: number;
-    mismatches?: { where: string; what: string }[];
-  };
-};
+import { adminService } from '../services/adminService';
+import type { BundleImportStatusResponse } from '../types/admin';
 
 const MAX_POLL_ATTEMPTS = 120;
 
@@ -50,7 +14,7 @@ export function AdminBundlesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ImportStatusResponse | null>(null);
+  const [result, setResult] = useState<BundleImportStatusResponse | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
   const pollAttemptsRef = useRef(0);
 
@@ -70,23 +34,11 @@ export function AdminBundlesPage() {
         return;
       }
       try {
-        const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import/${uploadId}`, { credentials: 'include' });
-        const body = (await res.json().catch((e: unknown) => { console.error('Failed to parse poll response', e); return undefined; })) as ImportStatusResponse | undefined;
-        if (!res.ok) {
-          const maybeError = body && typeof body === 'object' ? (body as Record<string, unknown>).error : undefined;
-          const rawMsg =
-            (maybeError && typeof maybeError === 'object' ? (maybeError as Record<string, unknown>).message : undefined) ||
-            `Status check failed (${res.status})`;
-          throw new Error(typeof rawMsg === 'string' ? rawMsg : String(rawMsg));
-        }
+        const body = await adminService.getBundleImportStatus(uploadId);
         if (cancelled) return;
 
-        setResult(body ?? null);
+        setResult(body);
 
-        if (!body) {
-          timeoutId = window.setTimeout(poll, 1000);
-          return;
-        }
         if (body.status === 'succeeded') {
           setBusy(false);
           return;
@@ -117,15 +69,7 @@ export function AdminBundlesPage() {
     setResult(null);
     setBusy(true);
     try {
-      const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/export`, { credentials: 'include' });
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(txt || `Export failed (${res.status})`);
-      }
-      const blob = await res.blob();
-      const cd = res.headers.get('content-disposition') || '';
-      const match = /filename="([^"]+)"/i.exec(cd);
-      const filename = match?.[1] || 'bundles.zip';
+      const { blob, filename } = await adminService.exportBundle();
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -152,20 +96,7 @@ export function AdminBundlesPage() {
     setUploadId(null);
     setBusy(true);
     try {
-      const form = new FormData();
-      form.append('file', file);
-
-      const res = await apiClient.fetch(`${API_URL}/api/admin/bundles/import`, { method: 'POST', body: form, credentials: 'include' });
-      const body = (await res.json().catch(() => undefined)) as unknown;
-      if (!res.ok) {
-        const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined;
-        const maybeError = record?.error;
-        const rawMsg =
-          (maybeError && typeof maybeError === 'object' ? (maybeError as Record<string, unknown>).message : undefined) ||
-          `Import failed (${res.status})`;
-        throw new Error(typeof rawMsg === 'string' ? rawMsg : String(rawMsg));
-      }
-      const started = body as ImportStartResponse;
+      const started = await adminService.startBundleImport(file);
       setUploadId(started.uploadId);
       setResult({
         uploadId: started.uploadId,

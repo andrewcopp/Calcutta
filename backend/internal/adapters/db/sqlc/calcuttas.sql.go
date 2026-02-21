@@ -24,7 +24,7 @@ type CreateCalcuttaParams struct {
 	Name         string
 	MinTeams     int32
 	MaxTeams     int32
-	MaxBidPoints       int32
+	MaxBidPoints int32
 	BudgetPoints int32
 	Visibility   string
 	CreatedAt    pgtype.Timestamptz
@@ -63,7 +63,7 @@ type GetCalcuttaByIDRow struct {
 	Name         string
 	MinTeams     int32
 	MaxTeams     int32
-	MaxBidPoints       int32
+	MaxBidPoints int32
 	BudgetPoints int32
 	Visibility   string
 	CreatedAt    pgtype.Timestamptz
@@ -104,7 +104,7 @@ type GetCalcuttasByTournamentRow struct {
 	Name         string
 	MinTeams     int32
 	MaxTeams     int32
-	MaxBidPoints       int32
+	MaxBidPoints int32
 	BudgetPoints int32
 	Visibility   string
 	CreatedAt    pgtype.Timestamptz
@@ -161,7 +161,7 @@ type ListCalcuttasRow struct {
 	Name         string
 	MinTeams     int32
 	MaxTeams     int32
-	MaxBidPoints       int32
+	MaxBidPoints int32
 	BudgetPoints int32
 	Visibility   string
 	CreatedAt    pgtype.Timestamptz
@@ -221,7 +221,7 @@ type ListCalcuttasByUserIDRow struct {
 	Name         string
 	MinTeams     int32
 	MaxTeams     int32
-	MaxBidPoints       int32
+	MaxBidPoints int32
 	BudgetPoints int32
 	Visibility   string
 	CreatedAt    pgtype.Timestamptz
@@ -281,7 +281,7 @@ type UpdateCalcuttaParams struct {
 	Name         string
 	MinTeams     int32
 	MaxTeams     int32
-	MaxBidPoints       int32
+	MaxBidPoints int32
 	BudgetPoints int32
 	Visibility   string
 	UpdatedAt    pgtype.Timestamptz

@@ -6,6 +6,9 @@ import type {
   ListAPIKeysResponse,
   CreateAPIKeyRequest,
   CreateAPIKeyResponse,
+  BundleExportResult,
+  BundleImportStartResponse,
+  BundleImportStatusResponse,
 } from '../types/admin';
 
 export const adminService = {
@@ -34,5 +37,30 @@ export const adminService = {
 
   async revokeApiKey(id: string): Promise<void> {
     return apiClient.delete<void>(`/admin/api-keys/${id}`);
+  },
+
+  // --- Bundle Import/Export ---
+
+  async exportBundle(): Promise<BundleExportResult> {
+    const res = await apiClient.fetch('/admin/bundles/export');
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(txt || `Export failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const cd = res.headers.get('content-disposition') || '';
+    const match = /filename="([^"]+)"/i.exec(cd);
+    const filename = match?.[1] || 'bundles.zip';
+    return { blob, filename };
+  },
+
+  async startBundleImport(file: File): Promise<BundleImportStartResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient.post<BundleImportStartResponse>('/admin/bundles/import', form);
+  },
+
+  async getBundleImportStatus(uploadId: string): Promise<BundleImportStatusResponse> {
+    return apiClient.get<BundleImportStatusResponse>(`/admin/bundles/import/${uploadId}`);
   },
 };

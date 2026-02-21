@@ -60,6 +60,10 @@ func (m *mockRepo) GetWinningTeam(context.Context, string) (*models.TournamentTe
 	panic("GetWinningTeam not implemented")
 }
 
+func (m *mockRepo) ListWinningTeams(context.Context) (map[string]*models.TournamentTeam, error) {
+	panic("ListWinningTeams not implemented")
+}
+
 func (m *mockRepo) GetCompetitions(context.Context) ([]models.Competition, error) {
 	panic("GetCompetitions not implemented")
 }

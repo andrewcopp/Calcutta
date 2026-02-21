@@ -196,18 +196,25 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 		return
 	}
 
+	tournaments, err := h.app.Tournament.List(r.Context())
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	tournamentByID := make(map[string]*models.Tournament, len(tournaments))
+	for i := range tournaments {
+		tournamentByID[tournaments[i].ID] = &tournaments[i]
+	}
+
 	results := make([]*dtos.CalcuttaWithRankingResponse, 0, len(calcuttas))
 	for _, calcutta := range calcuttas {
 		item := &dtos.CalcuttaWithRankingResponse{
 			CalcuttaResponse: dtos.NewCalcuttaResponse(calcutta),
 		}
 
-		tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
+		if tournament, ok := tournamentByID[calcutta.TournamentID]; ok {
+			item.TournamentStartingAt = tournament.StartingAt
 		}
-		item.TournamentStartingAt = tournament.StartingAt
 
 		entries, err := h.app.Calcutta.GetEntries(r.Context(), calcutta.ID)
 		if err != nil {

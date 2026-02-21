@@ -39,11 +39,11 @@ func ValidateEntry(calcutta *models.Calcutta, entry *models.CalcuttaEntry, teams
 	}
 
 	// Rule 5: Total bids cannot exceed starting budget
-	totalBids := 0.0
+	totalBids := 0
 	for _, team := range teams {
-		totalBids += float64(team.BidPoints)
+		totalBids += team.BidPoints
 	}
-	if totalBids > float64(calcutta.BudgetPoints) {
+	if totalBids > calcutta.BudgetPoints {
 		return fmt.Errorf("total bids cannot exceed starting budget of %d points", calcutta.BudgetPoints)
 	}
 

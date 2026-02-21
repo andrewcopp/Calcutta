@@ -16,6 +16,31 @@ from moneyball.db.connection import get_db_connection
 logger = logging.getLogger(__name__)
 
 
+VALID_MODEL_KINDS = {"ridge", "naive_ev", "oracle"}
+
+VALID_PARAMS_BY_KIND: Dict[str, set] = {
+    "ridge": {"feature_set", "seed_prior_k", "program_prior_k", "seed_prior_monotone", "target_transform"},
+    "naive_ev": set(),
+    "oracle": set(),
+}
+
+
+def validate_model_params(kind: str, params: Dict[str, Any]) -> None:
+    """Validate that params keys are recognized for the given model kind.
+
+    Raises ValueError if the kind is unknown or any param key is unexpected.
+    """
+    if kind not in VALID_MODEL_KINDS:
+        raise ValueError(f"unknown model kind: {kind!r}, expected one of {sorted(VALID_MODEL_KINDS)}")
+    allowed = VALID_PARAMS_BY_KIND[kind]
+    unexpected = set(params.keys()) - allowed
+    if unexpected:
+        raise ValueError(
+            f"unexpected params for kind {kind!r}: {sorted(unexpected)}. "
+            f"Valid keys: {sorted(allowed)}"
+        )
+
+
 @dataclass
 class InvestmentModel:
     """An investment prediction model being tested."""
@@ -82,9 +107,11 @@ def create_investment_model(
 
     Raises:
         ValueError: If a model with the same name already exists
+        ValueError: If kind is unknown or params contain unexpected keys
     """
     model_id = str(uuid.uuid4())
     params = params or {}
+    validate_model_params(kind, params)
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:

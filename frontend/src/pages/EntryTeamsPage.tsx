@@ -1,7 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalcuttaEntryTeam } from '../types/calcutta';
 import { Alert } from '../components/ui/Alert';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
@@ -16,6 +15,7 @@ import { PortfolioScores } from './EntryTeams/PortfolioScores';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useEntryTeamsData } from '../hooks/useEntryTeamsData';
+import { useEntryOwnershipData } from '../hooks/useEntryOwnershipData';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
 
@@ -54,79 +54,17 @@ export function EntryTeamsPage() {
     queryFn: () => calcuttaService.getEntryTeams(entryId!, calcuttaId!),
   });
 
-  // Helper function to find portfolio team data for a given team ID
-  const getPortfolioTeamData = useCallback(
-    (teamId: string) => {
-      // Find the portfolio team belonging to the current entry's portfolio
-      const currentPortfolioId = portfolios[0]?.id;
-      if (!currentPortfolioId) return undefined;
-      return allCalcuttaPortfolioTeams.find((pt) => pt.teamId === teamId && pt.portfolioId === currentPortfolioId);
-    },
-    [allCalcuttaPortfolioTeams, portfolios]
-  );
-
-  const ownershipTeamsData = useMemo(() => {
-    if (activeTab !== 'ownerships') return [];
-    if (!entryId) return [];
-
-    let teamsToShow: CalcuttaEntryTeam[];
-
-    if (ownershipShowAllTeams) {
-      const schoolMap = new Map(schools.map((s) => [s.id, s]));
-      teamsToShow = tournamentTeams.map((tt) => {
-        const existingTeam = teams.find((t) => t.teamId === tt.id);
-        if (existingTeam) return existingTeam;
-
-        return {
-          id: `synthetic-${tt.id}`,
-          entryId: entryId,
-          teamId: tt.id,
-          bid: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          team: {
-            ...tt,
-            school: schoolMap.get(tt.schoolId),
-          },
-        } as CalcuttaEntryTeam;
-      });
-    } else {
-      teamsToShow = teams.filter((team) => {
-        const portfolioTeam = getPortfolioTeamData(team.teamId);
-        return portfolioTeam && portfolioTeam.ownershipPercentage > 0;
-      });
-    }
-
-    teamsToShow = teamsToShow.slice().sort((a, b) => {
-      const portfolioTeamA = getPortfolioTeamData(a.teamId);
-      const portfolioTeamB = getPortfolioTeamData(b.teamId);
-
-      const pointsA = portfolioTeamA?.actualPoints || 0;
-      const pointsB = portfolioTeamB?.actualPoints || 0;
-      const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
-      const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-      const bidA = a.bid;
-      const bidB = b.bid;
-
-      if (sortBy === 'points') {
-        if (pointsB !== pointsA) return pointsB - pointsA;
-        if (ownershipB !== ownershipA) return ownershipB - ownershipA;
-        return bidB - bidA;
-      }
-
-      if (sortBy === 'ownership') {
-        if (ownershipB !== ownershipA) return ownershipB - ownershipA;
-        if (pointsB !== pointsA) return pointsB - pointsA;
-        return bidB - bidA;
-      }
-
-      if (bidB !== bidA) return bidB - bidA;
-      if (pointsB !== pointsA) return pointsB - pointsA;
-      return ownershipB - ownershipA;
-    });
-
-    return teamsToShow;
-  }, [activeTab, entryId, getPortfolioTeamData, ownershipShowAllTeams, schools, sortBy, teams, tournamentTeams]);
+  const { getPortfolioTeamData, getInvestorRanking, ownershipTeamsData } = useEntryOwnershipData({
+    activeTab,
+    entryId,
+    teams,
+    schools,
+    tournamentTeams,
+    portfolios,
+    allCalcuttaPortfolioTeams,
+    ownershipShowAllTeams,
+    sortBy,
+  });
 
   if (!entryId || !calcuttaId) {
     return (
@@ -171,26 +109,6 @@ export function EntryTeamsPage() {
   }
 
   const ownershipLoading = dashboardQuery.isFetching;
-
-  // Helper function to calculate investor ranking for a team
-  const getInvestorRanking = (teamId: string) => {
-    // Get all portfolio teams for this team across all portfolios in the Calcutta
-    const allInvestors = allCalcuttaPortfolioTeams.filter(pt => pt.teamId === teamId);
-
-    // Sort investors by ownership percentage (descending)
-    const sortedInvestors = [...allInvestors].sort((a, b) => b.ownershipPercentage - a.ownershipPercentage);
-
-    // Find current user's rank
-    const userPortfolio = portfolios[0];
-    const userRank = userPortfolio ?
-      sortedInvestors.findIndex(pt => pt.portfolioId === userPortfolio.id) + 1 :
-      0;
-
-    return {
-      rank: userRank,
-      total: allInvestors.length
-    };
-  };
 
   const entryTeams = biddingOpen && isOwnEntry ? ownEntryTeamsQuery.data ?? [] : teams;
   const entryTitle = isOwnEntry ? 'Your Entry' : (entryName || 'Entry');

@@ -260,6 +260,80 @@ func (q *Queries) ListTeamsByTournamentID(ctx context.Context, tournamentID stri
 	return items, nil
 }
 
+const listWinningTeams = `-- name: ListWinningTeams :many
+SELECT DISTINCT ON (tt.tournament_id)
+  tt.id,
+  tt.tournament_id,
+  tt.school_id,
+  tt.seed,
+  tt.region,
+  tt.byes,
+  tt.wins,
+  tt.eliminated,
+  tt.created_at,
+  tt.updated_at,
+  kps.net_rtg,
+  kps.o_rtg,
+  kps.d_rtg,
+  kps.adj_t
+FROM core.teams tt
+LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
+WHERE tt.deleted_at IS NULL AND tt.wins > 0
+ORDER BY tt.tournament_id, tt.wins DESC
+`
+
+type ListWinningTeamsRow struct {
+	ID           string
+	TournamentID string
+	SchoolID     string
+	Seed         int32
+	Region       string
+	Byes         int32
+	Wins         int32
+	Eliminated   bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	NetRtg       *float64
+	ORtg         *float64
+	DRtg         *float64
+	AdjT         *float64
+}
+
+func (q *Queries) ListWinningTeams(ctx context.Context) ([]ListWinningTeamsRow, error) {
+	rows, err := q.db.Query(ctx, listWinningTeams)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWinningTeamsRow
+	for rows.Next() {
+		var i ListWinningTeamsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TournamentID,
+			&i.SchoolID,
+			&i.Seed,
+			&i.Region,
+			&i.Byes,
+			&i.Wins,
+			&i.Eliminated,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.NetRtg,
+			&i.ORtg,
+			&i.DRtg,
+			&i.AdjT,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const softDeleteTeamsByTournamentID = `-- name: SoftDeleteTeamsByTournamentID :execrows
 UPDATE core.teams
 SET deleted_at = $1,

@@ -33,26 +33,30 @@ func (h *Handler) HandleListTournaments(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	winningTeams, err := h.app.Tournament.ListWinningTeams(r.Context())
+	if err != nil {
+		slog.Error("list_winning_teams_failed", "error", err)
+		winningTeams = make(map[string]*models.TournamentTeam)
+	}
+
+	schools, err := h.app.School.List(r.Context())
+	if err != nil {
+		slog.Error("list_schools_failed", "error", err)
+	}
+	schoolByID := make(map[string]string, len(schools))
+	for _, s := range schools {
+		schoolByID[s.ID] = s.Name
+	}
+
 	resp := make([]*dtos.TournamentResponse, 0, len(tournaments))
 	for _, tournament := range tournaments {
 		tournament := tournament
 		winnerName := ""
 
-		team, err := h.app.Tournament.GetWinningTeam(r.Context(), tournament.ID)
-		if err != nil {
-			slog.Error("get_winning_team_failed", "tournament_id", tournament.ID, "error", err)
-			// Include tournament with empty winner on error instead of skipping
-		} else if team != nil {
-			school, err := h.app.School.GetByID(r.Context(), team.SchoolID)
-			if err != nil {
-				slog.Error("get_school_failed", "team_id", team.ID, "error", err)
-				// Include tournament with empty winner on error instead of skipping
-			} else if school != nil {
-				winnerName = school.Name
-			}
+		if team, ok := winningTeams[tournament.ID]; ok && team != nil {
+			winnerName = schoolByID[team.SchoolID]
 		}
 
-		slog.Debug("processing_tournament", "tournament_id", tournament.ID, "tournament_name", tournament.Name)
 		resp = append(resp, dtos.NewTournamentResponse(&tournament, winnerName))
 	}
 	response.WriteJSON(w, http.StatusOK, resp)

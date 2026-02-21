@@ -56,3 +56,53 @@ export type UserResponse = {
   lastName: string;
   status: string;
 };
+
+// --- Bundle Import/Export ---
+
+export type BundleImportStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+
+export type BundleImportReport = {
+  startedAt: string;
+  finishedAt: string;
+  dryRun: boolean;
+  schools: number;
+  tournaments: number;
+  tournamentTeams: number;
+  calcuttas: number;
+  entries: number;
+  bids: number;
+  payouts: number;
+  rounds: number;
+};
+
+export type BundleVerifyReport = {
+  ok: boolean;
+  mismatchCount: number;
+  mismatches?: { where: string; what: string }[];
+};
+
+export type BundleImportStartResponse = {
+  uploadId: string;
+  status: BundleImportStatus;
+  filename: string;
+  sha256: string;
+  sizeBytes: number;
+};
+
+export type BundleImportStatusResponse = {
+  uploadId: string;
+  filename: string;
+  sha256: string;
+  sizeBytes: number;
+  status: BundleImportStatus;
+  startedAt?: string;
+  finishedAt?: string;
+  errorMessage?: string;
+  importReport?: BundleImportReport;
+  verifyReport?: BundleVerifyReport;
+};
+
+export type BundleExportResult = {
+  blob: Blob;
+  filename: string;
+};

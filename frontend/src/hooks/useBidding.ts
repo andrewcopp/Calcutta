@@ -25,8 +25,60 @@ export interface TeamComboboxOption extends ComboboxOption {
   region: string;
 }
 
-function createEmptySlot(): BidSlot {
+export function createEmptySlot(): BidSlot {
   return { teamId: '', searchText: '', bidAmount: 0 };
+}
+
+export function initializeSlotsFromBids(
+  initialBids: Record<string, number>,
+  teams: TeamWithSchool[],
+  maxTeams: number,
+): BidSlot[] {
+  const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  const filledSlots: BidSlot[] = Object.entries(initialBids).map(([teamId, bid]) => {
+    const team = teamMap.get(teamId);
+    return {
+      teamId,
+      searchText: team?.school?.name ?? '',
+      bidAmount: bid,
+    };
+  });
+
+  const emptyCount = Math.max(0, maxTeams - filledSlots.length);
+  const emptySlots = Array.from({ length: emptyCount }, createEmptySlot);
+  return [...filledSlots, ...emptySlots];
+}
+
+export function deriveBidsByTeamId(slots: BidSlot[]): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const slot of slots) {
+    if (slot.teamId && slot.bidAmount > 0) {
+      result[slot.teamId] = slot.bidAmount;
+    }
+  }
+  return result;
+}
+
+export function compactSlots(slots: BidSlot[]): BidSlot[] {
+  const filled = slots.filter((s) => s.teamId);
+  const empty = slots.filter((s) => !s.teamId);
+  return [...filled, ...empty];
+}
+
+export function deriveTeamOptions(teams: TeamWithSchool[]): TeamComboboxOption[] {
+  return teams
+    .map((team) => ({
+      id: team.id,
+      label: team.school?.name ?? 'Unknown',
+      seed: team.seed,
+      region: team.region,
+    }))
+    .sort((a, b) => a.seed - b.seed || a.label.localeCompare(b.label));
+}
+
+export function deriveUsedTeamIds(slots: BidSlot[]): Set<string> {
+  return new Set(slots.filter((s) => s.teamId).map((s) => s.teamId));
 }
 
 export function useBidding() {
@@ -86,51 +138,19 @@ export function useBidding() {
     if (biddingQuery.data && !initializedRef.current) {
       const { initialBids, teams: loadedTeams } = biddingQuery.data;
       const maxTeams = biddingQuery.data.calcutta?.maxTeams ?? 10;
-      const teamMap = new Map(loadedTeams.map((t) => [t.id, t]));
-
-      const filledSlots: BidSlot[] = Object.entries(initialBids).map(([teamId, bid]) => {
-        const team = teamMap.get(teamId);
-        return {
-          teamId,
-          searchText: team?.school?.name ?? '',
-          bidAmount: bid,
-        };
-      });
-
-      const emptyCount = Math.max(0, maxTeams - filledSlots.length);
-      const emptySlots = Array.from({ length: emptyCount }, createEmptySlot);
-      setSlots([...filledSlots, ...emptySlots]);
+      setSlots(initializeSlotsFromBids(initialBids, loadedTeams, maxTeams));
       initializedRef.current = true;
     }
   }, [biddingQuery.data]);
 
   // Derive bidsByTeamId from slots for validation/budget computation
-  const bidsByTeamId = useMemo(() => {
-    const result: Record<string, number> = {};
-    for (const slot of slots) {
-      if (slot.teamId && slot.bidAmount > 0) {
-        result[slot.teamId] = slot.bidAmount;
-      }
-    }
-    return result;
-  }, [slots]);
+  const bidsByTeamId = useMemo(() => deriveBidsByTeamId(slots), [slots]);
 
   // Team options for combobox
-  const teamOptions = useMemo((): TeamComboboxOption[] => {
-    return teams
-      .map((team) => ({
-        id: team.id,
-        label: team.school?.name ?? 'Unknown',
-        seed: team.seed,
-        region: team.region,
-      }))
-      .sort((a, b) => a.seed - b.seed || a.label.localeCompare(b.label));
-  }, [teams]);
+  const teamOptions = useMemo(() => deriveTeamOptions(teams), [teams]);
 
   // Set of already-selected team IDs
-  const usedTeamIds = useMemo(() => {
-    return new Set(slots.filter((s) => s.teamId).map((s) => s.teamId));
-  }, [slots]);
+  const usedTeamIds = useMemo(() => deriveUsedTeamIds(slots), [slots]);
 
   const updateEntryMutation = useMutation({
     mutationFn: async (teamsPayload: Array<{ teamId: string; bid: number }>) => {
@@ -165,10 +185,7 @@ export function useBidding() {
     setSlots((prev) => {
       const next = [...prev];
       next[slotIndex] = createEmptySlot();
-      // Compact: move filled slots to top, empties to bottom
-      const filled = next.filter((s) => s.teamId);
-      const empty = next.filter((s) => !s.teamId);
-      return [...filled, ...empty];
+      return compactSlots(next);
     });
   }, []);
 

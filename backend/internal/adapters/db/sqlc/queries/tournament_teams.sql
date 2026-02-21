@@ -93,3 +93,24 @@ LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at I
 WHERE tt.tournament_id = $1 AND tt.deleted_at IS NULL
 ORDER BY tt.wins DESC
 LIMIT 1;
+
+-- name: ListWinningTeams :many
+SELECT DISTINCT ON (tt.tournament_id)
+  tt.id,
+  tt.tournament_id,
+  tt.school_id,
+  tt.seed,
+  tt.region,
+  tt.byes,
+  tt.wins,
+  tt.eliminated,
+  tt.created_at,
+  tt.updated_at,
+  kps.net_rtg,
+  kps.o_rtg,
+  kps.d_rtg,
+  kps.adj_t
+FROM core.teams tt
+LEFT JOIN core.team_kenpom_stats kps ON kps.team_id = tt.id AND kps.deleted_at IS NULL
+WHERE tt.deleted_at IS NULL AND tt.wins > 0
+ORDER BY tt.tournament_id, tt.wins DESC;

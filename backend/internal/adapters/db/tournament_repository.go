@@ -386,6 +386,34 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 	return team, nil
 }
 
+func (r *TournamentRepository) ListWinningTeams(ctx context.Context) (map[string]*models.TournamentTeam, error) {
+	rows, err := r.q.ListWinningTeams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(map[string]*models.TournamentTeam, len(rows))
+	for _, row := range rows {
+		team := &models.TournamentTeam{
+			ID:           row.ID,
+			TournamentID: row.TournamentID,
+			SchoolID:     row.SchoolID,
+			Seed:         int(row.Seed),
+			Region:       row.Region,
+			Byes:         int(row.Byes),
+			Wins:         int(row.Wins),
+			Eliminated:   row.Eliminated,
+			CreatedAt:    row.CreatedAt.Time,
+			UpdatedAt:    row.UpdatedAt.Time,
+		}
+		if row.NetRtg != nil || row.ORtg != nil || row.DRtg != nil || row.AdjT != nil {
+			team.KenPom = &models.KenPomStats{NetRtg: row.NetRtg, ORtg: row.ORtg, DRtg: row.DRtg, AdjT: row.AdjT}
+		}
+		out[row.TournamentID] = team
+	}
+	return out, nil
+}
+
 func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID string, teams []*models.TournamentTeam) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
