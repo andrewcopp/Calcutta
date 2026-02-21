@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSeedVariant, SEED_FILTER_OPTIONS } from './useBidding';
-import type { SeedFilter } from './useBidding';
+import { getSeedVariant } from './useBidding';
 
 // ---------------------------------------------------------------------------
 // The useBidding hook is deeply entangled with React Router (useParams,
@@ -11,7 +10,6 @@ import type { SeedFilter } from './useBidding';
 // Instead, we test the exported pure functions and constants that contain
 // meaningful logic:
 //   - getSeedVariant: maps a seed number to a UI variant string
-//   - SEED_FILTER_OPTIONS: the constant array of seed filter values
 //
 // We also test the validation and budget computation logic by extracting it
 // into pure functions that mirror the hook's useMemo bodies.
@@ -78,12 +76,6 @@ function computeValidationErrors(
   return errors;
 }
 
-function matchesSeedFilter(seed: number, seedFilter: SeedFilter): boolean {
-  if (seedFilter === 'all') return true;
-  const [min, max] = seedFilter.split('-').map(Number);
-  return seed >= min && seed <= max;
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -129,29 +121,6 @@ describe('getSeedVariant', () => {
     // WHEN getting the variant
     // THEN it returns "outline"
     expect(getSeedVariant(16)).toBe('outline');
-  });
-});
-
-describe('SEED_FILTER_OPTIONS', () => {
-  it('contains exactly five filter options', () => {
-    // GIVEN the constant
-    // WHEN checking its length
-    // THEN there are 5 options
-    expect(SEED_FILTER_OPTIONS).toHaveLength(5);
-  });
-
-  it('starts with "all"', () => {
-    // GIVEN the constant
-    // WHEN checking the first element
-    // THEN it is "all"
-    expect(SEED_FILTER_OPTIONS[0]).toBe('all');
-  });
-
-  it('contains the expected seed range options in order', () => {
-    // GIVEN the constant
-    // WHEN checking all values
-    // THEN they match the expected order
-    expect(SEED_FILTER_OPTIONS).toEqual(['all', '1-4', '5-8', '9-12', '13-16']);
   });
 });
 
@@ -308,56 +277,5 @@ describe('validation errors', () => {
 
     // THEN there are no errors
     expect(errors).toEqual([]);
-  });
-});
-
-describe('matchesSeedFilter', () => {
-  it('returns true for any seed when filter is "all"', () => {
-    // GIVEN filter "all"
-    // WHEN checking seed 16
-    // THEN it matches
-    expect(matchesSeedFilter(16, 'all')).toBe(true);
-  });
-
-  it('returns true for seed within the "1-4" range', () => {
-    // GIVEN filter "1-4"
-    // WHEN checking seed 3
-    // THEN it matches
-    expect(matchesSeedFilter(3, '1-4')).toBe(true);
-  });
-
-  it('returns false for seed outside the "1-4" range', () => {
-    // GIVEN filter "1-4"
-    // WHEN checking seed 5
-    // THEN it does not match
-    expect(matchesSeedFilter(5, '1-4')).toBe(false);
-  });
-
-  it('returns true for seed at lower boundary of range', () => {
-    // GIVEN filter "5-8"
-    // WHEN checking seed 5
-    // THEN it matches (inclusive)
-    expect(matchesSeedFilter(5, '5-8')).toBe(true);
-  });
-
-  it('returns true for seed at upper boundary of range', () => {
-    // GIVEN filter "9-12"
-    // WHEN checking seed 12
-    // THEN it matches (inclusive)
-    expect(matchesSeedFilter(12, '9-12')).toBe(true);
-  });
-
-  it('returns false for seed below the "13-16" range', () => {
-    // GIVEN filter "13-16"
-    // WHEN checking seed 12
-    // THEN it does not match
-    expect(matchesSeedFilter(12, '13-16')).toBe(false);
-  });
-
-  it('returns true for seed 16 in the "13-16" range', () => {
-    // GIVEN filter "13-16"
-    // WHEN checking seed 16
-    // THEN it matches
-    expect(matchesSeedFilter(16, '13-16')).toBe(true);
   });
 });

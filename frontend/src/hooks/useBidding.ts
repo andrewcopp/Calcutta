@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
@@ -7,12 +7,9 @@ import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
 import type { School } from '../types/school';
 import type { TournamentTeam } from '../types/calcutta';
+import type { ComboboxOption } from '../components/ui/Combobox';
 
 const MIN_BID = 1;
-
-export type SeedFilter = 'all' | '1-4' | '5-8' | '9-12' | '13-16';
-
-export const SEED_FILTER_OPTIONS: SeedFilter[] = ['all', '1-4', '5-8', '9-12', '13-16'];
 
 export type TeamWithSchool = TournamentTeam & { school?: School };
 
@@ -23,20 +20,32 @@ export interface PortfolioItem {
   bid: number;
 }
 
+export interface BidSlot {
+  teamId: string;
+  searchText: string;
+  bidAmount: number;
+}
+
+export interface TeamComboboxOption extends ComboboxOption {
+  seed: number;
+  region: string;
+}
+
 export function getSeedVariant(seed: number): 'default' | 'secondary' | 'outline' {
   if (seed <= 4) return 'default';
   if (seed <= 8) return 'secondary';
   return 'outline';
 }
 
+function createEmptySlot(): BidSlot {
+  return { teamId: '', searchText: '', bidAmount: 0 };
+}
+
 export function useBidding() {
   const { calcuttaId, entryId } = useParams<{ calcuttaId: string; entryId: string }>();
   const navigate = useNavigate();
 
-  const [bidsByTeamId, setBidsByTeamId] = useState<Record<string, number>>({});
-  const [seedFilter, setSeedFilter] = useState<SeedFilter>('all');
-  const [unbidOnly, setUnbidOnly] = useState(false);
-  const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(new Set());
+  const [slots, setSlots] = useState<BidSlot[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const initializedRef = useRef(false);
 
@@ -78,39 +87,118 @@ export function useBidding() {
   });
 
   const calcutta = biddingQuery.data?.calcutta;
+  const teams = useMemo(() => biddingQuery.data?.teams ?? [], [biddingQuery.data?.teams]);
   const BUDGET = calcutta?.budgetPoints ?? 100;
   const MIN_TEAMS = calcutta?.minTeams ?? 3;
   const MAX_TEAMS = calcutta?.maxTeams ?? 10;
   const MAX_BID = calcutta?.maxBid ?? 50;
 
+  // Initialize slots from existing bids
   React.useEffect(() => {
-    if (biddingQuery.data?.initialBids && !initializedRef.current) {
-      setBidsByTeamId(biddingQuery.data.initialBids);
+    if (biddingQuery.data && !initializedRef.current) {
+      const { initialBids, teams: loadedTeams } = biddingQuery.data;
+      const maxTeams = biddingQuery.data.calcutta?.maxTeams ?? 10;
+      const teamMap = new Map(loadedTeams.map((t) => [t.id, t]));
+
+      const filledSlots: BidSlot[] = Object.entries(initialBids).map(([teamId, bid]) => {
+        const team = teamMap.get(teamId);
+        return {
+          teamId,
+          searchText: team?.school?.name ?? '',
+          bidAmount: bid,
+        };
+      });
+
+      const emptyCount = Math.max(0, maxTeams - filledSlots.length);
+      const emptySlots = Array.from({ length: emptyCount }, createEmptySlot);
+      setSlots([...filledSlots, ...emptySlots]);
       initializedRef.current = true;
     }
-  }, [biddingQuery.data?.initialBids]);
+  }, [biddingQuery.data]);
+
+  // Derive bidsByTeamId from slots for validation/budget computation
+  const bidsByTeamId = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const slot of slots) {
+      if (slot.teamId && slot.bidAmount > 0) {
+        result[slot.teamId] = slot.bidAmount;
+      }
+    }
+    return result;
+  }, [slots]);
+
+  // Team options for combobox
+  const teamOptions = useMemo((): TeamComboboxOption[] => {
+    return teams
+      .map((team) => ({
+        id: team.id,
+        label: team.school?.name ?? 'Unknown',
+        seed: team.seed,
+        region: team.region,
+      }))
+      .sort((a, b) => a.seed - b.seed || a.label.localeCompare(b.label));
+  }, [teams]);
+
+  // Set of already-selected team IDs
+  const usedTeamIds = useMemo(() => {
+    return new Set(slots.filter((s) => s.teamId).map((s) => s.teamId));
+  }, [slots]);
 
   const updateEntryMutation = useMutation({
-    mutationFn: async (teams: Array<{ teamId: string; bid: number }>) => {
+    mutationFn: async (teamsPayload: Array<{ teamId: string; bid: number }>) => {
       if (!entryId) throw new Error('Missing entry ID');
-      return calcuttaService.updateEntry(entryId, teams);
+      return calcuttaService.updateEntry(entryId, teamsPayload);
     },
     onSuccess: () => {
       navigate(`/calcuttas/${calcuttaId}/entries/${entryId}`);
     },
   });
 
-  const handleBidChange = (teamId: string, bid: number) => {
-    setBidsByTeamId((prev) => {
-      if (bid === 0) {
-        const next = { ...prev };
-        delete next[teamId];
+  // Slot handlers
+  const handleSlotSelect = useCallback(
+    (slotIndex: number, teamId: string) => {
+      const team = teams.find((t) => t.id === teamId);
+      setSlots((prev) => {
+        const next = [...prev];
+        next[slotIndex] = {
+          teamId,
+          searchText: team?.school?.name ?? '',
+          bidAmount: prev[slotIndex].bidAmount,
+        };
         return next;
-      }
-      return { ...prev, [teamId]: bid };
-    });
-  };
+      });
+    },
+    [teams]
+  );
 
+  const handleSlotClear = useCallback((slotIndex: number) => {
+    setSlots((prev) => {
+      const next = [...prev];
+      next[slotIndex] = createEmptySlot();
+      // Compact: move filled slots to top, empties to bottom
+      const filled = next.filter((s) => s.teamId);
+      const empty = next.filter((s) => !s.teamId);
+      return [...filled, ...empty];
+    });
+  }, []);
+
+  const handleSlotSearchChange = useCallback((slotIndex: number, text: string) => {
+    setSlots((prev) => {
+      const next = [...prev];
+      next[slotIndex] = { ...prev[slotIndex], searchText: text };
+      return next;
+    });
+  }, []);
+
+  const handleSlotBidChange = useCallback((slotIndex: number, bid: number) => {
+    setSlots((prev) => {
+      const next = [...prev];
+      next[slotIndex] = { ...prev[slotIndex], bidAmount: bid };
+      return next;
+    });
+  }, []);
+
+  // Budget & validation (same logic as before, derived from bidsByTeamId)
   const budgetRemaining = useMemo(() => {
     const spent = Object.values(bidsByTeamId).reduce((sum, bid) => sum + bid, 0);
     return BUDGET - spent;
@@ -156,54 +244,16 @@ export function useBidding() {
   };
 
   const handleConfirm = () => {
-    const teams = Object.entries(bidsByTeamId).map(([teamId, bid]) => ({
+    const teamsPayload = Object.entries(bidsByTeamId).map(([teamId, bid]) => ({
       teamId,
       bid,
     }));
 
-    updateEntryMutation.mutate(teams);
+    updateEntryMutation.mutate(teamsPayload);
     setShowConfirmModal(false);
   };
 
-  const sortedTeams = useMemo(() => {
-    if (!biddingQuery.data?.teams) return [];
-    return [...biddingQuery.data.teams].sort((a, b) => {
-      if (a.region !== b.region) return a.region.localeCompare(b.region);
-      return a.seed - b.seed;
-    });
-  }, [biddingQuery.data?.teams]);
-
-  // Group teams by region
-  const teamsByRegion = useMemo(() => {
-    const groups = new Map<string, typeof sortedTeams>();
-    for (const team of sortedTeams) {
-      const existing = groups.get(team.region) || [];
-      existing.push(team);
-      groups.set(team.region, existing);
-    }
-    return groups;
-  }, [sortedTeams]);
-
-  // Apply filters
-  const matchesSeedFilter = (seed: number) => {
-    if (seedFilter === 'all') return true;
-    const [min, max] = seedFilter.split('-').map(Number);
-    return seed >= min && seed <= max;
-  };
-
-  const toggleRegion = (region: string) => {
-    setCollapsedRegions((prev) => {
-      const next = new Set(prev);
-      if (next.has(region)) {
-        next.delete(region);
-      } else {
-        next.add(region);
-      }
-      return next;
-    });
-  };
-
-  // Portfolio summary - teams with bids
+  // Portfolio summary - teams with bids (used by BidConfirmModal)
   const portfolioSummary = useMemo((): PortfolioItem[] => {
     if (!biddingQuery.data?.teams) return [];
     return Object.entries(bidsByTeamId)
@@ -234,31 +284,33 @@ export function useBidding() {
     BUDGET,
     MIN_BID,
     MAX_BID,
+    MIN_TEAMS,
+    MAX_TEAMS,
 
-    // Bid state
-    bidsByTeamId,
+    // Slot state
+    slots,
+    teamOptions,
+    usedTeamIds,
+    teams,
+
+    // Derived bid state
     budgetRemaining,
     teamCount,
     validationErrors,
     isValid,
 
-    // Filters
-    seedFilter,
-    setSeedFilter,
-    unbidOnly,
-    setUnbidOnly,
-    collapsedRegions,
-
-    // Team data
-    teamsByRegion,
+    // Portfolio
     portfolioSummary,
 
-    // Handlers
-    handleBidChange,
+    // Slot handlers
+    handleSlotSelect,
+    handleSlotClear,
+    handleSlotSearchChange,
+    handleSlotBidChange,
+
+    // Submit
     handleSubmit,
     handleConfirm,
-    matchesSeedFilter,
-    toggleRegion,
 
     // Modal
     showConfirmModal,

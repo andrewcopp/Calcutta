@@ -17,6 +17,7 @@ interface ComboboxProps {
   className?: string;
   onBlur?: () => void;
   validationState?: 'none' | 'valid' | 'error';
+  renderOption?: (option: ComboboxOption, isHighlighted: boolean) => React.ReactNode;
 }
 
 export const Combobox: React.FC<ComboboxProps> = ({
@@ -30,6 +31,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   className,
   onBlur,
   validationState,
+  renderOption,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -157,7 +159,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
               }}
               onMouseEnter={() => setHighlightIndex(i)}
             >
-              {opt.label}
+              {renderOption ? renderOption(opt, i === highlightIndex) : opt.label}
             </li>
           ))}
         </ul>
