@@ -2,6 +2,7 @@ package calcuttas
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -50,6 +51,16 @@ func (h *Handler) HandleListEntryPortfolios(w http.ResponseWriter, r *http.Reque
 	}
 	if !decision.Allowed {
 		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !policy.IsBiddingPhaseViewAllowed(userID, entry, tournament, time.Now(), decision.IsAdmin) {
+		httperr.Write(w, r, http.StatusForbidden, "bidding_active", "Entry data is hidden while bidding is open", "")
 		return
 	}
 

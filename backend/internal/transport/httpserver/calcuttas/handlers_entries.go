@@ -123,6 +123,29 @@ func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Reque
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
+
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !tournament.HasStarted(time.Now()) {
+		manageDecision, err := policy.CanManageCalcutta(r.Context(), h.authz, userID, calcutta)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		if !manageDecision.Allowed {
+			filtered := make([]*models.CalcuttaEntry, 0)
+			for _, e := range entries {
+				if e.UserID != nil && *e.UserID == userID {
+					filtered = append(filtered, e)
+				}
+			}
+			entries = filtered
+		}
+	}
+
 	response.WriteJSON(w, http.StatusOK, dtos.NewEntryListResponse(entries))
 }
 
@@ -176,6 +199,16 @@ func (h *Handler) HandleListEntryTeams(w http.ResponseWriter, r *http.Request) {
 	}
 	if !decision.Allowed {
 		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !policy.IsBiddingPhaseViewAllowed(userID, entry, tournament, time.Now(), decision.IsAdmin) {
+		httperr.Write(w, r, http.StatusForbidden, "bidding_active", "Entry data is hidden while bidding is open", "")
 		return
 	}
 

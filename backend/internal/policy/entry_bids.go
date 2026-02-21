@@ -100,6 +100,22 @@ func CanViewEntryData(
 	return Decision{Allowed: true, IsAdmin: isAdmin}, nil
 }
 
+// IsBiddingPhaseViewAllowed checks whether a user may view another entry's
+// bid-sensitive data (teams, portfolios, portfolio-teams) while bidding is
+// still open. Pure function — no interfaces, no context.
+func IsBiddingPhaseViewAllowed(userID string, entry *models.CalcuttaEntry, tournament *models.Tournament, now time.Time, isAdmin bool) bool {
+	if tournament.HasStarted(now) {
+		return true
+	}
+	if isAdmin {
+		return true
+	}
+	if entry != nil && entry.UserID != nil && *entry.UserID == userID {
+		return true
+	}
+	return false
+}
+
 // IsEntryOwnerOrCalcuttaOwner is a pure function that checks if a user owns the entry or the calcutta.
 // This can be tested without mocking authorization.
 func IsEntryOwnerOrCalcuttaOwner(userID string, entry *models.CalcuttaEntry, calcutta *models.Calcutta) bool {

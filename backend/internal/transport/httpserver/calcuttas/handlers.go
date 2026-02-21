@@ -153,11 +153,28 @@ func (h *Handler) HandleGetCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := dtos.NewCalcuttaResponse(calcutta)
 	userID := ""
 	if h.authUserID != nil {
 		userID = h.authUserID(r.Context())
 	}
+
+	participantIDs, err := h.app.Calcutta.GetDistinctUserIDsByCalcutta(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanViewCalcutta(r.Context(), h.authz, userID, calcutta, participantIDs)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	resp := dtos.NewCalcuttaResponse(calcutta)
 	resp.Abilities = computeAbilities(r.Context(), h.authz, userID, calcutta)
 	response.WriteJSON(w, http.StatusOK, resp)
 }

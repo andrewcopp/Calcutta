@@ -12,6 +12,7 @@ import { ReturnsTab } from './EntryTeams/ReturnsTab';
 import { StatisticsTab } from './EntryTeams/StatisticsTab';
 import { PortfolioScores } from './EntryTeams/PortfolioScores';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
+import { BiddingOverlay } from '../components/BiddingOverlay';
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useEntryTeamsData } from '../hooks/useEntryTeamsData';
 
@@ -26,6 +27,9 @@ export function EntryTeamsPage() {
   const [returnsShowAllTeams, setReturnsShowAllTeams] = useState(false);
 
   const dashboardQuery = useCalcuttaDashboard(calcuttaId);
+
+  const biddingOpen = dashboardQuery.data?.biddingOpen ?? false;
+  const tournamentStartingAt = dashboardQuery.data?.tournamentStartingAt;
 
   const {
     calcuttaName,
@@ -172,62 +176,75 @@ export function EntryTeamsPage() {
 
       <PageHeader title={entryName || 'Entry'} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="investments">Investments</TabsTrigger>
-          <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
-          <TabsTrigger value="returns">Returns</TabsTrigger>
-          <TabsTrigger value="statistics">Statistics</TabsTrigger>
-        </TabsList>
+      {biddingOpen && tournamentStartingAt ? (
+        <BiddingOverlay tournamentStartingAt={tournamentStartingAt}>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="investments">Investments</TabsTrigger>
+              <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
+              <TabsTrigger value="returns">Returns</TabsTrigger>
+              <TabsTrigger value="statistics">Statistics</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </BiddingOverlay>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="investments">Investments</TabsTrigger>
+            <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
+            <TabsTrigger value="returns">Returns</TabsTrigger>
+            <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="investments">
-          <InvestmentsTab
-            entryId={entryId!}
-            tournamentTeams={tournamentTeams}
-            allEntryTeams={allEntryTeams}
-            schools={schools}
-            investmentsSortBy={investmentsSortBy}
-            setInvestmentsSortBy={setInvestmentsSortBy}
-            showAllTeams={showAllTeams}
-            setShowAllTeams={setShowAllTeams}
-          />
-        </TabsContent>
+          <TabsContent value="investments">
+            <InvestmentsTab
+              entryId={entryId!}
+              tournamentTeams={tournamentTeams}
+              allEntryTeams={allEntryTeams}
+              schools={schools}
+              investmentsSortBy={investmentsSortBy}
+              setInvestmentsSortBy={setInvestmentsSortBy}
+              showAllTeams={showAllTeams}
+              setShowAllTeams={setShowAllTeams}
+            />
+          </TabsContent>
 
-        <TabsContent value="ownerships">
-          <OwnershipsTab
-            ownershipShowAllTeams={ownershipShowAllTeams}
-            setOwnershipShowAllTeams={setOwnershipShowAllTeams}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            ownershipLoading={ownershipLoading}
-            ownershipTeamsData={ownershipTeamsData}
-            getPortfolioTeamData={getPortfolioTeamData}
-            getInvestorRanking={getInvestorRanking}
-            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-            allCalcuttaPortfolios={allCalcuttaPortfolios}
-            portfolios={portfolios}
-          />
-        </TabsContent>
+          <TabsContent value="ownerships">
+            <OwnershipsTab
+              ownershipShowAllTeams={ownershipShowAllTeams}
+              setOwnershipShowAllTeams={setOwnershipShowAllTeams}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              ownershipLoading={ownershipLoading}
+              ownershipTeamsData={ownershipTeamsData}
+              getPortfolioTeamData={getPortfolioTeamData}
+              getInvestorRanking={getInvestorRanking}
+              allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+              allCalcuttaPortfolios={allCalcuttaPortfolios}
+              portfolios={portfolios}
+            />
+          </TabsContent>
 
-        <TabsContent value="returns">
-          <ReturnsTab
-            entryId={entryId!}
-            returnsShowAllTeams={returnsShowAllTeams}
-            setReturnsShowAllTeams={setReturnsShowAllTeams}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            tournamentTeams={tournamentTeams}
-            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-            teams={teams}
-            schools={schools}
-            getPortfolioTeamData={getPortfolioTeamData}
-          />
-        </TabsContent>
+          <TabsContent value="returns">
+            <ReturnsTab
+              entryId={entryId!}
+              returnsShowAllTeams={returnsShowAllTeams}
+              setReturnsShowAllTeams={setReturnsShowAllTeams}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              tournamentTeams={tournamentTeams}
+              allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+              teams={teams}
+              schools={schools}
+              getPortfolioTeamData={getPortfolioTeamData}
+            />
+          </TabsContent>
 
-        <TabsContent value="statistics">
-          <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="statistics">
+            <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
+          </TabsContent>
+        </Tabs>
+      )}
     </PageContainer>
   );
 }
