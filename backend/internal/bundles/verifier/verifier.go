@@ -21,7 +21,7 @@ type Mismatch struct {
 
 type Report struct {
 	OK            bool       `json:"ok"`
-	MismatchCount int        `json:"mismatch_count"`
+	MismatchCount int        `json:"mismatchCount"`
 	Mismatches    []Mismatch `json:"mismatches,omitempty"`
 }
 

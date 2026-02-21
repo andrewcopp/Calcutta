@@ -82,8 +82,8 @@ func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament,
 			FinalFourTopRight:    derefString(row.FinalFourTopRight),
 			FinalFourBottomRight: derefString(row.FinalFourBottomRight),
 			StartingAt:           TimestamptzToPtrTime(row.StartingAt),
-			Created:              row.CreatedAt.Time,
-			Updated:              row.UpdatedAt.Time,
+			CreatedAt:            row.CreatedAt.Time,
+			UpdatedAt:            row.UpdatedAt.Time,
 		})
 	}
 	return out, nil
@@ -106,15 +106,15 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 		FinalFourTopRight:    derefString(row.FinalFourTopRight),
 		FinalFourBottomRight: derefString(row.FinalFourBottomRight),
 		StartingAt:           TimestamptzToPtrTime(row.StartingAt),
-		Created:              row.CreatedAt.Time,
-		Updated:              row.UpdatedAt.Time,
+		CreatedAt:            row.CreatedAt.Time,
+		UpdatedAt:            row.UpdatedAt.Time,
 	}, nil
 }
 
 func (r *TournamentRepository) Create(ctx context.Context, tournament *models.Tournament, competitionName string, year int) error {
 	now := time.Now()
-	tournament.Created = now
-	tournament.Updated = now
+	tournament.CreatedAt = now
+	tournament.UpdatedAt = now
 
 	fftl := tournament.FinalFourTopLeft
 	ffbl := tournament.FinalFourBottomLeft
@@ -150,8 +150,8 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 		FinalFourTopRight:    &fftr,
 		FinalFourBottomRight: &ffbr,
 		StartingAt:           startingAt,
-		CreatedAt:            pgtype.Timestamptz{Time: tournament.Created, Valid: true},
-		UpdatedAt:            pgtype.Timestamptz{Time: tournament.Updated, Valid: true},
+		CreatedAt:            pgtype.Timestamptz{Time: tournament.CreatedAt, Valid: true},
+		UpdatedAt:            pgtype.Timestamptz{Time: tournament.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateCoreTournament(ctx, params); err != nil {
 		var pgErr *pgconn.PgError
@@ -323,8 +323,8 @@ func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *m
 
 func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.TournamentTeam) error {
 	now := time.Now()
-	team.Created = now
-	team.Updated = now
+	team.CreatedAt = now
+	team.UpdatedAt = now
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -346,8 +346,8 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		Byes:         int32(team.Byes),
 		Wins:         int32(team.Wins),
 		Eliminated:   team.Eliminated,
-		CreatedAt:    pgtype.Timestamptz{Time: team.Created, Valid: true},
-		UpdatedAt:    pgtype.Timestamptz{Time: team.Updated, Valid: true},
+		CreatedAt:    pgtype.Timestamptz{Time: team.CreatedAt, Valid: true},
+		UpdatedAt:    pgtype.Timestamptz{Time: team.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateTeam(ctx, params); err != nil {
 		return err
@@ -377,8 +377,8 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 		Byes:         int(row.Byes),
 		Wins:         int(row.Wins),
 		Eliminated:   row.Eliminated,
-		Created:      row.CreatedAt.Time,
-		Updated:      row.UpdatedAt.Time,
+		CreatedAt:    row.CreatedAt.Time,
+		UpdatedAt:    row.UpdatedAt.Time,
 	}
 	if row.NetRtg != nil || row.ORtg != nil || row.DRtg != nil || row.AdjT != nil {
 		team.KenPom = &models.KenPomStats{NetRtg: row.NetRtg, ORtg: row.ORtg, DRtg: row.DRtg, AdjT: row.AdjT}
@@ -411,8 +411,8 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 		if team == nil {
 			continue
 		}
-		team.Created = now
-		team.Updated = now
+		team.CreatedAt = now
+		team.UpdatedAt = now
 		params := sqlc.CreateTeamParams{
 			ID:           team.ID,
 			TournamentID: team.TournamentID,
@@ -422,8 +422,8 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 			Byes:         int32(team.Byes),
 			Wins:         int32(team.Wins),
 			Eliminated:   team.Eliminated,
-			CreatedAt:    pgtype.Timestamptz{Time: team.Created, Valid: true},
-			UpdatedAt:    pgtype.Timestamptz{Time: team.Updated, Valid: true},
+			CreatedAt:    pgtype.Timestamptz{Time: team.CreatedAt, Valid: true},
+			UpdatedAt:    pgtype.Timestamptz{Time: team.UpdatedAt, Valid: true},
 		}
 		if err = qtx.CreateTeam(ctx, params); err != nil {
 			return err
@@ -446,8 +446,8 @@ func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region
 		Byes:         int(byes),
 		Wins:         int(wins),
 		Eliminated:   eliminated,
-		Created:      createdAt.Time,
-		Updated:      updatedAt.Time,
+		CreatedAt:    createdAt.Time,
+		UpdatedAt:    updatedAt.Time,
 	}
 	if netRtg != nil || oRtg != nil || dRtg != nil || adjT != nil {
 		team.KenPom = &models.KenPomStats{NetRtg: netRtg, ORtg: oRtg, DRtg: dRtg, AdjT: adjT}

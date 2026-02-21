@@ -7,24 +7,24 @@ export interface Calcutta {
   ownerId: string;
   minTeams: number;
   maxTeams: number;
-  maxBid: number;
+  maxBidPoints: number;
   budgetPoints: number;
   abilities?: CalcuttaAbilities;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CalcuttaEntry {
   id: string;
   name: string;
   calcuttaId: string;
-  status?: string;
+  status?: 'incomplete' | 'accepted';
   totalPoints?: number;
   finishPosition?: number;
   inTheMoney?: boolean;
   payoutCents?: number;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CalcuttaEntryTeam {
@@ -32,8 +32,8 @@ export interface CalcuttaEntryTeam {
   entryId: string;
   teamId: string;
   bid: number;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
   team?: {
     id: string;
     schoolId: string;
@@ -53,8 +53,8 @@ export interface CalcuttaPortfolio {
   id: string;
   entryId: string;
   maximumPoints: number;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CalcuttaPortfolioTeam {
@@ -64,8 +64,8 @@ export interface CalcuttaPortfolioTeam {
   ownershipPercentage: number;
   actualPoints: number;
   expectedPoints: number;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
   team?: {
     id: string;
     schoolId: string;

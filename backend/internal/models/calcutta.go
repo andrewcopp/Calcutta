@@ -11,10 +11,10 @@ type Calcutta struct {
 	Name         string     `json:"name"`
 	MinTeams     int        `json:"minTeams"`
 	MaxTeams     int        `json:"maxTeams"`
-	MaxBid       int        `json:"maxBid"`
+	MaxBidPoints int        `json:"maxBidPoints"`
 	BudgetPoints int        `json:"budgetPoints"`
 	Visibility   string     `json:"visibility"`
-	Created      time.Time  `json:"created"`
-	Updated      time.Time  `json:"updated"`
-	Deleted      *time.Time `json:"deleted,omitempty"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
+	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
 }

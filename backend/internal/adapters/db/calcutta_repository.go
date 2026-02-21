@@ -39,12 +39,12 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 			Name:         row.Name,
 			MinTeams:     int(row.MinTeams),
 			MaxTeams:     int(row.MaxTeams),
-			MaxBid:       int(row.MaxBid),
+			MaxBidPoints: int(row.MaxBidPoints),
 			BudgetPoints: int(row.BudgetPoints),
 			Visibility:   row.Visibility,
-			Created:      row.CreatedAt.Time,
-			Updated:      row.UpdatedAt.Time,
-			Deleted:      nil,
+			CreatedAt:    row.CreatedAt.Time,
+			UpdatedAt:    row.UpdatedAt.Time,
+			DeletedAt:    nil,
 		})
 	}
 	return out, nil
@@ -66,11 +66,11 @@ func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]
 			Name:         row.Name,
 			MinTeams:     int(row.MinTeams),
 			MaxTeams:     int(row.MaxTeams),
-			MaxBid:       int(row.MaxBid),
+			MaxBidPoints: int(row.MaxBidPoints),
 			BudgetPoints: int(row.BudgetPoints),
 			Visibility:   row.Visibility,
-			Created:      row.CreatedAt.Time,
-			Updated:      row.UpdatedAt.Time,
+			CreatedAt:    row.CreatedAt.Time,
+			UpdatedAt:    row.UpdatedAt.Time,
 		})
 	}
 	return out, nil
@@ -107,12 +107,12 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		Name:         row.Name,
 		MinTeams:     int(row.MinTeams),
 		MaxTeams:     int(row.MaxTeams),
-		MaxBid:       int(row.MaxBid),
+		MaxBidPoints: int(row.MaxBidPoints),
 		BudgetPoints: int(row.BudgetPoints),
 		Visibility:   row.Visibility,
-		Created:      row.CreatedAt.Time,
-		Updated:      row.UpdatedAt.Time,
-		Deleted:      nil,
+		CreatedAt:    row.CreatedAt.Time,
+		UpdatedAt:    row.UpdatedAt.Time,
+		DeletedAt:    nil,
 	}, nil
 }
 
@@ -132,12 +132,12 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 			Name:         row.Name,
 			MinTeams:     int(row.MinTeams),
 			MaxTeams:     int(row.MaxTeams),
-			MaxBid:       int(row.MaxBid),
+			MaxBidPoints: int(row.MaxBidPoints),
 			BudgetPoints: int(row.BudgetPoints),
 			Visibility:   row.Visibility,
-			Created:      row.CreatedAt.Time,
-			Updated:      row.UpdatedAt.Time,
-			Deleted:      TimestamptzToPtrTime(row.DeletedAt),
+			CreatedAt:    row.CreatedAt.Time,
+			UpdatedAt:    row.UpdatedAt.Time,
+			DeletedAt:    TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -146,8 +146,8 @@ func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tourn
 func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcutta) error {
 	now := time.Now()
 	calcutta.ID = uuid.New().String()
-	calcutta.Created = now
-	calcutta.Updated = now
+	calcutta.CreatedAt = now
+	calcutta.UpdatedAt = now
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -171,11 +171,11 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 		Name:         calcutta.Name,
 		MinTeams:     int32(calcutta.MinTeams),
 		MaxTeams:     int32(calcutta.MaxTeams),
-		MaxBid:       int32(calcutta.MaxBid),
+		MaxBidPoints:       int32(calcutta.MaxBidPoints),
 		BudgetPoints: int32(calcutta.BudgetPoints),
 		Visibility:   calcutta.Visibility,
-		CreatedAt:    pgtype.Timestamptz{Time: calcutta.Created, Valid: true},
-		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
+		CreatedAt:    pgtype.Timestamptz{Time: calcutta.CreatedAt, Valid: true},
+		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateCalcutta(ctx, params); err != nil {
 		return err
@@ -188,7 +188,7 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 }
 
 func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcutta) error {
-	calcutta.Updated = time.Now()
+	calcutta.UpdatedAt = time.Now()
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -207,10 +207,10 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 		Name:         calcutta.Name,
 		MinTeams:     int32(calcutta.MinTeams),
 		MaxTeams:     int32(calcutta.MaxTeams),
-		MaxBid:       int32(calcutta.MaxBid),
+		MaxBidPoints:       int32(calcutta.MaxBidPoints),
 		BudgetPoints: int32(calcutta.BudgetPoints),
 		Visibility:   calcutta.Visibility,
-		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.Updated, Valid: true},
+		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.UpdatedAt, Valid: true},
 		ID:           calcutta.ID,
 	}
 	affected, err := qtx.UpdateCalcutta(ctx, params)
@@ -240,9 +240,9 @@ func (r *CalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) (
 			CalcuttaID: row.CalcuttaID,
 			Round:      int(row.Round),
 			Points:     int(row.Points),
-			Created:    row.CreatedAt.Time,
-			Updated:    row.UpdatedAt.Time,
-			Deleted:    nil,
+			CreatedAt:  row.CreatedAt.Time,
+			UpdatedAt:  row.UpdatedAt.Time,
+			DeletedAt:  nil,
 		})
 	}
 	return out, nil
@@ -251,8 +251,8 @@ func (r *CalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) (
 func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
 	now := time.Now()
 	round.ID = uuid.New().String()
-	round.Created = now
-	round.Updated = now
+	round.CreatedAt = now
+	round.UpdatedAt = now
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -270,8 +270,8 @@ func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.Calc
 		CalcuttaID:    round.CalcuttaID,
 		WinIndex:      int32(round.Round),
 		PointsAwarded: int32(round.Points),
-		CreatedAt:     pgtype.Timestamptz{Time: round.Created, Valid: true},
-		UpdatedAt:     pgtype.Timestamptz{Time: round.Updated, Valid: true},
+		CreatedAt:     pgtype.Timestamptz{Time: round.CreatedAt, Valid: true},
+		UpdatedAt:     pgtype.Timestamptz{Time: round.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateCalcuttaRound(ctx, params); err != nil {
 		return err

@@ -84,7 +84,7 @@ function computeCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefined
       .sort((a, b) => {
         const diff = (b.totalPoints || 0) - (a.totalPoints || 0);
         if (diff !== 0) return diff;
-        return new Date(b.created).getTime() - new Date(a.created).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
 
     const seedMap = new Map<number, number>();
@@ -170,10 +170,10 @@ function makeCalcutta(overrides: Partial<Calcutta> = {}): Calcutta {
     ownerId: 'owner-1',
     minTeams: 3,
     maxTeams: 10,
-    maxBid: 50,
+    maxBidPoints: 50,
     budgetPoints: 100,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -182,8 +182,8 @@ function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): Calcutta
   return {
     name: 'Entry',
     calcuttaId: 'calc-1',
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -191,8 +191,8 @@ function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): Calcutta
 function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; entryId: string; teamId: string }): CalcuttaEntryTeam {
   return {
     bid: 10,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -200,8 +200,8 @@ function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; ent
 function makePortfolio(overrides: Partial<CalcuttaPortfolio> & { id: string; entryId: string }): CalcuttaPortfolio {
   return {
     maximumPoints: 100,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -213,8 +213,8 @@ function makePortfolioTeam(
     ownershipPercentage: 1,
     actualPoints: 0,
     expectedPoints: 0,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -227,8 +227,8 @@ function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; s
     byes: 0,
     wins: 0,
     eliminated: false,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -390,8 +390,8 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       // GIVEN two entries with identical points but different created dates
       const dashboard = makeDashboard({
         entries: [
-          makeEntry({ id: 'e1', name: 'Older', totalPoints: 20, created: '2026-01-01T00:00:00Z' }),
-          makeEntry({ id: 'e2', name: 'Newer', totalPoints: 20, created: '2026-02-01T00:00:00Z' }),
+          makeEntry({ id: 'e1', name: 'Older', totalPoints: 20, createdAt: '2026-01-01T00:00:00Z' }),
+          makeEntry({ id: 'e2', name: 'Newer', totalPoints: 20, createdAt: '2026-02-01T00:00:00Z' }),
         ],
       });
 

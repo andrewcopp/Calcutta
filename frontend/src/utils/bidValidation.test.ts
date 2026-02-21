@@ -81,7 +81,7 @@ describe('computeValidationErrors', () => {
   const defaultConfig: BidValidationConfig = {
     minTeams: 3,
     maxTeams: 10,
-    maxBid: 50,
+    maxBidPoints: 50,
     budget: 100,
   };
 
@@ -133,7 +133,7 @@ describe('computeValidationErrors', () => {
   });
 
   it('reports bid exceeds max with team name when available', () => {
-    // GIVEN a bid of 60 exceeding maxBid of 50, with a known team name
+    // GIVEN a bid of 60 exceeding maxBidPoints of 50, with a known team name
     const bids = { t1: 60, t2: 10, t3: 10 };
     const teams: BidTeamLookup[] = [{ id: 't1', schoolName: 'Duke' }];
 
@@ -201,7 +201,7 @@ describe('computeValidationErrors', () => {
   });
 
   it('accepts bids at exactly the max bid limit', () => {
-    // GIVEN a bid at exactly maxBid of 50
+    // GIVEN a bid at exactly maxBidPoints of 50
     const bids = { t1: 50, t2: 25, t3: 25 };
 
     // WHEN computing validation errors

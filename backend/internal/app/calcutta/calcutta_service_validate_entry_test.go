@@ -8,7 +8,7 @@ import (
 
 func TestThatValidEntryPassesValidation(t *testing.T) {
 	// GIVEN a valid entry with 3 teams and total bids of 90
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -33,7 +33,7 @@ func TestThatValidEntryPassesValidation(t *testing.T) {
 
 func TestThatFewerThanThreeTeamsFailsValidation(t *testing.T) {
 	// GIVEN an entry with only 2 teams
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -57,7 +57,7 @@ func TestThatFewerThanThreeTeamsFailsValidation(t *testing.T) {
 
 func TestThatMoreThanTenTeamsFailsValidation(t *testing.T) {
 	// GIVEN an entry with 11 teams
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -81,7 +81,7 @@ func TestThatMoreThanTenTeamsFailsValidation(t *testing.T) {
 
 func TestThatBidOver50FailsValidation(t *testing.T) {
 	// GIVEN an entry with a bid of 51 on one team
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -106,7 +106,7 @@ func TestThatBidOver50FailsValidation(t *testing.T) {
 
 func TestThatTotalBidsOver100FailsValidation(t *testing.T) {
 	// GIVEN an entry with total bids of 102
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -131,7 +131,7 @@ func TestThatTotalBidsOver100FailsValidation(t *testing.T) {
 
 func TestThatBidUnder1FailsValidation(t *testing.T) {
 	// GIVEN an entry with a bid of 0 on one team
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",
@@ -156,7 +156,7 @@ func TestThatBidUnder1FailsValidation(t *testing.T) {
 
 func TestThatDuplicateTeamBidsFailsValidation(t *testing.T) {
 	// GIVEN an entry with duplicate team IDs
-	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBid: 50, BudgetPoints: 100}
+	calcutta := &models.Calcutta{MinTeams: 3, MaxTeams: 10, MaxBidPoints: 50, BudgetPoints: 100}
 	userID := "user1"
 	entry := &models.CalcuttaEntry{
 		ID:         "entry1",

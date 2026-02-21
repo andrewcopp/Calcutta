@@ -8,8 +8,8 @@ export interface Tournament {
   finalFourTopRight?: string;
   finalFourBottomRight?: string;
   startingAt?: string;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TournamentTeam {
@@ -21,8 +21,8 @@ export interface TournamentTeam {
   byes: number;
   wins: number;
   eliminated: boolean;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
   school?: { id: string; name: string };
 }
 

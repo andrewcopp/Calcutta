@@ -9,7 +9,7 @@ type CalcuttaInvitation struct {
 	InvitedBy  string     `json:"invitedBy"`
 	Status     string     `json:"status"`
 	RevokedAt  *time.Time `json:"revokedAt,omitempty"`
-	Created    time.Time  `json:"created"`
-	Updated    time.Time  `json:"updated"`
-	Deleted    *time.Time `json:"deleted,omitempty"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+	DeletedAt  *time.Time `json:"deletedAt,omitempty"`
 }

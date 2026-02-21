@@ -3,15 +3,15 @@ package school
 import (
 	"context"
 
-	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
 type Service struct {
-	repo *dbadapters.SchoolRepository
+	repo ports.SchoolRepository
 }
 
-func New(repo *dbadapters.SchoolRepository) *Service {
+func New(repo ports.SchoolRepository) *Service {
 	return &Service{repo: repo}
 }
 

@@ -42,8 +42,8 @@ type TournamentResponse struct {
 	FinalFourTopRight    string     `json:"finalFourTopRight,omitempty"`
 	FinalFourBottomRight string     `json:"finalFourBottomRight,omitempty"`
 	StartingAt           *time.Time `json:"startingAt,omitempty"`
-	Created              time.Time  `json:"created"`
-	Updated              time.Time  `json:"updated"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	UpdatedAt            time.Time  `json:"updatedAt"`
 }
 
 func NewTournamentResponse(t *models.Tournament, winner string) *TournamentResponse {
@@ -57,8 +57,8 @@ func NewTournamentResponse(t *models.Tournament, winner string) *TournamentRespo
 		FinalFourTopRight:    t.FinalFourTopRight,
 		FinalFourBottomRight: t.FinalFourBottomRight,
 		StartingAt:           t.StartingAt,
-		Created:              t.Created,
-		Updated:              t.Updated,
+		CreatedAt:            t.CreatedAt,
+		UpdatedAt:            t.UpdatedAt,
 	}
 }
 
@@ -129,8 +129,8 @@ type TournamentTeamResponse struct {
 	Byes         int             `json:"byes"`
 	Wins         int             `json:"wins"`
 	Eliminated   bool            `json:"eliminated"`
-	Created      time.Time       `json:"created"`
-	Updated      time.Time       `json:"updated"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	UpdatedAt    time.Time       `json:"updatedAt"`
 	School       *SchoolResponse `json:"school,omitempty"`
 }
 
@@ -144,8 +144,8 @@ func NewTournamentTeamResponse(t *models.TournamentTeam, school *models.School) 
 		Byes:         t.Byes,
 		Wins:         t.Wins,
 		Eliminated:   t.Eliminated,
-		Created:      t.Created,
-		Updated:      t.Updated,
+		CreatedAt:    t.CreatedAt,
+		UpdatedAt:    t.UpdatedAt,
 	}
 	if school != nil {
 		resp.School = NewSchoolResponse(school)

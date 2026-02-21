@@ -44,7 +44,6 @@ func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users/{id}/email", s.requirePermission("admin.users.write", s.adminUsersSetEmailHandler)).Methods("PATCH")
 	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
 	r.HandleFunc("/api/admin/users/{id}/invite/send", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}/invite/resend", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
 }
 
 func (s *Server) adminUsersSetEmailHandler(w http.ResponseWriter, r *http.Request) {

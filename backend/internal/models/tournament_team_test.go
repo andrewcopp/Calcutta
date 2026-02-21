@@ -15,8 +15,8 @@ func TestThatTournamentTeamValidateAcceptsValidTeamWithDefaultConfig(t *testing.
 		Seed:         1,
 		Byes:         0,
 		Wins:         0,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -39,8 +39,8 @@ func TestThatTournamentTeamValidateAcceptsValidTeamWithMaxValues(t *testing.T) {
 		Seed:         16,
 		Byes:         1,
 		Wins:         7,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -63,8 +63,8 @@ func TestThatTournamentTeamValidateRejectsSeedZero(t *testing.T) {
 		Seed:         0,
 		Byes:         0,
 		Wins:         0,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -87,8 +87,8 @@ func TestThatTournamentTeamValidateRejectsSeedSeventeen(t *testing.T) {
 		Seed:         17,
 		Byes:         0,
 		Wins:         0,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -111,8 +111,8 @@ func TestThatTournamentTeamValidateRejectsNegativeByes(t *testing.T) {
 		Seed:         1,
 		Byes:         -1,
 		Wins:         0,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -135,8 +135,8 @@ func TestThatTournamentTeamValidateRejectsByesGreaterThanOne(t *testing.T) {
 		Seed:         1,
 		Byes:         2,
 		Wins:         0,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -159,8 +159,8 @@ func TestThatTournamentTeamValidateRejectsNegativeWins(t *testing.T) {
 		Seed:         1,
 		Byes:         0,
 		Wins:         -1,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -183,8 +183,8 @@ func TestThatTournamentTeamValidateRejectsWinsGreaterThanSeven(t *testing.T) {
 		Seed:         1,
 		Byes:         0,
 		Wins:         8,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := DefaultTournamentConfig()
 
@@ -207,8 +207,8 @@ func TestThatTournamentTeamValidateAcceptsCustomConfig(t *testing.T) {
 		Seed:         20,
 		Byes:         2,
 		Wins:         8,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	config := &TournamentConfig{
 		MinSeed: 1,
@@ -238,8 +238,8 @@ func TestThatTournamentTeamValidateDefaultAcceptsValidTeam(t *testing.T) {
 		Seed:         1,
 		Byes:         0,
 		Wins:         0,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
 	// WHEN validating with default config

@@ -28,6 +28,7 @@ export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const [activeTab, setActiveTab] = useState('leaderboard');
   const [isCreatingEntry, setIsCreatingEntry] = useState(false);
+  const [createEntryError, setCreateEntryError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user } = useUser();
 
@@ -87,10 +88,12 @@ export function CalcuttaEntriesPage() {
   const handleCreateEntry = async () => {
     if (!user || !calcuttaId) return;
     setIsCreatingEntry(true);
+    setCreateEntryError(null);
     try {
       const entry = await calcuttaService.createEntry(calcuttaId, `${user.firstName} ${user.lastName}`);
       navigate(`/calcuttas/${calcuttaId}/entries/${entry.id}/bid`);
-    } catch {
+    } catch (err) {
+      setCreateEntryError(err instanceof Error ? err.message : 'Failed to create entry');
       setIsCreatingEntry(false);
     }
   };
@@ -124,6 +127,10 @@ export function CalcuttaEntriesPage() {
             ) : undefined
           }
         />
+
+        {createEntryError && (
+          <Alert variant="error" className="mb-4">{createEntryError}</Alert>
+        )}
 
         {!currentUserEntry ? (
           <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">

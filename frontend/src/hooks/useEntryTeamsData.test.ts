@@ -107,10 +107,10 @@ function makeCalcutta(overrides: Partial<Calcutta> = {}): Calcutta {
     ownerId: 'owner-1',
     minTeams: 3,
     maxTeams: 10,
-    maxBid: 50,
+    maxBidPoints: 50,
     budgetPoints: 100,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -119,8 +119,8 @@ function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): Calcutta
   return {
     name: 'Entry',
     calcuttaId: 'calc-1',
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -128,8 +128,8 @@ function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): Calcutta
 function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; entryId: string; teamId: string }): CalcuttaEntryTeam {
   return {
     bid: 10,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -137,8 +137,8 @@ function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; ent
 function makePortfolio(overrides: Partial<CalcuttaPortfolio> & { id: string; entryId: string }): CalcuttaPortfolio {
   return {
     maximumPoints: 100,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -150,8 +150,8 @@ function makePortfolioTeam(
     ownershipPercentage: 1,
     actualPoints: 0,
     expectedPoints: 0,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -164,8 +164,8 @@ function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; s
     byes: 0,
     wins: 0,
     eliminated: false,
-    created: '2026-01-01T00:00:00Z',
-    updated: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }

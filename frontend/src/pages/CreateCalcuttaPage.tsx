@@ -14,7 +14,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Select } from '../components/ui/Select';
 
-const ROUND_LABELS: Record<number, string> = {
+const WIN_INDEX_LABELS: Record<number, string> = {
   1: 'First Four Win',
   2: 'Round of 64 Win',
   3: 'Round of 32 Win',
@@ -47,7 +47,7 @@ export function CreateCalcuttaPage() {
   const [scoringRules, setScoringRules] = useState<ScoringRule[]>([]);
   const [minTeams, setMinTeams] = useState(3);
   const [maxTeams, setMaxTeams] = useState(10);
-  const [maxBid, setMaxBid] = useState(50);
+  const [maxBidPoints, setMaxBidPoints] = useState(50);
 
   const tournamentsQuery = useQuery({
     queryKey: queryKeys.tournaments.all(),
@@ -55,13 +55,13 @@ export function CreateCalcuttaPage() {
   });
 
   const createCalcuttaMutation = useMutation({
-    mutationFn: async (params: { name: string; tournamentId: string; scoringRules: ScoringRule[]; minTeams: number; maxTeams: number; maxBid: number }) => {
-      return calcuttaService.createCalcutta(params.name, params.tournamentId, params.scoringRules, params.minTeams, params.maxTeams, params.maxBid);
+    mutationFn: async (params: { name: string; tournamentId: string; scoringRules: ScoringRule[]; minTeams: number; maxTeams: number; maxBidPoints: number }) => {
+      return calcuttaService.createCalcutta(params.name, params.tournamentId, params.scoringRules, params.minTeams, params.maxTeams, params.maxBidPoints);
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() }),
-        queryClient.invalidateQueries({ queryKey: ['calcuttasWithRankings'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.listWithRankings() }),
       ]);
       navigate('/calcuttas');
     },
@@ -99,7 +99,7 @@ export function CreateCalcuttaPage() {
       scoringRules,
       minTeams,
       maxTeams,
-      maxBid,
+      maxBidPoints,
     });
   };
 
@@ -213,15 +213,15 @@ export function CreateCalcuttaPage() {
                     />
                   </div>
                   <div className="flex items-center gap-3">
-                    <label htmlFor="maxBid" className="text-sm text-gray-600 w-44 shrink-0">
+                    <label htmlFor="maxBidPoints" className="text-sm text-gray-600 w-44 shrink-0">
                       Max Bid per Team
                     </label>
                     <Input
                       type="number"
-                      id="maxBid"
+                      id="maxBidPoints"
                       min={1}
-                      value={maxBid}
-                      onChange={(e) => setMaxBid(parseInt(e.target.value, 10) || 0)}
+                      value={maxBidPoints}
+                      onChange={(e) => setMaxBidPoints(parseInt(e.target.value, 10) || 0)}
                       className="w-28"
                     />
                     <span className="text-sm text-gray-500">pts</span>
@@ -242,7 +242,7 @@ export function CreateCalcuttaPage() {
                           htmlFor={`scoring-${rule.winIndex}`}
                           className="text-sm text-gray-600 w-44 shrink-0"
                         >
-                          {ROUND_LABELS[rule.winIndex] ?? `Win ${rule.winIndex}`}
+                          {WIN_INDEX_LABELS[rule.winIndex] ?? `Win ${rule.winIndex}`}
                         </label>
                         <Input
                           type="number"

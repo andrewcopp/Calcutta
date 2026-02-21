@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
 
 function RouteErrorFallback() {
@@ -21,8 +22,9 @@ function RouteErrorFallback() {
 }
 
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
+  const location = useLocation();
   return (
-    <ErrorBoundary fallback={<RouteErrorFallback />}>
+    <ErrorBoundary key={location.pathname} fallback={<RouteErrorFallback />}>
       {children}
     </ErrorBoundary>
   );

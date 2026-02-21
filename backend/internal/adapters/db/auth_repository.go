@@ -6,18 +6,11 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type AuthSession struct {
-	ID               string
-	UserID           string
-	RefreshTokenHash string
-	ExpiresAt        time.Time
-	RevokedAt        *time.Time
-}
 
 type AuthRepository struct {
 	pool *pgxpool.Pool
@@ -45,7 +38,7 @@ func (r *AuthRepository) CreateSession(ctx context.Context, userID, refreshToken
 	return r.q.CreateAuthSession(ctx, arg)
 }
 
-func (r *AuthRepository) GetSessionByID(ctx context.Context, id string) (*AuthSession, error) {
+func (r *AuthRepository) GetSessionByID(ctx context.Context, id string) (*models.AuthSession, error) {
 	row, err := r.q.GetAuthSessionByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -56,7 +49,7 @@ func (r *AuthRepository) GetSessionByID(ctx context.Context, id string) (*AuthSe
 	return authSessionFromRow(row.ID, row.UserID, row.RefreshTokenHash, row.ExpiresAt, row.RevokedAt), nil
 }
 
-func (r *AuthRepository) GetSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (*AuthSession, error) {
+func (r *AuthRepository) GetSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (*models.AuthSession, error) {
 	row, err := r.q.GetAuthSessionByRefreshTokenHash(ctx, refreshTokenHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -99,13 +92,13 @@ func (r *AuthRepository) IsUserActive(ctx context.Context, userID string) (bool,
 	return status == "active", nil
 }
 
-func authSessionFromRow(id, userID, refreshTokenHash string, expiresAt, revokedAt pgtype.Timestamptz) *AuthSession {
+func authSessionFromRow(id, userID, refreshTokenHash string, expiresAt, revokedAt pgtype.Timestamptz) *models.AuthSession {
 	var revoked *time.Time
 	if revokedAt.Valid {
 		t := revokedAt.Time
 		revoked = &t
 	}
-	return &AuthSession{
+	return &models.AuthSession{
 		ID:               id,
 		UserID:           userID,
 		RefreshTokenHash: refreshTokenHash,

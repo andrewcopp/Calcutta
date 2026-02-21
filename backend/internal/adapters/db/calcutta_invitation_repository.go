@@ -45,8 +45,8 @@ func (r *CalcuttaInvitationRepository) ListInvitations(ctx context.Context, calc
 			UserID:     row.UserID,
 			InvitedBy:  row.InvitedBy,
 			Status:     row.Status,
-			Created:    row.CreatedAt.Time,
-			Updated:    row.UpdatedAt.Time,
+			CreatedAt:  row.CreatedAt.Time,
+			UpdatedAt:  row.UpdatedAt.Time,
 		}
 		if row.RevokedAt.Valid {
 			t := row.RevokedAt.Time
@@ -74,8 +74,8 @@ func (r *CalcuttaInvitationRepository) GetInvitationByCalcuttaAndUser(ctx contex
 		UserID:     row.UserID,
 		InvitedBy:  row.InvitedBy,
 		Status:     row.Status,
-		Created:    row.CreatedAt.Time,
-		Updated:    row.UpdatedAt.Time,
+		CreatedAt:  row.CreatedAt.Time,
+		UpdatedAt:  row.UpdatedAt.Time,
 	}
 	if row.RevokedAt.Valid {
 		t := row.RevokedAt.Time
@@ -101,8 +101,8 @@ func (r *CalcuttaInvitationRepository) GetPendingInvitationByCalcuttaAndUser(ctx
 		UserID:     row.UserID,
 		InvitedBy:  row.InvitedBy,
 		Status:     row.Status,
-		Created:    row.CreatedAt.Time,
-		Updated:    row.UpdatedAt.Time,
+		CreatedAt:  row.CreatedAt.Time,
+		UpdatedAt:  row.UpdatedAt.Time,
 	}
 	if row.RevokedAt.Valid {
 		t := row.RevokedAt.Time
@@ -146,8 +146,8 @@ func (r *CalcuttaInvitationRepository) ListPendingInvitationsByUserID(ctx contex
 			UserID:     row.UserID,
 			InvitedBy:  row.InvitedBy,
 			Status:     row.Status,
-			Created:    row.CreatedAt.Time,
-			Updated:    row.UpdatedAt.Time,
+			CreatedAt:  row.CreatedAt.Time,
+			UpdatedAt:  row.UpdatedAt.Time,
 		})
 	}
 	return out, nil

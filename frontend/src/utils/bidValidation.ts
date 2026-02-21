@@ -3,7 +3,7 @@ const MIN_BID = 1;
 export interface BidValidationConfig {
   minTeams: number;
   maxTeams: number;
-  maxBid: number;
+  maxBidPoints: number;
   budget: number;
 }
 
@@ -46,9 +46,9 @@ export function computeValidationErrors(
     if (bid < MIN_BID) {
       errors.push(`All bids must be at least ${MIN_BID} pts`);
     }
-    if (bid > config.maxBid) {
+    if (bid > config.maxBidPoints) {
       const team = teams.find((t) => t.id === teamId);
-      errors.push(`Bid on ${team?.schoolName || 'team'} exceeds max ${config.maxBid} pts`);
+      errors.push(`Bid on ${team?.schoolName || 'team'} exceeds max ${config.maxBidPoints} pts`);
     }
   });
 

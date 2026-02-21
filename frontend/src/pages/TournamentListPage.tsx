@@ -83,7 +83,7 @@ export function TournamentListPage() {
                   <div>
                     <h2 className="text-xl font-semibold mb-2">{tournament.name}</h2>
                     <p className="text-gray-600">
-                      {tournament.rounds} rounds • Created {formatDate(tournament.created)}
+                      {tournament.rounds} rounds • Created {formatDate(tournament.createdAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">

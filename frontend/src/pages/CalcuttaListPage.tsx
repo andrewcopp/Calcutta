@@ -106,7 +106,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
             <p className="text-gray-600">
               {calcutta.tournamentStartingAt
                 ? `Tournament starts ${formatDate(calcutta.tournamentStartingAt)}`
-                : `Created ${formatDate(calcutta.created)}`}
+                : `Created ${formatDate(calcutta.createdAt)}`}
             </p>
           </div>
           {(() => {

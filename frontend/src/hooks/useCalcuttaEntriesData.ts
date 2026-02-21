@@ -91,7 +91,7 @@ export function useCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefi
       .sort((a, b) => {
         const diff = (b.totalPoints || 0) - (a.totalPoints || 0);
         if (diff !== 0) return diff;
-        return new Date(b.created).getTime() - new Date(a.created).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
 
     // Compute seed investment data

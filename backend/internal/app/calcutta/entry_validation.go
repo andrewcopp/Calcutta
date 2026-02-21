@@ -33,8 +33,8 @@ func ValidateEntry(calcutta *models.Calcutta, entry *models.CalcuttaEntry, teams
 
 	// Rule 4: Maximum bid on any single team
 	for _, team := range teams {
-		if team.BidPoints > calcutta.MaxBid {
-			return fmt.Errorf("maximum bid on any single team is %d points", calcutta.MaxBid)
+		if team.BidPoints > calcutta.MaxBidPoints {
+			return fmt.Errorf("maximum bid on any single team is %d points", calcutta.MaxBidPoints)
 		}
 	}
 

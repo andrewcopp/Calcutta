@@ -8,38 +8,38 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 
 type ImportStartResponse = {
-  upload_id: string;
+  uploadId: string;
   status: 'pending' | 'running' | 'succeeded' | 'failed';
   filename: string;
   sha256: string;
-  size_bytes: number;
+  sizeBytes: number;
 };
 
 type ImportStatusResponse = {
-  upload_id: string;
+  uploadId: string;
   filename: string;
   sha256: string;
-  size_bytes: number;
+  sizeBytes: number;
   status: 'pending' | 'running' | 'succeeded' | 'failed';
-  started_at?: string;
-  finished_at?: string;
-  error_message?: string;
-  import_report?: {
-    started_at: string;
-    finished_at: string;
-    dry_run: boolean;
+  startedAt?: string;
+  finishedAt?: string;
+  errorMessage?: string;
+  importReport?: {
+    startedAt: string;
+    finishedAt: string;
+    dryRun: boolean;
     schools: number;
     tournaments: number;
-    tournament_teams: number;
+    tournamentTeams: number;
     calcuttas: number;
     entries: number;
     bids: number;
     payouts: number;
     rounds: number;
   };
-  verify_report?: {
+  verifyReport?: {
     ok: boolean;
-    mismatch_count: number;
+    mismatchCount: number;
     mismatches?: { where: string; what: string }[];
   };
 };
@@ -93,7 +93,7 @@ export function AdminBundlesPage() {
         }
         if (body.status === 'failed') {
           setBusy(false);
-          setError(body.error_message || 'Import failed');
+          setError(body.errorMessage || 'Import failed');
           return;
         }
 
@@ -166,12 +166,12 @@ export function AdminBundlesPage() {
         throw new Error(typeof rawMsg === 'string' ? rawMsg : String(rawMsg));
       }
       const started = body as ImportStartResponse;
-      setUploadId(started.upload_id);
+      setUploadId(started.uploadId);
       setResult({
-        upload_id: started.upload_id,
+        uploadId: started.uploadId,
         filename: started.filename,
         sha256: started.sha256,
-        size_bytes: started.size_bytes,
+        sizeBytes: started.sizeBytes,
         status: started.status,
       });
     } catch (e) {
@@ -240,37 +240,37 @@ export function AdminBundlesPage() {
               <div className="text-gray-500">Filename</div>
               <div className="font-medium">{result.filename}</div>
               <div className="text-gray-500">Size</div>
-              <div className="font-medium">{(result.size_bytes / 1024).toFixed(1)} KB</div>
-              {result.import_report && (
+              <div className="font-medium">{(result.sizeBytes / 1024).toFixed(1)} KB</div>
+              {result.importReport && (
                 <>
                   <div className="col-span-2 border-t border-gray-200 mt-2 pt-2 font-semibold">Import Report</div>
                   <div className="text-gray-500">Schools</div>
-                  <div className="font-medium">{result.import_report.schools}</div>
+                  <div className="font-medium">{result.importReport.schools}</div>
                   <div className="text-gray-500">Tournaments</div>
-                  <div className="font-medium">{result.import_report.tournaments}</div>
+                  <div className="font-medium">{result.importReport.tournaments}</div>
                   <div className="text-gray-500">Teams</div>
-                  <div className="font-medium">{result.import_report.tournament_teams}</div>
+                  <div className="font-medium">{result.importReport.tournamentTeams}</div>
                   <div className="text-gray-500">Calcuttas</div>
-                  <div className="font-medium">{result.import_report.calcuttas}</div>
+                  <div className="font-medium">{result.importReport.calcuttas}</div>
                   <div className="text-gray-500">Entries</div>
-                  <div className="font-medium">{result.import_report.entries}</div>
+                  <div className="font-medium">{result.importReport.entries}</div>
                   <div className="text-gray-500">Bids</div>
-                  <div className="font-medium">{result.import_report.bids}</div>
+                  <div className="font-medium">{result.importReport.bids}</div>
                   <div className="text-gray-500">Payouts</div>
-                  <div className="font-medium">{result.import_report.payouts}</div>
+                  <div className="font-medium">{result.importReport.payouts}</div>
                 </>
               )}
-              {result.verify_report && (
+              {result.verifyReport && (
                 <>
                   <div className="col-span-2 border-t border-gray-200 mt-2 pt-2 font-semibold">Verify Report</div>
                   <div className="text-gray-500">OK</div>
-                  <div className={`font-medium ${result.verify_report.ok ? 'text-green-600' : 'text-red-600'}`}>
-                    {result.verify_report.ok ? 'Yes' : 'No'}
+                  <div className={`font-medium ${result.verifyReport.ok ? 'text-green-600' : 'text-red-600'}`}>
+                    {result.verifyReport.ok ? 'Yes' : 'No'}
                   </div>
-                  {result.verify_report.mismatch_count > 0 && (
+                  {result.verifyReport.mismatchCount > 0 && (
                     <>
                       <div className="text-gray-500">Mismatches</div>
-                      <div className="font-medium text-red-600">{result.verify_report.mismatch_count}</div>
+                      <div className="font-medium text-red-600">{result.verifyReport.mismatchCount}</div>
                     </>
                   )}
                 </>

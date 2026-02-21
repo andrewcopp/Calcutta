@@ -37,7 +37,7 @@ func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
 	apiKeysRepo := dbadapters.NewAPIKeysRepository(pool)
 	idempotencyRepo := dbadapters.NewIdempotencyRepository(pool)
 
-	a, tm, err := appbootstrap.NewApp(pool, cfg, authRepo, authzRepo)
+	a, tm, err := appbootstrap.NewApp(pool, cfg, authRepo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize app: %w", err)
 	}

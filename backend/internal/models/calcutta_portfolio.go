@@ -7,7 +7,7 @@ type CalcuttaPortfolio struct {
 	ID            string     `json:"id"`
 	EntryID       string     `json:"entryId"` // References CalcuttaEntry
 	MaximumPoints float64    `json:"maximumPoints"`
-	Created       time.Time  `json:"created"`
-	Updated       time.Time  `json:"updated"`
-	Deleted       *time.Time `json:"deleted,omitempty"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+	DeletedAt     *time.Time `json:"deletedAt,omitempty"`
 }

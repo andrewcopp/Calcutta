@@ -12,7 +12,7 @@ interface SettingsFormValues {
   name: string;
   minTeams: number;
   maxTeams: number;
-  maxBid: number;
+  maxBidPoints: number;
 }
 
 interface SettingsFormProps {
@@ -33,7 +33,7 @@ export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormPr
         name: calcutta.name,
         minTeams: calcutta.minTeams,
         maxTeams: calcutta.maxTeams,
-        maxBid: calcutta.maxBid,
+        maxBidPoints: calcutta.maxBidPoints,
       });
     }
   }, [calcutta, form]);
@@ -109,15 +109,15 @@ export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormPr
             </div>
 
             <div>
-              <label htmlFor="maxBid" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="maxBidPoints" className="block text-sm font-medium text-gray-700 mb-1">
                 Max Bid per Team
               </label>
               <Input
-                id="maxBid"
+                id="maxBidPoints"
                 type="number"
                 min={1}
-                value={form.maxBid}
-                onChange={(e) => setForm({ ...form, maxBid: parseInt(e.target.value) || 0 })}
+                value={form.maxBidPoints}
+                onChange={(e) => setForm({ ...form, maxBidPoints: parseInt(e.target.value) || 0 })}
                 required
               />
             </div>

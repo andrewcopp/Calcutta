@@ -9,7 +9,7 @@ type CalcuttaRound struct {
 	CalcuttaID string     `json:"calcuttaId"`
 	Round      int        `json:"round"` // 1 = First Four, 2 = First Round, 3 = Sweet 16, etc.
 	Points     int        `json:"points"`
-	Created    time.Time  `json:"created"`
-	Updated    time.Time  `json:"updated"`
-	Deleted    *time.Time `json:"deleted,omitempty"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+	DeletedAt  *time.Time `json:"deletedAt,omitempty"`
 }

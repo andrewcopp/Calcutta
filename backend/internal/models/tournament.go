@@ -24,9 +24,9 @@ type Tournament struct {
 	FinalFourTopRight    string     `json:"finalFourTopRight"`
 	FinalFourBottomRight string     `json:"finalFourBottomRight"`
 	StartingAt           *time.Time `json:"startingAt,omitempty"`
-	Created              time.Time  `json:"created"`
-	Updated              time.Time  `json:"updated"`
-	Deleted              *time.Time `json:"deleted,omitempty"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	UpdatedAt            time.Time  `json:"updatedAt"`
+	DeletedAt            *time.Time `json:"deletedAt,omitempty"`
 }
 
 func (t *Tournament) HasStarted(now time.Time) bool {

@@ -1,5 +1,5 @@
 -- Seed Data Migration
--- Inserts permissions, labels, and label_permissions
+-- Inserts permissions, labels, label_permissions, and reference data
 
 SET search_path = '';
 
@@ -29,18 +29,19 @@ INSERT INTO core.permissions (id, key, description) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- LABELS (4)
+-- LABELS (5)
 -- =============================================================================
 
 INSERT INTO core.labels (id, key, description) VALUES
   ('7fd3956d-9df0-4c1b-b176-e7b8b6d01248', 'site_admin', 'Full site administration'),
   ('2623b7e3-4dcf-4378-a091-a2a33efe560c', 'tournament_admin', 'Update tournament game results'),
   ('49b7d3d1-e45f-49b7-9bdc-424959d0c7ab', 'calcutta_admin', 'Manage a specific calcutta'),
-  ('fcbaa74f-823e-4015-8680-522f2e210fef', 'player', 'Participate in a calcutta')
+  ('fcbaa74f-823e-4015-8680-522f2e210fef', 'player', 'Participate in a calcutta'),
+  ('b8e1c2d3-f4a5-4b6c-8d7e-9f0a1b2c3d4e', 'user_manager', 'Manage user accounts: password resets, invite resends, user admin')
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- LABEL_PERMISSIONS (23)
+-- LABEL_PERMISSIONS (25)
 -- =============================================================================
 
 -- site_admin gets all permissions
@@ -70,7 +71,17 @@ INSERT INTO core.label_permissions (label_id, permission_id) VALUES
   ('49b7d3d1-e45f-49b7-9bdc-424959d0c7ab', '074eb6a9-c3ab-4f27-9a0d-fa0779bb7bcb'),
   ('49b7d3d1-e45f-49b7-9bdc-424959d0c7ab', 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d'),
   -- player
-  ('fcbaa74f-823e-4015-8680-522f2e210fef', '074eb6a9-c3ab-4f27-9a0d-fa0779bb7bcb')
+  ('fcbaa74f-823e-4015-8680-522f2e210fef', '074eb6a9-c3ab-4f27-9a0d-fa0779bb7bcb'),
+  -- user_manager
+  ('b8e1c2d3-f4a5-4b6c-8d7e-9f0a1b2c3d4e', '4d045f02-704b-475c-bb6a-5a88d742a07c'),
+  ('b8e1c2d3-f4a5-4b6c-8d7e-9f0a1b2c3d4e', 'caeb9563-7298-4ef3-b9d2-4c13529baa20')
 ON CONFLICT (label_id, permission_id) DO NOTHING;
+
+-- =============================================================================
+-- COMPETITIONS
+-- =============================================================================
+
+INSERT INTO core.competitions (name) VALUES ('NCAA Tournament')
+ON CONFLICT (name) DO NOTHING;
 
 COMMIT;

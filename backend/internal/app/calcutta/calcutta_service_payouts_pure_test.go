@@ -15,8 +15,8 @@ func TestThatComputeEntryPlacementsAndPayoutsReturnsNilWhenEntriesNil(t *testing
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSortsByTotalPointsDescending(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, Created: time.Unix(1, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 20, Created: time.Unix(2, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
+	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 20, CreatedAt: time.Unix(2, 0)}
 
 	sorted, _ := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1, e2}, nil)
 
@@ -26,8 +26,8 @@ func TestThatComputeEntryPlacementsAndPayoutsSortsByTotalPointsDescending(t *tes
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSortsTiesByCreatedDescending(t *testing.T) {
-	eOld := &models.CalcuttaEntry{ID: "old", TotalPoints: 10, Created: time.Unix(1, 0)}
-	eNew := &models.CalcuttaEntry{ID: "new", TotalPoints: 10, Created: time.Unix(2, 0)}
+	eOld := &models.CalcuttaEntry{ID: "old", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
+	eNew := &models.CalcuttaEntry{ID: "new", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
 
 	sorted, _ := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{eOld, eNew}, nil)
 
@@ -37,8 +37,8 @@ func TestThatComputeEntryPlacementsAndPayoutsSortsTiesByCreatedDescending(t *tes
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsMarksTiesWithinEpsilon(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10.00000, Created: time.Unix(2, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10.00001, Created: time.Unix(1, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10.00000, CreatedAt: time.Unix(2, 0)}
+	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10.00001, CreatedAt: time.Unix(1, 0)}
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1, e2}, nil)
 
@@ -48,8 +48,8 @@ func TestThatComputeEntryPlacementsAndPayoutsMarksTiesWithinEpsilon(t *testing.T
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSetsFinishPositionOneForTopEntry(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 20, Created: time.Unix(1, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, Created: time.Unix(1, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 20, CreatedAt: time.Unix(1, 0)}
+	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e2, e1}, nil)
 
@@ -59,8 +59,8 @@ func TestThatComputeEntryPlacementsAndPayoutsSetsFinishPositionOneForTopEntry(t 
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSplitsPayoutAcrossTieGroup(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, Created: time.Unix(2, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, Created: time.Unix(1, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
+	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
 	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 100}
 	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 50}
 
@@ -72,8 +72,8 @@ func TestThatComputeEntryPlacementsAndPayoutsSplitsPayoutAcrossTieGroup(t *testi
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsDistributesRemainderToEarlierEntryInSortedOrder(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, Created: time.Unix(2, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, Created: time.Unix(1, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
+	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
 	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 100}
 	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 99}
 
@@ -85,7 +85,7 @@ func TestThatComputeEntryPlacementsAndPayoutsDistributesRemainderToEarlierEntryI
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSetsInTheMoneyWhenPayoutPositive(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, Created: time.Unix(1, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
 	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 1}
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1}, []*models.CalcuttaPayout{p1})
@@ -96,7 +96,7 @@ func TestThatComputeEntryPlacementsAndPayoutsSetsInTheMoneyWhenPayoutPositive(t 
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsDoesNotMutateInputEntries(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, FinishPosition: 999, Created: time.Unix(1, 0)}
+	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, FinishPosition: 999, CreatedAt: time.Unix(1, 0)}
 
 	_, _ = ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1}, nil)
 

@@ -6,7 +6,7 @@ import "time"
 type School struct {
 	ID      string     `json:"id"`
 	Name    string     `json:"name"`
-	Created time.Time  `json:"created"`
-	Updated time.Time  `json:"updated"`
-	Deleted *time.Time `json:"deleted,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt,omitempty"`
 }

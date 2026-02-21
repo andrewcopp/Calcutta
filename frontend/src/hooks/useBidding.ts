@@ -14,14 +14,6 @@ const MIN_BID = 1;
 
 export type TeamWithSchool = TournamentTeam & { school?: School };
 
-export interface PortfolioItem {
-  teamId: string;
-  name: string;
-  seed: number;
-  region: string;
-  bid: number;
-}
-
 export interface BidSlot {
   teamId: string;
   searchText: string;
@@ -87,7 +79,7 @@ export function useBidding() {
   const BUDGET = calcutta?.budgetPoints ?? 100;
   const MIN_TEAMS = calcutta?.minTeams ?? 3;
   const MAX_TEAMS = calcutta?.maxTeams ?? 10;
-  const MAX_BID = calcutta?.maxBid ?? 50;
+  const MAX_BID = calcutta?.maxBidPoints ?? 50;
 
   // Initialize slots from existing bids
   React.useEffect(() => {
@@ -212,7 +204,7 @@ export function useBidding() {
     }));
     return computeValidationErrors(
       bidsByTeamId,
-      { minTeams: MIN_TEAMS, maxTeams: MAX_TEAMS, maxBid: MAX_BID, budget: BUDGET },
+      { minTeams: MIN_TEAMS, maxTeams: MAX_TEAMS, maxBidPoints: MAX_BID, budget: BUDGET },
       teamLookups,
     );
   }, [bidsByTeamId, biddingQuery.data?.teams, MIN_TEAMS, MAX_TEAMS, MAX_BID, BUDGET]);
@@ -227,24 +219,6 @@ export function useBidding() {
     }));
     updateEntryMutation.mutate(teamsPayload);
   };
-
-  // Portfolio summary - teams with bids sorted by bid descending
-  const portfolioSummary = useMemo((): PortfolioItem[] => {
-    if (!biddingQuery.data?.teams) return [];
-    return Object.entries(bidsByTeamId)
-      .filter(([, bid]) => bid > 0)
-      .map(([teamId, bid]) => {
-        const team = biddingQuery.data!.teams.find((t) => t.id === teamId);
-        return {
-          teamId,
-          name: team?.school?.name || 'Unknown',
-          seed: team?.seed || 0,
-          region: team?.region || '',
-          bid,
-        };
-      })
-      .sort((a, b) => b.bid - a.bid);
-  }, [bidsByTeamId, biddingQuery.data]);
 
   return {
     // IDs
@@ -274,9 +248,6 @@ export function useBidding() {
     teamCount,
     validationErrors,
     isValid,
-
-    // Portfolio
-    portfolioSummary,
 
     // Slot handlers
     handleSlotSelect,

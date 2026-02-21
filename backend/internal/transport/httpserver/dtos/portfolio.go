@@ -10,8 +10,8 @@ type PortfolioResponse struct {
 	ID            string    `json:"id"`
 	EntryID       string    `json:"entryId"`
 	MaximumPoints float64   `json:"maximumPoints"`
-	Created       time.Time `json:"created"`
-	Updated       time.Time `json:"updated"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 func NewPortfolioResponse(p *models.CalcuttaPortfolio) *PortfolioResponse {
@@ -19,8 +19,8 @@ func NewPortfolioResponse(p *models.CalcuttaPortfolio) *PortfolioResponse {
 		ID:            p.ID,
 		EntryID:       p.EntryID,
 		MaximumPoints: p.MaximumPoints,
-		Created:       p.Created,
-		Updated:       p.Updated,
+		CreatedAt:     p.CreatedAt,
+		UpdatedAt:     p.UpdatedAt,
 	}
 }
 
@@ -43,7 +43,7 @@ type PortfolioTeamResponse struct {
 	OwnershipPercentage float64                 `json:"ownershipPercentage"`
 	ExpectedPoints      float64                 `json:"expectedPoints"`
 	ActualPoints        float64                 `json:"actualPoints"`
-	Updated             time.Time               `json:"updated"`
+	UpdatedAt           time.Time               `json:"updatedAt"`
 	Team                *TournamentTeamResponse `json:"team,omitempty"`
 }
 
@@ -55,7 +55,7 @@ func NewPortfolioTeamResponse(pt *models.CalcuttaPortfolioTeam) *PortfolioTeamRe
 		OwnershipPercentage: pt.OwnershipPercentage,
 		ExpectedPoints:      pt.ExpectedPoints,
 		ActualPoints:        pt.ActualPoints,
-		Updated:             pt.Updated,
+		UpdatedAt:           pt.UpdatedAt,
 	}
 	if pt.Team != nil {
 		resp.Team = NewTournamentTeamResponse(pt.Team, pt.Team.School)

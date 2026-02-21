@@ -1,7 +1,7 @@
 import { CalcuttaWithRanking } from '../types/calcutta';
 
 export function getEffectiveDate(calcutta: CalcuttaWithRanking): string {
-  return calcutta.tournamentStartingAt ?? calcutta.created;
+  return calcutta.tournamentStartingAt ?? calcutta.createdAt;
 }
 
 export function groupCalcuttas(

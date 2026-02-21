@@ -87,7 +87,7 @@ func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts [
 			return true
 		}
 		if out[i].TotalPoints == out[j].TotalPoints {
-			return out[i].Created.After(out[j].Created)
+			return out[i].CreatedAt.After(out[j].CreatedAt)
 		}
 		return out[i].TotalPoints > out[j].TotalPoints
 	})

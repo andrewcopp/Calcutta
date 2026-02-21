@@ -11,10 +11,10 @@ function makeCalcutta(
     ownerId: 'o1',
     minTeams: 1,
     maxTeams: 64,
-    maxBid: 100,
+    maxBidPoints: 100,
     budgetPoints: 1000,
-    created: '2025-01-01T00:00:00Z',
-    updated: '2025-01-01T00:00:00Z',
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
     hasEntry: false,
     ...overrides,
   };
@@ -38,7 +38,7 @@ describe('groupCalcuttas', () => {
   it('places calcuttas without tournamentStartingAt after dated ones', () => {
     // GIVEN one calcutta with a start date and one without
     const withStart = makeCalcutta({ id: 'a', tournamentStartingAt: '2026-01-01T00:00:00Z' });
-    const withoutStart = makeCalcutta({ id: 'b', created: '2026-02-15T00:00:00Z' });
+    const withoutStart = makeCalcutta({ id: 'b', createdAt: '2026-02-15T00:00:00Z' });
 
     // WHEN grouping
     const { current } = groupCalcuttas([withoutStart, withStart], NOW);
@@ -60,7 +60,7 @@ describe('groupCalcuttas', () => {
 
   it('uses created date as fallback for grouping', () => {
     // GIVEN a calcutta without tournamentStartingAt and created over one year ago
-    const old = makeCalcutta({ id: 'a', created: '2024-12-01T00:00:00Z' });
+    const old = makeCalcutta({ id: 'a', createdAt: '2024-12-01T00:00:00Z' });
 
     // WHEN grouping
     const { historical } = groupCalcuttas([old], NOW);

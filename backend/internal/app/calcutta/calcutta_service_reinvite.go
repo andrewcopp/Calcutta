@@ -20,8 +20,8 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 	if newCalcutta.MaxTeams == 0 {
 		newCalcutta.MaxTeams = source.MaxTeams
 	}
-	if newCalcutta.MaxBid == 0 {
-		newCalcutta.MaxBid = source.MaxBid
+	if newCalcutta.MaxBidPoints == 0 {
+		newCalcutta.MaxBidPoints = source.MaxBidPoints
 	}
 
 	sourceRounds, err := s.ports.RoundReader.GetRounds(ctx, sourceCalcuttaID)

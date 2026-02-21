@@ -118,7 +118,7 @@ export function BiddingPage() {
               teamOptions={teamOptions}
               usedTeamIds={usedTeamIds}
               teams={teams}
-              maxBid={MAX_BID}
+              maxBidPoints={MAX_BID}
               minBid={MIN_BID}
               onSelect={handleSlotSelect}
               onClear={handleSlotClear}

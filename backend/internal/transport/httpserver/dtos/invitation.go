@@ -25,8 +25,8 @@ type InvitationResponse struct {
 	InvitedBy  string     `json:"invitedBy"`
 	Status     string     `json:"status"`
 	RevokedAt  *time.Time `json:"revokedAt,omitempty"`
-	Created    time.Time  `json:"created"`
-	Updated    time.Time  `json:"updated"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
 }
 
 func NewInvitationResponse(i *models.CalcuttaInvitation) *InvitationResponse {
@@ -37,8 +37,8 @@ func NewInvitationResponse(i *models.CalcuttaInvitation) *InvitationResponse {
 		InvitedBy:  i.InvitedBy,
 		Status:     i.Status,
 		RevokedAt:  i.RevokedAt,
-		Created:    i.Created,
-		Updated:    i.Updated,
+		CreatedAt:  i.CreatedAt,
+		UpdatedAt:  i.UpdatedAt,
 	}
 }
 

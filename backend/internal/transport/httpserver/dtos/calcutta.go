@@ -18,7 +18,7 @@ type CreateCalcuttaRequest struct {
 	TournamentID string             `json:"tournamentId"`
 	MinTeams     int                `json:"minTeams"`
 	MaxTeams     int                `json:"maxTeams"`
-	MaxBid       int                `json:"maxBid"`
+	MaxBidPoints int                `json:"maxBidPoints"`
 	ScoringRules []ScoringRuleInput `json:"scoringRules"`
 }
 
@@ -54,7 +54,7 @@ func (r *CreateCalcuttaRequest) ToModel() *models.Calcutta {
 		TournamentID: r.TournamentID,
 		MinTeams:     r.MinTeams,
 		MaxTeams:     r.MaxTeams,
-		MaxBid:       r.MaxBid,
+		MaxBidPoints: r.MaxBidPoints,
 	}
 }
 
@@ -83,10 +83,10 @@ type CalcuttaResponse struct {
 	OwnerID      string             `json:"ownerId"`
 	MinTeams     int                `json:"minTeams"`
 	MaxTeams     int                `json:"maxTeams"`
-	MaxBid       int                `json:"maxBid"`
+	MaxBidPoints int                `json:"maxBidPoints"`
 	Visibility   string             `json:"visibility"`
-	Created      time.Time          `json:"created"`
-	Updated      time.Time          `json:"updated"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
 	Abilities    *CalcuttaAbilities `json:"abilities,omitempty"`
 }
 
@@ -98,10 +98,10 @@ func NewCalcuttaResponse(c *models.Calcutta) *CalcuttaResponse {
 		OwnerID:      c.OwnerID,
 		MinTeams:     c.MinTeams,
 		MaxTeams:     c.MaxTeams,
-		MaxBid:       c.MaxBid,
+		MaxBidPoints: c.MaxBidPoints,
 		Visibility:   c.Visibility,
-		Created:      c.Created,
-		Updated:      c.Updated,
+		CreatedAt:    c.CreatedAt,
+		UpdatedAt:    c.UpdatedAt,
 	}
 }
 
@@ -109,11 +109,11 @@ type UpdateCalcuttaRequest struct {
 	Name     *string `json:"name,omitempty"`
 	MinTeams *int    `json:"minTeams,omitempty"`
 	MaxTeams *int    `json:"maxTeams,omitempty"`
-	MaxBid   *int    `json:"maxBid,omitempty"`
+	MaxBidPoints *int `json:"maxBidPoints,omitempty"`
 }
 
 func (r *UpdateCalcuttaRequest) Validate() error {
-	if r.Name == nil && r.MinTeams == nil && r.MaxTeams == nil && r.MaxBid == nil {
+	if r.Name == nil && r.MinTeams == nil && r.MaxTeams == nil && r.MaxBidPoints == nil {
 		return ErrFieldInvalid("body", "at least one field must be provided")
 	}
 	if r.Name != nil && strings.TrimSpace(*r.Name) == "" {
@@ -125,8 +125,8 @@ func (r *UpdateCalcuttaRequest) Validate() error {
 	if r.MaxTeams != nil && *r.MaxTeams <= 0 {
 		return ErrFieldInvalid("maxTeams", "must be greater than 0")
 	}
-	if r.MaxBid != nil && *r.MaxBid <= 0 {
-		return ErrFieldInvalid("maxBid", "must be greater than 0")
+	if r.MaxBidPoints != nil && *r.MaxBidPoints <= 0 {
+		return ErrFieldInvalid("maxBidPoints", "must be greater than 0")
 	}
 	return nil
 }

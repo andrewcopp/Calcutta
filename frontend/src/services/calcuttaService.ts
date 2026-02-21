@@ -16,7 +16,7 @@ export const calcuttaService = {
     scoringRules: Array<{ winIndex: number; pointsAwarded: number }>,
     minTeams: number,
     maxTeams: number,
-    maxBid: number,
+    maxBidPoints: number,
   ): Promise<Calcutta> {
     return apiClient.post<Calcutta>('/calcuttas', {
       name,
@@ -24,11 +24,11 @@ export const calcuttaService = {
       scoringRules,
       minTeams,
       maxTeams,
-      maxBid,
+      maxBidPoints,
     });
   },
 
-  async updateCalcutta(id: string, updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBid'>>): Promise<Calcutta> {
+  async updateCalcutta(id: string, updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBidPoints'>>): Promise<Calcutta> {
     return apiClient.patch<Calcutta>(`/calcuttas/${id}`, updates);
   },
 

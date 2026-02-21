@@ -24,9 +24,9 @@ func (r *CalcuttaRepository) GetPayouts(ctx context.Context, calcuttaID string) 
 			CalcuttaID:  row.CalcuttaID,
 			Position:    int(row.Position),
 			AmountCents: int(row.AmountCents),
-			Created:     row.CreatedAt.Time,
-			Updated:     row.UpdatedAt.Time,
-			Deleted:     nil,
+			CreatedAt:   row.CreatedAt.Time,
+			UpdatedAt:   row.UpdatedAt.Time,
+			DeletedAt:   nil,
 		})
 	}
 	return out, nil

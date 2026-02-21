@@ -105,7 +105,7 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
     localStorage.removeItem('user');
     if (typeof window !== 'undefined') {
       console.warn('Session expired, redirecting to login');
-      window.location.href = '/';
+      window.location.href = '/login?expired=true';
     }
     return response;
   }
@@ -119,7 +119,7 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
     localStorage.removeItem('user');
     if (typeof window !== 'undefined') {
       console.warn('Session expired after retry, redirecting to login');
-      window.location.href = '/';
+      window.location.href = '/login?expired=true';
     }
   }
 

@@ -9,12 +9,12 @@ import (
 )
 
 type Report struct {
-	StartedAt       time.Time `json:"started_at"`
-	FinishedAt      time.Time `json:"finished_at"`
-	DryRun          bool      `json:"dry_run"`
+	StartedAt       time.Time `json:"startedAt"`
+	FinishedAt      time.Time `json:"finishedAt"`
+	DryRun          bool      `json:"dryRun"`
 	Schools         int       `json:"schools"`
 	Tournaments     int       `json:"tournaments"`
-	TournamentTeams int       `json:"tournament_teams"`
+	TournamentTeams int       `json:"tournamentTeams"`
 	Calcuttas       int       `json:"calcuttas"`
 	Entries         int       `json:"entries"`
 	Bids            int       `json:"bids"`

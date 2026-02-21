@@ -4,8 +4,8 @@ export interface User {
   firstName: string;
   lastName: string;
   status: string;
-  created: string;
-  updated: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoginRequest {

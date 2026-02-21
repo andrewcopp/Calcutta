@@ -272,8 +272,8 @@ describe('retry on 401', () => {
     // WHEN making a request that triggers a 401 -> failed refresh
     await apiClient.get('/protected').catch(() => {});
 
-    // THEN the user is redirected to the root page
-    expect(locationMock.href).toBe('/');
+    // THEN the user is redirected to the login page with expired flag
+    expect(locationMock.href).toBe('/login?expired=true');
   });
 
   it('does not attempt refresh for auth endpoints', async () => {
@@ -311,8 +311,8 @@ describe('retry on 401', () => {
     // WHEN making a request where even the retry fails
     await apiClient.get('/protected').catch(() => {});
 
-    // THEN the user is redirected to root
-    expect(locationMock.href).toBe('/');
+    // THEN the user is redirected to the login page with expired flag
+    expect(locationMock.href).toBe('/login?expired=true');
   });
 
   it('stores user data from refresh response when present', async () => {

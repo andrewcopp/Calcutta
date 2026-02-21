@@ -22,9 +22,9 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 		ID:            row.ID,
 		EntryID:       row.EntryID,
 		MaximumPoints: row.MaximumPoints,
-		Created:       row.CreatedAt.Time,
-		Updated:       row.UpdatedAt.Time,
-		Deleted:       TimestamptzToPtrTime(row.DeletedAt),
+		CreatedAt:     row.CreatedAt.Time,
+		UpdatedAt:     row.UpdatedAt.Time,
+		DeletedAt:     TimestamptzToPtrTime(row.DeletedAt),
 	}, nil
 }
 
@@ -43,9 +43,9 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			OwnershipPercentage: row.OwnershipPercentage,
 			ActualPoints:        row.ActualPoints,
 			ExpectedPoints:      row.ExpectedPoints,
-			Created:             row.CreatedAt.Time,
-			Updated:             row.UpdatedAt.Time,
-			Deleted:             TimestamptzToPtrTime(row.DeletedAt),
+			CreatedAt:           row.CreatedAt.Time,
+			UpdatedAt:           row.UpdatedAt.Time,
+			DeletedAt:           TimestamptzToPtrTime(row.DeletedAt),
 		}
 
 		tt := &models.TournamentTeam{
@@ -57,8 +57,8 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
 			Eliminated:   row.Eliminated,
-			Created:      row.TeamCreatedAt.Time,
-			Updated:      row.TeamUpdatedAt.Time,
+			CreatedAt:    row.TeamCreatedAt.Time,
+			UpdatedAt:    row.TeamUpdatedAt.Time,
 		}
 		if row.SchoolName != nil {
 			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
@@ -83,11 +83,11 @@ func (r *CalcuttaRepository) GetPortfoliosByEntryIDs(ctx context.Context, entryI
 	out := make(map[string][]*models.CalcuttaPortfolio, len(entryIDs))
 	for _, row := range rows {
 		out[row.EntryID] = append(out[row.EntryID], &models.CalcuttaPortfolio{
-			ID:      row.ID,
-			EntryID: row.EntryID,
-			Created: row.CreatedAt.Time,
-			Updated: row.UpdatedAt.Time,
-			Deleted: TimestamptzToPtrTime(row.DeletedAt),
+			ID:        row.ID,
+			EntryID:   row.EntryID,
+			CreatedAt: row.CreatedAt.Time,
+			UpdatedAt: row.UpdatedAt.Time,
+			DeletedAt: TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -112,9 +112,9 @@ func (r *CalcuttaRepository) GetPortfolioTeamsByPortfolioIDs(ctx context.Context
 			OwnershipPercentage: row.OwnershipPercentage,
 			ActualPoints:        row.ActualPoints,
 			ExpectedPoints:      row.ExpectedPoints,
-			Created:             row.CreatedAt.Time,
-			Updated:             row.UpdatedAt.Time,
-			Deleted:             TimestamptzToPtrTime(row.DeletedAt),
+			CreatedAt:           row.CreatedAt.Time,
+			UpdatedAt:           row.UpdatedAt.Time,
+			DeletedAt:           TimestamptzToPtrTime(row.DeletedAt),
 		}
 
 		tt := &models.TournamentTeam{
@@ -126,8 +126,8 @@ func (r *CalcuttaRepository) GetPortfolioTeamsByPortfolioIDs(ctx context.Context
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
 			Eliminated:   row.Eliminated,
-			Created:      row.TeamCreatedAt.Time,
-			Updated:      row.TeamUpdatedAt.Time,
+			CreatedAt:    row.TeamCreatedAt.Time,
+			UpdatedAt:    row.TeamUpdatedAt.Time,
 		}
 		if row.SchoolName != nil {
 			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
@@ -148,11 +148,11 @@ func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID s
 	out := make([]*models.CalcuttaPortfolio, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &models.CalcuttaPortfolio{
-			ID:      row.ID,
-			EntryID: row.EntryID,
-			Created: row.CreatedAt.Time,
-			Updated: row.UpdatedAt.Time,
-			Deleted: TimestamptzToPtrTime(row.DeletedAt),
+			ID:        row.ID,
+			EntryID:   row.EntryID,
+			CreatedAt: row.CreatedAt.Time,
+			UpdatedAt: row.UpdatedAt.Time,
+			DeletedAt: TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -176,8 +176,8 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 		Byes:         int(row.Byes),
 		Wins:         int(row.Wins),
 		Eliminated:   row.Eliminated,
-		Created:      row.CreatedAt.Time,
-		Updated:      row.UpdatedAt.Time,
+		CreatedAt:    row.CreatedAt.Time,
+		UpdatedAt:    row.UpdatedAt.Time,
 	}
 	if row.NetRtg != nil || row.ORtg != nil || row.DRtg != nil || row.AdjT != nil {
 		team.KenPom = &models.KenPomStats{NetRtg: row.NetRtg, ORtg: row.ORtg, DRtg: row.DRtg, AdjT: row.AdjT}

@@ -87,8 +87,8 @@ export function ReturnsTab({
                         entryId: entryId,
                         teamId: tt.id,
                         bid: 0,
-                        created: new Date().toISOString(),
-                        updated: new Date().toISOString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
                         team: { ...tt, school: schoolMap.get(tt.schoolId) },
                       } as CalcuttaEntryTeam;
                     })

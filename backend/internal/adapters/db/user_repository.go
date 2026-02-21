@@ -27,8 +27,8 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	}
 
 	now := time.Now()
-	user.Created = now
-	user.Updated = now
+	user.CreatedAt = now
+	user.UpdatedAt = now
 
 	return r.q.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:                 user.ID,
@@ -39,8 +39,8 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 		PasswordHash:       user.PasswordHash,
 		ExternalProvider:   user.ExternalProvider,
 		ExternalProviderID: user.ExternalProviderID,
-		CreatedAt:          pgtype.Timestamptz{Time: user.Created, Valid: true},
-		UpdatedAt:          pgtype.Timestamptz{Time: user.Updated, Valid: true},
+		CreatedAt:          pgtype.Timestamptz{Time: user.CreatedAt, Valid: true},
+		UpdatedAt:          pgtype.Timestamptz{Time: user.UpdatedAt, Valid: true},
 	})
 }
 
@@ -86,11 +86,11 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 	}
 
 	now := time.Now()
-	user.Updated = now
+	user.UpdatedAt = now
 
 	var deletedAt pgtype.Timestamptz
-	if user.Deleted != nil {
-		deletedAt = pgtype.Timestamptz{Time: *user.Deleted, Valid: true}
+	if user.DeletedAt != nil {
+		deletedAt = pgtype.Timestamptz{Time: *user.DeletedAt, Valid: true}
 	}
 
 	return r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
@@ -102,7 +102,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 		PasswordHash:       user.PasswordHash,
 		ExternalProvider:   user.ExternalProvider,
 		ExternalProviderID: user.ExternalProviderID,
-		UpdatedAt:          pgtype.Timestamptz{Time: user.Updated, Valid: true},
+		UpdatedAt:          pgtype.Timestamptz{Time: user.UpdatedAt, Valid: true},
 		DeletedAt:          deletedAt,
 	})
 }
@@ -122,8 +122,8 @@ func userFromRow(id string, email *string, firstName, lastName, status string, p
 		PasswordHash:       passwordHash,
 		ExternalProvider:   externalProvider,
 		ExternalProviderID: externalProviderID,
-		Created:            createdAt.Time,
-		Updated:            updatedAt.Time,
-		Deleted:            deleted,
+		CreatedAt:          createdAt.Time,
+		UpdatedAt:          updatedAt.Time,
+		DeletedAt:          deleted,
 	}
 }

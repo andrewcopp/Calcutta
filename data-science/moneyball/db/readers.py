@@ -12,7 +12,6 @@ import pandas as pd
 from psycopg2.extras import RealDictCursor
 
 from moneyball.db.connection import get_db_connection
-from moneyball.utils import points
 
 logger = logging.getLogger(__name__)
 
@@ -208,46 +207,6 @@ def read_ridge_team_dataset_for_year(
             str(tournament_id),
         )
         return pd.read_sql_query(query, conn, params=params_tuple)
-
-
-def read_points_by_win_index_for_year(year: int) -> Dict[int, float]:
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                WITH season AS (
-                    SELECT id
-                    FROM core.seasons
-                    WHERE year = %s AND deleted_at IS NULL
-                ),
-                tournament AS (
-                    SELECT t.id
-                    FROM core.tournaments t
-                    JOIN season s ON s.id = t.season_id
-                    WHERE t.deleted_at IS NULL
-                    ORDER BY t.created_at DESC
-                    LIMIT 1
-                ),
-                calcutta AS (
-                    SELECT c.id
-                    FROM core.calcuttas c
-                    JOIN tournament t ON t.id = c.tournament_id
-                    WHERE c.deleted_at IS NULL
-                    ORDER BY c.created_at DESC
-                    LIMIT 1
-                )
-                SELECT r.win_index, r.points_awarded
-                FROM core.calcutta_scoring_rules r
-                JOIN calcutta c ON c.id = r.calcutta_id
-                WHERE r.deleted_at IS NULL
-                ORDER BY r.win_index ASC
-                """,
-                (year,),
-            )
-            rows = cur.fetchall() or []
-
-        df = pd.DataFrame(rows)
-        return points.points_by_win_index_from_scoring_rules(df)
 
 
 def read_latest_predicted_team_values(

@@ -47,13 +47,6 @@ INVESTMENT_MODELS: List[ModelSpec] = [
         notes="Ridge Regression V1 with optimal feature set",
     ),
     ModelSpec(
-        name="ridge-v1-recent",
-        kind="ridge",
-        params={"feature_set": "optimal"},
-        # TODO: implement train_years_window in training pipeline before re-adding param
-        notes="Ridge Regression V1 with recent training window (3 years)",
-    ),
-    ModelSpec(
         name="ridge-v2",
         kind="ridge",
         params={
@@ -73,16 +66,6 @@ INVESTMENT_MODELS: List[ModelSpec] = [
             "program_prior_k": 50.0,
         },
         notes="Ridge Regression V2 with shrunk priors (seed monotone + program)",
-    ),
-    ModelSpec(
-        name="ridge-v2-underbid-1sigma",
-        kind="ridge",
-        params={
-            "feature_set": "optimal_v2",
-            "seed_prior_k": 20.0,
-            "program_prior_k": 50.0,
-        },
-        notes="Ridge Regression V2 for underbid detection (1-sigma, seed/log, unscaled)",
     ),
     ModelSpec(
         name="ridge-v2-log",

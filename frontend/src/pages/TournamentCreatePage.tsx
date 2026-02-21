@@ -30,12 +30,12 @@ export function TournamentCreatePage() {
   const [error, setError] = useState<string | null>(null);
 
   const competitionsQuery = useQuery({
-    queryKey: ['competitions'],
+    queryKey: queryKeys.tournaments.competitions(),
     queryFn: () => tournamentService.getCompetitions(),
   });
 
   const seasonsQuery = useQuery({
-    queryKey: ['seasons'],
+    queryKey: queryKeys.tournaments.seasons(),
     queryFn: () => tournamentService.getSeasons(),
   });
 

@@ -17,8 +17,8 @@ import (
 func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error {
 	entry.ID = uuid.New().String()
 	now := time.Now()
-	entry.Created = now
-	entry.Updated = now
+	entry.CreatedAt = now
+	entry.UpdatedAt = now
 
 	var userID pgtype.UUID
 	if entry.UserID != nil {
@@ -59,9 +59,9 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 			UserID:      uuidToPtrString(row.UserID),
 			CalcuttaID:  row.CalcuttaID,
 			TotalPoints: row.TotalPoints,
-			Created:     row.CreatedAt.Time,
-			Updated:     row.UpdatedAt.Time,
-			Deleted:     TimestamptzToPtrTime(row.DeletedAt),
+			CreatedAt:   row.CreatedAt.Time,
+			UpdatedAt:   row.UpdatedAt.Time,
+			DeletedAt:   TimestamptzToPtrTime(row.DeletedAt),
 		})
 	}
 	return out, nil
@@ -81,9 +81,9 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 		Name:       row.Name,
 		UserID:     uuidToPtrString(row.UserID),
 		CalcuttaID: row.CalcuttaID,
-		Created:    row.CreatedAt.Time,
-		Updated:    row.UpdatedAt.Time,
-		Deleted:    TimestamptzToPtrTime(row.DeletedAt),
+		CreatedAt:  row.CreatedAt.Time,
+		UpdatedAt:  row.UpdatedAt.Time,
+		DeletedAt:  TimestamptzToPtrTime(row.DeletedAt),
 	}, nil
 }
 
@@ -96,13 +96,13 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 	out := make([]*models.CalcuttaEntryTeam, 0, len(rows))
 	for _, row := range rows {
 		team := &models.CalcuttaEntryTeam{
-			ID:      row.ID,
-			EntryID: row.EntryID,
-			TeamID:  row.TeamID,
+			ID:        row.ID,
+			EntryID:   row.EntryID,
+			TeamID:    row.TeamID,
 			BidPoints: int(row.BidPoints),
-			Created: row.CreatedAt.Time,
-			Updated: row.UpdatedAt.Time,
-			Deleted: TimestamptzToPtrTime(row.DeletedAt),
+			CreatedAt: row.CreatedAt.Time,
+			UpdatedAt: row.UpdatedAt.Time,
+			DeletedAt: TimestamptzToPtrTime(row.DeletedAt),
 		}
 
 		tt := &models.TournamentTeam{
@@ -113,9 +113,9 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			Region:       row.Region,
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
-			Created:      row.TeamCreatedAt.Time,
-			Updated:      row.TeamUpdatedAt.Time,
-			Deleted:      TimestamptzToPtrTime(row.TeamDeletedAt),
+			CreatedAt:    row.TeamCreatedAt.Time,
+			UpdatedAt:    row.TeamUpdatedAt.Time,
+			DeletedAt:    TimestamptzToPtrTime(row.TeamDeletedAt),
 		}
 		if row.SchoolName != nil {
 			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}
@@ -144,9 +144,9 @@ func (r *CalcuttaRepository) GetEntryTeamsByEntryIDs(ctx context.Context, entryI
 			EntryID:   row.EntryID,
 			TeamID:    row.TeamID,
 			BidPoints: int(row.BidPoints),
-			Created:   row.CreatedAt.Time,
-			Updated:   row.UpdatedAt.Time,
-			Deleted:   TimestamptzToPtrTime(row.DeletedAt),
+			CreatedAt: row.CreatedAt.Time,
+			UpdatedAt: row.UpdatedAt.Time,
+			DeletedAt: TimestamptzToPtrTime(row.DeletedAt),
 		}
 
 		tt := &models.TournamentTeam{
@@ -157,9 +157,9 @@ func (r *CalcuttaRepository) GetEntryTeamsByEntryIDs(ctx context.Context, entryI
 			Region:       row.Region,
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
-			Created:      row.TeamCreatedAt.Time,
-			Updated:      row.TeamUpdatedAt.Time,
-			Deleted:      TimestamptzToPtrTime(row.TeamDeletedAt),
+			CreatedAt:    row.TeamCreatedAt.Time,
+			UpdatedAt:    row.TeamUpdatedAt.Time,
+			DeletedAt:    TimestamptzToPtrTime(row.TeamDeletedAt),
 		}
 		if row.SchoolName != nil {
 			tt.School = &models.School{ID: row.SchoolID, Name: *row.SchoolName}

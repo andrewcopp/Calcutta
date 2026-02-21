@@ -10,7 +10,7 @@ interface BidSlotRowProps {
   teamOptions: TeamComboboxOption[];
   usedTeamIds: Set<string>;
   teams: TeamWithSchool[];
-  maxBid: number;
+  maxBidPoints: number;
   minBid: number;
   onSelect: (slotIndex: number, teamId: string) => void;
   onClear: (slotIndex: number) => void;
@@ -34,7 +34,7 @@ export function BidSlotRow({
   teamOptions,
   usedTeamIds,
   teams,
-  maxBid,
+  maxBidPoints,
   minBid,
   onSelect,
   onClear,
@@ -72,8 +72,8 @@ export function BidSlotRow({
     slot.bidAmount > 0
       ? slot.bidAmount < minBid
         ? `Min ${minBid} pts`
-        : slot.bidAmount > maxBid
-          ? `Max ${maxBid} pts`
+        : slot.bidAmount > maxBidPoints
+          ? `Max ${maxBidPoints} pts`
           : undefined
       : undefined;
 
@@ -100,7 +100,7 @@ export function BidSlotRow({
                   ref={bidInputRef}
                   type="number"
                   min="0"
-                  max={maxBid}
+                  max={maxBidPoints}
                   step="1"
                   value={slot.bidAmount || ''}
                   onChange={handleBidChange}

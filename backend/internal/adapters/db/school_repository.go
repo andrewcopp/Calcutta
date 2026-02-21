@@ -31,8 +31,8 @@ func (r *SchoolRepository) List(ctx context.Context) ([]models.School, error) {
 		schools = append(schools, models.School{
 			ID:      row.ID,
 			Name:    row.Name,
-			Created: row.CreatedAt.Time,
-			Updated: row.UpdatedAt.Time,
+			CreatedAt: row.CreatedAt.Time,
+			UpdatedAt: row.UpdatedAt.Time,
 		})
 	}
 	return schools, nil
@@ -49,7 +49,7 @@ func (r *SchoolRepository) GetByID(ctx context.Context, id string) (*models.Scho
 	return &models.School{
 		ID:      row.ID,
 		Name:    row.Name,
-		Created: row.CreatedAt.Time,
-		Updated: row.UpdatedAt.Time,
+		CreatedAt: row.CreatedAt.Time,
+		UpdatedAt: row.UpdatedAt.Time,
 	}, nil
 }

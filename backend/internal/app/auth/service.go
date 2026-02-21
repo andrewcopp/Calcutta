@@ -5,11 +5,10 @@ import (
 	"errors"
 	"time"
 
-	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
-	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,22 +22,13 @@ type Result struct {
 
 type Service struct {
 	userRepo   ports.UserRepository
-	authRepo   authRepository
-	authzRepo  *dbadapters.AuthorizationRepository
+	authRepo   ports.AuthSessionRepository
 	tokenMgr   *coreauth.TokenManager
 	refreshTTL time.Duration
 }
 
-type authRepository interface {
-	CreateSession(ctx context.Context, userID, refreshTokenHash, userAgent, ipAddress string, expiresAt time.Time) (string, error)
-	GetSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (*dbadapters.AuthSession, error)
-	RotateRefreshToken(ctx context.Context, sessionID, newRefreshTokenHash string, newExpiresAt time.Time) error
-	RevokeSession(ctx context.Context, sessionID string) error
-	IsUserActive(ctx context.Context, userID string) (bool, error)
-}
-
-func New(userRepo ports.UserRepository, authRepo *dbadapters.AuthRepository, authzRepo *dbadapters.AuthorizationRepository, tokenMgr *coreauth.TokenManager, refreshTTL time.Duration) *Service {
-	return &Service{userRepo: userRepo, authRepo: authRepo, authzRepo: authzRepo, tokenMgr: tokenMgr, refreshTTL: refreshTTL}
+func New(userRepo ports.UserRepository, authRepo ports.AuthSessionRepository, tokenMgr *coreauth.TokenManager, refreshTTL time.Duration) *Service {
+	return &Service{userRepo: userRepo, authRepo: authRepo, tokenMgr: tokenMgr, refreshTTL: refreshTTL}
 }
 
 func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddress string, now time.Time) (*Result, error) {
@@ -119,8 +109,8 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 		LastName:     lastName,
 		Status:       "active",
 		PasswordHash: &hashStr,
-		Created:      now,
-		Updated:      now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
