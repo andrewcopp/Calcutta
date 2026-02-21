@@ -5,7 +5,6 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Card } from '../components/ui/Card';
 import { CalcuttaTeamsSkeleton } from '../components/skeletons/CalcuttaTeamsSkeleton';
-import { BiddingOverlay } from '../components/BiddingOverlay';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
@@ -27,7 +26,6 @@ export function CalcuttaTeamsPage() {
   const dashboardQuery = useCalcuttaDashboard(calcuttaId);
 
   const biddingOpen = dashboardQuery.data?.biddingOpen ?? false;
-  const tournamentStartingAt = dashboardQuery.data?.tournamentStartingAt;
 
   const { calcuttaName, teams } = useMemo(() => {
     if (!dashboardQuery.data) {
@@ -112,8 +110,7 @@ export function CalcuttaTeamsPage() {
         }
       />
 
-      <BiddingOverlay tournamentStartingAt={tournamentStartingAt ?? ''} active={biddingOpen}>
-        <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHead>
@@ -150,8 +147,7 @@ export function CalcuttaTeamsPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
-      </BiddingOverlay>
+      </Card>
     </PageContainer>
   );
 }

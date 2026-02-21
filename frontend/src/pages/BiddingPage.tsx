@@ -6,7 +6,6 @@ import { BiddingSkeleton } from '../components/skeletons/BiddingSkeleton';
 import { Button } from '../components/ui/Button';
 import { BudgetTracker } from '../components/Bidding/BudgetTracker';
 import { BidSlotRow } from '../components/Bidding/BidSlotRow';
-import { BidConfirmModal } from '../components/Bidding/BidConfirmModal';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useBidding } from '../hooks/useBidding';
 
@@ -30,15 +29,11 @@ export function BiddingPage() {
     teamCount,
     validationErrors,
     isValid,
-    portfolioSummary,
     handleSlotSelect,
     handleSlotClear,
     handleSlotSearchChange,
     handleSlotBidChange,
     handleSubmit,
-    handleConfirm,
-    showConfirmModal,
-    setShowConfirmModal,
   } = useBidding();
 
   if (!calcuttaId || !entryId) {
@@ -86,11 +81,11 @@ export function BiddingPage() {
         }
         actions={
           <div className="flex gap-2">
-            <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}`}>
+            <Link to={`/calcuttas/${calcuttaId}`}>
               <Button variant="secondary">Cancel</Button>
             </Link>
             <Button onClick={handleSubmit} disabled={!isValid || updateEntryMutation.isPending} loading={updateEntryMutation.isPending} title={!isValid && validationErrors.length > 0 ? validationErrors[0] : undefined}>
-              {updateEntryMutation.isPending ? 'Saving...' : 'Save Bids'}
+              {updateEntryMutation.isPending ? 'Submitting...' : 'Submit Entry'}
             </Button>
           </div>
         }
@@ -140,16 +135,6 @@ export function BiddingPage() {
           ))}
         </div>
       </div>
-
-      <BidConfirmModal
-        open={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleConfirm}
-        isPending={updateEntryMutation.isPending}
-        portfolioSummary={portfolioSummary}
-        totalBudget={BUDGET}
-        budgetRemaining={budgetRemaining}
-      />
     </PageContainer>
   );
 }

@@ -26,6 +26,8 @@ export const queryKeys = {
     all: (userId?: string | null) => ['calcuttas', userId ?? null] as const,
     listWithRankings: (userId?: string | null) => ['calcuttasWithRankings', userId ?? null] as const,
     dashboard: (calcuttaId: string | null | undefined) => ['calcuttaDashboard', calcuttaId ?? null] as const,
+    entryTeams: (calcuttaId: string | null | undefined, entryId: string | null | undefined) =>
+      ['calcuttaEntryTeams', calcuttaId ?? null, entryId ?? null] as const,
     settings: (calcuttaId: string | null | undefined) => ['calcuttaSettings', calcuttaId ?? null] as const,
     payouts: (calcuttaId: string | null | undefined) => ['calcuttaPayouts', calcuttaId ?? null] as const,
   },

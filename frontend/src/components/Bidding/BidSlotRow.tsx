@@ -1,9 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Combobox } from '../ui/Combobox';
-import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/cn';
-import { getSeedVariant } from '../../hooks/useBidding';
 import type { BidSlot, TeamComboboxOption, TeamWithSchool } from '../../hooks/useBidding';
 
 interface BidSlotRowProps {
@@ -24,13 +22,9 @@ interface BidSlotRowProps {
 function renderTeamOption(option: { id: string; label: string }, isHighlighted: boolean) {
   const teamOption = option as TeamComboboxOption;
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant={getSeedVariant(teamOption.seed)} className="text-xs shrink-0">
-        {teamOption.seed}
-      </Badge>
-      <span className={isHighlighted ? 'font-medium' : ''}>{teamOption.label}</span>
-      <span className="text-gray-400 text-xs ml-auto">{teamOption.region}</span>
-    </div>
+    <span className={isHighlighted ? 'font-medium' : ''}>
+      {teamOption.label} ({teamOption.region} - {teamOption.seed})
+    </span>
   );
 }
 
@@ -95,11 +89,9 @@ export function BidSlotRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
-              <Badge variant={getSeedVariant(team?.seed ?? 0)} className="text-xs shrink-0">
-                {team?.seed}
-              </Badge>
-              <span className="font-medium text-gray-900 truncate">{team?.school?.name ?? 'Unknown'}</span>
-              <span className="text-sm text-gray-500">{team?.region}</span>
+              <span className="font-medium text-gray-900 truncate">
+                {team?.school?.name ?? 'Unknown'} ({team?.region} - {team?.seed})
+              </span>
             </div>
 
             <div className="flex items-center gap-2 ml-auto">

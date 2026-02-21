@@ -35,6 +35,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [dropAbove, setDropAbove] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -118,6 +119,11 @@ export const Combobox: React.FC<ComboboxProps> = ({
           setHighlightIndex(0);
         }}
         onFocus={() => {
+          if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            setDropAbove(spaceBelow < 280);
+          }
           setIsOpen(true);
           setHighlightIndex(0);
         }}
@@ -141,7 +147,10 @@ export const Combobox: React.FC<ComboboxProps> = ({
       {isOpen && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-surface shadow-lg"
+          className={cn(
+            'absolute z-50 max-h-60 w-full overflow-auto rounded-lg border border-border bg-surface shadow-lg',
+            dropAbove ? 'bottom-full mb-1' : 'mt-1'
+          )}
           role="listbox"
         >
           {filtered.map((opt, i) => (
@@ -165,7 +174,10 @@ export const Combobox: React.FC<ComboboxProps> = ({
         </ul>
       )}
       {isOpen && filtered.length === 0 && value && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-gray-500 shadow-lg">
+        <div className={cn(
+          'absolute z-50 w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-gray-500 shadow-lg',
+          dropAbove ? 'bottom-full mb-1' : 'mt-1'
+        )}>
           No results found
         </div>
       )}

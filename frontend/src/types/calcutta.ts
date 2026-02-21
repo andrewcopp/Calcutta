@@ -36,6 +36,7 @@ export interface CalcuttaEntryTeam {
     id: string;
     schoolId: string;
     seed?: number;
+    region?: string;
     byes?: number;
     wins?: number;
     eliminated?: boolean;

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
@@ -17,6 +17,7 @@ export interface PortfolioItem {
   teamId: string;
   name: string;
   seed: number;
+  region: string;
   bid: number;
 }
 
@@ -31,10 +32,8 @@ export interface TeamComboboxOption extends ComboboxOption {
   region: string;
 }
 
-export function getSeedVariant(seed: number): 'default' | 'secondary' | 'outline' {
-  if (seed <= 4) return 'default';
-  if (seed <= 8) return 'secondary';
-  return 'outline';
+export function getSeedVariant(): 'default' | 'secondary' | 'outline' {
+  return 'secondary';
 }
 
 function createEmptySlot(): BidSlot {
@@ -44,9 +43,9 @@ function createEmptySlot(): BidSlot {
 export function useBidding() {
   const { calcuttaId, entryId } = useParams<{ calcuttaId: string; entryId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [slots, setSlots] = useState<BidSlot[]>([]);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const initializedRef = useRef(false);
 
   const biddingQuery = useQuery({
@@ -150,7 +149,9 @@ export function useBidding() {
       return calcuttaService.updateEntry(entryId, teamsPayload);
     },
     onSuccess: () => {
-      navigate(`/calcuttas/${calcuttaId}/entries/${entryId}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.dashboard(calcuttaId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entryTeams(calcuttaId, entryId) });
+      navigate(`/calcuttas/${calcuttaId}`);
     },
   });
 
@@ -240,20 +241,14 @@ export function useBidding() {
 
   const handleSubmit = () => {
     if (!isValid) return;
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirm = () => {
     const teamsPayload = Object.entries(bidsByTeamId).map(([teamId, bid]) => ({
       teamId,
       bid,
     }));
-
     updateEntryMutation.mutate(teamsPayload);
-    setShowConfirmModal(false);
   };
 
-  // Portfolio summary - teams with bids (used by BidConfirmModal)
+  // Portfolio summary - teams with bids sorted by bid descending
   const portfolioSummary = useMemo((): PortfolioItem[] => {
     if (!biddingQuery.data?.teams) return [];
     return Object.entries(bidsByTeamId)
@@ -264,6 +259,7 @@ export function useBidding() {
           teamId,
           name: team?.school?.name || 'Unknown',
           seed: team?.seed || 0,
+          region: team?.region || '',
           bid,
         };
       })
@@ -310,10 +306,5 @@ export function useBidding() {
 
     // Submit
     handleSubmit,
-    handleConfirm,
-
-    // Modal
-    showConfirmModal,
-    setShowConfirmModal,
   };
 }

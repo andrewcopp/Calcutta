@@ -81,46 +81,11 @@ function computeValidationErrors(
 // ---------------------------------------------------------------------------
 
 describe('getSeedVariant', () => {
-  it('returns "default" for seed 1', () => {
-    // GIVEN seed 1
+  it('returns "secondary" for uniform styling', () => {
+    // GIVEN any seed
     // WHEN getting the variant
-    // THEN it returns "default"
-    expect(getSeedVariant(1)).toBe('default');
-  });
-
-  it('returns "default" for seed 4', () => {
-    // GIVEN seed 4 (upper bound of first tier)
-    // WHEN getting the variant
-    // THEN it returns "default"
-    expect(getSeedVariant(4)).toBe('default');
-  });
-
-  it('returns "secondary" for seed 5', () => {
-    // GIVEN seed 5 (lower bound of second tier)
-    // WHEN getting the variant
-    // THEN it returns "secondary"
-    expect(getSeedVariant(5)).toBe('secondary');
-  });
-
-  it('returns "secondary" for seed 8', () => {
-    // GIVEN seed 8 (upper bound of second tier)
-    // WHEN getting the variant
-    // THEN it returns "secondary"
-    expect(getSeedVariant(8)).toBe('secondary');
-  });
-
-  it('returns "outline" for seed 9', () => {
-    // GIVEN seed 9 (lower bound of third tier)
-    // WHEN getting the variant
-    // THEN it returns "outline"
-    expect(getSeedVariant(9)).toBe('outline');
-  });
-
-  it('returns "outline" for seed 16', () => {
-    // GIVEN seed 16 (highest possible seed)
-    // WHEN getting the variant
-    // THEN it returns "outline"
-    expect(getSeedVariant(16)).toBe('outline');
+    // THEN it returns "secondary" (uniform styling for all seeds)
+    expect(getSeedVariant()).toBe('secondary');
   });
 });
 
