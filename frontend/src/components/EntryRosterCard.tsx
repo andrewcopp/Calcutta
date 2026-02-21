@@ -29,7 +29,7 @@ export function EntryRosterCard({
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">{entryName}</h3>
           <Badge variant={entryStatus === 'final' ? 'success' : 'warning'}>
-            {entryStatus === 'final' ? 'Submitted' : 'Draft'}
+            {entryStatus === 'final' ? 'Accepted' : 'Draft'}
           </Badge>
         </div>
         <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}/bid`}>
