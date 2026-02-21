@@ -94,10 +94,10 @@ func (r *UpdateEntryRequest) Validate() error {
 }
 
 type EntryTeamResponse struct {
-	ID      string                  `json:"id"`
-	EntryID string                  `json:"entryId"`
-	TeamID  string                  `json:"teamId"`
-	BidPoints int                     `json:"bidPoints"`
+	ID        string                  `json:"id"`
+	EntryID   string                  `json:"entryId"`
+	TeamID    string                  `json:"teamId"`
+	BidPoints int                     `json:"bid"`
 	Team      *TournamentTeamResponse `json:"team,omitempty"`
 }
 

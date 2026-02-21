@@ -84,6 +84,7 @@ type CalcuttaResponse struct {
 	MinTeams     int                `json:"minTeams"`
 	MaxTeams     int                `json:"maxTeams"`
 	MaxBidPoints int                `json:"maxBidPoints"`
+	BudgetPoints int                `json:"budgetPoints"`
 	Visibility   string             `json:"visibility"`
 	CreatedAt    time.Time          `json:"createdAt"`
 	UpdatedAt    time.Time          `json:"updatedAt"`
@@ -99,6 +100,7 @@ func NewCalcuttaResponse(c *models.Calcutta) *CalcuttaResponse {
 		MinTeams:     c.MinTeams,
 		MaxTeams:     c.MaxTeams,
 		MaxBidPoints: c.MaxBidPoints,
+		BudgetPoints: c.BudgetPoints,
 		Visibility:   c.Visibility,
 		CreatedAt:    c.CreatedAt,
 		UpdatedAt:    c.UpdatedAt,
