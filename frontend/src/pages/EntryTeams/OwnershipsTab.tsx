@@ -116,6 +116,7 @@ export const OwnershipsTab: React.FC<{
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold leading-snug truncate">{team.team?.school?.name || 'Unknown School'}</h2>
+                    <div className="text-xs text-gray-500">{team.team?.region ?? '?'} - {team.team?.seed ?? '?'} seed</div>
                     <div className="mt-1 text-sm text-gray-600">
                       Investor Rank: {investorRanking.rank} / {investorRanking.total}
                     </div>

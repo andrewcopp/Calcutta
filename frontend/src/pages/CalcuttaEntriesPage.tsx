@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { EntryRosterCard } from '../components/EntryRosterCard';
+
 
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useCalcuttaEntriesData } from '../hooks/useCalcuttaEntriesData';
@@ -203,16 +203,30 @@ export function CalcuttaEntriesPage() {
         </div>
       )}
 
-      {currentUserEntry && (
-        <EntryRosterCard
-          entryId={currentUserEntry.id}
-          calcuttaId={calcuttaId}
-          entryStatus={currentUserEntry.status}
-          entryTeams={allEntryTeams.filter(et => et.entryId === currentUserEntry.id)}
-          budgetPoints={dashboardData?.calcutta?.budgetPoints ?? 100}
-          canEdit={false}
-        />
-      )}
+      {currentUserEntry && (() => {
+        const userTeams = allEntryTeams.filter(et => et.entryId === currentUserEntry.id);
+        const totalSpent = userTeams.reduce((sum, et) => sum + et.bid, 0);
+        const budgetPoints = dashboardData?.calcutta?.budgetPoints ?? 100;
+        return (
+          <Link
+            to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`}
+            className="block p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">Your Bid</h3>
+                <Badge variant={currentUserEntry.status === 'final' ? 'success' : 'warning'}>
+                  {currentUserEntry.status === 'final' ? 'Accepted' : 'Draft'}
+                </Badge>
+                <span className="text-sm text-gray-500">{userTeams.length} teams &middot; {totalSpent} / {budgetPoints} pts</span>
+              </div>
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </div>
+          </Link>
+        );
+      })()}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
