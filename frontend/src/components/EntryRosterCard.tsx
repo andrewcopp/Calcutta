@@ -6,19 +6,19 @@ import type { CalcuttaEntryTeam } from '../types/calcutta';
 interface EntryRosterCardProps {
   entryId: string;
   calcuttaId: string;
-  entryName: string;
   entryStatus: string;
   entryTeams: CalcuttaEntryTeam[];
   budgetPoints: number;
+  canEdit?: boolean;
 }
 
 export function EntryRosterCard({
   entryId,
   calcuttaId,
-  entryName,
   entryStatus,
   entryTeams,
   budgetPoints,
+  canEdit = true,
 }: EntryRosterCardProps) {
   const sortedTeams = [...entryTeams].sort((a, b) => b.bid - a.bid);
   const totalSpent = entryTeams.reduce((sum, et) => sum + et.bid, 0);
@@ -27,14 +27,16 @@ export function EntryRosterCard({
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">{entryName}</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Your Bid</h3>
           <Badge variant={entryStatus === 'final' ? 'success' : 'warning'}>
             {entryStatus === 'final' ? 'Accepted' : 'Draft'}
           </Badge>
         </div>
-        <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}/bid`}>
-          <Button size="sm">Edit</Button>
-        </Link>
+        {canEdit && (
+          <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}/bid`}>
+            <Button size="sm">Edit</Button>
+          </Link>
+        )}
       </div>
 
       <div className="px-4 py-2 divide-y divide-gray-100">

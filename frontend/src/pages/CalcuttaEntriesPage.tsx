@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { EntryRosterCard } from '../components/EntryRosterCard';
 
 import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useCalcuttaEntriesData } from '../hooks/useCalcuttaEntriesData';
@@ -200,6 +201,17 @@ export function CalcuttaEntriesPage() {
           <Badge variant="secondary">Portfolios Revealed</Badge>
           <span className="text-sm text-gray-500">{formatDate(dashboardData.tournamentStartingAt, true)}</span>
         </div>
+      )}
+
+      {currentUserEntry && (
+        <EntryRosterCard
+          entryId={currentUserEntry.id}
+          calcuttaId={calcuttaId}
+          entryStatus={currentUserEntry.status}
+          entryTeams={allEntryTeams.filter(et => et.entryId === currentUserEntry.id)}
+          budgetPoints={dashboardData?.calcutta?.budgetPoints ?? 100}
+          canEdit={false}
+        />
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

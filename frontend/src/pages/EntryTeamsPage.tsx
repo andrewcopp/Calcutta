@@ -167,7 +167,6 @@ export function EntryTeamsPage() {
           <EntryRosterCard
             entryId={entryId}
             calcuttaId={calcuttaId}
-            entryName={entryName || 'Entry'}
             entryStatus={currentUserEntry?.status ?? 'draft'}
             entryTeams={ownEntryTeamsQuery.data}
             budgetPoints={dashboardQuery.data?.calcutta?.budgetPoints ?? 100}
