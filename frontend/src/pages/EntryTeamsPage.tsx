@@ -7,7 +7,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { EntryRosterCard } from '../components/EntryRosterCard';
+import { EntryTab } from './EntryTeams/EntryTab';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -22,7 +22,7 @@ import { queryKeys } from '../queryKeys';
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
 
-  const [activeTab, setActiveTab] = useState('ownerships');
+  const [activeTab, setActiveTab] = useState('entry');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
   const [investmentsSortBy, setInvestmentsSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
   const [showAllTeams, setShowAllTeams] = useState(false);
@@ -152,30 +152,6 @@ export function EntryTeamsPage() {
     );
   }
 
-  if (biddingOpen && isOwnEntry) {
-    return (
-      <PageContainer>
-        <Breadcrumb
-          items={[
-            { label: 'Calcuttas', href: '/calcuttas' },
-            { label: calcuttaName, href: `/calcuttas/${calcuttaId}` },
-            { label: entryName || 'Entry' },
-          ]}
-        />
-        <PageHeader title={entryName || 'Entry'} />
-        {ownEntryTeamsQuery.data && (
-          <EntryRosterCard
-            entryId={entryId}
-            calcuttaId={calcuttaId}
-            entryStatus={currentUserEntry?.status ?? 'incomplete'}
-            entryTeams={ownEntryTeamsQuery.data}
-            budgetPoints={dashboardQuery.data?.calcutta?.budgetPoints ?? 100}
-          />
-        )}
-      </PageContainer>
-    );
-  }
-
   if (biddingOpen && !isOwnEntry) {
     return (
       <PageContainer>
@@ -216,6 +192,9 @@ export function EntryTeamsPage() {
     };
   };
 
+  const entryTeams = biddingOpen && isOwnEntry ? ownEntryTeamsQuery.data ?? [] : teams;
+  const entryTitle = isOwnEntry ? 'Your Entry' : (entryName || 'Entry');
+
   return (
     <PageContainer>
       <Breadcrumb
@@ -230,59 +209,80 @@ export function EntryTeamsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="investments">Investments</TabsTrigger>
-          <TabsTrigger value="ownerships">Ownerships</TabsTrigger>
-          <TabsTrigger value="returns">Returns</TabsTrigger>
-          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          <TabsTrigger value="entry">Entry</TabsTrigger>
+          {!biddingOpen && <TabsTrigger value="investments">Investments</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="ownerships">Ownerships</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="returns">Returns</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="statistics">Statistics</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="investments">
-          <InvestmentsTab
+        <TabsContent value="entry">
+          <EntryTab
             entryId={entryId!}
-            tournamentTeams={tournamentTeams}
-            allEntryTeams={allEntryTeams}
-            schools={schools}
-            investmentsSortBy={investmentsSortBy}
-            setInvestmentsSortBy={setInvestmentsSortBy}
-            showAllTeams={showAllTeams}
-            setShowAllTeams={setShowAllTeams}
+            calcuttaId={calcuttaId!}
+            entryStatus={currentUserEntry?.status ?? 'incomplete'}
+            entryTeams={entryTeams}
+            budgetPoints={dashboardQuery.data?.calcutta?.budgetPoints ?? 100}
+            canEdit={biddingOpen && isOwnEntry}
+            title={entryTitle}
           />
         </TabsContent>
 
-        <TabsContent value="ownerships">
-          <OwnershipsTab
-            ownershipShowAllTeams={ownershipShowAllTeams}
-            setOwnershipShowAllTeams={setOwnershipShowAllTeams}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            ownershipLoading={ownershipLoading}
-            ownershipTeamsData={ownershipTeamsData}
-            getPortfolioTeamData={getPortfolioTeamData}
-            getInvestorRanking={getInvestorRanking}
-            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-            allCalcuttaPortfolios={allCalcuttaPortfolios}
-            portfolios={portfolios}
-          />
-        </TabsContent>
+        {!biddingOpen && (
+          <TabsContent value="investments">
+            <InvestmentsTab
+              entryId={entryId!}
+              tournamentTeams={tournamentTeams}
+              allEntryTeams={allEntryTeams}
+              schools={schools}
+              investmentsSortBy={investmentsSortBy}
+              setInvestmentsSortBy={setInvestmentsSortBy}
+              showAllTeams={showAllTeams}
+              setShowAllTeams={setShowAllTeams}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="returns">
-          <ReturnsTab
-            entryId={entryId!}
-            returnsShowAllTeams={returnsShowAllTeams}
-            setReturnsShowAllTeams={setReturnsShowAllTeams}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            tournamentTeams={tournamentTeams}
-            allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
-            teams={teams}
-            schools={schools}
-            getPortfolioTeamData={getPortfolioTeamData}
-          />
-        </TabsContent>
+        {!biddingOpen && (
+          <TabsContent value="ownerships">
+            <OwnershipsTab
+              ownershipShowAllTeams={ownershipShowAllTeams}
+              setOwnershipShowAllTeams={setOwnershipShowAllTeams}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              ownershipLoading={ownershipLoading}
+              ownershipTeamsData={ownershipTeamsData}
+              getPortfolioTeamData={getPortfolioTeamData}
+              getInvestorRanking={getInvestorRanking}
+              allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+              allCalcuttaPortfolios={allCalcuttaPortfolios}
+              portfolios={portfolios}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="statistics">
-          <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
-        </TabsContent>
+        {!biddingOpen && (
+          <TabsContent value="returns">
+            <ReturnsTab
+              entryId={entryId!}
+              returnsShowAllTeams={returnsShowAllTeams}
+              setReturnsShowAllTeams={setReturnsShowAllTeams}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              tournamentTeams={tournamentTeams}
+              allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+              teams={teams}
+              schools={schools}
+              getPortfolioTeamData={getPortfolioTeamData}
+            />
+          </TabsContent>
+        )}
+
+        {!biddingOpen && (
+          <TabsContent value="statistics">
+            <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} PortfolioScoresComponent={PortfolioScores} />
+          </TabsContent>
+        )}
       </Tabs>
     </PageContainer>
   );

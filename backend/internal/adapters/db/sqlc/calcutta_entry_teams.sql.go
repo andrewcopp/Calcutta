@@ -50,6 +50,7 @@ SELECT
     tt.school_id,
     tt.tournament_id,
     tt.seed,
+    tt.region,
     tt.byes,
     tt.wins,
     tt.created_at AS team_created_at,
@@ -75,6 +76,7 @@ type ListEntryTeamsByEntryIDRow struct {
 	SchoolID         string
 	TournamentID     string
 	Seed             int32
+	Region           string
 	Byes             int32
 	Wins             int32
 	TeamCreatedAt    pgtype.Timestamptz
@@ -104,6 +106,7 @@ func (q *Queries) ListEntryTeamsByEntryID(ctx context.Context, entryID string) (
 			&i.SchoolID,
 			&i.TournamentID,
 			&i.Seed,
+			&i.Region,
 			&i.Byes,
 			&i.Wins,
 			&i.TeamCreatedAt,

@@ -110,6 +110,7 @@ func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) 
 			SchoolID:     row.SchoolID,
 			TournamentID: row.TournamentID,
 			Seed:         int(row.Seed),
+			Region:       row.Region,
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
 			Created:      row.TeamCreatedAt.Time,

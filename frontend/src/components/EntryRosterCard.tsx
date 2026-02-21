@@ -10,6 +10,7 @@ interface EntryRosterCardProps {
   entryTeams: CalcuttaEntryTeam[];
   budgetPoints: number;
   canEdit?: boolean;
+  title?: string;
 }
 
 export function EntryRosterCard({
@@ -19,6 +20,7 @@ export function EntryRosterCard({
   entryTeams,
   budgetPoints,
   canEdit = true,
+  title = 'Your Entry',
 }: EntryRosterCardProps) {
   const sortedTeams = [...entryTeams].sort((a, b) => b.bid - a.bid);
   const totalSpent = entryTeams.reduce((sum, et) => sum + et.bid, 0);
@@ -27,7 +29,7 @@ export function EntryRosterCard({
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">Your Entry</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <Badge variant={entryStatus === 'accepted' ? 'success' : 'secondary'}>
             {entryStatus === 'accepted' ? 'Accepted' : 'Incomplete'}
           </Badge>

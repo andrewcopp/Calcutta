@@ -11,6 +11,7 @@ SELECT
     tt.school_id,
     tt.tournament_id,
     tt.seed,
+    tt.region,
     tt.byes,
     tt.wins,
     tt.created_at AS team_created_at,

@@ -208,7 +208,7 @@ export function CalcuttaEntriesPage() {
         return (
           <Link
             to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`}
-            className="block p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+            className="block mb-6 p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
