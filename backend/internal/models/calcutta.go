@@ -7,6 +7,7 @@ type Calcutta struct {
 	ID           string     `json:"id"`
 	TournamentID string     `json:"tournamentId"`
 	OwnerID      string     `json:"ownerId"`
+	CreatedBy    string     `json:"createdBy"`
 	Name         string     `json:"name"`
 	MinTeams     int        `json:"minTeams"`
 	MaxTeams     int        `json:"maxTeams"`

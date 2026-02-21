@@ -156,6 +156,7 @@ func (h *Handler) HandleReinvite(w http.ResponseWriter, r *http.Request) {
 		Name:         strings.TrimSpace(req.Name),
 		TournamentID: strings.TrimSpace(req.TournamentID),
 		OwnerID:      userID,
+		CreatedBy:    userID,
 	}
 
 	created, invitations, err := h.app.Calcutta.ReinviteFromCalcutta(r.Context(), sourceCalcuttaID, newCalcutta, userID)

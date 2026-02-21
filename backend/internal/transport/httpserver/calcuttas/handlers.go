@@ -86,6 +86,7 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
 		return
 	}
+	calcutta.CreatedBy = calcutta.OwnerID
 
 	// Validate tournament has a start time (required for bidding-lock logic)
 	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
