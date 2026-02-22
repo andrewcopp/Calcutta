@@ -3,7 +3,9 @@
 Thumbs.db
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/agents/
 CLAUDE.local.md
 
 # Editor directories and files
