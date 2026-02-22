@@ -42,7 +42,7 @@ const AppLayout: React.FC = () => {
   const hideHeader = location.pathname === '/';
 
   return (
-    <div className={hideHeader ? 'min-h-screen bg-[#070a12]' : 'min-h-screen bg-gray-100'}>
+    <div className={hideHeader ? 'min-h-screen bg-[#070a12]' : 'min-h-screen bg-background'}>
       {!hideHeader && <Header />}
       <Routes>
         <Route path="/" element={<RouteErrorBoundary><HomePage /></RouteErrorBoundary>} />

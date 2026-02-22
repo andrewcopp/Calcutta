@@ -1,40 +1,47 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { useHasAnyPermission } from '../hooks/useHasAnyPermission';
 import { PERMISSIONS, ADMIN_PERMISSIONS } from '../constants/permissions';
 import { UserMenu } from './Header/UserMenu';
+import { cn } from '../lib/cn';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const canAccessLab = useHasPermission(PERMISSIONS.LAB_READ);
   const canAccessAdmin = useHasAnyPermission(ADMIN_PERMISSIONS);
+  const location = useLocation();
+
+  const navLinks = [
+    { to: '/calcuttas', label: 'Calcuttas', show: true },
+    { to: '/lab', label: 'Lab', show: canAccessLab },
+    { to: '/rules', label: 'How It Works', show: true },
+    { to: '/admin', label: 'Admin', show: canAccessAdmin },
+  ];
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    <header className="bg-white shadow-md">
+    <header className="bg-header shadow-lg shadow-black/10">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-6">
-            <Link to="/" className="text-xl font-bold text-gray-800">
-              Calcutta
+            <Link to="/" className="text-xl font-bold text-header-text">
+              <span className="text-blue-400">C</span>alcutta
             </Link>
             <nav className="hidden md:flex space-x-4">
-              <Link to="/calcuttas" className="text-gray-600 hover:text-gray-800">
-                Calcuttas
-              </Link>
-              {canAccessLab && (
-                <Link to="/lab" className="text-gray-600 hover:text-gray-800">
-                  Lab
+              {navLinks.filter(l => l.show).map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={cn(
+                    'transition-colors',
+                    isActive(link.to) ? 'text-header-text' : 'text-header-muted hover:text-header-text'
+                  )}
+                >
+                  {link.label}
                 </Link>
-              )}
-              <Link to="/rules" className="text-gray-600 hover:text-gray-800">
-                How It Works
-              </Link>
-              {canAccessAdmin && (
-                <Link to="/admin" className="text-gray-600 hover:text-gray-800">
-                  Admin
-                </Link>
-              )}
+              ))}
             </nav>
           </div>
 
@@ -44,7 +51,7 @@ export function Header() {
             </div>
             {/* Mobile hamburger */}
             <button
-              className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+              className="md:hidden p-2 rounded-md text-header-muted hover:text-header-text hover:bg-white/10"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
@@ -62,40 +69,23 @@ export function Header() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <nav className="md:hidden mt-4 pb-2 border-t border-gray-200 pt-4 space-y-2">
-            <Link
-              to="/calcuttas"
-              className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Calcuttas
-            </Link>
-            {canAccessLab && (
+          <nav className="md:hidden mt-4 pb-2 border-t border-white/10 pt-4 space-y-2">
+            {navLinks.filter(l => l.show).map(link => (
               <Link
-                to="/lab"
-                className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                key={link.to}
+                to={link.to}
+                className={cn(
+                  'block px-3 py-2 rounded-md transition-colors',
+                  isActive(link.to)
+                    ? 'text-header-text bg-white/10'
+                    : 'text-header-muted hover:text-header-text hover:bg-white/10'
+                )}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Lab
+                {link.label}
               </Link>
-            )}
-            <Link
-              to="/rules"
-              className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              How It Works
-            </Link>
-            {canAccessAdmin && (
-              <Link
-                to="/admin"
-                className="block px-3 py-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Admin
-              </Link>
-            )}
-            <div className="pt-2 border-t border-gray-200">
+            ))}
+            <div className="pt-2 border-t border-white/10">
               <UserMenu />
             </div>
           </nav>

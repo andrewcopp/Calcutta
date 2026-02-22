@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../utils/format';
 import { groupCalcuttas } from '../utils/calcuttaListHelpers';
 import { useUser } from '../contexts/UserContext';
 import { queryKeys } from '../queryKeys';
+import { IconBriefcase } from '../components/ui/Icons';
 
 export function CalcuttaListPage() {
   const navigate = useNavigate();
@@ -76,6 +77,7 @@ export function CalcuttaListPage() {
 
         {calcuttas.length === 0 ? (
           <EmptyState
+            icon={<IconBriefcase />}
             title="Welcome to Calcutta!"
             description="Create your first pool or wait for an invitation from a commissioner."
             action={
@@ -105,7 +107,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   if (tournamentStarted && ranking) {
     return (
       <Link to={`/calcuttas/${calcutta.id}`} className="block">
-        <Card className="hover:shadow-md transition-shadow">
+        <Card variant="elevated" padding="compact" className="hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-2xl font-bold text-blue-600">
               #{ranking.rank} of {ranking.totalEntries}
@@ -124,7 +126,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   if (tournamentStarted) {
     return (
       <Link to={`/calcuttas/${calcutta.id}`} className="block">
-        <Card className="hover:shadow-md transition-shadow">
+        <Card padding="compact" className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">{calcutta.name}</h2>
             <span className="text-sm font-medium text-gray-400">No Entry</span>
@@ -141,7 +143,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
 
   return (
     <Link to={`/calcuttas/${calcutta.id}`} className="block">
-      <Card className="hover:shadow-md transition-shadow">
+      <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">

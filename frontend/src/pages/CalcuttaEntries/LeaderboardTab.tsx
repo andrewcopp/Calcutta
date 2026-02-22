@@ -23,7 +23,7 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               : displayPosition === 3
                 ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-500'
                 : 'bg-gradient-to-r from-slate-50 to-blue-50 border-2 border-slate-300'
-          : 'bg-white';
+          : 'bg-white border border-gray-100';
 
         const pointsClass = isInTheMoney
           ? displayPosition === 1

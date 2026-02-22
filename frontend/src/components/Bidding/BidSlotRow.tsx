@@ -80,7 +80,7 @@ export function BidSlotRow({
   return (
     <div className="py-3 flex items-start gap-3">
       {/* Slot number */}
-      <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-sm font-medium shrink-0 mt-1.5">
+      <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-semibold shrink-0 mt-1.5">
         {slotIndex + 1}
       </div>
 
@@ -142,7 +142,7 @@ export function BidSlotRow({
             renderOption={renderTeamOption}
           />
           {isOptional && (
-            <span className="text-xs text-gray-400 shrink-0">optional</span>
+            <span className="text-xs text-gray-400 italic shrink-0">optional</span>
           )}
         </div>
       )}

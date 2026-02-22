@@ -1,5 +1,6 @@
 import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
 import type { TournamentTeam } from '../../types/tournament';
+import { Card } from '../../components/ui/Card';
 
 interface DashboardSummaryProps {
   currentEntry: CalcuttaEntry;
@@ -57,27 +58,27 @@ export function DashboardSummary({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">Your Position</p>
+      <Card variant="elevated" padding="compact">
+        <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Your Position</p>
         <p className={`text-2xl font-bold ${rankColor}`}>
           #{rank} <span className="text-base font-normal text-gray-500">of {total}</span>
         </p>
         {payoutLabel && (
           <p className="text-xs text-gray-500 mt-1">{payoutLabel}</p>
         )}
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">Your Teams</p>
+      <Card padding="compact">
+        <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Your Teams</p>
         <p className="text-2xl font-bold text-gray-900">{totalTeams} teams</p>
         <p className="text-xs text-gray-500 mt-1">{aliveTeams} still alive</p>
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">Your Points</p>
+      <Card padding="compact">
+        <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Your Points</p>
         <p className="text-2xl font-bold text-gray-900">{actualPoints.toFixed(2)} pts</p>
         <p className="text-xs text-gray-500 mt-1">{remainingPoints.toFixed(2)} possible remaining</p>
-      </div>
+      </Card>
     </div>
   );
 }

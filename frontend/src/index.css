@@ -15,6 +15,9 @@
    --destructive-foreground: 255 255 255;
    --border: 229 231 235;
    --radius: 0.5rem;
+   --header-bg: 15 23 42;
+   --header-text: 248 250 252;
+   --header-muted: 148 163 184;
  }
 
 body {

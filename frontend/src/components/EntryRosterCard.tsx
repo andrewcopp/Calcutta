@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import type { CalcuttaEntryTeam } from '../types/calcutta';
 
 interface EntryRosterCardProps {
@@ -26,7 +27,7 @@ export function EntryRosterCard({
   const totalSpent = entryTeams.reduce((sum, et) => sum + et.bid, 0);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <Card variant="default" padding="none">
       <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
@@ -56,6 +57,6 @@ export function EntryRosterCard({
         <span>{sortedTeams.length} teams</span>
         <span>{totalSpent} / {budgetPoints} pts</span>
       </div>
-    </div>
+    </Card>
   );
 }

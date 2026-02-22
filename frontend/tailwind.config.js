@@ -26,6 +26,11 @@ export default {
           foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
         },
         border: 'rgb(var(--border) / <alpha-value>)',
+        header: {
+          DEFAULT: 'rgb(var(--header-bg) / <alpha-value>)',
+          text: 'rgb(var(--header-text) / <alpha-value>)',
+          muted: 'rgb(var(--header-muted) / <alpha-value>)',
+        },
         // Legacy aliases
         bg: 'rgb(var(--background) / <alpha-value>)',
         surface: 'rgb(var(--card) / <alpha-value>)',

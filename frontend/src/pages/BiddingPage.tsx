@@ -101,7 +101,7 @@ export function BiddingPage() {
         validationErrors={validationErrors}
       />
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow-sm rounded-lg border border-border overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Your Roster</h2>
           <p className="text-sm text-gray-600 mt-1">
@@ -109,7 +109,7 @@ export function BiddingPage() {
           </p>
         </div>
 
-        <div className="px-4 sm:px-6 py-2 divide-y divide-gray-200">
+        <div className="px-4 sm:px-6 py-3 divide-y divide-gray-100">
           {slots.map((slot, index) => (
             <BidSlotRow
               key={index}

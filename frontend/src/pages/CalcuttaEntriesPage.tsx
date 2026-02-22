@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { Calcutta } from '../types/calcutta';
 import { Alert } from '../components/ui/Alert';
+import { Card } from '../components/ui/Card';
 import { ErrorState } from '../components/ui/ErrorState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
@@ -148,8 +149,9 @@ export function CalcuttaEntriesPage() {
         return (
           <Link
             to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`}
-            className="block mb-6 p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+            className="block mb-6"
           >
+          <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-gray-900">Your Entry</h3>
@@ -162,6 +164,7 @@ export function CalcuttaEntriesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </div>
+          </Card>
           </Link>
         );
       })()}

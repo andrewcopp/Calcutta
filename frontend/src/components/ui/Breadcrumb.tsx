@@ -25,9 +25,9 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
           return (
             <li key={index} className="flex items-center">
               {index > 0 && (
-                <span className="mx-2 text-gray-400" aria-hidden="true">
-                  /
-                </span>
+                <svg className="mx-2 h-4 w-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               )}
               {isLast || !item.href ? (
                 <span
