@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
@@ -137,6 +138,26 @@ func (h *Handler) HandleAcceptInvitation(w http.ResponseWriter, r *http.Request)
 	}
 	if invitation.ID != invitationID {
 		httperr.Write(w, r, http.StatusNotFound, "not_found", "Invitation not found", "")
+		return
+	}
+
+	calcutta, err := h.app.Calcutta.GetCalcuttaByID(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	decision, err := policy.CanAcceptInvitation(r.Context(), h.authz, userID, calcutta, tournament, time.Now())
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
 		return
 	}
 
