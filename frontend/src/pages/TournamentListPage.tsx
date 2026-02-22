@@ -29,7 +29,7 @@ export function TournamentListPage() {
       const tournamentsWithStatus = await Promise.all(
         data.map(async (tournament) => {
           const teams = await tournamentService.getTournamentTeams(tournament.id);
-          const eliminatedTeams = teams.filter((team) => team.eliminated).length;
+          const eliminatedTeams = teams.filter((team) => team.isEliminated).length;
           const totalTeams = teams.length;
 
           const status: TournamentStatus = totalTeams - eliminatedTeams <= 1 ? 'Complete' : 'In Progress';

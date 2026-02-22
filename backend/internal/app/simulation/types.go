@@ -13,7 +13,7 @@ type TeamSimulationResult struct {
 	TeamID     string
 	Wins       int
 	Byes       int
-	Eliminated bool
+	IsEliminated bool
 }
 
 // Options configures simulation execution.

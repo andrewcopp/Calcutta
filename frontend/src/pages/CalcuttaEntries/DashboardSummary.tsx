@@ -30,7 +30,7 @@ export function DashboardSummary({
 
   // Teams alive
   const eliminatedSet = new Set(
-    tournamentTeams.filter(tt => tt.eliminated).map(tt => tt.id),
+    tournamentTeams.filter(tt => tt.isEliminated).map(tt => tt.id),
   );
   const totalTeams = userPortfolioTeams.length;
   const aliveTeams = userPortfolioTeams.filter(pt => !eliminatedSet.has(pt.teamId)).length;

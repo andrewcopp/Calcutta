@@ -163,7 +163,7 @@ function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; s
     region: 'East',
     byes: 0,
     wins: 0,
-    eliminated: false,
+    isEliminated: false,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,

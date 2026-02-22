@@ -143,7 +143,7 @@ func verifyTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID
 			t.region,
 			t.byes,
 			t.wins,
-			t.eliminated,
+			t.is_eliminated,
 			k.net_rtg,
 			k.o_rtg,
 			k.d_rtg,
@@ -164,13 +164,13 @@ func verifyTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID
 	for rows.Next() {
 		var slug, name, region string
 		var seed, byes, wins int
-		var eliminated bool
+		var isEliminated bool
 		var net, o, d, adj *float64
 		var hasKP bool
-		if err := rows.Scan(&slug, &name, &seed, &region, &byes, &wins, &eliminated, &net, &o, &d, &adj, &hasKP); err != nil {
+		if err := rows.Scan(&slug, &name, &seed, &region, &byes, &wins, &isEliminated, &net, &o, &d, &adj, &hasKP); err != nil {
 			return []Mismatch{{Where: "tournament_teams:" + tournamentKey, What: err.Error()}}
 		}
-		tInDB[slug] = bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, Eliminated: eliminated}
+		tInDB[slug] = bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, IsEliminated: isEliminated}
 		if hasKP {
 			kpInDB[slug] = &bundles.KenPomRecord{NetRTG: bundles.DerefFloat64(net), ORTG: bundles.DerefFloat64(o), DRTG: bundles.DerefFloat64(d), AdjT: bundles.DerefFloat64(adj)}
 		}
@@ -186,7 +186,7 @@ func verifyTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID
 			out = append(out, Mismatch{Where: "tournament_teams:" + tournamentKey + ":" + t.SchoolSlug, What: "missing in db"})
 			continue
 		}
-		if dbT.Seed != t.Seed || dbT.Region != t.Region || dbT.Byes != t.Byes || dbT.Wins != t.Wins || dbT.Eliminated != t.Eliminated {
+		if dbT.Seed != t.Seed || dbT.Region != t.Region || dbT.Byes != t.Byes || dbT.Wins != t.Wins || dbT.IsEliminated != t.IsEliminated {
 			out = append(out, Mismatch{Where: "tournament_teams:" + tournamentKey + ":" + t.SchoolSlug, What: "field mismatch"})
 		}
 

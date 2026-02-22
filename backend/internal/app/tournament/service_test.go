@@ -45,9 +45,9 @@ func TestThatBuildTeamsFromInputsSetsEliminatedToFalse(t *testing.T) {
 	// WHEN building teams
 	teams := buildTeamsFromInputs("t1", inputs)
 
-	// THEN eliminated is false
-	if teams[0].Eliminated {
-		t.Errorf("expected eliminated=false")
+	// THEN isEliminated is false
+	if teams[0].IsEliminated {
+		t.Errorf("expected isEliminated=false")
 	}
 }
 

@@ -37,7 +37,7 @@ export function ReturnsTab({ entries, schools, tournamentTeams, allCalcuttaPortf
         seed: number | undefined;
         region: string;
         teamName: string;
-        eliminated: boolean;
+        isEliminated: boolean;
         pointsSegments: { entryId: string; entryName: string; amount: number }[];
         possibleSegments: { entryId: string; entryName: string; amount: number }[];
         totalPoints: number;
@@ -51,7 +51,7 @@ export function ReturnsTab({ entries, schools, tournamentTeams, allCalcuttaPortf
         seed: tt.seed,
         region: tt.region,
         teamName: schoolNameById.get(tt.schoolId) || 'Unknown School',
-        eliminated: tt.eliminated === true,
+        isEliminated: tt.isEliminated === true,
         pointsSegments: [],
         possibleSegments: [],
         totalPoints: 0,
@@ -81,7 +81,7 @@ export function ReturnsTab({ entries, schools, tournamentTeams, allCalcuttaPortf
       for (const [entryId, agg] of byEntry.entries()) {
         const entryName = entryNameById.get(entryId) || 'Unknown Entry';
         const actual = agg.actual;
-        const possible = row.eliminated ? actual : Math.max(agg.expected, actual);
+        const possible = row.isEliminated ? actual : Math.max(agg.expected, actual);
 
         if (actual > 0) {
           pointsSegments.push({ entryId, entryName, amount: actual });
@@ -179,7 +179,7 @@ export function ReturnsTab({ entries, schools, tournamentTeams, allCalcuttaPortf
                         color: entryColorById.get(seg.entryId) || '#94A3B8',
                       }))}
                       backgroundColor="#F3F4F6"
-                      disabled={row.eliminated}
+                      disabled={row.isEliminated}
                       getTooltipTitle={(seg) => seg.label}
                       getTooltipValue={(seg) => seg.value.toFixed(2)}
                     />

@@ -105,7 +105,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 
 			var tournamentTeamID string
 			err = tx.QueryRow(ctx, `
-				INSERT INTO core.teams (id, tournament_id, school_id, seed, region, byes, wins, eliminated)
+				INSERT INTO core.teams (id, tournament_id, school_id, seed, region, byes, wins, is_eliminated)
 				VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
 				ON CONFLICT (id)
 				DO UPDATE SET
@@ -115,11 +115,11 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 					region = EXCLUDED.region,
 					byes = EXCLUDED.byes,
 					wins = EXCLUDED.wins,
-					eliminated = EXCLUDED.eliminated,
+					is_eliminated = EXCLUDED.is_eliminated,
 					updated_at = NOW(),
 					deleted_at = NULL
 				RETURNING id
-			`, uuid.New().String(), tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.Eliminated).Scan(&tournamentTeamID)
+			`, uuid.New().String(), tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.IsEliminated).Scan(&tournamentTeamID)
 			if err != nil {
 				return 0, 0, err
 			}

@@ -162,7 +162,7 @@ func buildInviteUpdateSQL(setLastSent bool) string {
 func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*AdminUserRow, error) {
 	row := r.pool.QueryRow(ctx, `
 		WITH active_grants AS (
-			SELECT *
+			SELECT g.id, g.user_id, g.scope_type, g.scope_id, g.label_id, g.permission_id, g.created_at, g.updated_at, g.expires_at, g.revoked_at, g.deleted_at
 			FROM core.grants g
 			WHERE g.revoked_at IS NULL
 			  AND g.scope_type = 'global'
@@ -256,7 +256,7 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string) ([]AdminUserRow, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH active_grants AS (
-			SELECT *
+			SELECT g.id, g.user_id, g.scope_type, g.scope_id, g.label_id, g.permission_id, g.created_at, g.updated_at, g.expires_at, g.revoked_at, g.deleted_at
 			FROM core.grants g
 			WHERE g.revoked_at IS NULL
 			  AND g.scope_type = 'global'

@@ -63,7 +63,7 @@ func (h *Handler) HandleCreateTournamentTeam(w http.ResponseWriter, r *http.Requ
 		Region:       req.Region,
 		Byes:         0,
 		Wins:         0,
-		Eliminated:   false,
+		IsEliminated: false,
 	}
 
 	if err := h.app.Tournament.CreateTeam(r.Context(), team); err != nil {
@@ -97,8 +97,8 @@ func (h *Handler) HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 	if req.Byes != nil {
 		team.Byes = *req.Byes
 	}
-	if req.Eliminated != nil {
-		team.Eliminated = *req.Eliminated
+	if req.IsEliminated != nil {
+		team.IsEliminated = *req.IsEliminated
 	}
 
 	if err := team.ValidateDefault(); err != nil {

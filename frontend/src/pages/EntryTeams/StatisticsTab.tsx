@@ -23,7 +23,7 @@ export function StatisticsTab({ portfolios, portfolioTeams, teams, tournamentTea
   const expectedPoints = portfolioTeams.reduce((sum, pt) => sum + pt.expectedPoints, 0);
 
   const eliminatedSet = new Set(
-    tournamentTeams.filter(tt => tt.eliminated).map(tt => tt.id),
+    tournamentTeams.filter(tt => tt.isEliminated).map(tt => tt.id),
   );
   const teamsAlive = portfolioTeams.filter(pt => !eliminatedSet.has(pt.teamId)).length;
 

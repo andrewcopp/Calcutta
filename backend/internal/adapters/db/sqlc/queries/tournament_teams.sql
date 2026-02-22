@@ -7,7 +7,7 @@ SELECT
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -30,7 +30,7 @@ SELECT
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -47,7 +47,7 @@ WHERE tt.id = $1 AND tt.deleted_at IS NULL;
 UPDATE core.teams
 SET wins = $1,
     byes = $2,
-    eliminated = $3,
+    is_eliminated = $3,
     updated_at = NOW()
 WHERE id = $4 AND deleted_at IS NULL;
 
@@ -60,7 +60,7 @@ INSERT INTO core.teams (
   region,
   byes,
   wins,
-  eliminated,
+  is_eliminated,
   created_at,
   updated_at
 )
@@ -81,7 +81,7 @@ SELECT
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -103,7 +103,7 @@ SELECT DISTINCT ON (tt.tournament_id)
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,

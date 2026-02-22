@@ -38,7 +38,7 @@ type TeamRecord struct {
 	Region     string        `json:"region"`
 	Byes       int           `json:"byes"`
 	Wins       int           `json:"wins"`
-	Eliminated bool          `json:"eliminated"`
+	IsEliminated bool        `json:"is_eliminated"`
 	KenPom     *KenPomRecord `json:"kenpom,omitempty"`
 }
 

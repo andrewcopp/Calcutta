@@ -201,12 +201,12 @@ func runOneSimulation(
 	rng := rand.New(rand.NewSource(seed + int64(simID)*1_000_003))
 
 	wins := make(map[string]int, len(teams))
-	eliminated := make(map[string]bool, len(teams))
+	isEliminated := make(map[string]bool, len(teams))
 	winnersByGame := make(map[string]string, len(games))
 
 	for _, tid := range teams {
 		wins[tid] = 0
-		eliminated[tid] = false
+		isEliminated[tid] = false
 	}
 
 	for _, g := range games {
@@ -253,17 +253,17 @@ func runOneSimulation(
 
 		winnersByGame[g.GameID] = winner
 		wins[winner] = wins[winner] + 1
-		eliminated[loser] = true
+		isEliminated[loser] = true
 	}
 
 	base := simID * len(teams)
 	for i, tid := range teams {
 		out[base+i] = TeamSimulationResult{
-			SimID:      simID,
-			TeamID:     tid,
-			Wins:       wins[tid],
-			Byes:       baseByes[tid],
-			Eliminated: eliminated[tid],
+			SimID:        simID,
+			TeamID:       tid,
+			Wins:         wins[tid],
+			Byes:         baseByes[tid],
+			IsEliminated: isEliminated[tid],
 		}
 	}
 

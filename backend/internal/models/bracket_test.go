@@ -35,10 +35,10 @@ func TestThatTeamWithByeAndNoGamesPlayedIsNotEliminated(t *testing.T) {
 	bracket := createTestBracketWithTwoTeams()
 
 	// WHEN calculating wins and byes
-	_, _, eliminated := CalculateWinsAndByes("team1", bracket)
+	_, _, isEliminated := CalculateWinsAndByes("team1", bracket)
 
 	// THEN the team is not eliminated
-	if eliminated {
+	if isEliminated {
 		t.Errorf("Expected team to not be eliminated")
 	}
 }
@@ -64,10 +64,10 @@ func TestThatTeamLosingFirstGameIsEliminated(t *testing.T) {
 	bracket.Games["game1"].Winner = bracket.Games["game1"].Team2
 
 	// WHEN calculating wins and byes
-	_, _, eliminated := CalculateWinsAndByes("team1", bracket)
+	_, _, isEliminated := CalculateWinsAndByes("team1", bracket)
 
 	// THEN the team is eliminated
-	if !eliminated {
+	if !isEliminated {
 		t.Errorf("Expected team to be eliminated")
 	}
 }

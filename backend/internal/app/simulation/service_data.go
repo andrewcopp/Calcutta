@@ -258,16 +258,16 @@ func (s *Service) lockInFirstFourResults(
 
 func (s *Service) loadCoreTeamWinsEliminated(ctx context.Context, coreTeamID string) (int, bool, error) {
 	var wins int
-	var eliminated bool
+	var isEliminated bool
 	err := s.pool.QueryRow(ctx, `
-		SELECT wins, eliminated
+		SELECT wins, is_eliminated
 		FROM core.teams
 		WHERE id = $1::uuid
 			AND deleted_at IS NULL
 		LIMIT 1
-	`, coreTeamID).Scan(&wins, &eliminated)
+	`, coreTeamID).Scan(&wins, &isEliminated)
 	if err != nil {
 		return 0, false, err
 	}
-	return wins, eliminated, nil
+	return wins, isEliminated, nil
 }

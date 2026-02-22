@@ -122,10 +122,10 @@ func ValidateWinnerSelection(game *BracketGame, winnerTeamID string) error {
 }
 
 // CalculateWinsAndByes calculates wins and byes for a team based on bracket state
-func CalculateWinsAndByes(teamID string, bracket *BracketStructure) (wins int, byes int, eliminated bool) {
+func CalculateWinsAndByes(teamID string, bracket *BracketStructure) (wins int, byes int, isEliminated bool) {
 	wins = 0
 	byes = 0
-	eliminated = false
+	isEliminated = false
 
 	// Find the team's first game
 	var firstGame *BracketGame
@@ -139,7 +139,7 @@ func CalculateWinsAndByes(teamID string, bracket *BracketStructure) (wins int, b
 	}
 
 	if firstGame == nil {
-		return 0, 0, true
+		return 0, 0, true // team not found; treat as eliminated
 	}
 
 	// If first game is not First Four, team has a bye
@@ -166,10 +166,10 @@ func CalculateWinsAndByes(teamID string, bracket *BracketStructure) (wins int, b
 			currentGame = nextGame
 		} else {
 			// Team lost, they're eliminated
-			eliminated = true
+			isEliminated = true
 			break
 		}
 	}
 
-	return wins, byes, eliminated
+	return wins, byes, isEliminated
 }

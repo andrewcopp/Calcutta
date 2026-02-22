@@ -123,7 +123,7 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 		CalcuttaKey:    calcuttaKey,
 		CalcuttaName:   calcuttaName,
 		RowCounts:      rowCounts,
-		Notes:          fmt.Sprintf("games.csv is derived from bracket builder using team region/seed and team progress (wins+byes+eliminated). Tournament rounds=%d.", rounds),
+		Notes:          fmt.Sprintf("games.csv is derived from bracket builder using team region/seed and team progress (wins+byes+is_eliminated). Tournament rounds=%d.", rounds),
 	}
 
 	if err := bundles.WriteJSON(filepath.Join(outDir, "manifest.json"), m); err != nil {
@@ -200,7 +200,7 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 			t.region,
 			t.byes,
 			t.wins,
-			t.eliminated,
+			t.is_eliminated,
 			kps.net_rtg,
 			kps.o_rtg,
 			kps.d_rtg,
@@ -218,7 +218,7 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 	}
 	defer r.Close()
 
-	header := []string{"tournament_key", "team_key", "school_slug", "school_name", "seed", "region", "byes", "wins", "eliminated", "kenpom_net", "kenpom_o", "kenpom_d", "kenpom_adj_t"}
+	header := []string{"tournament_key", "team_key", "school_slug", "school_name", "seed", "region", "byes", "wins", "is_eliminated", "kenpom_net", "kenpom_o", "kenpom_d", "kenpom_adj_t"}
 	rows := make([][]string, 0)
 	slugBySchoolID := make(map[string]string)
 
@@ -226,10 +226,10 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 		var (
 			slug, schoolName, schoolID, region, tournamentKey string
 			seed, byes, wins                                  int
-			eliminated                                        bool
+			isEliminated                                      bool
 			net, o, d, adj                                    *float64
 		)
-		if err := r.Scan(&slug, &schoolName, &schoolID, &seed, &region, &byes, &wins, &eliminated, &net, &o, &d, &adj, &tournamentKey); err != nil {
+		if err := r.Scan(&slug, &schoolName, &schoolID, &seed, &region, &byes, &wins, &isEliminated, &net, &o, &d, &adj, &tournamentKey); err != nil {
 			return nil, csvTable{}, err
 		}
 		slugBySchoolID[schoolID] = slug
@@ -243,7 +243,7 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 			region,
 			strconv.Itoa(byes),
 			strconv.Itoa(wins),
-			strconv.FormatBool(eliminated),
+			strconv.FormatBool(isEliminated),
 			formatFloatPtr(net),
 			formatFloatPtr(o),
 			formatFloatPtr(d),

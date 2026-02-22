@@ -27,7 +27,7 @@ export interface TournamentTeam {
   region: string;
   byes: number;
   wins: number;
-  eliminated: boolean;
+  isEliminated: boolean;
   createdAt: string;
   updatedAt: string;
   school?: { id: string; name: string };

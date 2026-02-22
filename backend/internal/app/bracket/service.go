@@ -105,7 +105,7 @@ func (s *Service) SelectWinner(ctx context.Context, tournamentID, gameID, winner
 			return nil, fmt.Errorf("failed to get losing team: %w", err)
 		}
 		if losingTeam != nil {
-			losingTeam.Eliminated = true
+			losingTeam.IsEliminated = true
 			if err := s.tournamentRepo.UpdateTournamentTeam(ctx, losingTeam); err != nil {
 				return nil, fmt.Errorf("failed to mark losing team as eliminated: %w", err)
 			}
@@ -163,7 +163,7 @@ func (s *Service) UnselectWinner(ctx context.Context, tournamentID, gameID strin
 			return nil, fmt.Errorf("failed to get losing team: %w", err)
 		}
 		if losingTeam != nil {
-			losingTeam.Eliminated = false
+			losingTeam.IsEliminated = false
 			if err := s.tournamentRepo.UpdateTournamentTeam(ctx, losingTeam); err != nil {
 				return nil, fmt.Errorf("failed to reactivate losing team: %w", err)
 			}

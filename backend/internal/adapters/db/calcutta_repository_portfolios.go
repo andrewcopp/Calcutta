@@ -56,7 +56,7 @@ func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID 
 			Region:       row.Region,
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
-			Eliminated:   row.Eliminated,
+			IsEliminated: row.IsEliminated,
 			CreatedAt:    row.TeamCreatedAt.Time,
 			UpdatedAt:    row.TeamUpdatedAt.Time,
 		}
@@ -125,7 +125,7 @@ func (r *CalcuttaRepository) GetPortfolioTeamsByPortfolioIDs(ctx context.Context
 			Region:       row.Region,
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
-			Eliminated:   row.Eliminated,
+			IsEliminated: row.IsEliminated,
 			CreatedAt:    row.TeamCreatedAt.Time,
 			UpdatedAt:    row.TeamUpdatedAt.Time,
 		}
@@ -175,7 +175,7 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 		Region:       row.Region,
 		Byes:         int(row.Byes),
 		Wins:         int(row.Wins),
-		Eliminated:   row.Eliminated,
+		IsEliminated: row.IsEliminated,
 		CreatedAt:    row.CreatedAt.Time,
 		UpdatedAt:    row.UpdatedAt.Time,
 	}

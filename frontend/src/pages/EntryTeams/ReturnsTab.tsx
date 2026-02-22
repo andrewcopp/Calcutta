@@ -72,7 +72,7 @@ export function ReturnsTab({
                   const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === tt.id);
                   const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
                   const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.expectedPoints, 0);
-                  const eliminated = tt.eliminated === true;
+                  const eliminated = tt.isEliminated === true;
                   const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
                   return Math.max(max, totalActualPoints, totalPossiblePoints);
                 }, 0);
@@ -166,7 +166,7 @@ export function ReturnsTab({
                               : []),
                           ]}
                           backgroundColor="#F3F4F6"
-                          disabled={team.team?.eliminated === true}
+                          disabled={team.team?.isEliminated === true}
                           getTooltipTitle={(seg) => seg.label}
                           getTooltipValue={(seg) => `${seg.value.toFixed(2)} points`}
                         />

@@ -117,7 +117,7 @@ func (r *CreateTournamentTeamRequest) Validate() error {
 type UpdateTournamentTeamRequest struct {
 	Wins       *int  `json:"wins,omitempty"`
 	Byes       *int  `json:"byes,omitempty"`
-	Eliminated *bool `json:"eliminated,omitempty"`
+	IsEliminated *bool `json:"isEliminated,omitempty"`
 }
 
 type TournamentTeamResponse struct {
@@ -128,7 +128,7 @@ type TournamentTeamResponse struct {
 	Region       string          `json:"region"`
 	Byes         int             `json:"byes"`
 	Wins         int             `json:"wins"`
-	Eliminated   bool            `json:"eliminated"`
+	IsEliminated bool            `json:"isEliminated"`
 	CreatedAt    time.Time       `json:"createdAt"`
 	UpdatedAt    time.Time       `json:"updatedAt"`
 	School       *SchoolResponse `json:"school,omitempty"`
@@ -144,7 +144,7 @@ func NewTournamentTeamResponse(t *models.TournamentTeam, school *models.School) 
 		Region:       t.Region,
 		Byes:         t.Byes,
 		Wins:         t.Wins,
-		Eliminated:   t.Eliminated,
+		IsEliminated: t.IsEliminated,
 		CreatedAt:    t.CreatedAt,
 		UpdatedAt:    t.UpdatedAt,
 	}

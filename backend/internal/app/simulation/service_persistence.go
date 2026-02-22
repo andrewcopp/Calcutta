@@ -38,18 +38,18 @@ func (s *Service) createTournamentStateSnapshotFromBracket(
 			continue
 		}
 		coreTeamID := t.ID
-		wins, byes, eliminated := models.CalculateWinsAndByes(coreTeamID, br)
+		wins, byes, isEliminated := models.CalculateWinsAndByes(coreTeamID, br)
 		_, err := tx.Exec(ctx, `
 			INSERT INTO derived.simulation_state_teams (
 				simulation_state_id,
 				team_id,
 				wins,
 				byes,
-				eliminated
+				is_eliminated
 			)
 			VALUES ($1, $2::uuid, $3, $4, $5)
 			ON CONFLICT (simulation_state_id, team_id) DO NOTHING
-		`, snapshotID, coreTeamID, wins, byes, eliminated)
+		`, snapshotID, coreTeamID, wins, byes, isEliminated)
 		if err != nil {
 			return "", err
 		}
@@ -84,14 +84,14 @@ func (s *Service) createTournamentStateSnapshot(ctx context.Context, coreTournam
 			team_id,
 			wins,
 			byes,
-			eliminated
+			is_eliminated
 		)
 		SELECT
 			$1,
 			ct.id,
 			ct.wins,
 			ct.byes,
-			ct.eliminated
+			ct.is_eliminated
 		FROM core.teams ct
 		WHERE ct.tournament_id = $2
 		  AND ct.deleted_at IS NULL
@@ -155,7 +155,7 @@ func (s *simResultsSource) Values() ([]any, error) {
 		r.TeamID,
 		r.Wins,
 		r.Byes,
-		r.Eliminated,
+		r.IsEliminated,
 	}, nil
 }
 
@@ -185,7 +185,7 @@ func (s *Service) copyInsertSimulatedTournaments(
 	inserted, err := conn.Conn().CopyFrom(
 		ctx,
 		pgx.Identifier{"derived", "simulated_teams"},
-		[]string{"simulated_tournament_id", "tournament_id", "sim_id", "team_id", "wins", "byes", "eliminated"},
+		[]string{"simulated_tournament_id", "tournament_id", "sim_id", "team_id", "wins", "byes", "is_eliminated"},
 		src,
 	)
 	if err != nil {

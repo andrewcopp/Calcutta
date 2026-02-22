@@ -21,7 +21,7 @@ export function PortfolioScores({ portfolio, teams, tournamentTeams, schools }: 
         ...pt,
         seed: tt?.seed,
         region: tt?.region,
-        eliminated: tt?.eliminated === true,
+        isEliminated: tt?.isEliminated === true,
         schoolName: school?.name ?? 'Unknown Team',
       };
     })
@@ -49,11 +49,11 @@ export function PortfolioScores({ portfolio, teams, tournamentTeams, schools }: 
             {enrichedTeams.map(team => (
               <tr
                 key={team.id}
-                className={team.eliminated ? 'bg-gray-50 text-gray-400' : 'bg-gray-50'}
+                className={team.isEliminated ? 'bg-gray-50 text-gray-400' : 'bg-gray-50'}
               >
                 <td className="px-2 py-2 font-medium rounded-l-md whitespace-nowrap">{team.seed ?? '—'}</td>
                 <td className="px-2 py-2 whitespace-nowrap">{team.region ?? '—'}</td>
-                <td className={`px-2 py-2 font-medium whitespace-nowrap truncate ${team.eliminated ? 'line-through' : ''}`}>
+                <td className={`px-2 py-2 font-medium whitespace-nowrap truncate ${team.isEliminated ? 'line-through' : ''}`}>
                   {team.schoolName}
                 </td>
                 <td className="px-2 py-2 text-right font-medium whitespace-nowrap">{team.actualPoints.toFixed(2)}</td>

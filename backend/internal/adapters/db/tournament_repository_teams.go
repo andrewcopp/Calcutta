@@ -27,7 +27,7 @@ func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string
 			row.Region,
 			row.Byes,
 			row.Wins,
-			row.Eliminated,
+			row.IsEliminated,
 			row.CreatedAt,
 			row.UpdatedAt,
 			row.NetRtg,
@@ -56,7 +56,7 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 		row.Region,
 		row.Byes,
 		row.Wins,
-		row.Eliminated,
+		row.IsEliminated,
 		row.CreatedAt,
 		row.UpdatedAt,
 		row.NetRtg,
@@ -82,8 +82,8 @@ func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *m
 	params := sqlc.UpdateTeamParams{
 		Wins:       int32(team.Wins),
 		Byes:       int32(team.Byes),
-		Eliminated: team.Eliminated,
-		ID:         team.ID,
+		IsEliminated: team.IsEliminated,
+		ID:           team.ID,
 	}
 	if err = qtx.UpdateTeam(ctx, params); err != nil {
 		return err
@@ -119,7 +119,7 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		Region:       team.Region,
 		Byes:         int32(team.Byes),
 		Wins:         int32(team.Wins),
-		Eliminated:   team.Eliminated,
+		IsEliminated: team.IsEliminated,
 		CreatedAt:    pgtype.Timestamptz{Time: team.CreatedAt, Valid: true},
 		UpdatedAt:    pgtype.Timestamptz{Time: team.UpdatedAt, Valid: true},
 	}
@@ -150,7 +150,7 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 		Region:       row.Region,
 		Byes:         int(row.Byes),
 		Wins:         int(row.Wins),
-		Eliminated:   row.Eliminated,
+		IsEliminated: row.IsEliminated,
 		CreatedAt:    row.CreatedAt.Time,
 		UpdatedAt:    row.UpdatedAt.Time,
 	}
@@ -176,7 +176,7 @@ func (r *TournamentRepository) ListWinningTeams(ctx context.Context) (map[string
 			Region:       row.Region,
 			Byes:         int(row.Byes),
 			Wins:         int(row.Wins),
-			Eliminated:   row.Eliminated,
+			IsEliminated: row.IsEliminated,
 			CreatedAt:    row.CreatedAt.Time,
 			UpdatedAt:    row.UpdatedAt.Time,
 		}
@@ -223,7 +223,7 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 			Region:       team.Region,
 			Byes:         int32(team.Byes),
 			Wins:         int32(team.Wins),
-			Eliminated:   team.Eliminated,
+			IsEliminated: team.IsEliminated,
 			CreatedAt:    pgtype.Timestamptz{Time: team.CreatedAt, Valid: true},
 			UpdatedAt:    pgtype.Timestamptz{Time: team.UpdatedAt, Valid: true},
 		}
@@ -269,7 +269,7 @@ func (r *TournamentRepository) BulkUpsertKenPomStats(ctx context.Context, update
 	return nil
 }
 
-func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region string, byes, wins int32, eliminated bool, createdAt, updatedAt pgtype.Timestamptz, netRtg, oRtg, dRtg, adjT *float64, schoolName *string) *models.TournamentTeam {
+func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region string, byes, wins int32, isEliminated bool, createdAt, updatedAt pgtype.Timestamptz, netRtg, oRtg, dRtg, adjT *float64, schoolName *string) *models.TournamentTeam {
 	team := &models.TournamentTeam{
 		ID:           id,
 		TournamentID: tournamentID,
@@ -278,7 +278,7 @@ func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region
 		Region:       region,
 		Byes:         int(byes),
 		Wins:         int(wins),
-		Eliminated:   eliminated,
+		IsEliminated: isEliminated,
 		CreatedAt:    createdAt.Time,
 		UpdatedAt:    updatedAt.Time,
 	}

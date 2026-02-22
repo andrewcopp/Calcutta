@@ -137,7 +137,7 @@ func loadTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID s
 			t.region,
 			t.byes,
 			t.wins,
-			t.eliminated,
+			t.is_eliminated,
 			k.net_rtg,
 			k.o_rtg,
 			k.d_rtg,
@@ -158,14 +158,14 @@ func loadTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID s
 	for r.Next() {
 		var teamID, slug, name, region string
 		var seed, byes, wins int
-		var eliminated bool
+		var isEliminated bool
 		var net, o, d, adj *float64
 		var hasKP bool
-		if err := r.Scan(&teamID, &slug, &name, &seed, &region, &byes, &wins, &eliminated, &net, &o, &d, &adj, &hasKP); err != nil {
+		if err := r.Scan(&teamID, &slug, &name, &seed, &region, &byes, &wins, &isEliminated, &net, &o, &d, &adj, &hasKP); err != nil {
 			return nil, err
 		}
 
-		tr := bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, Eliminated: eliminated}
+		tr := bundles.TeamRecord{SchoolSlug: slug, SchoolName: name, Seed: seed, Region: region, Byes: byes, Wins: wins, IsEliminated: isEliminated}
 		if hasKP {
 			tr.KenPom = &bundles.KenPomRecord{NetRTG: bundles.DerefFloat64(net), ORTG: bundles.DerefFloat64(o), DRTG: bundles.DerefFloat64(d), AdjT: bundles.DerefFloat64(adj)}
 		}

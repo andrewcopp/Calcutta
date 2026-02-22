@@ -29,7 +29,7 @@ SELECT
     tt.region,
     tt.byes,
     tt.wins,
-    tt.eliminated,
+    tt.is_eliminated,
     tt.created_at AS team_created_at,
     tt.updated_at AS team_updated_at,
     s.name AS school_name
@@ -56,7 +56,7 @@ type ListPortfolioTeamsByPortfolioIDRow struct {
 	Region              string
 	Byes                int32
 	Wins                int32
-	Eliminated          bool
+	IsEliminated        bool
 	TeamCreatedAt       pgtype.Timestamptz
 	TeamUpdatedAt       pgtype.Timestamptz
 	SchoolName          *string
@@ -88,7 +88,7 @@ func (q *Queries) ListPortfolioTeamsByPortfolioID(ctx context.Context, portfolio
 			&i.Region,
 			&i.Byes,
 			&i.Wins,
-			&i.Eliminated,
+			&i.IsEliminated,
 			&i.TeamCreatedAt,
 			&i.TeamUpdatedAt,
 			&i.SchoolName,
@@ -121,7 +121,7 @@ SELECT
     tt.region,
     tt.byes,
     tt.wins,
-    tt.eliminated,
+    tt.is_eliminated,
     tt.created_at AS team_created_at,
     tt.updated_at AS team_updated_at,
     s.name AS school_name
@@ -148,7 +148,7 @@ type ListPortfolioTeamsByPortfolioIDsRow struct {
 	Region              string
 	Byes                int32
 	Wins                int32
-	Eliminated          bool
+	IsEliminated        bool
 	TeamCreatedAt       pgtype.Timestamptz
 	TeamUpdatedAt       pgtype.Timestamptz
 	SchoolName          *string
@@ -180,7 +180,7 @@ func (q *Queries) ListPortfolioTeamsByPortfolioIDs(ctx context.Context, portfoli
 			&i.Region,
 			&i.Byes,
 			&i.Wins,
-			&i.Eliminated,
+			&i.IsEliminated,
 			&i.TeamCreatedAt,
 			&i.TeamUpdatedAt,
 			&i.SchoolName,

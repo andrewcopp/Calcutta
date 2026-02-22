@@ -180,7 +180,7 @@ func buildTeamsFromInputs(tournamentID string, inputs []ReplaceTeamsInput) []*mo
 			Region:       input.Region,
 			Byes:         byes,
 			Wins:         0,
-			Eliminated:   false,
+			IsEliminated: false,
 		})
 	}
 	return teams

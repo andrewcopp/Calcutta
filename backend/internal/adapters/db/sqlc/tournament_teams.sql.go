@@ -20,7 +20,7 @@ INSERT INTO core.teams (
   region,
   byes,
   wins,
-  eliminated,
+  is_eliminated,
   created_at,
   updated_at
 )
@@ -35,7 +35,7 @@ type CreateTeamParams struct {
 	Region       string
 	Byes         int32
 	Wins         int32
-	Eliminated   bool
+	IsEliminated bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
@@ -49,7 +49,7 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) error {
 		arg.Region,
 		arg.Byes,
 		arg.Wins,
-		arg.Eliminated,
+		arg.IsEliminated,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -65,7 +65,7 @@ SELECT
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -87,7 +87,7 @@ type GetTeamByIDRow struct {
 	Region       string
 	Byes         int32
 	Wins         int32
-	Eliminated   bool
+	IsEliminated bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	NetRtg       *float64
@@ -108,7 +108,7 @@ func (q *Queries) GetTeamByID(ctx context.Context, id string) (GetTeamByIDRow, e
 		&i.Region,
 		&i.Byes,
 		&i.Wins,
-		&i.Eliminated,
+		&i.IsEliminated,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.NetRtg,
@@ -129,7 +129,7 @@ SELECT
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -151,7 +151,7 @@ type GetWinningTeamRow struct {
 	Region       string
 	Byes         int32
 	Wins         int32
-	Eliminated   bool
+	IsEliminated bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	NetRtg       *float64
@@ -171,7 +171,7 @@ func (q *Queries) GetWinningTeam(ctx context.Context, tournamentID string) (GetW
 		&i.Region,
 		&i.Byes,
 		&i.Wins,
-		&i.Eliminated,
+		&i.IsEliminated,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.NetRtg,
@@ -191,7 +191,7 @@ SELECT
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -214,7 +214,7 @@ type ListTeamsByTournamentIDRow struct {
 	Region       string
 	Byes         int32
 	Wins         int32
-	Eliminated   bool
+	IsEliminated bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	NetRtg       *float64
@@ -241,7 +241,7 @@ func (q *Queries) ListTeamsByTournamentID(ctx context.Context, tournamentID stri
 			&i.Region,
 			&i.Byes,
 			&i.Wins,
-			&i.Eliminated,
+			&i.IsEliminated,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.NetRtg,
@@ -269,7 +269,7 @@ SELECT DISTINCT ON (tt.tournament_id)
   tt.region,
   tt.byes,
   tt.wins,
-  tt.eliminated,
+  tt.is_eliminated,
   tt.created_at,
   tt.updated_at,
   kps.net_rtg,
@@ -290,7 +290,7 @@ type ListWinningTeamsRow struct {
 	Region       string
 	Byes         int32
 	Wins         int32
-	Eliminated   bool
+	IsEliminated bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	NetRtg       *float64
@@ -316,7 +316,7 @@ func (q *Queries) ListWinningTeams(ctx context.Context) ([]ListWinningTeamsRow, 
 			&i.Region,
 			&i.Byes,
 			&i.Wins,
-			&i.Eliminated,
+			&i.IsEliminated,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.NetRtg,
@@ -358,7 +358,7 @@ const updateTeam = `-- name: UpdateTeam :exec
 UPDATE core.teams
 SET wins = $1,
     byes = $2,
-    eliminated = $3,
+    is_eliminated = $3,
     updated_at = NOW()
 WHERE id = $4 AND deleted_at IS NULL
 `
@@ -366,7 +366,7 @@ WHERE id = $4 AND deleted_at IS NULL
 type UpdateTeamParams struct {
 	Wins       int32
 	Byes       int32
-	Eliminated bool
+	IsEliminated bool
 	ID         string
 }
 
@@ -374,7 +374,7 @@ func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
 	_, err := q.db.Exec(ctx, updateTeam,
 		arg.Wins,
 		arg.Byes,
-		arg.Eliminated,
+		arg.IsEliminated,
 		arg.ID,
 	)
 	return err

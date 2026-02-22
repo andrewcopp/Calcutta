@@ -16,7 +16,7 @@ SELECT
     tt.region,
     tt.byes,
     tt.wins,
-    tt.eliminated,
+    tt.is_eliminated,
     tt.created_at AS team_created_at,
     tt.updated_at AS team_updated_at,
     s.name AS school_name
@@ -43,7 +43,7 @@ SELECT
     tt.region,
     tt.byes,
     tt.wins,
-    tt.eliminated,
+    tt.is_eliminated,
     tt.created_at AS team_created_at,
     tt.updated_at AS team_updated_at,
     s.name AS school_name
