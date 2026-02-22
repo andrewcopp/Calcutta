@@ -1,7 +1,0 @@
-ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_visibility TO ck_calcuttas_visibility;
-ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_min_teams TO chk_calcuttas_min_teams;
-ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_max_teams_gte_min TO chk_calcuttas_max_teams_gte_min;
-ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_budget_positive TO chk_calcuttas_budget_positive;
-ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_max_bid_points_le_budget TO ck_core_calcuttas_max_bid_le_budget;
-ALTER TABLE core.calcuttas RENAME CONSTRAINT ck_core_calcuttas_max_bid_points_positive TO chk_calcuttas_max_bid_positive;
-ALTER TABLE core.calcuttas RENAME COLUMN max_bid_points TO max_bid;

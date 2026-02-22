@@ -1,1 +1,0 @@
-ALTER TABLE core.calcuttas DROP COLUMN IF EXISTS name;

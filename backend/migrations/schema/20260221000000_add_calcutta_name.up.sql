@@ -1,1 +1,0 @@
-ALTER TABLE core.calcuttas ADD COLUMN IF NOT EXISTS name text NOT NULL DEFAULT '';

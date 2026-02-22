@@ -1,5 +1,5 @@
 -- Seed Data Migration
--- Inserts permissions, labels, label_permissions, and reference data
+-- Inserts permissions, roles, role_permissions, and reference data
 
 SET search_path = '';
 
@@ -29,10 +29,10 @@ INSERT INTO core.permissions (id, key, description) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- LABELS (5)
+-- ROLES (5)
 -- =============================================================================
 
-INSERT INTO core.labels (id, key, description) VALUES
+INSERT INTO core.roles (id, key, description) VALUES
   ('7fd3956d-9df0-4c1b-b176-e7b8b6d01248', 'site_admin', 'Full site administration'),
   ('2623b7e3-4dcf-4378-a091-a2a33efe560c', 'tournament_admin', 'Update tournament game results'),
   ('49b7d3d1-e45f-49b7-9bdc-424959d0c7ab', 'calcutta_admin', 'Manage a specific calcutta'),
@@ -41,11 +41,11 @@ INSERT INTO core.labels (id, key, description) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- LABEL_PERMISSIONS (25)
+-- ROLE_PERMISSIONS (25)
 -- =============================================================================
 
 -- site_admin gets all permissions
-INSERT INTO core.label_permissions (label_id, permission_id) VALUES
+INSERT INTO core.role_permissions (role_id, permission_id) VALUES
   ('7fd3956d-9df0-4c1b-b176-e7b8b6d01248', 'f8be010c-b161-4d9b-a8f2-268c08be5e43'),
   ('7fd3956d-9df0-4c1b-b176-e7b8b6d01248', 'a9c96ef0-d7e7-4b35-9d68-7bef3b89c9c1'),
   ('7fd3956d-9df0-4c1b-b176-e7b8b6d01248', '8ea2f503-a867-4f53-a6ee-a7113d60dc12'),
@@ -75,7 +75,7 @@ INSERT INTO core.label_permissions (label_id, permission_id) VALUES
   -- user_manager
   ('b8e1c2d3-f4a5-4b6c-8d7e-9f0a1b2c3d4e', '4d045f02-704b-475c-bb6a-5a88d742a07c'),
   ('b8e1c2d3-f4a5-4b6c-8d7e-9f0a1b2c3d4e', 'caeb9563-7298-4ef3-b9d2-4c13529baa20')
-ON CONFLICT (label_id, permission_id) DO NOTHING;
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- =============================================================================
 -- COMPETITIONS
