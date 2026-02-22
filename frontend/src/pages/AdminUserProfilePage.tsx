@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
+import { calcuttaService } from '../services/calcuttaService';
+import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { PERMISSIONS } from '../constants/permissions';
@@ -14,8 +16,26 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { formatDate } from '../utils/format';
+import type { LabelGrant } from '../types/admin';
 
 const ALL_LABELS = ['site_admin', 'tournament_admin', 'calcutta_admin', 'player', 'user_manager'];
+
+const LABEL_SCOPES: Record<string, string[]> = {
+  site_admin: ['global'],
+  user_manager: ['global'],
+  calcutta_admin: ['global', 'calcutta'],
+  tournament_admin: ['global', 'tournament'],
+  player: ['global', 'calcutta'],
+};
+
+function labelGrantKey(g: LabelGrant): string {
+  return g.scopeId ? `${g.key}:${g.scopeType}:${g.scopeId}` : `${g.key}:global`;
+}
+
+function labelGrantDisplay(g: LabelGrant): string {
+  if (g.scopeType === 'global') return g.key;
+  return `${g.key} (${g.scopeName ?? g.scopeId})`;
+}
 
 function getStatusBadgeVariant(status: string): 'success' | 'warning' | 'secondary' | 'default' {
   switch (status) {
@@ -36,6 +56,8 @@ export function AdminUserProfilePage() {
   const queryClient = useQueryClient();
   const canWrite = useHasPermission(PERMISSIONS.ADMIN_USERS_WRITE);
   const [selectedLabel, setSelectedLabel] = useState('');
+  const [selectedScopeType, setSelectedScopeType] = useState<'global' | 'calcutta' | 'tournament'>('global');
+  const [selectedScopeId, setSelectedScopeId] = useState('');
 
   const userQuery = useQuery({
     queryKey: queryKeys.admin.userDetail(userId),
@@ -43,23 +65,69 @@ export function AdminUserProfilePage() {
     enabled: Boolean(userId),
   });
 
+  const calcuttasQuery = useQuery({
+    queryKey: queryKeys.calcuttas.all(),
+    queryFn: () => calcuttaService.getAllCalcuttas(),
+    enabled: canWrite,
+  });
+
+  const tournamentsQuery = useQuery({
+    queryKey: queryKeys.tournaments.all(),
+    queryFn: () => tournamentService.getAllTournaments(),
+    enabled: canWrite,
+  });
+
   const grantMutation = useMutation({
-    mutationFn: (labelKey: string) => adminService.grantLabel(userId!, labelKey),
+    mutationFn: ({ labelKey, scopeType, scopeId }: { labelKey: string; scopeType: string; scopeId?: string }) =>
+      adminService.grantLabel(userId!, labelKey, scopeType, scopeId),
     onSuccess: () => {
       setSelectedLabel('');
+      setSelectedScopeType('global');
+      setSelectedScopeId('');
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
     },
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (labelKey: string) => adminService.revokeLabel(userId!, labelKey),
+    mutationFn: (grant: LabelGrant) =>
+      adminService.revokeLabel(userId!, grant.key, grant.scopeType, grant.scopeId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
     },
   });
 
   const profile = userQuery.data;
-  const availableLabels = profile ? ALL_LABELS.filter((l) => !profile.labels.includes(l)) : [];
+
+  // Only exclude a label from the dropdown if it already has a global grant
+  const globalLabelKeys = new Set(
+    profile?.labels.filter((g) => g.scopeType === 'global').map((g) => g.key) ?? [],
+  );
+  const availableLabels = ALL_LABELS.filter((l) => !globalLabelKeys.has(l));
+
+  const allowedScopes = selectedLabel ? (LABEL_SCOPES[selectedLabel] ?? ['global']) : ['global'];
+  const needsScopeSelection = allowedScopes.length > 1;
+  const needsScopeId = selectedScopeType !== 'global';
+
+  const canGrant =
+    selectedLabel &&
+    (!needsScopeId || selectedScopeId) &&
+    !grantMutation.isPending;
+
+  function handleLabelChange(label: string) {
+    setSelectedLabel(label);
+    const scopes = LABEL_SCOPES[label] ?? ['global'];
+    setSelectedScopeType(scopes.length === 1 ? (scopes[0] as 'global' | 'calcutta' | 'tournament') : 'global');
+    setSelectedScopeId('');
+  }
+
+  function handleGrant() {
+    if (!selectedLabel) return;
+    grantMutation.mutate({
+      labelKey: selectedLabel,
+      scopeType: selectedScopeType,
+      scopeId: needsScopeId ? selectedScopeId : undefined,
+    });
+  }
 
   return (
     <PageContainer>
@@ -103,15 +171,15 @@ export function AdminUserProfilePage() {
             <h2 className="text-lg font-semibold mb-4">Labels</h2>
             {profile.labels.length > 0 ? (
               <div className="flex flex-wrap gap-2 mb-4">
-                {profile.labels.map((l) => (
-                  <span key={l} className="inline-flex items-center gap-1">
-                    <Badge variant="default">{l}</Badge>
+                {profile.labels.map((g) => (
+                  <span key={labelGrantKey(g)} className="inline-flex items-center gap-1">
+                    <Badge variant="default">{labelGrantDisplay(g)}</Badge>
                     {canWrite && (
                       <button
                         className="text-gray-400 hover:text-red-600 text-sm"
-                        onClick={() => revokeMutation.mutate(l)}
+                        onClick={() => revokeMutation.mutate(g)}
                         disabled={revokeMutation.isPending}
-                        aria-label={`Remove ${l}`}
+                        aria-label={`Remove ${labelGrantDisplay(g)}`}
                       >
                         x
                       </button>
@@ -124,10 +192,10 @@ export function AdminUserProfilePage() {
             )}
 
             {canWrite && availableLabels.length > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Select
                   value={selectedLabel}
-                  onChange={(e) => setSelectedLabel(e.target.value)}
+                  onChange={(e) => handleLabelChange(e.target.value)}
                   className="w-48"
                 >
                   <option value="">Select label...</option>
@@ -135,12 +203,52 @@ export function AdminUserProfilePage() {
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </Select>
+
+                {selectedLabel && needsScopeSelection && (
+                  <Select
+                    value={selectedScopeType}
+                    onChange={(e) => {
+                      setSelectedScopeType(e.target.value as 'global' | 'calcutta' | 'tournament');
+                      setSelectedScopeId('');
+                    }}
+                    className="w-40"
+                  >
+                    {allowedScopes.map((s) => (
+                      <option key={s} value={s}>{s === 'global' ? 'Global' : `Specific ${s}`}</option>
+                    ))}
+                  </Select>
+                )}
+
+                {selectedLabel && selectedScopeType === 'calcutta' && (
+                  <Select
+                    value={selectedScopeId}
+                    onChange={(e) => setSelectedScopeId(e.target.value)}
+                    className="w-48"
+                  >
+                    <option value="">Select calcutta...</option>
+                    {(calcuttasQuery.data ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Select>
+                )}
+
+                {selectedLabel && selectedScopeType === 'tournament' && (
+                  <Select
+                    value={selectedScopeId}
+                    onChange={(e) => setSelectedScopeId(e.target.value)}
+                    className="w-48"
+                  >
+                    <option value="">Select tournament...</option>
+                    {(tournamentsQuery.data ?? []).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Select>
+                )}
+
                 <Button
                   size="sm"
-                  disabled={!selectedLabel || grantMutation.isPending}
-                  onClick={() => {
-                    if (selectedLabel) grantMutation.mutate(selectedLabel);
-                  }}
+                  disabled={!canGrant}
+                  onClick={handleGrant}
                 >
                   Grant
                 </Button>

@@ -202,6 +202,48 @@ func (r *AuthorizationRepository) RevokeGlobalLabel(ctx context.Context, userID,
 	return err
 }
 
+// LabelGrantRow represents a label grant with scope info and display name.
+type LabelGrantRow struct {
+	Key       string
+	ScopeType string
+	ScopeID   *string
+	ScopeName *string
+}
+
+// ListUserLabelsWithScope returns all active label grants for a user with scope details.
+func (r *AuthorizationRepository) ListUserLabelsWithScope(ctx context.Context, userID string) ([]LabelGrantRow, error) {
+	query := `
+		SELECT DISTINCT l.key,
+			g.scope_type,
+			g.scope_id::text,
+			COALESCE(c.name, t.name) AS scope_name
+		FROM core.grants g
+		JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+		LEFT JOIN core.calcuttas c ON g.scope_type = 'calcutta' AND g.scope_id = c.id
+		LEFT JOIN core.tournaments t ON g.scope_type = 'tournament' AND g.scope_id = t.id
+		WHERE g.user_id = $1
+		  AND g.deleted_at IS NULL
+		  AND g.revoked_at IS NULL
+		  AND (g.expires_at IS NULL OR g.expires_at > NOW())
+		ORDER BY l.key, g.scope_type
+	`
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var grants []LabelGrantRow
+	for rows.Next() {
+		var row LabelGrantRow
+		if err := rows.Scan(&row.Key, &row.ScopeType, &row.ScopeID, &row.ScopeName); err != nil {
+			return nil, err
+		}
+		grants = append(grants, row)
+	}
+	return grants, rows.Err()
+}
+
 // ListGrantsByScope returns user IDs with a given label for a scope.
 func (r *AuthorizationRepository) ListGrantsByScope(ctx context.Context, labelKey, scopeType, scopeID string) ([]string, error) {
 	query := `

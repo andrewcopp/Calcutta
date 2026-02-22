@@ -1,8 +1,8 @@
 import { apiClient } from '../api/apiClient';
 import type {
   AdminUsersListResponse,
+  AdminUserDetailResponse,
   UserResponse,
-  UserProfileResponse,
   AdminInviteUserResponse,
   ListAPIKeysResponse,
   CreateAPIKeyRequest,
@@ -26,16 +26,20 @@ export const adminService = {
     return apiClient.post<AdminInviteUserResponse>(`/admin/users/${userId}/invite/send`);
   },
 
-  async getUser(userId: string): Promise<UserProfileResponse> {
-    return apiClient.get<UserProfileResponse>(`/admin/users/${userId}`);
+  async getUser(userId: string): Promise<AdminUserDetailResponse> {
+    return apiClient.get<AdminUserDetailResponse>(`/admin/users/${userId}`);
   },
 
-  async grantLabel(userId: string, labelKey: string): Promise<void> {
-    return apiClient.post<void>(`/admin/users/${userId}/labels`, { labelKey });
+  async grantLabel(userId: string, labelKey: string, scopeType?: string, scopeId?: string): Promise<void> {
+    return apiClient.post<void>(`/admin/users/${userId}/labels`, { labelKey, scopeType, scopeId });
   },
 
-  async revokeLabel(userId: string, labelKey: string): Promise<void> {
-    return apiClient.delete<void>(`/admin/users/${userId}/labels/${labelKey}`);
+  async revokeLabel(userId: string, labelKey: string, scopeType?: string, scopeId?: string): Promise<void> {
+    const params = new URLSearchParams();
+    if (scopeType) params.set('scopeType', scopeType);
+    if (scopeId) params.set('scopeId', scopeId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return apiClient.delete<void>(`/admin/users/${userId}/labels/${labelKey}${qs}`);
   },
 
   async listApiKeys(): Promise<ListAPIKeysResponse> {

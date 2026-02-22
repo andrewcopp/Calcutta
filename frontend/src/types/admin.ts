@@ -118,3 +118,22 @@ export type UserProfileResponse = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type LabelGrant = {
+  key: string;
+  scopeType: 'global' | 'calcutta' | 'tournament';
+  scopeId?: string;
+  scopeName?: string;
+};
+
+export type AdminUserDetailResponse = {
+  id: string;
+  email: string | null;
+  firstName: string;
+  lastName: string;
+  status: string;
+  labels: LabelGrant[];
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
+};

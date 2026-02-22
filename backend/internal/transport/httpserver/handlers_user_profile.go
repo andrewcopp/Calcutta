@@ -21,6 +21,14 @@ var validLabelKeys = map[string]bool{
 	"user_manager":     true,
 }
 
+var validLabelScopes = map[string]map[string]bool{
+	"site_admin":       {"global": true},
+	"user_manager":     {"global": true},
+	"calcutta_admin":   {"global": true, "calcutta": true},
+	"tournament_admin": {"global": true, "tournament": true},
+	"player":           {"global": true, "calcutta": true},
+}
+
 func (s *Server) meProfileHandler(w http.ResponseWriter, r *http.Request) {
 	userID := authUserID(r.Context())
 	if userID == "" {
@@ -90,13 +98,29 @@ func (s *Server) adminUserDetailHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.UserProfileResponse{
+	grantRows, err := s.authzRepo.ListUserLabelsWithScope(r.Context(), userID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, authUserID)
+		return
+	}
+
+	labels := make([]dtos.LabelGrant, 0, len(grantRows))
+	for _, g := range grantRows {
+		labels = append(labels, dtos.LabelGrant{
+			Key:       g.Key,
+			ScopeType: g.ScopeType,
+			ScopeID:   g.ScopeID,
+			ScopeName: g.ScopeName,
+		})
+	}
+
+	response.WriteJSON(w, http.StatusOK, dtos.AdminUserDetailResponse{
 		ID:          row.ID,
 		Email:       row.Email,
 		FirstName:   row.FirstName,
 		LastName:    row.LastName,
 		Status:      row.Status,
-		Labels:      row.Labels,
+		Labels:      labels,
 		Permissions: row.Permissions,
 		CreatedAt:   row.CreatedAt,
 		UpdatedAt:   row.UpdatedAt,
@@ -115,7 +139,9 @@ func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		LabelKey string `json:"labelKey"`
+		LabelKey  string `json:"labelKey"`
+		ScopeType string `json:"scopeType"`
+		ScopeID   string `json:"scopeId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
@@ -131,9 +157,29 @@ func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := s.authzRepo.GrantGlobalLabel(r.Context(), userID, req.LabelKey); err != nil {
-		httperr.WriteFromErr(w, r, err, authUserID)
+	if req.ScopeType == "" {
+		req.ScopeType = "global"
+	}
+	scopes := validLabelScopes[req.LabelKey]
+	if !scopes[req.ScopeType] {
+		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeType", "invalid scope for this label"), authUserID)
 		return
+	}
+
+	if req.ScopeType == "global" {
+		if err := s.authzRepo.GrantGlobalLabel(r.Context(), userID, req.LabelKey); err != nil {
+			httperr.WriteFromErr(w, r, err, authUserID)
+			return
+		}
+	} else {
+		if _, err := uuid.Parse(req.ScopeID); err != nil {
+			httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeId", "invalid uuid"), authUserID)
+			return
+		}
+		if err := s.authzRepo.GrantLabel(r.Context(), userID, req.LabelKey, req.ScopeType, req.ScopeID); err != nil {
+			httperr.WriteFromErr(w, r, err, authUserID)
+			return
+		}
 	}
 
 	response.WriteJSON(w, http.StatusOK, map[string]string{"status": "granted"})
@@ -161,9 +207,26 @@ func (s *Server) adminRevokeLabelHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := s.authzRepo.RevokeGlobalLabel(r.Context(), userID, labelKey); err != nil {
-		httperr.WriteFromErr(w, r, err, authUserID)
-		return
+	scopeType := r.URL.Query().Get("scopeType")
+	scopeID := r.URL.Query().Get("scopeId")
+	if scopeType == "" {
+		scopeType = "global"
+	}
+
+	if scopeType == "global" {
+		if err := s.authzRepo.RevokeGlobalLabel(r.Context(), userID, labelKey); err != nil {
+			httperr.WriteFromErr(w, r, err, authUserID)
+			return
+		}
+	} else {
+		if _, err := uuid.Parse(scopeID); err != nil {
+			httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeId", "invalid uuid"), authUserID)
+			return
+		}
+		if err := s.authzRepo.RevokeGrant(r.Context(), userID, labelKey, scopeType, scopeID); err != nil {
+			httperr.WriteFromErr(w, r, err, authUserID)
+			return
+		}
 	}
 
 	response.WriteJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
