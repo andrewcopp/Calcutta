@@ -10,6 +10,7 @@ import { TournamentViewPage } from './pages/TournamentViewPage';
 import { TournamentCreatePage } from './pages/TournamentCreatePage';
 import { TournamentSetupTeamsPage } from './pages/TournamentSetupTeamsPage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminKenPomPage } from './pages/AdminKenPomPage';
 import { AdminBundlesPage } from './pages/AdminBundlesPage';
 import { AdminApiKeysPage } from './pages/AdminApiKeysPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
@@ -58,6 +59,7 @@ const AppLayout: React.FC = () => {
         <Route path="/admin/bundles" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_BUNDLES_EXPORT}><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/users" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/hall-of-fame" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_HOF_READ}><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/kenpom" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><AdminKenPomPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/tournaments" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/tournaments/create" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentCreatePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/tournaments/:id" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentViewPage /></RouteErrorBoundary></PermissionProtectedRoute>} />

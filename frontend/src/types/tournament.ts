@@ -12,6 +12,13 @@ export interface Tournament {
   updatedAt: string;
 }
 
+export interface KenPomStats {
+  netRtg: number;
+  oRtg: number;
+  dRtg: number;
+  adjT: number;
+}
+
 export interface TournamentTeam {
   id: string;
   schoolId: string;
@@ -24,6 +31,7 @@ export interface TournamentTeam {
   createdAt: string;
   updatedAt: string;
   school?: { id: string; name: string };
+  kenPom?: KenPomStats;
 }
 
 export interface Competition {

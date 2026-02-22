@@ -132,6 +132,7 @@ type TournamentTeamResponse struct {
 	CreatedAt    time.Time       `json:"createdAt"`
 	UpdatedAt    time.Time       `json:"updatedAt"`
 	School       *SchoolResponse `json:"school,omitempty"`
+	KenPom       *KenPomResponse `json:"kenPom,omitempty"`
 }
 
 func NewTournamentTeamResponse(t *models.TournamentTeam, school *models.School) *TournamentTeamResponse {
@@ -150,7 +151,58 @@ func NewTournamentTeamResponse(t *models.TournamentTeam, school *models.School) 
 	if school != nil {
 		resp.School = NewSchoolResponse(school)
 	}
+	if t.KenPom != nil {
+		resp.KenPom = NewKenPomResponse(t.KenPom)
+	}
 	return resp
+}
+
+type KenPomResponse struct {
+	NetRtg float64 `json:"netRtg"`
+	ORtg   float64 `json:"oRtg"`
+	DRtg   float64 `json:"dRtg"`
+	AdjT   float64 `json:"adjT"`
+}
+
+func NewKenPomResponse(k *models.KenPomStats) *KenPomResponse {
+	resp := &KenPomResponse{}
+	if k.NetRtg != nil {
+		resp.NetRtg = *k.NetRtg
+	}
+	if k.ORtg != nil {
+		resp.ORtg = *k.ORtg
+	}
+	if k.DRtg != nil {
+		resp.DRtg = *k.DRtg
+	}
+	if k.AdjT != nil {
+		resp.AdjT = *k.AdjT
+	}
+	return resp
+}
+
+type UpdateKenPomStatsRequest struct {
+	Stats []KenPomStatEntry `json:"stats"`
+}
+
+type KenPomStatEntry struct {
+	TeamID string  `json:"teamId"`
+	NetRtg float64 `json:"netRtg"`
+	ORtg   float64 `json:"oRtg"`
+	DRtg   float64 `json:"dRtg"`
+	AdjT   float64 `json:"adjT"`
+}
+
+func (r *UpdateKenPomStatsRequest) Validate() error {
+	if len(r.Stats) == 0 {
+		return ErrFieldRequired("stats")
+	}
+	for i, s := range r.Stats {
+		if strings.TrimSpace(s.TeamID) == "" {
+			return ErrFieldInvalid("stats", fmt.Sprintf("stats[%d]: teamId is required", i))
+		}
+	}
+	return nil
 }
 
 // ReplaceTeamsRequest is the request body for PUT /api/tournaments/{id}/teams

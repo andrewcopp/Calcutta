@@ -29,6 +29,14 @@ type KenPomStats struct {
 	AdjT   *float64 `json:"adjT,omitempty"`
 }
 
+type TeamKenPomUpdate struct {
+	TeamID string
+	NetRtg float64
+	ORtg   float64
+	DRtg   float64
+	AdjT   float64
+}
+
 // TournamentConfig holds configuration for tournament rules and validation
 type TournamentConfig struct {
 	MinSeed int

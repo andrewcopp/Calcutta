@@ -59,4 +59,11 @@ export const tournamentService = {
   async revokeTournamentModerator(tournamentId: string, userId: string): Promise<void> {
     await apiClient.delete(`/tournaments/${tournamentId}/moderators/${userId}`);
   },
+
+  async updateKenPomStats(
+    tournamentId: string,
+    stats: { teamId: string; netRtg: number; oRtg: number; dRtg: number; adjT: number }[]
+  ): Promise<TournamentTeam[]> {
+    return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/kenpom`, { stats });
+  },
 };

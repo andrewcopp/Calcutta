@@ -25,6 +25,7 @@ type TournamentRepo interface {
 	GetCompetitions(ctx context.Context) ([]models.Competition, error)
 	GetSeasons(ctx context.Context) ([]models.Season, error)
 	ReplaceTeams(ctx context.Context, tournamentID string, teams []*models.TournamentTeam) error
+	BulkUpsertKenPomStats(ctx context.Context, updates []models.TeamKenPomUpdate) error
 }
 
 type Service struct {
@@ -108,6 +109,47 @@ func (s *Service) ReplaceTeams(ctx context.Context, tournamentID string, inputs 
 	}
 
 	return s.repo.GetTeams(ctx, tournamentID)
+}
+
+// KenPomUpdateInput represents a single team's KenPom rating update.
+type KenPomUpdateInput struct {
+	TeamID string
+	NetRtg float64
+	ORtg   float64
+	DRtg   float64
+	AdjT   float64
+}
+
+// UpdateKenPomStats validates that all team IDs belong to the tournament, then upserts KenPom ratings.
+func (s *Service) UpdateKenPomStats(ctx context.Context, tournamentID string, inputs []KenPomUpdateInput) error {
+	teams, err := s.repo.GetTeams(ctx, tournamentID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch teams: %w", err)
+	}
+
+	validIDs := make(map[string]bool, len(teams))
+	for _, t := range teams {
+		validIDs[t.ID] = true
+	}
+
+	for _, input := range inputs {
+		if !validIDs[input.TeamID] {
+			return fmt.Errorf("team %s does not belong to tournament %s", input.TeamID, tournamentID)
+		}
+	}
+
+	updates := make([]models.TeamKenPomUpdate, 0, len(inputs))
+	for _, input := range inputs {
+		updates = append(updates, models.TeamKenPomUpdate{
+			TeamID: input.TeamID,
+			NetRtg: input.NetRtg,
+			ORtg:   input.ORtg,
+			DRtg:   input.DRtg,
+			AdjT:   input.AdjT,
+		})
+	}
+
+	return s.repo.BulkUpsertKenPomStats(ctx, updates)
 }
 
 // buildTeamsFromInputs converts ReplaceTeamsInput entries into TournamentTeam models.

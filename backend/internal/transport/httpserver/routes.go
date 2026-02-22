@@ -59,6 +59,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		ListCompetitions:     tHandler.HandleListCompetitions,
 		ListSeasons:          tHandler.HandleListSeasons,
 		ReplaceTeams:         s.requirePermission("tournament.game.write", tHandler.HandleReplaceTeams),
+		UpdateKenPomStats:    s.requirePermission("tournament.game.write", tHandler.HandleUpdateKenPomStats),
 	})
 
 	s.registerBracketRoutes(r)

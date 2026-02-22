@@ -238,6 +238,37 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 	return nil
 }
 
+func (r *TournamentRepository) BulkUpsertKenPomStats(ctx context.Context, updates []models.TeamKenPomUpdate) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+	for _, u := range updates {
+		params := sqlc.UpsertTeamKenPomStatsParams{
+			TeamID: u.TeamID,
+			NetRtg: &u.NetRtg,
+			ORtg:   &u.ORtg,
+			DRtg:   &u.DRtg,
+			AdjT:   &u.AdjT,
+		}
+		if err = qtx.UpsertTeamKenPomStats(ctx, params); err != nil {
+			return err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func tournamentTeamFromRow(id, tournamentID, schoolID string, seed int32, region string, byes, wins int32, eliminated bool, createdAt, updatedAt pgtype.Timestamptz, netRtg, oRtg, dRtg, adjT *float64, schoolName *string) *models.TournamentTeam {
 	team := &models.TournamentTeam{
 		ID:           id,

@@ -80,6 +80,10 @@ func (m *mockRepo) UpdateFinalFour(context.Context, string, string, string, stri
 	panic("UpdateFinalFour not implemented")
 }
 
+func (m *mockRepo) BulkUpsertKenPomStats(context.Context, []models.TeamKenPomUpdate) error {
+	panic("BulkUpsertKenPomStats not implemented")
+}
+
 func TestThatCreateReturnsNewTournamentWithCorrectName(t *testing.T) {
 	// GIVEN a service with a mock repo
 	repo := &mockRepo{}

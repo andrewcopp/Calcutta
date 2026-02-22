@@ -28,6 +28,18 @@ export function AdminPage() {
           </Link>
         )}
 
+        {canTournaments && (
+          <Link
+            to="/admin/kenpom"
+            className="block"
+          >
+            <Card className="hover:shadow-md transition-shadow">
+              <h2 className="text-xl font-semibold mb-2">KenPom Ratings</h2>
+              <p className="text-gray-600">Enter or edit KenPom ratings for tournament teams</p>
+            </Card>
+          </Link>
+        )}
+
         {canBundles && (
           <Link
             to="/admin/bundles"
