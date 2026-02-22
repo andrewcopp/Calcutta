@@ -10,7 +10,7 @@ export type AdminUserListItem = {
   inviteConsumedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  labels: string[];
+  roles: string[];
   permissions: string[];
 };
 
@@ -57,11 +57,11 @@ export type UserResponse = {
   status: string;
 };
 
-// --- Bundle Import/Export ---
+// --- Tournament Import/Export ---
 
-export type BundleImportStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+export type TournamentImportStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 
-export type BundleImportReport = {
+export type TournamentImportReport = {
   startedAt: string;
   finishedAt: string;
   dryRun: boolean;
@@ -75,34 +75,34 @@ export type BundleImportReport = {
   rounds: number;
 };
 
-export type BundleVerifyReport = {
+export type TournamentVerifyReport = {
   ok: boolean;
   mismatchCount: number;
   mismatches?: { where: string; what: string }[];
 };
 
-export type BundleImportStartResponse = {
+export type TournamentImportStartResponse = {
   uploadId: string;
-  status: BundleImportStatus;
+  status: TournamentImportStatus;
   filename: string;
   sha256: string;
   sizeBytes: number;
 };
 
-export type BundleImportStatusResponse = {
+export type TournamentImportStatusResponse = {
   uploadId: string;
   filename: string;
   sha256: string;
   sizeBytes: number;
-  status: BundleImportStatus;
+  status: TournamentImportStatus;
   startedAt?: string;
   finishedAt?: string;
   errorMessage?: string;
-  importReport?: BundleImportReport;
-  verifyReport?: BundleVerifyReport;
+  importReport?: TournamentImportReport;
+  verifyReport?: TournamentVerifyReport;
 };
 
-export type BundleExportResult = {
+export type TournamentExportResult = {
   blob: Blob;
   filename: string;
 };
@@ -113,13 +113,13 @@ export type UserProfileResponse = {
   firstName: string;
   lastName: string;
   status: string;
-  labels: string[];
+  roles: string[];
   permissions: string[];
   createdAt: string;
   updatedAt: string;
 };
 
-export type LabelGrant = {
+export type RoleGrant = {
   key: string;
   scopeType: 'global' | 'calcutta' | 'tournament';
   scopeId?: string;
@@ -132,7 +132,7 @@ export type AdminUserDetailResponse = {
   firstName: string;
   lastName: string;
   status: string;
-  labels: LabelGrant[];
+  roles: RoleGrant[];
   permissions: string[];
   createdAt: string;
   updatedAt: string;

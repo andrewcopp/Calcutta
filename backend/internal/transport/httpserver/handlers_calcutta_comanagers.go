@@ -81,7 +81,7 @@ func (s *Server) grantCalcuttaCoManagerHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := s.authzRepo.GrantLabel(r.Context(), user.ID, "calcutta_admin", "calcutta", calcuttaID); err != nil {
+	if err := s.authzRepo.GrantRole(r.Context(), user.ID, "calcutta_admin", "calcutta", calcuttaID); err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}

@@ -16,19 +16,19 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// LabelGranter assigns labels to users with scope.
-type LabelGranter interface {
-	GrantLabel(ctx context.Context, userID, labelKey, scopeType, scopeID string) error
+// RoleGranter assigns roles to users with scope.
+type RoleGranter interface {
+	GrantRole(ctx context.Context, userID, roleKey, scopeType, scopeID string) error
 }
 
 type Handler struct {
 	app        *app.App
 	authz      policy.AuthorizationChecker
-	granter    LabelGranter
+	granter    RoleGranter
 	authUserID func(context.Context) string
 }
 
-func NewHandlerWithAuthUserID(a *app.App, authz policy.AuthorizationChecker, granter LabelGranter, authUserID func(context.Context) string) *Handler {
+func NewHandlerWithAuthUserID(a *app.App, authz policy.AuthorizationChecker, granter RoleGranter, authUserID func(context.Context) string) *Handler {
 	return &Handler{app: a, authz: authz, granter: granter, authUserID: authUserID}
 }
 
@@ -125,7 +125,7 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.granter != nil {
-		_ = h.granter.GrantLabel(r.Context(), calcutta.OwnerID, "calcutta_admin", "calcutta", calcutta.ID)
+		_ = h.granter.GrantRole(r.Context(), calcutta.OwnerID, "calcutta_admin", "calcutta", calcutta.ID)
 	}
 	slog.Info("calcutta_created", "calcutta_id", calcutta.ID)
 	response.WriteJSON(w, http.StatusCreated, dtos.NewCalcuttaResponse(calcutta))

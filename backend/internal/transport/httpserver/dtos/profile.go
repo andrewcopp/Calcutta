@@ -8,13 +8,13 @@ type UserProfileResponse struct {
 	FirstName   string    `json:"firstName"`
 	LastName    string    `json:"lastName"`
 	Status      string    `json:"status"`
-	Labels      []string  `json:"labels"`
+	Roles       []string  `json:"roles"`
 	Permissions []string  `json:"permissions"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-type LabelGrant struct {
+type RoleGrant struct {
 	Key       string  `json:"key"`
 	ScopeType string  `json:"scopeType"`
 	ScopeID   *string `json:"scopeId,omitempty"`
@@ -22,13 +22,13 @@ type LabelGrant struct {
 }
 
 type AdminUserDetailResponse struct {
-	ID          string       `json:"id"`
-	Email       *string      `json:"email,omitempty"`
-	FirstName   string       `json:"firstName"`
-	LastName    string       `json:"lastName"`
-	Status      string       `json:"status"`
-	Labels      []LabelGrant `json:"labels"`
-	Permissions []string     `json:"permissions"`
-	CreatedAt   time.Time    `json:"createdAt"`
-	UpdatedAt   time.Time    `json:"updatedAt"`
+	ID          string      `json:"id"`
+	Email       *string     `json:"email,omitempty"`
+	FirstName   string      `json:"firstName"`
+	LastName    string      `json:"lastName"`
+	Status      string      `json:"status"`
+	Roles       []RoleGrant `json:"roles"`
+	Permissions []string    `json:"permissions"`
+	CreatedAt   time.Time   `json:"createdAt"`
+	UpdatedAt   time.Time   `json:"updatedAt"`
 }

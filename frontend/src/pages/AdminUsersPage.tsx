@@ -135,7 +135,7 @@ export function AdminUsersPage() {
               <TableHeaderCell>Name</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell>Created</TableHeaderCell>
-              <TableHeaderCell>Labels</TableHeaderCell>
+              <TableHeaderCell>Roles</TableHeaderCell>
               <TableHeaderCell>Actions</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -162,9 +162,9 @@ export function AdminUsersPage() {
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
                 <TableCell>
-                  {(u.labels ?? []).length > 0 ? (
+                  {(u.roles ?? []).length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                      {(u.labels ?? []).map((l) => (
+                      {(u.roles ?? []).map((l) => (
                         <Badge key={l} variant="default">{l}</Badge>
                       ))}
                     </div>

@@ -29,7 +29,7 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 
 	protected := r.NewRoute().Subrouter()
 	protected.Use(s.requireAuthMiddleware)
-	s.registerAdminBundleRoutes(protected)
+	s.registerAdminTournamentImportRoutes(protected)
 	s.registerAdminAPIKeyRoutes(protected)
 	s.registerAdminAnalyticsRoutes(protected)
 	s.registerAdminUsersRoutes(protected)

@@ -11,7 +11,7 @@ import { TournamentCreatePage } from './pages/TournamentCreatePage';
 import { TournamentSetupTeamsPage } from './pages/TournamentSetupTeamsPage';
 import { AdminPage } from './pages/AdminPage';
 import { AdminKenPomPage } from './pages/AdminKenPomPage';
-import { AdminBundlesPage } from './pages/AdminBundlesPage';
+import { AdminTournamentImportsPage } from './pages/AdminTournamentImportsPage';
 import { AdminApiKeysPage } from './pages/AdminApiKeysPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminUserProfilePage } from './pages/AdminUserProfilePage';
@@ -59,7 +59,7 @@ const AppLayout: React.FC = () => {
         <Route path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><EntryProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN}><RouteErrorBoundary><AdminPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/api-keys" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_API_KEYS_WRITE}><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
-        <Route path="/admin/bundles" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_BUNDLES_EXPORT}><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/tournament-imports" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_BUNDLES_EXPORT}><RouteErrorBoundary><AdminTournamentImportsPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/users" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/users/:userId" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}><RouteErrorBoundary><AdminUserProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/hall-of-fame" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_HOF_READ}><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></PermissionProtectedRoute>} />

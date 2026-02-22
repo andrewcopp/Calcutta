@@ -6,15 +6,15 @@ import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { adminService } from '../services/adminService';
-import type { BundleImportStatusResponse } from '../types/admin';
+import type { TournamentImportStatusResponse } from '../types/admin';
 
 const MAX_POLL_ATTEMPTS = 120;
 
-export function AdminBundlesPage() {
+export function AdminTournamentImportsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<BundleImportStatusResponse | null>(null);
+  const [result, setResult] = useState<TournamentImportStatusResponse | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
   const pollAttemptsRef = useRef(0);
 
@@ -34,7 +34,7 @@ export function AdminBundlesPage() {
         return;
       }
       try {
-        const body = await adminService.getBundleImportStatus(uploadId);
+        const body = await adminService.getTournamentImportStatus(uploadId);
         if (cancelled) return;
 
         setResult(body);
@@ -69,7 +69,7 @@ export function AdminBundlesPage() {
     setResult(null);
     setBusy(true);
     try {
-      const { blob, filename } = await adminService.exportBundle();
+      const { blob, filename } = await adminService.exportTournamentData();
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -96,7 +96,7 @@ export function AdminBundlesPage() {
     setUploadId(null);
     setBusy(true);
     try {
-      const started = await adminService.startBundleImport(file);
+      const started = await adminService.startTournamentImport(file);
       setUploadId(started.uploadId);
       setResult({
         uploadId: started.uploadId,
@@ -116,22 +116,22 @@ export function AdminBundlesPage() {
       <Breadcrumb
         items={[
           { label: 'Admin', href: '/admin' },
-          { label: 'Bundles' },
+          { label: 'Tournament Data' },
         ]}
       />
-      <PageHeader title="Admin: Bundles" />
+      <PageHeader title="Admin: Tournament Data" />
 
       <Card className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Export</h2>
         <p className="text-gray-600 mb-4">Download a zip of the current DB state in bundle format.</p>
         <Button onClick={download} disabled={busy}>
-          Download bundles (.zip)
+          Download tournament data (.zip)
         </Button>
       </Card>
 
       <Card>
         <h2 className="text-xl font-semibold mb-2">Import</h2>
-        <p className="text-gray-600 mb-4">Upload a bundles zip and import it into the database.</p>
+        <p className="text-gray-600 mb-4">Upload a tournament data zip and import it into the database.</p>
 
         <div className="flex flex-col gap-3">
           <label className="flex items-center gap-3 cursor-pointer">

@@ -14,7 +14,7 @@ import (
 )
 
 // AdminUserRow holds the result of the admin user list query, including
-// aggregated labels and permissions from the authorization system.
+// aggregated roles and permissions from the authorization system.
 type AdminUserRow struct {
 	ID               string
 	Email            *string
@@ -27,7 +27,7 @@ type AdminUserRow struct {
 	InviteConsumedAt *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
-	Labels           []string
+	Roles            []string
 	Permissions      []string
 }
 
@@ -157,22 +157,22 @@ func buildInviteUpdateSQL(setLastSent bool) string {
 		WHERE id = $1 AND deleted_at IS NULL`
 }
 
-// GetAdminUserByID returns a single user with their aggregated labels and
+// GetAdminUserByID returns a single user with their aggregated roles and
 // permissions, using the same CTE logic as ListAdminUsers.
 func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*AdminUserRow, error) {
 	row := r.pool.QueryRow(ctx, `
 		WITH active_grants AS (
-			SELECT g.id, g.user_id, g.scope_type, g.scope_id, g.label_id, g.permission_id, g.created_at, g.updated_at, g.expires_at, g.revoked_at, g.deleted_at
+			SELECT g.id, g.user_id, g.scope_type, g.scope_id, g.role_id, g.permission_id, g.created_at, g.updated_at, g.expires_at, g.revoked_at, g.deleted_at
 			FROM core.grants g
 			WHERE g.revoked_at IS NULL
 			  AND g.scope_type = 'global'
 			  AND (g.expires_at IS NULL OR g.expires_at > NOW())
 		),
-		user_labels AS (
-			SELECT g.user_id, l.key
+		user_roles AS (
+			SELECT g.user_id, r.key
 			FROM active_grants g
-			JOIN core.labels l ON g.label_id = l.id
-			WHERE l.deleted_at IS NULL
+			JOIN core.roles r ON g.role_id = r.id
+			WHERE r.deleted_at IS NULL
 		),
 		user_permissions AS (
 			SELECT g.user_id, p.key
@@ -182,9 +182,9 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 			UNION
 			SELECT g.user_id, p2.key
 			FROM active_grants g
-			JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-			JOIN core.label_permissions lp ON lp.label_id = l.id
-			JOIN core.permissions p2 ON lp.permission_id = p2.id AND p2.deleted_at IS NULL
+			JOIN core.roles r ON g.role_id = r.id AND r.deleted_at IS NULL
+			JOIN core.role_permissions rp ON rp.role_id = r.id
+			JOIN core.permissions p2 ON rp.permission_id = p2.id AND p2.deleted_at IS NULL
 		)
 		SELECT
 			u.id::text,
@@ -198,10 +198,10 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 			u.invite_consumed_at,
 			u.created_at,
 			u.updated_at,
-			COALESCE(array_agg(DISTINCT ul.key) FILTER (WHERE ul.key IS NOT NULL), ARRAY[]::text[]) AS labels,
+			COALESCE(array_agg(DISTINCT ur.key) FILTER (WHERE ur.key IS NOT NULL), ARRAY[]::text[]) AS roles,
 			COALESCE(array_agg(DISTINCT up.key) FILTER (WHERE up.key IS NOT NULL), ARRAY[]::text[]) AS permissions
 		FROM core.users u
-		LEFT JOIN user_labels ul ON ul.user_id = u.id
+		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN user_permissions up ON up.user_id = u.id
 		WHERE u.deleted_at IS NULL
 		  AND u.id = $1
@@ -209,7 +209,7 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 	`, userID)
 
 	var item AdminUserRow
-	var labels []string
+	var roles []string
 	var perms []string
 	var invitedAt pgtype.Timestamptz
 	var lastInviteSentAt pgtype.Timestamptz
@@ -228,7 +228,7 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 		&inviteConsumedAt,
 		&item.CreatedAt,
 		&item.UpdatedAt,
-		&labels,
+		&roles,
 		&perms,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -242,31 +242,31 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 	item.InviteExpiresAt = TimestamptzToPtrTimeUTC(inviteExpiresAt)
 	item.InviteConsumedAt = TimestamptzToPtrTimeUTC(inviteConsumedAt)
 
-	sort.Strings(labels)
+	sort.Strings(roles)
 	sort.Strings(perms)
-	item.Labels = labels
+	item.Roles = roles
 	item.Permissions = perms
 
 	return &item, nil
 }
 
-// ListAdminUsers returns all non-deleted users with their aggregated labels
+// ListAdminUsers returns all non-deleted users with their aggregated roles
 // and permissions, optionally filtered by status. Results are ordered by
 // created_at descending.
 func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string) ([]AdminUserRow, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH active_grants AS (
-			SELECT g.id, g.user_id, g.scope_type, g.scope_id, g.label_id, g.permission_id, g.created_at, g.updated_at, g.expires_at, g.revoked_at, g.deleted_at
+			SELECT g.id, g.user_id, g.scope_type, g.scope_id, g.role_id, g.permission_id, g.created_at, g.updated_at, g.expires_at, g.revoked_at, g.deleted_at
 			FROM core.grants g
 			WHERE g.revoked_at IS NULL
 			  AND g.scope_type = 'global'
 			  AND (g.expires_at IS NULL OR g.expires_at > NOW())
 		),
-		user_labels AS (
-			SELECT g.user_id, l.key
+		user_roles AS (
+			SELECT g.user_id, r.key
 			FROM active_grants g
-			JOIN core.labels l ON g.label_id = l.id
-			WHERE l.deleted_at IS NULL
+			JOIN core.roles r ON g.role_id = r.id
+			WHERE r.deleted_at IS NULL
 		),
 		user_permissions AS (
 			SELECT g.user_id, p.key
@@ -276,9 +276,9 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 			UNION
 			SELECT g.user_id, p2.key
 			FROM active_grants g
-			JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-			JOIN core.label_permissions lp ON lp.label_id = l.id
-			JOIN core.permissions p2 ON lp.permission_id = p2.id AND p2.deleted_at IS NULL
+			JOIN core.roles r ON g.role_id = r.id AND r.deleted_at IS NULL
+			JOIN core.role_permissions rp ON rp.role_id = r.id
+			JOIN core.permissions p2 ON rp.permission_id = p2.id AND p2.deleted_at IS NULL
 		)
 		SELECT
 			u.id::text,
@@ -292,10 +292,10 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 			u.invite_consumed_at,
 			u.created_at,
 			u.updated_at,
-			COALESCE(array_agg(DISTINCT ul.key) FILTER (WHERE ul.key IS NOT NULL), ARRAY[]::text[]) AS labels,
+			COALESCE(array_agg(DISTINCT ur.key) FILTER (WHERE ur.key IS NOT NULL), ARRAY[]::text[]) AS roles,
 			COALESCE(array_agg(DISTINCT up.key) FILTER (WHERE up.key IS NOT NULL), ARRAY[]::text[]) AS permissions
 		FROM core.users u
-		LEFT JOIN user_labels ul ON ul.user_id = u.id
+		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN user_permissions up ON up.user_id = u.id
 		WHERE u.deleted_at IS NULL
 		  AND ($1 = '' OR u.status = $1)
@@ -310,7 +310,7 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 	var items []AdminUserRow
 	for rows.Next() {
 		var item AdminUserRow
-		var labels []string
+		var roles []string
 		var perms []string
 
 		var invitedAt pgtype.Timestamptz
@@ -330,7 +330,7 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 			&inviteConsumedAt,
 			&item.CreatedAt,
 			&item.UpdatedAt,
-			&labels,
+			&roles,
 			&perms,
 		); err != nil {
 			return nil, err
@@ -341,9 +341,9 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 		item.InviteExpiresAt = TimestamptzToPtrTimeUTC(inviteExpiresAt)
 		item.InviteConsumedAt = TimestamptzToPtrTimeUTC(inviteConsumedAt)
 
-		sort.Strings(labels)
+		sort.Strings(roles)
 		sort.Strings(perms)
-		item.Labels = labels
+		item.Roles = roles
 		item.Permissions = perms
 
 		items = append(items, item)

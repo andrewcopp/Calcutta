@@ -25,11 +25,11 @@ func main() {
 func run() error {
 	slog.Info("workers_starting")
 
-	runBundleImportWorker := flag.Bool("bundle-import-worker", true, "Run the bundle import worker")
+	runTournamentImportWorker := flag.Bool("tournament-import-worker", true, "Run the tournament import worker")
 	runLabPipelineWorker := flag.Bool("lab-pipeline-worker", true, "Run the lab pipeline worker")
 	flag.Parse()
 
-	if !*runBundleImportWorker && !*runLabPipelineWorker {
+	if !*runTournamentImportWorker && !*runLabPipelineWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -46,7 +46,7 @@ func run() error {
 	defer pool.Close()
 
 	progress := workers.NewDBProgressWriter(pool)
-	bundleWorker := workers.NewBundleImportWorker(pool)
+	tournamentImportWorker := workers.NewTournamentImportWorker(pool)
 	labPipelineWorker := workers.NewLabPipelineWorker(pool, progress, workers.LabPipelineWorkerConfig{
 		PythonBin:          cfg.PythonBin,
 		RunJobsMaxAttempts: cfg.RunJobsMaxAttempts,
@@ -58,11 +58,11 @@ func run() error {
 
 	var wg sync.WaitGroup
 
-	if *runBundleImportWorker {
+	if *runTournamentImportWorker {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			bundleWorker.Run(ctx)
+			tournamentImportWorker.Run(ctx)
 		}()
 	}
 	if *runLabPipelineWorker {

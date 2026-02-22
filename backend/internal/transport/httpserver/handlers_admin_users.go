@@ -31,7 +31,7 @@ type adminUserListItem struct {
 	InviteConsumedAt *time.Time `json:"inviteConsumedAt"`
 	CreatedAt        time.Time  `json:"createdAt"`
 	UpdatedAt        time.Time  `json:"updatedAt"`
-	Labels           []string   `json:"labels"`
+	Roles            []string   `json:"roles"`
 	Permissions      []string   `json:"permissions"`
 }
 
@@ -45,8 +45,8 @@ func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
 	r.HandleFunc("/api/admin/users/{id}/invite/send", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
 	r.HandleFunc("/api/admin/users/{id}", s.requirePermission("admin.users.read", s.adminUserDetailHandler)).Methods("GET")
-	r.HandleFunc("/api/admin/users/{id}/labels", s.requirePermission("admin.users.write", s.adminGrantLabelHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}/labels/{labelKey}", s.requirePermission("admin.users.write", s.adminRevokeLabelHandler)).Methods("DELETE")
+	r.HandleFunc("/api/admin/users/{id}/roles", s.requirePermission("admin.users.write", s.adminGrantRoleHandler)).Methods("POST")
+	r.HandleFunc("/api/admin/users/{id}/roles/{roleKey}", s.requirePermission("admin.users.write", s.adminRevokeRoleHandler)).Methods("DELETE")
 }
 
 func (s *Server) adminUsersSetEmailHandler(w http.ResponseWriter, r *http.Request) {
@@ -304,7 +304,7 @@ func (s *Server) adminUsersListHandler(w http.ResponseWriter, r *http.Request) {
 			InviteConsumedAt: row.InviteConsumedAt,
 			CreatedAt:        row.CreatedAt,
 			UpdatedAt:        row.UpdatedAt,
-			Labels:           row.Labels,
+			Roles:            row.Roles,
 			Permissions:      row.Permissions,
 		})
 	}

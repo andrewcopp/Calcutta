@@ -166,7 +166,7 @@ func (h *Handler) HandleAcceptInvitation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if h.granter != nil {
-		_ = h.granter.GrantLabel(r.Context(), userID, "player", "calcutta", calcuttaID)
+		_ = h.granter.GrantRole(r.Context(), userID, "player", "calcutta", calcuttaID)
 	}
 
 	invitation.Status = "accepted"

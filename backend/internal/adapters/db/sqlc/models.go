@@ -34,7 +34,7 @@ type CoreAuthSession struct {
 	DeletedAt        pgtype.Timestamptz
 }
 
-type CoreBundleUpload struct {
+type CoreTournamentImport struct {
 	ID           string
 	Filename     string
 	Sha256       string
@@ -122,7 +122,7 @@ type CoreGrant struct {
 	UserID       string
 	ScopeType    string
 	ScopeID      pgtype.UUID
-	LabelID      pgtype.UUID
+	RoleID       pgtype.UUID
 	PermissionID pgtype.UUID
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -140,7 +140,7 @@ type CoreIdempotencyKey struct {
 	ExpiresAt      pgtype.Timestamptz
 }
 
-type CoreLabel struct {
+type CoreRole struct {
 	ID          string
 	Key         string
 	Description *string
@@ -149,8 +149,8 @@ type CoreLabel struct {
 	DeletedAt   pgtype.Timestamptz
 }
 
-type CoreLabelPermission struct {
-	LabelID      string
+type CoreRolePermission struct {
+	RoleID       string
 	PermissionID string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -380,7 +380,7 @@ type DerivedSimulatedTeam struct {
 type DerivedSimulatedTournament struct {
 	ID                   string
 	TournamentID         string
-	SimulationStateID    string
+	TournamentSnapshotID string
 	NSims                int32
 	Seed                 int32
 	ProbabilitySourceKey string
@@ -389,7 +389,7 @@ type DerivedSimulatedTournament struct {
 	DeletedAt            pgtype.Timestamptz
 }
 
-type DerivedSimulationState struct {
+type DerivedTournamentSnapshot struct {
 	ID           string
 	TournamentID string
 	Source       string
@@ -399,16 +399,16 @@ type DerivedSimulationState struct {
 	DeletedAt    pgtype.Timestamptz
 }
 
-type DerivedSimulationStateTeam struct {
-	ID                string
-	SimulationStateID string
-	TeamID            string
-	Wins              int32
-	Byes              int32
-	Eliminated        bool
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
-	DeletedAt         pgtype.Timestamptz
+type DerivedTournamentSnapshotTeam struct {
+	ID                   string
+	TournamentSnapshotID string
+	TeamID               string
+	Wins                 int32
+	Byes                 int32
+	Eliminated           bool
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
 }
 
 type LabEntry struct {

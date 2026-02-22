@@ -6,7 +6,7 @@ import { PERMISSIONS } from '../constants/permissions';
 
 export function AdminPage() {
   const canTournaments = useHasPermission(PERMISSIONS.TOURNAMENT_GAME_WRITE);
-  const canBundles = useHasPermission(PERMISSIONS.ADMIN_BUNDLES_EXPORT);
+  const canTournamentImports = useHasPermission(PERMISSIONS.ADMIN_BUNDLES_EXPORT);
   const canApiKeys = useHasPermission(PERMISSIONS.ADMIN_API_KEYS_WRITE);
   const canUsers = useHasPermission(PERMISSIONS.ADMIN_USERS_READ);
   const canHof = useHasPermission(PERMISSIONS.ADMIN_HOF_READ);
@@ -40,14 +40,14 @@ export function AdminPage() {
           </Link>
         )}
 
-        {canBundles && (
+        {canTournamentImports && (
           <Link
-            to="/admin/bundles"
+            to="/admin/tournament-imports"
             className="block"
           >
             <Card className="hover:shadow-md transition-shadow">
-              <h2 className="text-xl font-semibold mb-2">Bundles</h2>
-              <p className="text-gray-600">Export or import bundle archives</p>
+              <h2 className="text-xl font-semibold mb-2">Tournament Data</h2>
+              <p className="text-gray-600">Export or import tournament data archives</p>
             </Card>
           </Link>
         )}

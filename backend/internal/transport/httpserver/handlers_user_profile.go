@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var validLabelKeys = map[string]bool{
+var validRoleKeys = map[string]bool{
 	"site_admin":       true,
 	"tournament_admin": true,
 	"calcutta_admin":   true,
@@ -21,7 +21,7 @@ var validLabelKeys = map[string]bool{
 	"user_manager":     true,
 }
 
-var validLabelScopes = map[string]map[string]bool{
+var validRoleScopes = map[string]map[string]bool{
 	"site_admin":       {"global": true},
 	"user_manager":     {"global": true},
 	"calcutta_admin":   {"global": true, "calcutta": true},
@@ -46,13 +46,13 @@ func (s *Server) meProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	labels, err := s.authzRepo.ListUserGlobalLabels(r.Context(), userID)
+	roles, err := s.authzRepo.ListUserGlobalRoles(r.Context(), userID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
-	if labels == nil {
-		labels = []string{}
+	if roles == nil {
+		roles = []string{}
 	}
 
 	permissions, err := s.authzRepo.ListUserGlobalPermissions(r.Context(), userID)
@@ -70,7 +70,7 @@ func (s *Server) meProfileHandler(w http.ResponseWriter, r *http.Request) {
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
 		Status:      user.Status,
-		Labels:      labels,
+		Roles:       roles,
 		Permissions: permissions,
 		CreatedAt:   user.CreatedAt,
 		UpdatedAt:   user.UpdatedAt,
@@ -98,15 +98,15 @@ func (s *Server) adminUserDetailHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	grantRows, err := s.authzRepo.ListUserLabelsWithScope(r.Context(), userID)
+	grantRows, err := s.authzRepo.ListUserRolesWithScope(r.Context(), userID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
 
-	labels := make([]dtos.LabelGrant, 0, len(grantRows))
+	roles := make([]dtos.RoleGrant, 0, len(grantRows))
 	for _, g := range grantRows {
-		labels = append(labels, dtos.LabelGrant{
+		roles = append(roles, dtos.RoleGrant{
 			Key:       g.Key,
 			ScopeType: g.ScopeType,
 			ScopeID:   g.ScopeID,
@@ -120,14 +120,14 @@ func (s *Server) adminUserDetailHandler(w http.ResponseWriter, r *http.Request) 
 		FirstName:   row.FirstName,
 		LastName:    row.LastName,
 		Status:      row.Status,
-		Labels:      labels,
+		Roles:       roles,
 		Permissions: row.Permissions,
 		CreatedAt:   row.CreatedAt,
 		UpdatedAt:   row.UpdatedAt,
 	})
 }
 
-func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) adminGrantRoleHandler(w http.ResponseWriter, r *http.Request) {
 	userID := strings.TrimSpace(mux.Vars(r)["id"])
 	if userID == "" {
 		httperr.WriteFromErr(w, r, dtos.ErrFieldRequired("id"), authUserID)
@@ -139,7 +139,7 @@ func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		LabelKey  string `json:"labelKey"`
+		RoleKey   string `json:"roleKey"`
 		ScopeType string `json:"scopeType"`
 		ScopeID   string `json:"scopeId"`
 	}
@@ -147,27 +147,27 @@ func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
 		return
 	}
-	req.LabelKey = strings.TrimSpace(req.LabelKey)
-	if req.LabelKey == "" {
-		httperr.WriteFromErr(w, r, dtos.ErrFieldRequired("labelKey"), authUserID)
+	req.RoleKey = strings.TrimSpace(req.RoleKey)
+	if req.RoleKey == "" {
+		httperr.WriteFromErr(w, r, dtos.ErrFieldRequired("roleKey"), authUserID)
 		return
 	}
-	if !validLabelKeys[req.LabelKey] {
-		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("labelKey", "unknown label key"), authUserID)
+	if !validRoleKeys[req.RoleKey] {
+		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("roleKey", "unknown role key"), authUserID)
 		return
 	}
 
 	if req.ScopeType == "" {
 		req.ScopeType = "global"
 	}
-	scopes := validLabelScopes[req.LabelKey]
+	scopes := validRoleScopes[req.RoleKey]
 	if !scopes[req.ScopeType] {
-		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeType", "invalid scope for this label"), authUserID)
+		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeType", "invalid scope for this role"), authUserID)
 		return
 	}
 
 	if req.ScopeType == "global" {
-		if err := s.authzRepo.GrantGlobalLabel(r.Context(), userID, req.LabelKey); err != nil {
+		if err := s.authzRepo.GrantGlobalRole(r.Context(), userID, req.RoleKey); err != nil {
 			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
@@ -176,7 +176,7 @@ func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) 
 			httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeId", "invalid uuid"), authUserID)
 			return
 		}
-		if err := s.authzRepo.GrantLabel(r.Context(), userID, req.LabelKey, req.ScopeType, req.ScopeID); err != nil {
+		if err := s.authzRepo.GrantRole(r.Context(), userID, req.RoleKey, req.ScopeType, req.ScopeID); err != nil {
 			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
@@ -185,10 +185,10 @@ func (s *Server) adminGrantLabelHandler(w http.ResponseWriter, r *http.Request) 
 	response.WriteJSON(w, http.StatusOK, map[string]string{"status": "granted"})
 }
 
-func (s *Server) adminRevokeLabelHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) adminRevokeRoleHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := strings.TrimSpace(vars["id"])
-	labelKey := strings.TrimSpace(vars["labelKey"])
+	roleKey := strings.TrimSpace(vars["roleKey"])
 
 	if userID == "" {
 		httperr.WriteFromErr(w, r, dtos.ErrFieldRequired("id"), authUserID)
@@ -198,12 +198,12 @@ func (s *Server) adminRevokeLabelHandler(w http.ResponseWriter, r *http.Request)
 		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("id", "invalid uuid"), authUserID)
 		return
 	}
-	if labelKey == "" {
-		httperr.WriteFromErr(w, r, dtos.ErrFieldRequired("labelKey"), authUserID)
+	if roleKey == "" {
+		httperr.WriteFromErr(w, r, dtos.ErrFieldRequired("roleKey"), authUserID)
 		return
 	}
-	if !validLabelKeys[labelKey] {
-		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("labelKey", "unknown label key"), authUserID)
+	if !validRoleKeys[roleKey] {
+		httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("roleKey", "unknown role key"), authUserID)
 		return
 	}
 
@@ -214,7 +214,7 @@ func (s *Server) adminRevokeLabelHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	if scopeType == "global" {
-		if err := s.authzRepo.RevokeGlobalLabel(r.Context(), userID, labelKey); err != nil {
+		if err := s.authzRepo.RevokeGlobalRole(r.Context(), userID, roleKey); err != nil {
 			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}
@@ -223,7 +223,7 @@ func (s *Server) adminRevokeLabelHandler(w http.ResponseWriter, r *http.Request)
 			httperr.WriteFromErr(w, r, dtos.ErrFieldInvalid("scopeId", "invalid uuid"), authUserID)
 			return
 		}
-		if err := s.authzRepo.RevokeGrant(r.Context(), userID, labelKey, scopeType, scopeID); err != nil {
+		if err := s.authzRepo.RevokeGrant(r.Context(), userID, roleKey, scopeType, scopeID); err != nil {
 			httperr.WriteFromErr(w, r, err, authUserID)
 			return
 		}

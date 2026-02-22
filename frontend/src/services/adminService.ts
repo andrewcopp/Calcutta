@@ -7,9 +7,9 @@ import type {
   ListAPIKeysResponse,
   CreateAPIKeyRequest,
   CreateAPIKeyResponse,
-  BundleExportResult,
-  BundleImportStartResponse,
-  BundleImportStatusResponse,
+  TournamentExportResult,
+  TournamentImportStartResponse,
+  TournamentImportStatusResponse,
 } from '../types/admin';
 
 export const adminService = {
@@ -30,16 +30,16 @@ export const adminService = {
     return apiClient.get<AdminUserDetailResponse>(`/admin/users/${userId}`);
   },
 
-  async grantLabel(userId: string, labelKey: string, scopeType?: string, scopeId?: string): Promise<void> {
-    return apiClient.post<void>(`/admin/users/${userId}/labels`, { labelKey, scopeType, scopeId });
+  async grantRole(userId: string, roleKey: string, scopeType?: string, scopeId?: string): Promise<void> {
+    return apiClient.post<void>(`/admin/users/${userId}/roles`, { roleKey, scopeType, scopeId });
   },
 
-  async revokeLabel(userId: string, labelKey: string, scopeType?: string, scopeId?: string): Promise<void> {
+  async revokeRole(userId: string, roleKey: string, scopeType?: string, scopeId?: string): Promise<void> {
     const params = new URLSearchParams();
     if (scopeType) params.set('scopeType', scopeType);
     if (scopeId) params.set('scopeId', scopeId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return apiClient.delete<void>(`/admin/users/${userId}/labels/${labelKey}${qs}`);
+    return apiClient.delete<void>(`/admin/users/${userId}/roles/${roleKey}${qs}`);
   },
 
   async listApiKeys(): Promise<ListAPIKeysResponse> {
@@ -56,10 +56,10 @@ export const adminService = {
     return apiClient.delete<void>(`/admin/api-keys/${id}`);
   },
 
-  // --- Bundle Import/Export ---
+  // --- Tournament Import/Export ---
 
-  async exportBundle(): Promise<BundleExportResult> {
-    const res = await apiClient.fetch('/admin/bundles/export');
+  async exportTournamentData(): Promise<TournamentExportResult> {
+    const res = await apiClient.fetch('/admin/tournament-imports/export');
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
       throw new Error(txt || `Export failed (${res.status})`);
@@ -67,17 +67,17 @@ export const adminService = {
     const blob = await res.blob();
     const cd = res.headers.get('content-disposition') || '';
     const match = /filename="([^"]+)"/i.exec(cd);
-    const filename = match?.[1] || 'bundles.zip';
+    const filename = match?.[1] || 'tournament-data.zip';
     return { blob, filename };
   },
 
-  async startBundleImport(file: File): Promise<BundleImportStartResponse> {
+  async startTournamentImport(file: File): Promise<TournamentImportStartResponse> {
     const form = new FormData();
     form.append('file', file);
-    return apiClient.post<BundleImportStartResponse>('/admin/bundles/import', form);
+    return apiClient.post<TournamentImportStartResponse>('/admin/tournament-imports/import', form);
   },
 
-  async getBundleImportStatus(uploadId: string): Promise<BundleImportStatusResponse> {
-    return apiClient.get<BundleImportStatusResponse>(`/admin/bundles/import/${uploadId}`);
+  async getTournamentImportStatus(uploadId: string): Promise<TournamentImportStatusResponse> {
+    return apiClient.get<TournamentImportStatusResponse>(`/admin/tournament-imports/import/${uploadId}`);
   },
 };

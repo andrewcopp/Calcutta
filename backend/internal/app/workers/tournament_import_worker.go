@@ -19,33 +19,33 @@ import (
 )
 
 const (
-	defaultBundleWorkerPollInterval = 2 * time.Second
-	defaultBundleWorkerStaleAfter   = 30 * time.Minute
+	defaultTournamentImportWorkerPollInterval = 2 * time.Second
+	defaultTournamentImportWorkerStaleAfter   = 30 * time.Minute
 )
 
-type BundleImportWorker struct {
+type TournamentImportWorker struct {
 	pool *pgxpool.Pool
 }
 
-func NewBundleImportWorker(pool *pgxpool.Pool) *BundleImportWorker {
-	return &BundleImportWorker{pool: pool}
+func NewTournamentImportWorker(pool *pgxpool.Pool) *TournamentImportWorker {
+	return &TournamentImportWorker{pool: pool}
 }
 
-func (w *BundleImportWorker) Run(ctx context.Context) {
-	w.RunWithOptions(ctx, defaultBundleWorkerPollInterval, defaultBundleWorkerStaleAfter)
+func (w *TournamentImportWorker) Run(ctx context.Context) {
+	w.RunWithOptions(ctx, defaultTournamentImportWorkerPollInterval, defaultTournamentImportWorkerStaleAfter)
 }
 
-func (w *BundleImportWorker) RunWithOptions(ctx context.Context, pollInterval time.Duration, staleAfter time.Duration) {
+func (w *TournamentImportWorker) RunWithOptions(ctx context.Context, pollInterval time.Duration, staleAfter time.Duration) {
 	if w == nil || w.pool == nil {
-		slog.Warn("bundle_import_worker_disabled", "reason", "database pool not available")
+		slog.Warn("tournament_import_worker_disabled", "reason", "database pool not available")
 		<-ctx.Done()
 		return
 	}
 	if pollInterval <= 0 {
-		pollInterval = defaultBundleWorkerPollInterval
+		pollInterval = defaultTournamentImportWorkerPollInterval
 	}
 	if staleAfter <= 0 {
-		staleAfter = defaultBundleWorkerStaleAfter
+		staleAfter = defaultTournamentImportWorkerStaleAfter
 	}
 
 	t := time.NewTicker(pollInterval)
@@ -56,20 +56,20 @@ func (w *BundleImportWorker) RunWithOptions(ctx context.Context, pollInterval ti
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			uploadID, ok, err := w.claimNextBundleUpload(ctx, staleAfter)
+			uploadID, ok, err := w.claimNextTournamentImport(ctx, staleAfter)
 			if err != nil {
-				slog.Error("bundle_import_claim_failed", "error", err)
+				slog.Error("tournament_import_claim_failed", "error", err)
 				continue
 			}
 			if !ok {
 				continue
 			}
-			w.processBundleUpload(ctx, uploadID)
+			w.processTournamentImport(ctx, uploadID)
 		}
 	}
 }
 
-func (w *BundleImportWorker) claimNextBundleUpload(ctx context.Context, staleAfter time.Duration) (string, bool, error) {
+func (w *TournamentImportWorker) claimNextTournamentImport(ctx context.Context, staleAfter time.Duration) (string, bool, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -90,7 +90,7 @@ func (w *BundleImportWorker) claimNextBundleUpload(ctx context.Context, staleAft
 	}()
 
 	q := sqlc.New(w.pool).WithTx(tx)
-	uploadID, err := q.ClaimNextBundleUpload(ctx, sqlc.ClaimNextBundleUploadParams{
+	uploadID, err := q.ClaimNextTournamentImport(ctx, sqlc.ClaimNextTournamentImportParams{
 		Now:         pgtype.Timestamptz{Time: now, Valid: true},
 		StaleBefore: pgtype.Timestamptz{Time: staleBefore, Valid: true},
 	})
@@ -109,19 +109,19 @@ func (w *BundleImportWorker) claimNextBundleUpload(ctx context.Context, staleAft
 	return uploadID, true, nil
 }
 
-func (w *BundleImportWorker) processBundleUpload(ctx context.Context, uploadID string) {
+func (w *TournamentImportWorker) processTournamentImport(ctx context.Context, uploadID string) {
 	if uploadID == "" {
 		return
 	}
 
 	err := func() error {
 		q := sqlc.New(w.pool)
-		zipBytes, err := q.GetBundleUploadArchive(ctx, uploadID)
+		zipBytes, err := q.GetTournamentImportArchive(ctx, uploadID)
 		if err != nil {
 			return err
 		}
 
-		tmpDir, err := os.MkdirTemp("", "calcutta-bundles-import-job-*")
+		tmpDir, err := os.MkdirTemp("", "calcutta-tournament-import-job-*")
 		if err != nil {
 			return err
 		}
@@ -150,37 +150,37 @@ func (w *BundleImportWorker) processBundleUpload(ctx context.Context, uploadID s
 			return fmt.Errorf("marshal verify report: %w", err)
 		}
 
-		err = q.MarkBundleUploadSucceeded(ctx, sqlc.MarkBundleUploadSucceededParams{
+		err = q.MarkTournamentImportSucceeded(ctx, sqlc.MarkTournamentImportSucceededParams{
 			UploadID:     uploadID,
 			ImportReport: impJSON,
 			VerifyReport: verJSON,
 		})
 		if err != nil {
-			slog.Error("bundle_upload_mark_succeeded_failed", "upload_id", uploadID, "error", err)
+			slog.Error("tournament_import_mark_succeeded_failed", "upload_id", uploadID, "error", err)
 		}
 		return nil
 	}()
 	if err != nil {
-		w.failBundleUpload(ctx, uploadID, err)
+		w.failTournamentImport(ctx, uploadID, err)
 	}
 }
 
-func (w *BundleImportWorker) failBundleUpload(ctx context.Context, uploadID string, jobErr error) {
+func (w *TournamentImportWorker) failTournamentImport(ctx context.Context, uploadID string, jobErr error) {
 	if uploadID == "" || jobErr == nil {
 		return
 	}
 
 	msg := jobErr.Error()
 	if errors.Is(jobErr, pgx.ErrNoRows) {
-		msg = "bundle upload not found"
+		msg = "tournament import not found"
 	}
 
 	q := sqlc.New(w.pool)
-	err := q.MarkBundleUploadFailed(ctx, sqlc.MarkBundleUploadFailedParams{
+	err := q.MarkTournamentImportFailed(ctx, sqlc.MarkTournamentImportFailedParams{
 		UploadID:     uploadID,
 		ErrorMessage: &msg,
 	})
 	if err != nil {
-		slog.Error("bundle_upload_mark_failed_failed", "upload_id", uploadID, "error", err)
+		slog.Error("tournament_import_mark_failed_failed", "upload_id", uploadID, "error", err)
 	}
 }

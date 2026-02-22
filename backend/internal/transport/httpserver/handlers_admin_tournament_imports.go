@@ -19,7 +19,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type adminBundlesImportResponse struct {
+type adminTournamentImportResponse struct {
 	UploadID  string `json:"uploadId"`
 	Status    string `json:"status"`
 	Filename  string `json:"filename"`
@@ -27,7 +27,7 @@ type adminBundlesImportResponse struct {
 	SizeBytes int    `json:"sizeBytes"`
 }
 
-type adminBundlesImportStatusResponse struct {
+type adminTournamentImportStatusResponse struct {
 	UploadID     string           `json:"uploadId"`
 	Filename     string           `json:"filename"`
 	SHA256       string           `json:"sha256"`
@@ -40,19 +40,19 @@ type adminBundlesImportStatusResponse struct {
 	VerifyReport *verifier.Report `json:"verifyReport,omitempty"`
 }
 
-func (s *Server) registerAdminBundleRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/bundles/export", s.requirePermission("admin.bundles.export", s.adminBundlesExportHandler)).Methods("GET")
-	r.HandleFunc("/api/admin/bundles/import", s.requirePermission("admin.bundles.import", s.adminBundlesImportHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/bundles/import/{uploadId}", s.requirePermission("admin.bundles.read", s.adminBundlesImportStatusHandler)).Methods("GET")
+func (s *Server) registerAdminTournamentImportRoutes(r *mux.Router) {
+	r.HandleFunc("/api/admin/tournament-imports/export", s.requirePermission("admin.bundles.export", s.adminTournamentImportsExportHandler)).Methods("GET")
+	r.HandleFunc("/api/admin/tournament-imports/import", s.requirePermission("admin.bundles.import", s.adminTournamentImportsImportHandler)).Methods("POST")
+	r.HandleFunc("/api/admin/tournament-imports/import/{uploadId}", s.requirePermission("admin.bundles.read", s.adminTournamentImportsImportStatusHandler)).Methods("GET")
 }
 
-func (s *Server) adminBundlesExportHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) adminTournamentImportsExportHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
 		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
 	}
 
-	tmpDir, err := os.MkdirTemp("", "calcutta-bundles-export-*")
+	tmpDir, err := os.MkdirTemp("", "calcutta-tournament-imports-export-*")
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
@@ -71,14 +71,14 @@ func (s *Server) adminBundlesExportHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	filename := "bundles-" + generatedAt.Format("20060102-150405") + ".zip"
+	filename := "tournament-data-" + generatedAt.Format("20060102-150405") + ".zip"
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(zipBytes)
 }
 
-func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) adminTournamentImportsImportHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
 		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
@@ -105,7 +105,7 @@ func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Reques
 	sha := hex.EncodeToString(sum[:])
 
 	q := sqlc.New(s.pool)
-	uploadID, err := q.UpsertBundleUpload(r.Context(), sqlc.UpsertBundleUploadParams{
+	uploadID, err := q.UpsertTournamentImport(r.Context(), sqlc.UpsertTournamentImportParams{
 		Filename:  header.Filename,
 		Sha256:    sha,
 		SizeBytes: int64(len(zipBytes)),
@@ -116,10 +116,10 @@ func (s *Server) adminBundlesImportHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	response.WriteJSON(w, http.StatusAccepted, adminBundlesImportResponse{UploadID: uploadID, Status: "pending", Filename: header.Filename, SHA256: sha, SizeBytes: len(zipBytes)})
+	response.WriteJSON(w, http.StatusAccepted, adminTournamentImportResponse{UploadID: uploadID, Status: "pending", Filename: header.Filename, SHA256: sha, SizeBytes: len(zipBytes)})
 }
 
-func (s *Server) adminBundlesImportStatusHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) adminTournamentImportsImportStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if s.pool == nil {
 		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "database pool not available", "")
 		return
@@ -133,7 +133,7 @@ func (s *Server) adminBundlesImportStatusHandler(w http.ResponseWriter, r *http.
 	}
 
 	q := sqlc.New(s.pool)
-	row, err := q.GetBundleUploadStatus(r.Context(), uploadID)
+	row, err := q.GetTournamentImportStatus(r.Context(), uploadID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
@@ -150,7 +150,7 @@ func (s *Server) adminBundlesImportStatusHandler(w http.ResponseWriter, r *http.
 		finishedAt = &t
 	}
 
-	resp := adminBundlesImportStatusResponse{UploadID: uploadID, Filename: row.Filename, SHA256: row.Sha256, SizeBytes: int(row.SizeBytes), Status: row.Status, StartedAt: startedAt, FinishedAt: finishedAt, ErrorMessage: row.ErrorMessage}
+	resp := adminTournamentImportStatusResponse{UploadID: uploadID, Filename: row.Filename, SHA256: row.Sha256, SizeBytes: int(row.SizeBytes), Status: row.Status, StartedAt: startedAt, FinishedAt: finishedAt, ErrorMessage: row.ErrorMessage}
 	if len(row.ImportReport) > 0 && string(row.ImportReport) != "{}" {
 		var rep importer.Report
 		if err := json.Unmarshal(row.ImportReport, &rep); err == nil {

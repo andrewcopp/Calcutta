@@ -17,11 +17,11 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { formatDate } from '../utils/format';
-import type { LabelGrant } from '../types/admin';
+import type { RoleGrant } from '../types/admin';
 
-const ALL_LABELS = ['site_admin', 'tournament_admin', 'calcutta_admin', 'player', 'user_manager'];
+const ALL_ROLES = ['site_admin', 'tournament_admin', 'calcutta_admin', 'player', 'user_manager'];
 
-const LABEL_SCOPES: Record<string, string[]> = {
+const ROLE_SCOPES: Record<string, string[]> = {
   site_admin: ['global'],
   user_manager: ['global'],
   calcutta_admin: ['global', 'calcutta'],
@@ -29,11 +29,11 @@ const LABEL_SCOPES: Record<string, string[]> = {
   player: ['global', 'calcutta'],
 };
 
-function labelGrantKey(g: LabelGrant): string {
+function roleGrantKey(g: RoleGrant): string {
   return g.scopeId ? `${g.key}:${g.scopeType}:${g.scopeId}` : `${g.key}:global`;
 }
 
-function labelGrantDisplay(g: LabelGrant): string {
+function roleGrantDisplay(g: RoleGrant): string {
   if (g.scopeType === 'global') return g.key;
   return `${g.key} (${g.scopeName ?? g.scopeId})`;
 }
@@ -56,7 +56,7 @@ export function AdminUserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const queryClient = useQueryClient();
   const canWrite = useHasPermission(PERMISSIONS.ADMIN_USERS_WRITE);
-  const [selectedLabel, setSelectedLabel] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
   const [selectedScopeType, setSelectedScopeType] = useState<'global' | 'calcutta' | 'tournament'>('global');
   const [selectedScopeId, setSelectedScopeId] = useState('');
 
@@ -79,54 +79,54 @@ export function AdminUserProfilePage() {
   });
 
   const grantMutation = useMutation({
-    mutationFn: ({ labelKey, scopeType, scopeId }: { labelKey: string; scopeType: string; scopeId?: string }) =>
-      adminService.grantLabel(userId!, labelKey, scopeType, scopeId),
+    mutationFn: ({ roleKey, scopeType, scopeId }: { roleKey: string; scopeType: string; scopeId?: string }) =>
+      adminService.grantRole(userId!, roleKey, scopeType, scopeId),
     onSuccess: () => {
-      setSelectedLabel('');
+      setSelectedRole('');
       setSelectedScopeType('global');
       setSelectedScopeId('');
-      toast.success('Label granted');
+      toast.success('Role granted');
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
     },
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (grant: LabelGrant) =>
-      adminService.revokeLabel(userId!, grant.key, grant.scopeType, grant.scopeId),
+    mutationFn: (grant: RoleGrant) =>
+      adminService.revokeRole(userId!, grant.key, grant.scopeType, grant.scopeId),
     onSuccess: () => {
-      toast.success('Label revoked');
+      toast.success('Role revoked');
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
     },
   });
 
   const profile = userQuery.data;
 
-  // Only exclude a label from the dropdown if it already has a global grant
-  const globalLabelKeys = new Set(
-    profile?.labels.filter((g) => g.scopeType === 'global').map((g) => g.key) ?? [],
+  // Only exclude a role from the dropdown if it already has a global grant
+  const globalRoleKeys = new Set(
+    profile?.roles.filter((g) => g.scopeType === 'global').map((g) => g.key) ?? [],
   );
-  const availableLabels = ALL_LABELS.filter((l) => !globalLabelKeys.has(l));
+  const availableRoles = ALL_ROLES.filter((r) => !globalRoleKeys.has(r));
 
-  const allowedScopes = selectedLabel ? (LABEL_SCOPES[selectedLabel] ?? ['global']) : ['global'];
+  const allowedScopes = selectedRole ? (ROLE_SCOPES[selectedRole] ?? ['global']) : ['global'];
   const needsScopeSelection = allowedScopes.length > 1;
   const needsScopeId = selectedScopeType !== 'global';
 
   const canGrant =
-    selectedLabel &&
+    selectedRole &&
     (!needsScopeId || selectedScopeId) &&
     !grantMutation.isPending;
 
-  function handleLabelChange(label: string) {
-    setSelectedLabel(label);
-    const scopes = LABEL_SCOPES[label] ?? ['global'];
+  function handleRoleChange(role: string) {
+    setSelectedRole(role);
+    const scopes = ROLE_SCOPES[role] ?? ['global'];
     setSelectedScopeType(scopes.length === 1 ? (scopes[0] as 'global' | 'calcutta' | 'tournament') : 'global');
     setSelectedScopeId('');
   }
 
   function handleGrant() {
-    if (!selectedLabel) return;
+    if (!selectedRole) return;
     grantMutation.mutate({
-      labelKey: selectedLabel,
+      roleKey: selectedRole,
       scopeType: selectedScopeType,
       scopeId: needsScopeId ? selectedScopeId : undefined,
     });
@@ -171,18 +171,18 @@ export function AdminUserProfilePage() {
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold mb-4">Labels</h2>
-            {profile.labels.length > 0 ? (
+            <h2 className="text-lg font-semibold mb-4">Roles</h2>
+            {profile.roles.length > 0 ? (
               <div className="flex flex-wrap gap-2 mb-4">
-                {profile.labels.map((g) => (
-                  <span key={labelGrantKey(g)} className="inline-flex items-center gap-1">
-                    <Badge variant="default">{labelGrantDisplay(g)}</Badge>
+                {profile.roles.map((g) => (
+                  <span key={roleGrantKey(g)} className="inline-flex items-center gap-1">
+                    <Badge variant="default">{roleGrantDisplay(g)}</Badge>
                     {canWrite && (
                       <button
                         className="text-gray-400 hover:text-red-600 text-sm"
                         onClick={() => revokeMutation.mutate(g)}
                         disabled={revokeMutation.isPending}
-                        aria-label={`Remove ${labelGrantDisplay(g)}`}
+                        aria-label={`Remove ${roleGrantDisplay(g)}`}
                       >
                         x
                       </button>
@@ -191,23 +191,23 @@ export function AdminUserProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-400 mb-4">No labels assigned.</p>
+              <p className="text-gray-400 mb-4">No roles assigned.</p>
             )}
 
-            {canWrite && availableLabels.length > 0 && (
+            {canWrite && availableRoles.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
                 <Select
-                  value={selectedLabel}
-                  onChange={(e) => handleLabelChange(e.target.value)}
+                  value={selectedRole}
+                  onChange={(e) => handleRoleChange(e.target.value)}
                   className="w-48"
                 >
-                  <option value="">Select label...</option>
-                  {availableLabels.map((l) => (
-                    <option key={l} value={l}>{l}</option>
+                  <option value="">Select role...</option>
+                  {availableRoles.map((r) => (
+                    <option key={r} value={r}>{r}</option>
                   ))}
                 </Select>
 
-                {selectedLabel && needsScopeSelection && (
+                {selectedRole && needsScopeSelection && (
                   <Select
                     value={selectedScopeType}
                     onChange={(e) => {
@@ -222,7 +222,7 @@ export function AdminUserProfilePage() {
                   </Select>
                 )}
 
-                {selectedLabel && selectedScopeType === 'calcutta' && (
+                {selectedRole && selectedScopeType === 'calcutta' && (
                   <Select
                     value={selectedScopeId}
                     onChange={(e) => setSelectedScopeId(e.target.value)}
@@ -235,7 +235,7 @@ export function AdminUserProfilePage() {
                   </Select>
                 )}
 
-                {selectedLabel && selectedScopeType === 'tournament' && (
+                {selectedRole && selectedScopeType === 'tournament' && (
                   <Select
                     value={selectedScopeId}
                     onChange={(e) => setSelectedScopeId(e.target.value)}

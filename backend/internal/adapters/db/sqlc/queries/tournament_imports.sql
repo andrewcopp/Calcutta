@@ -1,7 +1,7 @@
--- Bundles / bundle uploads
+-- Tournament imports (formerly bundle_uploads)
 
--- name: UpsertBundleUpload :one
-INSERT INTO core.bundle_uploads (filename, sha256, size_bytes, archive, status)
+-- name: UpsertTournamentImport :one
+INSERT INTO core.tournament_imports (filename, sha256, size_bytes, archive, status)
 VALUES (sqlc.arg(filename), sqlc.arg(sha256), sqlc.arg(size_bytes), sqlc.arg(archive), 'pending')
 ON CONFLICT (sha256) WHERE deleted_at IS NULL
 DO UPDATE SET
@@ -17,7 +17,7 @@ DO UPDATE SET
 	updated_at = NOW()
 RETURNING id;
 
--- name: GetBundleUploadStatus :one
+-- name: GetTournamentImportStatus :one
 SELECT
 	filename,
 	sha256,
@@ -28,24 +28,24 @@ SELECT
 	error_message,
 	COALESCE(import_report, '{}'::jsonb)::jsonb AS import_report,
 	COALESCE(verify_report, '{}'::jsonb)::jsonb AS verify_report
-FROM core.bundle_uploads
+FROM core.tournament_imports
 WHERE id = sqlc.arg(upload_id)::uuid AND deleted_at IS NULL;
 
--- name: ClaimNextBundleUpload :one
+-- name: ClaimNextTournamentImport :one
 WITH candidate AS (
 	SELECT id
-	FROM core.bundle_uploads
+	FROM core.tournament_imports
 	WHERE deleted_at IS NULL
-	  AND core.bundle_uploads.finished_at IS NULL
+	  AND core.tournament_imports.finished_at IS NULL
 	  AND (
-		core.bundle_uploads.status = 'pending'
-		OR (core.bundle_uploads.status = 'running' AND core.bundle_uploads.started_at IS NOT NULL AND core.bundle_uploads.started_at < sqlc.arg(stale_before))
+		core.tournament_imports.status = 'pending'
+		OR (core.tournament_imports.status = 'running' AND core.tournament_imports.started_at IS NOT NULL AND core.tournament_imports.started_at < sqlc.arg(stale_before))
 	  )
 	ORDER BY created_at ASC
 	LIMIT 1
 	FOR UPDATE SKIP LOCKED
 )
-UPDATE core.bundle_uploads bu
+UPDATE core.tournament_imports ti
 SET status = 'running',
 	started_at = sqlc.arg(now),
 	finished_at = NULL,
@@ -54,16 +54,16 @@ SET status = 'running',
 	verify_report = NULL,
 	updated_at = NOW()
 FROM candidate c
-WHERE bu.id = c.id
-RETURNING bu.id;
+WHERE ti.id = c.id
+RETURNING ti.id;
 
--- name: GetBundleUploadArchive :one
+-- name: GetTournamentImportArchive :one
 SELECT archive
-FROM core.bundle_uploads
+FROM core.tournament_imports
 WHERE id = sqlc.arg(upload_id)::uuid AND deleted_at IS NULL;
 
--- name: MarkBundleUploadSucceeded :exec
-UPDATE core.bundle_uploads
+-- name: MarkTournamentImportSucceeded :exec
+UPDATE core.tournament_imports
 SET status = 'succeeded',
 	finished_at = NOW(),
 	import_report = sqlc.arg(import_report),
@@ -71,8 +71,8 @@ SET status = 'succeeded',
 	updated_at = NOW()
 WHERE id = sqlc.arg(upload_id)::uuid AND deleted_at IS NULL;
 
--- name: MarkBundleUploadFailed :exec
-UPDATE core.bundle_uploads
+-- name: MarkTournamentImportFailed :exec
+UPDATE core.tournament_imports
 SET status = 'failed',
 	finished_at = NOW(),
 	error_message = sqlc.arg(error_message),

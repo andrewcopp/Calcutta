@@ -10,20 +10,20 @@ import (
 )
 
 const grantGlobalAdminSQL = `
-INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
-SELECT $1, 'global', NULL, l.id
-FROM core.labels l
-WHERE l.key = 'site_admin'
-  AND l.deleted_at IS NULL
+INSERT INTO core.grants (user_id, scope_type, scope_id, role_id)
+SELECT $1, 'global', NULL, r.id
+FROM core.roles r
+WHERE r.key = 'site_admin'
+  AND r.deleted_at IS NULL
   AND NOT EXISTS (
     SELECT 1
     FROM core.grants g
-    JOIN core.labels l2 ON g.label_id = l2.id
+    JOIN core.roles r2 ON g.role_id = r2.id
     WHERE g.user_id = $1
       AND g.scope_type = 'global'
       AND g.revoked_at IS NULL
-      AND l2.key = 'site_admin'
-      AND l2.deleted_at IS NULL
+      AND r2.key = 'site_admin'
+      AND r2.deleted_at IS NULL
   );
 `
 
@@ -57,61 +57,61 @@ func (r *AuthorizationRepository) HasPermission(ctx context.Context, userID, sco
 	return true, nil
 }
 
-// GrantLabel grants a label to a user with the given scope.
-func (r *AuthorizationRepository) GrantLabel(ctx context.Context, userID, labelKey, scopeType, scopeID string) error {
+// GrantRole grants a role to a user with the given scope.
+func (r *AuthorizationRepository) GrantRole(ctx context.Context, userID, roleKey, scopeType, scopeID string) error {
 	query := `
-		INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
-		SELECT $1, $2, $3::uuid, l.id
-		FROM core.labels l
-		WHERE l.key = $4
-		  AND l.deleted_at IS NULL
+		INSERT INTO core.grants (user_id, scope_type, scope_id, role_id)
+		SELECT $1, $2, $3::uuid, r.id
+		FROM core.roles r
+		WHERE r.key = $4
+		  AND r.deleted_at IS NULL
 		  AND NOT EXISTS (
 			SELECT 1
 			FROM core.grants g
 			WHERE g.user_id = $1
 			  AND g.scope_type = $2
 			  AND g.scope_id = $3::uuid
-			  AND g.label_id = l.id
+			  AND g.role_id = r.id
 			  AND g.revoked_at IS NULL
 		  )
 	`
-	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, labelKey)
+	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, roleKey)
 	return err
 }
 
-// RevokeGrant revokes all grants for a user+label+scope combination.
-func (r *AuthorizationRepository) RevokeGrant(ctx context.Context, userID, labelKey, scopeType, scopeID string) error {
+// RevokeGrant revokes all grants for a user+role+scope combination.
+func (r *AuthorizationRepository) RevokeGrant(ctx context.Context, userID, roleKey, scopeType, scopeID string) error {
 	query := `
 		UPDATE core.grants g
 		SET revoked_at = NOW()
-		FROM core.labels l
-		WHERE g.label_id = l.id
+		FROM core.roles r
+		WHERE g.role_id = r.id
 		  AND g.user_id = $1
 		  AND g.scope_type = $2
 		  AND g.scope_id = $3::uuid
-		  AND l.key = $4
-		  AND l.deleted_at IS NULL
+		  AND r.key = $4
+		  AND r.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
 	`
-	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, labelKey)
+	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, roleKey)
 	return err
 }
 
 // ListUserGlobalPermissions returns all permission keys a user has via global grants.
 func (r *AuthorizationRepository) ListUserGlobalPermissions(ctx context.Context, userID string) ([]string, error) {
 	query := `
-		SELECT DISTINCT COALESCE(p_direct.key, p_label.key) AS permission_key
+		SELECT DISTINCT COALESCE(p_direct.key, p_role.key) AS permission_key
 		FROM core.grants g
 		LEFT JOIN core.permissions p_direct ON g.permission_id = p_direct.id AND p_direct.deleted_at IS NULL
-		LEFT JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
-		LEFT JOIN core.label_permissions lp ON lp.label_id = l.id AND lp.deleted_at IS NULL
-		LEFT JOIN core.permissions p_label ON lp.permission_id = p_label.id AND p_label.deleted_at IS NULL
+		LEFT JOIN core.roles r ON g.role_id = r.id AND r.deleted_at IS NULL
+		LEFT JOIN core.role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
+		LEFT JOIN core.permissions p_role ON rp.permission_id = p_role.id AND p_role.deleted_at IS NULL
 		WHERE g.user_id = $1
 		  AND g.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
 		  AND (g.expires_at IS NULL OR g.expires_at > NOW())
 		  AND g.scope_type = 'global'
-		  AND (p_direct.key IS NOT NULL OR p_label.key IS NOT NULL)
+		  AND (p_direct.key IS NOT NULL OR p_role.key IS NOT NULL)
 		ORDER BY permission_key
 	`
 	rows, err := r.pool.Query(ctx, query, userID)
@@ -131,18 +131,18 @@ func (r *AuthorizationRepository) ListUserGlobalPermissions(ctx context.Context,
 	return permissions, rows.Err()
 }
 
-// ListUserGlobalLabels returns all label keys a user has via active global grants.
-func (r *AuthorizationRepository) ListUserGlobalLabels(ctx context.Context, userID string) ([]string, error) {
+// ListUserGlobalRoles returns all role keys a user has via active global grants.
+func (r *AuthorizationRepository) ListUserGlobalRoles(ctx context.Context, userID string) ([]string, error) {
 	query := `
-		SELECT DISTINCT l.key
+		SELECT DISTINCT r.key
 		FROM core.grants g
-		JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+		JOIN core.roles r ON g.role_id = r.id AND r.deleted_at IS NULL
 		WHERE g.user_id = $1
 		  AND g.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
 		  AND (g.expires_at IS NULL OR g.expires_at > NOW())
 		  AND g.scope_type = 'global'
-		ORDER BY l.key
+		ORDER BY r.key
 	`
 	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -150,75 +150,75 @@ func (r *AuthorizationRepository) ListUserGlobalLabels(ctx context.Context, user
 	}
 	defer rows.Close()
 
-	var labels []string
+	var roles []string
 	for rows.Next() {
 		var key string
 		if err := rows.Scan(&key); err != nil {
 			return nil, err
 		}
-		labels = append(labels, key)
+		roles = append(roles, key)
 	}
-	return labels, rows.Err()
+	return roles, rows.Err()
 }
 
-// GrantGlobalLabel grants a global label to a user.
-func (r *AuthorizationRepository) GrantGlobalLabel(ctx context.Context, userID, labelKey string) error {
+// GrantGlobalRole grants a global role to a user.
+func (r *AuthorizationRepository) GrantGlobalRole(ctx context.Context, userID, roleKey string) error {
 	query := `
-		INSERT INTO core.grants (user_id, scope_type, scope_id, label_id)
-		SELECT $1, 'global', NULL, l.id
-		FROM core.labels l
-		WHERE l.key = $2
-		  AND l.deleted_at IS NULL
+		INSERT INTO core.grants (user_id, scope_type, scope_id, role_id)
+		SELECT $1, 'global', NULL, r.id
+		FROM core.roles r
+		WHERE r.key = $2
+		  AND r.deleted_at IS NULL
 		  AND NOT EXISTS (
 			SELECT 1
 			FROM core.grants g
-			JOIN core.labels l2 ON g.label_id = l2.id
+			JOIN core.roles r2 ON g.role_id = r2.id
 			WHERE g.user_id = $1
 			  AND g.scope_type = 'global'
 			  AND g.revoked_at IS NULL
-			  AND l2.key = $2
-			  AND l2.deleted_at IS NULL
+			  AND r2.key = $2
+			  AND r2.deleted_at IS NULL
 		  )
 	`
-	_, err := r.pool.Exec(ctx, query, userID, labelKey)
+	_, err := r.pool.Exec(ctx, query, userID, roleKey)
 	return err
 }
 
-// RevokeGlobalLabel revokes a global label from a user.
-func (r *AuthorizationRepository) RevokeGlobalLabel(ctx context.Context, userID, labelKey string) error {
+// RevokeGlobalRole revokes a global role from a user.
+func (r *AuthorizationRepository) RevokeGlobalRole(ctx context.Context, userID, roleKey string) error {
 	query := `
 		UPDATE core.grants g
 		SET revoked_at = NOW()
-		FROM core.labels l
-		WHERE g.label_id = l.id
+		FROM core.roles r
+		WHERE g.role_id = r.id
 		  AND g.user_id = $1
 		  AND g.scope_type = 'global'
 		  AND g.scope_id IS NULL
-		  AND l.key = $2
-		  AND l.deleted_at IS NULL
+		  AND r.key = $2
+		  AND r.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
 	`
-	_, err := r.pool.Exec(ctx, query, userID, labelKey)
+	_, err := r.pool.Exec(ctx, query, userID, roleKey)
 	return err
 }
 
-// LabelGrantRow represents a label grant with scope info and display name.
-type LabelGrantRow struct {
+// RoleGrantRow represents a role grant with scope info and display name.
+type RoleGrantRow struct {
 	Key       string
 	ScopeType string
 	ScopeID   *string
 	ScopeName *string
 }
 
-// ListUserLabelsWithScope returns all active label grants for a user with scope details.
-func (r *AuthorizationRepository) ListUserLabelsWithScope(ctx context.Context, userID string) ([]LabelGrantRow, error) {
+// ListUserRolesWithScope returns all active role grants for a user with scope details.
+func (r *AuthorizationRepository) ListUserRolesWithScope(ctx context.Context, userID string) ([]RoleGrantRow, error) {
 	query := `
-		SELECT DISTINCT l.key,
+		SELECT DISTINCT r.key,
 			g.scope_type,
 			g.scope_id::text,
 			COALESCE(c.name, comp.name || ' ' || s.year) AS scope_name
 		FROM core.grants g
-		JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+		JOIN core.roles r ON g.role_id = r.id AND r.deleted_at IS NULL
 		LEFT JOIN core.calcuttas c ON g.scope_type = 'calcutta' AND g.scope_id = c.id
 		LEFT JOIN core.tournaments t ON g.scope_type = 'tournament' AND g.scope_id = t.id
 		LEFT JOIN core.competitions comp ON t.competition_id = comp.id
@@ -227,7 +227,7 @@ func (r *AuthorizationRepository) ListUserLabelsWithScope(ctx context.Context, u
 		  AND g.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
 		  AND (g.expires_at IS NULL OR g.expires_at > NOW())
-		ORDER BY l.key, g.scope_type
+		ORDER BY r.key, g.scope_type
 	`
 	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -235,9 +235,9 @@ func (r *AuthorizationRepository) ListUserLabelsWithScope(ctx context.Context, u
 	}
 	defer rows.Close()
 
-	var grants []LabelGrantRow
+	var grants []RoleGrantRow
 	for rows.Next() {
-		var row LabelGrantRow
+		var row RoleGrantRow
 		if err := rows.Scan(&row.Key, &row.ScopeType, &row.ScopeID, &row.ScopeName); err != nil {
 			return nil, err
 		}
@@ -246,20 +246,20 @@ func (r *AuthorizationRepository) ListUserLabelsWithScope(ctx context.Context, u
 	return grants, rows.Err()
 }
 
-// ListGrantsByScope returns user IDs with a given label for a scope.
-func (r *AuthorizationRepository) ListGrantsByScope(ctx context.Context, labelKey, scopeType, scopeID string) ([]string, error) {
+// ListGrantsByScope returns user IDs with a given role for a scope.
+func (r *AuthorizationRepository) ListGrantsByScope(ctx context.Context, roleKey, scopeType, scopeID string) ([]string, error) {
 	query := `
 		SELECT g.user_id::text
 		FROM core.grants g
-		JOIN core.labels l ON g.label_id = l.id
+		JOIN core.roles r ON g.role_id = r.id
 		WHERE g.scope_type = $1
 		  AND g.scope_id = $2::uuid
-		  AND l.key = $3
-		  AND l.deleted_at IS NULL
+		  AND r.key = $3
+		  AND r.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
 		  AND (g.expires_at IS NULL OR g.expires_at > NOW())
 	`
-	rows, err := r.pool.Query(ctx, query, scopeType, scopeID, labelKey)
+	rows, err := r.pool.Query(ctx, query, scopeType, scopeID, roleKey)
 	if err != nil {
 		return nil, err
 	}

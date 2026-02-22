@@ -62,10 +62,10 @@ export function UserProfilePage() {
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 mb-1">Labels</div>
-              {profile.labels.length > 0 ? (
+              <div className="text-sm text-gray-500 mb-1">Roles</div>
+              {profile.roles.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
-                  {profile.labels.map((l) => (
+                  {profile.roles.map((l) => (
                     <Badge key={l} variant="default">{l}</Badge>
                   ))}
                 </div>
