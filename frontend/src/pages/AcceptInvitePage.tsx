@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useUser } from '../contexts/UserContext';
+import { userService } from '../services/userService';
+import { formatDate } from '../utils/format';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
@@ -19,6 +22,14 @@ export function AcceptInvitePage() {
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [inviteConsumed, setInviteConsumed] = useState(false);
+
+  const previewQuery = useQuery({
+    queryKey: ['invite-preview', token],
+    queryFn: () => userService.previewInvite(token),
+    enabled: !!token && !user,
+    retry: false,
+  });
+  const preview = previewQuery.data;
 
   useEffect(() => {
     if (user && token && !inviteConsumed) {
@@ -132,8 +143,28 @@ export function AcceptInvitePage() {
         </div>
 
         <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-2 text-center">Welcome to Calcutta</h2>
-          <p className="text-gray-600 mb-6 text-center">Set your password to complete your account setup.</p>
+          {preview ? (
+            <>
+              <h2 className="text-2xl font-bold mb-2 text-center">Welcome, {preview.firstName}!</h2>
+              <div className="text-center mb-6">
+                <p className="text-gray-600">
+                  You've been invited to <span className="font-semibold">"{preview.calcuttaName}"</span>
+                </p>
+                <p className="text-gray-500 text-sm">by {preview.commissionerName}</p>
+                {preview.tournamentStartingAt && (
+                  <p className="text-gray-500 text-sm mt-1">
+                    Tournament starts {formatDate(preview.tournamentStartingAt)}
+                  </p>
+                )}
+                <p className="text-gray-600 mt-3">Set your password below to get started.</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold mb-2 text-center">Welcome to Calcutta</h2>
+              <p className="text-gray-600 mb-6 text-center">Set your password to complete your account setup.</p>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

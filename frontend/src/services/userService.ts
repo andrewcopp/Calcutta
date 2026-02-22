@@ -1,4 +1,4 @@
-import { User, LoginRequest, SignupRequest, AuthResponse } from '../types/user';
+import { User, LoginRequest, SignupRequest, AuthResponse, InvitePreview } from '../types/user';
 import { apiClient, USER_KEY, PERMISSIONS_KEY } from '../api/apiClient';
 import type { UserProfileResponse } from '../types/admin';
 
@@ -19,6 +19,10 @@ export const userService = {
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     apiClient.setAccessToken(res.accessToken);
     return res.user;
+  },
+
+  async previewInvite(token: string): Promise<InvitePreview> {
+    return apiClient.get<InvitePreview>(`/auth/invite/preview?token=${encodeURIComponent(token)}`);
   },
 
   async acceptInvite(token: string, password: string): Promise<User> {

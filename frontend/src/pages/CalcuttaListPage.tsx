@@ -9,7 +9,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { CalcuttaListSkeleton } from '../components/skeletons/CalcuttaListSkeleton';
 import { CalcuttaWithRanking } from '../types/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
-import { formatDate } from '../utils/format';
+import { formatRelativeTime } from '../utils/format';
 import { groupCalcuttas } from '../utils/calcuttaListHelpers';
 import { useUser } from '../contexts/UserContext';
 import { queryKeys } from '../queryKeys';
@@ -97,58 +97,71 @@ export function CalcuttaListPage() {
 
 function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   const ranking = calcutta.ranking;
+  const tournamentStarted = calcutta.tournamentStartingAt
+    ? new Date(calcutta.tournamentStartingAt) <= new Date()
+    : false;
+
+  // State C: Tournament started + has ranking → rank is the hero
+  if (tournamentStarted && ranking) {
+    return (
+      <Link to={`/calcuttas/${calcutta.id}`} className="block">
+        <Card className="hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-bold text-blue-600">
+              #{ranking.rank} of {ranking.totalEntries}
+            </span>
+            <span className="text-lg font-semibold">
+              {ranking.points.toFixed(2)} pts
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">{calcutta.name}</p>
+        </Card>
+      </Link>
+    );
+  }
+
+  // State D: Tournament started + no entry
+  if (tournamentStarted) {
+    return (
+      <Link to={`/calcuttas/${calcutta.id}`} className="block">
+        <Card className="hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{calcutta.name}</h2>
+            <span className="text-sm font-medium text-gray-400">No Entry</span>
+          </div>
+        </Card>
+      </Link>
+    );
+  }
+
+  // States A/B: Bidding open
+  const countdown = calcutta.tournamentStartingAt
+    ? formatRelativeTime(calcutta.tournamentStartingAt)
+    : null;
+
   return (
     <Link to={`/calcuttas/${calcutta.id}`} className="block">
       <Card className="hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-            <p className="text-gray-600">
-              {calcutta.tournamentStartingAt
-                ? `Tournament starts ${formatDate(calcutta.tournamentStartingAt)}`
-                : `Created ${formatDate(calcutta.createdAt)}`}
-            </p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold">{calcutta.name}</h2>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                calcutta.hasEntry
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {calcutta.hasEntry ? 'Entry Submitted' : 'Awaiting Entry'}
+              </span>
+            </div>
+            {countdown && (
+              <p className={`text-sm mt-1 ${countdown.urgent ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                {countdown.urgent
+                  ? `${countdown.text} remaining`
+                  : `${countdown.text} until portfolios reveal`}
+              </p>
+            )}
           </div>
-          {(() => {
-            const tournamentStarted = calcutta.tournamentStartingAt
-              ? new Date(calcutta.tournamentStartingAt) <= new Date()
-              : false;
-
-            if (!tournamentStarted) {
-              return (
-                <div className="text-right">
-                  <div className={`text-sm font-medium ${calcutta.hasEntry ? 'text-green-600' : 'text-amber-600'}`}>
-                    {calcutta.hasEntry ? 'Entry Submitted' : 'Awaiting Entry'}
-                  </div>
-                  {calcutta.tournamentStartingAt && (
-                    <div className="text-sm text-gray-500">
-                      Tournament starts {formatDate(calcutta.tournamentStartingAt, true)}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            if (ranking) {
-              return (
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-blue-600">
-                    #{ranking.rank} of {ranking.totalEntries}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {ranking.points.toFixed(2)} points
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-400">No Entry</div>
-                <div className="text-sm text-gray-500">0.00 points</div>
-              </div>
-            );
-          })()}
         </div>
       </Card>
     </Link>

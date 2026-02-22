@@ -12,6 +12,7 @@ import { InvestmentsTab } from './CalcuttaEntries/InvestmentsTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
 import { OwnershipsTab } from './CalcuttaEntries/OwnershipsTab';
 import { BiddingOpenView } from './CalcuttaEntries/BiddingOpenView';
+import { DashboardSummary } from './CalcuttaEntries/DashboardSummary';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Badge } from '../components/ui/Badge';
@@ -163,13 +164,23 @@ export function CalcuttaEntriesPage() {
         );
       })()}
 
+      {currentUserEntry && !biddingOpen && (
+        <DashboardSummary
+          currentEntry={currentUserEntry}
+          entries={entries}
+          portfolios={allCalcuttaPortfolios}
+          portfolioTeams={allCalcuttaPortfolioTeams}
+          tournamentTeams={tournamentTeams}
+        />
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-          <TabsTrigger value="investment">Investments</TabsTrigger>
-          <TabsTrigger value="ownership">Ownerships</TabsTrigger>
-          <TabsTrigger value="returns">Returns</TabsTrigger>
-          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          <TabsTrigger value="leaderboard">Standings</TabsTrigger>
+          <TabsTrigger value="investment">Bids</TabsTrigger>
+          <TabsTrigger value="ownership">Shares</TabsTrigger>
+          <TabsTrigger value="returns">Scoring</TabsTrigger>
+          <TabsTrigger value="statistics">Pool Stats</TabsTrigger>
         </TabsList>
 
         <TabsContent value="leaderboard">

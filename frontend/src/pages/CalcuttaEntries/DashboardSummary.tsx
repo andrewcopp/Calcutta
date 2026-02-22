@@ -1,0 +1,83 @@
+import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
+
+interface DashboardSummaryProps {
+  currentEntry: CalcuttaEntry;
+  entries: CalcuttaEntry[];
+  portfolios: CalcuttaPortfolio[];
+  portfolioTeams: CalcuttaPortfolioTeam[];
+  tournamentTeams: TournamentTeam[];
+}
+
+export function DashboardSummary({
+  currentEntry,
+  entries,
+  portfolios,
+  portfolioTeams,
+  tournamentTeams,
+}: DashboardSummaryProps) {
+  // Find user's portfolio and teams
+  const userPortfolio = portfolios.find(p => p.entryId === currentEntry.id);
+  const userPortfolioTeams = userPortfolio
+    ? portfolioTeams.filter(pt => pt.portfolioId === userPortfolio.id)
+    : [];
+
+  // Position: rank by totalPoints
+  const sortedEntries = [...entries].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
+  const rank = sortedEntries.findIndex(e => e.id === currentEntry.id) + 1;
+  const total = entries.length;
+
+  // Teams alive
+  const eliminatedSet = new Set(
+    tournamentTeams.filter(tt => tt.eliminated).map(tt => tt.id),
+  );
+  const totalTeams = userPortfolioTeams.length;
+  const aliveTeams = userPortfolioTeams.filter(pt => !eliminatedSet.has(pt.teamId)).length;
+
+  // Points
+  const actualPoints = userPortfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
+  const remainingPoints = userPortfolioTeams
+    .filter(pt => !eliminatedSet.has(pt.teamId))
+    .reduce((sum, pt) => sum + (pt.expectedPoints - pt.actualPoints), 0);
+
+  // Payout info
+  const payoutLabel = currentEntry.inTheMoney && currentEntry.payoutCents != null
+    ? `In the money`
+    : rank <= Math.ceil(total * 0.25) ? 'Top quartile' : null;
+
+  // Color by percentile
+  const percentile = total > 0 ? rank / total : 1;
+  const rankColor = percentile <= 0.25
+    ? 'text-green-600'
+    : percentile <= 0.5
+      ? 'text-blue-600'
+      : percentile <= 0.75
+        ? 'text-amber-600'
+        : 'text-gray-600';
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <p className="text-sm text-gray-500 mb-1">Your Position</p>
+        <p className={`text-2xl font-bold ${rankColor}`}>
+          #{rank} <span className="text-base font-normal text-gray-500">of {total}</span>
+        </p>
+        {payoutLabel && (
+          <p className="text-xs text-gray-500 mt-1">{payoutLabel}</p>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <p className="text-sm text-gray-500 mb-1">Your Teams</p>
+        <p className="text-2xl font-bold text-gray-900">{totalTeams} teams</p>
+        <p className="text-xs text-gray-500 mt-1">{aliveTeams} still alive</p>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <p className="text-sm text-gray-500 mb-1">Your Points</p>
+        <p className="text-2xl font-bold text-gray-900">{actualPoints.toFixed(2)} pts</p>
+        <p className="text-xs text-gray-500 mt-1">{remainingPoints.toFixed(2)} possible remaining</p>
+      </div>
+    </div>
+  );
+}
