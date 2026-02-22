@@ -7,18 +7,13 @@ import (
 	"errors"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type APIKey struct {
-	ID         string
-	UserID     string
-	Label      *string
-	CreatedAt  time.Time
-	RevokedAt  *time.Time
-	LastUsedAt *time.Time
-}
+var _ ports.APIKeyReader = (*APIKeysRepository)(nil)
 
 type APIKeysRepository struct {
 	pool *pgxpool.Pool
@@ -33,12 +28,12 @@ func HashAPIKey(raw string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func (r *APIKeysRepository) Create(ctx context.Context, userID, keyHash string, label *string, now time.Time) (*APIKey, error) {
+func (r *APIKeysRepository) Create(ctx context.Context, userID, keyHash string, label *string, now time.Time) (*models.APIKey, error) {
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
 
-	var row APIKey
+	var row models.APIKey
 	row.UserID = userID
 	row.Label = label
 
@@ -53,12 +48,12 @@ func (r *APIKeysRepository) Create(ctx context.Context, userID, keyHash string, 
 	return &row, nil
 }
 
-func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string, now time.Time) (*APIKey, error) {
+func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string, now time.Time) (*models.APIKey, error) {
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
 
-	var row APIKey
+	var row models.APIKey
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, user_id, label, created_at, revoked_at, last_used_at
 		FROM core.api_keys
@@ -82,7 +77,7 @@ func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string,
 	return &row, nil
 }
 
-func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]APIKey, error) {
+func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]models.APIKey, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, user_id, label, created_at, revoked_at, last_used_at
 		FROM core.api_keys
@@ -95,9 +90,9 @@ func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]AP
 	}
 	defer rows.Close()
 
-	var out []APIKey
+	var out []models.APIKey
 	for rows.Next() {
-		var rrow APIKey
+		var rrow models.APIKey
 		if err := rows.Scan(&rrow.ID, &rrow.UserID, &rrow.Label, &rrow.CreatedAt, &rrow.RevokedAt, &rrow.LastUsedAt); err != nil {
 			return nil, err
 		}

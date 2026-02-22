@@ -1,4 +1,4 @@
-package httpserver
+package cognito
 
 import (
 	"crypto"
@@ -18,7 +18,8 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 
-type cognitoJWTVerifier struct {
+// Verifier validates Cognito RS256 JWTs against the JWKS endpoint.
+type Verifier struct {
 	cfg     platform.Config
 	iss     string
 	jwksURL string
@@ -30,7 +31,8 @@ type cognitoJWTVerifier struct {
 	cacheTTL  time.Duration
 }
 
-type cognitoClaims struct {
+// Claims represents the decoded payload of a Cognito ID token.
+type Claims struct {
 	Sub        string `json:"sub"`
 	Email      string `json:"email"`
 	GivenName  string `json:"given_name"`
@@ -63,13 +65,13 @@ type jwtHeader struct {
 	Typ string `json:"typ"`
 }
 
-func newCognitoJWTVerifier(cfg platform.Config) (*cognitoJWTVerifier, error) {
+func NewVerifier(cfg platform.Config) (*Verifier, error) {
 	if cfg.CognitoRegion == "" || cfg.CognitoUserPoolID == "" {
 		return nil, errors.New("cognito config missing")
 	}
 	iss := fmt.Sprintf("https://cognito-idp.%s.amazonaws.com/%s", cfg.CognitoRegion, cfg.CognitoUserPoolID)
 	jwksURL := iss + "/.well-known/jwks.json"
-	return &cognitoJWTVerifier{
+	return &Verifier{
 		cfg:      cfg,
 		iss:      iss,
 		jwksURL:  jwksURL,
@@ -79,7 +81,7 @@ func newCognitoJWTVerifier(cfg platform.Config) (*cognitoJWTVerifier, error) {
 	}, nil
 }
 
-func (v *cognitoJWTVerifier) Verify(token string, now time.Time) (*cognitoClaims, error) {
+func (v *Verifier) Verify(token string, now time.Time) (*Claims, error) {
 	if now.IsZero() {
 		now = time.Now()
 	}
@@ -108,7 +110,7 @@ func (v *cognitoJWTVerifier) Verify(token string, now time.Time) (*cognitoClaims
 	if err != nil {
 		return nil, errors.New("invalid jwt payload")
 	}
-	var claims cognitoClaims
+	var claims Claims
 	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
 		return nil, errors.New("invalid jwt payload")
 	}
@@ -147,7 +149,7 @@ func (v *cognitoJWTVerifier) Verify(token string, now time.Time) (*cognitoClaims
 	return &claims, nil
 }
 
-func (v *cognitoJWTVerifier) getKey(kid string, now time.Time) (*rsa.PublicKey, error) {
+func (v *Verifier) getKey(kid string, now time.Time) (*rsa.PublicKey, error) {
 	v.mu.RLock()
 	if k, ok := v.keys[kid]; ok && !v.cacheExpired(now) {
 		v.mu.RUnlock()
@@ -174,14 +176,14 @@ func (v *cognitoJWTVerifier) getKey(kid string, now time.Time) (*rsa.PublicKey, 
 	return k, nil
 }
 
-func (v *cognitoJWTVerifier) cacheExpired(now time.Time) bool {
+func (v *Verifier) cacheExpired(now time.Time) bool {
 	if v.fetchedAt.IsZero() {
 		return true
 	}
 	return now.Sub(v.fetchedAt) > v.cacheTTL
 }
 
-func (v *cognitoJWTVerifier) refreshKeys(now time.Time) error {
+func (v *Verifier) refreshKeys(now time.Time) error {
 	v.mu.Lock()
 	if !v.cacheExpired(now) {
 		v.mu.Unlock()

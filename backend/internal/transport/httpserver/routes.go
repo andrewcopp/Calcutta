@@ -14,7 +14,7 @@ import (
 // RegisterRoutes centralizes HTTP route registration
 func (s *Server) RegisterRoutes(r *mux.Router) {
 	s.registerBasicRoutes(r)
-	if s.cfg.AuthMode != "cognito" {
+	if s.hasLocalAuth {
 		s.registerAuthRoutes(r)
 	}
 

@@ -17,19 +17,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRepository) (*app.App, *coreauth.TokenManager, error) {
+func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRepository, tm *coreauth.TokenManager) (*app.App, error) {
 	dbUserRepo := dbadapters.NewUserRepository(pool)
 	dbSchoolRepo := dbadapters.NewSchoolRepository(pool)
 	dbTournamentRepo := dbadapters.NewTournamentRepository(pool)
-
-	var tm *coreauth.TokenManager
-	if cfg.AuthMode != "cognito" {
-		created, err := coreauth.NewTokenManager(cfg.JWTSecret, time.Duration(cfg.AccessTokenTTLSeconds)*time.Second)
-		if err != nil {
-			return nil, nil, err
-		}
-		tm = created
-	}
 
 	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)
 	invitationRepo := dbadapters.NewCalcuttaInvitationRepository(pool)
@@ -60,5 +51,5 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)
 
-	return a, tm, nil
+	return a, nil
 }

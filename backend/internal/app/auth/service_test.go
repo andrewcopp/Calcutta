@@ -38,6 +38,10 @@ func (r *fakeUserRepo) GetByID(_ context.Context, id string) (*models.User, erro
 	return r.byID[id], nil
 }
 
+func (r *fakeUserRepo) GetByExternalProvider(_ context.Context, _, _ string) (*models.User, error) {
+	return nil, nil
+}
+
 func (r *fakeUserRepo) Create(_ context.Context, u *models.User) error {
 	if r.createFn != nil {
 		return r.createFn(nil, u)
@@ -86,6 +90,10 @@ func (r *fakeAuthRepo) CreateSession(_ context.Context, userID, refreshTokenHash
 	r.sessions[refreshTokenHash] = sess
 	r.sessionsID[r.nextSessID] = sess
 	return r.nextSessID, nil
+}
+
+func (r *fakeAuthRepo) GetSessionByID(_ context.Context, id string) (*models.AuthSession, error) {
+	return r.sessionsID[id], nil
 }
 
 func (r *fakeAuthRepo) GetSessionByRefreshTokenHash(_ context.Context, hash string) (*models.AuthSession, error) {
