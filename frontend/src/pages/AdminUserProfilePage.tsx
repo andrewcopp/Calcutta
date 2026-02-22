@@ -5,6 +5,7 @@ import { adminService } from '../services/adminService';
 import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
+import { toast } from '../lib/toast';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { PERMISSIONS } from '../constants/permissions';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -84,6 +85,7 @@ export function AdminUserProfilePage() {
       setSelectedLabel('');
       setSelectedScopeType('global');
       setSelectedScopeId('');
+      toast.success('Label granted');
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
     },
   });
@@ -92,6 +94,7 @@ export function AdminUserProfilePage() {
     mutationFn: (grant: LabelGrant) =>
       adminService.revokeLabel(userId!, grant.key, grant.scopeType, grant.scopeId),
     onSuccess: () => {
+      toast.success('Label revoked');
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
     },
   });

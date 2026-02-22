@@ -22,6 +22,7 @@ import { useCalcuttaDashboard } from '../hooks/useCalcuttaDashboard';
 import { useCalcuttaEntriesData } from '../hooks/useCalcuttaEntriesData';
 import { useUser } from '../contexts/UserContext';
 import { calcuttaService } from '../services/calcuttaService';
+import { toast } from '../lib/toast';
 
 import { formatDate } from '../utils/format';
 
@@ -89,6 +90,7 @@ export function CalcuttaEntriesPage() {
     setCreateEntryError(null);
     try {
       const entry = await calcuttaService.createEntry(calcuttaId, `${user.firstName} ${user.lastName}`);
+      toast.success('Entry created!');
       navigate(`/calcuttas/${calcuttaId}/entries/${entry.id}/bid`);
     } catch (err) {
       setCreateEntryError(err instanceof Error ? err.message : 'Failed to create entry');

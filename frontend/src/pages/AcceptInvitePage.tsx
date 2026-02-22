@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-do
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '../contexts/UserContext';
 import { userService } from '../services/userService';
+import { toast } from '../lib/toast';
 import { formatDate } from '../utils/format';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -63,6 +64,7 @@ export function AcceptInvitePage() {
     try {
       await acceptInvite(token, password);
       setInviteConsumed(true);
+      toast.success("Welcome! You're all set.");
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to accept invite. Please try again.';

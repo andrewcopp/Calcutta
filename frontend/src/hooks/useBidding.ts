@@ -5,6 +5,7 @@ import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
+import { toast } from '../lib/toast';
 import { computeBudgetRemaining, computeTeamCount, computeValidationErrors } from '../utils/bidValidation';
 import type { School } from '../types/school';
 import type { TournamentTeam } from '../types/tournament';
@@ -160,6 +161,7 @@ export function useBidding() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.dashboard(calcuttaId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entryTeams(calcuttaId, entryId) });
+      toast.success('Entry submitted successfully!');
       navigate(`/calcuttas/${calcuttaId}`);
     },
   });

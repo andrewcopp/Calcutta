@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
-import { useFlashMessage } from '../hooks/useFlashMessage';
 import type { AdminUserListItem } from '../types/admin';
+import { toast } from '../lib/toast';
 import { queryKeys } from '../queryKeys';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -14,7 +14,6 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
-import { Alert } from '../components/ui/Alert';
 import { SetEmailModal } from '../components/Admin/SetEmailModal';
 import { InviteConfirmModal } from '../components/Admin/InviteConfirmModal';
 import { formatDate } from '../utils/format';
@@ -61,7 +60,6 @@ function formatStatusLabel(status: string): string {
 export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
-  const [successMessage, flash] = useFlashMessage();
 
   const [emailModalUser, setEmailModalUser] = useState<AdminUserListItem | null>(null);
   const [inviteModalUser, setInviteModalUser] = useState<AdminUserListItem | null>(null);
@@ -75,13 +73,13 @@ export function AdminUsersPage() {
 
   const handleSetEmail = async (userId: string, email: string) => {
     await adminService.setUserEmail(userId, email);
-    flash('Email set successfully.');
+    toast.success('Email set successfully.');
     await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
   };
 
   const handleSendInvite = async (userId: string) => {
     await adminService.sendInvite(userId);
-    flash('Invite sent successfully.');
+    toast.success('Invite sent successfully.');
     await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
   };
 
@@ -123,10 +121,6 @@ export function AdminUsersPage() {
             Refresh
           </Button>
         </div>
-
-        {successMessage && (
-          <Alert variant="success" className="mb-4">{successMessage}</Alert>
-        )}
 
         {usersQuery.isError && (
           <ErrorState error={usersQuery.error} onRetry={() => usersQuery.refetch()} />

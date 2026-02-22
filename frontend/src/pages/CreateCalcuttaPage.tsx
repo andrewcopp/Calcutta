@@ -5,6 +5,7 @@ import { Tournament } from '../types/tournament';
 import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
+import { toast } from '../lib/toast';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
@@ -50,6 +51,7 @@ export function CreateCalcuttaPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.all() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.listWithRankings() }),
       ]);
+      toast.success('Pool created!');
       navigate('/calcuttas');
     },
     onError: (error) => {

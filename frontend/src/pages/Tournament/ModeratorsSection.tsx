@@ -9,7 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Modal, ModalActions } from '../../components/ui/Modal';
-import { useFlashMessage } from '../../hooks/useFlashMessage';
+import { toast } from '../../lib/toast';
 
 interface ModeratorsSectionProps {
   tournamentId: string;
@@ -19,7 +19,6 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [addEmail, setAddEmail] = useState('');
-  const [modSuccess, flashModSuccess] = useFlashMessage();
   const [modError, setModError] = useState<string | null>(null);
 
   const moderatorsQuery = useQuery({
@@ -35,7 +34,7 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
       setShowAddModal(false);
       setAddEmail('');
       setModError(null);
-      flashModSuccess('Moderator added successfully.');
+      toast.success('Moderator added successfully.');
     },
     onError: (err) => {
       setModError(err instanceof Error ? err.message : 'Failed to add moderator');
@@ -46,7 +45,7 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
     mutationFn: (userId: string) => tournamentService.revokeTournamentModerator(tournamentId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.moderators(tournamentId) });
-      flashModSuccess('Moderator removed successfully.');
+      toast.success('Moderator removed successfully.');
     },
     onError: (err) => {
       setModError(err instanceof Error ? err.message : 'Failed to remove moderator');
@@ -63,7 +62,6 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
           </Button>
         </div>
 
-        {modSuccess && <Alert variant="success" className="mb-4">{modSuccess}</Alert>}
         {modError && !showAddModal && <Alert variant="error" className="mb-4">{modError}</Alert>}
 
         {moderatorsQuery.isLoading ? (

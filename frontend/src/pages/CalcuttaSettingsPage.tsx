@@ -7,13 +7,12 @@ import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Alert } from '../components/ui/Alert';
 import { ErrorState } from '../components/ui/ErrorState';
 import { SettingsSkeleton } from '../components/skeletons/SettingsSkeleton';
-import { useFlashMessage } from '../hooks/useFlashMessage';
+import { toast } from '../lib/toast';
 import { SettingsForm } from './CalcuttaSettings/SettingsForm';
 import { PayoutsForm } from './CalcuttaSettings/PayoutsForm';
 
 export function CalcuttaSettingsPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
-  const [successMessage, flash] = useFlashMessage();
 
   const calcuttaQuery = useQuery({
     queryKey: queryKeys.calcuttas.settings(calcuttaId),
@@ -69,19 +68,17 @@ export function CalcuttaSettingsPage() {
 
       <PageHeader title="Pool Settings" />
 
-      {successMessage && <Alert variant="success" className="mb-4">{successMessage}</Alert>}
-
       <SettingsForm
         calcuttaId={calcuttaId}
         calcutta={calcutta}
-        onSuccess={() => flash('Settings saved successfully.')}
+        onSuccess={() => toast.success('Settings saved successfully.')}
       />
 
       <PageHeader title="Payout Structure" className="mt-8" />
 
       <PayoutsForm
         calcuttaId={calcuttaId}
-        onSuccess={() => flash('Payouts saved successfully.')}
+        onSuccess={() => toast.success('Payouts saved successfully.')}
       />
     </PageContainer>
   );
