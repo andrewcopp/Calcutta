@@ -216,11 +216,13 @@ func (r *AuthorizationRepository) ListUserLabelsWithScope(ctx context.Context, u
 		SELECT DISTINCT l.key,
 			g.scope_type,
 			g.scope_id::text,
-			COALESCE(c.name, t.name) AS scope_name
+			COALESCE(c.name, comp.name || ' ' || s.year) AS scope_name
 		FROM core.grants g
 		JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
 		LEFT JOIN core.calcuttas c ON g.scope_type = 'calcutta' AND g.scope_id = c.id
 		LEFT JOIN core.tournaments t ON g.scope_type = 'tournament' AND g.scope_id = t.id
+		LEFT JOIN core.competitions comp ON t.competition_id = comp.id
+		LEFT JOIN core.seasons s ON t.season_id = s.id
 		WHERE g.user_id = $1
 		  AND g.deleted_at IS NULL
 		  AND g.revoked_at IS NULL
