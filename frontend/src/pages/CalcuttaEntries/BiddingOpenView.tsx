@@ -22,7 +22,7 @@ interface BiddingOpenViewProps {
   onCreateEntry: () => void;
 }
 
-const statusLabelMap: Record<string, string> = { incomplete: 'Incomplete', accepted: 'Accepted' };
+const statusLabelMap: Record<string, string> = { incomplete: 'In Progress', accepted: 'Portfolio locked' };
 const statusVariantMap: Record<string, string> = { incomplete: 'secondary', accepted: 'success' };
 
 export function BiddingOpenView({
@@ -48,7 +48,7 @@ export function BiddingOpenView({
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: 'My Pools', href: '/calcuttas' },
           { label: calcuttaName },
         ]}
       />
@@ -72,11 +72,11 @@ export function BiddingOpenView({
         <Card variant="accent" padding="compact">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-gray-900">Your Entry</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Your Portfolio</h3>
               <Badge variant={entryStatusVariant as 'secondary' | 'success' | 'warning'}>{entryStatusLabel}</Badge>
             </div>
             <Button onClick={onCreateEntry} disabled={isCreatingEntry} size="sm">
-              {isCreatingEntry ? 'Creating...' : 'Create Entry'}
+              {isCreatingEntry ? 'Creating...' : 'Start Portfolio'}
             </Button>
           </div>
         </Card>
@@ -116,7 +116,7 @@ export function BiddingOpenView({
 
       <div className="mt-4 text-sm text-gray-500 text-center flex items-center justify-center gap-1.5">
         <IconUsers className="h-4 w-4" />
-        {totalEntries} {totalEntries === 1 ? 'entry' : 'entries'} submitted
+        {totalEntries} {totalEntries === 1 ? 'portfolio' : 'portfolios'} submitted
       </div>
     </PageContainer>
   );

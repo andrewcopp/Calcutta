@@ -50,7 +50,7 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               </div>
               <div className="text-right">
                 <p className={`text-2xl font-bold ${pointsClass}`}>
-                  {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} pts
+                  {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} points
                 </p>
               </div>
             </div>

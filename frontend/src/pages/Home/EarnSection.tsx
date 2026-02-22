@@ -57,7 +57,7 @@ export function EarnSection({ revealClass }: EarnSectionProps) {
                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }} axisLine={{ stroke: 'rgba(255,255,255,0.25)' }} />
                 <YAxis tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }} axisLine={{ stroke: 'rgba(255,255,255,0.25)' }} />
                 <Tooltip
-                  formatter={(value: number) => [`${value.toFixed(1)} pts`, 'Contribution']}
+                  formatter={(value: number) => [`${value.toFixed(1)} points`, 'Contribution']}
                   contentStyle={darkTooltipContentStyle}
                   labelStyle={darkTooltipLabelStyle}
                   itemStyle={darkTooltipItemStyle}

@@ -96,7 +96,7 @@ export function CalcuttaTeamsPage() {
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: 'My Pools', href: '/calcuttas' },
           { label: calcuttaName || 'Pool', href: `/calcuttas/${calcuttaId}` },
           { label: 'Teams' },
         ]}
@@ -105,7 +105,7 @@ export function CalcuttaTeamsPage() {
         title={`${calcuttaName} - Teams`}
         actions={
           <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">
-            ← Back to Calcutta
+            ← Back to Pool
           </Link>
         }
       />
@@ -130,7 +130,7 @@ export function CalcuttaTeamsPage() {
                     <TableCell className="text-gray-700">{team.schoolName}</TableCell>
                     <TableCell className="text-gray-700">{team.region}</TableCell>
                     <TableCell className="text-right text-gray-700">
-                      {biddingOpen ? '0.00 pts' : `${team.totalInvestment.toFixed(2)} pts`}
+                      {biddingOpen ? '0.00 credits' : `${team.totalInvestment.toFixed(2)} credits`}
                     </TableCell>
                     <TableCell className="text-right text-gray-700">{team.points}</TableCell>
                     <TableCell className="text-right">

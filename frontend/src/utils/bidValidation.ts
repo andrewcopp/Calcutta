@@ -39,16 +39,16 @@ export function computeValidationErrors(
   }
 
   if (budgetRemaining < 0) {
-    errors.push(`Over budget by ${Math.abs(budgetRemaining).toFixed(2)} pts`);
+    errors.push(`Over budget by ${Math.abs(budgetRemaining).toFixed(2)} credits`);
   }
 
   Object.entries(bidsByTeamId).forEach(([teamId, bid]) => {
     if (bid < MIN_BID) {
-      errors.push(`All bids must be at least ${MIN_BID} pts`);
+      errors.push(`All bids must be at least ${MIN_BID} credits`);
     }
     if (bid > config.maxBidPoints) {
       const team = teams.find((t) => t.id === teamId);
-      errors.push(`Bid on ${team?.schoolName || 'team'} exceeds max ${config.maxBidPoints} pts`);
+      errors.push(`Bid on ${team?.schoolName || 'team'} exceeds max ${config.maxBidPoints} credits`);
     }
   });
 

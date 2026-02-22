@@ -21,7 +21,7 @@ export function EntryRosterCard({
   entryTeams,
   budgetPoints,
   canEdit = true,
-  title = 'Your Entry',
+  title = 'Your Portfolio',
 }: EntryRosterCardProps) {
   const sortedTeams = [...entryTeams].sort((a, b) => b.bid - a.bid);
   const totalSpent = entryTeams.reduce((sum, et) => sum + et.bid, 0);
@@ -32,7 +32,7 @@ export function EntryRosterCard({
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <Badge variant={entryStatus === 'accepted' ? 'success' : 'secondary'}>
-            {entryStatus === 'accepted' ? 'Accepted' : 'Incomplete'}
+            {entryStatus === 'accepted' ? 'Portfolio locked' : 'In Progress'}
           </Badge>
         </div>
         {canEdit && (
@@ -48,14 +48,14 @@ export function EntryRosterCard({
             <span className="text-sm text-gray-800">
               {et.team?.school?.name ?? 'Unknown'} ({et.team?.region ?? '?'} - {et.team?.seed ?? '?'})
             </span>
-            <span className="text-sm font-medium text-blue-700">{et.bid} pts</span>
+            <span className="text-sm font-medium text-blue-700">{et.bid} credits</span>
           </div>
         ))}
       </div>
 
       <div className="px-4 py-3 border-t border-gray-200 flex justify-between text-sm text-gray-600">
         <span>{sortedTeams.length} teams</span>
-        <span>{totalSpent} / {budgetPoints} pts</span>
+        <span>{totalSpent} / {budgetPoints} credits</span>
       </div>
     </Card>
   );

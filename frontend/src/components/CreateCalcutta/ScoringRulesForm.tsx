@@ -47,11 +47,11 @@ export function ScoringRulesForm({ scoringRules, onPointsChange }: ScoringRulesF
               onChange={(e) => onPointsChange(rule.winIndex, e.target.value)}
               className="w-28"
             />
-            <span className="text-sm text-gray-500">pts</span>
+            <span className="text-sm text-gray-500">points</span>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-sm text-gray-500">Points awarded for each win in the tournament</p>
+      <p className="mt-2 text-sm text-gray-500">Points teams earn for each win in the tournament</p>
     </div>
   );
 }

@@ -149,7 +149,7 @@ export function OwnershipsTab({
                 <div className="text-right">
                   <div className="text-sm text-gray-600 whitespace-nowrap">
                     Total Investment
-                    <div className="text-base font-semibold text-gray-900">{team.totalSpend.toFixed(2)} pts</div>
+                    <div className="text-base font-semibold text-gray-900">{team.totalSpend.toFixed(2)} credits</div>
                   </div>
                 </div>
               </div>

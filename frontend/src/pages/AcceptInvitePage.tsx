@@ -46,7 +46,7 @@ export function AcceptInvitePage() {
     setError('');
 
     if (!token) {
-      setError('Invalid invite link. Please contact your pool admin for a new invite.');
+      setError('Invalid invite link. Please contact the person who invited you for a new link.');
       return;
     }
 
@@ -69,7 +69,7 @@ export function AcceptInvitePage() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to accept invite. Please try again.';
       if (message.toLowerCase().includes('expired') || message.toLowerCase().includes('invalid')) {
-        setError('This invite link has expired or is invalid. Please contact your pool admin for a new invite.');
+        setError('This invite link has expired or is invalid. Please contact the person who invited you for a new link.');
       } else {
         setError(message);
       }
@@ -89,7 +89,7 @@ export function AcceptInvitePage() {
           </div>
           <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
             <Alert variant="error">
-              Invalid invite link. Please contact your pool admin for a new invite.
+              Invalid invite link. Please contact the person who invited you for a new link.
             </Alert>
           </div>
         </div>
@@ -152,19 +152,19 @@ export function AcceptInvitePage() {
                 <p className="text-gray-600">
                   You've been invited to <span className="font-semibold">"{preview.calcuttaName}"</span>
                 </p>
-                <p className="text-gray-500 text-sm">by {preview.commissionerName}</p>
+                <p className="text-gray-500 text-sm">organized by {preview.commissionerName}</p>
                 {preview.tournamentStartingAt && (
                   <p className="text-gray-500 text-sm mt-1">
                     Tournament starts {formatDate(preview.tournamentStartingAt)}
                   </p>
                 )}
-                <p className="text-gray-600 mt-3">Set your password below to get started.</p>
+                <p className="text-gray-600 mt-3">Choose a password and you're in.</p>
               </div>
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold mb-2 text-center">Welcome to Calcutta</h2>
-              <p className="text-gray-600 mb-6 text-center">Set your password to complete your account setup.</p>
+              <h2 className="text-2xl font-bold mb-2 text-center">Welcome!</h2>
+              <p className="text-gray-600 mb-6 text-center">Choose a password and you're in.</p>
             </>
           )}
 
@@ -205,7 +205,7 @@ export function AcceptInvitePage() {
             )}
 
             <Button type="submit" className="w-full" disabled={loading || !passwordValid || !passwordsMatch}>
-              {loading ? 'Setting up...' : 'Set Password & Continue'}
+              {loading ? 'Getting you in...' : 'Set Password & Continue'}
             </Button>
           </form>
         </div>

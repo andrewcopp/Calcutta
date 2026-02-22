@@ -94,14 +94,14 @@ export function EntryTeamsPage() {
       <PageContainer>
         <Breadcrumb
           items={[
-            { label: 'Calcuttas', href: '/calcuttas' },
+            { label: 'My Pools', href: '/calcuttas' },
             { label: calcuttaName, href: `/calcuttas/${calcuttaId}` },
-            { label: 'Entry' },
+            { label: 'Portfolio' },
           ]}
         />
-        <PageHeader title="Entry" />
+        <PageHeader title="Portfolio" />
         <div className="p-6 border border-gray-200 rounded-lg bg-white shadow-sm text-center">
-          <p className="text-gray-600">This entry is hidden while bidding is open.</p>
+          <p className="text-gray-600">This portfolio is hidden while bidding is open.</p>
         </div>
       </PageContainer>
     );
@@ -110,23 +110,23 @@ export function EntryTeamsPage() {
   const ownershipLoading = dashboardQuery.isFetching;
 
   const entryTeams = biddingOpen && isOwnEntry ? ownEntryTeamsQuery.data ?? [] : teams;
-  const entryTitle = isOwnEntry ? 'Your Entry' : (entryName || 'Entry');
+  const entryTitle = isOwnEntry ? 'Your Portfolio' : (entryName || 'Portfolio');
 
   return (
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: 'My Pools', href: '/calcuttas' },
           { label: calcuttaName, href: `/calcuttas/${calcuttaId}` },
-          { label: entryName || 'Entry' },
+          { label: entryName || 'Portfolio' },
         ]}
       />
 
-      <PageHeader title={entryName || 'Entry'} />
+      <PageHeader title={entryName || 'Portfolio'} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="entry">Entry</TabsTrigger>
+          <TabsTrigger value="entry">Portfolio</TabsTrigger>
           {!biddingOpen && <TabsTrigger value="investments">Investments</TabsTrigger>}
           {!biddingOpen && <TabsTrigger value="ownerships">Ownerships</TabsTrigger>}
           {!biddingOpen && <TabsTrigger value="returns">Returns</TabsTrigger>}

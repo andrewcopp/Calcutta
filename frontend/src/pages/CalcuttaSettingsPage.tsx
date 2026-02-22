@@ -60,13 +60,13 @@ export function CalcuttaSettingsPage() {
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: 'My Pools', href: '/calcuttas' },
           { label: calcutta.name, href: `/calcuttas/${calcuttaId}` },
           { label: 'Settings' },
         ]}
       />
 
-      <PageHeader title="Pool Settings" />
+      <PageHeader title="Pool Rules" />
 
       <SettingsForm
         calcuttaId={calcuttaId}

@@ -72,7 +72,7 @@ export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormPr
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="minTeams" className="block text-sm font-medium text-gray-700 mb-1">
-                Min Teams
+                Min Teams per Portfolio
               </label>
               <Input
                 id="minTeams"
@@ -86,7 +86,7 @@ export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormPr
 
             <div>
               <label htmlFor="maxTeams" className="block text-sm font-medium text-gray-700 mb-1">
-                Max Teams
+                Max Teams per Portfolio
               </label>
               <Input
                 id="maxTeams"
@@ -100,7 +100,7 @@ export function SettingsForm({ calcuttaId, calcutta, onSuccess }: SettingsFormPr
 
             <div>
               <label htmlFor="maxBidPoints" className="block text-sm font-medium text-gray-700 mb-1">
-                Max Bid per Team
+                Max Credits per Team
               </label>
               <Input
                 id="maxBidPoints"

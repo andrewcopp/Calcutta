@@ -30,9 +30,9 @@ export function CalcuttaListPage() {
     return (
       <PageContainer>
         <PageHeader
-          title="Calcuttas"
+          title="My Pools"
           actions={
-            <Button onClick={() => navigate('/calcuttas/create')}>Create New Calcutta</Button>
+            <Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>
           }
         />
         <CalcuttaListSkeleton />
@@ -54,9 +54,9 @@ export function CalcuttaListPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Calcuttas"
+        title="My Pools"
         actions={
-          <Button onClick={() => navigate('/calcuttas/create')}>Create New Calcutta</Button>
+          <Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>
         }
       />
 
@@ -78,8 +78,8 @@ export function CalcuttaListPage() {
         {calcuttas.length === 0 ? (
           <EmptyState
             icon={<IconBriefcase />}
-            title="Welcome to Calcutta!"
-            description="Create your first pool or wait for an invitation from a commissioner."
+            title="Welcome!"
+            description="Create your first pool or wait for an invite."
             action={
               <div className="flex gap-3">
                 <Link to="/rules">
@@ -113,7 +113,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
               #{ranking.rank} of {ranking.totalEntries}
             </span>
             <span className="text-lg font-semibold">
-              {ranking.points.toFixed(2)} pts
+              {ranking.points.toFixed(2)} points
             </span>
           </div>
           <p className="text-sm text-gray-600 mt-1">{calcutta.name}</p>
@@ -129,7 +129,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
         <Card padding="compact" className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-            <span className="text-sm font-medium text-gray-400">No Entry</span>
+            <span className="text-sm font-medium text-gray-400">No Portfolio</span>
           </div>
         </Card>
       </Link>
@@ -153,7 +153,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
                   ? 'bg-green-100 text-green-700'
                   : 'bg-amber-100 text-amber-700'
               }`}>
-                {calcutta.hasEntry ? 'Entry Submitted' : 'Awaiting Entry'}
+                {calcutta.hasEntry ? "You're in" : 'Build your portfolio'}
               </span>
             </div>
             {countdown && (

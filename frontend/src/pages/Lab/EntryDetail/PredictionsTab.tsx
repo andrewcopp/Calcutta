@@ -88,11 +88,11 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-3">
           <div className="text-xs text-gray-500 uppercase">Total Rational Budget</div>
-          <div className="text-lg font-semibold">{totalRational.toLocaleString()} pts</div>
+          <div className="text-lg font-semibold">{totalRational.toLocaleString()} credits</div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-3">
           <div className="text-xs text-gray-500 uppercase">Total Predicted Market</div>
-          <div className="text-lg font-semibold">{totalPredicted.toLocaleString()} pts</div>
+          <div className="text-lg font-semibold">{totalPredicted.toLocaleString()} credits</div>
         </div>
       </div>
 

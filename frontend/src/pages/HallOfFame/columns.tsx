@@ -21,7 +21,7 @@ export const bestTeamsColumns: ColumnDef<BestTeam, unknown>[] = [
   {
     accessorKey: 'totalBid',
     header: 'Total Investment',
-    cell: ({ row }) => `${row.original.totalBid.toFixed(2)} pts`,
+    cell: ({ row }) => `${row.original.totalBid.toFixed(2)} credits`,
   },
   {
     accessorKey: 'rawROI',
@@ -44,7 +44,7 @@ export const bestInvestmentsColumns: ColumnDef<InvestmentLeaderboardRow, unknown
   {
     accessorKey: 'investment',
     header: 'Investment',
-    cell: ({ row }) => `${row.original.investment.toFixed(2)} pts`,
+    cell: ({ row }) => `${row.original.investment.toFixed(2)} credits`,
   },
   {
     accessorKey: 'ownershipPercentage',

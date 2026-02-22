@@ -91,7 +91,7 @@ export function EntryProfilePage() {
           </div>
           <div>
             <span className="text-xs text-gray-500 uppercase mr-2">Total Bid:</span>
-            <span className="font-medium">{profile.totalBidPoints.toLocaleString()} pts</span>
+            <span className="font-medium">{profile.totalBidPoints.toLocaleString()} credits</span>
           </div>
         </div>
       </div>

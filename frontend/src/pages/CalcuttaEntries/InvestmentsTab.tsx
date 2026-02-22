@@ -166,10 +166,10 @@ export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeam
                       }))}
                       backgroundColor="#E5E7EB"
                       getTooltipTitle={(seg) => seg.label}
-                      getTooltipValue={(seg) => `${seg.value.toFixed(2)} pts`}
+                      getTooltipValue={(seg) => `${seg.value.toFixed(2)} credits`}
                     />
                   </td>
-                  <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">{row.totalInvestment.toFixed(2)} pts</td>
+                  <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">{row.totalInvestment.toFixed(2)} credits</td>
                 </tr>
               );
             })}

@@ -26,13 +26,13 @@ export function OptimizerConfigCard({ optimizerKind, optimizerParams }: Optimize
         {budgetPoints != null && (
           <div>
             <span className="text-gray-500">Budget:</span>{' '}
-            <span className="font-medium">{budgetPoints} pts</span>
+            <span className="font-medium">{budgetPoints} credits</span>
           </div>
         )}
         {maxPerTeam != null && (
           <div>
             <span className="text-gray-500">Max Per Team:</span>{' '}
-            <span className="font-medium">{maxPerTeam} pts</span>
+            <span className="font-medium">{maxPerTeam} credits</span>
           </div>
         )}
         {minTeams != null && (
@@ -50,7 +50,7 @@ export function OptimizerConfigCard({ optimizerKind, optimizerParams }: Optimize
         {minBid != null && (
           <div>
             <span className="text-gray-500">Min Bid:</span>{' '}
-            <span className="font-medium">{minBid} pts</span>
+            <span className="font-medium">{minBid} credits</span>
           </div>
         )}
         {edgeMultiplier != null && (

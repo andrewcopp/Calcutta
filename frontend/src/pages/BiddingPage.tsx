@@ -64,7 +64,7 @@ export function BiddingPage() {
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'Calcuttas', href: '/calcuttas' },
+          { label: 'My Pools', href: '/calcuttas' },
           { label: calcutta?.name ?? 'Pool', href: `/calcuttas/${calcuttaId}` },
           { label: 'Bid' },
         ]}
@@ -72,14 +72,14 @@ export function BiddingPage() {
 
       <PageHeader
         title="Place Your Bids"
-        subtitle={`Budget: ${BUDGET} pts | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: ${MAX_BID} pts`}
+        subtitle={`Budget: ${BUDGET} credits | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: ${MAX_BID} credits`}
         actions={
           <div className="flex gap-2">
             <Link to={`/calcuttas/${calcuttaId}`}>
               <Button variant="secondary">Cancel</Button>
             </Link>
             <Button onClick={handleSubmit} disabled={!isValid || updateEntryMutation.isPending} loading={updateEntryMutation.isPending} title={!isValid && validationErrors.length > 0 ? validationErrors[0] : undefined}>
-              {updateEntryMutation.isPending ? 'Submitting...' : 'Submit Entry'}
+              {updateEntryMutation.isPending ? 'Submitting...' : 'Submit Portfolio'}
             </Button>
           </div>
         }

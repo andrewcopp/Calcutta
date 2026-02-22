@@ -55,7 +55,7 @@ export function CreateCalcuttaPage() {
       navigate('/calcuttas');
     },
     onError: (error) => {
-      setError(error instanceof Error ? error.message : 'Failed to create calcutta');
+      setError(error instanceof Error ? error.message : 'Failed to create pool');
     },
   });
 
@@ -116,15 +116,15 @@ export function CreateCalcuttaPage() {
       <div className="max-w-2xl mx-auto">
         <Breadcrumb
           items={[
-            { label: 'Calcuttas', href: '/calcuttas' },
+            { label: 'My Pools', href: '/calcuttas' },
             { label: 'Create' },
           ]}
         />
         <PageHeader
-          title="Create New Calcutta"
+          title="Start a New Pool"
           actions={
             <Button variant="ghost" onClick={() => navigate('/calcuttas')}>
-              ← Back to Calcuttas
+              ← Back to My Pools
             </Button>
           }
         />
@@ -136,14 +136,14 @@ export function CreateCalcuttaPage() {
             <div className="space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Calcutta Name
+                  Pool Name
                 </label>
                 <Input
                   type="text"
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter a name for your Calcutta"
+                  placeholder="Enter a name for your pool"
                   required
                 />
               </div>
@@ -165,17 +165,17 @@ export function CreateCalcuttaPage() {
                     </option>
                   ))}
                 </Select>
-                <p className="mt-1 text-sm text-gray-500">Select the tournament this Calcutta will be based on</p>
+                <p className="mt-1 text-sm text-gray-500">Select the tournament this pool will be based on</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Pool Settings
+                  Pool Rules
                 </label>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <label htmlFor="minTeams" className="text-sm text-gray-600 w-44 shrink-0">
-                      Min Teams per Entry
+                      Minimum teams per portfolio
                     </label>
                     <Input
                       type="number"
@@ -189,7 +189,7 @@ export function CreateCalcuttaPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <label htmlFor="maxTeams" className="text-sm text-gray-600 w-44 shrink-0">
-                      Max Teams per Entry
+                      Maximum teams per portfolio
                     </label>
                     <Input
                       type="number"
@@ -203,7 +203,7 @@ export function CreateCalcuttaPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <label htmlFor="maxBidPoints" className="text-sm text-gray-600 w-44 shrink-0">
-                      Max Bid per Team
+                      Max credits on a single team
                     </label>
                     <Input
                       type="number"
@@ -213,17 +213,17 @@ export function CreateCalcuttaPage() {
                       onChange={(e) => setMaxBidPoints(parseInt(e.target.value, 10) || 0)}
                       className="w-28"
                     />
-                    <span className="text-sm text-gray-500">pts</span>
+                    <span className="text-sm text-gray-500">credits</span>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">Constraints for each participant's entry</p>
+                <p className="mt-2 text-sm text-gray-500">These rules keep portfolios balanced.</p>
               </div>
 
               <ScoringRulesForm scoringRules={scoringRules} onPointsChange={handlePointsChange} />
 
               <div className="pt-2">
                 <Button type="submit" className="w-full" loading={createCalcuttaMutation.isPending}>
-                  Create Calcutta
+                  Create Pool
                 </Button>
               </div>
             </div>

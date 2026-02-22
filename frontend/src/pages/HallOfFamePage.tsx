@@ -62,7 +62,7 @@ export function HallOfFamePage() {
       />
       <PageHeader
         title="Hall of Fame"
-        subtitle="Leaderboards across all calcuttas (normalized for year-to-year comparisons)."
+        subtitle="Leaderboards across all pools, adjusted for inflation so every year is comparable."
         actions={
           <Link to="/admin" className="text-blue-600 hover:text-blue-800">
             Back to Admin Console
@@ -74,7 +74,7 @@ export function HallOfFamePage() {
         <TabsList>
           <TabsTrigger value="bestTeams">Best Teams</TabsTrigger>
           <TabsTrigger value="bestInvestments">Best Investments</TabsTrigger>
-          <TabsTrigger value="bestEntries">Best Entries</TabsTrigger>
+          <TabsTrigger value="bestEntries">Best Portfolios</TabsTrigger>
           <TabsTrigger value="bestCareers">Best Careers</TabsTrigger>
         </TabsList>
 
@@ -82,8 +82,7 @@ export function HallOfFamePage() {
         <Card>
           <h2 className="text-xl font-semibold mb-2">Best Teams</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Teams ranked by normalized ROI where 1.0 = average performance within that Calcutta (levels the playing field across seeds). Yes, we call it
-            "Adjusted for Inflation".
+            Which teams performed best relative to expectations? Performance adjusted for inflation, because a 12-seed making the Sweet 16 is more impressive than a 1-seed doing it.
           </p>
 
           {bestTeamsQuery.isLoading && <LoadingState label="Loading best teams..." layout="inline" />}
@@ -110,7 +109,7 @@ export function HallOfFamePage() {
         <Card>
           <h2 className="text-xl font-semibold mb-2">Best Investments</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Individual picks ranked by normalized returns: Raw Returns / (Total Returns / Total Investment), where Total Investment = $100 × participants. Yes, we call it "Adjusted for Inflation".
+            Which individual picks returned the most? Returns adjusted for inflation so every pool is on equal footing.
           </p>
 
           {bestInvestmentsQuery.isLoading && <LoadingState label="Loading best investments..." layout="inline" />}
@@ -135,9 +134,9 @@ export function HallOfFamePage() {
 
       <TabsContent value="bestEntries">
         <Card>
-          <h2 className="text-xl font-semibold mb-2">Best Entries</h2>
+          <h2 className="text-xl font-semibold mb-2">Best Portfolios</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Entries ranked by normalized returns: Entry Total Returns / (Calcutta Total Returns / Calcutta Total Investment), where Calcutta Total Investment = $100 × participants.
+            Which portfolios returned the most overall? Adjusted for inflation so results across years are comparable.
           </p>
 
           {bestEntriesQuery.isLoading && <LoadingState label="Loading best entries..." layout="inline" />}
@@ -164,7 +163,7 @@ export function HallOfFamePage() {
         <Card>
           <h2 className="text-xl font-semibold mb-2">Best Careers</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Careers ranked by average winnings per year (not shown). Tie breaks: wins, podiums, payouts, then top 10s.
+            Who's been the most consistent over the years? Ranked by average annual performance, with tie breaks on wins, podiums, payouts, and top-10 finishes.
           </p>
 
           <div className="mb-4 flex items-center gap-2">

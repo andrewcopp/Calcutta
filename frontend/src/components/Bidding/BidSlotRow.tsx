@@ -71,9 +71,9 @@ export function BidSlotRow({
   const validationError =
     slot.bidAmount > 0
       ? slot.bidAmount < minBid
-        ? `Min ${minBid} pts`
+        ? `Min ${minBid} credits`
         : slot.bidAmount > maxBidPoints
-          ? `Max ${maxBidPoints} pts`
+          ? `Max ${maxBidPoints} credits`
           : undefined
       : undefined;
 
@@ -110,7 +110,7 @@ export function BidSlotRow({
                   })}
                 />
                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 text-sm">pts</span>
+                  <span className="text-gray-500 text-sm">cr</span>
                 </div>
               </div>
 

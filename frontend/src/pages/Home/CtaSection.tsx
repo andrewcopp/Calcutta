@@ -26,7 +26,7 @@ export function CtaSection({ revealClass }: CtaSectionProps) {
           </div>
 
           <div className="mt-8 max-w-2xl text-xs sm:text-sm text-white/60">
-            This is a friendly game. Calcutta tracks points and ownership for your group — it does not facilitate gambling or real-money winnings.
+            Free to play. The only currency here is credits and the satisfaction of being right.
           </div>
         </div>
       </div>

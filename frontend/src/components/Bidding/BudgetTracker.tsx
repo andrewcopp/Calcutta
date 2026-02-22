@@ -43,7 +43,7 @@ export function BudgetTracker({
           <div>
             <div className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Budget</div>
             <div className={cn('text-2xl font-bold', getBudgetColor())}>
-              {budgetRemaining.toFixed(2)} / {totalBudget.toFixed(2)} pts
+              {budgetRemaining.toFixed(2)} / {totalBudget.toFixed(2)} credits
             </div>
             <div className="mt-2 bg-gray-100 rounded-full h-2.5 overflow-hidden">
               <div

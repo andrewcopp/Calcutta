@@ -33,7 +33,7 @@ export function EntryStatsCards({
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-3">
           <div className="text-xs text-gray-500 uppercase">Our Investment</div>
-          <div className="text-lg font-semibold">{totalOurInvestment.toLocaleString()} pts</div>
+          <div className="text-lg font-semibold">{totalOurInvestment.toLocaleString()} credits</div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-3">
           <div className="text-xs text-gray-500 uppercase">Wtd Pred ROI</div>
@@ -54,7 +54,7 @@ export function EntryStatsCards({
           <div className="text-xs text-blue-700 uppercase mb-2">Top Adj ROI Investments</div>
           {topRoiInvested.map(r => (
             <div key={r.teamId} className="text-sm text-blue-800">
-              {r.schoolName} ({r.seed}): {r.ourInvestment} pts {'\u2192'} {formatRoi(r.adjRoi)} adj ROI
+              {r.schoolName} ({r.seed}): {r.ourInvestment} credits {'\u2192'} {formatRoi(r.adjRoi)} adj ROI
             </div>
           ))}
         </div>

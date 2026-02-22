@@ -32,11 +32,11 @@ export function SeedAllocationChart({ investedRows, totalOurInvestment }: SeedAl
       <p className="text-sm text-gray-500 mb-3">Budget distribution across seed groups.</p>
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={seedAllocationData} layout="vertical">
-          <XAxis type="number" tickFormatter={(v: number) => `${v} pts`} fontSize={12} />
+          <XAxis type="number" tickFormatter={(v: number) => `${v} credits`} fontSize={12} />
           <YAxis type="category" dataKey="name" width={50} fontSize={12} />
           <Tooltip
             formatter={(value: number, _name: string, props: { payload?: { pct?: number } }) =>
-              [`${value} pts (${props.payload?.pct?.toFixed(0) ?? 0}%)`, 'Investment']
+              [`${value} credits (${props.payload?.pct?.toFixed(0) ?? 0}%)`, 'Investment']
             }
           />
           <Bar dataKey="amount" radius={[0, 4, 4, 0]}>

@@ -71,7 +71,7 @@ export function EarnCard() {
           <p className="text-gray-600">Your points are team points × your ownership percentage.</p>
         </div>
         <div className="rounded-full bg-gray-900 px-3 py-1 text-sm font-semibold text-white">
-          Example total: {simulatedTotal.toFixed(1)} pts
+          Example total: {simulatedTotal.toFixed(1)} points
         </div>
       </div>
 
@@ -110,7 +110,7 @@ export function EarnCard() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="team" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value: number) => [`${value.toFixed(1)} pts`, 'Your points']} />
+              <Tooltip formatter={(value: number) => [`${value.toFixed(1)} points`, 'Your points']} />
               <Bar dataKey="yourPoints" radius={[8, 8, 0, 0]}>
                 {simulatedEntryWithScore.map((t) => (
                   <Cell key={t.key} fill={t.fill} />

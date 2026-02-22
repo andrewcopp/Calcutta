@@ -76,7 +76,7 @@ export function DashboardSummary({
 
       <Card padding="compact">
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Your Points</p>
-        <p className="text-2xl font-bold text-gray-900">{actualPoints.toFixed(2)} pts</p>
+        <p className="text-2xl font-bold text-gray-900">{actualPoints.toFixed(2)} points</p>
         <p className="text-xs text-gray-500 mt-1">{remainingPoints.toFixed(2)} possible remaining</p>
       </Card>
     </div>

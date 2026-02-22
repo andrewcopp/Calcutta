@@ -13,7 +13,7 @@ export function Header() {
   const location = useLocation();
 
   const navLinks = [
-    { to: '/calcuttas', label: 'Calcuttas', show: true },
+    { to: '/calcuttas', label: 'My Pools', show: true },
     { to: '/lab', label: 'Lab', show: canAccessLab },
     { to: '/rules', label: 'How It Works', show: true },
     { to: '/admin', label: 'Admin', show: canAccessAdmin },

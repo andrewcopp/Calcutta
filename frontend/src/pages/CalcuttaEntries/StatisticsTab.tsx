@@ -27,7 +27,7 @@ export function StatisticsTab({ calcuttaId, totalEntries, totalInvestment, total
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Tournament Statistics</h2>
           <p className="text-gray-600">Total Entries: {totalEntries}</p>
-          <p className="text-gray-600">Total Investment: {totalInvestment.toFixed(2)} pts</p>
+          <p className="text-gray-600">Total Investment: {totalInvestment.toFixed(2)} credits</p>
           <p className="text-gray-600">Total Returns: {totalReturns.toFixed(2)}</p>
           <p className="text-gray-600">Average Return: {averageReturn.toFixed(2)}</p>
           <p className="text-gray-600">Std Dev for Returns: {returnsStdDev.toFixed(2)}</p>
@@ -40,8 +40,8 @@ export function StatisticsTab({ calcuttaId, totalEntries, totalInvestment, total
               <BarChart data={seedInvestmentData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="seed" label={{ value: 'Seed', position: 'insideBottom', offset: -5 }} />
-                <YAxis label={{ value: 'Total Investment (pts)', angle: -90, position: 'insideLeft' }} />
-                <Tooltip formatter={(value: number) => [`${value.toFixed(2)} pts`, 'Total Investment']} />
+                <YAxis label={{ value: 'Total Investment (credits)', angle: -90, position: 'insideLeft' }} />
+                <Tooltip formatter={(value: number) => [`${value.toFixed(2)} credits`, 'Total Investment']} />
                 <Bar dataKey="totalInvestment" fill="#4F46E5" />
               </BarChart>
             </ResponsiveContainer>
@@ -56,7 +56,7 @@ export function StatisticsTab({ calcuttaId, totalEntries, totalInvestment, total
 
       <div className="bg-white rounded-lg shadow p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Team ROI - Tournament Heroes</h2>
-        <p className="text-sm text-gray-600 mb-4">Return on Investment: Points scored per dollar spent. ROI = Points / (Investment + $1)</p>
+        <p className="text-sm text-gray-600 mb-4">Return on investment: points scored per credit invested. ROI = Points / (Investment + 1)</p>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -78,7 +78,7 @@ export function StatisticsTab({ calcuttaId, totalEntries, totalInvestment, total
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{team.region}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{team.teamName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{team.points.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{team.investment.toFixed(2)} pts</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{team.investment.toFixed(2)} credits</td>
                   <td
                     className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${
                       index < 3 ? 'text-green-600' : 'text-gray-900'

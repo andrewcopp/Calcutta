@@ -118,7 +118,7 @@ describe('computeValidationErrors', () => {
     const errors = computeValidationErrors(bids, defaultConfig, []);
 
     // THEN an error about being over budget is present
-    expect(errors).toContain('Over budget by 10.00 pts');
+    expect(errors).toContain('Over budget by 10.00 credits');
   });
 
   it('reports bid below minimum when a bid is less than 1', () => {
@@ -129,7 +129,7 @@ describe('computeValidationErrors', () => {
     const errors = computeValidationErrors(bids, defaultConfig, []);
 
     // THEN an error about minimum bid is present
-    expect(errors).toContain('All bids must be at least 1 pts');
+    expect(errors).toContain('All bids must be at least 1 credits');
   });
 
   it('reports bid exceeds max with team name when available', () => {
@@ -141,7 +141,7 @@ describe('computeValidationErrors', () => {
     const errors = computeValidationErrors(bids, defaultConfig, teams);
 
     // THEN the error includes the team name
-    expect(errors).toContain('Bid on Duke exceeds max 50 pts');
+    expect(errors).toContain('Bid on Duke exceeds max 50 credits');
   });
 
   it('falls back to "team" when school name is not found for over-max bid', () => {
@@ -152,7 +152,7 @@ describe('computeValidationErrors', () => {
     const errors = computeValidationErrors(bids, defaultConfig, []);
 
     // THEN the error falls back to "team"
-    expect(errors).toContain('Bid on team exceeds max 50 pts');
+    expect(errors).toContain('Bid on team exceeds max 50 credits');
   });
 
   it('returns no errors when bids are valid', () => {
@@ -186,7 +186,7 @@ describe('computeValidationErrors', () => {
 
     // THEN both the min-teams and min-bid errors are present
     expect(errors).toContain('Select at least 3 teams');
-    expect(errors).toContain('All bids must be at least 1 pts');
+    expect(errors).toContain('All bids must be at least 1 credits');
   });
 
   it('does not report over-budget at exact zero remaining', () => {
