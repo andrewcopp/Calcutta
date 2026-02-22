@@ -33,10 +33,12 @@ cd frontend && npm test                                  # Frontend tests
 cd frontend && npm run lint                              # Frontend linting
 ```
 
-### Code Generation
+### Code Generation (SQLC)
 ```bash
 make sqlc-generate      # Regenerate SQL type-safe wrappers from queries
 ```
+
+SQLC pipeline: write SQL in `backend/internal/adapters/db/sqlc/queries/*.sql` → run `make sqlc-generate` → generated Go in `backend/internal/adapters/db/sqlc/*.sql.go`. Query annotations (`-- name: GetCalcutta :one`) control generated method signatures. Config in `backend/sqlc.yaml`.
 
 ### Data Science
 ```bash
@@ -73,7 +75,11 @@ make api-test ENDPOINT="/api/..."    # Test endpoint (supports METHOD, DATA)
 - `backend/cmd/` - Runnable binaries (api, migrate, workers, tools)
 - `backend/internal/app/` - Feature services (~15 domains: bracket, calcutta, scoring, analytics, etc.)
 - `backend/internal/adapters/` - Database and external API implementations
-- `backend/internal/transport/httpserver/` - HTTP handlers (`handlers_*.go`)
+- `backend/internal/transport/httpserver/` - HTTP handlers (`handlers_*.go`), DTOs (`dtos/`), middleware (`middleware/`)
+- `backend/internal/ports/` - Interface contracts (CalcuttaRepository, EntryRepository, etc.)
+- `backend/internal/models/` - Domain structs mirroring database tables
+- `backend/internal/auth/` - Token manager, session/API key/chain authenticators
+- `backend/internal/platform/` - Config loading, logger, pgx pool, mailer
 - `backend/migrations/schema/` - Versioned SQL migrations (YYYYMMDDHHMMSS format)
 - `frontend/src/` - React components, pages, hooks, services
 - `data-science/moneyball/` - db, lab, models, utils
@@ -86,11 +92,65 @@ cmd/* (handlers/CLIs) → internal/app/* (services) → internal/ports (interfac
 
 Services depend on small interfaces in `internal/ports`, not concrete implementations. Lower layers never import higher layers.
 
+### Wiring & Dependency Injection
+
+`backend/internal/app/bootstrap/app.go` creates the `App` struct with all services. Each service takes a `Ports` struct of interfaces:
+
+```go
+// Example: calcutta service depends on port interfaces, not concrete repos
+type Ports struct {
+    Calcuttas       ports.CalcuttaRepository
+    Entries         ports.EntryRepository
+    Payouts         ports.PayoutRepository
+    PortfolioReader ports.PortfolioReader
+}
+```
+
+Adapters in `internal/adapters/db/` implement these interfaces, wrapping SQLC-generated queries and mapping to domain models.
+
 ### Code Patterns
-- **Handlers:** parse input → call service → return response DTO
+- **Handlers:** parse input → call service → `response.WriteJSON(w, status, dto)` or `httperr.WriteFromErr(w, r, err, userID)`
 - **Services:** business logic only, no logging, return errors
+- **Adapters:** wrap SQLC queries, convert between SQLC types and domain models
+- **DTOs:** `transport/httpserver/dtos/` with `NewXxxResponse(model)` mapper constructors
 - **File size:** <200-400 LOC, split by responsibility
 - **Function size:** 20-60 LOC (orchestration may be longer)
+
+### Database Schemas
+- **`core.*`** - Production tables (calcuttas, entries, teams, tournaments, users)
+- **`derived.*`** - Simulation/sandbox infrastructure (simulation_runs, simulated_calcuttas)
+- **`lab.*`** - R&D schema (investment_models, entries, evaluations)
+- **`archive.*`** - Deprecated tables
+
+### Workers
+
+`backend/cmd/workers/main.go` runs background jobs. Two workers:
+- **TournamentImportWorker** - Polls DB for import jobs, executes bracket imports
+- **LabPipelineWorker** - Polls DB for evaluation jobs, orchestrates Python ML scripts
+
+Worker container mounts both `backend/` and `data-science/`, installing Python deps at startup. Workers report progress via `DBProgressWriter` and shut down gracefully on SIGTERM/SIGINT.
+
+### Frontend Stack
+- **Vite** + **TypeScript** + **React Router** v6
+- **React Query** (`@tanstack/react-query`) for server state with `queryKeys.ts` cache key registry
+- **Tailwind CSS** + **Radix UI** primitives for styling and accessibility
+- **Recharts** for data visualization
+- API client in `frontend/src/api/apiClient.ts` with auto-refresh on 401 (Bearer token + HTTP-only refresh cookie)
+- Domain services in `frontend/src/services/` call apiClient methods
+
+### Auth
+Two modes controlled by `AUTH_MODE` env var:
+- **`legacy`** (default, development) - Local email/password with JWT tokens
+- **`cognito`** - AWS Cognito integration
+
+Auth chain in `internal/auth/`: `ChainAuthenticator` tries `SessionAuthenticator` (cookie) then `APIKeyAuthenticator`. Middleware extracts user from token and injects into request context.
+
+### API Error Envelope
+```json
+{"error": {"code": "validation_error", "message": "...", "field": "...", "requestId": "..."}}
+```
+
+Status codes: 200, 201, 204, 400, 401, 403, 404, 409, 423 (business rule lock), 500.
 
 ## Testing Conventions (Strictly Enforced)
 
@@ -118,12 +178,25 @@ func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
 }
 ```
 
+Frontend tests follow the same conventions using Vitest:
+```typescript
+describe('createEmptySlot', () => {
+  it('returns empty teamId', () => {
+    const slot = createEmptySlot();
+    expect(slot.teamId).toBe('');
+  });
+});
+```
+
 ## Database Rules
 
 - **All schema changes via versioned migrations** - No ad-hoc DDL on shared databases
 - **Migration filenames:** `YYYYMMDDHHMMSS_description.up.sql` and `.down.sql`
 - **Never modify existing migrations** - Create new ones
 - **Soft deletes:** Use `deleted_at` timestamps
+- **DO NOT wrap migrations in BEGIN/COMMIT** - golang-migrate auto-wraps each file in a transaction
+- **Always schema-qualify** table/index/function names (e.g., `core.users`, not `users`)
+- **Use `public.uuid_generate_v4()`** (fully qualified) since migrations set `search_path = ''`
 
 ## Domain Units
 
@@ -149,5 +222,6 @@ Use prefixes to distinguish data types:
 
 - `docs/standards/engineering.md` - Architecture principles
 - `docs/standards/bracket_testing_guidelines.md` - Testing conventions (required reading)
+- `docs/standards/api_conventions.md` - HTTP API standards and error envelope
 - `docs/reference/rules.md` - Business logic and game rules
 - `docs/runbooks/moneyball_pipeline_usage.md` - Data science workflow
