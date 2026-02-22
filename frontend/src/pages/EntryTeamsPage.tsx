@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
+import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { EntryRosterCard } from '../components/EntryRosterCard';
+import { DashboardSummary } from './CalcuttaEntries/DashboardSummary';
 import { InvestmentsTab } from './EntryTeams/InvestmentsTab';
 import { OwnershipsTab } from './EntryTeams/OwnershipsTab';
 import { ReturnsTab } from './EntryTeams/ReturnsTab';
@@ -17,6 +20,7 @@ import { useEntryTeamsData } from '../hooks/useEntryTeamsData';
 import { useEntryOwnershipData } from '../hooks/useEntryOwnershipData';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
+import { formatDate } from '../utils/format';
 
 export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
@@ -100,9 +104,9 @@ export function EntryTeamsPage() {
           ]}
         />
         <PageHeader title="Portfolio" />
-        <div className="p-6 border border-gray-200 rounded-lg bg-white shadow-sm text-center">
+        <Card className="text-center">
           <p className="text-gray-600">This portfolio is hidden while bidding is open.</p>
-        </div>
+        </Card>
       </PageContainer>
     );
   }
@@ -124,13 +128,46 @@ export function EntryTeamsPage() {
 
       <PageHeader title={entryName || 'Portfolio'} />
 
+      {isOwnEntry && !biddingOpen && dashboardQuery.data?.tournamentStartingAt && (
+        <div className="mb-4 flex items-center gap-2">
+          <Badge variant="secondary">Portfolios Revealed</Badge>
+          <span className="text-sm text-gray-500">{formatDate(dashboardQuery.data.tournamentStartingAt, true)}</span>
+        </div>
+      )}
+
+      {isOwnEntry && !biddingOpen && (() => {
+        const totalSpent = teams.reduce((sum, et) => sum + et.bid, 0);
+        const budgetPoints = dashboardQuery.data?.calcutta?.budgetPoints ?? 100;
+        return (
+          <Card variant="accent" padding="compact" className="mb-6">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-semibold text-gray-900">Your Portfolio</h3>
+              <Badge variant={currentUserEntry?.status === 'accepted' ? 'success' : 'secondary'}>
+                {currentUserEntry?.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
+              </Badge>
+              <span className="text-sm text-gray-500">{teams.length} teams &middot; {totalSpent} / {budgetPoints} credits</span>
+            </div>
+          </Card>
+        );
+      })()}
+
+      {isOwnEntry && !biddingOpen && currentUserEntry && dashboardQuery.data && (
+        <DashboardSummary
+          currentEntry={currentUserEntry}
+          entries={dashboardQuery.data.entries}
+          portfolios={allCalcuttaPortfolios}
+          portfolioTeams={allCalcuttaPortfolioTeams}
+          tournamentTeams={tournamentTeams}
+        />
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="entry">Portfolio</TabsTrigger>
-          {!biddingOpen && <TabsTrigger value="investments">Investments</TabsTrigger>}
-          {!biddingOpen && <TabsTrigger value="ownerships">Ownerships</TabsTrigger>}
-          {!biddingOpen && <TabsTrigger value="returns">Returns</TabsTrigger>}
-          {!biddingOpen && <TabsTrigger value="statistics">Statistics</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="investments">Bids</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="ownerships">Shares</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="returns">Scoring</TabsTrigger>}
+          {!biddingOpen && <TabsTrigger value="statistics">Stats</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="entry">
@@ -197,7 +234,13 @@ export function EntryTeamsPage() {
 
         {!biddingOpen && (
           <TabsContent value="statistics">
-            <StatisticsTab portfolios={portfolios} portfolioTeams={portfolioTeams} />
+            <StatisticsTab
+              portfolios={portfolios}
+              portfolioTeams={portfolioTeams}
+              teams={teams}
+              tournamentTeams={tournamentTeams}
+              schools={schools}
+            />
           </TabsContent>
         )}
       </Tabs>

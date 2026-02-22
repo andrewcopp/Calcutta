@@ -1,30 +1,69 @@
 import { CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
+import type { TournamentTeam } from '../../types/tournament';
+import { Card } from '../../components/ui/Card';
 
-export function PortfolioScores({ portfolio, teams }: { portfolio: CalcuttaPortfolio; teams: CalcuttaPortfolioTeam[] }) {
+interface PortfolioScoresProps {
+  portfolio: CalcuttaPortfolio;
+  teams: CalcuttaPortfolioTeam[];
+  tournamentTeams: TournamentTeam[];
+  schools: { id: string; name: string }[];
+}
+
+export function PortfolioScores({ portfolio, teams, tournamentTeams, schools }: PortfolioScoresProps) {
+  const tournamentTeamMap = new Map(tournamentTeams.map(tt => [tt.id, tt]));
+  const schoolMap = new Map(schools.map(s => [s.id, s]));
+
+  const enrichedTeams = teams
+    .map(pt => {
+      const tt = tournamentTeamMap.get(pt.teamId);
+      const school = pt.team?.school ?? (tt ? schoolMap.get(tt.schoolId) : undefined);
+      return {
+        ...pt,
+        seed: tt?.seed,
+        region: tt?.region,
+        eliminated: tt?.eliminated === true,
+        schoolName: school?.name ?? 'Unknown Team',
+      };
+    })
+    .sort((a, b) => b.actualPoints - a.actualPoints);
+
   return (
-    <div className="bg-white shadow rounded-lg p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4">Portfolio Scores</h3>
-      <div className="grid grid-cols-1 gap-4">
-        <div className="flex justify-between items-center">
-          <span className="text-gray-600">Maximum Possible Score:</span>
-          <span className="font-medium">{portfolio.maximumPoints.toFixed(2)}</span>
-        </div>
-        <div className="border-t pt-4">
-          <h4 className="text-md font-medium mb-2">Team Scores</h4>
-          <div className="space-y-2">
-            {teams.map((team) => (
-              <div key={team.id} className="flex justify-between items-center">
-                <span className="text-gray-600">{team.team?.school?.name || 'Unknown Team'}</span>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">
-                    Expected: {team.expectedPoints.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Team Scores</h3>
+        <span className="text-sm text-gray-500">Max possible: {portfolio.maximumPoints.toFixed(2)}</span>
       </div>
-    </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full table-fixed border-separate border-spacing-y-1">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+              <th className="px-2 py-2 w-14">Seed</th>
+              <th className="px-2 py-2 w-20">Region</th>
+              <th className="px-2 py-2">Team</th>
+              <th className="px-2 py-2 w-28 text-right">Actual</th>
+              <th className="px-2 py-2 w-28 text-right">Expected</th>
+              <th className="px-2 py-2 w-24 text-right">Ownership</th>
+            </tr>
+          </thead>
+          <tbody>
+            {enrichedTeams.map(team => (
+              <tr
+                key={team.id}
+                className={team.eliminated ? 'bg-gray-50 text-gray-400' : 'bg-gray-50'}
+              >
+                <td className="px-2 py-2 font-medium rounded-l-md whitespace-nowrap">{team.seed ?? '—'}</td>
+                <td className="px-2 py-2 whitespace-nowrap">{team.region ?? '—'}</td>
+                <td className={`px-2 py-2 font-medium whitespace-nowrap truncate ${team.eliminated ? 'line-through' : ''}`}>
+                  {team.schoolName}
+                </td>
+                <td className="px-2 py-2 text-right font-medium whitespace-nowrap">{team.actualPoints.toFixed(2)}</td>
+                <td className="px-2 py-2 text-right whitespace-nowrap">{team.expectedPoints.toFixed(2)}</td>
+                <td className="px-2 py-2 text-right rounded-r-md whitespace-nowrap">{(team.ownershipPercentage * 100).toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }

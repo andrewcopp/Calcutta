@@ -148,7 +148,7 @@ export function ReturnsTab({
                               ? [
                                   {
                                     key: `${team.teamId}-entry`,
-                                    label: 'Entry',
+                                    label: 'Your Portfolio',
                                     value: userActualPoints,
                                     color: '#4F46E5',
                                   },
