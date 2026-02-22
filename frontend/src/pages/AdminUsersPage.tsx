@@ -151,7 +151,11 @@ export function AdminUsersPage() {
                 <TableCell className="whitespace-nowrap">
                   {u.email ?? <span className="text-gray-400 italic">No email</span>}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{u.firstName} {u.lastName}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <Link to={`/admin/users/${u.id}`} className="text-blue-600 hover:text-blue-800 hover:underline">
+                    {u.firstName} {u.lastName}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(u.status)}>
                     {formatStatusLabel(u.status)}

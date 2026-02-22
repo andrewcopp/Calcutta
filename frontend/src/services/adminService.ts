@@ -2,6 +2,7 @@ import { apiClient } from '../api/apiClient';
 import type {
   AdminUsersListResponse,
   UserResponse,
+  UserProfileResponse,
   AdminInviteUserResponse,
   ListAPIKeysResponse,
   CreateAPIKeyRequest,
@@ -23,6 +24,18 @@ export const adminService = {
 
   async sendInvite(userId: string): Promise<AdminInviteUserResponse> {
     return apiClient.post<AdminInviteUserResponse>(`/admin/users/${userId}/invite/send`);
+  },
+
+  async getUser(userId: string): Promise<UserProfileResponse> {
+    return apiClient.get<UserProfileResponse>(`/admin/users/${userId}`);
+  },
+
+  async grantLabel(userId: string, labelKey: string): Promise<void> {
+    return apiClient.post<void>(`/admin/users/${userId}/labels`, { labelKey });
+  },
+
+  async revokeLabel(userId: string, labelKey: string): Promise<void> {
+    return apiClient.delete<void>(`/admin/users/${userId}/labels/${labelKey}`);
   },
 
   async listApiKeys(): Promise<ListAPIKeysResponse> {

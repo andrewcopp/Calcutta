@@ -6,6 +6,7 @@ export const PERMISSIONS = {
   ADMIN_HOF_READ: 'admin.hof.read',
   TOURNAMENT_GAME_WRITE: 'tournament.game.write',
   CALCUTTA_CONFIG_WRITE: 'calcutta.config.write',
+  ADMIN_USERS_WRITE: 'admin.users.write',
   LAB_READ: 'lab.read',
 } as const;
 

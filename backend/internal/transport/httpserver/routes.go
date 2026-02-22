@@ -45,6 +45,7 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	r.HandleFunc("/api/me/permissions", s.mePermissionsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/me/profile", s.meProfileHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/schools", s.schoolsHandler).Methods("GET")
 
 	tHandler := tournaments.NewHandlerWithAuthUserID(s.app, authUserID)

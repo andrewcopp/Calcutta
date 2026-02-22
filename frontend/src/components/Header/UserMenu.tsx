@@ -37,6 +37,9 @@ export function UserMenu() {
           {user.firstName} {user.lastName}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/profile">Profile</Link>
+        </DropdownMenuItem>
         {canAccessAdmin && (
           <DropdownMenuItem asChild>
             <Link to="/admin">Admin Console</Link>

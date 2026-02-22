@@ -14,6 +14,8 @@ import { AdminKenPomPage } from './pages/AdminKenPomPage';
 import { AdminBundlesPage } from './pages/AdminBundlesPage';
 import { AdminApiKeysPage } from './pages/AdminApiKeysPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { AdminUserProfilePage } from './pages/AdminUserProfilePage';
+import { UserProfilePage } from './pages/UserProfilePage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -47,6 +49,7 @@ const AppLayout: React.FC = () => {
         <Route path="/login" element={<RouteErrorBoundary><LoginPage /></RouteErrorBoundary>} />
         <Route path="/invite" element={<RouteErrorBoundary><AcceptInvitePage /></RouteErrorBoundary>} />
         <Route path="/rules" element={<RouteErrorBoundary><RulesPage /></RouteErrorBoundary>} />
+        <Route path="/profile" element={<ProtectedRoute><RouteErrorBoundary><UserProfilePage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/calcuttas" element={<RouteErrorBoundary><CalcuttaListPage /></RouteErrorBoundary>} />
         <Route path="/calcuttas/create" element={<ProtectedRoute><RouteErrorBoundary><CreateCalcuttaPage /></RouteErrorBoundary></ProtectedRoute>} />
         <Route path="/lab" element={<PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}><RouteErrorBoundary><LabPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
@@ -58,6 +61,7 @@ const AppLayout: React.FC = () => {
         <Route path="/admin/api-keys" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_API_KEYS_WRITE}><RouteErrorBoundary><AdminApiKeysPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/bundles" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_BUNDLES_EXPORT}><RouteErrorBoundary><AdminBundlesPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/users" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}><RouteErrorBoundary><AdminUsersPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
+        <Route path="/admin/users/:userId" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}><RouteErrorBoundary><AdminUserProfilePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/hall-of-fame" element={<PermissionProtectedRoute permission={PERMISSIONS.ADMIN_HOF_READ}><RouteErrorBoundary><HallOfFamePage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/kenpom" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><AdminKenPomPage /></RouteErrorBoundary></PermissionProtectedRoute>} />
         <Route path="/admin/tournaments" element={<PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}><RouteErrorBoundary><TournamentListPage /></RouteErrorBoundary></PermissionProtectedRoute>} />

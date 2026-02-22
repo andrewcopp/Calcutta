@@ -157,6 +157,99 @@ func buildInviteUpdateSQL(setLastSent bool) string {
 		WHERE id = $1 AND deleted_at IS NULL`
 }
 
+// GetAdminUserByID returns a single user with their aggregated labels and
+// permissions, using the same CTE logic as ListAdminUsers.
+func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*AdminUserRow, error) {
+	row := r.pool.QueryRow(ctx, `
+		WITH active_grants AS (
+			SELECT *
+			FROM core.grants g
+			WHERE g.revoked_at IS NULL
+			  AND g.scope_type = 'global'
+			  AND (g.expires_at IS NULL OR g.expires_at > NOW())
+		),
+		user_labels AS (
+			SELECT g.user_id, l.key
+			FROM active_grants g
+			JOIN core.labels l ON g.label_id = l.id
+			WHERE l.deleted_at IS NULL
+		),
+		user_permissions AS (
+			SELECT g.user_id, p.key
+			FROM active_grants g
+			JOIN core.permissions p ON g.permission_id = p.id
+			WHERE p.deleted_at IS NULL
+			UNION
+			SELECT g.user_id, p2.key
+			FROM active_grants g
+			JOIN core.labels l ON g.label_id = l.id AND l.deleted_at IS NULL
+			JOIN core.label_permissions lp ON lp.label_id = l.id
+			JOIN core.permissions p2 ON lp.permission_id = p2.id AND p2.deleted_at IS NULL
+		)
+		SELECT
+			u.id::text,
+			u.email,
+			u.first_name,
+			u.last_name,
+			u.status,
+			u.invited_at,
+			u.last_invite_sent_at,
+			u.invite_expires_at,
+			u.invite_consumed_at,
+			u.created_at,
+			u.updated_at,
+			COALESCE(array_agg(DISTINCT ul.key) FILTER (WHERE ul.key IS NOT NULL), ARRAY[]::text[]) AS labels,
+			COALESCE(array_agg(DISTINCT up.key) FILTER (WHERE up.key IS NOT NULL), ARRAY[]::text[]) AS permissions
+		FROM core.users u
+		LEFT JOIN user_labels ul ON ul.user_id = u.id
+		LEFT JOIN user_permissions up ON up.user_id = u.id
+		WHERE u.deleted_at IS NULL
+		  AND u.id = $1
+		GROUP BY u.id, u.email, u.first_name, u.last_name, u.status, u.invited_at, u.last_invite_sent_at, u.invite_expires_at, u.invite_consumed_at, u.created_at, u.updated_at
+	`, userID)
+
+	var item AdminUserRow
+	var labels []string
+	var perms []string
+	var invitedAt pgtype.Timestamptz
+	var lastInviteSentAt pgtype.Timestamptz
+	var inviteExpiresAt pgtype.Timestamptz
+	var inviteConsumedAt pgtype.Timestamptz
+
+	if err := row.Scan(
+		&item.ID,
+		&item.Email,
+		&item.FirstName,
+		&item.LastName,
+		&item.Status,
+		&invitedAt,
+		&lastInviteSentAt,
+		&inviteExpiresAt,
+		&inviteConsumedAt,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+		&labels,
+		&perms,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	item.InvitedAt = TimestamptzToPtrTimeUTC(invitedAt)
+	item.LastInviteSentAt = TimestamptzToPtrTimeUTC(lastInviteSentAt)
+	item.InviteExpiresAt = TimestamptzToPtrTimeUTC(inviteExpiresAt)
+	item.InviteConsumedAt = TimestamptzToPtrTimeUTC(inviteConsumedAt)
+
+	sort.Strings(labels)
+	sort.Strings(perms)
+	item.Labels = labels
+	item.Permissions = perms
+
+	return &item, nil
+}
+
 // ListAdminUsers returns all non-deleted users with their aggregated labels
 // and permissions, optionally filtered by status. Results are ordered by
 // created_at descending.

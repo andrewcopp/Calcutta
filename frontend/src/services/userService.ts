@@ -1,5 +1,6 @@
 import { User, LoginRequest, SignupRequest, AuthResponse } from '../types/user';
 import { apiClient, USER_KEY, PERMISSIONS_KEY } from '../api/apiClient';
+import type { UserProfileResponse } from '../types/admin';
 
 interface PermissionsResponse {
   permissions: string[];
@@ -58,6 +59,10 @@ export const userService = {
       console.error('Failed to fetch permissions', e);
       return [];
     }
+  },
+
+  async fetchProfile(): Promise<UserProfileResponse> {
+    return apiClient.get<UserProfileResponse>('/me/profile');
   },
 
   getStoredPermissions(): string[] {

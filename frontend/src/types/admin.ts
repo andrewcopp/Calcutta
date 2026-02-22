@@ -106,3 +106,15 @@ export type BundleExportResult = {
   blob: Blob;
   filename: string;
 };
+
+export type UserProfileResponse = {
+  id: string;
+  email: string | null;
+  firstName: string;
+  lastName: string;
+  status: string;
+  labels: string[];
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
+};
