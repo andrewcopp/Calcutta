@@ -96,6 +96,20 @@ export const CalcuttaPortfolioTeamSchema = z.object({
 
 export type CalcuttaPortfolioTeam = z.infer<typeof CalcuttaPortfolioTeamSchema>;
 
+export const ScoringRuleSchema = z.object({
+  winIndex: z.number(),
+  pointsAwarded: z.number(),
+});
+
+export type ScoringRule = z.infer<typeof ScoringRuleSchema>;
+
+export const DashboardPayoutSchema = z.object({
+  position: z.number(),
+  amountCents: z.number(),
+});
+
+export type DashboardPayout = z.infer<typeof DashboardPayoutSchema>;
+
 export const CalcuttaDashboardSchema = z.object({
   calcutta: CalcuttaSchema,
   tournamentStartingAt: z.string().optional(),
@@ -109,6 +123,8 @@ export const CalcuttaDashboardSchema = z.object({
   portfolioTeams: z.array(CalcuttaPortfolioTeamSchema),
   schools: z.array(SchoolSchema),
   tournamentTeams: z.array(TournamentTeamSchema),
+  scoringRules: z.array(ScoringRuleSchema),
+  payouts: z.array(DashboardPayoutSchema),
 });
 
 export type CalcuttaDashboard = z.infer<typeof CalcuttaDashboardSchema>;

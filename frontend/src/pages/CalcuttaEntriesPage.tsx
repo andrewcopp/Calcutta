@@ -196,7 +196,7 @@ export function CalcuttaEntriesPage() {
         </TabsList>
 
         <TabsContent value="leaderboard">
-          <LeaderboardTab calcuttaId={calcuttaId} entries={entries} />
+          <LeaderboardTab calcuttaId={calcuttaId} entries={entries} dashboard={dashboardData!} />
         </TabsContent>
 
         <TabsContent value="investment">

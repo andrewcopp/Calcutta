@@ -85,6 +85,18 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		tournamentTeamResponses = append(tournamentTeamResponses, dtos.NewTournamentTeamResponse(team, team.School))
 	}
 
+	rounds, err := h.app.Calcutta.GetRounds(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	payouts, err := h.app.Calcutta.GetPayouts(r.Context(), calcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
 	biddingOpen := !tournament.HasStarted(time.Now())
 
 	var currentUserEntry *models.CalcuttaEntry
@@ -101,8 +113,10 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		BiddingOpen:          biddingOpen,
 		TotalEntries:         len(entries),
 		Abilities:            computeAbilities(r.Context(), h.authz, userID, calcutta),
-		Schools:              dtos.NewSchoolListResponse(schools),
-		TournamentTeams:      tournamentTeamResponses,
+		Schools:         dtos.NewSchoolListResponse(schools),
+		TournamentTeams: tournamentTeamResponses,
+		ScoringRules:    dtos.NewScoringRuleListResponse(rounds),
+		Payouts:         dtos.NewPayoutListResponse(payouts),
 	}
 
 	if currentUserEntry != nil {

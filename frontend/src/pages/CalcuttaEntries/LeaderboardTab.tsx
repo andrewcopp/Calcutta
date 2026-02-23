@@ -1,64 +1,86 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalcuttaEntry } from '../../schemas/calcutta';
+import type { CalcuttaDashboard, CalcuttaEntry } from '../../schemas/calcutta';
 import { formatDollarsFromCents } from '../../utils/format';
+import { getRoundOptions } from '../../utils/roundLabels';
+import { useLeaderboardStandings } from '../../hooks/useLeaderboardStandings';
+import { Select } from '../../components/ui/Select';
 
 type SortMode = 'actual' | 'projected';
 
 interface LeaderboardTabProps {
   calcuttaId: string;
   entries: CalcuttaEntry[];
+  dashboard: CalcuttaDashboard;
 }
 
-export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
+export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTabProps) {
   const [sortMode, setSortMode] = useState<SortMode>('actual');
+  const [throughRound, setThroughRound] = useState<number | null>(null);
+
+  const rewindEntries = useLeaderboardStandings(dashboard, throughRound);
+  const displayEntries = rewindEntries ?? entries;
+
+  const isHistorical = throughRound !== null;
+  const effectiveSortMode = isHistorical ? 'actual' : sortMode;
 
   const hasProjections = entries.some((e) => e.projectedEv != null);
 
+  const roundOptions = useMemo(
+    () => getRoundOptions(dashboard.scoringRules),
+    [dashboard.scoringRules],
+  );
+
   const sortedEntries = useMemo(() => {
-    if (sortMode === 'projected') {
-      return [...entries].sort((a, b) => {
+    if (effectiveSortMode === 'projected') {
+      return [...displayEntries].sort((a, b) => {
         const aVal = a.projectedEv ?? a.totalPoints ?? 0;
         const bVal = b.projectedEv ?? b.totalPoints ?? 0;
         return bVal - aVal;
       });
     }
-    return entries;
-  }, [entries, sortMode]);
+    return displayEntries;
+  }, [displayEntries, effectiveSortMode]);
 
   return (
     <div className="grid gap-4">
-      {hasProjections && (
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          <button
-            onClick={() => setSortMode('actual')}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              sortMode === 'actual'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+      <div className="flex gap-3 items-center">
+        {hasProjections && (
+          <Select
+            value={effectiveSortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            disabled={isHistorical}
+            className="w-auto"
           >
-            Actual Points
-          </button>
-          <button
-            onClick={() => setSortMode('projected')}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              sortMode === 'projected'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            <option value="actual">Actual Points</option>
+            <option value="projected">Projected Finish</option>
+          </Select>
+        )}
+
+        {roundOptions.length > 1 && (
+          <Select
+            value={throughRound === null ? 'current' : String(throughRound)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setThroughRound(val === 'current' ? null : Number(val));
+            }}
+            className="w-auto"
           >
-            Projected Finish
-          </button>
-        </div>
-      )}
+            {roundOptions.map((opt) => (
+              <option key={opt.value === null ? 'current' : opt.value} value={opt.value === null ? 'current' : opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        )}
+      </div>
 
       {sortedEntries.map((entry, index) => {
         const displayPosition =
-          sortMode === 'actual'
+          effectiveSortMode === 'actual'
             ? entry.finishPosition || index + 1
             : index + 1;
-        const isInTheMoney = sortMode === 'actual' && Boolean(entry.inTheMoney);
+        const isInTheMoney = effectiveSortMode === 'actual' && Boolean(entry.inTheMoney);
         const payoutText = entry.payoutCents ? `(${formatDollarsFromCents(entry.payoutCents)})` : '';
 
         const rowClass = isInTheMoney
@@ -82,11 +104,11 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
           : 'text-primary';
 
         const displayValue =
-          sortMode === 'projected' && entry.projectedEv != null
+          effectiveSortMode === 'projected' && entry.projectedEv != null
             ? entry.projectedEv.toFixed(2)
             : (entry.totalPoints ?? 0).toFixed(2);
 
-        const displayLabel = sortMode === 'projected' ? 'projected' : 'points';
+        const displayLabel = effectiveSortMode === 'projected' ? 'projected' : 'points';
 
         return (
           <Link
@@ -98,7 +120,7 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               <div>
                 <h2 className="text-xl font-semibold">
                   {displayPosition}. {entry.name}
-                  {sortMode === 'actual' && isInTheMoney && payoutText && (
+                  {effectiveSortMode === 'actual' && isInTheMoney && payoutText && (
                     <span className="ml-2 text-sm text-foreground">{payoutText}</span>
                   )}
                 </h2>
