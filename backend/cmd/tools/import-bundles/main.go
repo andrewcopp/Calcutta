@@ -57,7 +57,7 @@ func run() error {
 func refreshPredictions(ctx context.Context, pool *pgxpool.Pool, tournamentIDs []string) {
 	predSvc := prediction.New(pool)
 	for _, tid := range tournamentIDs {
-		result, err := predSvc.Run(ctx, prediction.RunParams{
+		results, err := predSvc.RunAllCheckpoints(ctx, prediction.RunParams{
 			TournamentID:         tid,
 			ProbabilitySourceKey: "kenpom",
 		})
@@ -65,8 +65,10 @@ func refreshPredictions(ctx context.Context, pool *pgxpool.Pool, tournamentIDs [
 			slog.Warn("prediction_refresh_failed", "tournament_id", tid, "error", err)
 			continue
 		}
-		slog.Info("prediction_refresh_succeeded",
-			"tournament_id", tid, "batch_id", result.BatchID,
-			"team_count", result.TeamCount, "duration_ms", result.Duration.Milliseconds())
+		for _, result := range results {
+			slog.Info("prediction_refresh_succeeded",
+				"tournament_id", tid, "batch_id", result.BatchID,
+				"team_count", result.TeamCount, "duration_ms", result.Duration.Milliseconds())
+		}
 	}
 }

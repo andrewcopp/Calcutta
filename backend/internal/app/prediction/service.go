@@ -79,22 +79,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 
 	var teamValues []PredictedTeamValue
 
-	if throughRound == 0 {
-		// Pre-tournament: require 68 teams and use full-field theoretical matchups
-		if len(teams) != 68 {
-			return nil, fmt.Errorf("expected 68 teams, got %d", len(teams))
-		}
-
-		matchups, err := GenerateAllTheoreticalMatchups(teams, p.GameOutcomeSpec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate matchups: %w", err)
-		}
-		teamValues = GenerateTournamentValues(matchups, rules)
-	} else if throughRound >= 7 {
+	if throughRound >= 7 {
 		// Tournament complete: no remaining matchups, all values from actual results
 		teamValues = GenerateTournamentValuesFromCheckpoint(teams, nil, throughRound, rules)
 	} else {
-		// Mid-tournament: filter to survivors and generate from checkpoint
+		// Pre-tournament (0) or mid-tournament (1-6): filter to survivors, generate matchups
 		var survivors []TeamInput
 		for _, t := range teams {
 			if t.Wins+t.Byes >= throughRound {
@@ -102,11 +91,16 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 			}
 		}
 
-		matchups, err := GenerateMatchupsFromCheckpoint(survivors, throughRound, p.GameOutcomeSpec)
+		matchups, err := GenerateMatchups(survivors, throughRound, p.GameOutcomeSpec)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate checkpoint matchups: %w", err)
+			return nil, fmt.Errorf("failed to generate matchups: %w", err)
 		}
-		teamValues = GenerateTournamentValuesFromCheckpoint(teams, matchups, throughRound, rules)
+
+		if throughRound == 0 {
+			teamValues = GenerateTournamentValues(matchups, rules)
+		} else {
+			teamValues = GenerateTournamentValuesFromCheckpoint(teams, matchups, throughRound, rules)
+		}
 	}
 
 	// Store results
@@ -153,6 +147,36 @@ func (s *Service) pruneOldBatchesForCheckpoint(ctx context.Context, tournamentID
 	if n := result.RowsAffected(); n > 0 {
 		slog.Info("prediction_prune_succeeded", "tournament_id", tournamentID, "through_round", throughRound, "batches_deleted", n)
 	}
+}
+
+// RunAllCheckpoints generates prediction batches for every checkpoint from
+// round 0 through the current tournament state. Returns one RunResult per
+// checkpoint.
+func (s *Service) RunAllCheckpoints(ctx context.Context, p RunParams) ([]RunResult, error) {
+	if p.TournamentID == "" {
+		return nil, errors.New("TournamentID is required")
+	}
+
+	throughRound, err := s.DetectThroughRound(ctx, p.TournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("detecting through round: %w", err)
+	}
+
+	var results []RunResult
+	for cp := 0; cp <= throughRound; cp++ {
+		checkpoint := cp
+		result, err := s.Run(ctx, RunParams{
+			TournamentID:         p.TournamentID,
+			ProbabilitySourceKey: p.ProbabilitySourceKey,
+			GameOutcomeSpec:      p.GameOutcomeSpec,
+			ThroughRound:         &checkpoint,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("prediction run failed for checkpoint %d: %w", cp, err)
+		}
+		results = append(results, *result)
+	}
+	return results, nil
 }
 
 // DetectThroughRound loads teams for the tournament and returns the current

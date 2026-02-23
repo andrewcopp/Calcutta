@@ -113,7 +113,7 @@ func (w *CoreComputeWorker) processRefreshPredictions(ctx context.Context, job *
 
 	start := time.Now()
 	predSvc := prediction.New(w.pool)
-	result, err := predSvc.Run(ctx, prediction.RunParams{
+	results, err := predSvc.RunAllCheckpoints(ctx, prediction.RunParams{
 		TournamentID:         params.TournamentID,
 		ProbabilitySourceKey: sourceKey,
 	})
@@ -129,9 +129,15 @@ func (w *CoreComputeWorker) processRefreshPredictions(ctx context.Context, job *
 		slog.Warn("core_compute_worker succeed_job", "error", err)
 	}
 
-	slog.Info("core_compute_worker prediction_succeeded",
+	for _, result := range results {
+		slog.Info("core_compute_worker prediction_succeeded",
+			"tournament_id", params.TournamentID,
+			"batch_id", result.BatchID,
+			"team_count", result.TeamCount,
+			"duration_ms", result.Duration.Milliseconds())
+	}
+	slog.Info("core_compute_worker all_checkpoints_done",
 		"tournament_id", params.TournamentID,
-		"batch_id", result.BatchID,
-		"team_count", result.TeamCount,
-		"duration_ms", time.Since(start).Milliseconds())
+		"checkpoints", len(results),
+		"total_duration_ms", time.Since(start).Milliseconds())
 }

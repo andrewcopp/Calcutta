@@ -32,26 +32,18 @@ func main() {
 	defer pool.Close()
 
 	svc := prediction.New(pool)
-
-	currentRound, err := svc.DetectThroughRound(ctx, tournamentID)
+	results, err := svc.RunAllCheckpoints(ctx, prediction.RunParams{
+		TournamentID:         tournamentID,
+		ProbabilitySourceKey: "kenpom",
+	})
 	if err != nil {
-		log.Fatalf("failed to detect tournament checkpoint: %v", err)
-	}
-	fmt.Printf("Tournament checkpoint: through_round=%d\n", currentRound)
-
-	for checkpoint := 0; checkpoint <= currentRound; checkpoint++ {
-		cp := checkpoint
-		result, err := svc.Run(ctx, prediction.RunParams{
-			TournamentID:         tournamentID,
-			ProbabilitySourceKey: "kenpom",
-			ThroughRound:         &cp,
-		})
-		if err != nil {
-			log.Fatalf("prediction run failed for checkpoint %d: %v", checkpoint, err)
-		}
-		fmt.Printf("  checkpoint=%d batch=%s teams=%d duration=%s\n",
-			checkpoint, result.BatchID, result.TeamCount, result.Duration)
+		log.Fatalf("prediction run failed: %v", err)
 	}
 
-	fmt.Printf("Done: %d batches generated (rounds 0-%d)\n", currentRound+1, currentRound)
+	for _, result := range results {
+		fmt.Printf("  batch=%s teams=%d duration=%s\n",
+			result.BatchID, result.TeamCount, result.Duration)
+	}
+
+	fmt.Printf("Done: %d batches generated\n", len(results))
 }

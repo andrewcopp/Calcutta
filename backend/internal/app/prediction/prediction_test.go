@@ -9,13 +9,13 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 )
 
-func TestThatGenerateAllTheoreticalMatchupsCreatesMatchupsForAllRounds(t *testing.T) {
+func TestThatGenerateMatchupsCreatesMatchupsForAllRounds(t *testing.T) {
 	// GIVEN a 68-team tournament field
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating all theoretical matchups
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestThatPMatchupSumsToOneForEachGame(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating all theoretical matchups
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestThatWinProbabilitiesSumToOneForEachMatchup(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating all theoretical matchups
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestThatAllTeamsHavePositiveExpectedPoints(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestThatChampionshipProbabilitiesSumToOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestThatOneSeedHasHigherExpectedPointsThanSixteenSeed(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestThatNonFirstFourTeamsHaveFFProbabilityOfOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestThatFirstFourTeamsHaveFFProbabilityLessThanOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestThatProbabilitiesAreMonotonicallyDecreasing(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -304,7 +304,7 @@ func TestThatOneSeedReachesSweetSixteenMoreThanFiftyPercent(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -335,7 +335,7 @@ func TestThatOneSeedChampionshipProbabilityExceedsFivePercent(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -366,7 +366,7 @@ func TestThatSixteenSeedReachesSweetSixteenLessThanFivePercent(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -398,7 +398,7 @@ func TestThatStrongerFirstFourTeamHasHigherFFProbability(t *testing.T) {
 	// GIVEN a 68-team field where East has two 16-seeds: team-16 (KenPom -10.0) and team-65 (KenPom -12.0)
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -423,7 +423,7 @@ func TestThatFirstFourPairProbabilitiesSumToOne(t *testing.T) {
 	// GIVEN a 68-team field where East has two 16-seeds
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -470,7 +470,7 @@ func TestThatCheckpointMatchupsHavePMatchupOneForKnownGames(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating checkpoint matchups
-	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 2, spec)
+	matchups, err := GenerateMatchups(survivors, 2, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -494,7 +494,7 @@ func TestThatCheckpointChampionshipProbsSumToOne(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating checkpoint matchups and values
-	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 5, spec)
+	matchups, err := GenerateMatchups(survivors, 5, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -524,7 +524,7 @@ func TestThatCheckpointValuesSetResolvedRoundsCorrectly(t *testing.T) {
 	survivors := []TeamInput{allTeams[0], allTeams[1], allTeams[2], allTeams[3]}
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
-	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 3, spec)
+	matchups, err := GenerateMatchups(survivors, 3, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -556,7 +556,7 @@ func TestThatCheckpointExpectedPointsIncludesActualPlusRemaining(t *testing.T) {
 		{ID: "t-midwest", Seed: 1, Region: "Midwest", KenPomNet: 22.0, Wins: 4, Byes: 1},
 	}
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 5, spec)
+	matchups, err := GenerateMatchups(survivors, 5, spec)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -599,6 +599,70 @@ func TestThatCompletedTournamentProducesValuesForAllTeams(t *testing.T) {
 	// THEN all 68 teams have values
 	if len(values) != 68 {
 		t.Errorf("expected 68 team values, got %d", len(values))
+	}
+}
+
+func TestThatThroughRoundZeroProducesSixRoundsOfMatchups(t *testing.T) {
+	// GIVEN a 68-team tournament field
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating matchups at throughRound=0
+	matchups, err := GenerateMatchups(teams, 0, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// THEN rounds 1-6 are all present
+	roundPresent := make(map[int]bool)
+	for _, m := range matchups {
+		roundPresent[m.RoundOrder] = true
+	}
+	for r := 1; r <= 6; r++ {
+		if !roundPresent[r] {
+			t.Errorf("expected round %d matchups to be present", r)
+		}
+	}
+}
+
+func TestThatThroughRoundZeroFirstFourPMatchupLessThanOne(t *testing.T) {
+	// GIVEN a 68-team tournament field
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating matchups at throughRound=0
+	matchups, err := GenerateMatchups(teams, 0, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// THEN R1 games involving First Four seeds have pMatchup < 1.0
+	ffSeeds := make(map[string]bool)
+	for _, region := range []string{"East", "West", "South", "Midwest"} {
+		seedCounts := make(map[int]int)
+		for _, t := range teams {
+			if t.Region == region {
+				seedCounts[t.Seed]++
+			}
+		}
+		for _, t := range teams {
+			if t.Region == region && seedCounts[t.Seed] > 1 {
+				ffSeeds[t.ID] = true
+			}
+		}
+	}
+
+	foundFFMatchup := false
+	for _, m := range matchups {
+		if m.RoundOrder == 1 && (ffSeeds[m.Team1ID] || ffSeeds[m.Team2ID]) {
+			foundFFMatchup = true
+			if m.PMatchup >= 1.0 {
+				t.Errorf("R1 game %s involving FF team: pMatchup = %.4f, expected < 1.0", m.GameID, m.PMatchup)
+			}
+		}
+	}
+	if !foundFFMatchup {
+		t.Error("expected to find R1 matchups involving First Four teams")
 	}
 }
 
