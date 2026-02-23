@@ -29,6 +29,7 @@ type RunParams struct {
 	TournamentID         string
 	ProbabilitySourceKey string                        // e.g., "kenpom"
 	GameOutcomeSpec      *simulation_game_outcomes.Spec // KenPom parameters
+	ThroughRound         *int                           // Override checkpoint; nil = auto-detect from team progress
 }
 
 // RunResult holds the output of a prediction run.
@@ -70,22 +71,10 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		rules = DefaultScoringRules()
 	}
 
-	// Detect tournament checkpoint from team progress.
-	// throughRound = 0 means pre-tournament (use existing full-field flow).
-	// throughRound > 0 means mid-tournament (use checkpoint flow with survivors only).
-	maxWins := 0
-	throughRound := 0
-	for _, t := range teams {
-		if t.Wins > maxWins {
-			maxWins = t.Wins
-		}
-	}
-	if maxWins > 0 {
-		for _, t := range teams {
-			if p := t.Wins + t.Byes; p > throughRound {
-				throughRound = p
-			}
-		}
+	// Determine checkpoint: use override if provided, otherwise auto-detect.
+	throughRound := detectThroughRoundFromTeams(teams)
+	if p.ThroughRound != nil {
+		throughRound = *p.ThroughRound
 	}
 
 	var teamValues []PredictedTeamValue
@@ -127,7 +116,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to store predictions: %w", err)
 	}
 
-	s.pruneOldBatches(ctx, p.TournamentID, 10)
+	s.pruneOldBatchesForCheckpoint(ctx, p.TournamentID, throughRound, 1)
 
 	return &RunResult{
 		BatchID:              batchID,
@@ -138,29 +127,61 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	}, nil
 }
 
-// pruneOldBatches deletes prediction batches older than the latest keepN
-// for a tournament. CASCADE on the FK auto-deletes predicted_team_values.
+// pruneOldBatchesForCheckpoint deletes prediction batches for a specific
+// tournament + through_round combo, keeping only the latest keepN.
+// CASCADE on the FK auto-deletes predicted_team_values.
 // Best-effort: logs and continues on error.
-func (s *Service) pruneOldBatches(ctx context.Context, tournamentID string, keepN int) {
+func (s *Service) pruneOldBatchesForCheckpoint(ctx context.Context, tournamentID string, throughRound int, keepN int) {
 	result, err := s.pool.Exec(ctx, `
 		DELETE FROM compute.prediction_batches
 		WHERE tournament_id = $1::uuid
+			AND through_round = $3
 			AND deleted_at IS NULL
 			AND id NOT IN (
 				SELECT id FROM compute.prediction_batches
 				WHERE tournament_id = $1::uuid
+					AND through_round = $3
 					AND deleted_at IS NULL
 				ORDER BY created_at DESC
 				LIMIT $2
 			)
-	`, tournamentID, keepN)
+	`, tournamentID, keepN, throughRound)
 	if err != nil {
-		slog.Warn("prediction_prune_failed", "tournament_id", tournamentID, "error", err)
+		slog.Warn("prediction_prune_failed", "tournament_id", tournamentID, "through_round", throughRound, "error", err)
 		return
 	}
 	if n := result.RowsAffected(); n > 0 {
-		slog.Info("prediction_prune_succeeded", "tournament_id", tournamentID, "batches_deleted", n)
+		slog.Info("prediction_prune_succeeded", "tournament_id", tournamentID, "through_round", throughRound, "batches_deleted", n)
 	}
+}
+
+// DetectThroughRound loads teams for the tournament and returns the current
+// checkpoint (0 = pre-tournament, 1-6 = mid-tournament, 7+ = completed).
+func (s *Service) DetectThroughRound(ctx context.Context, tournamentID string) (int, error) {
+	teams, err := s.loadTeams(ctx, tournamentID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to load teams: %w", err)
+	}
+	return detectThroughRoundFromTeams(teams), nil
+}
+
+// detectThroughRoundFromTeams computes the tournament checkpoint from team progress.
+func detectThroughRoundFromTeams(teams []TeamInput) int {
+	maxWins := 0
+	throughRound := 0
+	for _, t := range teams {
+		if t.Wins > maxWins {
+			maxWins = t.Wins
+		}
+	}
+	if maxWins > 0 {
+		for _, t := range teams {
+			if p := t.Wins + t.Byes; p > throughRound {
+				throughRound = p
+			}
+		}
+	}
+	return throughRound
 }
 
 // ListBatches returns all non-deleted prediction batches for a tournament, newest first.

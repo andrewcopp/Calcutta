@@ -25,7 +25,7 @@ const THROUGH_ROUND_LABELS: Record<number, string> = {
 
 export function AdminPredictionsPage() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
-  const [throughRound, setThroughRound] = useState<number | null>(null);
+  const [selectedThroughRound, setSelectedThroughRound] = useState<number | null>(null);
   const [sortRound, setSortRound] = useState(7);
 
   const tournamentsQuery = useQuery({
@@ -33,43 +33,61 @@ export function AdminPredictionsPage() {
     queryFn: () => tournamentService.getAllTournaments(),
   });
 
-  const predictionsQuery = useQuery({
-    queryKey: queryKeys.tournaments.predictions(selectedTournamentId || undefined),
-    queryFn: () => tournamentService.getTournamentPredictions(selectedTournamentId),
+  const batchesQuery = useQuery({
+    queryKey: queryKeys.tournaments.predictionBatches(selectedTournamentId || undefined),
+    queryFn: () => tournamentService.getPredictionBatches(selectedTournamentId),
     enabled: !!selectedTournamentId,
   });
 
-  const teams = useMemo(() => predictionsQuery.data?.teams ?? [], [predictionsQuery.data]);
-
-  // Use throughRound from the API response (batch-level), falling back to max progress
-  const batchThroughRound = predictionsQuery.data?.throughRound ?? 0;
-  const maxProgress = useMemo(
-    () => teams.reduce((max, t) => Math.max(max, t.wins + t.byes), 0),
-    [teams],
-  );
-
-  // effectiveThroughRound: user override or batch's throughRound
-  const effectiveThroughRound = throughRound ?? batchThroughRound;
-
-  // Build through-round options: 0 through maxProgress
+  // Deduplicate and sort throughRound values from available batches
   const throughRoundOptions = useMemo(() => {
-    const opts: { label: string; value: number }[] = [];
-    for (let i = 0; i <= maxProgress; i++) {
-      opts.push({ label: THROUGH_ROUND_LABELS[i] ?? `After Round ${i}`, value: i });
+    if (!batchesQuery.data) return [];
+    const seen = new Set<number>();
+    for (const batch of batchesQuery.data) {
+      seen.add(batch.throughRound);
     }
-    return opts;
-  }, [maxProgress]);
+    return Array.from(seen)
+      .sort((a, b) => a - b)
+      .map((value) => ({
+        label: THROUGH_ROUND_LABELS[value] ?? `After Round ${value}`,
+        value,
+      }));
+  }, [batchesQuery.data]);
+
+  // Default to highest available throughRound
+  const effectiveThroughRound = useMemo(() => {
+    if (selectedThroughRound !== null) return selectedThroughRound;
+    if (throughRoundOptions.length > 0) return throughRoundOptions[throughRoundOptions.length - 1].value;
+    return 0;
+  }, [selectedThroughRound, throughRoundOptions]);
+
+  // Find the batch ID for the selected throughRound (most recent one)
+  const selectedBatchId = useMemo(() => {
+    if (!batchesQuery.data) return undefined;
+    // Batches come from API sorted by created_at DESC, so first match is most recent
+    const match = batchesQuery.data.find((b) => b.throughRound === effectiveThroughRound);
+    return match?.id;
+  }, [batchesQuery.data, effectiveThroughRound]);
+
+  const predictionsQuery = useQuery({
+    queryKey: queryKeys.tournaments.predictions(selectedTournamentId || undefined, selectedBatchId),
+    queryFn: () => tournamentService.getTournamentPredictions(selectedTournamentId, selectedBatchId),
+    enabled: !!selectedTournamentId && !!selectedBatchId,
+  });
+
+  const teams = useMemo(() => predictionsQuery.data?.teams ?? [], [predictionsQuery.data]);
+  const batchThroughRound = predictionsQuery.data?.throughRound ?? 0;
 
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => {
-      const aProb = getConditionalProbability(a, sortRound, effectiveThroughRound);
-      const bProb = getConditionalProbability(b, sortRound, effectiveThroughRound);
+      const aProb = getConditionalProbability(a, sortRound, batchThroughRound);
+      const bProb = getConditionalProbability(b, sortRound, batchThroughRound);
       if (bProb.value !== aProb.value) return bProb.value - aProb.value;
       if (a.region < b.region) return -1;
       if (a.region > b.region) return 1;
       return a.seed - b.seed;
     });
-  }, [teams, sortRound, effectiveThroughRound]);
+  }, [teams, sortRound, batchThroughRound]);
 
   return (
     <PageContainer>
@@ -92,7 +110,7 @@ export function AdminPredictionsPage() {
                 value={selectedTournamentId}
                 onChange={(e) => {
                   setSelectedTournamentId(e.target.value);
-                  setThroughRound(null);
+                  setSelectedThroughRound(null);
                 }}
               >
                 <option value="">Select a tournament...</option>
@@ -105,7 +123,7 @@ export function AdminPredictionsPage() {
             )}
           </div>
 
-          {teams.length > 0 && (
+          {throughRoundOptions.length > 0 && (
             <div className="flex-1">
               <label htmlFor="round-select" className="block text-sm font-medium text-foreground mb-2">
                 Through Round
@@ -113,7 +131,7 @@ export function AdminPredictionsPage() {
               <Select
                 id="round-select"
                 value={effectiveThroughRound}
-                onChange={(e) => setThroughRound(Number(e.target.value))}
+                onChange={(e) => setSelectedThroughRound(Number(e.target.value))}
               >
                 {throughRoundOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -161,7 +179,7 @@ export function AdminPredictionsPage() {
                     <td className="px-3 py-2">{team.schoolName || '—'}</td>
                     {ROUND_ABBREVS.map((_, i) => {
                       const round = i + 1;
-                      const { value, style } = getConditionalProbability(team, round, effectiveThroughRound);
+                      const { value, style } = getConditionalProbability(team, round, batchThroughRound);
                       return (
                         <td key={round} className={`px-2 py-2 text-right tabular-nums ${style}`}>
                           {formatPercent(value)}
