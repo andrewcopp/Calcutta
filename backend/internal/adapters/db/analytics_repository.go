@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
@@ -20,7 +21,7 @@ func NewAnalyticsRepository(pool *pgxpool.Pool) *AnalyticsRepository {
 func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]ports.SeedAnalyticsData, float64, float64, error) {
 	rows, err := r.q.GetSeedAnalytics(ctx)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("querying seed analytics: %w", err)
 	}
 
 	out := make([]ports.SeedAnalyticsData, 0, len(rows))
@@ -43,7 +44,7 @@ func (r *AnalyticsRepository) GetSeedAnalytics(ctx context.Context) ([]ports.See
 func (r *AnalyticsRepository) GetRegionAnalytics(ctx context.Context) ([]ports.RegionAnalyticsData, float64, float64, error) {
 	rows, err := r.q.GetRegionAnalytics(ctx)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("querying region analytics: %w", err)
 	}
 
 	out := make([]ports.RegionAnalyticsData, 0, len(rows))
@@ -66,7 +67,7 @@ func (r *AnalyticsRepository) GetRegionAnalytics(ctx context.Context) ([]ports.R
 func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.TeamAnalyticsData, error) {
 	rows, err := r.q.GetTeamAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying team analytics: %w", err)
 	}
 
 	out := make([]ports.TeamAnalyticsData, 0, len(rows))
@@ -87,7 +88,7 @@ func (r *AnalyticsRepository) GetTeamAnalytics(ctx context.Context) ([]ports.Tea
 func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]ports.SeedVarianceData, error) {
 	rows, err := r.q.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying seed variance analytics: %w", err)
 	}
 
 	out := make([]ports.SeedVarianceData, 0, len(rows))
@@ -107,7 +108,7 @@ func (r *AnalyticsRepository) GetSeedVarianceAnalytics(ctx context.Context) ([]p
 func (r *AnalyticsRepository) GetSeedInvestmentPoints(ctx context.Context) ([]ports.SeedInvestmentPointData, error) {
 	rows, err := r.q.GetSeedInvestmentPoints(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying seed investment points: %w", err)
 	}
 
 	out := make([]ports.SeedInvestmentPointData, 0, len(rows))
@@ -131,7 +132,7 @@ func (r *AnalyticsRepository) GetSeedInvestmentPoints(ctx context.Context) ([]po
 func (r *AnalyticsRepository) GetBestInvestments(ctx context.Context, limit int) ([]ports.BestInvestmentData, error) {
 	rows, err := r.q.GetBestInvestments(ctx, int32(limit))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying best investments: %w", err)
 	}
 
 	out := make([]ports.BestInvestmentData, 0, len(rows))
@@ -161,7 +162,7 @@ func (r *AnalyticsRepository) GetBestInvestments(ctx context.Context, limit int)
 func (r *AnalyticsRepository) GetBestInvestmentBids(ctx context.Context, limit int) ([]ports.InvestmentLeaderboardData, error) {
 	rows, err := r.q.GetBestInvestmentBids(ctx, int32(limit))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying best investment bids: %w", err)
 	}
 
 	out := make([]ports.InvestmentLeaderboardData, 0, len(rows))
@@ -188,7 +189,7 @@ func (r *AnalyticsRepository) GetBestInvestmentBids(ctx context.Context, limit i
 func (r *AnalyticsRepository) GetBestEntries(ctx context.Context, limit int) ([]ports.EntryLeaderboardData, error) {
 	rows, err := r.q.GetBestEntries(ctx, int32(limit))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying best entries: %w", err)
 	}
 
 	out := make([]ports.EntryLeaderboardData, 0, len(rows))
@@ -212,7 +213,7 @@ func (r *AnalyticsRepository) GetBestEntries(ctx context.Context, limit int) ([]
 func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]ports.CareerLeaderboardData, error) {
 	rows, err := r.q.GetBestCareers(ctx, int32(limit))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying best careers: %w", err)
 	}
 
 	out := make([]ports.CareerLeaderboardData, 0, len(rows))

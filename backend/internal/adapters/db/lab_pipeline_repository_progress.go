@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -15,7 +16,7 @@ func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID s
 	// Get pipeline run
 	pipelineRun, err := r.GetPipelineRun(ctx, pipelineRunID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting pipeline run for progress %s: %w", pipelineRunID, err)
 	}
 
 	// Get model name
@@ -24,7 +25,7 @@ func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID s
 		SELECT name FROM lab.investment_models WHERE id = $1::uuid
 	`, pipelineRun.InvestmentModelID).Scan(&modelName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting model name for pipeline run %s: %w", pipelineRunID, err)
 	}
 
 	// Get calcutta runs with calcutta details
@@ -56,7 +57,7 @@ func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID s
 
 	rows, err := r.pool.Query(ctx, query, pipelineRunID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying calcutta runs for pipeline %s: %w", pipelineRunID, err)
 	}
 	defer rows.Close()
 
@@ -75,7 +76,7 @@ func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID s
 			&c.HasPredictions, &c.HasEntry, &c.HasEvaluation,
 			&meanPayout,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning calcutta progress: %w", err)
 		}
 		c.MeanPayout = meanPayout
 
@@ -100,7 +101,7 @@ func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID s
 		calcuttas = append(calcuttas, c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterating calcutta progress for pipeline %s: %w", pipelineRunID, err)
 	}
 
 	if payoutCount > 0 {
@@ -133,13 +134,13 @@ func (r *LabRepository) GetModelPipelineProgress(ctx context.Context, modelID st
 		return nil, &apperrors.NotFoundError{Resource: "investment_model", ID: modelID}
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting model name for model %s: %w", modelID, err)
 	}
 
 	// Check for active pipeline run
 	activePipeline, err := r.GetActivePipelineRun(ctx, modelID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting active pipeline run for model %s: %w", modelID, err)
 	}
 
 	// Get historical calcuttas with their entry/evaluation status for this model
@@ -184,7 +185,7 @@ func (r *LabRepository) GetModelPipelineProgress(ctx context.Context, modelID st
 
 	rows, err := r.pool.Query(ctx, query, modelID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying calcutta progress for model %s: %w", modelID, err)
 	}
 	defer rows.Close()
 
@@ -204,7 +205,7 @@ func (r *LabRepository) GetModelPipelineProgress(ctx context.Context, modelID st
 			&c.MeanPayout, &c.OurRank,
 			&stage, &status, &progress, &c.ProgressMessage, &c.ErrorMessage,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning model calcutta progress: %w", err)
 		}
 
 		// Set stage/status/progress from active pipeline run if present
@@ -244,7 +245,7 @@ func (r *LabRepository) GetModelPipelineProgress(ctx context.Context, modelID st
 		calcuttas = append(calcuttas, c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterating model calcutta progress for model %s: %w", modelID, err)
 	}
 
 	result := &models.LabModelPipelineProgress{

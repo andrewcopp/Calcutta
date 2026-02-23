@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -43,7 +44,7 @@ func (r *APIKeysRepository) Create(ctx context.Context, userID, keyHash string, 
 		RETURNING id, created_at
 	`, userID, keyHash, label, now).Scan(&row.ID, &row.CreatedAt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating api key for user %s: %w", userID, err)
 	}
 	return &row, nil
 }
@@ -64,7 +65,7 @@ func (r *APIKeysRepository) GetActiveByHash(ctx context.Context, keyHash string,
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting active api key by hash: %w", err)
 	}
 
 	_, _ = r.pool.Exec(ctx, `
@@ -86,7 +87,7 @@ func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]mo
 		ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying api keys for user %s: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -94,12 +95,12 @@ func (r *APIKeysRepository) ListByUser(ctx context.Context, userID string) ([]mo
 	for rows.Next() {
 		var rrow models.APIKey
 		if err := rows.Scan(&rrow.ID, &rrow.UserID, &rrow.Label, &rrow.CreatedAt, &rrow.RevokedAt, &rrow.LastUsedAt); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning api key row: %w", err)
 		}
 		out = append(out, rrow)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterating api keys: %w", err)
 	}
 	return out, nil
 }
@@ -115,5 +116,8 @@ func (r *APIKeysRepository) Revoke(ctx context.Context, id, userID string, now t
 		  AND user_id = $2
 		  AND revoked_at IS NULL
 	`, id, userID, now)
-	return err
+	if err != nil {
+		return fmt.Errorf("revoking api key %s for user %s: %w", id, userID, err)
+	}
+	return nil
 }

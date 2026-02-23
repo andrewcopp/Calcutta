@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/jackc/pgx/v5"
@@ -38,7 +39,10 @@ func NewAuthorizationRepository(pool *pgxpool.Pool) *AuthorizationRepository {
 
 func (r *AuthorizationRepository) GrantGlobalAdmin(ctx context.Context, userID string) error {
 	_, err := r.pool.Exec(ctx, grantGlobalAdminSQL, userID)
-	return err
+	if err != nil {
+		return fmt.Errorf("granting global admin to user %s: %w", userID, err)
+	}
+	return nil
 }
 
 func (r *AuthorizationRepository) HasPermission(ctx context.Context, userID, scopeType, scopeID, permissionKey string) (bool, error) {
@@ -52,7 +56,7 @@ func (r *AuthorizationRepository) HasPermission(ctx context.Context, userID, sco
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("checking permission %s for user %s: %w", permissionKey, userID, err)
 	}
 	return true, nil
 }
@@ -76,7 +80,10 @@ func (r *AuthorizationRepository) GrantRole(ctx context.Context, userID, roleKey
 		  )
 	`
 	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, roleKey)
-	return err
+	if err != nil {
+		return fmt.Errorf("granting role %s to user %s: %w", roleKey, userID, err)
+	}
+	return nil
 }
 
 // RevokeGrant revokes all grants for a user+role+scope combination.
@@ -94,7 +101,10 @@ func (r *AuthorizationRepository) RevokeGrant(ctx context.Context, userID, roleK
 		  AND g.revoked_at IS NULL
 	`
 	_, err := r.pool.Exec(ctx, query, userID, scopeType, scopeID, roleKey)
-	return err
+	if err != nil {
+		return fmt.Errorf("revoking grant for role %s from user %s: %w", roleKey, userID, err)
+	}
+	return nil
 }
 
 // ListUserGlobalPermissions returns all permission keys a user has via global grants.
@@ -116,7 +126,7 @@ func (r *AuthorizationRepository) ListUserGlobalPermissions(ctx context.Context,
 	`
 	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying global permissions for user %s: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -124,11 +134,14 @@ func (r *AuthorizationRepository) ListUserGlobalPermissions(ctx context.Context,
 	for rows.Next() {
 		var key string
 		if err := rows.Scan(&key); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning global permission row: %w", err)
 		}
 		permissions = append(permissions, key)
 	}
-	return permissions, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating global permissions: %w", err)
+	}
+	return permissions, nil
 }
 
 // ListUserGlobalRoles returns all role keys a user has via active global grants.
@@ -146,7 +159,7 @@ func (r *AuthorizationRepository) ListUserGlobalRoles(ctx context.Context, userI
 	`
 	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying global roles for user %s: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -154,11 +167,14 @@ func (r *AuthorizationRepository) ListUserGlobalRoles(ctx context.Context, userI
 	for rows.Next() {
 		var key string
 		if err := rows.Scan(&key); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning global role row: %w", err)
 		}
 		roles = append(roles, key)
 	}
-	return roles, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating global roles: %w", err)
+	}
+	return roles, nil
 }
 
 // GrantGlobalRole grants a global role to a user.
@@ -181,7 +197,10 @@ func (r *AuthorizationRepository) GrantGlobalRole(ctx context.Context, userID, r
 		  )
 	`
 	_, err := r.pool.Exec(ctx, query, userID, roleKey)
-	return err
+	if err != nil {
+		return fmt.Errorf("granting global role %s to user %s: %w", roleKey, userID, err)
+	}
+	return nil
 }
 
 // RevokeGlobalRole revokes a global role from a user.
@@ -199,7 +218,10 @@ func (r *AuthorizationRepository) RevokeGlobalRole(ctx context.Context, userID, 
 		  AND g.revoked_at IS NULL
 	`
 	_, err := r.pool.Exec(ctx, query, userID, roleKey)
-	return err
+	if err != nil {
+		return fmt.Errorf("revoking global role %s from user %s: %w", roleKey, userID, err)
+	}
+	return nil
 }
 
 // RoleGrantRow represents a role grant with scope info and display name.
@@ -231,7 +253,7 @@ func (r *AuthorizationRepository) ListUserRolesWithScope(ctx context.Context, us
 	`
 	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying roles with scope for user %s: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -239,11 +261,14 @@ func (r *AuthorizationRepository) ListUserRolesWithScope(ctx context.Context, us
 	for rows.Next() {
 		var row RoleGrantRow
 		if err := rows.Scan(&row.Key, &row.ScopeType, &row.ScopeID, &row.ScopeName); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning role grant row: %w", err)
 		}
 		grants = append(grants, row)
 	}
-	return grants, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating role grants: %w", err)
+	}
+	return grants, nil
 }
 
 // ListGrantsByScope returns user IDs with a given role for a scope.
@@ -261,7 +286,7 @@ func (r *AuthorizationRepository) ListGrantsByScope(ctx context.Context, roleKey
 	`
 	rows, err := r.pool.Query(ctx, query, scopeType, scopeID, roleKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying grants by scope %s/%s: %w", scopeType, scopeID, err)
 	}
 	defer rows.Close()
 
@@ -269,9 +294,12 @@ func (r *AuthorizationRepository) ListGrantsByScope(ctx context.Context, roleKey
 	for rows.Next() {
 		var uid string
 		if err := rows.Scan(&uid); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning grant user id: %w", err)
 		}
 		userIDs = append(userIDs, uid)
 	}
-	return userIDs, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating grants by scope: %w", err)
+	}
+	return userIDs, nil
 }

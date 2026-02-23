@@ -44,7 +44,7 @@ func (s *Service) loadKenPomNetByTeamID(ctx context.Context, coreTournamentID st
 			AND t.deleted_at IS NULL
 	`, coreTournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying kenpom ratings: %w", err)
 	}
 	defer rows.Close()
 
@@ -53,14 +53,14 @@ func (s *Service) loadKenPomNetByTeamID(ctx context.Context, coreTournamentID st
 		var teamID string
 		var net *float64
 		if err := rows.Scan(&teamID, &net); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning kenpom rating: %w", err)
 		}
 		if net != nil {
 			out[teamID] = *net
 		}
 	}
 	if rows.Err() != nil {
-		return nil, rows.Err()
+		return nil, fmt.Errorf("iterating kenpom ratings: %w", rows.Err())
 	}
 	return out, nil
 }
@@ -81,7 +81,7 @@ func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*mo
 		ORDER BY t.seed ASC, s.name ASC
 	`, coreTournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying teams: %w", err)
 	}
 	defer rows.Close()
 
@@ -92,7 +92,7 @@ func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*mo
 		var region *string
 		var schoolName string
 		if err := rows.Scan(&id, &seed, &region, &schoolName); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning team: %w", err)
 		}
 
 		seedVal := 0
@@ -112,7 +112,7 @@ func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*mo
 		})
 	}
 	if rows.Err() != nil {
-		return nil, rows.Err()
+		return nil, fmt.Errorf("iterating teams: %w", rows.Err())
 	}
 	if len(out) != 68 {
 		return nil, fmt.Errorf("expected 68 teams, got %d", len(out))
@@ -124,7 +124,7 @@ func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, to
 	if gameOutcomeRunID != nil && *gameOutcomeRunID != "" {
 		out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, *gameOutcomeRunID)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, 0, fmt.Errorf("loading predicted game outcomes by run id: %w", err)
 		}
 		if n == 0 {
 			return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *gameOutcomeRunID)
@@ -144,13 +144,13 @@ func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, to
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil, 0, fmt.Errorf("no game_outcome_runs found for tournament_id=%s", tournamentID)
 		}
-		return nil, nil, 0, err
+		return nil, nil, 0, fmt.Errorf("querying latest game outcome run: %w", err)
 	}
 
 	ptr := &latestRunID
 	out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, latestRunID)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, fmt.Errorf("loading predicted game outcomes by run id: %w", err)
 	}
 	if n == 0 {
 		return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", latestRunID)
@@ -166,7 +166,7 @@ func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID st
 			AND deleted_at IS NULL
 	`, runID)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("querying predicted game outcomes: %w", err)
 	}
 	defer rows.Close()
 
@@ -178,14 +178,14 @@ func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID st
 		var t2 string
 		var p float64
 		if err := rows.Scan(&gameID, &t1, &t2, &p); err != nil {
-			return nil, 0, err
+			return nil, 0, fmt.Errorf("scanning predicted game outcome: %w", err)
 		}
 		n++
 		out[MatchupKey{GameID: gameID, Team1ID: t1, Team2ID: t2}] = p
 		out[MatchupKey{GameID: gameID, Team1ID: t2, Team2ID: t1}] = 1.0 - p
 	}
 	if rows.Err() != nil {
-		return nil, 0, rows.Err()
+		return nil, 0, fmt.Errorf("iterating predicted game outcomes: %w", rows.Err())
 	}
 	return out, n, nil
 }
@@ -220,11 +220,11 @@ func (s *Service) lockInFirstFourResults(
 
 		wins1, elim1, err := s.loadCoreTeamWinsEliminated(ctx, team1)
 		if err != nil {
-			return err
+			return fmt.Errorf("loading team wins for first four team %s: %w", team1, err)
 		}
 		wins2, elim2, err := s.loadCoreTeamWinsEliminated(ctx, team2)
 		if err != nil {
-			return err
+			return fmt.Errorf("loading team wins for first four team %s: %w", team2, err)
 		}
 
 		winner := ""
@@ -267,7 +267,7 @@ func (s *Service) loadCoreTeamWinsEliminated(ctx context.Context, coreTeamID str
 		LIMIT 1
 	`, coreTeamID).Scan(&wins, &isEliminated)
 	if err != nil {
-		return 0, false, err
+		return 0, false, fmt.Errorf("querying team wins for %s: %w", coreTeamID, err)
 	}
 	return wins, isEliminated, nil
 }

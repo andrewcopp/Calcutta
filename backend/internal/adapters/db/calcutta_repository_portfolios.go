@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -15,7 +16,7 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "portfolio", ID: id}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting portfolio %s: %w", id, err)
 	}
 
 	return &models.CalcuttaPortfolio{
@@ -31,7 +32,7 @@ func (r *CalcuttaRepository) GetPortfolio(ctx context.Context, id string) (*mode
 func (r *CalcuttaRepository) GetPortfolioTeams(ctx context.Context, portfolioID string) ([]*models.CalcuttaPortfolioTeam, error) {
 	rows, err := r.q.ListPortfolioTeamsByPortfolioID(ctx, portfolioID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing portfolio teams for portfolio %s: %w", portfolioID, err)
 	}
 
 	out := make([]*models.CalcuttaPortfolioTeam, 0, len(rows))
@@ -77,7 +78,7 @@ func (r *CalcuttaRepository) GetPortfoliosByEntryIDs(ctx context.Context, entryI
 
 	rows, err := r.q.ListPortfoliosByEntryIDs(ctx, entryIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing portfolios by entry IDs: %w", err)
 	}
 
 	out := make(map[string][]*models.CalcuttaPortfolio, len(entryIDs))
@@ -100,7 +101,7 @@ func (r *CalcuttaRepository) GetPortfolioTeamsByPortfolioIDs(ctx context.Context
 
 	rows, err := r.q.ListPortfolioTeamsByPortfolioIDs(ctx, portfolioIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing portfolio teams by portfolio IDs: %w", err)
 	}
 
 	out := make(map[string][]*models.CalcuttaPortfolioTeam, len(portfolioIDs))
@@ -142,7 +143,7 @@ func (r *CalcuttaRepository) GetPortfolioTeamsByPortfolioIDs(ctx context.Context
 func (r *CalcuttaRepository) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	rows, err := r.q.ListPortfoliosByEntryID(ctx, entryID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing portfolios for entry %s: %w", entryID, err)
 	}
 
 	out := make([]*models.CalcuttaPortfolio, 0, len(rows))
@@ -164,7 +165,7 @@ func (r *CalcuttaRepository) GetTournamentTeam(ctx context.Context, id string) (
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "tournament team", ID: id}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting tournament team %s: %w", id, err)
 	}
 
 	team := &models.TournamentTeam{

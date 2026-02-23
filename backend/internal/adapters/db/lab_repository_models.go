@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -54,7 +55,7 @@ func (r *LabRepository) ListInvestmentModels(ctx context.Context, filter models.
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing investment models: %w", err)
 	}
 	defer rows.Close()
 
@@ -63,12 +64,15 @@ func (r *LabRepository) ListInvestmentModels(ctx context.Context, filter models.
 		var m models.InvestmentModel
 		var paramsStr string
 		if err := rows.Scan(&m.ID, &m.Name, &m.Kind, &paramsStr, &m.Notes, &m.CreatedAt, &m.UpdatedAt, &m.NEntries, &m.NEvaluations); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning investment model: %w", err)
 		}
 		m.ParamsJSON = json.RawMessage(paramsStr)
 		out = append(out, m)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating investment models: %w", err)
+	}
+	return out, nil
 }
 
 // GetInvestmentModel returns a single investment model by ID.
@@ -96,7 +100,7 @@ func (r *LabRepository) GetInvestmentModel(ctx context.Context, id string) (*mod
 		return nil, &apperrors.NotFoundError{Resource: "investment_model", ID: id}
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting investment model %s: %w", id, err)
 	}
 	m.ParamsJSON = json.RawMessage(paramsStr)
 	return &m, nil
@@ -127,7 +131,7 @@ func (r *LabRepository) GetModelLeaderboard(ctx context.Context) ([]models.LabLe
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying model leaderboard: %w", err)
 	}
 	defer rows.Close()
 
@@ -150,9 +154,12 @@ func (r *LabRepository) GetModelLeaderboard(ctx context.Context) ([]models.LabLe
 			&e.FirstEvalAt,
 			&e.LastEvalAt,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning leaderboard entry: %w", err)
 		}
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating leaderboard entries: %w", err)
+	}
+	return out, nil
 }

@@ -67,7 +67,7 @@ func (s *Service) GetBracket(ctx context.Context, tournamentID string) (*models.
 func (s *Service) SelectWinner(ctx context.Context, tournamentID, gameID, winnerTeamID string) (*models.BracketStructure, error) {
 	bracket, err := s.GetBracket(ctx, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting bracket: %w", err)
 	}
 
 	game, exists := bracket.Games[gameID]
@@ -123,7 +123,7 @@ func (s *Service) SelectWinner(ctx context.Context, tournamentID, gameID, winner
 func (s *Service) UnselectWinner(ctx context.Context, tournamentID, gameID string) (*models.BracketStructure, error) {
 	bracket, err := s.GetBracket(ctx, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting bracket: %w", err)
 	}
 
 	game, exists := bracket.Games[gameID]
@@ -181,7 +181,7 @@ func (s *Service) UnselectWinner(ctx context.Context, tournamentID, gameID strin
 func (s *Service) ValidateBracketSetup(ctx context.Context, tournamentID string) error {
 	teams, err := s.tournamentRepo.GetTeams(ctx, tournamentID)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting teams: %w", err)
 	}
 
 	return ValidateBracketSetupTeams(teams)

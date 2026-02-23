@@ -48,7 +48,7 @@ func (s *Service) Create(ctx context.Context, competitionName string, year int, 
 	name := fmt.Sprintf("%s (%d)", competitionName, year)
 	t := &models.Tournament{ID: uuid.New().String(), Name: name, Rounds: rounds}
 	if err := s.repo.Create(ctx, t, competitionName, year); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating tournament: %w", err)
 	}
 	return t, nil
 }
@@ -108,7 +108,11 @@ func (s *Service) ReplaceTeams(ctx context.Context, tournamentID string, inputs 
 		return nil, fmt.Errorf("failed to replace teams: %w", err)
 	}
 
-	return s.repo.GetTeams(ctx, tournamentID)
+	result, err := s.repo.GetTeams(ctx, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("getting teams after replace: %w", err)
+	}
+	return result, nil
 }
 
 // KenPomUpdateInput represents a single team's KenPom rating update.

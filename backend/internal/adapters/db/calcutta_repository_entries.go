@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -24,7 +25,7 @@ func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.Calc
 	if entry.UserID != nil {
 		parsed, err := uuid.Parse(*entry.UserID)
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing user ID for entry: %w", err)
 		}
 		userID = pgtype.UUID{Bytes: parsed, Valid: true}
 	}
@@ -40,7 +41,7 @@ func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.Calc
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return &apperrors.AlreadyExistsError{Resource: "entry", Field: "user_id"}
 		}
-		return err
+		return fmt.Errorf("creating entry: %w", err)
 	}
 	return nil
 }
@@ -48,7 +49,7 @@ func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.Calc
 func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
 	rows, err := r.q.ListEntriesByCalcuttaID(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing entries for calcutta %s: %w", calcuttaID, err)
 	}
 
 	out := make([]*models.CalcuttaEntry, 0, len(rows))
@@ -73,7 +74,7 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "entry", ID: id}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting entry %s: %w", id, err)
 	}
 
 	return &models.CalcuttaEntry{
@@ -90,7 +91,7 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 func (r *CalcuttaRepository) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {
 	rows, err := r.q.ListEntryTeamsByEntryID(ctx, entryID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing entry teams for entry %s: %w", entryID, err)
 	}
 
 	out := make([]*models.CalcuttaEntryTeam, 0, len(rows))
@@ -134,7 +135,7 @@ func (r *CalcuttaRepository) GetEntryTeamsByEntryIDs(ctx context.Context, entryI
 
 	rows, err := r.q.ListEntryTeamsByEntryIDs(ctx, entryIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing entry teams by entry IDs: %w", err)
 	}
 
 	out := make(map[string][]*models.CalcuttaEntryTeam, len(entryIDs))
@@ -179,7 +180,7 @@ func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID stri
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction to replace entry teams for entry %s: %w", entryID, err)
 	}
 	defer func() {
 		if err != nil {
@@ -194,7 +195,7 @@ func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID stri
 		DeletedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		EntryID:   entryID,
 	}); err != nil {
-		return err
+		return fmt.Errorf("soft-deleting entry teams for entry %s: %w", entryID, err)
 	}
 
 	for _, t := range teams {
@@ -211,12 +212,12 @@ func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID stri
 			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		}
 		if err = qtx.CreateEntryTeam(ctx, params); err != nil {
-			return err
+			return fmt.Errorf("creating entry team for entry %s: %w", entryID, err)
 		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing transaction to replace entry teams for entry %s: %w", entryID, err)
 	}
 	return nil
 }

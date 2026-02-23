@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -26,7 +27,7 @@ func NewCalcuttaRepository(pool *pgxpool.Pool) *CalcuttaRepository {
 func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, error) {
 	rows, err := r.q.ListCalcuttas(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing calcuttas: %w", err)
 	}
 
 	out := make([]*models.Calcutta, 0, len(rows))
@@ -53,7 +54,7 @@ func (r *CalcuttaRepository) GetAll(ctx context.Context) ([]*models.Calcutta, er
 func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]*models.Calcutta, error) {
 	rows, err := r.q.ListCalcuttasByUserID(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing calcuttas by user %s: %w", userID, err)
 	}
 
 	out := make([]*models.Calcutta, 0, len(rows))
@@ -79,7 +80,7 @@ func (r *CalcuttaRepository) GetByUserID(ctx context.Context, userID string) ([]
 func (r *CalcuttaRepository) GetDistinctUserIDsByCalcutta(ctx context.Context, calcuttaID string) ([]string, error) {
 	uuids, err := r.q.ListDistinctUserIDsByCalcuttaID(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing distinct user IDs for calcutta %s: %w", calcuttaID, err)
 	}
 	out := make([]string, 0, len(uuids))
 	for _, u := range uuids {
@@ -97,7 +98,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "calcutta", ID: id}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting calcutta %s: %w", id, err)
 	}
 	return &models.Calcutta{
 		ID:           row.ID,
@@ -119,7 +120,7 @@ func (r *CalcuttaRepository) GetByID(ctx context.Context, id string) (*models.Ca
 func (r *CalcuttaRepository) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
 	rows, err := r.q.GetCalcuttasByTournament(ctx, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing calcuttas by tournament %s: %w", tournamentID, err)
 	}
 
 	out := make([]*models.Calcutta, 0, len(rows))
@@ -151,7 +152,7 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction to create calcutta: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -178,11 +179,11 @@ func (r *CalcuttaRepository) Create(ctx context.Context, calcutta *models.Calcut
 		UpdatedAt:    pgtype.Timestamptz{Time: calcutta.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateCalcutta(ctx, params); err != nil {
-		return err
+		return fmt.Errorf("creating calcutta: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing transaction to create calcutta: %w", err)
 	}
 	return nil
 }
@@ -192,7 +193,7 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction to update calcutta %s: %w", calcutta.ID, err)
 	}
 	defer func() {
 		if err != nil {
@@ -215,14 +216,14 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 	}
 	affected, err := qtx.UpdateCalcutta(ctx, params)
 	if err != nil {
-		return err
+		return fmt.Errorf("updating calcutta %s: %w", calcutta.ID, err)
 	}
 	if affected == 0 {
 		return &apperrors.NotFoundError{Resource: "calcutta", ID: calcutta.ID}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing transaction to update calcutta %s: %w", calcutta.ID, err)
 	}
 	return nil
 }
@@ -230,7 +231,7 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 func (r *CalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error) {
 	rows, err := r.q.ListCalcuttaRounds(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing calcutta rounds for calcutta %s: %w", calcuttaID, err)
 	}
 
 	out := make([]*models.CalcuttaRound, 0, len(rows))
@@ -256,7 +257,7 @@ func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.Calc
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction to create calcutta round: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -274,11 +275,11 @@ func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.Calc
 		UpdatedAt:     pgtype.Timestamptz{Time: round.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateCalcuttaRound(ctx, params); err != nil {
-		return err
+		return fmt.Errorf("creating calcutta round: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing transaction to create calcutta round: %w", err)
 	}
 	return nil
 }

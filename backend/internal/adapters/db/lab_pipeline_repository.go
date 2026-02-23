@@ -80,7 +80,7 @@ func (r *LabRepository) CreatePipelineRun(ctx context.Context, run *models.LabPi
 		&result.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating pipeline run: %w", err)
 	}
 	result.TargetCalcuttaIDs = targetIDs
 	return &result, nil
@@ -131,7 +131,7 @@ func (r *LabRepository) GetPipelineRun(ctx context.Context, id string) (*models.
 		return nil, &apperrors.NotFoundError{Resource: "pipeline_run", ID: id}
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting pipeline run %s: %w", id, err)
 	}
 	result.TargetCalcuttaIDs = targetIDs
 	return &result, nil
@@ -163,7 +163,7 @@ func (r *LabRepository) UpdatePipelineRunStatus(ctx context.Context, id string, 
 
 	tag, err := r.pool.Exec(ctx, query, id, status, startedAt, finishedAt, errorMessage)
 	if err != nil {
-		return err
+		return fmt.Errorf("updating pipeline run %s status to %s: %w", id, status, err)
 	}
 	if tag.RowsAffected() == 0 {
 		return &apperrors.NotFoundError{Resource: "pipeline_run", ID: id}
@@ -219,7 +219,7 @@ func (r *LabRepository) GetActivePipelineRun(ctx context.Context, modelID string
 		return nil, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting active pipeline run for model %s: %w", modelID, err)
 	}
 	result.TargetCalcuttaIDs = targetIDs
 	return &result, nil
@@ -245,7 +245,10 @@ func (r *LabRepository) CreatePipelineCalcuttaRuns(ctx context.Context, pipeline
 		VALUES ` + strings.Join(values, ", ")
 
 	_, err := r.pool.Exec(ctx, query, args...)
-	return err
+	if err != nil {
+		return fmt.Errorf("creating pipeline calcutta runs: %w", err)
+	}
+	return nil
 }
 
 // GetHistoricalCalcuttaIDs returns all historical calcutta IDs (years before current year).
@@ -264,7 +267,7 @@ func (r *LabRepository) GetHistoricalCalcuttaIDs(ctx context.Context) ([]string,
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying historical calcutta IDs: %w", err)
 	}
 	defer rows.Close()
 
@@ -272,11 +275,14 @@ func (r *LabRepository) GetHistoricalCalcuttaIDs(ctx context.Context) ([]string,
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning historical calcutta ID: %w", err)
 		}
 		ids = append(ids, id)
 	}
-	return ids, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating historical calcutta IDs: %w", err)
+	}
+	return ids, nil
 }
 
 // SoftDeleteModelArtifacts soft-deletes all entries and evaluations for a model.
@@ -286,7 +292,7 @@ func (r *LabRepository) SoftDeleteModelArtifacts(ctx context.Context, modelID st
 	// Use a transaction to ensure atomicity
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction for soft-deleting model artifacts: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -348,5 +354,8 @@ func (r *LabRepository) SoftDeleteModelArtifacts(ctx context.Context, modelID st
 		return fmt.Errorf("failed to cancel active pipeline runs: %w", err)
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing transaction for soft-deleting model artifacts: %w", err)
+	}
+	return nil
 }

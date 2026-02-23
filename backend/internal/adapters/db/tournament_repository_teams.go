@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -14,7 +15,7 @@ import (
 func (r *TournamentRepository) GetTeams(ctx context.Context, tournamentID string) ([]*models.TournamentTeam, error) {
 	rows, err := r.q.ListTeamsByTournamentID(ctx, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing teams for tournament %s: %w", tournamentID, err)
 	}
 
 	teams := make([]*models.TournamentTeam, 0, len(rows))
@@ -46,7 +47,7 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting team %s: %w", id, err)
 	}
 	return tournamentTeamFromRow(
 		row.ID,
@@ -70,7 +71,7 @@ func (r *TournamentRepository) GetTournamentTeam(ctx context.Context, id string)
 func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *models.TournamentTeam) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -86,11 +87,11 @@ func (r *TournamentRepository) UpdateTournamentTeam(ctx context.Context, team *m
 		ID:           team.ID,
 	}
 	if err = qtx.UpdateTeam(ctx, params); err != nil {
-		return err
+		return fmt.Errorf("updating team %s: %w", team.ID, err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing team update: %w", err)
 	}
 	return nil
 }
@@ -102,7 +103,7 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -124,11 +125,11 @@ func (r *TournamentRepository) CreateTeam(ctx context.Context, team *models.Tour
 		UpdatedAt:    pgtype.Timestamptz{Time: team.UpdatedAt, Valid: true},
 	}
 	if err = qtx.CreateTeam(ctx, params); err != nil {
-		return err
+		return fmt.Errorf("creating team %s: %w", team.ID, err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing team creation: %w", err)
 	}
 	return nil
 }
@@ -139,7 +140,7 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting winning team for tournament %s: %w", tournamentID, err)
 	}
 
 	team := &models.TournamentTeam{
@@ -163,7 +164,7 @@ func (r *TournamentRepository) GetWinningTeam(ctx context.Context, tournamentID 
 func (r *TournamentRepository) ListWinningTeams(ctx context.Context) (map[string]*models.TournamentTeam, error) {
 	rows, err := r.q.ListWinningTeams(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing winning teams: %w", err)
 	}
 
 	out := make(map[string]*models.TournamentTeam, len(rows))
@@ -191,7 +192,7 @@ func (r *TournamentRepository) ListWinningTeams(ctx context.Context) (map[string
 func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID string, teams []*models.TournamentTeam) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -206,7 +207,7 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 		DeletedAt:    pgtype.Timestamptz{Time: now, Valid: true},
 		TournamentID: tournamentID,
 	}); err != nil {
-		return err
+		return fmt.Errorf("soft-deleting teams for tournament %s: %w", tournamentID, err)
 	}
 
 	for _, team := range teams {
@@ -228,12 +229,12 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 			UpdatedAt:    pgtype.Timestamptz{Time: team.UpdatedAt, Valid: true},
 		}
 		if err = qtx.CreateTeam(ctx, params); err != nil {
-			return err
+			return fmt.Errorf("creating replacement team %s: %w", team.ID, err)
 		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing team replacement: %w", err)
 	}
 	return nil
 }
@@ -241,7 +242,7 @@ func (r *TournamentRepository) ReplaceTeams(ctx context.Context, tournamentID st
 func (r *TournamentRepository) BulkUpsertKenPomStats(ctx context.Context, updates []models.TeamKenPomUpdate) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -259,12 +260,12 @@ func (r *TournamentRepository) BulkUpsertKenPomStats(ctx context.Context, update
 			AdjT:   &u.AdjT,
 		}
 		if err = qtx.UpsertTeamKenPomStats(ctx, params); err != nil {
-			return err
+			return fmt.Errorf("upserting kenpom stats for team %s: %w", u.TeamID, err)
 		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing kenpom stats upsert: %w", err)
 	}
 	return nil
 }

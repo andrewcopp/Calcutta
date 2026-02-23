@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -33,7 +34,7 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	return r.q.CreateUser(ctx, sqlc.CreateUserParams{
+	if err := r.q.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:                 user.ID,
 		Email:              user.Email,
 		FirstName:          user.FirstName,
@@ -44,7 +45,10 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 		ExternalProviderID: user.ExternalProviderID,
 		CreatedAt:          pgtype.Timestamptz{Time: user.CreatedAt, Valid: true},
 		UpdatedAt:          pgtype.Timestamptz{Time: user.UpdatedAt, Valid: true},
-	})
+	}); err != nil {
+		return fmt.Errorf("creating user %s: %w", user.ID, err)
+	}
+	return nil
 }
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
@@ -53,7 +57,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting user by email: %w", err)
 	}
 	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
@@ -64,7 +68,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting user by id %s: %w", id, err)
 	}
 	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
@@ -78,7 +82,7 @@ func (r *UserRepository) GetByExternalProvider(ctx context.Context, provider, pr
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting user by external provider %s: %w", provider, err)
 	}
 	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
@@ -96,7 +100,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 		deletedAt = pgtype.Timestamptz{Time: *user.DeletedAt, Valid: true}
 	}
 
-	return r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
+	if err := r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
 		ID:                 user.ID,
 		Email:              user.Email,
 		FirstName:          user.FirstName,
@@ -107,7 +111,10 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 		ExternalProviderID: user.ExternalProviderID,
 		UpdatedAt:          pgtype.Timestamptz{Time: user.UpdatedAt, Valid: true},
 		DeletedAt:          deletedAt,
-	})
+	}); err != nil {
+		return fmt.Errorf("updating user %s: %w", user.ID, err)
+	}
+	return nil
 }
 
 func userFromRow(id string, email *string, firstName, lastName, status string, passwordHash, externalProvider, externalProviderID *string, createdAt, updatedAt, deletedAt pgtype.Timestamptz) *models.User {

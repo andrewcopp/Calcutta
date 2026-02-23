@@ -73,21 +73,21 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	loadStart := time.Now()
 	setup, err := s.loadBracketAndProbabilities(ctx, p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading bracket and probabilities: %w", err)
 	}
 	loadDur := time.Since(loadStart)
 
 	// Phase 2: Persist snapshot and batch records.
 	snapshotID, batchID, err := s.createSnapshotAndBatch(ctx, setup.coreTournamentID, setup.bracket, setup.teams, p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating snapshot and batch: %w", err)
 	}
 
 	// Phase 3: Run simulation batches and write results.
 	simStart := time.Now()
 	rowsWritten, err := s.runSimulationBatches(ctx, setup.bracket, setup.provider, setup.probs, batchID, setup.coreTournamentID, p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("running simulation batches: %w", err)
 	}
 	simDur := time.Since(simStart)
 
@@ -152,17 +152,17 @@ type setupResult struct {
 func (s *Service) loadBracketAndProbabilities(ctx context.Context, p RunParams) (*setupResult, error) {
 	coreTournamentID, err := s.tournamentResolver.ResolveCoreTournamentID(ctx, p.Season)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolving tournament id for season %d: %w", p.Season, err)
 	}
 
 	ff, err := s.tournamentResolver.LoadFinalFourConfig(ctx, coreTournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading final four config: %w", err)
 	}
 
 	teams, err := s.loadTeams(ctx, coreTournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading teams: %w", err)
 	}
 
 	br, err := appbracket.BuildBracketStructure(coreTournamentID, teams, ff)
@@ -172,7 +172,7 @@ func (s *Service) loadBracketAndProbabilities(ctx context.Context, p RunParams) 
 
 	provider, probs, err := s.resolveProbabilities(ctx, coreTournamentID, br, p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolving probabilities: %w", err)
 	}
 
 	return &setupResult{
@@ -206,11 +206,11 @@ func (s *Service) resolveKenPomProbabilities(
 ) (ProbabilityProvider, map[MatchupKey]float64, error) {
 	p.GameOutcomeSpec.Normalize()
 	if err := p.GameOutcomeSpec.Validate(); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("validating game outcome spec: %w", err)
 	}
 	netByTeamID, err := s.loadKenPomNetByTeamID(ctx, coreTournamentID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("loading kenpom ratings: %w", err)
 	}
 	if len(netByTeamID) == 0 {
 		return nil, nil, errors.New("no kenpom ratings available for tournament")
@@ -218,7 +218,7 @@ func (s *Service) resolveKenPomProbabilities(
 	overrides := make(map[MatchupKey]float64)
 	if p.StartingStateKey == "post_first_four" {
 		if err := s.lockInFirstFourResults(ctx, br, overrides); err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("locking in first four results: %w", err)
 		}
 	}
 	provider := kenPomProvider{spec: p.GameOutcomeSpec, netByTeamID: netByTeamID, overrides: overrides}
@@ -233,7 +233,7 @@ func (s *Service) resolvePredictedProbabilities(
 ) (ProbabilityProvider, map[MatchupKey]float64, error) {
 	selectedGameOutcomeRunID, loaded, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("loading predicted game outcomes: %w", err)
 	}
 	if nPredRows == 0 {
 		if selectedGameOutcomeRunID != nil {
@@ -243,7 +243,7 @@ func (s *Service) resolvePredictedProbabilities(
 	}
 	if p.StartingStateKey == "post_first_four" {
 		if err := s.lockInFirstFourResults(ctx, br, loaded); err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("locking in first four results: %w", err)
 		}
 	}
 	return nil, loaded, nil
@@ -266,12 +266,12 @@ func (s *Service) createSnapshotAndBatch(
 		snapshotID, err = s.createTournamentStateSnapshot(ctx, coreTournamentID)
 	}
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("creating tournament state snapshot: %w", err)
 	}
 
 	batchID, err := s.createTournamentSimulationBatch(ctx, coreTournamentID, snapshotID, p.NSims, p.Seed, p.ProbabilitySourceKey)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("creating simulation batch: %w", err)
 	}
 
 	return snapshotID, batchID, nil
@@ -305,12 +305,12 @@ func (s *Service) runSimulationBatches(
 			results, err = Simulate(br, probs, n, batchSeed, Options{Workers: p.Workers})
 		}
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("simulating batch at offset %d: %w", offset, err)
 		}
 
 		inserted, err := s.copyInsertSimulatedTournaments(ctx, batchID, coreTournamentID, offset, results)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("inserting simulated tournaments at offset %d: %w", offset, err)
 		}
 		rowsWritten += inserted
 	}

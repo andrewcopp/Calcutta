@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -41,14 +42,14 @@ func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddre
 
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting user by email: %w", err)
 	}
 	if user == nil {
 		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
 	}
 	ok, err := s.authRepo.IsUserActive(ctx, user.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking user active status: %w", err)
 	}
 	if !ok {
 		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
@@ -62,19 +63,19 @@ func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddre
 
 	refreshToken, err := coreauth.NewRefreshToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generating refresh token: %w", err)
 	}
 	refreshHash := coreauth.HashRefreshToken(refreshToken)
 	expiresAt := now.Add(s.refreshTTL)
 
 	sessionID, err := s.authRepo.CreateSession(ctx, user.ID, refreshHash, userAgent, ipAddress, expiresAt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating session: %w", err)
 	}
 
 	accessToken, _, err := s.tokenMgr.IssueAccessToken(user.ID, sessionID, now)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("issuing access token: %w", err)
 	}
 
 	return &Result{User: user, AccessToken: accessToken, RefreshToken: refreshToken, RefreshExpiresAt: expiresAt}, nil
@@ -90,7 +91,7 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 
 	existing, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking existing user: %w", err)
 	}
 	if existing != nil {
 		return nil, &apperrors.AlreadyExistsError{Resource: "user", Field: "email", Value: email}
@@ -98,7 +99,7 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("hashing password: %w", err)
 	}
 	hashStr := string(hash)
 
@@ -113,24 +114,24 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 		UpdatedAt:    now,
 	}
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating user: %w", err)
 	}
 
 	refreshToken, err := coreauth.NewRefreshToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generating refresh token: %w", err)
 	}
 	refreshHash := coreauth.HashRefreshToken(refreshToken)
 	expiresAt := now.Add(s.refreshTTL)
 
 	sessionID, err := s.authRepo.CreateSession(ctx, user.ID, refreshHash, userAgent, ipAddress, expiresAt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating session: %w", err)
 	}
 
 	accessToken, _, err := s.tokenMgr.IssueAccessToken(user.ID, sessionID, now)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("issuing access token: %w", err)
 	}
 
 	return &Result{User: user, AccessToken: accessToken, RefreshToken: refreshToken, RefreshExpiresAt: expiresAt}, nil
@@ -150,7 +151,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 	oldHash := coreauth.HashRefreshToken(refreshToken)
 	sess, err := s.authRepo.GetSessionByRefreshTokenHash(ctx, oldHash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting session by refresh token: %w", err)
 	}
 	if sess == nil || sess.RevokedAt != nil || now.After(sess.ExpiresAt) {
 		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
@@ -158,14 +159,14 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 
 	user, err := s.userRepo.GetByID(ctx, sess.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting user by id: %w", err)
 	}
 	if user == nil {
 		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
 	}
 	ok, err := s.authRepo.IsUserActive(ctx, user.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking user active status: %w", err)
 	}
 	if !ok {
 		return nil, &apperrors.UnauthorizedError{Message: "invalid refresh token"}
@@ -173,17 +174,17 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, now time.Tim
 
 	newToken, err := coreauth.NewRefreshToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generating refresh token: %w", err)
 	}
 	newHash := coreauth.HashRefreshToken(newToken)
 	newExpiresAt := now.Add(s.refreshTTL)
 	if err := s.authRepo.RotateRefreshToken(ctx, sess.ID, newHash, newExpiresAt); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rotating refresh token: %w", err)
 	}
 
 	accessToken, _, err := s.tokenMgr.IssueAccessToken(sess.UserID, sess.ID, now)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("issuing access token: %w", err)
 	}
 
 	return &Result{User: user, AccessToken: accessToken, RefreshToken: newToken, RefreshExpiresAt: newExpiresAt}, nil
@@ -196,10 +197,13 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	h := coreauth.HashRefreshToken(refreshToken)
 	sess, err := s.authRepo.GetSessionByRefreshTokenHash(ctx, h)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting session by refresh token: %w", err)
 	}
 	if sess == nil {
 		return nil
 	}
-	return s.authRepo.RevokeSession(ctx, sess.ID)
+	if err := s.authRepo.RevokeSession(ctx, sess.ID); err != nil {
+		return fmt.Errorf("revoking session: %w", err)
+	}
+	return nil
 }

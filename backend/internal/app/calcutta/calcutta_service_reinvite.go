@@ -2,6 +2,7 @@ package calcutta
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
@@ -10,7 +11,7 @@ import (
 func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID string, newCalcutta *models.Calcutta, invitedBy string) (*models.Calcutta, []*models.CalcuttaInvitation, error) {
 	source, err := s.ports.Calcuttas.GetByID(ctx, sourceCalcuttaID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("getting source calcutta: %w", err)
 	}
 
 	// Copy defaults from source if not set
@@ -26,16 +27,16 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 
 	sourceRounds, err := s.ports.Rounds.GetRounds(ctx, sourceCalcuttaID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("getting source calcutta rounds: %w", err)
 	}
 
 	if err := s.CreateCalcuttaWithRounds(ctx, newCalcutta, sourceRounds); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("creating calcutta with rounds: %w", err)
 	}
 
 	userIDs, err := s.ports.Entries.GetDistinctUserIDsByCalcutta(ctx, sourceCalcuttaID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("getting user ids from source calcutta: %w", err)
 	}
 
 	invitations := make([]*models.CalcuttaInvitation, 0, len(userIDs))
@@ -46,7 +47,7 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 			InvitedBy:  invitedBy,
 		}
 		if err := s.ports.Invitations.CreateInvitation(ctx, inv); err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("creating invitation for user %s: %w", uid, err)
 		}
 		invitations = append(invitations, inv)
 	}

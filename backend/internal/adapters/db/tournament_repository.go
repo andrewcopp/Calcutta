@@ -46,7 +46,7 @@ func NewTournamentRepository(pool *pgxpool.Pool) *TournamentRepository {
 func (r *TournamentRepository) GetCompetitions(ctx context.Context) ([]models.Competition, error) {
 	rows, err := r.q.ListCompetitions(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing competitions: %w", err)
 	}
 	out := make([]models.Competition, 0, len(rows))
 	for _, row := range rows {
@@ -58,7 +58,7 @@ func (r *TournamentRepository) GetCompetitions(ctx context.Context) ([]models.Co
 func (r *TournamentRepository) GetSeasons(ctx context.Context) ([]models.Season, error) {
 	rows, err := r.q.ListSeasons(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing seasons: %w", err)
 	}
 	out := make([]models.Season, 0, len(rows))
 	for _, row := range rows {
@@ -70,7 +70,7 @@ func (r *TournamentRepository) GetSeasons(ctx context.Context) ([]models.Season,
 func (r *TournamentRepository) GetAll(ctx context.Context) ([]models.Tournament, error) {
 	rows, err := r.q.ListTournaments(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing tournaments: %w", err)
 	}
 
 	out := make([]models.Tournament, 0, len(rows))
@@ -97,7 +97,7 @@ func (r *TournamentRepository) GetByID(ctx context.Context, id string) (*models.
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting tournament %s: %w", id, err)
 	}
 	return &models.Tournament{
 		ID:                   row.ID,
@@ -130,7 +130,7 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -164,7 +164,7 @@ func (r *TournamentRepository) Create(ctx context.Context, tournament *models.To
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing tournament creation: %w", err)
 	}
 	return nil
 }
@@ -179,7 +179,7 @@ func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentI
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -195,11 +195,11 @@ func (r *TournamentRepository) UpdateStartingAt(ctx context.Context, tournamentI
 	}
 	affected, err := qtx.UpdateCoreTournamentStartingAt(ctx, params)
 	if err != nil {
-		return err
+		return fmt.Errorf("updating tournament starting_at %s: %w", tournamentID, err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing tournament starting_at update: %w", err)
 	}
 	if affected == 0 {
 		return nil
@@ -212,7 +212,7 @@ func (r *TournamentRepository) UpdateFinalFour(ctx context.Context, tournamentID
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -230,11 +230,11 @@ func (r *TournamentRepository) UpdateFinalFour(ctx context.Context, tournamentID
 		ID:                   tournamentID,
 	}
 	if _, err = qtx.UpdateCoreTournamentFinalFour(ctx, params); err != nil {
-		return err
+		return fmt.Errorf("updating tournament final four %s: %w", tournamentID, err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing tournament final four update: %w", err)
 	}
 	return nil
 }

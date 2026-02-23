@@ -45,7 +45,10 @@ func (r *UserRepository) UpdateLastInviteSentAt(ctx context.Context, userID stri
 		SET last_invite_sent_at = $2, updated_at = $2
 		WHERE id = $1 AND deleted_at IS NULL
 	`, userID, now)
-	return err
+	if err != nil {
+		return fmt.Errorf("updating last invite sent at for user %s: %w", userID, err)
+	}
+	return nil
 }
 
 // GenerateInviteToken runs a transactional flow that locks the user row,
@@ -61,7 +64,7 @@ func (r *UserRepository) GenerateInviteToken(
 ) (*InviteTokenResult, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("beginning invite token transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -79,7 +82,7 @@ func (r *UserRepository) GenerateInviteToken(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "user", ID: userID}
 		}
-		return nil, err
+		return nil, fmt.Errorf("locking user row for invite token %s: %w", userID, err)
 	}
 
 	if email == nil || strings.TrimSpace(*email) == "" {
@@ -126,7 +129,7 @@ func (r *UserRepository) GenerateInviteToken(
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("committing invite token transaction: %w", err)
 	}
 	return result, nil
 }
@@ -234,7 +237,7 @@ func (r *UserRepository) GetAdminUserByID(ctx context.Context, userID string) (*
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("scanning admin user %s: %w", userID, err)
 	}
 
 	item.InvitedAt = TimestamptzToPtrTimeUTC(invitedAt)
@@ -303,7 +306,7 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 		ORDER BY u.created_at DESC
 	`, statusFilter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying admin users: %w", err)
 	}
 	defer rows.Close()
 
@@ -333,7 +336,7 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 			&roles,
 			&perms,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning admin user row: %w", err)
 		}
 
 		item.InvitedAt = TimestamptzToPtrTimeUTC(invitedAt)
@@ -349,7 +352,7 @@ func (r *UserRepository) ListAdminUsers(ctx context.Context, statusFilter string
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterating admin users: %w", err)
 	}
 
 	return items, nil

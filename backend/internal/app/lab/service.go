@@ -66,7 +66,7 @@ func (s *Service) ListEntries(ctx context.Context, filter models.LabListEntriesF
 func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*models.LabEntryDetailEnriched, error) {
 	raw, err := s.repo.GetEntryRaw(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting raw entry: %w", err)
 	}
 	return EnrichEntry(raw), nil
 }
@@ -75,9 +75,13 @@ func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*models.LabE
 func (s *Service) GetEntryEnrichedByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (*models.LabEntryDetailEnriched, error) {
 	entryID, err := s.repo.GetEntryIDByModelAndCalcutta(ctx, modelName, calcuttaID, startingStateKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting entry id for model: %w", err)
 	}
-	return s.GetEntryEnriched(ctx, entryID)
+	enriched, err := s.GetEntryEnriched(ctx, entryID)
+	if err != nil {
+		return nil, fmt.Errorf("getting enriched entry: %w", err)
+	}
+	return enriched, nil
 }
 
 // ListEvaluations returns evaluations matching the filter.
@@ -116,7 +120,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 		// Only check for active pipeline if not force re-running
 		active, err := s.pipelineRepo.GetActivePipelineRun(ctx, modelID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("checking active pipeline: %w", err)
 		}
 		if active != nil {
 			return nil, &PipelineAlreadyRunningError{PipelineRunID: active.ID}
@@ -129,7 +133,7 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 		var err error
 		calcuttaIDs, err = s.pipelineRepo.GetHistoricalCalcuttaIDs(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting historical calcutta ids: %w", err)
 		}
 	}
 	if len(calcuttaIDs) == 0 {
@@ -179,13 +183,13 @@ func (s *Service) StartPipeline(ctx context.Context, modelID string, req models.
 
 	created, err := s.pipelineRepo.CreatePipelineRun(ctx, run)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating pipeline run: %w", err)
 	}
 
 	// Create calcutta runs
 	err = s.pipelineRepo.CreatePipelineCalcuttaRuns(ctx, created.ID, calcuttaIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating pipeline calcutta runs: %w", err)
 	}
 
 	return &models.LabStartPipelineResponse{
@@ -227,7 +231,7 @@ func (s *Service) CancelPipeline(ctx context.Context, pipelineRunID string) erro
 
 	run, err := s.pipelineRepo.GetPipelineRun(ctx, pipelineRunID)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting pipeline run: %w", err)
 	}
 
 	if run.Status != "pending" && run.Status != "running" {
@@ -235,7 +239,10 @@ func (s *Service) CancelPipeline(ctx context.Context, pipelineRunID string) erro
 	}
 
 	msg := "cancelled by user"
-	return s.pipelineRepo.UpdatePipelineRunStatus(ctx, pipelineRunID, "cancelled", &msg)
+	if err := s.pipelineRepo.UpdatePipelineRunStatus(ctx, pipelineRunID, "cancelled", &msg); err != nil {
+		return fmt.Errorf("updating pipeline run status: %w", err)
+	}
+	return nil
 }
 
 // Pipeline errors

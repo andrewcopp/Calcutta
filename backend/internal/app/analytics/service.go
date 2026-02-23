@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
@@ -19,7 +20,7 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 
 	data, err := s.repo.GetBestInvestments(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting best investments: %w", err)
 	}
 
 	results := make([]BestInvestmentResult, 0, len(data))
@@ -51,7 +52,7 @@ func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeader
 
 	data, err := s.repo.GetBestCareers(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting best careers: %w", err)
 	}
 
 	results := make([]CareerLeaderboardResult, 0, len(data))
@@ -77,7 +78,7 @@ func (s *Service) GetBestInvestmentBids(ctx context.Context, limit int) ([]Inves
 
 	data, err := s.repo.GetBestInvestmentBids(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting best investment bids: %w", err)
 	}
 
 	results := make([]InvestmentLeaderboardResult, 0, len(data))
@@ -106,7 +107,7 @@ func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderb
 
 	data, err := s.repo.GetBestEntries(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting best entries: %w", err)
 	}
 
 	results := make([]EntryLeaderboardResult, 0, len(data))
@@ -130,7 +131,7 @@ func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderb
 func (s *Service) GetSeedInvestmentDistribution(ctx context.Context) (*SeedInvestmentDistributionResult, error) {
 	data, err := s.repo.GetSeedInvestmentPoints(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting seed investment points: %w", err)
 	}
 
 	points := make([]SeedInvestmentPointResult, 0, len(data))
@@ -160,7 +161,7 @@ func (s *Service) GetSeedInvestmentDistribution(ctx context.Context) (*SeedInves
 func (s *Service) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, float64, float64, error) {
 	data, totalPoints, totalInvestment, err := s.repo.GetSeedAnalytics(ctx)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("getting seed analytics: %w", err)
 	}
 
 	// Convert ports data to input type for pure function
@@ -181,7 +182,7 @@ func (s *Service) GetSeedAnalytics(ctx context.Context) ([]SeedAnalyticsResult, 
 func (s *Service) GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsResult, float64, float64, error) {
 	data, totalPoints, totalInvestment, err := s.repo.GetRegionAnalytics(ctx)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("getting region analytics: %w", err)
 	}
 
 	// Convert ports data to input type for pure function
@@ -202,7 +203,7 @@ func (s *Service) GetRegionAnalytics(ctx context.Context) ([]RegionAnalyticsResu
 func (s *Service) GetTeamAnalytics(ctx context.Context) ([]TeamAnalyticsResult, float64, error) {
 	data, err := s.repo.GetTeamAnalytics(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("getting team analytics: %w", err)
 	}
 
 	// Convert ports data to input type for pure function
@@ -225,7 +226,7 @@ func (s *Service) GetTeamAnalytics(ctx context.Context) ([]TeamAnalyticsResult, 
 func (s *Service) GetSeedVarianceAnalytics(ctx context.Context) ([]SeedVarianceResult, error) {
 	data, err := s.repo.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting seed variance analytics: %w", err)
 	}
 
 	// Convert ports data to input type for pure function
@@ -247,22 +248,22 @@ func (s *Service) GetSeedVarianceAnalytics(ctx context.Context) ([]SeedVarianceR
 func (s *Service) GetAllAnalytics(ctx context.Context) (*AnalyticsResult, error) {
 	seedAnalytics, totalPoints, totalInvestment, err := s.GetSeedAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting seed analytics: %w", err)
 	}
 
 	regionAnalytics, _, _, err := s.GetRegionAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting region analytics: %w", err)
 	}
 
 	teamAnalytics, _, err := s.GetTeamAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting team analytics: %w", err)
 	}
 
 	seedVarianceAnalytics, err := s.GetSeedVarianceAnalytics(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting seed variance analytics: %w", err)
 	}
 
 	var baselineROI float64

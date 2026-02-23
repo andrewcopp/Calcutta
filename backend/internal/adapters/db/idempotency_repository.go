@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,7 +38,7 @@ func (r *IdempotencyRepository) Get(ctx context.Context, key, userID string) (*I
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting idempotency record for key %s: %w", key, err)
 	}
 	return &rec, nil
 }
@@ -50,7 +51,7 @@ func (r *IdempotencyRepository) Reserve(ctx context.Context, key, userID string)
 		key, userID,
 	)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("reserving idempotency key %s: %w", key, err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
@@ -61,5 +62,8 @@ func (r *IdempotencyRepository) Complete(ctx context.Context, key, userID string
 		`UPDATE core.idempotency_keys SET response_status = $3, response_body = $4 WHERE key = $1 AND user_id = $2`,
 		key, userID, status, body,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("completing idempotency key %s: %w", key, err)
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,7 +43,7 @@ func ResolveCoreTournamentID(ctx context.Context, pool *pgxpool.Pool, season int
 		ORDER BY t.created_at DESC
 		LIMIT 1
 	`, season).Scan(&id); err != nil {
-		return "", err
+		return "", fmt.Errorf("resolving tournament ID for season %d: %w", season, err)
 	}
 	return id, nil
 }
@@ -60,7 +61,7 @@ func ResolveSeasonFromTournamentID(ctx context.Context, pool *pgxpool.Pool, tour
 			AND t.deleted_at IS NULL
 		LIMIT 1
 	`, tournamentID).Scan(&year); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("resolving season for tournament %s: %w", tournamentID, err)
 	}
 	return year, nil
 }
@@ -80,7 +81,7 @@ func LoadFinalFourConfig(ctx context.Context, pool *pgxpool.Pool, coreTournament
 		LIMIT 1
 	`, coreTournamentID).Scan(&tl, &bl, &tr, &br)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading final four config for tournament %s: %w", coreTournamentID, err)
 	}
 
 	cfg := &models.FinalFourConfig{}

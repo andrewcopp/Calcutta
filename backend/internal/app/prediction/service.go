@@ -112,7 +112,7 @@ func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (st
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false, nil
 		}
-		return "", false, err
+		return "", false, fmt.Errorf("getting latest prediction batch: %w", err)
 	}
 	return batchID, true, nil
 }
@@ -137,7 +137,7 @@ func (s *Service) GetTeamValues(ctx context.Context, batchID string) ([]Predicte
 			AND deleted_at IS NULL
 	`, batchID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying team values: %w", err)
 	}
 	defer rows.Close()
 
@@ -157,7 +157,7 @@ func (s *Service) GetTeamValues(ctx context.Context, batchID string) ([]Predicte
 			&v.PRound6,
 			&v.PRound7,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning team value: %w", err)
 		}
 		results = append(results, v)
 	}
@@ -169,7 +169,7 @@ func (s *Service) GetTeamValues(ctx context.Context, batchID string) ([]Predicte
 func (s *Service) GetExpectedPointsMap(ctx context.Context, tournamentID string) (map[string]float64, error) {
 	batchID, found, err := s.GetLatestBatchID(ctx, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting latest batch id: %w", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("no prediction batch found for tournament %s", tournamentID)
@@ -177,7 +177,7 @@ func (s *Service) GetExpectedPointsMap(ctx context.Context, tournamentID string)
 
 	values, err := s.GetTeamValues(ctx, batchID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting team values: %w", err)
 	}
 
 	result := make(map[string]float64, len(values))
@@ -203,7 +203,7 @@ func (s *Service) loadTeams(ctx context.Context, tournamentID string) ([]TeamInp
 		ORDER BY t.region, t.seed
 	`, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying teams: %w", err)
 	}
 	defer rows.Close()
 
@@ -211,7 +211,7 @@ func (s *Service) loadTeams(ctx context.Context, tournamentID string) ([]TeamInp
 	for rows.Next() {
 		var t TeamInput
 		if err := rows.Scan(&t.ID, &t.Seed, &t.Region, &t.KenPomNet); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning team: %w", err)
 		}
 		teams = append(teams, t)
 	}
@@ -230,7 +230,7 @@ func (s *Service) loadScoringRules(ctx context.Context, tournamentID string) ([]
 		LIMIT 10
 	`, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying scoring rules: %w", err)
 	}
 	defer rows.Close()
 
@@ -238,7 +238,7 @@ func (s *Service) loadScoringRules(ctx context.Context, tournamentID string) ([]
 	for rows.Next() {
 		var r scoring.Rule
 		if err := rows.Scan(&r.WinIndex, &r.PointsAwarded); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning scoring rule: %w", err)
 		}
 		rules = append(rules, r)
 	}
@@ -254,7 +254,7 @@ func (s *Service) storePredictions(
 ) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -313,7 +313,7 @@ func (s *Service) storePredictions(
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return "", err
+		return "", fmt.Errorf("committing predictions: %w", err)
 	}
 
 	return batchID, nil

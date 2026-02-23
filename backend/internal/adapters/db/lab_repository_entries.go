@@ -62,7 +62,7 @@ func (r *LabRepository) ListEntries(ctx context.Context, filter models.LabListEn
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing lab entries: %w", err)
 	}
 	defer rows.Close()
 
@@ -87,14 +87,17 @@ func (r *LabRepository) ListEntries(ctx context.Context, filter models.LabListEn
 			&e.CalcuttaName,
 			&e.NEvaluations,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning lab entry: %w", err)
 		}
 		e.GameOutcomeParamsJSON = json.RawMessage(gameOutcomeParamsStr)
 		e.OptimizerParamsJSON = json.RawMessage(optimizerParamsStr)
 		e.BidsJSON = json.RawMessage(bidsStr)
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating lab entries: %w", err)
+	}
+	return out, nil
 }
 
 // GetEntryRaw returns a single entry with raw data (bids, predictions, teams, pool budget)
@@ -144,7 +147,7 @@ func (r *LabRepository) GetEntryRaw(ctx context.Context, id string) (*models.Lab
 		return nil, &apperrors.NotFoundError{Resource: "entry", ID: id}
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting lab entry %s: %w", id, err)
 	}
 
 	result.GameOutcomeParamsJSON = json.RawMessage(gameOutcomeParamsStr)
@@ -154,26 +157,26 @@ func (r *LabRepository) GetEntryRaw(ctx context.Context, id string) (*models.Lab
 	result.HasPredictions = predictionsStr != nil && *predictionsStr != ""
 	if result.HasPredictions {
 		if err := json.Unmarshal([]byte(*predictionsStr), &result.Predictions); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshalling predictions for entry %s: %w", id, err)
 		}
 	}
 
 	// Parse raw bids.
 	if err := json.Unmarshal([]byte(bidsStr), &result.Bids); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshalling bids for entry %s: %w", id, err)
 	}
 
 	// Load team info for all teams in this tournament.
 	teamMap, err := r.loadTeamMap(ctx, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading team map for entry %s: %w", id, err)
 	}
 	result.Teams = teamMap
 
 	// Load total pool budget.
 	totalPoolBudget, err := r.loadTotalPoolBudget(ctx, result.CalcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading total pool budget for entry %s: %w", id, err)
 	}
 	result.TotalPoolBudget = totalPoolBudget
 
@@ -202,7 +205,7 @@ func (r *LabRepository) GetEntryIDByModelAndCalcutta(ctx context.Context, modelN
 		return "", &apperrors.NotFoundError{Resource: "entry", ID: modelName + "/" + calcuttaID}
 	}
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getting entry by model %s and calcutta %s: %w", modelName, calcuttaID, err)
 	}
 	return entryID, nil
 }
@@ -217,7 +220,7 @@ func (r *LabRepository) loadTeamMap(ctx context.Context, tournamentID string) (m
 	`
 	rows, err := r.pool.Query(ctx, teamQuery, tournamentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying teams for tournament %s: %w", tournamentID, err)
 	}
 	defer rows.Close()
 
@@ -226,11 +229,14 @@ func (r *LabRepository) loadTeamMap(ctx context.Context, tournamentID string) (m
 		var tid, name, region string
 		var seed int
 		if err := rows.Scan(&tid, &name, &seed, &region); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning team info: %w", err)
 		}
 		teamMap[tid] = models.LabTeamInfo{Name: name, Seed: seed, Region: region}
 	}
-	return teamMap, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating teams for tournament %s: %w", tournamentID, err)
+	}
+	return teamMap, nil
 }
 
 // loadTotalPoolBudget returns the total pool budget for a calcutta.

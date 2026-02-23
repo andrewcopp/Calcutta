@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -23,7 +24,7 @@ func NewSchoolRepository(pool *pgxpool.Pool) *SchoolRepository {
 func (r *SchoolRepository) List(ctx context.Context) ([]models.School, error) {
 	rows, err := r.q.ListSchools(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying schools: %w", err)
 	}
 
 	schools := make([]models.School, 0, len(rows))
@@ -44,7 +45,7 @@ func (r *SchoolRepository) GetByID(ctx context.Context, id string) (*models.Scho
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "school", ID: id}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting school by id %s: %w", id, err)
 	}
 	return &models.School{
 		ID:      row.ID,

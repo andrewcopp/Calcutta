@@ -2,6 +2,7 @@ package calcutta
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 
@@ -23,12 +24,12 @@ func (s *Service) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta)
 func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
 	entries, err := s.ports.Entries.GetEntries(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting entries: %w", err)
 	}
 
 	payouts, err := s.ports.Payouts.GetPayouts(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting payouts: %w", err)
 	}
 
 	sorted, results := ComputeEntryPlacementsAndPayouts(entries, payouts)

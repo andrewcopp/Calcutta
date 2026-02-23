@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -62,7 +63,7 @@ func (r *LabRepository) ListEvaluations(ctx context.Context, filter models.LabLi
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing evaluations: %w", err)
 	}
 	defer rows.Close()
 
@@ -87,11 +88,14 @@ func (r *LabRepository) ListEvaluations(ctx context.Context, filter models.LabLi
 			&ev.CalcuttaName,
 			&ev.StartingStateKey,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning evaluation: %w", err)
 		}
 		out = append(out, ev)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating evaluations: %w", err)
+	}
+	return out, nil
 }
 
 // GetEvaluation returns a single evaluation by ID with full details.
@@ -145,7 +149,7 @@ func (r *LabRepository) GetEvaluation(ctx context.Context, id string) (*models.L
 		return nil, &apperrors.NotFoundError{Resource: "evaluation", ID: id}
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting evaluation %s: %w", id, err)
 	}
 	return &ev, nil
 }
@@ -168,7 +172,7 @@ func (r *LabRepository) GetEvaluationEntryResults(ctx context.Context, evaluatio
 
 	rows, err := r.pool.Query(ctx, query, evaluationID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying evaluation entry results for evaluation %s: %w", evaluationID, err)
 	}
 	defer rows.Close()
 
@@ -183,11 +187,14 @@ func (r *LabRepository) GetEvaluationEntryResults(ctx context.Context, evaluatio
 			&e.PInMoney,
 			&e.Rank,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning evaluation entry result: %w", err)
 		}
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating evaluation entry results: %w", err)
+	}
+	return out, nil
 }
 
 // GetEvaluationEntryProfile returns detailed profile for an entry in an evaluation.
@@ -218,7 +225,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 		return nil, &apperrors.NotFoundError{Resource: "evaluation_entry_result", ID: entryResultID}
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting evaluation entry result %s: %w", entryResultID, err)
 	}
 
 	// Get the lab entry_id and calcutta_id from the evaluation
@@ -232,7 +239,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 			AND ev.deleted_at IS NULL
 	`, evaluationID).Scan(&labEntryID, &calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting entry and calcutta for evaluation %s: %w", evaluationID, err)
 	}
 
 	profile.Bids = make([]models.LabEvaluationEntryBid, 0)
@@ -317,7 +324,7 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 		rows, err = r.pool.Query(ctx, query, calcuttaID, profile.EntryName)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying bids for entry result %s: %w", entryResultID, err)
 	}
 	defer rows.Close()
 
@@ -333,11 +340,14 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 			&bid.BidPoints,
 			&bid.Ownership,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning entry bid: %w", err)
 		}
 		profile.TotalBidPoints += bid.BidPoints
 		profile.Bids = append(profile.Bids, bid)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating entry bids: %w", err)
+	}
 
-	return &profile, rows.Err()
+	return &profile, nil
 }

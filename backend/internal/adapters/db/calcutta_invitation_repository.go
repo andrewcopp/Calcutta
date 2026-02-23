@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
@@ -29,13 +30,16 @@ func (r *CalcuttaInvitationRepository) CreateInvitation(ctx context.Context, inv
 		InvitedBy:  invitation.InvitedBy,
 		Status:     "pending",
 	}
-	return r.q.CreateCalcuttaInvitation(ctx, params)
+	if err := r.q.CreateCalcuttaInvitation(ctx, params); err != nil {
+		return fmt.Errorf("creating calcutta invitation: %w", err)
+	}
+	return nil
 }
 
 func (r *CalcuttaInvitationRepository) ListInvitations(ctx context.Context, calcuttaID string) ([]*models.CalcuttaInvitation, error) {
 	rows, err := r.q.ListCalcuttaInvitationsByCalcuttaID(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing invitations for calcutta %s: %w", calcuttaID, err)
 	}
 	out := make([]*models.CalcuttaInvitation, 0, len(rows))
 	for _, row := range rows {
@@ -66,7 +70,7 @@ func (r *CalcuttaInvitationRepository) GetInvitationByCalcuttaAndUser(ctx contex
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "invitation", ID: calcuttaID + "/" + userID}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting invitation for calcutta %s and user %s: %w", calcuttaID, userID, err)
 	}
 	inv := &models.CalcuttaInvitation{
 		ID:         row.ID,
@@ -93,7 +97,7 @@ func (r *CalcuttaInvitationRepository) GetPendingInvitationByCalcuttaAndUser(ctx
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &apperrors.NotFoundError{Resource: "invitation", ID: calcuttaID + "/" + userID}
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting pending invitation for calcutta %s and user %s: %w", calcuttaID, userID, err)
 	}
 	inv := &models.CalcuttaInvitation{
 		ID:         row.ID,
@@ -114,7 +118,7 @@ func (r *CalcuttaInvitationRepository) GetPendingInvitationByCalcuttaAndUser(ctx
 func (r *CalcuttaInvitationRepository) AcceptInvitation(ctx context.Context, id string) error {
 	affected, err := r.q.AcceptCalcuttaInvitation(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("accepting invitation %s: %w", id, err)
 	}
 	if affected == 0 {
 		return &apperrors.NotFoundError{Resource: "invitation", ID: id}
@@ -125,7 +129,7 @@ func (r *CalcuttaInvitationRepository) AcceptInvitation(ctx context.Context, id 
 func (r *CalcuttaInvitationRepository) RevokeInvitation(ctx context.Context, id string) error {
 	affected, err := r.q.RevokeCalcuttaInvitation(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("revoking invitation %s: %w", id, err)
 	}
 	if affected == 0 {
 		return &apperrors.NotFoundError{Resource: "invitation", ID: id}
@@ -136,7 +140,7 @@ func (r *CalcuttaInvitationRepository) RevokeInvitation(ctx context.Context, id 
 func (r *CalcuttaInvitationRepository) ListPendingInvitationsByUserID(ctx context.Context, userID string) ([]*models.CalcuttaInvitation, error) {
 	rows, err := r.q.ListPendingInvitationsByUserID(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing pending invitations for user %s: %w", userID, err)
 	}
 	out := make([]*models.CalcuttaInvitation, 0, len(rows))
 	for _, row := range rows {

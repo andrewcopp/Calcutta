@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -14,7 +15,7 @@ import (
 func (r *CalcuttaRepository) GetPayouts(ctx context.Context, calcuttaID string) ([]*models.CalcuttaPayout, error) {
 	rows, err := r.q.ListCalcuttaPayouts(ctx, calcuttaID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing payouts for calcutta %s: %w", calcuttaID, err)
 	}
 
 	out := make([]*models.CalcuttaPayout, 0, len(rows))
@@ -35,7 +36,7 @@ func (r *CalcuttaRepository) GetPayouts(ctx context.Context, calcuttaID string) 
 func (r *CalcuttaRepository) ReplacePayouts(ctx context.Context, calcuttaID string, payouts []*models.CalcuttaPayout) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction to replace payouts for calcutta %s: %w", calcuttaID, err)
 	}
 	defer func() {
 		if err != nil {
@@ -53,7 +54,7 @@ func (r *CalcuttaRepository) ReplacePayouts(ctx context.Context, calcuttaID stri
 		CalcuttaID: calcuttaID,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("soft-deleting payouts for calcutta %s: %w", calcuttaID, err)
 	}
 
 	// Insert new payouts
@@ -70,12 +71,12 @@ func (r *CalcuttaRepository) ReplacePayouts(ctx context.Context, calcuttaID stri
 			UpdatedAt:   pgtype.Timestamptz{Time: now, Valid: true},
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("creating payout for calcutta %s: %w", calcuttaID, err)
 		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("committing transaction to replace payouts for calcutta %s: %w", calcuttaID, err)
 	}
 	return nil
 }

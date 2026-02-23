@@ -2,6 +2,7 @@ package calcutta
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
@@ -30,7 +31,7 @@ func New(ports Ports) *Service {
 // CreateCalcuttaWithRounds creates a new calcutta and its associated rounds
 func (s *Service) CreateCalcuttaWithRounds(ctx context.Context, calcutta *models.Calcutta, rounds []*models.CalcuttaRound) error {
 	if err := s.ports.Calcuttas.Create(ctx, calcutta); err != nil {
-		return err
+		return fmt.Errorf("creating calcutta: %w", err)
 	}
 
 	for _, r := range rounds {
@@ -40,7 +41,7 @@ func (s *Service) CreateCalcuttaWithRounds(ctx context.Context, calcutta *models
 			Points:     r.Points,
 		}
 		if err := s.ports.Rounds.CreateRound(ctx, calcuttaRound); err != nil {
-			return err
+			return fmt.Errorf("creating calcutta round: %w", err)
 		}
 	}
 

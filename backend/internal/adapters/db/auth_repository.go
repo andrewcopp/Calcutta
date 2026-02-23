@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
@@ -38,7 +39,11 @@ func (r *AuthRepository) CreateSession(ctx context.Context, userID, refreshToken
 		ip := ipAddress
 		arg.IpAddress = &ip
 	}
-	return r.q.CreateAuthSession(ctx, arg)
+	id, err := r.q.CreateAuthSession(ctx, arg)
+	if err != nil {
+		return "", fmt.Errorf("creating auth session for user %s: %w", userID, err)
+	}
+	return id, nil
 }
 
 func (r *AuthRepository) GetSessionByID(ctx context.Context, id string) (*models.AuthSession, error) {
@@ -47,7 +52,7 @@ func (r *AuthRepository) GetSessionByID(ctx context.Context, id string) (*models
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting auth session by id %s: %w", id, err)
 	}
 	return authSessionFromRow(row.ID, row.UserID, row.RefreshTokenHash, row.ExpiresAt, row.RevokedAt), nil
 }
@@ -58,21 +63,28 @@ func (r *AuthRepository) GetSessionByRefreshTokenHash(ctx context.Context, refre
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("getting auth session by refresh token hash: %w", err)
 	}
 	return authSessionFromRow(row.ID, row.UserID, row.RefreshTokenHash, row.ExpiresAt, row.RevokedAt), nil
 }
 
 func (r *AuthRepository) RotateRefreshToken(ctx context.Context, sessionID, newRefreshTokenHash string, newExpiresAt time.Time) error {
-	return r.q.RotateAuthSessionRefreshToken(ctx, sqlc.RotateAuthSessionRefreshTokenParams{
+	err := r.q.RotateAuthSessionRefreshToken(ctx, sqlc.RotateAuthSessionRefreshTokenParams{
 		ID:               sessionID,
 		RefreshTokenHash: newRefreshTokenHash,
 		ExpiresAt:        pgtype.Timestamptz{Time: newExpiresAt, Valid: true},
 	})
+	if err != nil {
+		return fmt.Errorf("rotating refresh token for session %s: %w", sessionID, err)
+	}
+	return nil
 }
 
 func (r *AuthRepository) RevokeSession(ctx context.Context, sessionID string) error {
-	return r.q.RevokeAuthSession(ctx, sessionID)
+	if err := r.q.RevokeAuthSession(ctx, sessionID); err != nil {
+		return fmt.Errorf("revoking auth session %s: %w", sessionID, err)
+	}
+	return nil
 }
 
 func (r *AuthRepository) IsUserActive(ctx context.Context, userID string) (bool, error) {
@@ -90,7 +102,7 @@ func (r *AuthRepository) IsUserActive(ctx context.Context, userID string) (bool,
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("querying user active status %s: %w", userID, err)
 	}
 	return status == "active", nil
 }
