@@ -96,19 +96,23 @@ export const CalcuttaPortfolioTeamSchema = z.object({
 
 export type CalcuttaPortfolioTeam = z.infer<typeof CalcuttaPortfolioTeamSchema>;
 
-export const ScoringRuleSchema = z.object({
-  winIndex: z.number(),
-  pointsAwarded: z.number(),
+export const RoundStandingEntrySchema = z.object({
+  entryId: z.string(),
+  totalPoints: z.number(),
+  finishPosition: z.number(),
+  isTied: z.boolean(),
+  payoutCents: z.number(),
+  inTheMoney: z.boolean(),
 });
 
-export type ScoringRule = z.infer<typeof ScoringRuleSchema>;
+export type RoundStandingEntry = z.infer<typeof RoundStandingEntrySchema>;
 
-export const DashboardPayoutSchema = z.object({
-  position: z.number(),
-  amountCents: z.number(),
+export const RoundStandingGroupSchema = z.object({
+  round: z.number(),
+  entries: z.array(RoundStandingEntrySchema),
 });
 
-export type DashboardPayout = z.infer<typeof DashboardPayoutSchema>;
+export type RoundStandingGroup = z.infer<typeof RoundStandingGroupSchema>;
 
 export const CalcuttaDashboardSchema = z.object({
   calcutta: CalcuttaSchema,
@@ -123,8 +127,7 @@ export const CalcuttaDashboardSchema = z.object({
   portfolioTeams: z.array(CalcuttaPortfolioTeamSchema),
   schools: z.array(SchoolSchema),
   tournamentTeams: z.array(TournamentTeamSchema),
-  scoringRules: z.array(ScoringRuleSchema),
-  payouts: z.array(DashboardPayoutSchema),
+  roundStandings: z.array(RoundStandingGroupSchema),
 });
 
 export type CalcuttaDashboard = z.infer<typeof CalcuttaDashboardSchema>;

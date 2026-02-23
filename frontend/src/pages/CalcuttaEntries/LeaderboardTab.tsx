@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import type { CalcuttaDashboard, CalcuttaEntry } from '../../schemas/calcutta';
 import { formatDollarsFromCents } from '../../utils/format';
 import { getRoundOptions } from '../../utils/roundLabels';
-import { useLeaderboardStandings } from '../../hooks/useLeaderboardStandings';
 import { Select } from '../../components/ui/Select';
 
 type SortMode = 'actual' | 'projected';
@@ -18,18 +17,36 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
   const [sortMode, setSortMode] = useState<SortMode>('actual');
   const [throughRound, setThroughRound] = useState<number | null>(null);
 
-  const rewindEntries = useLeaderboardStandings(dashboard, throughRound);
-  const displayEntries = rewindEntries ?? entries;
-
   const isHistorical = throughRound !== null;
   const effectiveSortMode = isHistorical ? 'actual' : sortMode;
 
   const hasProjections = entries.some((e) => e.projectedEv != null);
 
   const roundOptions = useMemo(
-    () => getRoundOptions(dashboard.scoringRules),
-    [dashboard.scoringRules],
+    () => getRoundOptions(dashboard.roundStandings.map((g) => g.round)),
+    [dashboard.roundStandings],
   );
+
+  const displayEntries = useMemo(() => {
+    if (throughRound === null) return entries;
+
+    const roundGroup = dashboard.roundStandings.find((g) => g.round === throughRound);
+    if (!roundGroup) return entries;
+
+    const entryById = new Map(entries.map((e) => [e.id, e]));
+    return roundGroup.entries.map((s) => {
+      const entry = entryById.get(s.entryId);
+      return {
+        ...(entry ?? { id: s.entryId, name: s.entryId, calcuttaId: '', createdAt: '', updatedAt: '' }),
+        totalPoints: s.totalPoints,
+        finishPosition: s.finishPosition,
+        isTied: s.isTied,
+        payoutCents: s.payoutCents,
+        inTheMoney: s.inTheMoney,
+        projectedEv: undefined,
+      };
+    });
+  }, [entries, dashboard.roundStandings, throughRound]);
 
   const sortedEntries = useMemo(() => {
     if (effectiveSortMode === 'projected') {

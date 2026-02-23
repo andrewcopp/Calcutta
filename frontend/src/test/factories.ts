@@ -96,8 +96,7 @@ export function makeDashboard(overrides: Partial<CalcuttaDashboard> = {}): Calcu
     portfolioTeams: [],
     schools: [],
     tournamentTeams: [],
-    scoringRules: [],
-    payouts: [],
+    roundStandings: [],
     ...overrides,
   };
 }

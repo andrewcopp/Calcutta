@@ -113,10 +113,9 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		BiddingOpen:          biddingOpen,
 		TotalEntries:         len(entries),
 		Abilities:            computeAbilities(r.Context(), h.authz, userID, calcutta),
-		Schools:         dtos.NewSchoolListResponse(schools),
-		TournamentTeams: tournamentTeamResponses,
-		ScoringRules:    dtos.NewScoringRuleListResponse(rounds),
-		Payouts:         dtos.NewPayoutListResponse(payouts),
+		Schools:              dtos.NewSchoolListResponse(schools),
+		TournamentTeams:      tournamentTeamResponses,
+		RoundStandings:       []*dtos.RoundStandingGroup{},
 	}
 
 	if currentUserEntry != nil {
@@ -187,6 +186,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
+		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts)
 	}
 
 	response.WriteJSON(w, http.StatusOK, resp)
@@ -367,5 +367,80 @@ func (h *Handler) attachProjectedEV(
 			s.ProjectedEV = &v
 		}
 	}
+}
+
+// computeRoundStandings computes standings at each round cap (0 through maxRound).
+// This lets the frontend show "as of" standings for any point in the tournament.
+func computeRoundStandings(
+	entries []*models.CalcuttaEntry,
+	portfolios []*models.CalcuttaPortfolio,
+	portfolioTeams []*models.CalcuttaPortfolioTeam,
+	tournamentTeams []*models.TournamentTeam,
+	rounds []*models.CalcuttaRound,
+	payouts []*models.CalcuttaPayout,
+) []*dtos.RoundStandingGroup {
+	if len(rounds) == 0 {
+		return []*dtos.RoundStandingGroup{}
+	}
+
+	rules := make([]scoring.Rule, len(rounds))
+	maxRound := 0
+	for i, rd := range rounds {
+		rules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
+		if rd.Round > maxRound {
+			maxRound = rd.Round
+		}
+	}
+
+	teamByID := make(map[string]*models.TournamentTeam, len(tournamentTeams))
+	for _, tt := range tournamentTeams {
+		teamByID[tt.ID] = tt
+	}
+
+	portfolioToEntry := make(map[string]string, len(portfolios))
+	for _, p := range portfolios {
+		portfolioToEntry[p.ID] = p.EntryID
+	}
+
+	groups := make([]*dtos.RoundStandingGroup, 0, maxRound+1)
+	for cap := 0; cap <= maxRound; cap++ {
+		pointsByEntry := make(map[string]float64)
+		for _, pt := range portfolioTeams {
+			team := teamByID[pt.TeamID]
+			if team == nil {
+				continue
+			}
+			entryID := portfolioToEntry[pt.PortfolioID]
+			if entryID == "" {
+				continue
+			}
+			progress := team.Wins + team.Byes
+			if progress > cap {
+				progress = cap
+			}
+			teamPoints := scoring.PointsForProgress(rules, progress, 0)
+			pointsByEntry[entryID] += pt.OwnershipPercentage * float64(teamPoints)
+		}
+
+		standings := calcuttaapp.ComputeStandings(entries, pointsByEntry, payouts)
+		standingEntries := make([]*dtos.RoundStandingEntry, len(standings))
+		for i, s := range standings {
+			standingEntries[i] = &dtos.RoundStandingEntry{
+				EntryID:        s.EntryID,
+				TotalPoints:    s.TotalPoints,
+				FinishPosition: s.FinishPosition,
+				IsTied:         s.IsTied,
+				PayoutCents:    s.PayoutCents,
+				InTheMoney:     s.InTheMoney,
+			}
+		}
+
+		groups = append(groups, &dtos.RoundStandingGroup{
+			Round:   cap,
+			Entries: standingEntries,
+		})
+	}
+
+	return groups
 }
 

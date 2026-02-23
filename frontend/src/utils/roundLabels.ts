@@ -1,5 +1,3 @@
-import type { ScoringRule } from '../schemas/calcutta';
-
 export interface RoundOption {
   label: string;
   value: number | null; // null = "Current"
@@ -24,23 +22,25 @@ const ROUND_NAMES_7: Record<number, string> = {
   7: 'Championship',
 };
 
-export function getRoundOptions(scoringRules: ScoringRule[]): RoundOption[] {
-  if (scoringRules.length === 0) return [{ label: 'Current', value: null }];
+export function getRoundOptions(rounds: number[]): RoundOption[] {
+  if (rounds.length === 0) return [];
 
-  const maxWinIndex = Math.max(...scoringRules.map((r) => r.winIndex));
-  const nameMap = maxWinIndex >= 7 ? ROUND_NAMES_7 : ROUND_NAMES_6;
+  const maxRound = Math.max(...rounds);
+  const nameMap = maxRound >= 7 ? ROUND_NAMES_7 : ROUND_NAMES_6;
 
   const options: RoundOption[] = [{ label: 'Current', value: null }];
 
   // Add round options in reverse chronological order (After Championship → ... → Start)
-  const winIndices = scoringRules.map((r) => r.winIndex).sort((a, b) => b - a);
+  const sorted = [...rounds].filter((r) => r > 0).sort((a, b) => b - a);
 
-  for (const idx of winIndices) {
-    const name = nameMap[idx] ?? `Round ${idx}`;
-    options.push({ label: `After ${name}`, value: idx });
+  for (const round of sorted) {
+    const name = nameMap[round] ?? `Round ${round}`;
+    options.push({ label: `After ${name}`, value: round });
   }
 
-  options.push({ label: 'Start', value: 0 });
+  if (rounds.includes(0)) {
+    options.push({ label: 'Start', value: 0 });
+  }
 
   return options;
 }
