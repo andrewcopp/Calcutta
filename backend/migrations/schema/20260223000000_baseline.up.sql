@@ -535,6 +535,7 @@ CREATE TABLE lab.evaluations (
     p_top1 double precision,
     p_in_money double precision,
     our_rank integer,
+    summary_json jsonb,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
