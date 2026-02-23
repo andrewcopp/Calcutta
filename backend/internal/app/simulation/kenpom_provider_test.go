@@ -9,8 +9,8 @@ import (
 
 func TestThatKenPomProviderReturnsOverrideProbabilityWhenMatchupKeyExists(t *testing.T) {
 	// GIVEN a provider with an override for a specific matchup
-	provider := kenPomProvider{
-		overrides: map[MatchupKey]float64{
+	provider := KenPomProvider{
+		Overrides: map[MatchupKey]float64{
 			{GameID: "g1", Team1ID: "a", Team2ID: "b"}: 0.75,
 		},
 	}
@@ -26,8 +26,8 @@ func TestThatKenPomProviderReturnsOverrideProbabilityWhenMatchupKeyExists(t *tes
 
 func TestThatKenPomProviderReturnsFiftyWhenSpecIsNil(t *testing.T) {
 	// GIVEN a provider with nil spec and no overrides
-	provider := kenPomProvider{
-		netByTeamID: map[string]float64{"a": 10.0, "b": 5.0},
+	provider := KenPomProvider{
+		NetByTeamID: map[string]float64{"a": 10.0, "b": 5.0},
 	}
 
 	// WHEN calling Prob
@@ -42,9 +42,9 @@ func TestThatKenPomProviderReturnsFiftyWhenSpecIsNil(t *testing.T) {
 func TestThatKenPomProviderReturnsFiftyWhenTeam1RatingMissing(t *testing.T) {
 	// GIVEN a provider where team1 has no rating
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	provider := kenPomProvider{
-		spec:        spec,
-		netByTeamID: map[string]float64{"b": 5.0},
+	provider := KenPomProvider{
+		Spec:        spec,
+		NetByTeamID: map[string]float64{"b": 5.0},
 	}
 
 	// WHEN calling Prob with missing team1
@@ -59,9 +59,9 @@ func TestThatKenPomProviderReturnsFiftyWhenTeam1RatingMissing(t *testing.T) {
 func TestThatKenPomProviderReturnsFiftyWhenTeam2RatingMissing(t *testing.T) {
 	// GIVEN a provider where team2 has no rating
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	provider := kenPomProvider{
-		spec:        spec,
-		netByTeamID: map[string]float64{"a": 10.0},
+	provider := KenPomProvider{
+		Spec:        spec,
+		NetByTeamID: map[string]float64{"a": 10.0},
 	}
 
 	// WHEN calling Prob with missing team2
@@ -76,9 +76,9 @@ func TestThatKenPomProviderReturnsFiftyWhenTeam2RatingMissing(t *testing.T) {
 func TestThatKenPomProviderUsesSpecWinProbWhenBothRatingsPresent(t *testing.T) {
 	// GIVEN a provider with both ratings and a spec (sigma=10)
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	provider := kenPomProvider{
-		spec:        spec,
-		netByTeamID: map[string]float64{"a": 20.0, "b": 10.0},
+	provider := KenPomProvider{
+		Spec:        spec,
+		NetByTeamID: map[string]float64{"a": 20.0, "b": 10.0},
 	}
 
 	// WHEN calling Prob

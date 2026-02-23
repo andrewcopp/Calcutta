@@ -2,6 +2,9 @@ package calcutta_evaluations
 
 import (
 	"sort"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation"
 )
 
 // SimulationResult represents the outcome of one simulation
@@ -36,7 +39,9 @@ type TeamSimResult struct {
 	Points int
 }
 
-func calculateSimulationOutcomes(simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
+// CalculateSimulationOutcomes computes each entry's total points, rank, and
+// payout for a single simulation. It is a pure function with no side effects.
+func CalculateSimulationOutcomes(simID int, entries map[string]*Entry, teamResults []TeamSimResult, payouts map[int]int, firstPlacePayout int) ([]SimulationResult, error) {
 
 	// Build team points map for this simulation
 	teamPoints := make(map[string]int)
@@ -112,7 +117,28 @@ func calculateSimulationOutcomes(simID int, entries map[string]*Entry, teamResul
 	return results, nil
 }
 
-func calculatePerformanceMetrics(results []SimulationResult) map[string]*EntryPerformance {
+// ConvertSimulationResults bridges simulation output to evaluation input by
+// grouping TeamSimulationResult records by SimID and converting each team's
+// wins/byes into points using the provided scoring rules.
+func ConvertSimulationResults(
+	simResults []simulation.TeamSimulationResult,
+	nTeams int,
+	rules []scoring.Rule,
+) map[int][]TeamSimResult {
+	out := make(map[int][]TeamSimResult)
+	for _, sr := range simResults {
+		points := scoring.PointsForProgress(rules, sr.Wins, sr.Byes)
+		out[sr.SimID] = append(out[sr.SimID], TeamSimResult{
+			TeamID: sr.TeamID,
+			Points: points,
+		})
+	}
+	return out
+}
+
+// CalculatePerformanceMetrics aggregates simulation results into per-entry
+// performance statistics (mean/median payout, P(top1), P(in money)).
+func CalculatePerformanceMetrics(results []SimulationResult) map[string]*EntryPerformance {
 	entryPayouts := make(map[string][]float64)
 
 	for _, r := range results {

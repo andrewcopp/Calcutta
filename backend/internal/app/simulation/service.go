@@ -221,7 +221,7 @@ func (s *Service) resolveKenPomProbabilities(
 			return nil, nil, fmt.Errorf("locking in first four results: %w", err)
 		}
 	}
-	provider := kenPomProvider{spec: p.GameOutcomeSpec, netByTeamID: netByTeamID, overrides: overrides}
+	provider := KenPomProvider{Spec: p.GameOutcomeSpec, NetByTeamID: netByTeamID, Overrides: overrides}
 	return provider, nil, nil
 }
 

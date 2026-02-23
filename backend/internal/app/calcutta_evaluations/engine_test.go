@@ -3,6 +3,9 @@ package calcutta_evaluations
 import (
 	"math"
 	"testing"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation"
 )
 
 // --- calculateSimulationOutcomes tests ---
@@ -16,7 +19,7 @@ func TestThatPointsAreDistributedByProportionalOwnership(t *testing.T) {
 	teamResults := []TeamSimResult{{TeamID: "teamA", Points: 100}}
 
 	// WHEN calculating simulation outcomes
-	results, err := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000, 2: 500}, 1000)
+	results, err := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000, 2: 500}, 1000)
 
 	// THEN Alice gets 60 points and Bob gets 40 points
 	if err != nil {
@@ -40,7 +43,7 @@ func TestThatRank1IsAssignedToHighestScorer(t *testing.T) {
 	}
 
 	// WHEN calculating simulation outcomes
-	results, _ := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
+	results, _ := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
 
 	// THEN Alice is rank 1
 	if findResult(results, "Alice").Rank != 1 {
@@ -57,7 +60,7 @@ func TestThatTiesAreBrokenByNameAlphabetically(t *testing.T) {
 	teamResults := []TeamSimResult{{TeamID: "teamA", Points: 100}}
 
 	// WHEN calculating simulation outcomes
-	results, _ := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000, 2: 500}, 1000)
+	results, _ := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000, 2: 500}, 1000)
 
 	// THEN Alice (alphabetically first) gets rank 1
 	if findResult(results, "Alice").Rank != 1 {
@@ -73,7 +76,7 @@ func TestThatNormalizedPayoutIsDividedByFirstPlacePayout(t *testing.T) {
 	teamResults := []TeamSimResult{{TeamID: "teamA", Points: 100}}
 
 	// WHEN calculating with firstPlacePayout = 2000
-	results, _ := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 2000)
+	results, _ := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 2000)
 
 	// THEN normalized payout is 0.5 (1000/2000)
 	if results[0].NormalizedPayout != 0.5 {
@@ -89,7 +92,7 @@ func TestThatNormalizedPayoutIsZeroWhenFirstPlacePayoutIsZero(t *testing.T) {
 	teamResults := []TeamSimResult{{TeamID: "teamA", Points: 100}}
 
 	// WHEN firstPlacePayout is zero
-	results, _ := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 500}, 0)
+	results, _ := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 500}, 0)
 
 	// THEN normalized payout is 0.0
 	if results[0].NormalizedPayout != 0.0 {
@@ -108,7 +111,7 @@ func TestThatTeamWithZeroTotalBidsDoesNotPanic(t *testing.T) {
 	}
 
 	// WHEN calculating simulation outcomes
-	results, err := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
+	results, err := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
 
 	// THEN no panic and Alice gets points only from teamB
 	if err != nil {
@@ -127,7 +130,7 @@ func TestThatSingleEntryGetsRankOne(t *testing.T) {
 	teamResults := []TeamSimResult{{TeamID: "teamA", Points: 50}}
 
 	// WHEN calculating simulation outcomes
-	results, _ := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
+	results, _ := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
 
 	// THEN Alice is rank 1
 	if results[0].Rank != 1 {
@@ -141,7 +144,7 @@ func TestThatEmptyEntriesReturnsEmptySlice(t *testing.T) {
 	teamResults := []TeamSimResult{{TeamID: "teamA", Points: 100}}
 
 	// WHEN calculating simulation outcomes
-	results, err := calculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
+	results, err := CalculateSimulationOutcomes(1, entries, teamResults, map[int]int{1: 1000}, 1000)
 
 	// THEN result slice is empty
 	if err != nil {
@@ -163,7 +166,7 @@ func TestThatMeanPayoutIsAverageOfNormalizedPayouts(t *testing.T) {
 	}
 
 	// WHEN calculating performance metrics
-	perf := calculatePerformanceMetrics(results)
+	perf := CalculatePerformanceMetrics(results)
 
 	// THEN mean is 0.5
 	if perf["Alice"].MeanPayout != 0.5 {
@@ -180,7 +183,7 @@ func TestThatMedianPayoutIsMiddleValue(t *testing.T) {
 	}
 
 	// WHEN calculating performance metrics
-	perf := calculatePerformanceMetrics(results)
+	perf := CalculatePerformanceMetrics(results)
 
 	// THEN median is the middle value (index 1 of sorted [0.0, 0.5, 1.0] -> 0.5)
 	if perf["Alice"].MedianPayout != 0.5 {
@@ -198,7 +201,7 @@ func TestThatPTop1CountsSimsWithNormalizedPayoutAtLeastOne(t *testing.T) {
 	}
 
 	// WHEN calculating performance metrics
-	perf := calculatePerformanceMetrics(results)
+	perf := CalculatePerformanceMetrics(results)
 
 	// THEN PTop1 is 0.25 (1 out of 4)
 	if perf["Alice"].PTop1 != 0.25 {
@@ -216,7 +219,7 @@ func TestThatPInMoneyCountsSimsWithPayoutGreaterThanZero(t *testing.T) {
 	}
 
 	// WHEN calculating performance metrics
-	perf := calculatePerformanceMetrics(results)
+	perf := CalculatePerformanceMetrics(results)
 
 	// THEN PInMoney is 0.5 (2 out of 4)
 	if perf["Alice"].PInMoney != 0.5 {
@@ -233,7 +236,7 @@ func TestThatTotalSimsEqualsInputCount(t *testing.T) {
 	}
 
 	// WHEN calculating performance metrics
-	perf := calculatePerformanceMetrics(results)
+	perf := CalculatePerformanceMetrics(results)
 
 	// THEN TotalSims is 3
 	if perf["Alice"].TotalSims != 3 {
@@ -246,11 +249,66 @@ func TestThatPerformanceMetricsReturnsEmptyMapForNoResults(t *testing.T) {
 	results := []SimulationResult{}
 
 	// WHEN calculating performance metrics
-	perf := calculatePerformanceMetrics(results)
+	perf := CalculatePerformanceMetrics(results)
 
 	// THEN map is empty
 	if len(perf) != 0 {
 		t.Errorf("expected empty map, got %d entries", len(perf))
+	}
+}
+
+// --- ConvertSimulationResults tests ---
+
+func TestThatConvertSimulationResultsConvertsWinsAndByesToPoints(t *testing.T) {
+	// GIVEN a team with 2 wins and 1 bye, and scoring rules that award 10 per progress level
+	simResults := []simulation.TeamSimulationResult{
+		{SimID: 0, TeamID: "teamA", Wins: 2, Byes: 1},
+	}
+	rules := []scoring.Rule{
+		{WinIndex: 1, PointsAwarded: 10},
+		{WinIndex: 2, PointsAwarded: 20},
+		{WinIndex: 3, PointsAwarded: 30},
+	}
+
+	// WHEN converting simulation results
+	result := ConvertSimulationResults(simResults, 1, rules)
+
+	// THEN the team gets 60 points (10+20+30 for progress=3)
+	if result[0][0].Points != 60 {
+		t.Errorf("expected 60 points, got %d", result[0][0].Points)
+	}
+}
+
+func TestThatConvertSimulationResultsGroupsBySimID(t *testing.T) {
+	// GIVEN results from two different simulations
+	simResults := []simulation.TeamSimulationResult{
+		{SimID: 0, TeamID: "teamA", Wins: 1, Byes: 1},
+		{SimID: 0, TeamID: "teamB", Wins: 0, Byes: 1},
+		{SimID: 1, TeamID: "teamA", Wins: 0, Byes: 1},
+		{SimID: 1, TeamID: "teamB", Wins: 1, Byes: 1},
+	}
+	rules := []scoring.Rule{{WinIndex: 1, PointsAwarded: 10}}
+
+	// WHEN converting simulation results
+	result := ConvertSimulationResults(simResults, 2, rules)
+
+	// THEN there are exactly 2 simulation groups
+	if len(result) != 2 {
+		t.Errorf("expected 2 simulation groups, got %d", len(result))
+	}
+}
+
+func TestThatConvertSimulationResultsReturnsEmptyMapForEmptyInput(t *testing.T) {
+	// GIVEN no simulation results
+	simResults := []simulation.TeamSimulationResult{}
+	rules := []scoring.Rule{{WinIndex: 1, PointsAwarded: 10}}
+
+	// WHEN converting simulation results
+	result := ConvertSimulationResults(simResults, 0, rules)
+
+	// THEN the map is empty
+	if len(result) != 0 {
+		t.Errorf("expected empty map, got %d entries", len(result))
 	}
 }
 

@@ -10,27 +10,39 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type kenPomProvider struct {
-	spec        *simulation_game_outcomes.Spec
-	netByTeamID map[string]float64
-	overrides   map[MatchupKey]float64
+// KenPomProvider implements ProbabilityProvider using KenPom net ratings
+// and a logistic model to estimate win probabilities.
+type KenPomProvider struct {
+	Spec        *simulation_game_outcomes.Spec
+	NetByTeamID map[string]float64
+	Overrides   map[MatchupKey]float64
 }
 
-func (p kenPomProvider) Prob(gameID string, team1ID string, team2ID string) float64 {
-	if p.overrides != nil {
-		if v, ok := p.overrides[MatchupKey{GameID: gameID, Team1ID: team1ID, Team2ID: team2ID}]; ok {
+// NewKenPomProvider creates a KenPomProvider from a spec, net ratings by team
+// ID, and optional per-matchup probability overrides.
+func NewKenPomProvider(spec *simulation_game_outcomes.Spec, netByTeamID map[string]float64, overrides map[MatchupKey]float64) *KenPomProvider {
+	return &KenPomProvider{
+		Spec:        spec,
+		NetByTeamID: netByTeamID,
+		Overrides:   overrides,
+	}
+}
+
+func (p KenPomProvider) Prob(gameID string, team1ID string, team2ID string) float64 {
+	if p.Overrides != nil {
+		if v, ok := p.Overrides[MatchupKey{GameID: gameID, Team1ID: team1ID, Team2ID: team2ID}]; ok {
 			return v
 		}
 	}
-	if p.spec == nil {
+	if p.Spec == nil {
 		return 0.5
 	}
-	n1, ok1 := p.netByTeamID[team1ID]
-	n2, ok2 := p.netByTeamID[team2ID]
+	n1, ok1 := p.NetByTeamID[team1ID]
+	n2, ok2 := p.NetByTeamID[team2ID]
 	if !ok1 || !ok2 {
 		return 0.5
 	}
-	return p.spec.WinProb(n1, n2)
+	return p.Spec.WinProb(n1, n2)
 }
 
 func (s *Service) loadKenPomNetByTeamID(ctx context.Context, coreTournamentID string) (map[string]float64, error) {

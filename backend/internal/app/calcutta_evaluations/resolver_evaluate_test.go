@@ -76,7 +76,7 @@ func TestThatRankEntryPerformanceRanksEntriesByMeanPayoutDescending(t *testing.T
 	}
 
 	// WHEN ranking entry performance
-	results := rankEntryPerformance(performance)
+	results := RankEntryPerformance(performance)
 
 	// THEN the first entry has the highest mean payout
 	if results[0].EntryName != "High" {
@@ -93,7 +93,7 @@ func TestThatRankEntryPerformanceAssignsSequentialRanks(t *testing.T) {
 	}
 
 	// WHEN ranking entry performance
-	results := rankEntryPerformance(performance)
+	results := RankEntryPerformance(performance)
 
 	// THEN ranks are sequential: 1, 2, 3
 	ranks := make([]int, len(results))

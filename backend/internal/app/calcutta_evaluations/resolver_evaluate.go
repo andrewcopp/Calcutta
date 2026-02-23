@@ -126,7 +126,7 @@ func (s *Service) runConcurrentEvaluations(
 	for simID := range simulations {
 		sid := simID
 		g.Go(func() error {
-			simResults, err := calculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
+			simResults, err := CalculateSimulationOutcomes(sid, entries, simulations[sid], payouts, firstPlacePayout)
 			if err != nil {
 				return fmt.Errorf("simulation %d: %w", sid, err)
 			}
@@ -145,14 +145,14 @@ func (s *Service) runConcurrentEvaluations(
 // buildLabEvaluationResult aggregates simulation results into performance
 // metrics, extracts the lab entry's metrics, and ranks all entries.
 func buildLabEvaluationResult(allResults []SimulationResult, nSims int) (*LabEvaluationResult, error) {
-	performance := calculatePerformanceMetrics(allResults)
+	performance := CalculatePerformanceMetrics(allResults)
 
 	ourPerformance, ok := performance[models.LabStrategyEntryName]
 	if !ok {
 		return nil, fmt.Errorf("failed to find performance for lab entry")
 	}
 
-	allEntryResults := rankEntryPerformance(performance)
+	allEntryResults := RankEntryPerformance(performance)
 
 	return &LabEvaluationResult{
 		MeanNormalizedPayout:   ourPerformance.MeanPayout,
@@ -164,9 +164,9 @@ func buildLabEvaluationResult(allResults []SimulationResult, nSims int) (*LabEva
 	}, nil
 }
 
-// rankEntryPerformance converts the performance map into a sorted,
+// RankEntryPerformance converts the performance map into a sorted,
 // ranked slice ordered by MeanPayout descending.
-func rankEntryPerformance(performance map[string]*EntryPerformance) []LabEntryPerformance {
+func RankEntryPerformance(performance map[string]*EntryPerformance) []LabEntryPerformance {
 	results := make([]LabEntryPerformance, 0, len(performance))
 	for _, perf := range performance {
 		results = append(results, LabEntryPerformance{
