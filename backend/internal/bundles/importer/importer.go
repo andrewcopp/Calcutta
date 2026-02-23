@@ -15,6 +15,7 @@ type Report struct {
 	Schools         int       `json:"schools"`
 	Tournaments     int       `json:"tournaments"`
 	TournamentTeams int       `json:"tournamentTeams"`
+	TournamentIDs   []string  `json:"tournamentIds"`
 	Calcuttas       int       `json:"calcuttas"`
 	Entries         int       `json:"entries"`
 	Bids            int       `json:"bids"`
@@ -48,6 +49,7 @@ func ImportFromDir(ctx context.Context, pool *pgxpool.Pool, inDir string, opts O
 	report.Schools = counts.schools
 	report.Tournaments = counts.tournaments
 	report.TournamentTeams = counts.teams
+	report.TournamentIDs = counts.tournamentIDs
 	report.Calcuttas = counts.calcuttas
 	report.Entries = counts.entries
 	report.Bids = counts.bids
@@ -67,14 +69,15 @@ func ImportFromDir(ctx context.Context, pool *pgxpool.Pool, inDir string, opts O
 }
 
 type importCounts struct {
-	schools     int
-	tournaments int
-	teams       int
-	calcuttas   int
-	entries     int
-	bids        int
-	payouts     int
-	rounds      int
+	schools       int
+	tournaments   int
+	teams         int
+	tournamentIDs []string
+	calcuttas     int
+	entries       int
+	bids          int
+	payouts       int
+	rounds        int
 }
 
 func importAll(ctx context.Context, tx pgx.Tx, inDir string) (importCounts, error) {
@@ -86,12 +89,13 @@ func importAll(ctx context.Context, tx pgx.Tx, inDir string) (importCounts, erro
 	}
 	c.schools = sc
 
-	tc, teams, err := importTournaments(ctx, tx, inDir)
+	tc, teams, tournamentIDs, err := importTournaments(ctx, tx, inDir)
 	if err != nil {
 		return c, err
 	}
 	c.tournaments = tc
 	c.teams = teams
+	c.tournamentIDs = tournamentIDs
 
 	cc, entries, bids, payouts, rounds, err := importCalcuttas(ctx, tx, inDir)
 	if err != nil {

@@ -11,18 +11,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, error) {
+func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, []string, error) {
 	paths, err := filepath.Glob(filepath.Join(inDir, "tournaments", "*.json"))
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	sort.Strings(paths)
 
+	var tournamentIDs []string
 	teamsInserted := 0
 	for _, path := range paths {
 		var b bundles.TournamentBundle
 		if err := bundles.ReadJSON(path, &b); err != nil {
-			return 0, 0, err
+			return 0, 0, nil, err
 		}
 
 		// Ensure competition exists
@@ -34,7 +35,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 			RETURNING id
 		`).Scan(&competitionID)
 		if err != nil {
-			return 0, 0, fmt.Errorf("failed to upsert competition: %w", err)
+			return 0, 0, nil, fmt.Errorf("failed to upsert competition: %w", err)
 		}
 
 		// Extract year from tournament name and ensure season exists
@@ -52,7 +53,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 			RETURNING id
 		`, year).Scan(&seasonID)
 		if err != nil {
-			return 0, 0, fmt.Errorf("failed to upsert season for year %d: %w", year, err)
+			return 0, 0, nil, fmt.Errorf("failed to upsert season for year %d: %w", year, err)
 		}
 
 		// Check if tournament exists
@@ -73,7 +74,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 				b.Tournament.Rounds, b.Tournament.StartingAt, b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft,
 				b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight).Scan(&tournamentID)
 			if err != nil {
-				return 0, 0, fmt.Errorf("failed to insert tournament %s: %w", b.Tournament.ImportKey, err)
+				return 0, 0, nil, fmt.Errorf("failed to insert tournament %s: %w", b.Tournament.ImportKey, err)
 			}
 		} else {
 			// Tournament exists, update it
@@ -88,9 +89,11 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 				b.Tournament.FinalFourTopLeft, b.Tournament.FinalFourBottomLeft,
 				b.Tournament.FinalFourTopRight, b.Tournament.FinalFourBottomRight)
 			if err != nil {
-				return 0, 0, fmt.Errorf("failed to update tournament %s: %w", b.Tournament.ImportKey, err)
+				return 0, 0, nil, fmt.Errorf("failed to update tournament %s: %w", b.Tournament.ImportKey, err)
 			}
 		}
+
+		tournamentIDs = append(tournamentIDs, tournamentID)
 
 		for _, team := range b.Teams {
 			var schoolID string
@@ -100,7 +103,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 				WHERE slug = $1 AND deleted_at IS NULL
 			`, team.SchoolSlug).Scan(&schoolID)
 			if err != nil {
-				return 0, 0, fmt.Errorf("school slug %s not found: %w", team.SchoolSlug, err)
+				return 0, 0, nil, fmt.Errorf("school slug %s not found: %w", team.SchoolSlug, err)
 			}
 
 			var tournamentTeamID string
@@ -121,7 +124,7 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 				RETURNING id
 			`, uuid.New().String(), tournamentID, schoolID, team.Seed, team.Region, team.Byes, team.Wins, team.IsEliminated).Scan(&tournamentTeamID)
 			if err != nil {
-				return 0, 0, err
+				return 0, 0, nil, err
 			}
 
 			if team.KenPom != nil {
@@ -138,12 +141,12 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 						deleted_at = NULL
 				`, tournamentTeamID, team.KenPom.NetRTG, team.KenPom.ORTG, team.KenPom.DRTG, team.KenPom.AdjT)
 				if err != nil {
-					return 0, 0, err
+					return 0, 0, nil, err
 				}
 			}
 			teamsInserted++
 		}
 	}
 
-	return len(paths), teamsInserted, nil
+	return len(paths), teamsInserted, tournamentIDs, nil
 }

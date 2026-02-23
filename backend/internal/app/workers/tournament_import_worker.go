@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/verifier"
@@ -114,40 +115,40 @@ func (w *TournamentImportWorker) processTournamentImport(ctx context.Context, up
 		return
 	}
 
-	err := func() error {
+	report, err := func() (*importer.Report, error) {
 		q := sqlc.New(w.pool)
 		zipBytes, err := q.GetTournamentImportArchive(ctx, uploadID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		tmpDir, err := os.MkdirTemp("", "calcutta-tournament-import-job-*")
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer os.RemoveAll(tmpDir)
 
 		if err := archive.UnzipToDir(zipBytes, tmpDir); err != nil {
-			return err
+			return nil, err
 		}
 
 		impReport, err := importer.ImportFromDir(ctx, w.pool, tmpDir, importer.Options{DryRun: false})
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		verReport, err := verifier.VerifyDirAgainstDB(ctx, w.pool, tmpDir)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		impJSON, err := json.Marshal(impReport)
 		if err != nil {
-			return fmt.Errorf("marshal import report: %w", err)
+			return nil, fmt.Errorf("marshal import report: %w", err)
 		}
 		verJSON, err := json.Marshal(verReport)
 		if err != nil {
-			return fmt.Errorf("marshal verify report: %w", err)
+			return nil, fmt.Errorf("marshal verify report: %w", err)
 		}
 
 		err = q.MarkTournamentImportSucceeded(ctx, sqlc.MarkTournamentImportSucceededParams{
@@ -158,10 +159,30 @@ func (w *TournamentImportWorker) processTournamentImport(ctx context.Context, up
 		if err != nil {
 			slog.Error("tournament_import_mark_succeeded_failed", "upload_id", uploadID, "error", err)
 		}
-		return nil
+		return &impReport, nil
 	}()
 	if err != nil {
 		w.failTournamentImport(ctx, uploadID, err)
+		return
+	}
+
+	w.refreshPredictions(ctx, report.TournamentIDs)
+}
+
+func (w *TournamentImportWorker) refreshPredictions(ctx context.Context, tournamentIDs []string) {
+	predSvc := prediction.New(w.pool)
+	for _, tid := range tournamentIDs {
+		result, err := predSvc.Run(ctx, prediction.RunParams{
+			TournamentID:         tid,
+			ProbabilitySourceKey: "kenpom",
+		})
+		if err != nil {
+			slog.Warn("prediction_refresh_failed", "tournament_id", tid, "error", err)
+			continue
+		}
+		slog.Info("prediction_refresh_succeeded",
+			"tournament_id", tid, "batch_id", result.BatchID,
+			"team_count", result.TeamCount, "duration_ms", result.Duration.Milliseconds())
 	}
 }
 

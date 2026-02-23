@@ -2,8 +2,10 @@ package tournaments
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
@@ -43,6 +45,18 @@ func (h *Handler) HandleUpdateKenPomStats(w http.ResponseWriter, r *http.Request
 	if err := h.app.Tournament.UpdateKenPomStats(r.Context(), tournamentID, inputs); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
+	}
+
+	if result, err := h.app.Prediction.Run(r.Context(), prediction.RunParams{
+		TournamentID:         tournamentID,
+		ProbabilitySourceKey: "kenpom",
+	}); err != nil {
+		slog.Warn("prediction_refresh_after_kenpom_failed",
+			"tournament_id", tournamentID, "error", err)
+	} else {
+		slog.Info("prediction_refresh_after_kenpom_succeeded",
+			"tournament_id", tournamentID, "batch_id", result.BatchID,
+			"duration_ms", result.Duration.Milliseconds())
 	}
 
 	teams, err := h.app.Tournament.GetTeams(r.Context(), tournamentID)
