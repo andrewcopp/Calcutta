@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
@@ -317,4 +318,73 @@ func (s *Service) storePredictions(
 	}
 
 	return batchID, nil
+}
+
+// BackfillMissing generates predictions for any tournament that has 68 teams
+// with KenPom data and scoring rules but no prediction batch. Returns the
+// number of tournaments backfilled.
+func (s *Service) BackfillMissing(ctx context.Context) int {
+	rows, err := s.pool.Query(ctx, `
+		SELECT t.id::text
+		FROM core.tournaments t
+		WHERE t.deleted_at IS NULL
+			AND NOT EXISTS (
+				SELECT 1 FROM compute.prediction_batches pb
+				WHERE pb.tournament_id = t.id AND pb.deleted_at IS NULL
+			)
+			AND (
+				SELECT COUNT(*) FROM core.teams tt
+				WHERE tt.tournament_id = t.id AND tt.deleted_at IS NULL
+			) = 68
+			AND EXISTS (
+				SELECT 1 FROM core.team_kenpom_stats ks
+				JOIN core.teams tt ON tt.id = ks.team_id AND tt.deleted_at IS NULL
+				WHERE tt.tournament_id = t.id AND ks.deleted_at IS NULL
+			)
+			AND EXISTS (
+				SELECT 1 FROM core.calcutta_scoring_rules csr
+				JOIN core.calcuttas c ON c.id = csr.calcutta_id AND c.deleted_at IS NULL
+				WHERE c.tournament_id = t.id AND csr.deleted_at IS NULL
+			)
+	`)
+	if err != nil {
+		slog.Warn("prediction_backfill_query_failed", "error", err)
+		return 0
+	}
+	defer rows.Close()
+
+	var tournamentIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			slog.Warn("prediction_backfill_scan_failed", "error", err)
+			return 0
+		}
+		tournamentIDs = append(tournamentIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("prediction_backfill_rows_failed", "error", err)
+		return 0
+	}
+
+	if len(tournamentIDs) == 0 {
+		return 0
+	}
+
+	count := 0
+	for _, tid := range tournamentIDs {
+		result, err := s.Run(ctx, RunParams{
+			TournamentID:         tid,
+			ProbabilitySourceKey: "kenpom",
+		})
+		if err != nil {
+			slog.Warn("prediction_backfill_failed", "tournament_id", tid, "error", err)
+			continue
+		}
+		slog.Info("prediction_backfill_succeeded",
+			"tournament_id", tid, "batch_id", result.BatchID,
+			"team_count", result.TeamCount, "duration_ms", result.Duration.Milliseconds())
+		count++
+	}
+	return count
 }

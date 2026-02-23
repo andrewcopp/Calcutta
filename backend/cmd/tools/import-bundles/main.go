@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -44,5 +46,27 @@ func run() error {
 
 	b, _ := json.MarshalIndent(report, "", "  ")
 	fmt.Println(string(b))
+
+	if !*dryRun {
+		refreshPredictions(ctx, pool, report.TournamentIDs)
+	}
+
 	return nil
+}
+
+func refreshPredictions(ctx context.Context, pool *pgxpool.Pool, tournamentIDs []string) {
+	predSvc := prediction.New(pool)
+	for _, tid := range tournamentIDs {
+		result, err := predSvc.Run(ctx, prediction.RunParams{
+			TournamentID:         tid,
+			ProbabilitySourceKey: "kenpom",
+		})
+		if err != nil {
+			slog.Warn("prediction_refresh_failed", "tournament_id", tid, "error", err)
+			continue
+		}
+		slog.Info("prediction_refresh_succeeded",
+			"tournament_id", tid, "batch_id", result.BatchID,
+			"team_count", result.TeamCount, "duration_ms", result.Duration.Milliseconds())
+	}
 }
