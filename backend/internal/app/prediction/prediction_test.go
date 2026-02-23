@@ -574,6 +574,34 @@ func TestThatCheckpointExpectedPointsIncludesActualPlusRemaining(t *testing.T) {
 	}
 }
 
+func TestThatCompletedTournamentProducesValuesForAllTeams(t *testing.T) {
+	// GIVEN a completed tournament (throughRound=7) with all teams having final results
+	allTeams := generateTestTeams()
+	// Set wins to simulate a completed tournament: champion has 6 wins, others fewer
+	for i := range allTeams {
+		allTeams[i].Byes = 1
+		// Give the first team (East 1-seed) the championship
+		if i == 0 {
+			allTeams[i].Wins = 6
+		} else if i < 4 {
+			allTeams[i].Wins = 4 // F4 losers
+		} else if i < 8 {
+			allTeams[i].Wins = 3 // E8 losers
+		} else {
+			allTeams[i].Wins = 1 // Early losers
+		}
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating values with throughRound=7 and no remaining matchups
+	values := GenerateTournamentValuesFromCheckpoint(allTeams, nil, 7, rules)
+
+	// THEN all 68 teams have values
+	if len(values) != 68 {
+		t.Errorf("expected 68 team values, got %d", len(values))
+	}
+}
+
 // generateTestTeams creates a realistic 68-team tournament field for testing.
 func generateTestTeams() []TeamInput {
 	regions := []string{"East", "West", "South", "Midwest"}

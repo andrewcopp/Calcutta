@@ -101,6 +101,9 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 			return nil, fmt.Errorf("failed to generate matchups: %w", err)
 		}
 		teamValues = GenerateTournamentValues(matchups, rules)
+	} else if throughRound >= 7 {
+		// Tournament complete: no remaining matchups, all values from actual results
+		teamValues = GenerateTournamentValuesFromCheckpoint(teams, nil, throughRound, rules)
 	} else {
 		// Mid-tournament: filter to survivors and generate from checkpoint
 		var survivors []TeamInput

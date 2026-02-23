@@ -312,11 +312,6 @@ func GenerateMatchupsFromCheckpoint(survivors []TeamInput, throughRound int, spe
 	}
 	sort.Strings(regions)
 
-	// Ensure we have exactly 4 regions for Final Four pairing logic
-	if len(regions) != 4 {
-		return nil, fmt.Errorf("expected 4 regions, got %d", len(regions))
-	}
-
 	calcWinProb := func(id1, id2 string) float64 {
 		return spec.WinProb(kenpomByID[id1], kenpomByID[id2])
 	}
@@ -484,12 +479,12 @@ func GenerateMatchupsFromCheckpoint(survivors []TeamInput, throughRound int, spe
 		pAdvance = computeAdvanceProbs(r4Matchups)
 	}
 
-	// Round 5 (F4): only if throughRound < 6
-	ffPairings := [][2]string{
-		{regions[0], regions[1]},
-		{regions[2], regions[3]},
-	}
-	if throughRound < 6 {
+	// Round 5 (F4): only if throughRound < 6 and we have 4 regions for bracket pairing
+	if throughRound < 6 && len(regions) >= 4 {
+		ffPairings := [][2]string{
+			{regions[0], regions[1]},
+			{regions[2], regions[3]},
+		}
 		var r5Matchups []PredictedMatchup
 		for gameNum, pairing := range ffPairings {
 			teams1 := teamsByRegion[pairing[0]]
@@ -508,8 +503,8 @@ func GenerateMatchupsFromCheckpoint(survivors []TeamInput, throughRound int, spe
 		pAdvance = computeAdvanceProbs(r5Matchups)
 	}
 
-	// Round 6 (NCG): only if throughRound < 7
-	if throughRound < 7 {
+	// Round 6 (NCG): only if throughRound < 7 and we have 4 regions for bracket pairing
+	if throughRound < 7 && len(regions) >= 4 {
 		side1Regions := []string{regions[0], regions[1]}
 		side2Regions := []string{regions[2], regions[3]}
 
