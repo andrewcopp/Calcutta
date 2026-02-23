@@ -6,6 +6,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
+	appprediction "github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 )
@@ -15,6 +16,7 @@ type App struct {
 	Lab        *applab.Service
 	Bracket    *bracket.Service
 	Calcutta   *appcalcutta.Service
+	Prediction *appprediction.Service
 	Auth       *appauth.Service
 	School     *appschool.Service
 	Tournament *apptournament.Service

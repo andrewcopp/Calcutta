@@ -14,6 +14,7 @@ type CalcuttaEntry struct {
 	InTheMoney     bool       `json:"inTheMoney"`
 	PayoutCents    int        `json:"payoutCents"`
 	IsTied         bool       `json:"isTied"`
+	ProjectedEV    *float64   `json:"projectedEv,omitempty"`
 	CreatedAt      time.Time  `json:"createdAt"`
 	UpdatedAt      time.Time  `json:"updatedAt"`
 	DeletedAt      *time.Time `json:"deletedAt,omitempty"`

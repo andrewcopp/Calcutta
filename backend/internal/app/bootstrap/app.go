@@ -10,6 +10,7 @@ import (
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
 	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
 	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
+	appprediction "github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
@@ -45,6 +46,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService
+	a.Prediction = appprediction.New(pool)
 	a.Analytics = analyticsService
 	a.Lab = labService
 	a.Auth = appauth.New(dbUserRepo, authRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)

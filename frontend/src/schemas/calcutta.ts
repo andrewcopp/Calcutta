@@ -36,6 +36,7 @@ export const CalcuttaEntrySchema = z.object({
   finishPosition: z.number().optional(),
   inTheMoney: z.boolean().optional(),
   payoutCents: z.number().optional(),
+  projectedEv: z.number().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

@@ -1,11 +1,14 @@
 package calcuttas
 
 import (
+	"log/slog"
 	"net/http"
 	"sort"
 	"time"
 
 	calcuttaapp "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/policy"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
@@ -160,6 +163,8 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeamsByEntry[entry.ID])
 		}
 
+		h.attachProjectedEV(r, calcutta, entries, allPortfolios, allPortfolioTeams, tournamentTeams)
+
 		resp.Entries = dtos.NewEntryListResponse(entries)
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
@@ -258,5 +263,94 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 	}
 
 	response.WriteJSON(w, http.StatusOK, results)
+}
+
+// attachProjectedEV computes and attaches projected EV to each entry using prediction data.
+// This is best-effort: if any step fails, entries simply won't have projectedEv set.
+func (h *Handler) attachProjectedEV(
+	r *http.Request,
+	calcutta *models.Calcutta,
+	entries []*models.CalcuttaEntry,
+	portfolios []*models.CalcuttaPortfolio,
+	portfolioTeams []*models.CalcuttaPortfolioTeam,
+	tournamentTeams []*models.TournamentTeam,
+) {
+	ctx := r.Context()
+
+	batchID, found, err := h.app.Prediction.GetLatestBatchID(ctx, calcutta.TournamentID)
+	if err != nil {
+		slog.Debug("projected_ev_skip_batch", "error", err)
+		return
+	}
+	if !found {
+		return
+	}
+
+	teamValues, err := h.app.Prediction.GetTeamValues(ctx, batchID)
+	if err != nil {
+		slog.Debug("projected_ev_skip_values", "error", err)
+		return
+	}
+
+	rounds, err := h.app.Calcutta.GetRounds(ctx, calcutta.ID)
+	if err != nil {
+		slog.Debug("projected_ev_skip_rounds", "error", err)
+		return
+	}
+
+	rules := make([]scoring.Rule, len(rounds))
+	for i, rd := range rounds {
+		rules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
+	}
+
+	ptvByTeam := make(map[string]prediction.PredictedTeamValue, len(teamValues))
+	for _, tv := range teamValues {
+		ptvByTeam[tv.TeamID] = tv
+	}
+
+	ttByID := make(map[string]*models.TournamentTeam, len(tournamentTeams))
+	for _, tt := range tournamentTeams {
+		ttByID[tt.ID] = tt
+	}
+
+	// Accumulate projected EV per portfolio from portfolio teams
+	evByPortfolio := make(map[string]float64)
+	for _, pt := range portfolioTeams {
+		ptv, ok := ptvByTeam[pt.TeamID]
+		if !ok {
+			continue
+		}
+		tt := ttByID[pt.TeamID]
+		if tt == nil {
+			continue
+		}
+		tp := prediction.TeamProgress{
+			Wins:         tt.Wins,
+			Byes:         tt.Byes,
+			IsEliminated: tt.IsEliminated,
+		}
+		teamEV := prediction.ProjectedTeamEV(ptv, rules, tp)
+		evByPortfolio[pt.PortfolioID] += pt.OwnershipPercentage * teamEV
+	}
+
+	// Map portfolioID -> entryID using already-loaded portfolios
+	portfolioToEntry := make(map[string]string, len(portfolios))
+	for _, p := range portfolios {
+		portfolioToEntry[p.ID] = p.EntryID
+	}
+
+	entryEV := make(map[string]float64)
+	for portfolioID, ev := range evByPortfolio {
+		if entryID, ok := portfolioToEntry[portfolioID]; ok {
+			entryEV[entryID] += ev
+		}
+	}
+
+	for _, entry := range entries {
+		if ev, ok := entryEV[entry.ID]; ok {
+			v := ev
+			entry.ProjectedEV = &v
+		}
+	}
 }
 

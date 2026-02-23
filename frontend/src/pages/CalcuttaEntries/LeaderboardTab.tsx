@@ -1,6 +1,9 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalcuttaEntry } from '../../schemas/calcutta';
 import { formatDollarsFromCents } from '../../utils/format';
+
+type SortMode = 'actual' | 'projected';
 
 interface LeaderboardTabProps {
   calcuttaId: string;
@@ -8,11 +11,54 @@ interface LeaderboardTabProps {
 }
 
 export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
+  const [sortMode, setSortMode] = useState<SortMode>('actual');
+
+  const hasProjections = entries.some((e) => e.projectedEv != null);
+
+  const sortedEntries = useMemo(() => {
+    if (sortMode === 'projected') {
+      return [...entries].sort((a, b) => {
+        const aVal = a.projectedEv ?? a.totalPoints ?? 0;
+        const bVal = b.projectedEv ?? b.totalPoints ?? 0;
+        return bVal - aVal;
+      });
+    }
+    return entries;
+  }, [entries, sortMode]);
+
   return (
     <div className="grid gap-4">
-      {entries.map((entry, index) => {
-        const displayPosition = entry.finishPosition || index + 1;
-        const isInTheMoney = Boolean(entry.inTheMoney);
+      {hasProjections && (
+        <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <button
+            onClick={() => setSortMode('actual')}
+            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              sortMode === 'actual'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Actual Points
+          </button>
+          <button
+            onClick={() => setSortMode('projected')}
+            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              sortMode === 'projected'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Projected Finish
+          </button>
+        </div>
+      )}
+
+      {sortedEntries.map((entry, index) => {
+        const displayPosition =
+          sortMode === 'actual'
+            ? entry.finishPosition || index + 1
+            : index + 1;
+        const isInTheMoney = sortMode === 'actual' && Boolean(entry.inTheMoney);
         const payoutText = entry.payoutCents ? `(${formatDollarsFromCents(entry.payoutCents)})` : '';
 
         const rowClass = isInTheMoney
@@ -35,6 +81,13 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
                 : 'text-slate-700'
           : 'text-primary';
 
+        const displayValue =
+          sortMode === 'projected' && entry.projectedEv != null
+            ? entry.projectedEv.toFixed(2)
+            : (entry.totalPoints ?? 0).toFixed(2);
+
+        const displayLabel = sortMode === 'projected' ? 'projected' : 'points';
+
         return (
           <Link
             key={entry.id}
@@ -45,12 +98,14 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               <div>
                 <h2 className="text-xl font-semibold">
                   {displayPosition}. {entry.name}
-                  {isInTheMoney && payoutText && <span className="ml-2 text-sm text-foreground">{payoutText}</span>}
+                  {sortMode === 'actual' && isInTheMoney && payoutText && (
+                    <span className="ml-2 text-sm text-foreground">{payoutText}</span>
+                  )}
                 </h2>
               </div>
               <div className="text-right">
                 <p className={`text-2xl font-bold ${pointsClass}`}>
-                  {entry.totalPoints ? entry.totalPoints.toFixed(2) : '0.00'} points
+                  {displayValue} {displayLabel}
                 </p>
               </div>
             </div>

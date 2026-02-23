@@ -197,6 +197,10 @@ func (s *Service) GetCalcuttasByUser(ctx context.Context, userID string) ([]*mod
 	return s.ports.Calcuttas.GetByUserID(ctx, userID)
 }
 
+func (s *Service) GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error) {
+	return s.ports.Rounds.GetRounds(ctx, calcuttaID)
+}
+
 func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {
 	return s.ports.Calcuttas.GetCalcuttasByTournament(ctx, tournamentID)
 }

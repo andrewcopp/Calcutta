@@ -18,6 +18,7 @@ type EntryResponse struct {
 	InTheMoney     bool      `json:"inTheMoney"`
 	PayoutCents    int       `json:"payoutCents"`
 	IsTied         bool      `json:"isTied"`
+	ProjectedEV    *float64  `json:"projectedEv,omitempty"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 }
@@ -34,6 +35,7 @@ func NewEntryResponse(e *models.CalcuttaEntry) *EntryResponse {
 		InTheMoney:     e.InTheMoney,
 		PayoutCents:    e.PayoutCents,
 		IsTied:         e.IsTied,
+		ProjectedEV:    e.ProjectedEV,
 		CreatedAt:      e.CreatedAt,
 		UpdatedAt:      e.UpdatedAt,
 	}
