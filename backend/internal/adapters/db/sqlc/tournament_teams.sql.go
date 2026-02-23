@@ -364,10 +364,10 @@ WHERE id = $4 AND deleted_at IS NULL
 `
 
 type UpdateTeamParams struct {
-	Wins       int32
-	Byes       int32
+	Wins         int32
+	Byes         int32
 	IsEliminated bool
-	ID         string
+	ID           string
 }
 
 func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {

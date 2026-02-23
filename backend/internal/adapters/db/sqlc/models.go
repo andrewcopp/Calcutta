@@ -34,29 +34,11 @@ type CoreAuthSession struct {
 	DeletedAt        pgtype.Timestamptz
 }
 
-type CoreTournamentImport struct {
-	ID           string
-	Filename     string
-	Sha256       string
-	SizeBytes    int64
-	Archive      []byte
-	ImportReport []byte
-	VerifyReport []byte
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	Status       string
-	StartedAt    pgtype.Timestamptz
-	FinishedAt   pgtype.Timestamptz
-	ErrorMessage *string
-}
-
 type CoreCalcutta struct {
 	ID           string
 	TournamentID string
 	OwnerID      string
-	CreatedBy    string
-	Visibility   string
+	Name         string
 	MinTeams     int32
 	MaxTeams     int32
 	MaxBidPoints int32
@@ -64,7 +46,8 @@ type CoreCalcutta struct {
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
 	BudgetPoints int32
-	Name         string
+	Visibility   string
+	CreatedBy    string
 }
 
 type CoreCalcuttaInvitation struct {
@@ -73,10 +56,10 @@ type CoreCalcuttaInvitation struct {
 	UserID     string
 	InvitedBy  string
 	Status     string
-	RevokedAt  pgtype.Timestamptz
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
+	RevokedAt  pgtype.Timestamptz
 }
 
 type CoreCalcuttaScoringRule struct {
@@ -129,6 +112,7 @@ type CoreGrant struct {
 	ExpiresAt    pgtype.Timestamptz
 	RevokedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
+	GrantedBy    pgtype.UUID
 }
 
 type CoreIdempotencyKey struct {
@@ -137,24 +121,8 @@ type CoreIdempotencyKey struct {
 	CreatedAt      pgtype.Timestamptz
 	ResponseStatus *int32
 	ResponseBody   []byte
-	ExpiresAt      pgtype.Timestamptz
-}
-
-type CoreRole struct {
-	ID          string
-	Key         string
-	Description *string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	DeletedAt   pgtype.Timestamptz
-}
-
-type CoreRolePermission struct {
-	RoleID       string
-	PermissionID string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	DeletedAt      pgtype.Timestamptz
 }
 
 type CorePayout struct {
@@ -174,6 +142,23 @@ type CorePermission struct {
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	DeletedAt   pgtype.Timestamptz
+}
+
+type CoreRole struct {
+	ID          string
+	Key         string
+	Description *string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
+type CoreRolePermission struct {
+	RoleID       string
+	PermissionID string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
 
 type CoreSchool struct {
@@ -201,7 +186,7 @@ type CoreTeam struct {
 	Region       string
 	Byes         int32
 	Wins         int32
-	Eliminated   bool
+	IsEliminated bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -234,6 +219,23 @@ type CoreTournament struct {
 	DeletedAt            pgtype.Timestamptz
 }
 
+type CoreTournamentImport struct {
+	ID           string
+	Filename     string
+	Sha256       string
+	SizeBytes    int64
+	Archive      []byte
+	ImportReport []byte
+	VerifyReport []byte
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+	Status       string
+	StartedAt    pgtype.Timestamptz
+	FinishedAt   pgtype.Timestamptz
+	ErrorMessage *string
+}
+
 type CoreUser struct {
 	ID                 string
 	Email              *string
@@ -251,6 +253,7 @@ type CoreUser struct {
 	LastInviteSentAt   pgtype.Timestamptz
 	ExternalProvider   *string
 	ExternalProviderID *string
+	InvitedBy          pgtype.UUID
 }
 
 type DerivedGameOutcomeRun struct {
@@ -298,7 +301,7 @@ type DerivedPredictedGameOutcome struct {
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
-	RunID        string
+	RunID        pgtype.UUID
 }
 
 // Stores predicted expected points and round probabilities for each team (analogous to simulated_teams for simulations)
@@ -360,7 +363,6 @@ type DerivedRunJob struct {
 	ErrorMessage      *string
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
-	DeletedAt         pgtype.Timestamptz
 }
 
 type DerivedSimulatedTeam struct {
@@ -370,11 +372,11 @@ type DerivedSimulatedTeam struct {
 	TeamID                string
 	Wins                  int32
 	Byes                  int32
-	Eliminated            bool
+	IsEliminated          bool
 	CreatedAt             pgtype.Timestamptz
 	UpdatedAt             pgtype.Timestamptz
 	DeletedAt             pgtype.Timestamptz
-	SimulatedTournamentID string
+	SimulatedTournamentID pgtype.UUID
 }
 
 type DerivedSimulatedTournament struct {
@@ -405,7 +407,7 @@ type DerivedTournamentSnapshotTeam struct {
 	TeamID               string
 	Wins                 int32
 	Byes                 int32
-	Eliminated           bool
+	IsEliminated         bool
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 	DeletedAt            pgtype.Timestamptz
@@ -439,6 +441,7 @@ type LabEvaluation struct {
 	PTop1                  *float64
 	PInMoney               *float64
 	OurRank                *int32
+	SummaryJson            []byte
 	CreatedAt              pgtype.Timestamptz
 	UpdatedAt              pgtype.Timestamptz
 	DeletedAt              pgtype.Timestamptz
@@ -453,8 +456,6 @@ type LabEvaluationEntryResult struct {
 	PInMoney             *float64
 	Rank                 *int32
 	CreatedAt            pgtype.Timestamptz
-	UpdatedAt            pgtype.Timestamptz
-	DeletedAt            pgtype.Timestamptz
 }
 
 type LabInvestmentModel struct {
@@ -503,7 +504,6 @@ type LabPipelineCalcuttaRun struct {
 	FinishedAt        pgtype.Timestamptz
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
-	DeletedAt         pgtype.Timestamptz
 }
 
 type LabPipelineRun struct {
@@ -521,5 +521,4 @@ type LabPipelineRun struct {
 	ErrorMessage      *string
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
-	DeletedAt         pgtype.Timestamptz
 }

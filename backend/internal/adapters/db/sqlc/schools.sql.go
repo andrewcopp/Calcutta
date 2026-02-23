@@ -11,6 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createSchool = `-- name: CreateSchool :exec
+INSERT INTO core.schools (id, name, slug, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type CreateSchoolParams struct {
+	ID        string
+	Name      string
+	Slug      string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateSchool(ctx context.Context, arg CreateSchoolParams) error {
+	_, err := q.db.Exec(ctx, createSchool,
+		arg.ID,
+		arg.Name,
+		arg.Slug,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const getSchoolByID = `-- name: GetSchoolByID :one
 SELECT id, name, created_at, updated_at
 FROM core.schools

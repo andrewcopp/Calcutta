@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,6 +39,24 @@ func (r *SchoolRepository) List(ctx context.Context) ([]models.School, error) {
 		})
 	}
 	return schools, nil
+}
+
+func (r *SchoolRepository) Create(ctx context.Context, school *models.School) error {
+	now := time.Now()
+	school.CreatedAt = now
+	school.UpdatedAt = now
+
+	params := sqlc.CreateSchoolParams{
+		ID:        school.ID,
+		Name:      school.Name,
+		Slug:      slugify(school.Name),
+		CreatedAt: pgtype.Timestamptz{Time: school.CreatedAt, Valid: true},
+		UpdatedAt: pgtype.Timestamptz{Time: school.UpdatedAt, Valid: true},
+	}
+	if err := r.q.CreateSchool(ctx, params); err != nil {
+		return fmt.Errorf("creating school: %w", err)
+	}
+	return nil
 }
 
 func (r *SchoolRepository) GetByID(ctx context.Context, id string) (*models.School, error) {

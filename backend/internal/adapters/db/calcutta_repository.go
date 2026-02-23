@@ -219,7 +219,8 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 		return fmt.Errorf("updating calcutta %s: %w", calcutta.ID, err)
 	}
 	if affected == 0 {
-		return &apperrors.NotFoundError{Resource: "calcutta", ID: calcutta.ID}
+		err = &apperrors.NotFoundError{Resource: "calcutta", ID: calcutta.ID}
+		return err
 	}
 
 	if err = tx.Commit(ctx); err != nil {
