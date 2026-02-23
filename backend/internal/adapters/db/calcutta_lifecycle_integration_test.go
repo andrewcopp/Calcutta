@@ -21,15 +21,6 @@ func assertFloat(t *testing.T, got, want float64, msg string) {
 	}
 }
 
-func findEntry(entries []*models.CalcuttaEntry, id string) *models.CalcuttaEntry {
-	for _, e := range entries {
-		if e.ID == id {
-			return e
-		}
-	}
-	return nil
-}
-
 func findPortfolioTeam(teams []*models.CalcuttaPortfolioTeam, teamID string) *models.CalcuttaPortfolioTeam {
 	for _, pt := range teams {
 		if pt.TeamID == teamID {
@@ -55,14 +46,14 @@ func TestThatLifecyclePreTournamentEntriesHaveZeroTotalPoints(t *testing.T) {
 	f := mustSeedLifecycleTournament(t, ctx)
 
 	// WHEN listing entries
-	entries, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
+	entries, pointsByEntry, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}
 
 	// THEN all 3 entries have 0 total points
 	for _, e := range entries {
-		assertFloat(t, e.TotalPoints, 0.0, "entry "+e.Name+" total points")
+		assertFloat(t, pointsByEntry[e.ID], 0.0, "entry "+e.Name+" total points")
 	}
 	_ = f
 }
@@ -293,17 +284,13 @@ func TestThatLifecycleMidTournamentTotalPointsReflectProgress(t *testing.T) {
 	mustAdvanceToRound1(t, ctx, &f)
 
 	// WHEN listing entries
-	entries, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
+	_, pointsByEntry, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}
 
 	// THEN Alice=11.0, Bob=4.0, Charlie=5.0
-	aliceE := findEntry(entries, f.aliceEntry.ID)
-	if aliceE == nil {
-		t.Fatalf("Alice entry not found")
-	}
-	assertFloat(t, aliceE.TotalPoints, 11.0, "Alice total points")
+	assertFloat(t, pointsByEntry[f.aliceEntry.ID], 11.0, "Alice total points")
 }
 
 func TestThatLifecycleMidTournamentEntriesRankByTotalPointsDescending(t *testing.T) {
@@ -319,7 +306,7 @@ func TestThatLifecycleMidTournamentEntriesRankByTotalPointsDescending(t *testing
 	mustAdvanceToRound1(t, ctx, &f)
 
 	// WHEN listing entries (returned sorted by total_points DESC)
-	entries, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
+	entries, _, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}
@@ -476,18 +463,15 @@ func TestThatLifecycleCompletedFinalTotalPointsAreCorrect(t *testing.T) {
 	mustAdvanceToFinal(t, ctx, &f)
 
 	// WHEN listing entries
-	entries, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
+	_, pointsByEntry, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}
 
 	// THEN Alice=31.0, Bob=9.0, Charlie=5.0
-	aliceE := findEntry(entries, f.aliceEntry.ID)
-	bobE := findEntry(entries, f.bobEntry.ID)
-	charlieE := findEntry(entries, f.charlieEntry.ID)
-	assertFloat(t, aliceE.TotalPoints, 31.0, "Alice final total points")
-	assertFloat(t, bobE.TotalPoints, 9.0, "Bob final total points")
-	assertFloat(t, charlieE.TotalPoints, 5.0, "Charlie final total points")
+	assertFloat(t, pointsByEntry[f.aliceEntry.ID], 31.0, "Alice final total points")
+	assertFloat(t, pointsByEntry[f.bobEntry.ID], 9.0, "Bob final total points")
+	assertFloat(t, pointsByEntry[f.charlieEntry.ID], 5.0, "Charlie final total points")
 }
 
 func TestThatLifecycleCompletedFinalRankingIsAliceBobCharlie(t *testing.T) {
@@ -503,7 +487,7 @@ func TestThatLifecycleCompletedFinalRankingIsAliceBobCharlie(t *testing.T) {
 	mustAdvanceToFinal(t, ctx, &f)
 
 	// WHEN listing entries (sorted by total_points DESC)
-	entries, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
+	entries, _, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}
@@ -536,7 +520,7 @@ func TestThatLifecycleCompletedPayoutsDistributeCorrectly(t *testing.T) {
 	mustAdvanceToFinal(t, ctx, &f)
 
 	// WHEN computing payouts from SQL-derived total points
-	entries, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
+	entries, pointsByEntry, err := f.calcuttaRepo.GetEntries(ctx, f.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}
@@ -545,16 +529,20 @@ func TestThatLifecycleCompletedPayoutsDistributeCorrectly(t *testing.T) {
 		t.Fatalf("getting payouts: %v", err)
 	}
 
-	_, results := calcutta.ComputeEntryPlacementsAndPayouts(entries, payouts)
+	standings := calcutta.ComputeStandings(entries, pointsByEntry, payouts)
+	standingsByID := make(map[string]*models.EntryStanding, len(standings))
+	for _, s := range standings {
+		standingsByID[s.EntryID] = s
+	}
 
 	// THEN Alice=500c (1st), Bob=300c (2nd), Charlie=0c (3rd)
-	if results[f.aliceEntry.ID].PayoutCents != 500 {
-		t.Errorf("expected Alice payout 500c, got %d", results[f.aliceEntry.ID].PayoutCents)
+	if standingsByID[f.aliceEntry.ID].PayoutCents != 500 {
+		t.Errorf("expected Alice payout 500c, got %d", standingsByID[f.aliceEntry.ID].PayoutCents)
 	}
-	if results[f.bobEntry.ID].PayoutCents != 300 {
-		t.Errorf("expected Bob payout 300c, got %d", results[f.bobEntry.ID].PayoutCents)
+	if standingsByID[f.bobEntry.ID].PayoutCents != 300 {
+		t.Errorf("expected Bob payout 300c, got %d", standingsByID[f.bobEntry.ID].PayoutCents)
 	}
-	if results[f.charlieEntry.ID].PayoutCents != 0 {
-		t.Errorf("expected Charlie payout 0c, got %d", results[f.charlieEntry.ID].PayoutCents)
+	if standingsByID[f.charlieEntry.ID].PayoutCents != 0 {
+		t.Errorf("expected Charlie payout 0c, got %d", standingsByID[f.charlieEntry.ID].PayoutCents)
 	}
 }

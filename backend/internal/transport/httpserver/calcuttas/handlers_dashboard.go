@@ -3,7 +3,6 @@ package calcuttas
 import (
 	"log/slog"
 	"net/http"
-	"sort"
 	"time"
 
 	calcuttaapp "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
@@ -52,10 +51,15 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := h.app.Calcutta.GetEntries(r.Context(), calcuttaID)
+	entries, standings, err := h.app.Calcutta.GetEntries(r.Context(), calcuttaID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
+	}
+
+	standingsByID := make(map[string]*models.EntryStanding, len(standings))
+	for _, s := range standings {
+		standingsByID[s.EntryID] = s
 	}
 
 	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
@@ -108,7 +112,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		currentUserEntry.Status = calcuttaapp.DeriveEntryStatus(userTeams)
-		resp.CurrentUserEntry = dtos.NewEntryResponse(currentUserEntry)
+		resp.CurrentUserEntry = dtos.NewEntryResponse(currentUserEntry, standingsByID[currentUserEntry.ID])
 	}
 
 	if biddingOpen {
@@ -163,9 +167,9 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeamsByEntry[entry.ID])
 		}
 
-		h.attachProjectedEV(r, calcutta, entries, allPortfolios, allPortfolioTeams, tournamentTeams)
+		h.attachProjectedEV(r, calcutta, standingsByID, allPortfolios, allPortfolioTeams, tournamentTeams)
 
-		resp.Entries = dtos.NewEntryListResponse(entries)
+		resp.Entries = dtos.NewEntryListResponse(entries, standingsByID)
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
@@ -221,7 +225,7 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 			item.TournamentStartingAt = tournament.StartingAt
 		}
 
-		entries, err := h.app.Calcutta.GetEntries(r.Context(), calcutta.ID)
+		entries, standings, err := h.app.Calcutta.GetEntries(r.Context(), calcutta.ID)
 		if err != nil {
 			httperr.WriteFromErr(w, r, err, h.authUserID)
 			return
@@ -238,16 +242,13 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 		if userEntry != nil {
 			item.HasEntry = true
 
-			sorted := make([]*models.CalcuttaEntry, len(entries))
-			copy(sorted, entries)
-			sort.Slice(sorted, func(i, j int) bool {
-				return sorted[i].TotalPoints > sorted[j].TotalPoints
-			})
-
+			// standings are already sorted by points desc
 			rank := 1
-			for i, e := range sorted {
-				if e.ID == userEntry.ID {
+			var userPoints float64
+			for i, s := range standings {
+				if s.EntryID == userEntry.ID {
 					rank = i + 1
+					userPoints = s.TotalPoints
 					break
 				}
 			}
@@ -255,7 +256,7 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 			item.Ranking = &dtos.CalcuttaRankingResponse{
 				Rank:         rank,
 				TotalEntries: len(entries),
-				Points:       userEntry.TotalPoints,
+				Points:       userPoints,
 			}
 		}
 
@@ -265,12 +266,12 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 	response.WriteJSON(w, http.StatusOK, results)
 }
 
-// attachProjectedEV computes and attaches projected EV to each entry using prediction data.
-// This is best-effort: if any step fails, entries simply won't have projectedEv set.
+// attachProjectedEV computes and attaches projected EV to each standing using prediction data.
+// This is best-effort: if any step fails, standings simply won't have projectedEv set.
 func (h *Handler) attachProjectedEV(
 	r *http.Request,
 	calcutta *models.Calcutta,
-	entries []*models.CalcuttaEntry,
+	standingsByID map[string]*models.EntryStanding,
 	portfolios []*models.CalcuttaPortfolio,
 	portfolioTeams []*models.CalcuttaPortfolioTeam,
 	tournamentTeams []*models.TournamentTeam,
@@ -346,10 +347,10 @@ func (h *Handler) attachProjectedEV(
 		}
 	}
 
-	for _, entry := range entries {
-		if ev, ok := entryEV[entry.ID]; ok {
+	for entryID, ev := range entryEV {
+		if s, ok := standingsByID[entryID]; ok {
 			v := ev
-			entry.ProjectedEV = &v
+			s.ProjectedEV = &v
 		}
 	}
 }

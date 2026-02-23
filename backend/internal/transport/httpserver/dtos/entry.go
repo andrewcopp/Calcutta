@@ -23,32 +23,35 @@ type EntryResponse struct {
 	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
-func NewEntryResponse(e *models.CalcuttaEntry) *EntryResponse {
-	return &EntryResponse{
-		ID:             e.ID,
-		Name:           e.Name,
-		UserID:         e.UserID,
-		CalcuttaID:     e.CalcuttaID,
-		Status:         e.Status,
-		TotalPoints:    e.TotalPoints,
-		FinishPosition: e.FinishPosition,
-		InTheMoney:     e.InTheMoney,
-		PayoutCents:    e.PayoutCents,
-		IsTied:         e.IsTied,
-		ProjectedEV:    e.ProjectedEV,
-		CreatedAt:      e.CreatedAt,
-		UpdatedAt:      e.UpdatedAt,
+func NewEntryResponse(e *models.CalcuttaEntry, s *models.EntryStanding) *EntryResponse {
+	resp := &EntryResponse{
+		ID:         e.ID,
+		Name:       e.Name,
+		UserID:     e.UserID,
+		CalcuttaID: e.CalcuttaID,
+		Status:     e.Status,
+		CreatedAt:  e.CreatedAt,
+		UpdatedAt:  e.UpdatedAt,
 	}
+	if s != nil {
+		resp.TotalPoints = s.TotalPoints
+		resp.FinishPosition = s.FinishPosition
+		resp.InTheMoney = s.InTheMoney
+		resp.PayoutCents = s.PayoutCents
+		resp.IsTied = s.IsTied
+		resp.ProjectedEV = s.ProjectedEV
+	}
+	return resp
 }
 
-func NewEntryListResponse(entries []*models.CalcuttaEntry) []*EntryResponse {
+func NewEntryListResponse(entries []*models.CalcuttaEntry, standingsByID map[string]*models.EntryStanding) []*EntryResponse {
 	if entries == nil {
 		return []*EntryResponse{}
 	}
 
 	responses := make([]*EntryResponse, len(entries))
 	for i, e := range entries {
-		responses[i] = NewEntryResponse(e)
+		responses[i] = NewEntryResponse(e, standingsByID[e.ID])
 	}
 	return responses
 }

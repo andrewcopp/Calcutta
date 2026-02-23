@@ -46,26 +46,27 @@ func (r *CalcuttaRepository) CreateEntry(ctx context.Context, entry *models.Calc
 	return nil
 }
 
-func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
+func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, map[string]float64, error) {
 	rows, err := r.q.ListEntriesByCalcuttaID(ctx, calcuttaID)
 	if err != nil {
-		return nil, fmt.Errorf("listing entries for calcutta %s: %w", calcuttaID, err)
+		return nil, nil, fmt.Errorf("listing entries for calcutta %s: %w", calcuttaID, err)
 	}
 
-	out := make([]*models.CalcuttaEntry, 0, len(rows))
+	entries := make([]*models.CalcuttaEntry, 0, len(rows))
+	pointsByEntry := make(map[string]float64, len(rows))
 	for _, row := range rows {
-		out = append(out, &models.CalcuttaEntry{
-			ID:          row.ID,
-			Name:        row.Name,
-			UserID:      uuidToPtrString(row.UserID),
-			CalcuttaID:  row.CalcuttaID,
-			TotalPoints: row.TotalPoints,
-			CreatedAt:   row.CreatedAt.Time,
-			UpdatedAt:   row.UpdatedAt.Time,
-			DeletedAt:   TimestamptzToPtrTime(row.DeletedAt),
+		entries = append(entries, &models.CalcuttaEntry{
+			ID:         row.ID,
+			Name:       row.Name,
+			UserID:     uuidToPtrString(row.UserID),
+			CalcuttaID: row.CalcuttaID,
+			CreatedAt:  row.CreatedAt.Time,
+			UpdatedAt:  row.UpdatedAt.Time,
+			DeletedAt:  TimestamptzToPtrTime(row.DeletedAt),
 		})
+		pointsByEntry[row.ID] = row.TotalPoints
 	}
-	return out, nil
+	return entries, pointsByEntry, nil
 }
 
 func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error) {

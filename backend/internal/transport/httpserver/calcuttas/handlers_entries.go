@@ -80,7 +80,7 @@ func (h *Handler) HandleCreateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusCreated, dtos.NewEntryResponse(entry))
+	response.WriteJSON(w, http.StatusCreated, dtos.NewEntryResponse(entry, nil))
 }
 
 func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Request) {
@@ -118,10 +118,15 @@ func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	entries, err := h.app.Calcutta.GetEntries(r.Context(), calcuttaID)
+	entries, standings, err := h.app.Calcutta.GetEntries(r.Context(), calcuttaID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
+	}
+
+	standingsByID := make(map[string]*models.EntryStanding, len(standings))
+	for _, s := range standings {
+		standingsByID[s.EntryID] = s
 	}
 
 	tournament, err := h.app.Tournament.GetByID(r.Context(), calcutta.TournamentID)
@@ -146,7 +151,7 @@ func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewEntryListResponse(entries))
+	response.WriteJSON(w, http.StatusOK, dtos.NewEntryListResponse(entries, standingsByID))
 }
 
 func (h *Handler) HandleListEntryTeams(w http.ResponseWriter, r *http.Request) {

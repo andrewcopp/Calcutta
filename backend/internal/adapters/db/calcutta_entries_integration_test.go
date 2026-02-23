@@ -154,7 +154,7 @@ func TestThatGetEntriesReturnsEntriesOrderedByPointsDescending(t *testing.T) {
 	entry2 := mustSeedEntry(t, ctx, base.calcuttaRepo, base.calcutta.ID, secondUser.ID)
 
 	// WHEN retrieving entries
-	entries, err := base.calcuttaRepo.GetEntries(ctx, base.calcutta.ID)
+	entries, _, err := base.calcuttaRepo.GetEntries(ctx, base.calcutta.ID)
 	if err != nil {
 		t.Fatalf("getting entries: %v", err)
 	}

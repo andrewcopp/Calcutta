@@ -21,56 +21,51 @@ func (s *Service) UpdateCalcutta(ctx context.Context, calcutta *models.Calcutta)
 	return s.ports.Calcuttas.Update(ctx, calcutta)
 }
 
-func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error) {
-	entries, err := s.ports.Entries.GetEntries(ctx, calcuttaID)
+func (s *Service) GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, []*models.EntryStanding, error) {
+	entries, pointsByEntry, err := s.ports.Entries.GetEntries(ctx, calcuttaID)
 	if err != nil {
-		return nil, fmt.Errorf("getting entries: %w", err)
+		return nil, nil, fmt.Errorf("getting entries: %w", err)
 	}
 
 	payouts, err := s.ports.Payouts.GetPayouts(ctx, calcuttaID)
 	if err != nil {
-		return nil, fmt.Errorf("getting payouts: %w", err)
+		return nil, nil, fmt.Errorf("getting payouts: %w", err)
 	}
 
-	sorted, results := ComputeEntryPlacementsAndPayouts(entries, payouts)
-	if len(sorted) == len(entries) {
-		copy(entries, sorted)
-		sorted = entries
+	standings := ComputeStandings(entries, pointsByEntry, payouts)
+	return entries, standings, nil
+}
+
+// ComputeStandings computes finish positions and payouts from entries, their points, and payout rules.
+// Returns standings sorted by points descending. Does not mutate entries.
+func ComputeStandings(
+	entries []*models.CalcuttaEntry,
+	pointsByEntry map[string]float64,
+	payouts []*models.CalcuttaPayout,
+) []*models.EntryStanding {
+	if entries == nil {
+		return nil
 	}
-	for _, e := range sorted {
+
+	type entryWithPoints struct {
+		entry  *models.CalcuttaEntry
+		points float64
+	}
+
+	sorted := make([]entryWithPoints, 0, len(entries))
+	for _, e := range entries {
 		if e == nil {
 			continue
 		}
-		res, ok := results[e.ID]
-		if !ok {
-			continue
+		sorted = append(sorted, entryWithPoints{entry: e, points: pointsByEntry[e.ID]})
+	}
+
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].points == sorted[j].points {
+			return sorted[i].entry.CreatedAt.After(sorted[j].entry.CreatedAt)
 		}
-		e.FinishPosition = res.FinishPosition
-		e.IsTied = res.IsTied
-		e.PayoutCents = res.PayoutCents
-		e.InTheMoney = res.InTheMoney
-	}
-	return sorted, nil
-}
-
-type EntryPayoutResult struct {
-	FinishPosition int
-	IsTied         bool
-	PayoutCents    int
-	InTheMoney     bool
-}
-
-func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts []*models.CalcuttaPayout) ([]*models.CalcuttaEntry, map[string]EntryPayoutResult) {
-	if entries == nil {
-		return nil, nil
-	}
-
-	out := make([]*models.CalcuttaEntry, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, e)
-	}
-
-	results := make(map[string]EntryPayoutResult, len(entries))
+		return sorted[i].points > sorted[j].points
+	})
 
 	payoutByPosition := map[int]int{}
 	for _, p := range payouts {
@@ -80,34 +75,14 @@ func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts [
 		payoutByPosition[p.Position] = p.AmountCents
 	}
 
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i] == nil {
-			return false
-		}
-		if out[j] == nil {
-			return true
-		}
-		if out[i].TotalPoints == out[j].TotalPoints {
-			return out[i].CreatedAt.After(out[j].CreatedAt)
-		}
-		return out[i].TotalPoints > out[j].TotalPoints
-	})
-
 	const epsilon = 0.0001
+	standings := make([]*models.EntryStanding, len(sorted))
 
 	position := 1
-	for i := 0; i < len(out); {
-		if out[i] == nil {
-			i++
-			continue
-		}
-
+	for i := 0; i < len(sorted); {
 		j := i + 1
-		for j < len(out) {
-			if out[j] == nil {
-				break
-			}
-			if math.Abs(out[j].TotalPoints-out[i].TotalPoints) >= epsilon {
+		for j < len(sorted) {
+			if math.Abs(sorted[j].points-sorted[i].points) >= epsilon {
 				break
 			}
 			j++
@@ -129,16 +104,14 @@ func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts [
 		}
 
 		for k := 0; k < groupSize; k++ {
-			e := out[i+k]
-			if e == nil {
-				continue
-			}
 			payoutCents := base
 			if remainder > 0 {
 				payoutCents++
 				remainder--
 			}
-			results[e.ID] = EntryPayoutResult{
+			standings[i+k] = &models.EntryStanding{
+				EntryID:        sorted[i+k].entry.ID,
+				TotalPoints:    sorted[i+k].points,
 				FinishPosition: position,
 				IsTied:         isTied,
 				PayoutCents:    payoutCents,
@@ -150,7 +123,7 @@ func ComputeEntryPlacementsAndPayouts(entries []*models.CalcuttaEntry, payouts [
 		i = j
 	}
 
-	return out, results
+	return standings
 }
 
 func (s *Service) GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error) {

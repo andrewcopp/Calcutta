@@ -24,7 +24,7 @@ type CalcuttaRepository interface {
 }
 
 type EntryReader interface {
-	GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, error)
+	GetEntries(ctx context.Context, calcuttaID string) ([]*models.CalcuttaEntry, map[string]float64, error)
 	GetEntry(ctx context.Context, id string) (*models.CalcuttaEntry, error)
 	GetEntryTeams(ctx context.Context, entryID string) ([]*models.CalcuttaEntryTeam, error)
 	GetEntryTeamsByEntryIDs(ctx context.Context, entryIDs []string) (map[string][]*models.CalcuttaEntryTeam, error)
