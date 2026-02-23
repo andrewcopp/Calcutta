@@ -1,21 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {
-  darkTooltipContentStyle,
-  darkTooltipLabelStyle,
-  darkTooltipItemStyle,
-  darkBarCursor,
-} from './chartTheme';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { darkTooltipContentStyle, darkTooltipLabelStyle, darkTooltipItemStyle, darkBarCursor } from './chartTheme';
 
 interface EarnBar {
   key: string;
@@ -45,7 +31,8 @@ export function EarnSection({ revealClass }: EarnSectionProps) {
         <div className="mt-3 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">Multiple paths to points</h2>
           <div className="text-sm text-white/70 max-w-md">
-            Four archetypes can contribute in different ways — a small slice of a favorite, or a bigger slice of the right dark horse.
+            Four archetypes can contribute in different ways — a small slice of a favorite, or a bigger slice of the
+            right dark horse.
           </div>
         </div>
 
@@ -54,8 +41,15 @@ export function EarnSection({ revealClass }: EarnSectionProps) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={bars} margin={{ top: 8, right: 20, left: 0, bottom: 12 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.12)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }} axisLine={{ stroke: 'rgba(255,255,255,0.25)' }} />
-                <YAxis tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }} axisLine={{ stroke: 'rgba(255,255,255,0.25)' }} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.25)' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.25)' }}
+                />
                 <Tooltip
                   formatter={(value: number) => [`${value.toFixed(1)} points`, 'Contribution']}
                   contentStyle={darkTooltipContentStyle}

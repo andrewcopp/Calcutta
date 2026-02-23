@@ -84,11 +84,7 @@ export function TournamentSetupTeamsForm({
       </Tabs>
 
       <div className="flex justify-end mt-6">
-        <Button
-          onClick={handleSubmit}
-          disabled={isPending || stats.total === 0}
-          loading={isPending}
-        >
+        <Button onClick={handleSubmit} disabled={isPending || stats.total === 0} loading={isPending}>
           {isPending ? 'Saving...' : 'Save Teams'}
         </Button>
       </div>

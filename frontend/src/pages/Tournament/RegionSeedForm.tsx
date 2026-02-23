@@ -43,7 +43,7 @@ export function RegionSeedForm({
         const slots = regionState[seed];
         return (
           <div key={seed} className="flex items-start gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 text-sm font-bold text-gray-700 shrink-0">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted text-sm font-bold text-foreground shrink-0">
               {seed}
             </div>
             <div className="flex-1 space-y-2">

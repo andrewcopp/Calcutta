@@ -1,14 +1,5 @@
 import { useMemo } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card } from '../../components/ui/Card';
 
 interface InvestDatum {
@@ -31,10 +22,10 @@ export function InvestCard() {
     <Card className="shadow-lg">
       <div className="flex items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Invest</h2>
-          <p className="text-gray-600">Allocate 100 credits across a handful of teams.</p>
+          <h2 className="text-2xl font-semibold text-foreground">Invest</h2>
+          <p className="text-muted-foreground">Allocate 100 credits across a handful of teams.</p>
         </div>
-        <div className="text-xs text-gray-500">Illustrative</div>
+        <div className="text-xs text-muted-foreground">Illustrative</div>
       </div>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -51,7 +42,7 @@ export function InvestCard() {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-4 text-sm text-gray-600">
+      <div className="mt-4 text-sm text-muted-foreground">
         Typical constraints: invest in 3\u201310 teams, max 50 credits on any single team.
       </div>
     </Card>

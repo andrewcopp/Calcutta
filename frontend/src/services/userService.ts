@@ -26,7 +26,11 @@ export const userService = {
   },
 
   async acceptInvite(token: string, password: string): Promise<User> {
-    const res = await apiClient.post<AuthResponse>('/auth/invite/accept', { token, password }, { credentials: 'include' });
+    const res = await apiClient.post<AuthResponse>(
+      '/auth/invite/accept',
+      { token, password },
+      { credentials: 'include' },
+    );
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     apiClient.setAccessToken(res.accessToken);
     return res.user;

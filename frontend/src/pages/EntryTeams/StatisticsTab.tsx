@@ -13,7 +13,11 @@ type StatisticsTabProps = {
 
 export function StatisticsTab({ portfolios, portfolioTeams, teams, tournamentTeams, schools }: StatisticsTabProps) {
   if (portfolios.length === 0) {
-    return <p className="text-gray-500 text-sm py-4">No portfolio statistics available yet. Statistics appear after the tournament begins.</p>;
+    return (
+      <p className="text-muted-foreground text-sm py-4">
+        No portfolio statistics available yet. Statistics appear after the tournament begins.
+      </p>
+    );
   }
 
   const portfolio = portfolios[0];
@@ -22,33 +26,33 @@ export function StatisticsTab({ portfolios, portfolioTeams, teams, tournamentTea
   const actualPoints = portfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
   const expectedPoints = portfolioTeams.reduce((sum, pt) => sum + pt.expectedPoints, 0);
 
-  const eliminatedSet = new Set(
-    tournamentTeams.filter(tt => tt.isEliminated).map(tt => tt.id),
-  );
-  const teamsAlive = portfolioTeams.filter(pt => !eliminatedSet.has(pt.teamId)).length;
+  const eliminatedSet = new Set(tournamentTeams.filter((tt) => tt.isEliminated).map((tt) => tt.id));
+  const teamsAlive = portfolioTeams.filter((pt) => !eliminatedSet.has(pt.teamId)).length;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card padding="compact">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Total Bids</p>
-          <p className="text-2xl font-bold text-gray-900">{totalInvestment}</p>
-          <p className="text-xs text-gray-500 mt-1">credits spent</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Total Bids</p>
+          <p className="text-2xl font-bold text-foreground">{totalInvestment}</p>
+          <p className="text-xs text-muted-foreground mt-1">credits spent</p>
         </Card>
         <Card padding="compact">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Actual Points</p>
-          <p className="text-2xl font-bold text-gray-900">{actualPoints.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-1">earned so far</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Actual Points</p>
+          <p className="text-2xl font-bold text-foreground">{actualPoints.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">earned so far</p>
         </Card>
         <Card padding="compact">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Expected Points</p>
-          <p className="text-2xl font-bold text-gray-900">{expectedPoints.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-1">if all teams win out</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Expected Points</p>
+          <p className="text-2xl font-bold text-foreground">{expectedPoints.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">if all teams win out</p>
         </Card>
         <Card padding="compact">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Teams Alive</p>
-          <p className="text-2xl font-bold text-gray-900">{teamsAlive} <span className="text-base font-normal text-gray-500">of {portfolioTeams.length}</span></p>
-          <p className="text-xs text-gray-500 mt-1">still competing</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Teams Alive</p>
+          <p className="text-2xl font-bold text-foreground">
+            {teamsAlive} <span className="text-base font-normal text-muted-foreground">of {portfolioTeams.length}</span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">still competing</p>
         </Card>
       </div>
 

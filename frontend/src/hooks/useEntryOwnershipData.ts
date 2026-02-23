@@ -40,7 +40,7 @@ export function useEntryOwnershipData({
       if (!currentPortfolioId) return undefined;
       return allCalcuttaPortfolioTeams.find((pt) => pt.teamId === teamId && pt.portfolioId === currentPortfolioId);
     },
-    [allCalcuttaPortfolioTeams, portfolios]
+    [allCalcuttaPortfolioTeams, portfolios],
   );
 
   const getInvestorRanking = useCallback(
@@ -56,7 +56,7 @@ export function useEntryOwnershipData({
         total: allInvestors.length,
       };
     },
-    [allCalcuttaPortfolioTeams, portfolios]
+    [allCalcuttaPortfolioTeams, portfolios],
   );
 
   const ownershipTeamsData = useMemo(() => {

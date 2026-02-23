@@ -23,7 +23,7 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               : displayPosition === 3
                 ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-500'
                 : 'bg-gradient-to-r from-slate-50 to-blue-50 border-2 border-slate-300'
-          : 'bg-white border border-gray-100';
+          : 'bg-card border border-gray-100';
 
         const pointsClass = isInTheMoney
           ? displayPosition === 1
@@ -33,7 +33,7 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               : displayPosition === 3
                 ? 'text-amber-700'
                 : 'text-slate-700'
-          : 'text-blue-600';
+          : 'text-primary';
 
         return (
           <Link
@@ -45,7 +45,7 @@ export function LeaderboardTab({ calcuttaId, entries }: LeaderboardTabProps) {
               <div>
                 <h2 className="text-xl font-semibold">
                   {displayPosition}. {entry.name}
-                  {isInTheMoney && payoutText && <span className="ml-2 text-sm text-gray-700">{payoutText}</span>}
+                  {isInTheMoney && payoutText && <span className="ml-2 text-sm text-foreground">{payoutText}</span>}
                 </h2>
               </div>
               <div className="text-right">

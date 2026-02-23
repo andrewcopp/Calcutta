@@ -31,22 +31,14 @@ export function AuthForm() {
 
   return (
     <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">
-        {isLogin ? 'Login' : 'Sign Up'}
-      </h2>
+      <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Login' : 'Sign Up'}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
             Email
           </label>
-          <Input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <Input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
 
         <div>
@@ -92,20 +84,13 @@ export function AuthForm() {
           </>
         )}
 
-        {error && (
-          <Alert variant="error">{error}</Alert>
-        )}
+        {error && <Alert variant="error">{error}</Alert>}
 
         <Button type="submit" className="w-full">
           {isLogin ? 'Login' : 'Sign Up'}
         </Button>
 
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setIsLogin(!isLogin)}
-          className="w-full"
-        >
+        <Button type="button" variant="ghost" onClick={() => setIsLogin(!isLogin)} className="w-full">
           {isLogin ? 'Need an account? Sign up' : 'Already have an account? Login'}
         </Button>
       </form>

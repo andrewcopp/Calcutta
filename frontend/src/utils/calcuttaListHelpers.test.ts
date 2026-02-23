@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { CalcuttaWithRanking } from '../types/calcutta';
 import { groupCalcuttas } from './calcuttaListHelpers';
 
-function makeCalcutta(
-  overrides: Partial<CalcuttaWithRanking> & { id: string },
-): CalcuttaWithRanking {
+function makeCalcutta(overrides: Partial<CalcuttaWithRanking> & { id: string }): CalcuttaWithRanking {
   return {
     name: 'Test',
     tournamentId: 't1',

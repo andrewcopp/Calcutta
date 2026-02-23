@@ -76,10 +76,7 @@ export function CalcuttaSettingsPage() {
 
       <PageHeader title="Payout Structure" className="mt-8" />
 
-      <PayoutsForm
-        calcuttaId={calcuttaId}
-        onSuccess={() => toast.success('Payouts saved successfully.')}
-      />
+      <PayoutsForm calcuttaId={calcuttaId} onSuccess={() => toast.success('Payouts saved successfully.')} />
     </PageContainer>
   );
 }

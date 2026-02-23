@@ -73,13 +73,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPermissions([]);
   };
 
-  const hasPermission = useCallback(
-    (permission: string) => permissions.includes(permission),
-    [permissions]
-  );
+  const hasPermission = useCallback((permission: string) => permissions.includes(permission), [permissions]);
 
   return (
-    <UserContext.Provider value={{ user, permissions, permissionsLoading, login, signup, acceptInvite, logout, hasPermission }}>
+    <UserContext.Provider
+      value={{ user, permissions, permissionsLoading, login, signup, acceptInvite, logout, hasPermission }}
+    >
       {children}
     </UserContext.Provider>
   );

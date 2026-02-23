@@ -6,21 +6,13 @@ export const bracketService = {
     return apiClient.get<BracketStructure>(`/tournaments/${tournamentId}/bracket`);
   },
 
-  async selectWinner(
-    tournamentId: string,
-    gameId: string,
-    winnerTeamId: string
-  ): Promise<BracketStructure> {
-    return apiClient.post<BracketStructure>(
-      `/tournaments/${tournamentId}/bracket/games/${gameId}/winner`,
-      { winnerTeamId }
-    );
+  async selectWinner(tournamentId: string, gameId: string, winnerTeamId: string): Promise<BracketStructure> {
+    return apiClient.post<BracketStructure>(`/tournaments/${tournamentId}/bracket/games/${gameId}/winner`, {
+      winnerTeamId,
+    });
   },
 
-  async unselectWinner(
-    tournamentId: string,
-    gameId: string
-  ): Promise<BracketStructure> {
+  async unselectWinner(tournamentId: string, gameId: string): Promise<BracketStructure> {
     return apiClient.delete<BracketStructure>(`/tournaments/${tournamentId}/bracket/games/${gameId}/winner`);
   },
 

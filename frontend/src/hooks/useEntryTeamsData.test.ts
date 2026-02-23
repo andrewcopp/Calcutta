@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  CalcuttaDashboard,
-  CalcuttaEntry,
-  CalcuttaEntryTeam,
-  CalcuttaPortfolio,
-  CalcuttaPortfolioTeam,
-  Calcutta,
-} from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
+import type { CalcuttaDashboard, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import type { EntryTeamsData } from './useEntryTeamsData';
+import {
+  makeCalcutta,
+  makeEntry,
+  makeEntryTeam,
+  makePortfolio,
+  makePortfolioTeam,
+  makeTournamentTeam,
+  makeDashboard,
+} from '../test/factories';
 
 // ---------------------------------------------------------------------------
 // The hook is a single useMemo that transforms CalcuttaDashboard into
@@ -16,7 +17,10 @@ import type { EntryTeamsData } from './useEntryTeamsData';
 // function to test without React rendering (the vitest env is node, not jsdom).
 // ---------------------------------------------------------------------------
 
-function computeEntryTeamsData(dashboardData: CalcuttaDashboard | undefined, entryId: string | undefined): EntryTeamsData {
+function computeEntryTeamsData(
+  dashboardData: CalcuttaDashboard | undefined,
+  entryId: string | undefined,
+): EntryTeamsData {
   if (!dashboardData || !entryId) {
     return {
       calcuttaName: '',
@@ -92,96 +96,6 @@ function computeEntryTeamsData(dashboardData: CalcuttaDashboard | undefined, ent
     allEntryTeams: entryTeams,
     allCalcuttaPortfolios: allPortfoliosWithNames,
     allCalcuttaPortfolioTeams: allPortfolioTeamsWithSchools,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-function makeCalcutta(overrides: Partial<Calcutta> = {}): Calcutta {
-  return {
-    id: 'calc-1',
-    name: 'March Madness 2026',
-    tournamentId: 'tourn-1',
-    ownerId: 'owner-1',
-    minTeams: 3,
-    maxTeams: 10,
-    maxBidPoints: 50,
-    budgetPoints: 100,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): CalcuttaEntry {
-  return {
-    name: 'Entry',
-    calcuttaId: 'calc-1',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; entryId: string; teamId: string }): CalcuttaEntryTeam {
-  return {
-    bid: 10,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makePortfolio(overrides: Partial<CalcuttaPortfolio> & { id: string; entryId: string }): CalcuttaPortfolio {
-  return {
-    maximumPoints: 100,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makePortfolioTeam(
-  overrides: Partial<CalcuttaPortfolioTeam> & { id: string; portfolioId: string; teamId: string },
-): CalcuttaPortfolioTeam {
-  return {
-    ownershipPercentage: 1,
-    actualPoints: 0,
-    expectedPoints: 0,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; schoolId: string }): TournamentTeam {
-  return {
-    tournamentId: 'tourn-1',
-    seed: 1,
-    region: 'East',
-    byes: 0,
-    wins: 0,
-    isEliminated: false,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeDashboard(overrides: Partial<CalcuttaDashboard> = {}): CalcuttaDashboard {
-  return {
-    calcutta: makeCalcutta(),
-    biddingOpen: false,
-    totalEntries: 0,
-    entries: [],
-    entryTeams: [],
-    portfolios: [],
-    portfolioTeams: [],
-    schools: [],
-    tournamentTeams: [],
-    ...overrides,
   };
 }
 
@@ -309,10 +223,7 @@ describe('useEntryTeamsData (pure transformation)', () => {
     it('returns only teams belonging to the specified entry', () => {
       // GIVEN entry teams for two different entries
       const dashboard = makeDashboard({
-        entries: [
-          makeEntry({ id: 'e1', name: 'Alice' }),
-          makeEntry({ id: 'e2', name: 'Bob' }),
-        ],
+        entries: [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })],
         entryTeams: [
           makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1' }),
           makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2' }),
@@ -372,9 +283,7 @@ describe('useEntryTeamsData (pure transformation)', () => {
       // GIVEN an entry team with no nested team object
       const dashboard = makeDashboard({
         entries: [makeEntry({ id: 'e1', name: 'Alice' })],
-        entryTeams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', team: undefined }),
-        ],
+        entryTeams: [makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', team: undefined })],
       });
 
       // WHEN computing entry teams data
@@ -390,10 +299,7 @@ describe('useEntryTeamsData (pure transformation)', () => {
       // GIVEN portfolios for two entries
       const dashboard = makeDashboard({
         entries: [makeEntry({ id: 'e1', name: 'Alice' })],
-        portfolios: [
-          makePortfolio({ id: 'p1', entryId: 'e1' }),
-          makePortfolio({ id: 'p2', entryId: 'e2' }),
-        ],
+        portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' }), makePortfolio({ id: 'p2', entryId: 'e2' })],
       });
 
       // WHEN computing entry teams data for "e1"
@@ -407,10 +313,7 @@ describe('useEntryTeamsData (pure transformation)', () => {
       // GIVEN portfolio teams across multiple entries
       const dashboard = makeDashboard({
         entries: [makeEntry({ id: 'e1', name: 'Alice' })],
-        portfolios: [
-          makePortfolio({ id: 'p1', entryId: 'e1' }),
-          makePortfolio({ id: 'p2', entryId: 'e2' }),
-        ],
+        portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' }), makePortfolio({ id: 'p2', entryId: 'e2' })],
         portfolioTeams: [
           makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1' }),
           makePortfolioTeam({ id: 'pt2', portfolioId: 'p2', teamId: 't2' }),
@@ -458,14 +361,8 @@ describe('useEntryTeamsData (pure transformation)', () => {
     it('enriches all portfolios with entry names', () => {
       // GIVEN portfolios belonging to different entries
       const dashboard = makeDashboard({
-        entries: [
-          makeEntry({ id: 'e1', name: 'Alice' }),
-          makeEntry({ id: 'e2', name: 'Bob' }),
-        ],
-        portfolios: [
-          makePortfolio({ id: 'p1', entryId: 'e1' }),
-          makePortfolio({ id: 'p2', entryId: 'e2' }),
-        ],
+        entries: [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })],
+        portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' }), makePortfolio({ id: 'p2', entryId: 'e2' })],
       });
 
       // WHEN computing entry teams data for "e1"

@@ -58,7 +58,8 @@ export function EntryDetailPage() {
   const loadedEntryId = entryQuery.data?.id;
   const evaluationsQuery = useQuery<ListEvaluationsResponse | null>({
     queryKey: queryKeys.lab.evaluations.byEntry(loadedEntryId),
-    queryFn: () => (loadedEntryId ? labService.listEvaluations({ entryId: loadedEntryId, limit: 1 }) : Promise.resolve(null)),
+    queryFn: () =>
+      loadedEntryId ? labService.listEvaluations({ entryId: loadedEntryId, limit: 1 }) : Promise.resolve(null),
     enabled: Boolean(loadedEntryId),
   });
 
@@ -143,50 +144,50 @@ export function EntryDetailPage() {
 
       {/* Compact header */}
       <div className="flex items-baseline gap-3 mb-4">
-        <h1 className="text-xl font-bold text-gray-900">Entry Detail</h1>
-        <span className="text-gray-500">
+        <h1 className="text-xl font-bold text-foreground">Entry Detail</h1>
+        <span className="text-muted-foreground">
           {entry.modelName} ({entry.modelKind}) → {entry.calcuttaName}
         </span>
       </div>
 
       {/* Interactive pipeline stage indicator */}
       <div className="flex items-center gap-2 mb-4 text-sm">
-        <span className="px-2 py-1 rounded bg-green-100 text-green-800">✓ Registered</span>
-        <span className="text-gray-400">→</span>
+        <span className="px-2 py-1 rounded bg-success/10 text-success">✓ Registered</span>
+        <span className="text-muted-foreground/60">→</span>
         <button
           type="button"
           onClick={() => handleTabChange('predictions')}
           disabled={!hasPredictions}
           className={cn(
             'px-2 py-1 rounded transition-colors',
-            hasPredictions ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-500',
-            activeTab === 'predictions' && hasPredictions && 'ring-2 ring-green-500 ring-offset-1'
+            hasPredictions ? 'bg-success/10 text-success hover:bg-green-200' : 'bg-muted text-muted-foreground',
+            activeTab === 'predictions' && hasPredictions && 'ring-2 ring-green-500 ring-offset-1',
           )}
         >
           {hasPredictions ? '✓' : '○'} Predicted
         </button>
-        <span className="text-gray-400">→</span>
+        <span className="text-muted-foreground/60">→</span>
         <button
           type="button"
           onClick={() => handleTabChange('entry')}
           disabled={!hasBids}
           className={cn(
             'px-2 py-1 rounded transition-colors',
-            hasBids ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-500',
-            activeTab === 'entry' && hasBids && 'ring-2 ring-green-500 ring-offset-1'
+            hasBids ? 'bg-success/10 text-success hover:bg-green-200' : 'bg-muted text-muted-foreground',
+            activeTab === 'entry' && hasBids && 'ring-2 ring-green-500 ring-offset-1',
           )}
         >
           {hasBids ? '✓' : '○'} Optimized
         </button>
-        <span className="text-gray-400">→</span>
+        <span className="text-muted-foreground/60">→</span>
         <button
           type="button"
           onClick={() => handleTabChange('evaluations')}
           disabled={!hasEvaluations}
           className={cn(
             'px-2 py-1 rounded transition-colors',
-            hasEvaluations ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-500',
-            activeTab === 'evaluations' && hasEvaluations && 'ring-2 ring-green-500 ring-offset-1'
+            hasEvaluations ? 'bg-success/10 text-success hover:bg-green-200' : 'bg-muted text-muted-foreground',
+            activeTab === 'evaluations' && hasEvaluations && 'ring-2 ring-green-500 ring-offset-1',
           )}
         >
           {hasEvaluations ? '✓' : '○'} Evaluated

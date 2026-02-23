@@ -11,7 +11,7 @@ module.exports = {
     sourceType: 'module',
   },
   plugins: ['@typescript-eslint', 'react-hooks', 'react-refresh'],
-  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react-hooks/recommended'],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react-hooks/recommended', 'prettier'],
   ignorePatterns: ['dist', 'node_modules'],
   rules: {
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],

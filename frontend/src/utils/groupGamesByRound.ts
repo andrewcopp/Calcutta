@@ -4,9 +4,7 @@ export function groupGamesByRound(games: BracketGame[]): Record<BracketRound, Br
   const grouped = {} as Record<BracketRound, BracketGame[]>;
 
   ROUND_ORDER.forEach((round) => {
-    grouped[round] = games
-      .filter((game) => game.round === round)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    grouped[round] = games.filter((game) => game.round === round).sort((a, b) => a.sortOrder - b.sortOrder);
   });
 
   return grouped;

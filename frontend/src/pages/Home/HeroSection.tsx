@@ -13,9 +13,7 @@ export function HeroSection({ scrollY, prefersReducedMotion, revealClass }: Hero
         className="pointer-events-none absolute -top-40 left-1/2 h-[680px] w-[680px] -translate-x-1/2 rounded-full blur-3xl"
         style={{
           background: 'radial-gradient(circle at 30% 30%, rgba(59,130,246,0.55), rgba(59,130,246,0) 60%)',
-          transform: prefersReducedMotion
-            ? undefined
-            : `translate3d(-50%, ${scrollY * 0.08}px, 0)`,
+          transform: prefersReducedMotion ? undefined : `translate3d(-50%, ${scrollY * 0.08}px, 0)`,
         }}
       />
       <div
@@ -37,9 +35,7 @@ export function HeroSection({ scrollY, prefersReducedMotion, revealClass }: Hero
             </Link>
           </div>
           <div className={`transition-all duration-700 ease-out ${revealClass}`}>
-            <div className="text-xs font-semibold tracking-wider text-blue-200">
-              CALCUTTA INVESTMENT POOL
-            </div>
+            <div className="text-xs font-semibold tracking-wider text-blue-200">CALCUTTA INVESTMENT POOL</div>
             <h1 className="mt-4 text-5xl sm:text-6xl font-bold tracking-tight">
               Invest.
               <span className="text-blue-300"> Own.</span>

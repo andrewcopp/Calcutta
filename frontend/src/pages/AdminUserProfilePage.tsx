@@ -91,8 +91,7 @@ export function AdminUserProfilePage() {
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (grant: RoleGrant) =>
-      adminService.revokeRole(userId!, grant.key, grant.scopeType, grant.scopeId),
+    mutationFn: (grant: RoleGrant) => adminService.revokeRole(userId!, grant.key, grant.scopeType, grant.scopeId),
     onSuccess: () => {
       toast.success('Role revoked');
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
@@ -102,19 +101,14 @@ export function AdminUserProfilePage() {
   const profile = userQuery.data;
 
   // Only exclude a role from the dropdown if it already has a global grant
-  const globalRoleKeys = new Set(
-    profile?.roles.filter((g) => g.scopeType === 'global').map((g) => g.key) ?? [],
-  );
+  const globalRoleKeys = new Set(profile?.roles.filter((g) => g.scopeType === 'global').map((g) => g.key) ?? []);
   const availableRoles = ALL_ROLES.filter((r) => !globalRoleKeys.has(r));
 
   const allowedScopes = selectedRole ? (ROLE_SCOPES[selectedRole] ?? ['global']) : ['global'];
   const needsScopeSelection = allowedScopes.length > 1;
   const needsScopeId = selectedScopeType !== 'global';
 
-  const canGrant =
-    selectedRole &&
-    (!needsScopeId || selectedScopeId) &&
-    !grantMutation.isPending;
+  const canGrant = selectedRole && (!needsScopeId || selectedScopeId) && !grantMutation.isPending;
 
   function handleRoleChange(role: string) {
     setSelectedRole(role);
@@ -152,19 +146,23 @@ export function AdminUserProfilePage() {
             <h2 className="text-lg font-semibold mb-4">User Info</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-500">Name</div>
-                <div className="font-medium">{profile.firstName} {profile.lastName}</div>
+                <div className="text-sm text-muted-foreground">Name</div>
+                <div className="font-medium">
+                  {profile.firstName} {profile.lastName}
+                </div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Email</div>
-                <div className="font-medium">{profile.email ?? <span className="text-gray-400 italic">Not set</span>}</div>
+                <div className="text-sm text-muted-foreground">Email</div>
+                <div className="font-medium">
+                  {profile.email ?? <span className="text-muted-foreground/60 italic">Not set</span>}
+                </div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Status</div>
+                <div className="text-sm text-muted-foreground">Status</div>
                 <Badge variant={getStatusBadgeVariant(profile.status)}>{profile.status}</Badge>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Member Since</div>
+                <div className="text-sm text-muted-foreground">Member Since</div>
                 <div className="font-medium">{formatDate(profile.createdAt)}</div>
               </div>
             </div>
@@ -179,7 +177,7 @@ export function AdminUserProfilePage() {
                     <Badge variant="default">{roleGrantDisplay(g)}</Badge>
                     {canWrite && (
                       <button
-                        className="text-gray-400 hover:text-red-600 text-sm"
+                        className="text-muted-foreground/60 hover:text-destructive text-sm"
                         onClick={() => revokeMutation.mutate(g)}
                         disabled={revokeMutation.isPending}
                         aria-label={`Remove ${roleGrantDisplay(g)}`}
@@ -191,19 +189,17 @@ export function AdminUserProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-400 mb-4">No roles assigned.</p>
+              <p className="text-muted-foreground/60 mb-4">No roles assigned.</p>
             )}
 
             {canWrite && availableRoles.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={selectedRole}
-                  onChange={(e) => handleRoleChange(e.target.value)}
-                  className="w-48"
-                >
+                <Select value={selectedRole} onChange={(e) => handleRoleChange(e.target.value)} className="w-48">
                   <option value="">Select role...</option>
                   {availableRoles.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
                   ))}
                 </Select>
 
@@ -217,42 +213,36 @@ export function AdminUserProfilePage() {
                     className="w-40"
                   >
                     {allowedScopes.map((s) => (
-                      <option key={s} value={s}>{s === 'global' ? 'Global' : `Specific ${s}`}</option>
+                      <option key={s} value={s}>
+                        {s === 'global' ? 'Global' : `Specific ${s}`}
+                      </option>
                     ))}
                   </Select>
                 )}
 
                 {selectedRole && selectedScopeType === 'calcutta' && (
-                  <Select
-                    value={selectedScopeId}
-                    onChange={(e) => setSelectedScopeId(e.target.value)}
-                    className="w-48"
-                  >
+                  <Select value={selectedScopeId} onChange={(e) => setSelectedScopeId(e.target.value)} className="w-48">
                     <option value="">Select calcutta...</option>
                     {(calcuttasQuery.data ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
                     ))}
                   </Select>
                 )}
 
                 {selectedRole && selectedScopeType === 'tournament' && (
-                  <Select
-                    value={selectedScopeId}
-                    onChange={(e) => setSelectedScopeId(e.target.value)}
-                    className="w-48"
-                  >
+                  <Select value={selectedScopeId} onChange={(e) => setSelectedScopeId(e.target.value)} className="w-48">
                     <option value="">Select tournament...</option>
                     {(tournamentsQuery.data ?? []).map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </Select>
                 )}
 
-                <Button
-                  size="sm"
-                  disabled={!canGrant}
-                  onClick={handleGrant}
-                >
+                <Button size="sm" disabled={!canGrant} onClick={handleGrant}>
                   Grant
                 </Button>
               </div>
@@ -264,11 +254,13 @@ export function AdminUserProfilePage() {
             {profile.permissions.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {profile.permissions.map((p) => (
-                  <Badge key={p} variant="secondary">{p}</Badge>
+                  <Badge key={p} variant="secondary">
+                    {p}
+                  </Badge>
                 ))}
               </div>
             ) : (
-              <span className="text-gray-400">None</span>
+              <span className="text-muted-foreground/60">None</span>
             )}
           </Card>
         </div>

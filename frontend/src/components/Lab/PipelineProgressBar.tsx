@@ -44,15 +44,7 @@ function getStageStatus(isComplete: boolean, isPending: boolean): StageStatus {
   return 'inactive';
 }
 
-function StageNode({
-  status,
-  label,
-  ariaLabel,
-}: {
-  status: StageStatus;
-  label: string;
-  ariaLabel: string;
-}) {
+function StageNode({ status, label, ariaLabel }: { status: StageStatus; label: string; ariaLabel: string }) {
   const config = stageConfigs[status];
 
   return (
@@ -61,7 +53,7 @@ function StageNode({
         className={cn(
           'w-6 h-6 rounded-full border-2 flex items-center justify-center',
           config.bgClass,
-          config.borderClass
+          config.borderClass,
         )}
       >
         {status === 'complete' ? (
@@ -69,12 +61,7 @@ function StageNode({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         ) : (
-          <div
-            className={cn(
-              'w-2 h-2 rounded-full',
-              status === 'pending' ? 'bg-amber-500' : 'bg-gray-300'
-            )}
-          />
+          <div className={cn('w-2 h-2 rounded-full', status === 'pending' ? 'bg-amber-500' : 'bg-gray-300')} />
         )}
       </div>
       <span className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">{label}</span>
@@ -87,7 +74,12 @@ function ConnectingLine({ status }: { status: StageStatus }) {
   return <div className={cn('flex-1 h-0.5 mx-1', config.lineColor)} />;
 }
 
-export function PipelineProgressBar({ hasPredictions, hasEntries, hasEvaluations, className }: PipelineProgressBarProps) {
+export function PipelineProgressBar({
+  hasPredictions,
+  hasEntries,
+  hasEvaluations,
+  className,
+}: PipelineProgressBarProps) {
   // Stage 1: Model Registered - always true (model exists)
   const stage1Status: StageStatus = 'complete';
 

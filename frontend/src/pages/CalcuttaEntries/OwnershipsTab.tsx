@@ -1,10 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  CalcuttaEntry,
-  CalcuttaEntryTeam,
-  CalcuttaPortfolio,
-  CalcuttaPortfolioTeam,
-} from '../../types/calcutta';
+import { CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
 import type { TournamentTeam } from '../../types/tournament';
 import { School } from '../../types/school';
 import { Select } from '../../components/ui/Select';
@@ -64,7 +59,9 @@ export function OwnershipsTab({
     const cards: OwnershipTeamCard[] = tournamentTeams.map((team) => {
       const teamId = team.id;
       const spend = byTeamSpend.get(teamId) || 0;
-      const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter((pt) => pt.teamId === teamId && pt.ownershipPercentage > 0);
+      const teamPortfolioTeams = allCalcuttaPortfolioTeams.filter(
+        (pt) => pt.teamId === teamId && pt.ownershipPercentage > 0,
+      );
 
       const slices: OwnershipSlice[] = teamPortfolioTeams
         .slice()
@@ -72,7 +69,8 @@ export function OwnershipsTab({
         .map((pt) => {
           const portfolio = allCalcuttaPortfolios.find((p) => p.id === pt.portfolioId);
           const entryId = portfolio?.entryId || '';
-          const entryName = portfolio?.entryName || (entryId ? entryNameById.get(entryId) : undefined) || 'Unknown Entry';
+          const entryName =
+            portfolio?.entryName || (entryId ? entryNameById.get(entryId) : undefined) || 'Unknown Entry';
           return {
             name: entryName,
             value: pt.ownershipPercentage * 100,
@@ -116,7 +114,7 @@ export function OwnershipsTab({
   return (
     <>
       <div className="mb-4 flex items-center justify-end">
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-muted-foreground">
           Sort by
           <Select
             className="ml-2 w-auto"
@@ -132,24 +130,24 @@ export function OwnershipsTab({
       </div>
 
       {ownershipLoading ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <LoadingState label="Loading ownership…" />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {ownershipSortedTeams.map((team) => (
-            <div key={team.teamId} className="bg-white rounded-lg shadow p-4 flex flex-col">
+            <div key={team.teamId} className="bg-card rounded-lg shadow p-4 flex flex-col">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="text-lg font-semibold leading-snug truncate">{team.teamName}</h2>
-                  <div className="mt-1 text-sm text-gray-600">
+                  <div className="mt-1 text-sm text-muted-foreground">
                     {team.seed} Seed - {team.region}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-600 whitespace-nowrap">
+                  <div className="text-sm text-muted-foreground whitespace-nowrap">
                     Total Investment
-                    <div className="text-base font-semibold text-gray-900">{team.totalSpend.toFixed(2)} credits</div>
+                    <div className="text-base font-semibold text-foreground">{team.totalSpend.toFixed(2)} credits</div>
                   </div>
                 </div>
               </div>
@@ -168,7 +166,7 @@ export function OwnershipsTab({
               </div>
 
               <div className="mt-4">
-                <div className="text-sm font-medium text-gray-900">Top Shareholders</div>
+                <div className="text-sm font-medium text-foreground">Top Shareholders</div>
                 <div className="mt-2 space-y-2">
                   {Array.from({ length: 3 }).map((_, idx) => {
                     const owner = team.topOwners[idx];
@@ -176,11 +174,11 @@ export function OwnershipsTab({
                     const pct = owner ? `${owner.value.toFixed(2)}%` : '--';
                     return (
                       <div key={idx} className="flex items-center justify-between gap-3 text-sm">
-                        <div className="min-w-0 truncate text-gray-700 flex items-center gap-2">
-                          <div className="w-4 shrink-0 text-gray-500">{idx + 1}</div>
+                        <div className="min-w-0 truncate text-foreground flex items-center gap-2">
+                          <div className="w-4 shrink-0 text-muted-foreground">{idx + 1}</div>
                           <div className="truncate">{name}</div>
                         </div>
-                        <div className="font-medium text-gray-900">{pct}</div>
+                        <div className="font-medium text-foreground">{pct}</div>
                       </div>
                     );
                   })}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode, type KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useId, type ReactNode, type KeyboardEvent } from 'react';
 import { cn } from '../../lib/cn';
 
 export interface ComboboxOption {
@@ -38,6 +38,9 @@ export function Combobox({
   const [dropAbove, setDropAbove] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const instanceId = useId();
+  const listboxId = `${instanceId}-listbox`;
+  const getOptionId = (index: number) => `${instanceId}-option-${index}`;
 
   const filtered = options.filter((opt) => {
     if (excludeIds?.has(opt.id)) return false;
@@ -52,7 +55,7 @@ export function Combobox({
       setIsOpen(false);
       setHighlightIndex(-1);
     },
-    [onChange, onSelect]
+    [onChange, onSelect],
   );
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -112,6 +115,12 @@ export function Combobox({
     <div ref={containerRef} className={cn('relative', className)}>
       <input
         type="text"
+        role="combobox"
+        aria-expanded={isOpen && filtered.length > 0}
+        aria-controls={listboxId}
+        aria-activedescendant={highlightIndex >= 0 ? getOptionId(highlightIndex) : undefined}
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -136,31 +145,33 @@ export function Combobox({
         placeholder={placeholder}
         disabled={disabled}
         className={cn(
-          'h-10 w-full rounded-lg border bg-surface px-4 py-2 text-sm text-text outline-none disabled:opacity-50',
+          'h-10 w-full rounded-lg border bg-card px-4 py-2 text-sm text-foreground outline-none disabled:opacity-50',
           validationState === 'valid'
             ? 'border-green-500 ring-2 ring-green-200'
             : validationState === 'error'
               ? 'border-red-500 ring-2 ring-red-200'
-              : 'border-border focus:ring-2 focus:ring-primary focus:border-primary'
+              : 'border-border focus:ring-2 focus:ring-primary focus:border-primary',
         )}
       />
       {isOpen && filtered.length > 0 && (
         <ul
           ref={listRef}
           className={cn(
-            'absolute z-50 max-h-60 w-full overflow-auto rounded-lg border border-border bg-surface shadow-lg',
-            dropAbove ? 'bottom-full mb-1' : 'mt-1'
+            'absolute z-50 max-h-60 w-full overflow-auto rounded-lg border border-border bg-card shadow-lg',
+            dropAbove ? 'bottom-full mb-1' : 'mt-1',
           )}
+          id={listboxId}
           role="listbox"
         >
           {filtered.map((opt, i) => (
             <li
               key={opt.id}
+              id={getOptionId(i)}
               role="option"
               aria-selected={i === highlightIndex}
               className={cn(
                 'cursor-pointer px-4 py-2 text-sm',
-                i === highlightIndex ? 'bg-blue-50 text-blue-700' : 'text-text hover:bg-gray-50'
+                i === highlightIndex ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-accent',
               )}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -174,10 +185,12 @@ export function Combobox({
         </ul>
       )}
       {isOpen && filtered.length === 0 && value && (
-        <div className={cn(
-          'absolute z-50 w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-gray-500 shadow-lg',
-          dropAbove ? 'bottom-full mb-1' : 'mt-1'
-        )}>
+        <div
+          className={cn(
+            'absolute z-50 w-full rounded-lg border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-lg',
+            dropAbove ? 'bottom-full mb-1' : 'mt-1',
+          )}
+        >
           No results found
         </div>
       )}

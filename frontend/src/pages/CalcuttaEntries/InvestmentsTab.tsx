@@ -7,7 +7,12 @@ import { SegmentedBar } from '../../components/SegmentedBar';
 import { getEntryColorById } from '../../utils/entryColors';
 import { createTeamSortComparator } from '../../utils/teamSort';
 
-export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeams }: {
+export function InvestmentsTab({
+  entries,
+  schools,
+  tournamentTeams,
+  allEntryTeams,
+}: {
   entries: CalcuttaEntry[];
   schools: School[];
   tournamentTeams: TournamentTeam[];
@@ -119,9 +124,9 @@ export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeam
   }, [investmentRows.rows, investmentSortBy]);
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-card rounded-lg shadow p-6">
       <div className="mb-4 flex items-center justify-end">
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-muted-foreground">
           Sort by
           <Select
             className="ml-2 w-auto"
@@ -139,7 +144,7 @@ export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeam
       <div className="mt-4 overflow-x-auto">
         <table className="min-w-full table-fixed border-separate border-spacing-y-2">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-2 py-2 w-14">Seed</th>
               <th className="px-2 py-2 w-20">Region</th>
               <th className="px-2 py-2 w-44">Team</th>
@@ -149,12 +154,15 @@ export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeam
           </thead>
           <tbody>
             {investmentSortedRows.map((row) => {
-              const barWidthPct = investmentRows.maxTotal > 0 ? (row.totalInvestment / investmentRows.maxTotal) * 100 : 0;
+              const barWidthPct =
+                investmentRows.maxTotal > 0 ? (row.totalInvestment / investmentRows.maxTotal) * 100 : 0;
               return (
-                <tr key={row.teamId} className="bg-gray-50">
-                  <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{row.seed ?? '—'}</td>
-                  <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{row.region}</td>
-                  <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">{row.teamName}</td>
+                <tr key={row.teamId} className="bg-accent">
+                  <td className="px-2 py-3 font-medium text-foreground rounded-l-md whitespace-nowrap">
+                    {row.seed ?? '—'}
+                  </td>
+                  <td className="px-2 py-3 text-foreground whitespace-nowrap">{row.region}</td>
+                  <td className="px-2 py-3 text-foreground font-medium whitespace-nowrap truncate">{row.teamName}</td>
                   <td className="px-2 py-3">
                     <SegmentedBar
                       barWidthPct={barWidthPct}
@@ -169,7 +177,9 @@ export function InvestmentsTab({ entries, schools, tournamentTeams, allEntryTeam
                       getTooltipValue={(seg) => `${seg.value.toFixed(2)} credits`}
                     />
                   </td>
-                  <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">{row.totalInvestment.toFixed(2)} credits</td>
+                  <td className="px-2 py-3 text-right font-medium text-foreground rounded-r-md whitespace-nowrap">
+                    {row.totalInvestment.toFixed(2)} credits
+                  </td>
                 </tr>
               );
             })}

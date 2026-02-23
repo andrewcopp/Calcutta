@@ -85,17 +85,12 @@ export function AdminUsersPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'Users' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Admin', href: '/admin' }, { label: 'Users' }]} />
       <PageHeader
         title="Admin: Users"
         subtitle="Manage users, set emails, and send invites."
         actions={
-          <Link to="/admin" className="text-blue-600 hover:text-blue-800">
+          <Link to="/admin" className="text-primary hover:text-primary">
             Back to Admin Console
           </Link>
         }
@@ -122,9 +117,7 @@ export function AdminUsersPage() {
           </Button>
         </div>
 
-        {usersQuery.isError && (
-          <ErrorState error={usersQuery.error} onRetry={() => usersQuery.refetch()} />
-        )}
+        {usersQuery.isError && <ErrorState error={usersQuery.error} onRetry={() => usersQuery.refetch()} />}
 
         {usersQuery.isLoading ? <LoadingState label="Loading users..." layout="inline" /> : null}
 
@@ -143,21 +136,17 @@ export function AdminUsersPage() {
             {users.map((u) => (
               <TableRow key={u.id} className="align-top">
                 <TableCell className="whitespace-nowrap">
-                  {u.email ?? <span className="text-gray-400 italic">No email</span>}
+                  {u.email ?? <span className="text-muted-foreground/60 italic">No email</span>}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  <Link to={`/admin/users/${u.id}`} className="text-blue-600 hover:text-blue-800 hover:underline">
+                  <Link to={`/admin/users/${u.id}`} className="text-primary hover:text-primary hover:underline">
                     {u.firstName} {u.lastName}
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getStatusBadgeVariant(u.status)}>
-                    {formatStatusLabel(u.status)}
-                  </Badge>
+                  <Badge variant={getStatusBadgeVariant(u.status)}>{formatStatusLabel(u.status)}</Badge>
                   {u.lastInviteSentAt && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      Invited: {formatDate(u.lastInviteSentAt)}
-                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Invited: {formatDate(u.lastInviteSentAt)}</div>
                   )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
@@ -165,36 +154,28 @@ export function AdminUsersPage() {
                   {(u.roles ?? []).length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {(u.roles ?? []).map((l) => (
-                        <Badge key={l} variant="default">{l}</Badge>
+                        <Badge key={l} variant="default">
+                          {l}
+                        </Badge>
                       ))}
                     </div>
                   ) : (
-                    <span className="text-gray-500">-</span>
+                    <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     {u.status === 'stub' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEmailModalUser(u)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setEmailModalUser(u)}>
                         Set Email
                       </Button>
                     )}
                     {(u.status === 'invited' || u.status === 'requires_password_setup') && u.email && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setInviteModalUser(u)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setInviteModalUser(u)}>
                         {u.lastInviteSentAt ? 'Resend Invite' : 'Send Invite'}
                       </Button>
                     )}
-                    {u.status === 'active' && (
-                      <span className="text-gray-400 text-sm">-</span>
-                    )}
+                    {u.status === 'active' && <span className="text-muted-foreground/60 text-sm">-</span>}
                   </div>
                 </TableCell>
               </TableRow>
@@ -202,7 +183,7 @@ export function AdminUsersPage() {
 
             {users.length === 0 && !usersQuery.isLoading ? (
               <TableRow>
-                <TableCell className="text-gray-500" colSpan={6}>
+                <TableCell className="text-muted-foreground" colSpan={6}>
                   No users found.
                 </TableCell>
               </TableRow>

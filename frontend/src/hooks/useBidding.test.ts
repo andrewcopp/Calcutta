@@ -274,10 +274,7 @@ describe('deriveBidsByTeamId', () => {
 
   it('uses the last bid when the same teamId appears in multiple slots', () => {
     // GIVEN two slots with the same teamId but different bids
-    const slots = [
-      makeSlot({ teamId: 't1', bidAmount: 10 }),
-      makeSlot({ teamId: 't1', bidAmount: 30 }),
-    ];
+    const slots = [makeSlot({ teamId: 't1', bidAmount: 10 }), makeSlot({ teamId: 't1', bidAmount: 30 })];
 
     // WHEN deriving bids by team ID
     const result = deriveBidsByTeamId(slots);
@@ -363,10 +360,7 @@ describe('compactSlots', () => {
 
   it('handles all filled slots', () => {
     // GIVEN only filled slots
-    const slots = [
-      makeSlot({ teamId: 't1', bidAmount: 10 }),
-      makeSlot({ teamId: 't2', bidAmount: 20 }),
-    ];
+    const slots = [makeSlot({ teamId: 't1', bidAmount: 10 }), makeSlot({ teamId: 't2', bidAmount: 20 })];
 
     // WHEN compacting
     const result = compactSlots(slots);
@@ -377,10 +371,7 @@ describe('compactSlots', () => {
 
   it('preserves bid amounts during compaction', () => {
     // GIVEN an empty slot between two filled slots with specific bids
-    const slots = [
-      createEmptySlot(),
-      makeSlot({ teamId: 't1', searchText: 'Duke', bidAmount: 42 }),
-    ];
+    const slots = [createEmptySlot(), makeSlot({ teamId: 't1', searchText: 'Duke', bidAmount: 42 })];
 
     // WHEN compacting
     const result = compactSlots(slots);
@@ -391,10 +382,7 @@ describe('compactSlots', () => {
 
   it('preserves searchText during compaction', () => {
     // GIVEN a filled slot with searchText behind an empty slot
-    const slots = [
-      createEmptySlot(),
-      makeSlot({ teamId: 't1', searchText: 'Duke', bidAmount: 10 }),
-    ];
+    const slots = [createEmptySlot(), makeSlot({ teamId: 't1', searchText: 'Duke', bidAmount: 10 })];
 
     // WHEN compacting
     const result = compactSlots(slots);
@@ -555,10 +543,7 @@ describe('deriveUsedTeamIds', () => {
 
   it('excludes empty teamId strings', () => {
     // GIVEN a mix of filled and empty slots
-    const slots = [
-      makeSlot({ teamId: 't1', bidAmount: 10 }),
-      createEmptySlot(),
-    ];
+    const slots = [makeSlot({ teamId: 't1', bidAmount: 10 }), createEmptySlot()];
 
     // WHEN deriving used team IDs
     const used = deriveUsedTeamIds(slots);
@@ -580,10 +565,7 @@ describe('deriveUsedTeamIds', () => {
 
   it('deduplicates team IDs', () => {
     // GIVEN two slots with the same teamId
-    const slots = [
-      makeSlot({ teamId: 't1', bidAmount: 10 }),
-      makeSlot({ teamId: 't1', bidAmount: 20 }),
-    ];
+    const slots = [makeSlot({ teamId: 't1', bidAmount: 10 }), makeSlot({ teamId: 't1', bidAmount: 20 })];
 
     // WHEN deriving used team IDs
     const used = deriveUsedTeamIds(slots);

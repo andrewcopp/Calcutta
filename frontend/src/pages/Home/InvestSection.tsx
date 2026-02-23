@@ -1,19 +1,5 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {
-  darkTooltipContentStyle,
-  darkTooltipLabelStyle,
-  darkTooltipItemStyle,
-  darkBarCursor,
-} from './chartTheme';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { darkTooltipContentStyle, darkTooltipLabelStyle, darkTooltipItemStyle, darkBarCursor } from './chartTheme';
 
 const investData = [
   { label: 'Favorite', credits: 40, fill: '#2563EB' },
@@ -43,8 +29,15 @@ export function InvestSection({ revealClass }: InvestSectionProps) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={investData} margin={{ top: 8, right: 20, left: 0, bottom: 10 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.12)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }} axisLine={{ stroke: 'rgba(255,255,255,0.25)' }} />
-                <YAxis tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }} axisLine={{ stroke: 'rgba(255,255,255,0.25)' }} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.25)' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.75)' }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.25)' }}
+                />
                 <Tooltip
                   formatter={(value: number) => [`${value} credits`, 'Investment']}
                   contentStyle={darkTooltipContentStyle}

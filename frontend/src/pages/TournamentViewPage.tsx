@@ -86,12 +86,7 @@ export function TournamentViewPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Tournaments', href: '/admin/tournaments' },
-          { label: tournament.name },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Tournaments', href: '/admin/tournaments' }, { label: tournament.name }]} />
       <PageHeader
         title={tournament.name}
         subtitle={`${tournament.rounds} rounds • ${tournament.startingAt ? `Starts ${formatDate(tournament.startingAt, true)}` : 'No start time set'}`}
@@ -109,7 +104,7 @@ export function TournamentViewPage() {
 
       <Card>
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">Start Time</span>
+          <span className="text-sm font-medium text-foreground">Start Time</span>
           {editingStartTime ? (
             <>
               <Input
@@ -126,17 +121,13 @@ export function TournamentViewPage() {
               >
                 Save
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditingStartTime(false)}
-              >
+              <Button size="sm" variant="outline" onClick={() => setEditingStartTime(false)}>
                 Cancel
               </Button>
             </>
           ) : (
             <>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {tournament.startingAt ? formatDate(tournament.startingAt, true) : 'Not set'}
               </span>
               <Button
@@ -171,17 +162,15 @@ export function TournamentViewPage() {
           </ul>
           <div className="mt-2">
             <Link to={`/admin/tournaments/${id}/teams/setup`}>
-              <Button size="sm" variant="outline">Setup Teams</Button>
+              <Button size="sm" variant="outline">
+                Setup Teams
+              </Button>
             </Link>
           </div>
         </Alert>
       )}
 
-      {bracketError && (
-        <Alert variant="error">
-          {bracketError}
-        </Alert>
-      )}
+      {bracketError && <Alert variant="error">{bracketError}</Alert>}
 
       {bracketLoading && <LoadingState label="Loading bracket..." />}
 
@@ -198,10 +187,10 @@ export function TournamentViewPage() {
             if (games.length === 0) return null;
 
             return (
-              <Card key={round} className="bg-gray-50">
-                <h2 className="text-2xl font-bold mb-4 text-gray-800">
+              <Card key={round} className="bg-accent">
+                <h2 className="text-2xl font-bold mb-4 text-foreground">
                   {ROUND_LABELS[round]}
-                  <span className="ml-3 text-sm font-normal text-gray-500">
+                  <span className="ml-3 text-sm font-normal text-muted-foreground">
                     ({games.length} {games.length === 1 ? 'game' : 'games'})
                   </span>
                 </h2>

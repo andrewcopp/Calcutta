@@ -56,27 +56,41 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
     <>
       <Card className="mt-8 mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Moderators</h3>
-          <Button size="sm" onClick={() => { setShowAddModal(true); setModError(null); }}>
+          <h3 className="text-lg font-semibold text-foreground">Moderators</h3>
+          <Button
+            size="sm"
+            onClick={() => {
+              setShowAddModal(true);
+              setModError(null);
+            }}
+          >
             Add Moderator
           </Button>
         </div>
 
-        {modError && !showAddModal && <Alert variant="error" className="mb-4">{modError}</Alert>}
+        {modError && !showAddModal && (
+          <Alert variant="error" className="mb-4">
+            {modError}
+          </Alert>
+        )}
 
         {moderatorsQuery.isLoading ? (
           <LoadingState label="Loading moderators..." />
         ) : moderatorsQuery.isError ? (
           <Alert variant="error">
             Failed to load moderators.
-            <Button size="sm" className="ml-2" onClick={() => moderatorsQuery.refetch()}>Retry</Button>
+            <Button size="sm" className="ml-2" onClick={() => moderatorsQuery.refetch()}>
+              Retry
+            </Button>
           </Alert>
         ) : (moderatorsQuery.data ?? []).length === 0 ? (
-          <p className="text-gray-500 text-sm">No moderators have been added yet. Moderators can enter game results on your behalf.</p>
+          <p className="text-muted-foreground text-sm">
+            No moderators have been added yet. Moderators can enter game results on your behalf.
+          </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-gray-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th className="pb-2 font-medium">Name</th>
                 <th className="pb-2 font-medium">Email</th>
                 <th className="pb-2 font-medium text-right">Actions</th>
@@ -85,8 +99,10 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
             <tbody>
               {(moderatorsQuery.data ?? []).map((mod: TournamentModerator) => (
                 <tr key={mod.id} className="border-b border-gray-100 last:border-0">
-                  <td className="py-2">{mod.firstName} {mod.lastName}</td>
-                  <td className="py-2 text-gray-600">{mod.email}</td>
+                  <td className="py-2">
+                    {mod.firstName} {mod.lastName}
+                  </td>
+                  <td className="py-2 text-muted-foreground">{mod.email}</td>
                   <td className="py-2 text-right">
                     <Button
                       size="sm"
@@ -104,10 +120,29 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
         )}
       </Card>
 
-      <Modal open={showAddModal} onClose={() => { setShowAddModal(false); setAddEmail(''); setModError(null); }} title="Add Moderator">
-        <p className="text-sm text-gray-600 mb-4">Enter the email address of the user you want to add as a moderator.</p>
-        {modError && <Alert variant="error" className="mb-4">{modError}</Alert>}
-        <form onSubmit={(e) => { e.preventDefault(); if (addEmail.trim()) grantMutation.mutate(addEmail.trim()); }}>
+      <Modal
+        open={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setAddEmail('');
+          setModError(null);
+        }}
+        title="Add Moderator"
+      >
+        <p className="text-sm text-muted-foreground mb-4">
+          Enter the email address of the user you want to add as a moderator.
+        </p>
+        {modError && (
+          <Alert variant="error" className="mb-4">
+            {modError}
+          </Alert>
+        )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (addEmail.trim()) grantMutation.mutate(addEmail.trim());
+          }}
+        >
           <Input
             type="email"
             placeholder="user@example.com"
@@ -116,7 +151,15 @@ export function ModeratorsSection({ tournamentId }: ModeratorsSectionProps) {
             required
           />
           <ModalActions>
-            <Button variant="secondary" type="button" onClick={() => { setShowAddModal(false); setAddEmail(''); setModError(null); }}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => {
+                setShowAddModal(false);
+                setAddEmail('');
+                setModError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={grantMutation.isPending || !addEmail.trim()}>

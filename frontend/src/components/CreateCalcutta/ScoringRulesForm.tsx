@@ -27,16 +27,11 @@ export function ScoringRulesForm({ scoringRules, onPointsChange }: ScoringRulesF
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-3">
-        Scoring Rules
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-3">Scoring Rules</label>
       <div className="space-y-3">
         {scoringRules.map((rule) => (
           <div key={rule.winIndex} className="flex items-center gap-3">
-            <label
-              htmlFor={`scoring-${rule.winIndex}`}
-              className="text-sm text-gray-600 w-44 shrink-0"
-            >
+            <label htmlFor={`scoring-${rule.winIndex}`} className="text-sm text-gray-600 w-44 shrink-0">
               {WIN_INDEX_LABELS[rule.winIndex] ?? `Win ${rule.winIndex}`}
             </label>
             <Input

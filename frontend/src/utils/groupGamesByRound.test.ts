@@ -52,9 +52,7 @@ describe('groupGamesByRound', () => {
 
   it('includes all round keys even when no games match', () => {
     // GIVEN games only in round_of_64
-    const games: BracketGame[] = [
-      makeGame({ round: 'round_of_64', sortOrder: 1 }),
-    ];
+    const games: BracketGame[] = [makeGame({ round: 'round_of_64', sortOrder: 1 })];
 
     // WHEN grouping by round
     const result = groupGamesByRound(games);
@@ -67,9 +65,7 @@ describe('groupGamesByRound', () => {
 
   it('handles a single game', () => {
     // GIVEN a single championship game
-    const games: BracketGame[] = [
-      makeGame({ round: 'championship', sortOrder: 1 }),
-    ];
+    const games: BracketGame[] = [makeGame({ round: 'championship', sortOrder: 1 })];
 
     // WHEN grouping by round
     const result = groupGamesByRound(games);
@@ -116,9 +112,7 @@ describe('groupGamesByRound', () => {
 
   it('handles games in every round simultaneously', () => {
     // GIVEN one game in each round
-    const games: BracketGame[] = ROUND_ORDER.map((round, index) =>
-      makeGame({ round, sortOrder: index + 1 }),
-    );
+    const games: BracketGame[] = ROUND_ORDER.map((round, index) => makeGame({ round, sortOrder: index + 1 }));
 
     // WHEN grouping by round
     const result = groupGamesByRound(games);

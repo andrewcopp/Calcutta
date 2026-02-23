@@ -25,9 +25,8 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
   const hasEntries = entry.nCalcuttasWithEntries > 0;
   const hasEvaluations = entry.nCalcuttasWithEvaluations > 0;
 
-  const coverageText = totalCalcuttas > 0
-    ? `${entry.nCalcuttasWithEvaluations}/${totalCalcuttas}`
-    : `${entry.nCalcuttasWithEvaluations}`;
+  const coverageText =
+    totalCalcuttas > 0 ? `${entry.nCalcuttasWithEvaluations}/${totalCalcuttas}` : `${entry.nCalcuttasWithEvaluations}`;
 
   return (
     <div
@@ -57,7 +56,11 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
 
         {/* Progress bar - hidden on mobile */}
         <div className="hidden md:block flex-shrink-0 w-48">
-          <PipelineProgressBar hasPredictions={hasPredictions} hasEntries={hasEntries} hasEvaluations={hasEvaluations} />
+          <PipelineProgressBar
+            hasPredictions={hasPredictions}
+            hasEntries={hasEntries}
+            hasEvaluations={hasEvaluations}
+          />
         </div>
 
         {/* Coverage - hidden on mobile */}
@@ -69,9 +72,7 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
         {/* P(Top 1) - always visible, primary metric */}
         <div className="flex-shrink-0 w-20 text-center">
           <p className="text-xs text-gray-500">P(Top 1)</p>
-          <p className={cn('text-lg font-bold', getTop1ColorClass(entry.avgPTop1))}>
-            {formatPct(entry.avgPTop1)}
-          </p>
+          <p className={cn('text-lg font-bold', getTop1ColorClass(entry.avgPTop1))}>{formatPct(entry.avgPTop1)}</p>
         </div>
 
         {/* Avg Payout - hidden on mobile */}
@@ -92,7 +93,11 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
       {/* Mobile: metrics row below */}
       <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 md:hidden">
         <div className="flex-1">
-          <PipelineProgressBar hasPredictions={hasPredictions} hasEntries={hasEntries} hasEvaluations={hasEvaluations} />
+          <PipelineProgressBar
+            hasPredictions={hasPredictions}
+            hasEntries={hasEntries}
+            hasEvaluations={hasEvaluations}
+          />
         </div>
         <div className="text-center">
           <p className="text-xs text-gray-500">Payout</p>

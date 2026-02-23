@@ -30,18 +30,28 @@ interface EntryRow {
   seed: number;
   region: string;
   predPerformance: number; // naivePoints (budget-normalized expected value, same as Rational)
-  predInvestment: number;  // predictedBidPoints from predictions
-  ourInvestment: number;   // bidPoints from bids
-  predRoi: number;         // predPerformance / predInvestment
-  adjRoi: number;          // predPerformance / (predInvestment + ourInvestment)
+  predInvestment: number; // predictedBidPoints from predictions
+  ourInvestment: number; // bidPoints from bids
+  predRoi: number; // predPerformance / predInvestment
+  adjRoi: number; // predPerformance / (predInvestment + ourInvestment)
 }
 
-export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnlyInvested, onShowOnlyInvestedChange, optimizerKind, optimizerParams }: EntryTabProps) {
+export function EntryTab({
+  bids,
+  predictions,
+  sortKey,
+  sortDir,
+  onSort,
+  showOnlyInvested,
+  onShowOnlyInvestedChange,
+  optimizerKind,
+  optimizerParams,
+}: EntryTabProps) {
   // Join bids with predictions by teamId
   const rows = useMemo((): EntryRow[] => {
-    const predByTeam = new Map(predictions.map(p => [p.teamId, p]));
+    const predByTeam = new Map(predictions.map((p) => [p.teamId, p]));
 
-    return bids.map(bid => {
+    return bids.map((bid) => {
       const pred = predByTeam.get(bid.teamId);
       // Use expectedPoints from predictions as predPerformance (actual expected tournament points)
       const predPerf = pred?.expectedPoints ?? 0;
@@ -49,7 +59,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
       const ourInv = bid.bidPoints;
 
       const predRoi = predInv > 0 ? predPerf / predInv : 0;
-      const adjRoi = (predInv + ourInv) > 0 ? predPerf / (predInv + ourInv) : 0;
+      const adjRoi = predInv + ourInv > 0 ? predPerf / (predInv + ourInv) : 0;
 
       return {
         teamId: bid.teamId,
@@ -97,7 +107,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
   }, [rows, sortKey, sortDir]);
 
   // Filter if needed
-  const displayRows = showOnlyInvested ? sortedRows.filter(r => r.ourInvestment > 0) : sortedRows;
+  const displayRows = showOnlyInvested ? sortedRows.filter((r) => r.ourInvestment > 0) : sortedRows;
 
   const SortHeader = ({ label, sortKeyValue }: { label: string; sortKeyValue: BidSortKey }) => (
     <button
@@ -105,7 +115,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
       onClick={() => onSort(sortKeyValue)}
       className={cn(
         'flex items-center gap-1 text-xs font-medium uppercase tracking-wider',
-        sortKey === sortKeyValue ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+        sortKey === sortKeyValue ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
       )}
     >
       {label}
@@ -114,16 +124,18 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
   );
 
   // Summary stats
-  const investedRows = rows.filter(r => r.ourInvestment > 0);
+  const investedRows = rows.filter((r) => r.ourInvestment > 0);
   const totalOurInvestment = rows.reduce((sum, r) => sum + r.ourInvestment, 0);
 
   // Weighted average ROI (by our investment)
-  const weightedPredRoi = investedRows.length > 0
-    ? investedRows.reduce((sum, r) => sum + r.predRoi * r.ourInvestment, 0) / totalOurInvestment
-    : 0;
-  const weightedAdjRoi = investedRows.length > 0
-    ? investedRows.reduce((sum, r) => sum + r.adjRoi * r.ourInvestment, 0) / totalOurInvestment
-    : 0;
+  const weightedPredRoi =
+    investedRows.length > 0
+      ? investedRows.reduce((sum, r) => sum + r.predRoi * r.ourInvestment, 0) / totalOurInvestment
+      : 0;
+  const weightedAdjRoi =
+    investedRows.length > 0
+      ? investedRows.reduce((sum, r) => sum + r.adjRoi * r.ourInvestment, 0) / totalOurInvestment
+      : 0;
 
   // Top ROI teams we invested in
   const topRoiInvested = [...investedRows].sort((a, b) => b.adjRoi - a.adjRoi).slice(0, 3);
@@ -146,17 +158,17 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Optimized Entry</h2>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={showOnlyInvested}
               onChange={(e) => onShowOnlyInvestedChange(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-border"
             />
             Show only invested ({investedRows.length} of {rows.length})
           </label>
         </div>
-        <p className="text-sm text-gray-600 mb-3">
+        <p className="text-sm text-muted-foreground mb-3">
           Our optimized bid allocation based on predicted performance and market behavior.
           <strong className="ml-2">Pred Perf</strong> = expected tournament points (same as Rational).
           <strong className="ml-2">Pred Inv</strong> = predicted market bid.
@@ -169,7 +181,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-accent border-b border-border">
                 <tr>
                   <th className="px-3 py-2 text-left">
                     <SortHeader label="Team" sortKeyValue="team" />
@@ -177,7 +189,7 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
                   <th className="px-3 py-2 text-center">
                     <SortHeader label="Seed" sortKeyValue="seed" />
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Region</th>
                   <th className="px-3 py-2 text-right">
                     <SortHeader label="Pred Perf" sortKeyValue="pred_perf" />
                   </th>
@@ -197,33 +209,27 @@ export function EntryTab({ bids, predictions, sortKey, sortDir, onSort, showOnly
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {displayRows.map((row) => (
-                  <tr
-                    key={row.teamId}
-                    className={cn(
-                      'hover:bg-gray-50',
-                      row.ourInvestment > 0 ? 'bg-blue-50' : ''
-                    )}
-                  >
-                    <td className="px-3 py-2 text-sm font-medium text-gray-900">{row.schoolName}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700 text-center">{row.seed}</td>
-                    <td className="px-3 py-2 text-sm text-gray-500">{row.region}</td>
-                    <td className="px-3 py-2 text-sm text-gray-900 text-right tabular-nums">
+                  <tr key={row.teamId} className={cn('hover:bg-accent', row.ourInvestment > 0 ? 'bg-primary/10' : '')}>
+                    <td className="px-3 py-2 text-sm font-medium text-foreground">{row.schoolName}</td>
+                    <td className="px-3 py-2 text-sm text-foreground text-center">{row.seed}</td>
+                    <td className="px-3 py-2 text-sm text-muted-foreground">{row.region}</td>
+                    <td className="px-3 py-2 text-sm text-foreground text-right tabular-nums">
                       {row.predPerformance.toFixed(0)}
                     </td>
-                    <td className="px-3 py-2 text-sm text-gray-900 text-right tabular-nums">
-                      {row.predInvestment}
-                    </td>
+                    <td className="px-3 py-2 text-sm text-foreground text-right tabular-nums">{row.predInvestment}</td>
                     <td className="px-3 py-2 text-sm text-right font-medium tabular-nums">
                       {row.ourInvestment > 0 ? (
-                        <span className="text-blue-700">{row.ourInvestment}</span>
+                        <span className="text-primary">{row.ourInvestment}</span>
                       ) : (
-                        <span className="text-gray-400">0</span>
+                        <span className="text-muted-foreground/60">0</span>
                       )}
                     </td>
                     <td className={cn('px-3 py-2 text-sm text-right tabular-nums', getRoiColor(row.predRoi))}>
                       {formatRoi(row.predRoi)}
                     </td>
-                    <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getRoiColor(row.adjRoi))}>
+                    <td
+                      className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getRoiColor(row.adjRoi))}
+                    >
                       {formatRoi(row.adjRoi)}
                     </td>
                   </tr>

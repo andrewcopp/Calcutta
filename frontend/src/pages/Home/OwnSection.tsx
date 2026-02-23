@@ -1,16 +1,6 @@
 import { useMemo } from 'react';
-import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
-import {
-  darkTooltipContentStyle,
-  darkTooltipLabelStyle,
-  darkTooltipItemStyle,
-} from './chartTheme';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { darkTooltipContentStyle, darkTooltipLabelStyle, darkTooltipItemStyle } from './chartTheme';
 
 interface OwnershipScenario {
   key: string;
@@ -67,10 +57,7 @@ interface OwnSectionProps {
 }
 
 export function OwnSection({ prefersReducedMotion, revealClass }: OwnSectionProps) {
-  const duplicatedScenarios = useMemo(
-    () => [...ownershipScenarios, ...ownershipScenarios],
-    [],
-  );
+  const duplicatedScenarios = useMemo(() => [...ownershipScenarios, ...ownershipScenarios], []);
 
   return (
     <section id="own" className="py-20 sm:py-28">

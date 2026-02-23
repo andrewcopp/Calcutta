@@ -14,48 +14,46 @@ export function OptimizerConfigCard({ optimizerKind, optimizerParams }: Optimize
   if (!optimizerKind && budgetPoints == null) return null;
 
   return (
-    <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-      <div className="text-xs text-gray-500 uppercase mb-2">Optimizer Configuration</div>
+    <div className="bg-accent rounded-lg border border-border p-3">
+      <div className="text-xs text-muted-foreground uppercase mb-2">Optimizer Configuration</div>
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
         {optimizerKind && (
           <div>
-            <span className="text-gray-500">Optimizer:</span>{' '}
+            <span className="text-muted-foreground">Optimizer:</span>{' '}
             <span className="font-medium">{optimizerKind}</span>
           </div>
         )}
         {budgetPoints != null && (
           <div>
-            <span className="text-gray-500">Budget:</span>{' '}
+            <span className="text-muted-foreground">Budget:</span>{' '}
             <span className="font-medium">{budgetPoints} credits</span>
           </div>
         )}
         {maxPerTeam != null && (
           <div>
-            <span className="text-gray-500">Max Per Team:</span>{' '}
+            <span className="text-muted-foreground">Max Per Team:</span>{' '}
             <span className="font-medium">{maxPerTeam} credits</span>
           </div>
         )}
         {minTeams != null && (
           <div>
-            <span className="text-gray-500">Min Teams:</span>{' '}
-            <span className="font-medium">{minTeams}</span>
+            <span className="text-muted-foreground">Min Teams:</span> <span className="font-medium">{minTeams}</span>
           </div>
         )}
         {maxTeams != null && (
           <div>
-            <span className="text-gray-500">Max Teams:</span>{' '}
-            <span className="font-medium">{maxTeams}</span>
+            <span className="text-muted-foreground">Max Teams:</span> <span className="font-medium">{maxTeams}</span>
           </div>
         )}
         {minBid != null && (
           <div>
-            <span className="text-gray-500">Min Bid:</span>{' '}
+            <span className="text-muted-foreground">Min Bid:</span>{' '}
             <span className="font-medium">{minBid} credits</span>
           </div>
         )}
         {edgeMultiplier != null && (
           <div>
-            <span className="text-gray-500">Edge Multiplier:</span>{' '}
+            <span className="text-muted-foreground">Edge Multiplier:</span>{' '}
             <span className="font-medium">{edgeMultiplier}x</span>
           </div>
         )}

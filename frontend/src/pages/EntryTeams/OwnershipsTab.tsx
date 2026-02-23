@@ -42,16 +42,16 @@ export function OwnershipsTab({
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-4">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             checked={ownershipShowAllTeams}
             onChange={(e) => setOwnershipShowAllTeams(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-border"
           />
           Show All Teams
         </label>
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-muted-foreground">
           Sort by
           <Select
             className="ml-2 w-auto"
@@ -66,7 +66,7 @@ export function OwnershipsTab({
       </div>
 
       {ownershipLoading ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <LoadingState label="Loading ownerships…" />
         </div>
       ) : (
@@ -112,20 +112,24 @@ export function OwnershipsTab({
             }
 
             return (
-              <div key={team.id} className="bg-white rounded-lg shadow p-4 flex flex-col">
+              <div key={team.id} className="bg-card rounded-lg shadow p-4 flex flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold leading-snug truncate">{team.team?.school?.name || 'Unknown School'}</h2>
-                    <div className="text-xs text-gray-500">{team.team?.region ?? '?'} - {team.team?.seed ?? '?'} seed</div>
-                    <div className="mt-1 text-sm text-gray-600">
+                    <h2 className="text-lg font-semibold leading-snug truncate">
+                      {team.team?.school?.name || 'Unknown School'}
+                    </h2>
+                    <div className="text-xs text-muted-foreground">
+                      {team.team?.region ?? '?'} - {team.team?.seed ?? '?'} seed
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
                       Investor Rank: {investorRanking.rank} / {investorRanking.total}
                     </div>
                   </div>
                   <div className="text-right">
                     {ownershipPct !== undefined && (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         Ownership
-                        <div className="text-base font-semibold text-gray-900">{ownershipPct.toFixed(2)}%</div>
+                        <div className="text-base font-semibold text-foreground">{ownershipPct.toFixed(2)}%</div>
                       </div>
                     )}
                   </div>
@@ -136,15 +140,17 @@ export function OwnershipsTab({
                 </div>
 
                 <div className="mt-4">
-                  <div className="text-sm font-medium text-gray-900">Top Shareholders</div>
+                  <div className="text-sm font-medium text-foreground">Top Shareholders</div>
                   <div className="mt-2 space-y-2">
                     {topOwners.map((owner, idx) => (
                       <div key={idx} className="flex items-center justify-between gap-3 text-sm">
-                        <div className="min-w-0 truncate text-gray-700 flex items-center gap-2">
-                          <div className="w-4 shrink-0 text-gray-500">{idx + 1}</div>
+                        <div className="min-w-0 truncate text-foreground flex items-center gap-2">
+                          <div className="w-4 shrink-0 text-muted-foreground">{idx + 1}</div>
                           <div className="truncate">{owner.name}</div>
                         </div>
-                        <div className="font-medium text-gray-900">{owner.pct === null ? '--' : `${owner.pct.toFixed(2)}%`}</div>
+                        <div className="font-medium text-foreground">
+                          {owner.pct === null ? '--' : `${owner.pct.toFixed(2)}%`}
+                        </div>
                       </div>
                     ))}
                   </div>

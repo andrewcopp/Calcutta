@@ -29,9 +29,7 @@ export type TeamSortKey = 'seed' | 'region' | 'team';
  *
  * Undefined seeds sort last (treated as 999).
  */
-export function createTeamSortComparator<T extends TeamSortRow>(
-  sortKey: TeamSortKey,
-): (a: T, b: T) => number {
+export function createTeamSortComparator<T extends TeamSortRow>(sortKey: TeamSortKey): (a: T, b: T) => number {
   const seedVal = (seed: number | undefined) => seed ?? 999;
   const regionVal = (region: string) => region || '';
   const teamVal = (name: string) => name || '';

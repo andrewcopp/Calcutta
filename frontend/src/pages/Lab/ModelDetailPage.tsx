@@ -107,18 +107,14 @@ export function ModelDetailPage() {
   return (
     <PageContainer>
       <Breadcrumb
-        items={[
-          { label: 'Lab', href: '/lab' },
-          { label: 'Models', href: '/lab?tab=models' },
-          { label: model.name },
-        ]}
+        items={[{ label: 'Lab', href: '/lab' }, { label: 'Models', href: '/lab?tab=models' }, { label: model.name }]}
       />
 
       <PageHeader title={model.name} subtitle={`Kind: ${model.kind}`} />
 
       {model.notes && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="text-xs text-blue-600 uppercase font-semibold mb-1">Hypothesis</div>
+        <div className="bg-primary/10 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="text-xs text-primary uppercase font-semibold mb-1">Hypothesis</div>
           <p className="text-sm text-blue-900">{model.notes}</p>
         </div>
       )}
@@ -127,40 +123,34 @@ export function ModelDetailPage() {
         <h2 className="text-lg font-semibold mb-3">Model Details</h2>
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <dt className="text-gray-500">Kind</dt>
+            <dt className="text-muted-foreground">Kind</dt>
             <dd className="font-medium">{model.kind}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Created</dt>
+            <dt className="text-muted-foreground">Created</dt>
             <dd className="font-medium">{formatDate(model.createdAt)}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Entries</dt>
+            <dt className="text-muted-foreground">Entries</dt>
             <dd className="font-medium">{model.nEntries}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Evaluations</dt>
+            <dt className="text-muted-foreground">Evaluations</dt>
             <dd className="font-medium">{model.nEvaluations}</dd>
           </div>
         </dl>
 
         {model.paramsJson && Object.keys(model.paramsJson).length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowParams(!showParams)}
-            >
+          <div className="mt-4 pt-4 border-t border-border">
+            <Button variant="ghost" size="sm" onClick={() => setShowParams(!showParams)}>
               {showParams ? '\u25BC' : '\u25B6'} Model Parameters ({Object.keys(model.paramsJson).length})
             </Button>
             {showParams && (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-3">
                 {Object.entries(model.paramsJson).map(([key, value]) => (
                   <div key={key}>
-                    <dt className="text-gray-500 font-mono text-xs">{key}</dt>
-                    <dd className="font-medium">
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </dd>
+                    <dt className="text-muted-foreground font-mono text-xs">{key}</dt>
+                    <dd className="font-medium">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
                   </div>
                 ))}
               </dl>
@@ -171,19 +161,22 @@ export function ModelDetailPage() {
 
       {startPipelineMutation.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to start pipeline: {startPipelineMutation.error instanceof Error ? startPipelineMutation.error.message : 'Unknown error'}
+          Failed to start pipeline:{' '}
+          {startPipelineMutation.error instanceof Error ? startPipelineMutation.error.message : 'Unknown error'}
         </Alert>
       )}
 
       {cancelPipelineMutation.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to cancel pipeline: {cancelPipelineMutation.error instanceof Error ? cancelPipelineMutation.error.message : 'Unknown error'}
+          Failed to cancel pipeline:{' '}
+          {cancelPipelineMutation.error instanceof Error ? cancelPipelineMutation.error.message : 'Unknown error'}
         </Alert>
       )}
 
       {rerunAllMutation.isError && (
         <Alert variant="error" className="mb-4">
-          Failed to re-run pipeline: {rerunAllMutation.error instanceof Error ? rerunAllMutation.error.message : 'Unknown error'}
+          Failed to re-run pipeline:{' '}
+          {rerunAllMutation.error instanceof Error ? rerunAllMutation.error.message : 'Unknown error'}
         </Alert>
       )}
 
@@ -202,7 +195,7 @@ export function ModelDetailPage() {
       {performanceData.length > 1 && (
         <Card className="mb-6">
           <h2 className="text-lg font-semibold mb-3">Cross-Calcutta Performance</h2>
-          <p className="text-sm text-gray-500 mb-4">Mean payout by calcutta year. 1.0x = break-even.</p>
+          <p className="text-sm text-muted-foreground mb-4">Mean payout by calcutta year. 1.0x = break-even.</p>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={performanceData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -212,11 +205,7 @@ export function ModelDetailPage() {
                 formatter={(value: number) => [`${value.toFixed(2)}x`, 'Payout']}
                 labelFormatter={(label: string) => `Year: ${label}`}
               />
-              <Bar
-                dataKey="payout"
-                fill="#3b82f6"
-                radius={[4, 4, 0, 0]}
-              />
+              <Bar dataKey="payout" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

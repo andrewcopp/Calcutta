@@ -19,9 +19,7 @@ export function bracketOrder(size: number): number[] {
 
   while (currentSize < size / 2) {
     currentSize *= 2;
-    anchors = anchors.flatMap((s, i) =>
-      i === 0 ? [s, currentSize + 1 - s] : [currentSize + 1 - s, s],
-    );
+    anchors = anchors.flatMap((s, i) => (i === 0 ? [s, currentSize + 1 - s] : [currentSize + 1 - s, s]));
   }
 
   // Phase 2: Expand each anchor to a matchup pair [s, size+1-s].

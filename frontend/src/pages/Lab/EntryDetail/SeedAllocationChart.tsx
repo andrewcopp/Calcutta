@@ -17,10 +17,8 @@ export function SeedAllocationChart({ investedRows, totalOurInvestment }: SeedAl
       { name: '13-16', seeds: [13, 14, 15, 16], color: '#dbeafe' },
     ];
     return groups.map(({ name, seeds, color }) => {
-      const amount = investedRows
-        .filter((r) => seeds.includes(r.seed))
-        .reduce((sum, r) => sum + r.ourInvestment, 0);
-      return { name, amount, color, pct: totalOurInvestment > 0 ? (amount / totalOurInvestment * 100) : 0 };
+      const amount = investedRows.filter((r) => seeds.includes(r.seed)).reduce((sum, r) => sum + r.ourInvestment, 0);
+      return { name, amount, color, pct: totalOurInvestment > 0 ? (amount / totalOurInvestment) * 100 : 0 };
     });
   }, [investedRows, totalOurInvestment]);
 
@@ -29,15 +27,16 @@ export function SeedAllocationChart({ investedRows, totalOurInvestment }: SeedAl
   return (
     <Card>
       <h2 className="text-lg font-semibold mb-3">Seed Allocation</h2>
-      <p className="text-sm text-gray-500 mb-3">Budget distribution across seed groups.</p>
+      <p className="text-sm text-muted-foreground mb-3">Budget distribution across seed groups.</p>
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={seedAllocationData} layout="vertical">
           <XAxis type="number" tickFormatter={(v: number) => `${v} credits`} fontSize={12} />
           <YAxis type="category" dataKey="name" width={50} fontSize={12} />
           <Tooltip
-            formatter={(value: number, _name: string, props: { payload?: { pct?: number } }) =>
-              [`${value} credits (${props.payload?.pct?.toFixed(0) ?? 0}%)`, 'Investment']
-            }
+            formatter={(value: number, _name: string, props: { payload?: { pct?: number } }) => [
+              `${value} credits (${props.payload?.pct?.toFixed(0) ?? 0}%)`,
+              'Investment',
+            ]}
           />
           <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
             {seedAllocationData.map((entry) => (

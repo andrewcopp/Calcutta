@@ -180,7 +180,7 @@ export function useBidding() {
         return next;
       });
     },
-    [teams]
+    [teams],
   );
 
   const handleSlotClear = useCallback((slotIndex: number) => {

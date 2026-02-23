@@ -45,8 +45,10 @@ export function TournamentCreatePage() {
   const isAddNewCompetition = competition === '__new__';
   const isAddNewYear = year === '__new__';
 
-  const resolvedCompetition = isAddNewCompetition ? newCompetition.trim() : competitions.find(c => c.id === competition)?.name || '';
-  const resolvedYear = isAddNewYear ? parseInt(newYear) : seasons.find(s => s.id === year)?.year || 0;
+  const resolvedCompetition = isAddNewCompetition
+    ? newCompetition.trim()
+    : competitions.find((c) => c.id === competition)?.name || '';
+  const resolvedYear = isAddNewYear ? parseInt(newYear) : seasons.find((s) => s.id === year)?.year || 0;
 
   const derivedName = resolvedCompetition && resolvedYear > 0 ? `${resolvedCompetition} (${resolvedYear})` : '';
 
@@ -95,12 +97,7 @@ export function TournamentCreatePage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Tournaments', href: '/admin/tournaments' },
-          { label: 'Create' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Tournaments', href: '/admin/tournaments' }, { label: 'Create' }]} />
       <PageHeader
         title="Create New Tournament"
         actions={
@@ -124,9 +121,7 @@ export function TournamentCreatePage() {
             <h2 className="text-xl font-semibold mb-4">Tournament Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Competition
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1">Competition</label>
                 <Select
                   value={competition}
                   onChange={(e) => {
@@ -135,8 +130,10 @@ export function TournamentCreatePage() {
                   }}
                 >
                   <option value="">Select a competition</option>
-                  {competitions.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  {competitions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
                   <option value="__new__">+ Add new...</option>
                 </Select>
@@ -151,9 +148,7 @@ export function TournamentCreatePage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Year
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1">Year</label>
                 <Select
                   value={year}
                   onChange={(e) => {
@@ -162,8 +157,10 @@ export function TournamentCreatePage() {
                   }}
                 >
                   <option value="">Select a year</option>
-                  {seasons.map(s => (
-                    <option key={s.id} value={s.id}>{s.year}</option>
+                  {seasons.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.year}
+                    </option>
                   ))}
                   <option value="__new__">+ Add new...</option>
                 </Select>
@@ -179,9 +176,7 @@ export function TournamentCreatePage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Rounds
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1">Rounds</label>
                 <Input
                   type="number"
                   value={rounds}
@@ -192,24 +187,18 @@ export function TournamentCreatePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Time
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={startingAt}
-                  onChange={(e) => setStartingAt(e.target.value)}
-                />
-                <p className="mt-1 text-xs text-gray-500">
+                <label className="block text-sm font-medium text-foreground mb-1">Start Time</label>
+                <Input type="datetime-local" value={startingAt} onChange={(e) => setStartingAt(e.target.value)} />
+                <p className="mt-1 text-xs text-muted-foreground">
                   Used to auto-lock bidding when the tournament starts
                 </p>
               </div>
             </div>
 
             {derivedName && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm text-gray-600">Tournament name: </span>
-                <span className="text-sm font-semibold text-blue-700">{derivedName}</span>
+              <div className="mt-4 p-3 bg-primary/10 rounded-lg">
+                <span className="text-sm text-muted-foreground">Tournament name: </span>
+                <span className="text-sm font-semibold text-primary">{derivedName}</span>
               </div>
             )}
           </Card>
@@ -217,20 +206,20 @@ export function TournamentCreatePage() {
           <Card>
             <h2 className="text-xl font-semibold mb-4">Region Names</h2>
             <div className="grid grid-cols-2 gap-4">
-              {([
-                ['topLeft', 'Top Left'],
-                ['bottomLeft', 'Bottom Left'],
-                ['topRight', 'Top Right'],
-                ['bottomRight', 'Bottom Right'],
-              ] as const).map(([key, label]) => (
+              {(
+                [
+                  ['topLeft', 'Top Left'],
+                  ['bottomLeft', 'Bottom Left'],
+                  ['topRight', 'Top Right'],
+                  ['bottomRight', 'Bottom Right'],
+                ] as const
+              ).map(([key, label]) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {label}
-                  </label>
+                  <label className="block text-sm font-medium text-foreground mb-1">{label}</label>
                   <Input
                     type="text"
                     value={regionNames[key]}
-                    onChange={(e) => setRegionNames(prev => ({ ...prev, [key]: e.target.value }))}
+                    onChange={(e) => setRegionNames((prev) => ({ ...prev, [key]: e.target.value }))}
                   />
                 </div>
               ))}

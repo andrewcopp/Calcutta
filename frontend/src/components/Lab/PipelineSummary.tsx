@@ -46,12 +46,7 @@ export function PipelineSummary({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Pipeline Progress</h2>
         {isPipelineRunning ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={onCancelPipeline}
-            disabled={isCancelling}
-          >
+          <Button size="sm" variant="secondary" onClick={onCancelPipeline} disabled={isCancelling}>
             {isCancelling ? 'Cancelling...' : 'Cancel Pipeline'}
           </Button>
         ) : (
@@ -78,7 +73,9 @@ export function PipelineSummary({
       <div className="mb-4">
         <div className="flex justify-between text-sm text-gray-600 mb-1">
           <span>Overall Progress</span>
-          <span>{completedCount}/{totalCount} calcuttas evaluated</span>
+          <span>
+            {completedCount}/{totalCount} calcuttas evaluated
+          </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div
@@ -95,27 +92,21 @@ export function PipelineSummary({
           <dt className="text-gray-500">Predictions</dt>
           <dd className="font-medium flex items-center">
             {progress.predictionsCount}/{totalCount}
-            {progress.predictionsCount === totalCount && (
-              <span className="ml-1 text-green-500">&#10003;</span>
-            )}
+            {progress.predictionsCount === totalCount && <span className="ml-1 text-green-500">&#10003;</span>}
           </dd>
         </div>
         <div>
           <dt className="text-gray-500">Entries</dt>
           <dd className="font-medium flex items-center">
             {progress.entriesCount}/{totalCount}
-            {progress.entriesCount === totalCount && (
-              <span className="ml-1 text-green-500">&#10003;</span>
-            )}
+            {progress.entriesCount === totalCount && <span className="ml-1 text-green-500">&#10003;</span>}
           </dd>
         </div>
         <div>
           <dt className="text-gray-500">Evaluations</dt>
           <dd className="font-medium flex items-center">
             {progress.evaluationsCount}/{totalCount}
-            {progress.evaluationsCount === totalCount && (
-              <span className="ml-1 text-green-500">&#10003;</span>
-            )}
+            {progress.evaluationsCount === totalCount && <span className="ml-1 text-green-500">&#10003;</span>}
           </dd>
         </div>
         <div>

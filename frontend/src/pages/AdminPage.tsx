@@ -17,73 +17,57 @@ export function AdminPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {canTournaments && (
-          <Link
-            to="/admin/tournaments"
-            className="block"
-          >
+          <Link to="/admin/tournaments" className="block">
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">Tournaments</h2>
-              <p className="text-gray-600">Manage tournaments, teams, and brackets</p>
+              <p className="text-muted-foreground">Manage tournaments, teams, and brackets</p>
             </Card>
           </Link>
         )}
 
         {canTournaments && (
-          <Link
-            to="/admin/kenpom"
-            className="block"
-          >
+          <Link to="/admin/kenpom" className="block">
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">KenPom Ratings</h2>
-              <p className="text-gray-600">Enter or edit KenPom ratings for tournament teams</p>
+              <p className="text-muted-foreground">Enter or edit KenPom ratings for tournament teams</p>
             </Card>
           </Link>
         )}
 
         {canTournamentImports && (
-          <Link
-            to="/admin/tournament-imports"
-            className="block"
-          >
+          <Link to="/admin/tournament-imports" className="block">
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">Tournament Data</h2>
-              <p className="text-gray-600">Export or import tournament data archives</p>
+              <p className="text-muted-foreground">Export or import tournament data archives</p>
             </Card>
           </Link>
         )}
 
         {canApiKeys && (
-          <Link
-            to="/admin/api-keys"
-            className="block"
-          >
+          <Link to="/admin/api-keys" className="block">
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">API Keys</h2>
-              <p className="text-gray-600">Create, view, and revoke server-to-server API keys</p>
+              <p className="text-muted-foreground">Create, view, and revoke server-to-server API keys</p>
             </Card>
           </Link>
         )}
 
         {canUsers && (
-          <Link
-            to="/admin/users"
-            className="block"
-          >
+          <Link to="/admin/users" className="block">
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">Users</h2>
-              <p className="text-gray-600">View users and their roles/permissions</p>
+              <p className="text-muted-foreground">View users and their roles/permissions</p>
             </Card>
           </Link>
         )}
 
         {canHof && (
-          <Link
-            to="/admin/hall-of-fame"
-            className="block"
-          >
+          <Link to="/admin/hall-of-fame" className="block">
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">Hall of Fame</h2>
-              <p className="text-gray-600">Leaderboards for best teams, investments, and entries across all years</p>
+              <p className="text-muted-foreground">
+                Leaderboards for best teams, investments, and entries across all years
+              </p>
             </Card>
           </Link>
         )}

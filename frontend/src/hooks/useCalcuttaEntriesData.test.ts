@@ -5,10 +5,16 @@ import type {
   CalcuttaEntryTeam,
   CalcuttaPortfolio,
   CalcuttaPortfolioTeam,
-  Calcutta,
 } from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
 import type { CalcuttaEntriesData } from './useCalcuttaEntriesData';
+import {
+  makeEntry,
+  makeEntryTeam,
+  makePortfolio,
+  makePortfolioTeam,
+  makeTournamentTeam,
+  makeDashboard,
+} from '../test/factories';
 
 // ---------------------------------------------------------------------------
 // The hook is a chain of useMemo calls over CalcuttaDashboard.
@@ -159,96 +165,6 @@ function computeCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefined
 }
 
 // ---------------------------------------------------------------------------
-// Test helpers -- factory functions for building fixture data
-// ---------------------------------------------------------------------------
-
-function makeCalcutta(overrides: Partial<Calcutta> = {}): Calcutta {
-  return {
-    id: 'calc-1',
-    name: 'Test Calcutta',
-    tournamentId: 'tourn-1',
-    ownerId: 'owner-1',
-    minTeams: 3,
-    maxTeams: 10,
-    maxBidPoints: 50,
-    budgetPoints: 100,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): CalcuttaEntry {
-  return {
-    name: 'Entry',
-    calcuttaId: 'calc-1',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; entryId: string; teamId: string }): CalcuttaEntryTeam {
-  return {
-    bid: 10,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makePortfolio(overrides: Partial<CalcuttaPortfolio> & { id: string; entryId: string }): CalcuttaPortfolio {
-  return {
-    maximumPoints: 100,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makePortfolioTeam(
-  overrides: Partial<CalcuttaPortfolioTeam> & { id: string; portfolioId: string; teamId: string },
-): CalcuttaPortfolioTeam {
-  return {
-    ownershipPercentage: 1,
-    actualPoints: 0,
-    expectedPoints: 0,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; schoolId: string }): TournamentTeam {
-  return {
-    tournamentId: 'tourn-1',
-    seed: 1,
-    region: 'East',
-    byes: 0,
-    wins: 0,
-    isEliminated: false,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeDashboard(overrides: Partial<CalcuttaDashboard> = {}): CalcuttaDashboard {
-  return {
-    calcutta: makeCalcutta(),
-    biddingOpen: false,
-    totalEntries: 0,
-    entries: [],
-    entryTeams: [],
-    portfolios: [],
-    portfolioTeams: [],
-    schools: [],
-    tournamentTeams: [],
-    ...overrides,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -357,9 +273,7 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       const dashboard = makeDashboard({
         entries: [makeEntry({ id: 'e1', name: 'Alice', totalPoints: 50 })],
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
-        portfolioTeams: [
-          makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', actualPoints: 10 }),
-        ],
+        portfolioTeams: [makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', actualPoints: 10 })],
       });
 
       // WHEN computing entries data
@@ -476,9 +390,27 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       // GIVEN entry teams with bids on seed 1 (10+5) and seed 8 (20)
       const dashboard = makeDashboard({
         entryTeams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 10, team: { id: 't1', schoolId: 's1', seed: 1 } }),
-          makeEntryTeam({ id: 'et2', entryId: 'e2', teamId: 't2', bid: 5, team: { id: 't2', schoolId: 's2', seed: 1 } }),
-          makeEntryTeam({ id: 'et3', entryId: 'e1', teamId: 't3', bid: 20, team: { id: 't3', schoolId: 's3', seed: 8 } }),
+          makeEntryTeam({
+            id: 'et1',
+            entryId: 'e1',
+            teamId: 't1',
+            bid: 10,
+            team: { id: 't1', schoolId: 's1', seed: 1 },
+          }),
+          makeEntryTeam({
+            id: 'et2',
+            entryId: 'e2',
+            teamId: 't2',
+            bid: 5,
+            team: { id: 't2', schoolId: 's2', seed: 1 },
+          }),
+          makeEntryTeam({
+            id: 'et3',
+            entryId: 'e1',
+            teamId: 't3',
+            bid: 20,
+            team: { id: 't3', schoolId: 's3', seed: 8 },
+          }),
         ],
       });
 
@@ -511,7 +443,13 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       // GIVEN an entry team with bid=0
       const dashboard = makeDashboard({
         entryTeams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 0, team: { id: 't1', schoolId: 's1', seed: 1 } }),
+          makeEntryTeam({
+            id: 'et1',
+            entryId: 'e1',
+            teamId: 't1',
+            bid: 0,
+            team: { id: 't1', schoolId: 's1', seed: 1 },
+          }),
         ],
       });
 

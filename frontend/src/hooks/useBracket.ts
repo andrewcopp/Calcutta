@@ -67,8 +67,7 @@ export function useBracket(tournamentId: string | undefined) {
     }
   };
 
-  const validationErrors =
-    validationQuery.data?.valid === false ? validationQuery.data.errors : [];
+  const validationErrors = validationQuery.data?.valid === false ? validationQuery.data.errors : [];
 
   const bracket = bracketQuery.data || null;
   const gamesByRound = bracket ? groupGamesByRound(bracket.games) : null;

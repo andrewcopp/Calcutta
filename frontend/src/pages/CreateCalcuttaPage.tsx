@@ -43,8 +43,22 @@ export function CreateCalcuttaPage() {
   });
 
   const createCalcuttaMutation = useMutation({
-    mutationFn: async (params: { name: string; tournamentId: string; scoringRules: ScoringRule[]; minTeams: number; maxTeams: number; maxBidPoints: number }) => {
-      return calcuttaService.createCalcutta(params.name, params.tournamentId, params.scoringRules, params.minTeams, params.maxTeams, params.maxBidPoints);
+    mutationFn: async (params: {
+      name: string;
+      tournamentId: string;
+      scoringRules: ScoringRule[];
+      minTeams: number;
+      maxTeams: number;
+      maxBidPoints: number;
+    }) => {
+      return calcuttaService.createCalcutta(
+        params.name,
+        params.tournamentId,
+        params.scoringRules,
+        params.minTeams,
+        params.maxTeams,
+        params.maxBidPoints,
+      );
     },
     onSuccess: async () => {
       await Promise.all([
@@ -74,7 +88,7 @@ export function CreateCalcuttaPage() {
     const points = parseInt(value, 10);
     if (isNaN(points) || points < 0) return;
     setScoringRules((prev) =>
-      prev.map((rule) => (rule.winIndex === winIndex ? { ...rule, pointsAwarded: points } : rule))
+      prev.map((rule) => (rule.winIndex === winIndex ? { ...rule, pointsAwarded: points } : rule)),
     );
   };
 
@@ -101,7 +115,8 @@ export function CreateCalcuttaPage() {
   }
 
   if (tournamentsQuery.isError) {
-    const message = tournamentsQuery.error instanceof Error ? tournamentsQuery.error.message : 'Failed to fetch tournaments';
+    const message =
+      tournamentsQuery.error instanceof Error ? tournamentsQuery.error.message : 'Failed to fetch tournaments';
     return (
       <PageContainer>
         <Alert variant="error">{message}</Alert>
@@ -114,12 +129,7 @@ export function CreateCalcuttaPage() {
   return (
     <PageContainer>
       <div className="max-w-2xl mx-auto">
-        <Breadcrumb
-          items={[
-            { label: 'My Pools', href: '/calcuttas' },
-            { label: 'Create' },
-          ]}
-        />
+        <Breadcrumb items={[{ label: 'My Pools', href: '/calcuttas' }, { label: 'Create' }]} />
         <PageHeader
           title="Start a New Pool"
           actions={
@@ -129,13 +139,17 @@ export function CreateCalcuttaPage() {
           }
         />
 
-        {error ? <Alert variant="error" className="mb-4">{error}</Alert> : null}
+        {error ? (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        ) : null}
 
         <Card>
           <form onSubmit={handleCreateCalcutta}>
             <div className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
                   Pool Name
                 </label>
                 <Input
@@ -149,7 +163,7 @@ export function CreateCalcuttaPage() {
               </div>
 
               <div>
-                <label htmlFor="tournament" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="tournament" className="block text-sm font-medium text-foreground mb-1">
                   Tournament
                 </label>
                 <Select
@@ -165,16 +179,14 @@ export function CreateCalcuttaPage() {
                     </option>
                   ))}
                 </Select>
-                <p className="mt-1 text-sm text-gray-500">Select the tournament this pool will be based on</p>
+                <p className="mt-1 text-sm text-muted-foreground">Select the tournament this pool will be based on</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Pool Rules
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-3">Pool Rules</label>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <label htmlFor="minTeams" className="text-sm text-gray-600 w-44 shrink-0">
+                    <label htmlFor="minTeams" className="text-sm text-muted-foreground w-44 shrink-0">
                       Minimum teams per portfolio
                     </label>
                     <Input
@@ -188,7 +200,7 @@ export function CreateCalcuttaPage() {
                     />
                   </div>
                   <div className="flex items-center gap-3">
-                    <label htmlFor="maxTeams" className="text-sm text-gray-600 w-44 shrink-0">
+                    <label htmlFor="maxTeams" className="text-sm text-muted-foreground w-44 shrink-0">
                       Maximum teams per portfolio
                     </label>
                     <Input
@@ -202,7 +214,7 @@ export function CreateCalcuttaPage() {
                     />
                   </div>
                   <div className="flex items-center gap-3">
-                    <label htmlFor="maxBidPoints" className="text-sm text-gray-600 w-44 shrink-0">
+                    <label htmlFor="maxBidPoints" className="text-sm text-muted-foreground w-44 shrink-0">
                       Max credits on a single team
                     </label>
                     <Input
@@ -213,10 +225,10 @@ export function CreateCalcuttaPage() {
                       onChange={(e) => setMaxBidPoints(parseInt(e.target.value, 10) || 0)}
                       className="w-28"
                     />
-                    <span className="text-sm text-gray-500">credits</span>
+                    <span className="text-sm text-muted-foreground">credits</span>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">These rules keep portfolios balanced.</p>
+                <p className="mt-2 text-sm text-muted-foreground">These rules keep portfolios balanced.</p>
               </div>
 
               <ScoringRulesForm scoringRules={scoringRules} onPointsChange={handlePointsChange} />

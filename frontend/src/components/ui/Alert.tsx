@@ -9,10 +9,10 @@ type AlertProps = React.HTMLAttributes<HTMLDivElement> & {
 };
 
 const variantClasses: Record<AlertVariant, string> = {
-  info: 'bg-blue-50 border-blue-200 text-blue-900',
-  success: 'bg-green-50 border-green-200 text-green-900',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-900',
-  error: 'bg-red-100 border-red-400 text-red-700',
+  info: 'bg-info/10 border-info/20 text-info-foreground',
+  success: 'bg-success/10 border-success/20 text-success',
+  warning: 'bg-warning/10 border-warning/20 text-warning',
+  error: 'bg-destructive/10 border-destructive/20 text-destructive',
 };
 
 export function Alert({ className, variant = 'info', ...props }: AlertProps) {

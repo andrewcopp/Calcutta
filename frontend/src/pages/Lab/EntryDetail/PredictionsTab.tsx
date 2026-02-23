@@ -15,17 +15,17 @@ interface PredictionsTabProps {
 }
 
 function getEdgeColor(edge: number): string {
-  if (edge >= 25) return 'bg-green-100';
-  if (edge >= 10) return 'bg-green-50';
-  if (edge <= -25) return 'bg-red-100';
-  if (edge <= -10) return 'bg-red-50';
+  if (edge >= 25) return 'bg-success/10';
+  if (edge >= 10) return 'bg-success/10';
+  if (edge <= -25) return 'bg-destructive/10';
+  if (edge <= -10) return 'bg-destructive/10';
   return '';
 }
 
 function getEdgeTextColor(edge: number): string {
-  if (edge >= 10) return 'text-green-700';
-  if (edge <= -10) return 'text-red-700';
-  return 'text-gray-600';
+  if (edge >= 10) return 'text-success';
+  if (edge <= -10) return 'text-destructive';
+  return 'text-muted-foreground';
 }
 
 function formatEdge(edge: number): string {
@@ -40,7 +40,7 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
       onClick={() => onSort(sortKeyValue)}
       className={cn(
         'flex items-center gap-1 text-xs font-medium uppercase tracking-wider',
-        sortKey === sortKeyValue ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+        sortKey === sortKeyValue ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
       )}
     >
       {label}
@@ -58,25 +58,28 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
 
   // Find biggest edge opportunities (where market might undervalue)
   const sortedByEdge = [...predictions].sort((a, b) => b.edgePercent - a.edgePercent);
-  const topUndervalued = sortedByEdge.filter(p => p.edgePercent > 0).slice(0, 3);
-  const topOvervalued = sortedByEdge.filter(p => p.edgePercent < 0).slice(-3).reverse();
+  const topUndervalued = sortedByEdge.filter((p) => p.edgePercent > 0).slice(0, 3);
+  const topOvervalued = sortedByEdge
+    .filter((p) => p.edgePercent < 0)
+    .slice(-3)
+    .reverse();
 
   return (
     <div className="space-y-4">
       {/* Prediction inputs */}
       {(estimatedParticipants != null || excludedEntryName) && (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-          <div className="text-xs text-gray-500 uppercase mb-2">Prediction Inputs</div>
+        <div className="bg-accent rounded-lg border border-border p-3">
+          <div className="text-xs text-muted-foreground uppercase mb-2">Prediction Inputs</div>
           <div className="flex gap-6 text-sm">
             {estimatedParticipants != null && (
               <div>
-                <span className="text-gray-500">Estimated Participants:</span>{' '}
+                <span className="text-muted-foreground">Estimated Participants:</span>{' '}
                 <span className="font-medium">{estimatedParticipants}</span>
               </div>
             )}
             {excludedEntryName && (
               <div>
-                <span className="text-gray-500">Excluded Entry:</span>{' '}
+                <span className="text-muted-foreground">Excluded Entry:</span>{' '}
                 <span className="font-medium">{excludedEntryName}</span>
               </div>
             )}
@@ -86,12 +89,12 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
-          <div className="text-xs text-gray-500 uppercase">Total Rational Budget</div>
+        <div className="bg-card rounded-lg border border-border p-3">
+          <div className="text-xs text-muted-foreground uppercase">Total Rational Budget</div>
           <div className="text-lg font-semibold">{totalRational.toLocaleString()} credits</div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
-          <div className="text-xs text-gray-500 uppercase">Total Predicted Market</div>
+        <div className="bg-card rounded-lg border border-border p-3">
+          <div className="text-xs text-muted-foreground uppercase">Total Predicted Market</div>
           <div className="text-lg font-semibold">{totalPredicted.toLocaleString()} credits</div>
         </div>
       </div>
@@ -100,20 +103,20 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
       {(topUndervalued.length > 0 || topOvervalued.length > 0) && (
         <div className="grid grid-cols-2 gap-4">
           {topUndervalued.length > 0 && (
-            <div className="bg-green-50 rounded-lg border border-green-200 p-3">
-              <div className="text-xs text-green-700 uppercase mb-2">Potentially Undervalued</div>
-              {topUndervalued.map(p => (
-                <div key={p.teamId} className="text-sm text-green-800">
+            <div className="bg-success/10 rounded-lg border border-green-200 p-3">
+              <div className="text-xs text-success uppercase mb-2">Potentially Undervalued</div>
+              {topUndervalued.map((p) => (
+                <div key={p.teamId} className="text-sm text-success">
                   {p.schoolName} ({p.seed}) {formatEdge(p.edgePercent)}
                 </div>
               ))}
             </div>
           )}
           {topOvervalued.length > 0 && (
-            <div className="bg-red-50 rounded-lg border border-red-200 p-3">
-              <div className="text-xs text-red-700 uppercase mb-2">Potentially Overvalued</div>
-              {topOvervalued.map(p => (
-                <div key={p.teamId} className="text-sm text-red-800">
+            <div className="bg-destructive/10 rounded-lg border border-red-200 p-3">
+              <div className="text-xs text-destructive uppercase mb-2">Potentially Overvalued</div>
+              {topOvervalued.map((p) => (
+                <div key={p.teamId} className="text-sm text-destructive">
                   {p.schoolName} ({p.seed}) {formatEdge(p.edgePercent)}
                 </div>
               ))}
@@ -124,15 +127,17 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
 
       <Card>
         <h2 className="text-lg font-semibold mb-3">Market Predictions</h2>
-        <p className="text-sm text-gray-600 mb-3">
+        <p className="text-sm text-muted-foreground mb-3">
           Comparing rational vs predicted market behavior.
-          <strong className="ml-2">Rational</strong> = what perfect-info bidders would bid (proportional to expected value).
+          <strong className="ml-2">Rational</strong> = what perfect-info bidders would bid (proportional to expected
+          value).
           <strong className="ml-2">Predicted</strong> = model's prediction of actual market bids (blind auction).
-          <strong className="ml-2">Edge</strong> = (rational - predicted) / rational — where market may be over/undervaluing.
+          <strong className="ml-2">Edge</strong> = (rational - predicted) / rational — where market may be
+          over/undervaluing.
         </p>
         <div className="overflow-x-auto">
           <table className="min-w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-accent border-b border-border">
               <tr>
                 <th className="px-3 py-2 text-left">
                   <SortHeader label="Team" sortKeyValue="team" />
@@ -140,7 +145,7 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
                 <th className="px-3 py-2 text-center">
                   <SortHeader label="Seed" sortKeyValue="seed" />
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Region</th>
                 <th className="px-3 py-2 text-right">
                   <SortHeader label="Rational" sortKeyValue="rational" />
                 </th>
@@ -154,13 +159,22 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
             </thead>
             <tbody className="divide-y divide-gray-100">
               {predictions.map((pred) => (
-                <tr key={pred.teamId} className={cn('hover:bg-gray-50', getEdgeColor(pred.edgePercent))}>
-                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{pred.schoolName}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700 text-center">{pred.seed}</td>
-                  <td className="px-3 py-2 text-sm text-gray-500">{pred.region}</td>
-                  <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.naivePoints}</td>
-                  <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium tabular-nums">{pred.predictedBidPoints}</td>
-                  <td className={cn('px-3 py-2 text-sm text-right font-medium tabular-nums', getEdgeTextColor(pred.edgePercent))}>
+                <tr key={pred.teamId} className={cn('hover:bg-accent', getEdgeColor(pred.edgePercent))}>
+                  <td className="px-3 py-2 text-sm font-medium text-foreground">{pred.schoolName}</td>
+                  <td className="px-3 py-2 text-sm text-foreground text-center">{pred.seed}</td>
+                  <td className="px-3 py-2 text-sm text-muted-foreground">{pred.region}</td>
+                  <td className="px-3 py-2 text-sm text-foreground text-right font-medium tabular-nums">
+                    {pred.naivePoints}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-foreground text-right font-medium tabular-nums">
+                    {pred.predictedBidPoints}
+                  </td>
+                  <td
+                    className={cn(
+                      'px-3 py-2 text-sm text-right font-medium tabular-nums',
+                      getEdgeTextColor(pred.edgePercent),
+                    )}
+                  >
                     {formatEdge(pred.edgePercent)}
                   </td>
                 </tr>

@@ -72,7 +72,9 @@ export function SetEmailModal({ open, onClose, userId, userName, onSubmit }: Set
         </div>
 
         {error && (
-          <Alert variant="error" className="mb-4">{error}</Alert>
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
         )}
 
         <ModalActions>

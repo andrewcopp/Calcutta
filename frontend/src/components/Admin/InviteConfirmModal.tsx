@@ -39,7 +39,7 @@ export function InviteConfirmModal({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const recentlySent = lastInviteSentAt && (Date.now() - new Date(lastInviteSentAt).getTime()) < 60000;
+  const recentlySent = lastInviteSentAt && Date.now() - new Date(lastInviteSentAt).getTime() < 60000;
 
   const handleConfirm = async () => {
     setError('');
@@ -71,9 +71,7 @@ export function InviteConfirmModal({
       </p>
 
       {lastInviteSentAt && (
-        <p className="text-sm text-gray-500 mb-4">
-          Last invite sent: {formatRelativeTime(lastInviteSentAt)}
-        </p>
+        <p className="text-sm text-gray-500 mb-4">Last invite sent: {formatRelativeTime(lastInviteSentAt)}</p>
       )}
 
       {recentlySent && (
@@ -83,7 +81,9 @@ export function InviteConfirmModal({
       )}
 
       {error && (
-        <Alert variant="error" className="mb-4">{error}</Alert>
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
       )}
 
       <ModalActions>

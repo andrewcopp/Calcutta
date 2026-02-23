@@ -25,7 +25,7 @@ export interface BracketStructure {
   games: BracketGame[];
 }
 
-export type BracketRound = 
+export type BracketRound =
   | 'first_four'
   | 'round_of_64'
   | 'round_of_32'

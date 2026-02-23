@@ -22,15 +22,10 @@ export function HomePage() {
     <div
       className="min-h-screen text-white"
       style={{
-        background:
-          'linear-gradient(180deg, #070A12 0%, #091B3A 38%, #070A12 100%)',
+        background: 'linear-gradient(180deg, #070A12 0%, #091B3A 38%, #070A12 100%)',
       }}
     >
-      <HeroSection
-        scrollY={scrollY}
-        prefersReducedMotion={prefersReducedMotion}
-        revealClass={revealClass('hero')}
-      />
+      <HeroSection scrollY={scrollY} prefersReducedMotion={prefersReducedMotion} revealClass={revealClass('hero')} />
 
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">

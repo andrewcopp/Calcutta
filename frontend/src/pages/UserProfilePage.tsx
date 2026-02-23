@@ -44,46 +44,54 @@ export function UserProfilePage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-500">Name</div>
-                <div className="font-medium">{profile.firstName} {profile.lastName}</div>
+                <div className="text-sm text-muted-foreground">Name</div>
+                <div className="font-medium">
+                  {profile.firstName} {profile.lastName}
+                </div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Email</div>
-                <div className="font-medium">{profile.email ?? <span className="text-gray-400 italic">Not set</span>}</div>
+                <div className="text-sm text-muted-foreground">Email</div>
+                <div className="font-medium">
+                  {profile.email ?? <span className="text-muted-foreground/60 italic">Not set</span>}
+                </div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Status</div>
+                <div className="text-sm text-muted-foreground">Status</div>
                 <Badge variant={getStatusBadgeVariant(profile.status)}>{profile.status}</Badge>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Member Since</div>
+                <div className="text-sm text-muted-foreground">Member Since</div>
                 <div className="font-medium">{formatDate(profile.createdAt)}</div>
               </div>
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 mb-1">Roles</div>
+              <div className="text-sm text-muted-foreground mb-1">Roles</div>
               {profile.roles.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
                   {profile.roles.map((l) => (
-                    <Badge key={l} variant="default">{l}</Badge>
+                    <Badge key={l} variant="default">
+                      {l}
+                    </Badge>
                   ))}
                 </div>
               ) : (
-                <span className="text-gray-400">None</span>
+                <span className="text-muted-foreground/60">None</span>
               )}
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 mb-1">Permissions</div>
+              <div className="text-sm text-muted-foreground mb-1">Permissions</div>
               {profile.permissions.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
                   {profile.permissions.map((p) => (
-                    <Badge key={p} variant="secondary">{p}</Badge>
+                    <Badge key={p} variant="secondary">
+                      {p}
+                    </Badge>
                   ))}
                 </div>
               ) : (
-                <span className="text-gray-400">None</span>
+                <span className="text-muted-foreground/60">None</span>
               )}
             </div>
           </div>

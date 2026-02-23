@@ -1,14 +1,5 @@
 import { useMemo } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card } from '../../components/ui/Card';
 
 interface SimulatedTeam {
@@ -67,8 +58,8 @@ export function EarnCard() {
     <Card className="shadow-lg">
       <div className="flex items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Earn</h2>
-          <p className="text-gray-600">Your points are team points × your ownership percentage.</p>
+          <h2 className="text-2xl font-semibold text-foreground">Earn</h2>
+          <p className="text-muted-foreground">Your points are team points × your ownership percentage.</p>
         </div>
         <div className="rounded-full bg-gray-900 px-3 py-1 text-sm font-semibold text-white">
           Example total: {simulatedTotal.toFixed(1)} points
@@ -76,26 +67,42 @@ export function EarnCard() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-accent">
             <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seed</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
-              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ownership</th>
-              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Team Points</th>
-              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Your Points</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Team
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Seed
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Path
+              </th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Ownership
+              </th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Team Points
+              </th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Your Points
+              </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {simulatedEntryWithScore.map((t) => (
               <tr key={t.key}>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{t.team}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600">{t.seed}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600">{t.path}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-600">{t.ownershipPct}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-600">{t.teamPoints}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-right font-semibold text-gray-900">{t.yourPoints.toFixed(1)}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-foreground">{t.team}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">{t.seed}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">{t.path}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-muted-foreground">
+                  {t.ownershipPct}%
+                </td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-muted-foreground">{t.teamPoints}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-right font-semibold text-foreground">
+                  {t.yourPoints.toFixed(1)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -103,7 +110,7 @@ export function EarnCard() {
       </div>
 
       <div className="mt-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Contribution to your score</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-2">Contribution to your score</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={simulatedEntryWithScore} margin={{ top: 6, right: 12, left: 0, bottom: 6 }}>

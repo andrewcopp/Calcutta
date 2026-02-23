@@ -26,13 +26,13 @@ export const labService = {
   async getEntryByModelAndCalcutta(
     modelName: string,
     calcuttaId: string,
-    startingStateKey?: string
+    startingStateKey?: string,
   ): Promise<EntryDetail> {
     const q = new URLSearchParams();
     if (startingStateKey) q.set('starting_state_key', startingStateKey);
     const suffix = q.toString() ? `?${q.toString()}` : '';
     return apiClient.get<EntryDetail>(
-      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry${suffix}`
+      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry${suffix}`,
     );
   },
 
@@ -59,37 +59,27 @@ export const labService = {
 
   async getEvaluationEntryResults(id: string): Promise<EvaluationEntryResult[]> {
     const response = await apiClient.get<{ items: EvaluationEntryResult[] }>(
-      `/lab/evaluations/${encodeURIComponent(id)}/entries`
+      `/lab/evaluations/${encodeURIComponent(id)}/entries`,
     );
     return response.items;
   },
 
   async getEvaluationEntryProfile(entryResultId: string): Promise<EvaluationEntryProfile> {
-    return apiClient.get<EvaluationEntryProfile>(
-      `/lab/entry-results/${encodeURIComponent(entryResultId)}`
-    );
+    return apiClient.get<EvaluationEntryProfile>(`/lab/entry-results/${encodeURIComponent(entryResultId)}`);
   },
 
-  async startPipeline(
-    modelId: string,
-    request?: StartPipelineRequest
-  ): Promise<StartPipelineResponse> {
+  async startPipeline(modelId: string, request?: StartPipelineRequest): Promise<StartPipelineResponse> {
     return apiClient.post<StartPipelineResponse>(
       `/lab/models/${encodeURIComponent(modelId)}/pipeline/start`,
-      request ?? {}
+      request ?? {},
     );
   },
 
   async getModelPipelineProgress(modelId: string): Promise<ModelPipelineProgress> {
-    return apiClient.get<ModelPipelineProgress>(
-      `/lab/models/${encodeURIComponent(modelId)}/pipeline/progress`
-    );
+    return apiClient.get<ModelPipelineProgress>(`/lab/models/${encodeURIComponent(modelId)}/pipeline/progress`);
   },
 
   async cancelPipeline(pipelineRunId: string): Promise<void> {
-    await apiClient.post<{ status: string }>(
-      `/lab/pipeline-runs/${encodeURIComponent(pipelineRunId)}/cancel`,
-      {}
-    );
+    await apiClient.post<{ status: string }>(`/lab/pipeline-runs/${encodeURIComponent(pipelineRunId)}/cancel`, {});
   },
 };

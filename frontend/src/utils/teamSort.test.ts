@@ -25,10 +25,7 @@ describe('createTeamSortComparator', () => {
 
     it('breaks seed ties by region alphabetically', () => {
       // GIVEN two rows with the same seed but different regions
-      const rows = [
-        makeRow({ id: 'a', seed: 1, region: 'West' }),
-        makeRow({ id: 'b', seed: 1, region: 'East' }),
-      ];
+      const rows = [makeRow({ id: 'a', seed: 1, region: 'West' }), makeRow({ id: 'b', seed: 1, region: 'East' })];
 
       // WHEN sorting by seed
       rows.sort(createTeamSortComparator('seed'));
@@ -53,10 +50,7 @@ describe('createTeamSortComparator', () => {
 
     it('sorts undefined seeds last', () => {
       // GIVEN a row with undefined seed and a row with seed 16
-      const rows = [
-        makeRow({ id: 'a', seed: undefined }),
-        makeRow({ id: 'b', seed: 16 }),
-      ];
+      const rows = [makeRow({ id: 'a', seed: undefined }), makeRow({ id: 'b', seed: 16 })];
 
       // WHEN sorting by seed
       rows.sort(createTeamSortComparator('seed'));
@@ -69,10 +63,7 @@ describe('createTeamSortComparator', () => {
   describe('region sort', () => {
     it('sorts regions alphabetically', () => {
       // GIVEN two rows with different regions
-      const rows = [
-        makeRow({ id: 'a', region: 'West' }),
-        makeRow({ id: 'b', region: 'East' }),
-      ];
+      const rows = [makeRow({ id: 'a', region: 'West' }), makeRow({ id: 'b', region: 'East' })];
 
       // WHEN sorting by region
       rows.sort(createTeamSortComparator('region'));
@@ -83,10 +74,7 @@ describe('createTeamSortComparator', () => {
 
     it('breaks region ties by seed', () => {
       // GIVEN two rows with the same region but different seeds
-      const rows = [
-        makeRow({ id: 'a', region: 'East', seed: 8 }),
-        makeRow({ id: 'b', region: 'East', seed: 2 }),
-      ];
+      const rows = [makeRow({ id: 'a', region: 'East', seed: 8 }), makeRow({ id: 'b', region: 'East', seed: 2 })];
 
       // WHEN sorting by region
       rows.sort(createTeamSortComparator('region'));
@@ -113,10 +101,7 @@ describe('createTeamSortComparator', () => {
   describe('team sort', () => {
     it('sorts team names alphabetically', () => {
       // GIVEN two rows with different names
-      const rows = [
-        makeRow({ id: 'a', teamName: 'Zephyr' }),
-        makeRow({ id: 'b', teamName: 'Alpha' }),
-      ];
+      const rows = [makeRow({ id: 'a', teamName: 'Zephyr' }), makeRow({ id: 'b', teamName: 'Alpha' })];
 
       // WHEN sorting by team
       rows.sort(createTeamSortComparator('team'));
@@ -127,10 +112,7 @@ describe('createTeamSortComparator', () => {
 
     it('breaks team name ties by seed', () => {
       // GIVEN two rows with the same name but different seeds
-      const rows = [
-        makeRow({ id: 'a', teamName: 'Alpha', seed: 8 }),
-        makeRow({ id: 'b', teamName: 'Alpha', seed: 2 }),
-      ];
+      const rows = [makeRow({ id: 'a', teamName: 'Alpha', seed: 8 }), makeRow({ id: 'b', teamName: 'Alpha', seed: 2 })];
 
       // WHEN sorting by team
       rows.sort(createTeamSortComparator('team'));
@@ -143,10 +125,7 @@ describe('createTeamSortComparator', () => {
   describe('edge cases', () => {
     it('handles empty region strings', () => {
       // GIVEN rows with empty region strings
-      const rows = [
-        makeRow({ id: 'a', region: '' }),
-        makeRow({ id: 'b', region: '' }),
-      ];
+      const rows = [makeRow({ id: 'a', region: '' }), makeRow({ id: 'b', region: '' })];
 
       // WHEN sorting by region
       rows.sort(createTeamSortComparator('region'));
@@ -157,10 +136,7 @@ describe('createTeamSortComparator', () => {
 
     it('handles empty team name strings', () => {
       // GIVEN rows with empty team names
-      const rows = [
-        makeRow({ id: 'a', teamName: '', seed: 5 }),
-        makeRow({ id: 'b', teamName: '', seed: 2 }),
-      ];
+      const rows = [makeRow({ id: 'a', teamName: '', seed: 5 }), makeRow({ id: 'b', teamName: '', seed: 2 })];
 
       // WHEN sorting by team
       rows.sort(createTeamSortComparator('team'));

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { Calcutta } from '../types/calcutta';
 import { Alert } from '../components/ui/Alert';
@@ -29,7 +29,11 @@ import { formatDate } from '../utils/format';
 
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
-  const [activeTab, setActiveTab] = useState('leaderboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs = ['leaderboard', 'investment', 'ownership', 'returns', 'statistics'] as const;
+  const tabParam = searchParams.get('tab');
+  const activeTab = validTabs.includes(tabParam as (typeof validTabs)[number]) ? tabParam! : 'leaderboard';
+  const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
   const [isCreatingEntry, setIsCreatingEntry] = useState(false);
   const [createEntryError, setCreateEntryError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -117,19 +121,16 @@ export function CalcuttaEntriesPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'My Pools', href: '/calcuttas' },
-          { label: calcuttaName },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'My Pools', href: '/calcuttas' }, { label: calcuttaName }]} />
 
       <PageHeader
         title={calcuttaName}
         actions={
           dashboardData?.abilities?.canEditSettings ? (
             <Link to={`/calcuttas/${calcuttaId}/settings`}>
-              <Button variant="outline" size="sm">Settings</Button>
+              <Button variant="outline" size="sm">
+                Settings
+              </Button>
             </Link>
           ) : undefined
         }
@@ -138,36 +139,42 @@ export function CalcuttaEntriesPage() {
       {dashboardData?.tournamentStartingAt && (
         <div className="mb-4 flex items-center gap-2">
           <Badge variant="secondary">Portfolios Revealed</Badge>
-          <span className="text-sm text-gray-500">{formatDate(dashboardData.tournamentStartingAt, true)}</span>
+          <span className="text-sm text-muted-foreground">{formatDate(dashboardData.tournamentStartingAt, true)}</span>
         </div>
       )}
 
-      {currentUserEntry && (() => {
-        const userTeams = allEntryTeams.filter(et => et.entryId === currentUserEntry.id);
-        const totalSpent = userTeams.reduce((sum, et) => sum + et.bid, 0);
-        const budgetPoints = dashboardData?.calcutta?.budgetPoints ?? 100;
-        return (
-          <Link
-            to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`}
-            className="block mb-6"
-          >
-          <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-gray-900">Your Portfolio</h3>
-                <Badge variant={currentUserEntry.status === 'accepted' ? 'success' : 'secondary'}>
-                  {currentUserEntry.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
-                </Badge>
-                <span className="text-sm text-gray-500">{userTeams.length} teams &middot; {totalSpent} / {budgetPoints} credits</span>
-              </div>
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </div>
-          </Card>
-          </Link>
-        );
-      })()}
+      {currentUserEntry &&
+        (() => {
+          const userTeams = allEntryTeams.filter((et) => et.entryId === currentUserEntry.id);
+          const totalSpent = userTeams.reduce((sum, et) => sum + et.bid, 0);
+          const budgetPoints = dashboardData?.calcutta?.budgetPoints ?? 100;
+          return (
+            <Link to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`} className="block mb-6">
+              <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
+                    <Badge variant={currentUserEntry.status === 'accepted' ? 'success' : 'secondary'}>
+                      {currentUserEntry.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {userTeams.length} teams &middot; {totalSpent} / {budgetPoints} credits
+                    </span>
+                  </div>
+                  <svg
+                    className="h-5 w-5 text-muted-foreground/60"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Card>
+            </Link>
+          );
+        })()}
 
       {currentUserEntry && !biddingOpen && (
         <DashboardSummary
@@ -193,7 +200,12 @@ export function CalcuttaEntriesPage() {
         </TabsContent>
 
         <TabsContent value="investment">
-          <InvestmentsTab entries={entries} schools={schools} tournamentTeams={tournamentTeams} allEntryTeams={allEntryTeams} />
+          <InvestmentsTab
+            entries={entries}
+            schools={schools}
+            tournamentTeams={tournamentTeams}
+            allEntryTeams={allEntryTeams}
+          />
         </TabsContent>
 
         <TabsContent value="ownership">

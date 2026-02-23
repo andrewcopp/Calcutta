@@ -4,9 +4,9 @@ import { cn } from '../../lib/cn';
 import { toast as toastStore, type Toast as ToastType } from '../../lib/toast';
 
 const variantClasses: Record<ToastType['variant'], string> = {
-  success: 'bg-green-50 border-green-200 text-green-900',
-  error: 'bg-red-100 border-red-400 text-red-700',
-  info: 'bg-blue-50 border-blue-200 text-blue-900',
+  success: 'bg-success/10 border-success/20 text-success',
+  error: 'bg-destructive/10 border-destructive/20 text-destructive',
+  info: 'bg-info/10 border-info/20 text-info-foreground',
 };
 
 const EXIT_MS = 200;
@@ -34,11 +34,7 @@ export function Toast({ id, message, variant }: ToastType) {
       )}
     >
       <span className="flex-1">{message}</span>
-      <button
-        onClick={handleDismiss}
-        className="shrink-0 opacity-60 hover:opacity-100"
-        aria-label="Dismiss"
-      >
+      <button onClick={handleDismiss} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>

@@ -38,7 +38,7 @@ export function getRegionList(tournament: Tournament): string[] {
 export function createRegionsFromTeams(
   regionNames: string[],
   teams: TournamentTeam[],
-  schools: School[]
+  schools: School[],
 ): Record<string, RegionState> {
   const regions = createInitialRegions(regionNames);
   const schoolMap = new Map(schools.map((s) => [s.id, s.name]));
@@ -76,10 +76,7 @@ export interface ValidationStats {
 
 export type SlotValidationState = Record<string, Record<string, 'none' | 'valid' | 'error'>>;
 
-export function deriveUsedSchoolIds(
-  regionList: string[],
-  regions: Record<string, RegionState>
-): Set<string> {
+export function deriveUsedSchoolIds(regionList: string[], regions: Record<string, RegionState>): Set<string> {
   const ids = new Set<string>();
   for (const regionName of regionList) {
     const regionState = regions[regionName];
@@ -96,7 +93,7 @@ export function deriveUsedSchoolIds(
 export function deriveValidationStats(
   regionList: string[],
   regions: Record<string, RegionState>,
-  schools: School[]
+  schools: School[],
 ): ValidationStats {
   let total = 0;
   let playIns = 0;
@@ -134,7 +131,7 @@ export function deriveValidationStats(
 export function deriveSlotValidation(
   regionList: string[],
   regions: Record<string, RegionState>,
-  flashingSlots: Record<string, boolean>
+  flashingSlots: Record<string, boolean>,
 ): SlotValidationState {
   const result: SlotValidationState = {};
   for (const regionName of regionList) {
@@ -165,7 +162,7 @@ export function applyUpdateSlot(
   region: string,
   seed: number,
   slotIndex: number,
-  update: Partial<TeamSlot>
+  update: Partial<TeamSlot>,
 ): Record<string, RegionState> {
   const regionState = prev[region];
   if (!regionState) return prev;
@@ -179,7 +176,7 @@ export function applyUpdateSlot(
 export function applyAddPlayIn(
   prev: Record<string, RegionState>,
   region: string,
-  seed: number
+  seed: number,
 ): Record<string, RegionState> {
   const regionState = prev[region];
   if (!regionState) return prev;
@@ -196,7 +193,7 @@ export function applyRemovePlayIn(
   prev: Record<string, RegionState>,
   region: string,
   seed: number,
-  slotIndex: number
+  slotIndex: number,
 ): Record<string, RegionState> {
   const regionState = prev[region];
   if (!regionState) return prev;
@@ -213,7 +210,7 @@ export function applySlotBlur(
   prev: Record<string, RegionState>,
   region: string,
   seed: number,
-  slotIndex: number
+  slotIndex: number,
 ): { regions: Record<string, RegionState>; shouldFlash: boolean; flashKey: string } {
   const regionState = prev[region];
   if (!regionState) return { regions: prev, shouldFlash: false, flashKey: '' };
@@ -232,7 +229,7 @@ export function applySlotBlur(
 
 export function collectTeamsForSubmission(
   regionList: string[],
-  regions: Record<string, RegionState>
+  regions: Record<string, RegionState>,
 ): { schoolId: string; seed: number; region: string }[] {
   const teams: { schoolId: string; seed: number; region: string }[] = [];
   for (const regionName of regionList) {
@@ -279,7 +276,7 @@ export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamS
   const [regions, setRegions] = useState(() =>
     initialTeams && initialTeams.length > 0
       ? createRegionsFromTeams(regionList, initialTeams, schools)
-      : createInitialRegions(regionList)
+      : createInitialRegions(regionList),
   );
   const [activeTab, setActiveTab] = useState(() => regionList[0]);
   const [flashingSlots, setFlashingSlots] = useState<Record<string, boolean>>({});
@@ -288,15 +285,12 @@ export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamS
   const stats = useMemo(() => deriveValidationStats(regionList, regions, schools), [regions, schools, regionList]);
   const slotValidation = useMemo(
     () => deriveSlotValidation(regionList, regions, flashingSlots),
-    [regions, flashingSlots, regionList]
+    [regions, flashingSlots, regionList],
   );
 
-  const updateSlot = useCallback(
-    (region: string, seed: number, slotIndex: number, update: Partial<TeamSlot>) => {
-      setRegions((prev) => applyUpdateSlot(prev, region, seed, slotIndex, update));
-    },
-    []
-  );
+  const updateSlot = useCallback((region: string, seed: number, slotIndex: number, update: Partial<TeamSlot>) => {
+    setRegions((prev) => applyUpdateSlot(prev, region, seed, slotIndex, update));
+  }, []);
 
   const addPlayIn = useCallback((region: string, seed: number) => {
     setRegions((prev) => applyAddPlayIn(prev, region, seed));
@@ -306,21 +300,18 @@ export function useTeamSetupForm({ tournament, schools, initialTeams }: UseTeamS
     setRegions((prev) => applyRemovePlayIn(prev, region, seed, slotIndex));
   }, []);
 
-  const handleSlotBlur = useCallback(
-    (region: string, seed: number, slotIndex: number) => {
-      setRegions((prev) => {
-        const result = applySlotBlur(prev, region, seed, slotIndex);
-        if (result.shouldFlash) {
-          setFlashingSlots((f) => ({ ...f, [result.flashKey]: true }));
-          setTimeout(() => {
-            setFlashingSlots((f) => ({ ...f, [result.flashKey]: false }));
-          }, 1000);
-        }
-        return result.regions;
-      });
-    },
-    []
-  );
+  const handleSlotBlur = useCallback((region: string, seed: number, slotIndex: number) => {
+    setRegions((prev) => {
+      const result = applySlotBlur(prev, region, seed, slotIndex);
+      if (result.shouldFlash) {
+        setFlashingSlots((f) => ({ ...f, [result.flashKey]: true }));
+        setTimeout(() => {
+          setFlashingSlots((f) => ({ ...f, [result.flashKey]: false }));
+        }, 1000);
+      }
+      return result.regions;
+    });
+  }, []);
 
   const { errors, handleSubmit, isPending } = useTeamSetupMutations({
     tournamentId: tournament.id,

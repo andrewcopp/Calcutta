@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card } from '../../components/ui/Card';
 
 interface OwnershipScenario {
@@ -72,14 +66,14 @@ export function OwnCard({ prefersReducedMotion }: OwnCardProps) {
     <Card className="shadow-lg">
       <div className="flex items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Own</h2>
-          <p className="text-gray-600">Your ownership is proportional to total credits invested by everyone.</p>
+          <h2 className="text-2xl font-semibold text-foreground">Own</h2>
+          <p className="text-muted-foreground">Your ownership is proportional to total credits invested by everyone.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setScenarioIndex((i) => (i - 1 + scenarios.length) % scenarios.length)}
-            className="h-9 w-9 rounded-full bg-white shadow-sm ring-1 ring-gray-200 text-gray-700 hover:bg-gray-50"
+            className="h-9 w-9 rounded-full bg-card shadow-sm ring-1 ring-gray-200 text-foreground hover:bg-accent"
             aria-label="Previous scenario"
           >
             ←
@@ -87,7 +81,7 @@ export function OwnCard({ prefersReducedMotion }: OwnCardProps) {
           <button
             type="button"
             onClick={() => setScenarioIndex((i) => (i + 1) % scenarios.length)}
-            className="h-9 w-9 rounded-full bg-white shadow-sm ring-1 ring-gray-200 text-gray-700 hover:bg-gray-50"
+            className="h-9 w-9 rounded-full bg-card shadow-sm ring-1 ring-gray-200 text-foreground hover:bg-accent"
             aria-label="Next scenario"
           >
             →
@@ -129,30 +123,31 @@ export function OwnCard({ prefersReducedMotion }: OwnCardProps) {
         </div>
 
         <div>
-          <div className="text-lg font-semibold text-gray-900">{activeScenario.title}</div>
-          <div className="text-sm text-gray-600">{activeScenario.subtitle}</div>
+          <div className="text-lg font-semibold text-foreground">{activeScenario.title}</div>
+          <div className="text-sm text-muted-foreground">{activeScenario.subtitle}</div>
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <div className="rounded-lg bg-gray-50 p-3">
-              <div className="text-xs font-semibold text-gray-500">Seed</div>
-              <div className="mt-1 text-lg font-bold text-gray-900">{activeScenario.seed}</div>
+            <div className="rounded-lg bg-accent p-3">
+              <div className="text-xs font-semibold text-muted-foreground">Seed</div>
+              <div className="mt-1 text-lg font-bold text-foreground">{activeScenario.seed}</div>
             </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <div className="text-xs font-semibold text-gray-500">You invest</div>
-              <div className="mt-1 text-lg font-bold text-gray-900">{activeScenario.credits}</div>
+            <div className="rounded-lg bg-accent p-3">
+              <div className="text-xs font-semibold text-muted-foreground">You invest</div>
+              <div className="mt-1 text-lg font-bold text-foreground">{activeScenario.credits}</div>
             </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <div className="text-xs font-semibold text-gray-500">Total</div>
-              <div className="mt-1 text-lg font-bold text-gray-900">{activeScenario.totalCredits}</div>
+            <div className="rounded-lg bg-accent p-3">
+              <div className="text-xs font-semibold text-muted-foreground">Total</div>
+              <div className="mt-1 text-lg font-bold text-foreground">{activeScenario.totalCredits}</div>
             </div>
           </div>
-          <div className="mt-4 rounded-lg bg-blue-50 p-3">
-            <div className="text-xs font-semibold text-blue-700">Your ownership</div>
+          <div className="mt-4 rounded-lg bg-primary/10 p-3">
+            <div className="text-xs font-semibold text-primary">Your ownership</div>
             <div className="mt-1 text-2xl font-bold text-blue-900">
               {((activeScenario.credits / activeScenario.totalCredits) * 100).toFixed(2)}%
             </div>
           </div>
-          <div className="mt-4 text-sm text-gray-600">
-            Top seeds are popular (lots of investors), so your slice is often small. Lower seeds can be larger slices—if they win, it matters.
+          <div className="mt-4 text-sm text-muted-foreground">
+            Top seeds are popular (lots of investors), so your slice is often small. Lower seeds can be larger slices—if
+            they win, it matters.
           </div>
         </div>
       </div>
@@ -166,13 +161,13 @@ export function OwnCard({ prefersReducedMotion }: OwnCardProps) {
                 key={s.key}
                 type="button"
                 onClick={() => setScenarioIndex(idx)}
-                className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'}`}
+                className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-primary' : 'bg-gray-300 hover:bg-gray-400'}`}
                 aria-label={`Go to scenario ${idx + 1}`}
               />
             );
           })}
         </div>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-muted-foreground">
           {scenarioIndex + 1} / {scenarios.length}
         </div>
       </div>

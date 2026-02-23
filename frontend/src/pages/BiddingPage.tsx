@@ -78,7 +78,12 @@ export function BiddingPage() {
             <Link to={`/calcuttas/${calcuttaId}`}>
               <Button variant="secondary">Cancel</Button>
             </Link>
-            <Button onClick={handleSubmit} disabled={!isValid || updateEntryMutation.isPending} loading={updateEntryMutation.isPending} title={!isValid && validationErrors.length > 0 ? validationErrors[0] : undefined}>
+            <Button
+              onClick={handleSubmit}
+              disabled={!isValid || updateEntryMutation.isPending}
+              loading={updateEntryMutation.isPending}
+              title={!isValid && validationErrors.length > 0 ? validationErrors[0] : undefined}
+            >
               {updateEntryMutation.isPending ? 'Submitting...' : 'Submit Portfolio'}
             </Button>
           </div>
@@ -101,10 +106,10 @@ export function BiddingPage() {
         validationErrors={validationErrors}
       />
 
-      <div className="bg-white shadow-sm rounded-lg border border-border overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Your Roster</h2>
-          <p className="text-sm text-gray-600 mt-1">
+      <div className="bg-card shadow-sm rounded-lg border border-border overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">Your Roster</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Search and select up to {MAX_TEAMS} teams, then set your bid amounts.
           </p>
         </div>

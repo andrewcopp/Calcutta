@@ -34,9 +34,7 @@ export function PayoutsForm({ calcuttaId, onSuccess }: PayoutsFormProps) {
   // Initialize payout form when data loads
   useEffect(() => {
     if (payoutsData && !payoutRows) {
-      setPayoutRows(
-        payoutsData.payouts.length > 0 ? [...payoutsData.payouts] : [{ position: 1, amountCents: 0 }]
-      );
+      setPayoutRows(payoutsData.payouts.length > 0 ? [...payoutsData.payouts] : [{ position: 1, amountCents: 0 }]);
     }
   }, [payoutsData, payoutRows]);
 
@@ -65,7 +63,7 @@ export function PayoutsForm({ calcuttaId, onSuccess }: PayoutsFormProps) {
           <div className="space-y-4">
             {payoutRows.map((row, idx) => (
               <div key={idx} className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 w-8">{row.position}.</span>
+                <span className="text-sm font-medium text-foreground w-8">{row.position}.</span>
                 <div className="flex-1">
                   <Input
                     type="number"
@@ -95,9 +93,7 @@ export function PayoutsForm({ calcuttaId, onSuccess }: PayoutsFormProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  setPayoutRows([...payoutRows, { position: payoutRows.length + 1, amountCents: 0 }])
-                }
+                onClick={() => setPayoutRows([...payoutRows, { position: payoutRows.length + 1, amountCents: 0 }])}
               >
                 Add Position
               </Button>

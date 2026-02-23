@@ -9,11 +9,7 @@ interface Props {
   redirectTo?: string;
 }
 
-export function PermissionProtectedRoute({
-  permission,
-  children,
-  redirectTo = '/',
-}: Props) {
+export function PermissionProtectedRoute({ permission, children, redirectTo = '/' }: Props) {
   const { user, hasPermission, permissionsLoading } = useUser();
 
   if (!user) {

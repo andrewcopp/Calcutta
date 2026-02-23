@@ -13,11 +13,11 @@ export function Collapsible({ title, count, defaultOpen = false, children }: Col
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-t border-gray-200 pt-4">
+    <div className="border-t border-border pt-4">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center gap-2 text-left text-gray-500 hover:text-gray-700"
+        className="flex w-full items-center gap-2 text-left text-muted-foreground hover:text-foreground"
       >
         <svg
           className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-90')}
@@ -31,9 +31,7 @@ export function Collapsible({ title, count, defaultOpen = false, children }: Col
           />
         </svg>
         <span className="text-sm font-medium">{title}</span>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-          {count}
-        </span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{count}</span>
       </button>
       {open && <div className="mt-4">{children}</div>}
     </div>

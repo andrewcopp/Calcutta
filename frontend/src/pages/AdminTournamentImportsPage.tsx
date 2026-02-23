@@ -113,17 +113,12 @@ export function AdminTournamentImportsPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'Tournament Data' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Admin', href: '/admin' }, { label: 'Tournament Data' }]} />
       <PageHeader title="Admin: Tournament Data" />
 
       <Card className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Export</h2>
-        <p className="text-gray-600 mb-4">Download a zip of the current DB state in bundle format.</p>
+        <p className="text-muted-foreground mb-4">Download a zip of the current DB state in bundle format.</p>
         <Button onClick={download} disabled={busy}>
           Download tournament data (.zip)
         </Button>
@@ -131,11 +126,11 @@ export function AdminTournamentImportsPage() {
 
       <Card>
         <h2 className="text-xl font-semibold mb-2">Import</h2>
-        <p className="text-gray-600 mb-4">Upload a tournament data zip and import it into the database.</p>
+        <p className="text-muted-foreground mb-4">Upload a tournament data zip and import it into the database.</p>
 
         <div className="flex flex-col gap-3">
           <label className="flex items-center gap-3 cursor-pointer">
-            <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <span className="inline-flex items-center px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground bg-card hover:bg-accent transition-colors">
               Choose File
             </span>
             <input
@@ -145,7 +140,7 @@ export function AdminTournamentImportsPage() {
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="sr-only"
             />
-            <span className="text-sm text-gray-500">{file ? file.name : 'No file selected'}</span>
+            <span className="text-sm text-muted-foreground">{file ? file.name : 'No file selected'}</span>
           </label>
           <div>
             <Button onClick={upload} disabled={busy || !file}>
@@ -166,42 +161,42 @@ export function AdminTournamentImportsPage() {
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-3">Result</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div className="text-gray-500">Status</div>
+              <div className="text-muted-foreground">Status</div>
               <div className="font-medium">{result.status}</div>
-              <div className="text-gray-500">Filename</div>
+              <div className="text-muted-foreground">Filename</div>
               <div className="font-medium">{result.filename}</div>
-              <div className="text-gray-500">Size</div>
+              <div className="text-muted-foreground">Size</div>
               <div className="font-medium">{(result.sizeBytes / 1024).toFixed(1)} KB</div>
               {result.importReport && (
                 <>
-                  <div className="col-span-2 border-t border-gray-200 mt-2 pt-2 font-semibold">Import Report</div>
-                  <div className="text-gray-500">Schools</div>
+                  <div className="col-span-2 border-t border-border mt-2 pt-2 font-semibold">Import Report</div>
+                  <div className="text-muted-foreground">Schools</div>
                   <div className="font-medium">{result.importReport.schools}</div>
-                  <div className="text-gray-500">Tournaments</div>
+                  <div className="text-muted-foreground">Tournaments</div>
                   <div className="font-medium">{result.importReport.tournaments}</div>
-                  <div className="text-gray-500">Teams</div>
+                  <div className="text-muted-foreground">Teams</div>
                   <div className="font-medium">{result.importReport.tournamentTeams}</div>
-                  <div className="text-gray-500">Calcuttas</div>
+                  <div className="text-muted-foreground">Calcuttas</div>
                   <div className="font-medium">{result.importReport.calcuttas}</div>
-                  <div className="text-gray-500">Entries</div>
+                  <div className="text-muted-foreground">Entries</div>
                   <div className="font-medium">{result.importReport.entries}</div>
-                  <div className="text-gray-500">Bids</div>
+                  <div className="text-muted-foreground">Bids</div>
                   <div className="font-medium">{result.importReport.bids}</div>
-                  <div className="text-gray-500">Payouts</div>
+                  <div className="text-muted-foreground">Payouts</div>
                   <div className="font-medium">{result.importReport.payouts}</div>
                 </>
               )}
               {result.verifyReport && (
                 <>
-                  <div className="col-span-2 border-t border-gray-200 mt-2 pt-2 font-semibold">Verify Report</div>
-                  <div className="text-gray-500">OK</div>
-                  <div className={`font-medium ${result.verifyReport.ok ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className="col-span-2 border-t border-border mt-2 pt-2 font-semibold">Verify Report</div>
+                  <div className="text-muted-foreground">OK</div>
+                  <div className={`font-medium ${result.verifyReport.ok ? 'text-success' : 'text-destructive'}`}>
                     {result.verifyReport.ok ? 'Yes' : 'No'}
                   </div>
                   {result.verifyReport.mismatchCount > 0 && (
                     <>
-                      <div className="text-gray-500">Mismatches</div>
-                      <div className="font-medium text-red-600">{result.verifyReport.mismatchCount}</div>
+                      <div className="text-muted-foreground">Mismatches</div>
+                      <div className="font-medium text-destructive">{result.verifyReport.mismatchCount}</div>
                     </>
                   )}
                 </>

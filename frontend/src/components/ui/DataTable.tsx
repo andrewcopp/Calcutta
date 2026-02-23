@@ -57,25 +57,23 @@ export function DataTable<TData>({
 
   return (
     <div className={cn('overflow-x-auto', className)}>
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-accent">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
                   className={cn(
-                    'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                    header.column.getCanSort() && 'cursor-pointer select-none hover:text-gray-700'
+                    'px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider',
+                    header.column.getCanSort() && 'cursor-pointer select-none hover:text-foreground',
                   )}
                   onClick={header.column.getToggleSortingHandler()}
                 >
                   <div className="flex items-center gap-1">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     {header.column.getCanSort() && (
-                      <span className="text-gray-400">
+                      <span className="text-muted-foreground/60">
                         {{
                           asc: '↑',
                           desc: '↓',
@@ -88,11 +86,11 @@ export function DataTable<TData>({
             </tr>
           ))}
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-card divide-y divide-border">
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="hover:bg-gray-50">
+            <tr key={row.id} className="hover:bg-accent">
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 text-sm text-gray-700">
+                <td key={cell.id} className="px-4 py-3 text-sm text-foreground">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -102,8 +100,8 @@ export function DataTable<TData>({
       </table>
 
       {pagination && table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-          <div className="text-sm text-gray-500">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+          <div className="text-sm text-muted-foreground">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({data.length} rows)
           </div>
           <div className="flex gap-2">
@@ -115,12 +113,7 @@ export function DataTable<TData>({
             >
               Previous
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
               Next
             </Button>
           </div>

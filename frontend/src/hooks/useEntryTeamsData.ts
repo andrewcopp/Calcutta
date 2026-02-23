@@ -15,7 +15,10 @@ export interface EntryTeamsData {
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
 }
 
-export function useEntryTeamsData(dashboardData: CalcuttaDashboard | undefined, entryId: string | undefined): EntryTeamsData {
+export function useEntryTeamsData(
+  dashboardData: CalcuttaDashboard | undefined,
+  entryId: string | undefined,
+): EntryTeamsData {
   return useMemo(() => {
     if (!dashboardData || !entryId) {
       return {

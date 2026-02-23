@@ -45,10 +45,7 @@ export function UserMenu() {
             <Link to="/admin">Admin Console</Link>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem
-          className="text-red-600 focus:text-red-600"
-          onSelect={() => logout()}
-        >
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => logout()}>
           Logout
         </DropdownMenuItem>
       </DropdownMenuContent>

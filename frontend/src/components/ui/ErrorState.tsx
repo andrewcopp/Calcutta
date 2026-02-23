@@ -16,9 +16,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
   return (
     <div className="space-y-4">
       <Alert variant="error">{formatError(error)}</Alert>
-      {onRetry ? (
-        <Button onClick={onRetry}>Retry</Button>
-      ) : null}
+      {onRetry ? <Button onClick={onRetry}>Retry</Button> : null}
     </div>
   );
 }

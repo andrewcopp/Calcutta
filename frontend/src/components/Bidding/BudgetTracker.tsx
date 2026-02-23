@@ -25,27 +25,33 @@ export function BudgetTracker({
   const budgetPercent = (budgetUsed / totalBudget) * 100;
 
   const getBudgetColor = () => {
-    if (budgetRemaining < 0) return 'text-red-600';
+    if (budgetRemaining < 0) return 'text-destructive';
     if (budgetRemaining < 10) return 'text-yellow-600';
-    return 'text-green-600';
+    return 'text-success';
   };
 
   const getTeamCountColor = () => {
-    if (teamCount < minTeams || teamCount > maxTeams) return 'text-red-600';
+    if (teamCount < minTeams || teamCount > maxTeams) return 'text-destructive';
     if (teamCount === maxTeams) return 'text-yellow-600';
-    return 'text-green-600';
+    return 'text-success';
   };
 
   return (
     <div className="sticky top-16 z-10 mb-6">
-      <Card variant="elevated" className={cn('border-t-2 border-t-primary', budgetRemaining < 0 ? 'bg-red-50 border-red-200 border-t-red-500' : '')}>
+      <Card
+        variant="elevated"
+        className={cn(
+          'border-t-2 border-t-primary',
+          budgetRemaining < 0 ? 'bg-destructive/10 border-destructive/20 border-t-destructive' : '',
+        )}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Budget</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Budget</div>
             <div className={cn('text-2xl font-bold', getBudgetColor())}>
               {budgetRemaining.toFixed(2)} / {totalBudget.toFixed(2)} credits
             </div>
-            <div className="mt-2 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+            <div className="mt-2 bg-muted rounded-full h-2.5 overflow-hidden">
               <div
                 className={cn('h-full transition-all', {
                   'bg-green-500': budgetRemaining >= 10,
@@ -58,30 +64,32 @@ export function BudgetTracker({
           </div>
 
           <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Teams Selected</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">
+              Teams Selected
+            </div>
             <div className={cn('text-2xl font-bold', getTeamCountColor())}>
               {teamCount} / {minTeams}-{maxTeams}
             </div>
             {teamCount < minTeams && (
-              <div className="text-xs text-red-600 mt-1">Need {minTeams - teamCount} more team(s)</div>
+              <div className="text-xs text-destructive mt-1">Need {minTeams - teamCount} more team(s)</div>
             )}
             {teamCount > maxTeams && (
-              <div className="text-xs text-red-600 mt-1">Remove {teamCount - maxTeams} team(s)</div>
+              <div className="text-xs text-destructive mt-1">Remove {teamCount - maxTeams} team(s)</div>
             )}
           </div>
 
           <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">Status</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Status</div>
             <div
               className={cn('text-2xl font-bold', {
-                'text-green-600': isValid,
-                'text-red-600': !isValid,
+                'text-success': isValid,
+                'text-destructive': !isValid,
               })}
             >
               {isValid ? 'Ready to Submit' : 'Not Valid'}
             </div>
             {validationErrors.length > 0 && (
-              <div className="text-xs text-red-600 mt-1 space-y-1">
+              <div className="text-xs text-destructive mt-1 space-y-1">
                 {validationErrors.map((error, index) => (
                   <div key={index}>{error}</div>
                 ))}

@@ -100,23 +100,18 @@ export function AdminKenPomPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'KenPom Ratings' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Admin', href: '/admin' }, { label: 'KenPom Ratings' }]} />
       <PageHeader title="KenPom Ratings" subtitle="Enter or edit KenPom ratings for tournament teams" />
 
       <Card>
         <div className="mb-6">
-          <label htmlFor="tournament-select" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="tournament-select" className="block text-sm font-medium text-foreground mb-2">
             Tournament
           </label>
           {tournamentsQuery.isLoading ? (
             <LoadingState />
           ) : tournamentsQuery.isError ? (
-            <ErrorState message="Failed to load tournaments" />
+            <ErrorState error="Failed to load tournaments" onRetry={() => tournamentsQuery.refetch()} />
           ) : (
             <Select
               id="tournament-select"
@@ -134,9 +129,15 @@ export function AdminKenPomPage() {
         </div>
 
         {selectedTournamentId && teamsQuery.isLoading && <LoadingState />}
-        {selectedTournamentId && teamsQuery.isError && <ErrorState message="Failed to load teams" />}
+        {selectedTournamentId && teamsQuery.isError && (
+          <ErrorState error="Failed to load teams" onRetry={() => teamsQuery.refetch()} />
+        )}
 
-        {successMessage && <Alert variant="success" className="mb-4">{successMessage}</Alert>}
+        {successMessage && (
+          <Alert variant="success" className="mb-4">
+            {successMessage}
+          </Alert>
+        )}
         {mutation.isError && (
           <Alert variant="error" className="mb-4">
             {mutation.error instanceof Error ? mutation.error.message : 'Failed to save KenPom ratings'}
@@ -148,7 +149,7 @@ export function AdminKenPomPage() {
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-gray-600">
+                  <tr className="border-b text-left text-muted-foreground">
                     <th className="px-3 py-2 font-medium">Region</th>
                     <th className="px-3 py-2 font-medium">Seed</th>
                     <th className="px-3 py-2 font-medium">School</th>

@@ -31,9 +31,7 @@ export function CalcuttaListPage() {
       <PageContainer>
         <PageHeader
           title="My Pools"
-          actions={
-            <Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>
-          }
+          actions={<Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>}
         />
         <CalcuttaListSkeleton />
       </PageContainer>
@@ -55,9 +53,7 @@ export function CalcuttaListPage() {
     <PageContainer>
       <PageHeader
         title="My Pools"
-        actions={
-          <Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>
-        }
+        actions={<Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>}
       />
 
       <div className="grid gap-4">
@@ -109,14 +105,12 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
       <Link to={`/calcuttas/${calcutta.id}`} className="block">
         <Card variant="elevated" padding="compact" className="hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-blue-600">
+            <span className="text-2xl font-bold text-primary">
               #{ranking.rank} of {ranking.totalEntries}
             </span>
-            <span className="text-lg font-semibold">
-              {ranking.points.toFixed(2)} points
-            </span>
+            <span className="text-lg font-semibold">{ranking.points.toFixed(2)} points</span>
           </div>
-          <p className="text-sm text-gray-600 mt-1">{calcutta.name}</p>
+          <p className="text-sm text-muted-foreground mt-1">{calcutta.name}</p>
         </Card>
       </Link>
     );
@@ -129,7 +123,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
         <Card padding="compact" className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-            <span className="text-sm font-medium text-gray-400">No Portfolio</span>
+            <span className="text-sm font-medium text-muted-foreground/60">No Portfolio</span>
           </div>
         </Card>
       </Link>
@@ -137,9 +131,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   }
 
   // States A/B: Bidding open
-  const countdown = calcutta.tournamentStartingAt
-    ? formatRelativeTime(calcutta.tournamentStartingAt)
-    : null;
+  const countdown = calcutta.tournamentStartingAt ? formatRelativeTime(calcutta.tournamentStartingAt) : null;
 
   return (
     <Link to={`/calcuttas/${calcutta.id}`} className="block">
@@ -148,19 +140,19 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold">{calcutta.name}</h2>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                calcutta.hasEntry
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-amber-100 text-amber-700'
-              }`}>
+              <span
+                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  calcutta.hasEntry ? 'bg-success/10 text-success' : 'bg-amber-100 text-amber-700'
+                }`}
+              >
                 {calcutta.hasEntry ? "You're in" : 'Build your portfolio'}
               </span>
             </div>
             {countdown && (
-              <p className={`text-sm mt-1 ${countdown.urgent ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-                {countdown.urgent
-                  ? `${countdown.text} remaining`
-                  : `${countdown.text} until portfolios reveal`}
+              <p
+                className={`text-sm mt-1 ${countdown.urgent ? 'text-destructive font-medium' : 'text-muted-foreground'}`}
+              >
+                {countdown.urgent ? `${countdown.text} remaining` : `${countdown.text} until portfolios reveal`}
               </p>
             )}
           </div>

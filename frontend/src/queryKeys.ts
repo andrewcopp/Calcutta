@@ -56,12 +56,10 @@ export const queryKeys = {
       detail: (evaluationId: string | null | undefined) => ['lab', 'evaluations', evaluationId ?? null] as const,
       entries: (evaluationId: string | null | undefined) =>
         ['lab', 'evaluations', evaluationId ?? null, 'entries'] as const,
-      byEntry: (entryId: string | null | undefined) =>
-        ['lab', 'evaluations', { entry_id: entryId ?? null }] as const,
+      byEntry: (entryId: string | null | undefined) => ['lab', 'evaluations', { entry_id: entryId ?? null }] as const,
     },
     entryResults: {
-      profile: (entryResultId: string | null | undefined) =>
-        ['lab', 'entry-results', entryResultId ?? null] as const,
+      profile: (entryResultId: string | null | undefined) => ['lab', 'entry-results', entryResultId ?? null] as const,
     },
   },
 };

@@ -58,9 +58,7 @@ export function LabPage() {
       {isLoading ? <LoadingState label="Loading leaderboard..." layout="inline" /> : null}
 
       {!isLoading && items.length === 0 ? (
-        <Alert variant="info">
-          No models found. Register investment models via Python to see them here.
-        </Alert>
+        <Alert variant="info">No models found. Register investment models via Python to see them here.</Alert>
       ) : null}
 
       {!isLoading && items.length > 0 ? (

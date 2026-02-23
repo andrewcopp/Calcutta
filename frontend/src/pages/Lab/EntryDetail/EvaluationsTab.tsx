@@ -42,7 +42,7 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
 
   const handleEntryClick = (entryResultId: string) => {
     navigate(
-      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry-results/${encodeURIComponent(entryResultId)}`
+      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry-results/${encodeURIComponent(entryResultId)}`,
     );
   };
 
@@ -57,29 +57,27 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
   return (
     <div className="space-y-4">
       {/* Compact evaluation metrics header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-card rounded-lg border border-border p-4">
         <div className="flex flex-wrap items-center gap-6">
           <div>
-            <span className="text-xs text-gray-500 uppercase mr-2">Sims:</span>
+            <span className="text-xs text-muted-foreground uppercase mr-2">Sims:</span>
             <span className="font-medium">{evaluation.nSims.toLocaleString()}</span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 uppercase mr-2">Mean Payout:</span>
+            <span className="text-xs text-muted-foreground uppercase mr-2">Mean Payout:</span>
             <span className={cn('font-semibold', getPayoutColor(evaluation.meanNormalizedPayout))}>
               {formatPayoutX(evaluation.meanNormalizedPayout)}
             </span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 uppercase mr-2">P(Top 1):</span>
+            <span className="text-xs text-muted-foreground uppercase mr-2">P(Top 1):</span>
             <span className="font-medium">{formatPct(evaluation.pTop1)}</span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 uppercase mr-2">P(In Money):</span>
+            <span className="text-xs text-muted-foreground uppercase mr-2">P(In Money):</span>
             <span className="font-medium">{formatPct(evaluation.pInMoney)}</span>
           </div>
-          <div className="text-gray-400 text-sm">
-            Created: {formatDate(evaluation.createdAt)}
-          </div>
+          <div className="text-muted-foreground/60 text-sm">Created: {formatDate(evaluation.createdAt)}</div>
         </div>
       </div>
 
@@ -89,38 +87,46 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
         {entryResultsQuery.isLoading ? (
           <LoadingState label="Loading entry results..." layout="inline" />
         ) : entryResults.length === 0 ? (
-          <p className="text-gray-500 text-sm">No entry results available for this evaluation.</p>
+          <p className="text-muted-foreground text-sm">No entry results available for this evaluation.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-accent">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entry Name</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mean Payout</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(Top 1)</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(In Money)</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Rank</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Entry Name
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
+                    Mean Payout
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">P(Top 1)</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
+                    P(In Money)
+                  </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {entryResults.map((entry) => {
                   const isOurStrategy = entry.entryName === 'Our Strategy';
                   return (
                     <tr
                       key={entry.entryName}
                       className={cn(
-                        'hover:bg-gray-50 cursor-pointer',
-                        isOurStrategy && 'bg-blue-50 font-semibold hover:bg-blue-100'
+                        'hover:bg-accent cursor-pointer',
+                        isOurStrategy && 'bg-primary/10 font-semibold hover:bg-blue-100',
                       )}
                       onClick={() => handleEntryClick(entry.id)}
                     >
-                      <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
-                      <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
+                      <td className="px-3 py-2 text-sm text-foreground">#{entry.rank}</td>
+                      <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-foreground')}>
                         {entry.entryName}
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.meanNormalizedPayout)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.pTop1)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.pInMoney)}</td>
+                      <td className="px-3 py-2 text-sm text-foreground text-right">
+                        {formatPayoutX(entry.meanNormalizedPayout)}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-foreground text-right">{formatPct(entry.pTop1)}</td>
+                      <td className="px-3 py-2 text-sm text-foreground text-right">{formatPct(entry.pInMoney)}</td>
                     </tr>
                   );
                 })}

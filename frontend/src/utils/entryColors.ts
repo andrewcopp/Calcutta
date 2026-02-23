@@ -15,7 +15,7 @@ const DEFAULT_ENTRY_COLOR_PALETTE = [
 
 export function getEntryColorById<T extends { id: string }>(
   entries: readonly T[],
-  palette: readonly string[] = DEFAULT_ENTRY_COLOR_PALETTE
+  palette: readonly string[] = DEFAULT_ENTRY_COLOR_PALETTE,
 ): Map<string, string> {
   const map = new Map<string, string>();
   entries.forEach((entry, idx) => {

@@ -26,15 +26,33 @@ export default {
           foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
         },
         border: 'rgb(var(--border) / <alpha-value>)',
+        input: 'rgb(var(--input) / <alpha-value>)',
+        ring: 'rgb(var(--ring) / <alpha-value>)',
         header: {
           DEFAULT: 'rgb(var(--header-bg) / <alpha-value>)',
           text: 'rgb(var(--header-text) / <alpha-value>)',
           muted: 'rgb(var(--header-muted) / <alpha-value>)',
         },
-        // Legacy aliases
-        bg: 'rgb(var(--background) / <alpha-value>)',
-        surface: 'rgb(var(--card) / <alpha-value>)',
-        text: 'rgb(var(--foreground) / <alpha-value>)',
+        muted: {
+          DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
+          foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
+        },
+        success: {
+          DEFAULT: 'rgb(var(--success) / <alpha-value>)',
+          foreground: 'rgb(var(--success-foreground) / <alpha-value>)',
+        },
+        warning: {
+          DEFAULT: 'rgb(var(--warning) / <alpha-value>)',
+          foreground: 'rgb(var(--warning-foreground) / <alpha-value>)',
+        },
+        info: {
+          DEFAULT: 'rgb(var(--info) / <alpha-value>)',
+          foreground: 'rgb(var(--info-foreground) / <alpha-value>)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

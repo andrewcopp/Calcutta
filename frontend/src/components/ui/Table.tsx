@@ -25,26 +25,29 @@ type ThProps = React.ThHTMLAttributes<HTMLTableCellElement>;
 type TdProps = React.TdHTMLAttributes<HTMLTableCellElement>;
 
 export function TableHead({ className, ...props }: TheadProps) {
-  return <thead className={cn('bg-gray-50', className)} {...props} />;
+  return <thead className={cn('bg-accent', className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: TbodyProps) {
-  return <tbody className={cn('bg-surface divide-y divide-border', className)} {...props} />;
+  return <tbody className={cn('bg-card divide-y divide-border', className)} {...props} />;
 }
 
 export function TableRow({ className, ...props }: TrProps) {
-  return <tr className={cn('hover:bg-gray-50', className)} {...props} />;
+  return <tr className={cn('hover:bg-accent', className)} {...props} />;
 }
 
 export function TableHeaderCell({ className, ...props }: ThProps) {
   return (
     <th
-      className={cn('px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider', className)}
+      className={cn(
+        'px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider',
+        className,
+      )}
       {...props}
     />
   );
 }
 
 export function TableCell({ className, ...props }: TdProps) {
-  return <td className={cn('px-4 py-3 text-sm text-gray-700', className)} {...props} />;
+  return <td className={cn('px-4 py-3 text-sm text-foreground', className)} {...props} />;
 }

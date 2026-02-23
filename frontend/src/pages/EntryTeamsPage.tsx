@@ -105,7 +105,7 @@ export function EntryTeamsPage() {
         />
         <PageHeader title="Portfolio" />
         <Card className="text-center">
-          <p className="text-gray-600">This portfolio is hidden while bidding is open.</p>
+          <p className="text-muted-foreground">This portfolio is hidden while bidding is open.</p>
         </Card>
       </PageContainer>
     );
@@ -113,8 +113,8 @@ export function EntryTeamsPage() {
 
   const ownershipLoading = dashboardQuery.isFetching;
 
-  const entryTeams = biddingOpen && isOwnEntry ? ownEntryTeamsQuery.data ?? [] : teams;
-  const entryTitle = isOwnEntry ? 'Your Portfolio' : (entryName || 'Portfolio');
+  const entryTeams = biddingOpen && isOwnEntry ? (ownEntryTeamsQuery.data ?? []) : teams;
+  const entryTitle = isOwnEntry ? 'Your Portfolio' : entryName || 'Portfolio';
 
   return (
     <PageContainer>
@@ -131,25 +131,31 @@ export function EntryTeamsPage() {
       {isOwnEntry && !biddingOpen && dashboardQuery.data?.tournamentStartingAt && (
         <div className="mb-4 flex items-center gap-2">
           <Badge variant="secondary">Portfolios Revealed</Badge>
-          <span className="text-sm text-gray-500">{formatDate(dashboardQuery.data.tournamentStartingAt, true)}</span>
+          <span className="text-sm text-muted-foreground">
+            {formatDate(dashboardQuery.data.tournamentStartingAt, true)}
+          </span>
         </div>
       )}
 
-      {isOwnEntry && !biddingOpen && (() => {
-        const totalSpent = teams.reduce((sum, et) => sum + et.bid, 0);
-        const budgetPoints = dashboardQuery.data?.calcutta?.budgetPoints ?? 100;
-        return (
-          <Card variant="accent" padding="compact" className="mb-6">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-gray-900">Your Portfolio</h3>
-              <Badge variant={currentUserEntry?.status === 'accepted' ? 'success' : 'secondary'}>
-                {currentUserEntry?.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
-              </Badge>
-              <span className="text-sm text-gray-500">{teams.length} teams &middot; {totalSpent} / {budgetPoints} credits</span>
-            </div>
-          </Card>
-        );
-      })()}
+      {isOwnEntry &&
+        !biddingOpen &&
+        (() => {
+          const totalSpent = teams.reduce((sum, et) => sum + et.bid, 0);
+          const budgetPoints = dashboardQuery.data?.calcutta?.budgetPoints ?? 100;
+          return (
+            <Card variant="accent" padding="compact" className="mb-6">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
+                <Badge variant={currentUserEntry?.status === 'accepted' ? 'success' : 'secondary'}>
+                  {currentUserEntry?.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {teams.length} teams &middot; {totalSpent} / {budgetPoints} credits
+                </span>
+              </div>
+            </Card>
+          );
+        })()}
 
       {isOwnEntry && !biddingOpen && currentUserEntry && dashboardQuery.data && (
         <DashboardSummary

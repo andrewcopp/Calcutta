@@ -46,7 +46,10 @@ export function EvaluationDetailPage() {
   if (evaluationQuery.isError || !evaluation) {
     return (
       <PageContainer>
-        <ErrorState error={evaluationQuery.error ?? 'Failed to load evaluation.'} onRetry={() => evaluationQuery.refetch()} />
+        <ErrorState
+          error={evaluationQuery.error ?? 'Failed to load evaluation.'}
+          onRetry={() => evaluationQuery.refetch()}
+        />
       </PageContainer>
     );
   }
@@ -61,45 +64,46 @@ export function EvaluationDetailPage() {
         ]}
       />
 
-      <PageHeader
-        title="Evaluation Results"
-        subtitle={`${evaluation.modelName} on ${evaluation.calcuttaName}`}
-      />
+      <PageHeader title="Evaluation Results" subtitle={`${evaluation.modelName} on ${evaluation.calcuttaName}`} />
 
       <Card className="mb-6">
         <h2 className="text-lg font-semibold mb-3">Simulation Details</h2>
         <dl className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-gray-500">Model</dt>
+            <dt className="text-muted-foreground">Model</dt>
             <dd className="font-medium">
               <button
                 type="button"
-                className="text-blue-600 hover:underline"
-                onClick={() => navigate(`/lab/models/${encodeURIComponent(evaluation.modelName)}/calcutta/${encodeURIComponent(evaluation.calcuttaId)}`)}
+                className="text-primary hover:underline"
+                onClick={() =>
+                  navigate(
+                    `/lab/models/${encodeURIComponent(evaluation.modelName)}/calcutta/${encodeURIComponent(evaluation.calcuttaId)}`,
+                  )
+                }
               >
                 {evaluation.modelName}
               </button>
-              <span className="text-gray-500 ml-1">({evaluation.modelKind})</span>
+              <span className="text-muted-foreground ml-1">({evaluation.modelKind})</span>
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">Calcutta</dt>
+            <dt className="text-muted-foreground">Calcutta</dt>
             <dd className="font-medium">{evaluation.calcuttaName}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Starting State</dt>
+            <dt className="text-muted-foreground">Starting State</dt>
             <dd className="font-medium">{evaluation.startingStateKey}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Simulations</dt>
+            <dt className="text-muted-foreground">Simulations</dt>
             <dd className="font-medium">{evaluation.nSims.toLocaleString()}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Seed</dt>
+            <dt className="text-muted-foreground">Seed</dt>
             <dd className="font-medium">{evaluation.seed}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Created</dt>
+            <dt className="text-muted-foreground">Created</dt>
             <dd className="font-medium">{formatDate(evaluation.createdAt, true)}</dd>
           </div>
         </dl>
@@ -108,38 +112,34 @@ export function EvaluationDetailPage() {
       <Card className="mb-6">
         <h2 className="text-lg font-semibold mb-3">Results</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-sm text-gray-500 mb-1">Mean Normalized Payout</div>
-            <div className="text-2xl font-bold text-gray-900">
+          <div className="text-center p-4 bg-accent rounded-lg">
+            <div className="text-sm text-muted-foreground mb-1">Mean Normalized Payout</div>
+            <div className="text-2xl font-bold text-foreground">
               {formatPayoutX(evaluation.meanNormalizedPayout, 4)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">The key metric</div>
+            <div className="text-xs text-muted-foreground mt-1">The key metric</div>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-sm text-gray-500 mb-1">Median Normalized Payout</div>
-            <div className="text-2xl font-bold text-gray-700">
+          <div className="text-center p-4 bg-accent rounded-lg">
+            <div className="text-sm text-muted-foreground mb-1">Median Normalized Payout</div>
+            <div className="text-2xl font-bold text-foreground">
               {formatPayoutX(evaluation.medianNormalizedPayout, 4)}
             </div>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-sm text-gray-500 mb-1">P(Top 1)</div>
-            <div className="text-2xl font-bold text-gray-700">
-              {formatPct(evaluation.pTop1, 2)}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">Probability of winning</div>
+          <div className="text-center p-4 bg-accent rounded-lg">
+            <div className="text-sm text-muted-foreground mb-1">P(Top 1)</div>
+            <div className="text-2xl font-bold text-foreground">{formatPct(evaluation.pTop1, 2)}</div>
+            <div className="text-xs text-muted-foreground mt-1">Probability of winning</div>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-sm text-gray-500 mb-1">P(In Money)</div>
-            <div className="text-2xl font-bold text-gray-700">
-              {formatPct(evaluation.pInMoney, 2)}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">Probability of payout</div>
+          <div className="text-center p-4 bg-accent rounded-lg">
+            <div className="text-sm text-muted-foreground mb-1">P(In Money)</div>
+            <div className="text-2xl font-bold text-foreground">{formatPct(evaluation.pInMoney, 2)}</div>
+            <div className="text-xs text-muted-foreground mt-1">Probability of payout</div>
           </div>
         </div>
 
         {evaluation.ourRank != null ? (
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg text-center">
-            <div className="text-sm text-blue-600 mb-1">Our Rank (median)</div>
+          <div className="mt-4 p-4 bg-primary/10 rounded-lg text-center">
+            <div className="text-sm text-primary mb-1">Our Rank (median)</div>
             <div className="text-2xl font-bold text-blue-900">#{evaluation.ourRank}</div>
           </div>
         ) : null}
@@ -150,36 +150,39 @@ export function EvaluationDetailPage() {
         {entryResultsQuery.isLoading ? (
           <LoadingState label="Loading entry results..." />
         ) : entryResults.length === 0 ? (
-          <p className="text-gray-500 text-sm">No entry results available for this evaluation.</p>
+          <p className="text-muted-foreground text-sm">No entry results available for this evaluation.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-accent">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entry Name</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mean Payout</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(Top 1)</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P(In Money)</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Rank</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Entry Name
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
+                    Mean Payout
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">P(Top 1)</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
+                    P(In Money)
+                  </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {entryResults.map((entry) => {
                   const isOurStrategy = entry.entryName === 'Our Strategy';
                   return (
-                    <tr
-                      key={entry.entryName}
-                      className={cn(
-                        isOurStrategy && 'bg-blue-50 font-semibold'
-                      )}
-                    >
-                      <td className="px-3 py-2 text-sm text-gray-700">#{entry.rank}</td>
-                      <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-gray-900')}>
+                    <tr key={entry.entryName} className={cn(isOurStrategy && 'bg-primary/10 font-semibold')}>
+                      <td className="px-3 py-2 text-sm text-foreground">#{entry.rank}</td>
+                      <td className={cn('px-3 py-2 text-sm', isOurStrategy ? 'text-blue-900' : 'text-foreground')}>
                         {entry.entryName}
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPayoutX(entry.meanNormalizedPayout, 4)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.pTop1, 2)}</td>
-                      <td className="px-3 py-2 text-sm text-gray-700 text-right">{formatPct(entry.pInMoney, 2)}</td>
+                      <td className="px-3 py-2 text-sm text-foreground text-right">
+                        {formatPayoutX(entry.meanNormalizedPayout, 4)}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-foreground text-right">{formatPct(entry.pTop1, 2)}</td>
+                      <td className="px-3 py-2 text-sm text-foreground text-right">{formatPct(entry.pInMoney, 2)}</td>
                     </tr>
                   );
                 })}
@@ -188,7 +191,6 @@ export function EvaluationDetailPage() {
           </div>
         )}
       </Card>
-
     </PageContainer>
   );
 }

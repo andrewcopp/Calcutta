@@ -4,7 +4,7 @@ export function LeaderboardSkeleton() {
   return (
     <div className="grid gap-4">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="bg-white p-4 rounded-lg shadow">
+        <div key={i} className="bg-card p-4 rounded-lg shadow">
           <div className="flex justify-between items-center">
             <div className="space-y-2">
               <Skeleton className="h-6 w-40" />

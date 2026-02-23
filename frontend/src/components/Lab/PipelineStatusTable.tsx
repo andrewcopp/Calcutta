@@ -35,13 +35,7 @@ function StageProgress({ stage }: { stage: string }) {
         return (
           <div
             key={s}
-            className={`h-1.5 w-6 rounded ${
-              isComplete
-                ? 'bg-green-500'
-                : isCurrent
-                ? 'bg-blue-500'
-                : 'bg-gray-200'
-            }`}
+            className={`h-1.5 w-6 rounded ${isComplete ? 'bg-green-500' : isCurrent ? 'bg-blue-500' : 'bg-gray-200'}`}
             title={s}
           ></div>
         );
@@ -99,9 +93,7 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Result
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Rank
-              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -113,12 +105,12 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
               return (
                 <tr
                   key={c.calcuttaId}
-                  className={`${
-                    canNavigate ? 'hover:bg-gray-50 cursor-pointer' : ''
-                  } ${isFailed ? 'bg-red-50' : ''}`}
+                  className={`${canNavigate ? 'hover:bg-gray-50 cursor-pointer' : ''} ${isFailed ? 'bg-red-50' : ''}`}
                   onClick={() => {
                     if (canNavigate) {
-                      navigate(`/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(c.calcuttaId)}`);
+                      navigate(
+                        `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(c.calcuttaId)}`,
+                      );
                     }
                   }}
                 >
@@ -127,22 +119,13 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
                     <div className="text-xs text-gray-500">{c.calcuttaYear}</div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <StatusIcon
-                      completed={c.hasPredictions}
-                      running={isRunning && c.stage === 'predictions'}
-                    />
+                    <StatusIcon completed={c.hasPredictions} running={isRunning && c.stage === 'predictions'} />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <StatusIcon
-                      completed={c.hasEntry}
-                      running={isRunning && c.stage === 'optimization'}
-                    />
+                    <StatusIcon completed={c.hasEntry} running={isRunning && c.stage === 'optimization'} />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <StatusIcon
-                      completed={c.hasEvaluation}
-                      running={isRunning && c.stage === 'evaluation'}
-                    />
+                    <StatusIcon completed={c.hasEvaluation} running={isRunning && c.stage === 'evaluation'} />
                   </td>
                   <td className="px-4 py-3">
                     {isFailed ? (
@@ -172,9 +155,7 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
                   </td>
                   <td className="px-4 py-3 text-right">
                     {c.hasEvaluation && c.ourRank != null ? (
-                      <span className="text-sm font-medium text-gray-900">
-                        #{c.ourRank}
-                      </span>
+                      <span className="text-sm font-medium text-gray-900">#{c.ourRank}</span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
                     )}

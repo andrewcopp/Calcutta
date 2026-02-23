@@ -18,23 +18,27 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
 
   return (
     <nav aria-label="Breadcrumb" className={cn('mb-4', className)}>
-      <ol className="flex flex-wrap items-center gap-1 text-sm text-gray-600">
+      <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 
           return (
             <li key={index} className="flex items-center">
               {index > 0 && (
-                <svg className="mx-2 h-4 w-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden="true">
+                <svg
+                  className="mx-2 h-4 w-4 text-muted-foreground/60 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                 </svg>
               )}
               {isLast || !item.href ? (
                 <span
-                  className={cn(
-                    'max-w-[200px] truncate',
-                    isLast ? 'font-medium text-gray-900' : ''
-                  )}
+                  className={cn('max-w-[200px] truncate', isLast ? 'font-medium text-foreground' : '')}
                   aria-current={isLast ? 'page' : undefined}
                   title={item.label}
                 >
@@ -43,7 +47,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
               ) : (
                 <Link
                   to={item.href}
-                  className="max-w-[200px] truncate text-blue-600 hover:text-blue-800 hover:underline"
+                  className="max-w-[200px] truncate text-primary hover:text-primary hover:underline"
                   title={item.label}
                 >
                   {item.label}

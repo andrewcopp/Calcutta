@@ -55,7 +55,9 @@ export function EntryRosterCard({
 
       <div className="px-4 py-3 border-t border-gray-200 flex justify-between text-sm text-gray-600">
         <span>{sortedTeams.length} teams</span>
-        <span>{totalSpent} / {budgetPoints} credits</span>
+        <span>
+          {totalSpent} / {budgetPoints} credits
+        </span>
       </div>
     </Card>
   );

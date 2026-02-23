@@ -166,8 +166,15 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
 
   const parseBody = async () => {
     if (!response.ok) {
-      if (isJson) return response.json().catch((e: unknown) => { console.error('Failed to parse error response JSON', e); return undefined; });
-      return response.text().catch((e: unknown) => { console.error('Failed to parse error response text', e); return undefined; });
+      if (isJson)
+        return response.json().catch((e: unknown) => {
+          console.error('Failed to parse error response JSON', e);
+          return undefined;
+        });
+      return response.text().catch((e: unknown) => {
+        console.error('Failed to parse error response text', e);
+        return undefined;
+      });
     }
     if (isJson) return response.json();
     return response.text();
@@ -212,5 +219,6 @@ export const apiClient = {
     request<T>(path, { ...options, method: 'PUT', body }),
   patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'PATCH', body }),
-  delete: <T>(path: string, options?: Omit<RequestOptions, 'method'>) => request<T>(path, { ...options, method: 'DELETE' }),
+  delete: <T>(path: string, options?: Omit<RequestOptions, 'method'>) =>
+    request<T>(path, { ...options, method: 'DELETE' }),
 };

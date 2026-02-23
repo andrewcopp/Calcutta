@@ -40,7 +40,7 @@ export function TournamentListPage() {
             totalTeams,
             eliminatedTeams,
           };
-        })
+        }),
       );
 
       return tournamentsWithStatus;
@@ -59,17 +59,10 @@ export function TournamentListPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'Tournaments' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Admin', href: '/admin' }, { label: 'Tournaments' }]} />
       <PageHeader
         title="Tournaments"
-        actions={
-          <Button onClick={() => navigate('/admin/tournaments/create')}>Create Tournament</Button>
-        }
+        actions={<Button onClick={() => navigate('/admin/tournaments/create')}>Create Tournament</Button>}
       />
 
       {tournamentsQuery.isLoading ? <LoadingState label="Loading tournaments..." /> : null}
@@ -82,7 +75,7 @@ export function TournamentListPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h2 className="text-xl font-semibold mb-2">{tournament.name}</h2>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       {tournament.rounds} rounds • Created {formatDate(tournament.createdAt)}
                     </p>
                   </div>
@@ -90,7 +83,7 @@ export function TournamentListPage() {
                     <div
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
                         tournament.status === 'Complete'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-success/10 text-success'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >
@@ -114,7 +107,7 @@ export function TournamentListPage() {
           ))}
 
           {tournaments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No tournaments found. Create your first tournament to get started.
             </div>
           ) : null}
@@ -122,4 +115,4 @@ export function TournamentListPage() {
       ) : null}
     </PageContainer>
   );
- }
+}

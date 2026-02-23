@@ -8,7 +8,7 @@ export function CalcuttaTeamsSkeleton() {
         <Skeleton className="h-5 w-24" />
       </div>
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className="bg-white p-3 rounded-lg shadow flex items-center justify-between">
+        <div key={i} className="bg-card p-3 rounded-lg shadow flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Skeleton className="h-8 w-8 rounded-full" />
             <div className="space-y-1">

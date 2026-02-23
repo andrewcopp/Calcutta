@@ -30,16 +30,16 @@ export function ReturnsTab({
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-4">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             checked={returnsShowAllTeams}
             onChange={(e) => setReturnsShowAllTeams(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-border"
           />
           Show All Teams
         </label>
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-muted-foreground">
           Sort by
           <Select
             className="ml-2 w-auto"
@@ -53,11 +53,11 @@ export function ReturnsTab({
         </label>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <div className="overflow-x-auto">
           <table className="min-w-full table-fixed border-separate border-spacing-y-2">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-2 py-2 w-14">Seed</th>
                 <th className="px-2 py-2 w-20">Region</th>
                 <th className="px-2 py-2 w-44">Team</th>
@@ -73,7 +73,9 @@ export function ReturnsTab({
                   const totalActualPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
                   const totalExpectedPoints = teamPortfolioTeams.reduce((sum, pt) => sum + pt.expectedPoints, 0);
                   const eliminated = tt.isEliminated === true;
-                  const totalPossiblePoints = eliminated ? totalActualPoints : Math.max(totalExpectedPoints, totalActualPoints);
+                  const totalPossiblePoints = eliminated
+                    ? totalActualPoints
+                    : Math.max(totalExpectedPoints, totalActualPoints);
                   return Math.max(max, totalActualPoints, totalPossiblePoints);
                 }, 0);
 
@@ -134,10 +136,12 @@ export function ReturnsTab({
                   const othersActualPoints = totalActualPoints * (1 - userOwnership);
 
                   return (
-                    <tr key={team.id} className="bg-gray-50">
-                      <td className="px-2 py-3 font-medium text-gray-900 rounded-l-md whitespace-nowrap">{team.team?.seed ?? '—'}</td>
-                      <td className="px-2 py-3 text-gray-700 whitespace-nowrap">{tournamentTeam?.region || '—'}</td>
-                      <td className="px-2 py-3 text-gray-900 font-medium whitespace-nowrap truncate">
+                    <tr key={team.id} className="bg-accent">
+                      <td className="px-2 py-3 font-medium text-foreground rounded-l-md whitespace-nowrap">
+                        {team.team?.seed ?? '—'}
+                      </td>
+                      <td className="px-2 py-3 text-foreground whitespace-nowrap">{tournamentTeam?.region || '—'}</td>
+                      <td className="px-2 py-3 text-foreground font-medium whitespace-nowrap truncate">
                         {team.team?.school?.name || 'Unknown School'}
                       </td>
                       <td className="px-2 py-3">
@@ -171,8 +175,10 @@ export function ReturnsTab({
                           getTooltipValue={(seg) => `${seg.value.toFixed(2)} points`}
                         />
                       </td>
-                      <td className="px-2 py-3 text-right font-medium text-gray-900 whitespace-nowrap">{userActualPoints.toFixed(2)}</td>
-                      <td className="px-2 py-3 text-right font-medium text-gray-900 rounded-r-md whitespace-nowrap">
+                      <td className="px-2 py-3 text-right font-medium text-foreground whitespace-nowrap">
+                        {userActualPoints.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-3 text-right font-medium text-foreground rounded-r-md whitespace-nowrap">
                         {totalActualPoints.toFixed(2)}
                       </td>
                     </tr>

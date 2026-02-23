@@ -28,7 +28,7 @@ function renderTeamOption(option: { id: string; label: string }, isHighlighted: 
   );
 }
 
-export function BidSlotRow({
+function BidSlotRowComponent({
   slotIndex,
   slot,
   teamOptions,
@@ -89,7 +89,7 @@ export function BidSlotRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="font-medium text-gray-900 truncate">
+              <span className="font-medium text-foreground truncate">
                 {team?.school?.name ?? 'Unknown'} ({team?.region} - {team?.seed})
               </span>
             </div>
@@ -110,14 +110,14 @@ export function BidSlotRow({
                   })}
                 />
                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 text-sm">cr</span>
+                  <span className="text-muted-foreground text-sm">cr</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => onClear(slotIndex)}
-                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                className="p-1.5 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
                 title="Remove team"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -141,11 +141,11 @@ export function BidSlotRow({
             className="flex-1"
             renderOption={renderTeamOption}
           />
-          {isOptional && (
-            <span className="text-xs text-gray-400 italic shrink-0">optional</span>
-          )}
+          {isOptional && <span className="text-xs text-muted-foreground/60 italic shrink-0">optional</span>}
         </div>
       )}
     </div>
   );
 }
+
+export const BidSlotRow = React.memo(BidSlotRowComponent);

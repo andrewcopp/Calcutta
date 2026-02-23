@@ -63,7 +63,7 @@ function makeSchool(overrides: Partial<School> & { id: string }): School {
 /** Build a minimal regions object with a single region containing specific slots. */
 function buildRegions(
   regionName: string,
-  seedSlots: Record<number, { schoolId: string; searchText: string }[]>
+  seedSlots: Record<number, { schoolId: string; searchText: string }[]>,
 ): Record<string, RegionState> {
   const base = createInitialRegions([regionName]);
   for (const [seed, slots] of Object.entries(seedSlots)) {
@@ -129,9 +129,11 @@ describe('createEmptyRegion', () => {
     const region = createEmptyRegion();
 
     // THEN the numeric keys are 1 through 16
-    expect(Object.keys(region).map(Number).sort((a, b) => a - b)).toEqual(
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-    );
+    expect(
+      Object.keys(region)
+        .map(Number)
+        .sort((a, b) => a - b),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
   });
 });
 
@@ -281,10 +283,7 @@ describe('createRegionsFromTeams', () => {
       makeTeam({ id: 't1', schoolId: 's1', region: 'East', seed: 11 }),
       makeTeam({ id: 't2', schoolId: 's2', region: 'East', seed: 11 }),
     ];
-    const schools = [
-      makeSchool({ id: 's1', name: 'Arizona St' }),
-      makeSchool({ id: 's2', name: 'Texas' }),
-    ];
+    const schools = [makeSchool({ id: 's1', name: 'Arizona St' }), makeSchool({ id: 's2', name: 'Texas' })];
 
     // WHEN creating regions from teams
     const regions = createRegionsFromTeams(['East'], teams, schools);
@@ -299,10 +298,7 @@ describe('createRegionsFromTeams', () => {
       makeTeam({ id: 't1', schoolId: 's1', region: 'East', seed: 11 }),
       makeTeam({ id: 't2', schoolId: 's2', region: 'East', seed: 11 }),
     ];
-    const schools = [
-      makeSchool({ id: 's1', name: 'Arizona St' }),
-      makeSchool({ id: 's2', name: 'Texas' }),
-    ];
+    const schools = [makeSchool({ id: 's1', name: 'Arizona St' }), makeSchool({ id: 's2', name: 'Texas' })];
 
     // WHEN creating regions from teams
     const regions = createRegionsFromTeams(['East'], teams, schools);
@@ -317,10 +313,7 @@ describe('createRegionsFromTeams', () => {
       makeTeam({ id: 't1', schoolId: 's1', region: 'East', seed: 11 }),
       makeTeam({ id: 't2', schoolId: 's2', region: 'East', seed: 11 }),
     ];
-    const schools = [
-      makeSchool({ id: 's1', name: 'Arizona St' }),
-      makeSchool({ id: 's2', name: 'Texas' }),
-    ];
+    const schools = [makeSchool({ id: 's1', name: 'Arizona St' }), makeSchool({ id: 's2', name: 'Texas' })];
 
     // WHEN creating regions from teams
     const regions = createRegionsFromTeams(['East'], teams, schools);
@@ -359,10 +352,7 @@ describe('createRegionsFromTeams', () => {
       makeTeam({ id: 't1', schoolId: 's1', region: 'East', seed: 1 }),
       makeTeam({ id: 't2', schoolId: 's2', region: 'West', seed: 3 }),
     ];
-    const schools = [
-      makeSchool({ id: 's1', name: 'Duke' }),
-      makeSchool({ id: 's2', name: 'Kansas' }),
-    ];
+    const schools = [makeSchool({ id: 's1', name: 'Duke' }), makeSchool({ id: 's2', name: 'Kansas' })];
 
     // WHEN creating regions from teams
     const regions = createRegionsFromTeams(['East', 'West'], teams, schools);
@@ -554,10 +544,7 @@ describe('deriveValidationStats', () => {
 
   it('returns empty duplicates when all schools are unique', () => {
     // GIVEN unique schools across regions
-    const schools = [
-      makeSchool({ id: 's1', name: 'Duke' }),
-      makeSchool({ id: 's2', name: 'UNC' }),
-    ];
+    const schools = [makeSchool({ id: 's1', name: 'Duke' }), makeSchool({ id: 's2', name: 'UNC' })];
     const regions = {
       ...buildRegions('East', { 1: [{ schoolId: 's1', searchText: 'Duke' }] }),
       ...buildRegions('West', { 1: [{ schoolId: 's2', searchText: 'UNC' }] }),

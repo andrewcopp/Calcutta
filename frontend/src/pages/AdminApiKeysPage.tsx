@@ -60,17 +60,12 @@ export function AdminApiKeysPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'API Keys' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Admin', href: '/admin' }, { label: 'API Keys' }]} />
       <PageHeader
         title="Admin: API Keys"
         subtitle="Create API keys for server-to-server access (e.g. the Python data science client)."
         actions={
-          <Link to="/admin" className="text-blue-600 hover:text-blue-800">
+          <Link to="/admin" className="text-primary hover:text-primary">
             Back to Admin Console
           </Link>
         }
@@ -103,9 +98,9 @@ export function AdminApiKeysPage() {
         {created && (
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">New key (copy this now)</h3>
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
-              <div className="mb-2 text-sm text-gray-700">This value will only be shown once.</div>
-              <pre className="bg-white rounded p-3 overflow-auto text-sm">{created.key}</pre>
+            <div className="bg-warning/10 border border-yellow-200 rounded p-4">
+              <div className="mb-2 text-sm text-foreground">This value will only be shown once.</div>
+              <pre className="bg-card rounded p-3 overflow-auto text-sm">{created.key}</pre>
               <div className="mt-3">
                 <Button onClick={() => copy(created.key)} variant="secondary">
                   Copy key
@@ -118,7 +113,7 @@ export function AdminApiKeysPage() {
 
       <Card>
         <h2 className="text-xl font-semibold mb-2">Your keys</h2>
-        <p className="text-gray-600 mb-4">These are key records (not the raw secret).</p>
+        <p className="text-muted-foreground mb-4">These are key records (not the raw secret).</p>
 
         {keysQuery.isLoading ? (
           <LoadingState label="Loading API keys..." layout="inline" />
@@ -156,7 +151,7 @@ export function AdminApiKeysPage() {
 
               {keys.length === 0 ? (
                 <TableRow>
-                  <TableCell className="text-gray-500" colSpan={5}>
+                  <TableCell className="text-muted-foreground" colSpan={5}>
                     No keys yet.
                   </TableCell>
                 </TableRow>
@@ -171,8 +166,10 @@ export function AdminApiKeysPage() {
           </Button>
         </div>
 
-        <div className="mt-6 text-sm text-gray-600">
-          <div>Use in Python as: <code>Authorization: Bearer &lt;api_key&gt;</code></div>
+        <div className="mt-6 text-sm text-muted-foreground">
+          <div>
+            Use in Python as: <code>Authorization: Bearer &lt;api_key&gt;</code>
+          </div>
         </div>
       </Card>
     </PageContainer>

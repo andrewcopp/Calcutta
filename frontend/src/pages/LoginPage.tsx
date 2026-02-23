@@ -17,10 +17,10 @@ export function LoginPage() {
   }, [navigate, user, from]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-muted">
       <div className="container mx-auto px-4 py-10">
         <div className="mb-6">
-          <Link to="/" className="text-blue-600 hover:text-blue-800">
+          <Link to="/" className="text-primary hover:text-primary">
             ← Back to Home
           </Link>
         </div>
@@ -31,8 +31,8 @@ export function LoginPage() {
               Your session has expired. Please log in again.
             </Alert>
           )}
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Log in</h1>
-          <p className="text-gray-600 mb-6">Sign in to view your pools and entries.</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Log in</h1>
+          <p className="text-muted-foreground mb-6">Sign in to view your pools and entries.</p>
           <AuthForm />
         </div>
       </div>

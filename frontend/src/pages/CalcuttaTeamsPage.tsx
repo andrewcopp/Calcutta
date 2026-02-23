@@ -104,49 +104,49 @@ export function CalcuttaTeamsPage() {
       <PageHeader
         title={`${calcuttaName} - Teams`}
         actions={
-          <Link to={`/calcuttas/${calcuttaId}`} className="text-blue-600 hover:text-blue-800">
+          <Link to={`/calcuttas/${calcuttaId}`} className="text-primary hover:text-primary">
             ← Back to Pool
           </Link>
         }
       />
 
       <Card className="p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell>Seed</TableHeaderCell>
-                  <TableHeaderCell>Team</TableHeaderCell>
-                  <TableHeaderCell>Region</TableHeaderCell>
-                  <TableHeaderCell className="text-right">Investment</TableHeaderCell>
-                  <TableHeaderCell className="text-right">Points</TableHeaderCell>
-                  <TableHeaderCell className="text-right">ROI</TableHeaderCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Seed</TableHeaderCell>
+                <TableHeaderCell>Team</TableHeaderCell>
+                <TableHeaderCell>Region</TableHeaderCell>
+                <TableHeaderCell className="text-right">Investment</TableHeaderCell>
+                <TableHeaderCell className="text-right">Points</TableHeaderCell>
+                <TableHeaderCell className="text-right">ROI</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {teams.map((team) => (
+                <TableRow key={team.teamId} className="hover:bg-accent">
+                  <TableCell className="font-medium text-foreground">{team.seed}</TableCell>
+                  <TableCell className="text-foreground">{team.schoolName}</TableCell>
+                  <TableCell className="text-foreground">{team.region}</TableCell>
+                  <TableCell className="text-right text-foreground">
+                    {biddingOpen ? '0.00 credits' : `${team.totalInvestment.toFixed(2)} credits`}
+                  </TableCell>
+                  <TableCell className="text-right text-foreground">{team.points}</TableCell>
+                  <TableCell className="text-right">
+                    {biddingOpen ? (
+                      <span className="font-medium text-muted-foreground/60">--</span>
+                    ) : (
+                      <span className={`font-medium ${team.roi > 0 ? 'text-success' : 'text-destructive'}`}>
+                        {team.roi.toFixed(2)}%
+                      </span>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {teams.map((team) => (
-                  <TableRow key={team.teamId} className="hover:bg-gray-50">
-                    <TableCell className="font-medium text-gray-900">{team.seed}</TableCell>
-                    <TableCell className="text-gray-700">{team.schoolName}</TableCell>
-                    <TableCell className="text-gray-700">{team.region}</TableCell>
-                    <TableCell className="text-right text-gray-700">
-                      {biddingOpen ? '0.00 credits' : `${team.totalInvestment.toFixed(2)} credits`}
-                    </TableCell>
-                    <TableCell className="text-right text-gray-700">{team.points}</TableCell>
-                    <TableCell className="text-right">
-                      {biddingOpen ? (
-                        <span className="font-medium text-gray-400">--</span>
-                      ) : (
-                        <span className={`font-medium ${team.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {team.roi.toFixed(2)}%
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </PageContainer>
   );

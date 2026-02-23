@@ -18,6 +18,18 @@
    --header-bg: 15 23 42;
    --header-text: 248 250 252;
    --header-muted: 148 163 184;
+   --muted: 243 244 246;
+   --muted-foreground: 107 114 128;
+   --accent: 249 250 251;
+   --accent-foreground: 17 24 39;
+   --ring: 37 99 235;
+   --input: 229 231 235;
+   --success: 34 197 94;
+   --success-foreground: 255 255 255;
+   --warning: 234 179 8;
+   --warning-foreground: 255 255 255;
+   --info: 59 130 246;
+   --info-foreground: 255 255 255;
  }
 
 body {

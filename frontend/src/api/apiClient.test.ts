@@ -43,7 +43,17 @@ const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promis
 vi.stubGlobal('fetch', fetchMock);
 
 // -- import the module under test (after stubs are in place) --
-type ApiClientModule = { apiClient: { get: <T>(path: string) => Promise<T>; post: <T>(path: string, body?: unknown) => Promise<T>; put: <T>(path: string, body?: unknown) => Promise<T>; patch: <T>(path: string, body?: unknown) => Promise<T>; delete: <T>(path: string) => Promise<T>; fetch: (path: string, options?: RequestInit) => Promise<Response>; setAccessToken: (token: string | null) => void } };
+type ApiClientModule = {
+  apiClient: {
+    get: <T>(path: string) => Promise<T>;
+    post: <T>(path: string, body?: unknown) => Promise<T>;
+    put: <T>(path: string, body?: unknown) => Promise<T>;
+    patch: <T>(path: string, body?: unknown) => Promise<T>;
+    delete: <T>(path: string) => Promise<T>;
+    fetch: (path: string, options?: RequestInit) => Promise<Response>;
+    setAccessToken: (token: string | null) => void;
+  };
+};
 let apiClient: ApiClientModule['apiClient'];
 
 beforeEach(async () => {

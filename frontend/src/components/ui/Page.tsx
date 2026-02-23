@@ -25,7 +25,7 @@ export function PageHeader({ title, subtitle, leftActions, actions, className }:
       <div className="min-w-0">
         {leftActions ? <div className="mb-2 flex items-center gap-2">{leftActions}</div> : null}
         <h1 className="text-3xl font-bold tracking-tight mb-2">{title}</h1>
-        {subtitle ? <p className="text-gray-500">{subtitle}</p> : null}
+        {subtitle ? <p className="text-muted-foreground">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>

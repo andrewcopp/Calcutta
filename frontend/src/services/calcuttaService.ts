@@ -28,7 +28,10 @@ export const calcuttaService = {
     });
   },
 
-  async updateCalcutta(id: string, updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBidPoints'>>): Promise<Calcutta> {
+  async updateCalcutta(
+    id: string,
+    updates: Partial<Pick<Calcutta, 'name' | 'minTeams' | 'maxTeams' | 'maxBidPoints'>>,
+  ): Promise<Calcutta> {
     return apiClient.patch<Calcutta>(`/calcuttas/${id}`, updates);
   },
 
@@ -48,10 +51,7 @@ export const calcuttaService = {
     return apiClient.get<CalcuttaWithRanking[]>('/calcuttas/list-with-rankings');
   },
 
-  async updateEntry(
-    entryId: string,
-    teams: Array<{ teamId: string; bid: number }>
-  ): Promise<CalcuttaEntry> {
+  async updateEntry(entryId: string, teams: Array<{ teamId: string; bid: number }>): Promise<CalcuttaEntry> {
     return apiClient.patch<CalcuttaEntry>(`/entries/${entryId}`, {
       teams,
     });
@@ -61,7 +61,10 @@ export const calcuttaService = {
     return apiClient.get(`/calcuttas/${calcuttaId}/payouts`);
   },
 
-  async replacePayouts(calcuttaId: string, payouts: Array<{ position: number; amountCents: number }>): Promise<{ payouts: Array<{ position: number; amountCents: number }> }> {
+  async replacePayouts(
+    calcuttaId: string,
+    payouts: Array<{ position: number; amountCents: number }>,
+  ): Promise<{ payouts: Array<{ position: number; amountCents: number }> }> {
     return apiClient.put(`/calcuttas/${calcuttaId}/payouts`, { payouts });
   },
 };

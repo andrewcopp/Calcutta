@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  CalcuttaEntryTeam,
-  CalcuttaPortfolio,
-  CalcuttaPortfolioTeam,
-} from '../types/calcutta';
+import type { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
 import type { TournamentTeam } from '../types/tournament';
+import { makeEntryTeam, makePortfolio, makePortfolioTeam, makeTournamentTeam } from '../test/factories';
 
 // ---------------------------------------------------------------------------
 // The hook wraps useCallback/useMemo over three computations:
@@ -138,55 +135,6 @@ function computeOwnershipTeamsData({
 }
 
 // ---------------------------------------------------------------------------
-// Test helpers -- factory functions for building fixture data
-// ---------------------------------------------------------------------------
-
-function makeEntryTeam(overrides: Partial<CalcuttaEntryTeam> & { id: string; entryId: string; teamId: string }): CalcuttaEntryTeam {
-  return {
-    bid: 10,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makePortfolio(overrides: Partial<CalcuttaPortfolio> & { id: string; entryId: string }): CalcuttaPortfolio {
-  return {
-    maximumPoints: 100,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makePortfolioTeam(
-  overrides: Partial<CalcuttaPortfolioTeam> & { id: string; portfolioId: string; teamId: string },
-): CalcuttaPortfolioTeam {
-  return {
-    ownershipPercentage: 1,
-    actualPoints: 0,
-    expectedPoints: 0,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function makeTournamentTeam(overrides: Partial<TournamentTeam> & { id: string; schoolId: string }): TournamentTeam {
-  return {
-    tournamentId: 'tourn-1',
-    seed: 1,
-    region: 'East',
-    byes: 0,
-    wins: 0,
-    isEliminated: false,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Default inputs for computeOwnershipTeamsData
 // ---------------------------------------------------------------------------
 
@@ -256,9 +204,7 @@ describe('useEntryOwnershipData (pure transformation)', () => {
     it('returns undefined when team is not in the first portfolio', () => {
       // GIVEN a portfolio team that belongs to a different portfolio
       const portfolios = [makePortfolio({ id: 'p1', entryId: 'e1' })];
-      const portfolioTeams = [
-        makePortfolioTeam({ id: 'pt1', portfolioId: 'p2', teamId: 't1' }),
-      ];
+      const portfolioTeams = [makePortfolioTeam({ id: 'pt1', portfolioId: 'p2', teamId: 't1' })];
 
       // WHEN looking up portfolio team data for 't1' against portfolio 'p1'
       const result = computeGetPortfolioTeamData('t1', portfolios, portfolioTeams);
@@ -269,10 +215,7 @@ describe('useEntryOwnershipData (pure transformation)', () => {
 
     it('uses only the first portfolio when multiple portfolios exist', () => {
       // GIVEN two portfolios and portfolio teams for each
-      const portfolios = [
-        makePortfolio({ id: 'p1', entryId: 'e1' }),
-        makePortfolio({ id: 'p2', entryId: 'e2' }),
-      ];
+      const portfolios = [makePortfolio({ id: 'p1', entryId: 'e1' }), makePortfolio({ id: 'p2', entryId: 'e2' })];
       const portfolioTeams = [
         makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', ownershipPercentage: 0.5 }),
         makePortfolioTeam({ id: 'pt2', portfolioId: 'p2', teamId: 't1', ownershipPercentage: 0.8 }),
@@ -288,9 +231,7 @@ describe('useEntryOwnershipData (pure transformation)', () => {
     it('returns undefined for a team that has no portfolio team record', () => {
       // GIVEN a portfolio with team records for 't1' only
       const portfolios = [makePortfolio({ id: 'p1', entryId: 'e1' })];
-      const portfolioTeams = [
-        makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1' }),
-      ];
+      const portfolioTeams = [makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1' })];
 
       // WHEN looking up portfolio team data for a different team 't2'
       const result = computeGetPortfolioTeamData('t2', portfolios, portfolioTeams);

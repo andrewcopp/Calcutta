@@ -26,14 +26,14 @@ export const tournamentService = {
       finalFourBottomLeft?: string;
       finalFourTopRight?: string;
       finalFourBottomRight?: string;
-    }
+    },
   ): Promise<Tournament> {
     return apiClient.patch<Tournament>(`/tournaments/${id}`, updates);
   },
 
   async replaceTeams(
     tournamentId: string,
-    teams: { schoolId: string; seed: number; region: string }[]
+    teams: { schoolId: string; seed: number; region: string }[],
   ): Promise<TournamentTeam[]> {
     return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/teams`, { teams });
   },
@@ -52,7 +52,9 @@ export const tournamentService = {
   },
 
   async grantTournamentModerator(tournamentId: string, email: string): Promise<TournamentModerator> {
-    const res = await apiClient.post<{ moderator: TournamentModerator }>(`/tournaments/${tournamentId}/moderators`, { email });
+    const res = await apiClient.post<{ moderator: TournamentModerator }>(`/tournaments/${tournamentId}/moderators`, {
+      email,
+    });
     return res.moderator;
   },
 
@@ -62,7 +64,7 @@ export const tournamentService = {
 
   async updateKenPomStats(
     tournamentId: string,
-    stats: { teamId: string; netRtg: number; oRtg: number; dRtg: number; adjT: number }[]
+    stats: { teamId: string; netRtg: number; oRtg: number; dRtg: number; adjT: number }[],
   ): Promise<TournamentTeam[]> {
     return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/kenpom`, { stats });
   },
