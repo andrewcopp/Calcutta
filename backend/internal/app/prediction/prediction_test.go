@@ -300,6 +300,100 @@ func TestThatProbabilitiesAreMonotonicallyDecreasing(t *testing.T) {
 	}
 }
 
+func TestThatOneSeedReachesSweetSixteenMoreThanFiftyPercent(t *testing.T) {
+	// GIVEN a 68-team tournament field with matchups
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values for the East 1-seed
+	values := GenerateTournamentValues(matchups, rules)
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	var oneSeedID string
+	for _, team := range teams {
+		if team.Region == "East" && team.Seed == 1 {
+			oneSeedID = team.ID
+		}
+	}
+
+	// THEN the 1-seed has >50% probability of reaching the Sweet 16
+	v := valueByID[oneSeedID]
+	if v.PRound3 <= 0.50 {
+		t.Errorf("1-seed PRound3 (reach S16) = %.4f, expected > 0.50", v.PRound3)
+	}
+}
+
+func TestThatOneSeedChampionshipProbabilityExceedsFivePercent(t *testing.T) {
+	// GIVEN a 68-team tournament field with matchups
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values for the East 1-seed
+	values := GenerateTournamentValues(matchups, rules)
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	var oneSeedID string
+	for _, team := range teams {
+		if team.Region == "East" && team.Seed == 1 {
+			oneSeedID = team.ID
+		}
+	}
+
+	// THEN the 1-seed has >5% championship probability
+	v := valueByID[oneSeedID]
+	if v.PRound7 <= 0.05 {
+		t.Errorf("1-seed PRound7 (win championship) = %.4f, expected > 0.05", v.PRound7)
+	}
+}
+
+func TestThatSixteenSeedReachesSweetSixteenLessThanFivePercent(t *testing.T) {
+	// GIVEN a 68-team tournament field with matchups
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values for non-FF 16-seeds
+	values := GenerateTournamentValues(matchups, rules)
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	// Find a non-FF 16-seed (South region has exactly one 16-seed)
+	var sixteenSeedID string
+	for _, team := range teams {
+		if team.Region == "South" && team.Seed == 16 {
+			sixteenSeedID = team.ID
+		}
+	}
+
+	// THEN the 16-seed has <5% probability of reaching the Sweet 16
+	v := valueByID[sixteenSeedID]
+	if v.PRound3 >= 0.05 {
+		t.Errorf("16-seed PRound3 (reach S16) = %.4f, expected < 0.05", v.PRound3)
+	}
+}
+
 // generateTestTeams creates a realistic 68-team tournament field for testing.
 func generateTestTeams() []TeamInput {
 	regions := []string{"East", "West", "South", "Midwest"}
