@@ -59,16 +59,28 @@ export function AdminPredictionsPage() {
     return opts;
   }, [maxProgress]);
 
+  // Compute round sums for surviving teams to normalize conditional probabilities
+  const roundSums = useMemo(() => {
+    if (effectiveThroughRound === 0) return undefined;
+    const sums: Record<number, number> = {};
+    const survivors = teams.filter((t) => t.wins + t.byes >= effectiveThroughRound);
+    for (let round = 1; round <= 7; round++) {
+      const pKey = `pRound${round}` as keyof typeof survivors[0];
+      sums[round] = survivors.reduce((sum, t) => sum + (t[pKey] as number), 0);
+    }
+    return sums;
+  }, [teams, effectiveThroughRound]);
+
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => {
-      const aProb = getConditionalProbability(a, sortRound, effectiveThroughRound);
-      const bProb = getConditionalProbability(b, sortRound, effectiveThroughRound);
+      const aProb = getConditionalProbability(a, sortRound, effectiveThroughRound, roundSums);
+      const bProb = getConditionalProbability(b, sortRound, effectiveThroughRound, roundSums);
       if (bProb.value !== aProb.value) return bProb.value - aProb.value;
       if (a.region < b.region) return -1;
       if (a.region > b.region) return 1;
       return a.seed - b.seed;
     });
-  }, [teams, sortRound, effectiveThroughRound]);
+  }, [teams, sortRound, effectiveThroughRound, roundSums]);
 
   return (
     <PageContainer>
@@ -160,7 +172,7 @@ export function AdminPredictionsPage() {
                     <td className="px-3 py-2">{team.schoolName || '—'}</td>
                     {ROUND_ABBREVS.map((_, i) => {
                       const round = i + 1;
-                      const { value, style } = getConditionalProbability(team, round, effectiveThroughRound);
+                      const { value, style } = getConditionalProbability(team, round, effectiveThroughRound, roundSums);
                       return (
                         <td key={round} className={`px-2 py-2 text-right tabular-nums ${style}`}>
                           {formatPercent(value)}

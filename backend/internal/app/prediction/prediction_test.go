@@ -394,6 +394,55 @@ func TestThatSixteenSeedReachesSweetSixteenLessThanFivePercent(t *testing.T) {
 	}
 }
 
+func TestThatStrongerFirstFourTeamHasHigherFFProbability(t *testing.T) {
+	// GIVEN a 68-team field where East has two 16-seeds: team-16 (KenPom -10.0) and team-65 (KenPom -12.0)
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values
+	values := GenerateTournamentValues(matchups, rules)
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	// THEN the stronger East 16-seed (team-16, KenPom -10.0) has higher PRound1 than the weaker one (team-65, KenPom -12.0)
+	stronger := valueByID["team-16"]
+	weaker := valueByID["team-65"]
+	if stronger.PRound1 <= weaker.PRound1 {
+		t.Errorf("stronger FF team PRound1 (%.4f) should be > weaker FF team PRound1 (%.4f)", stronger.PRound1, weaker.PRound1)
+	}
+}
+
+func TestThatFirstFourPairProbabilitiesSumToOne(t *testing.T) {
+	// GIVEN a 68-team field where East has two 16-seeds
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values
+	values := GenerateTournamentValues(matchups, rules)
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	// THEN the East 16-seed pair PRound1 values sum to 1.0
+	pSum := valueByID["team-16"].PRound1 + valueByID["team-65"].PRound1
+	if math.Abs(pSum-1.0) > 0.001 {
+		t.Errorf("East 16-seed FF pair PRound1 sum = %.4f, expected 1.0", pSum)
+	}
+}
+
 // generateTestTeams creates a realistic 68-team tournament field for testing.
 func generateTestTeams() []TeamInput {
 	regions := []string{"East", "West", "South", "Midwest"}

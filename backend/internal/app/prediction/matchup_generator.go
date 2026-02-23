@@ -48,6 +48,22 @@ func GenerateAllTheoreticalMatchups(teams []TeamInput, spec *simulation_game_out
 		return spec.WinProb(net1, net2)
 	}
 
+	// Precompute First Four win probabilities using KenPom ratings
+	ffWinProb := make(map[string]float64) // teamID -> P(win FF game)
+	for _, region := range regions {
+		seedGroups := make(map[int][]TeamInput)
+		for _, t := range teamsByRegion[region] {
+			seedGroups[t.Seed] = append(seedGroups[t.Seed], t)
+		}
+		for _, group := range seedGroups {
+			if len(group) == 2 {
+				p := calcWinProb(group[0].ID, group[1].ID)
+				ffWinProb[group[0].ID] = p
+				ffWinProb[group[1].ID] = 1.0 - p
+			}
+		}
+	}
+
 	makeMatchup := func(gameID string, roundOrder int, t1, t2 TeamInput, pMatchup float64) PredictedMatchup {
 		p1Wins := calcWinProb(t1.ID, t2.ID)
 		return PredictedMatchup{
@@ -104,9 +120,11 @@ func GenerateAllTheoreticalMatchups(teams []TeamInput, spec *simulation_game_out
 				for _, t2 := range t2Teams {
 					// p_matchup depends on whether this is a First Four matchup
 					pMatch := 1.0
-					if len(t1Teams) > 1 || len(t2Teams) > 1 {
-						// First Four involved - probability is 1/n per team
-						pMatch = (1.0 / float64(len(t1Teams))) * (1.0 / float64(len(t2Teams)))
+					if len(t1Teams) > 1 {
+						pMatch *= ffWinProb[t1.ID]
+					}
+					if len(t2Teams) > 1 {
+						pMatch *= ffWinProb[t2.ID]
 					}
 					r1Matchups = append(r1Matchups, makeMatchup(
 						fmt.Sprintf("R1-%s-%d", region, idx+1),

@@ -196,6 +196,91 @@ describe('getConditionalProbability', () => {
       expect(result.value).toBe(0);
     });
   });
+
+  describe('future rounds, team alive (normalized with roundSums)', () => {
+    it('normalizes championship probability using roundSums', () => {
+      // GIVEN a team alive at throughRound=5 with pRound7=0.1, and roundSums showing total=0.5 at round 7
+      const team = makeTeam({ wins: 4, byes: 1, pRound7: 0.1 });
+      const roundSums = { 1: 64, 2: 32, 3: 16, 4: 8, 5: 4, 6: 2, 7: 0.5 };
+
+      // WHEN getting probability for round 7 (championship)
+      const result = getConditionalProbability(team, 7, 5, roundSums);
+
+      // THEN normalizes: (0.1 / 0.5) * 1 = 0.2
+      expect(result.value).toBeCloseTo(0.2);
+    });
+
+    it('clamps to 1 when normalization would exceed 1', () => {
+      // GIVEN a team whose normalized probability would exceed 1
+      const team = makeTeam({ wins: 4, byes: 1, pRound7: 0.8 });
+      const roundSums = { 1: 64, 2: 32, 3: 16, 4: 8, 5: 4, 6: 2, 7: 0.5 };
+
+      // WHEN getting probability for round 7
+      const result = getConditionalProbability(team, 7, 5, roundSums);
+
+      // THEN clamps to 1
+      expect(result.value).toBe(1);
+    });
+
+    it('returns 0 when roundSums is 0 for the round', () => {
+      // GIVEN roundSums[7] = 0
+      const team = makeTeam({ wins: 4, byes: 1, pRound7: 0.1 });
+      const roundSums = { 1: 64, 2: 32, 3: 16, 4: 8, 5: 4, 6: 2, 7: 0 };
+
+      // WHEN getting probability for round 7
+      const result = getConditionalProbability(team, 7, 5, roundSums);
+
+      // THEN returns 0
+      expect(result.value).toBe(0);
+    });
+
+    it('does not affect pre-tournament mode', () => {
+      // GIVEN pre-tournament (throughRound=0) with roundSums provided
+      const team = makeTeam({ byes: 0 });
+      const roundSums = { 1: 64, 2: 32, 3: 16, 4: 8, 5: 4, 6: 2, 7: 1 };
+
+      // WHEN getting probability for round 2
+      const result = getConditionalProbability(team, 2, 0, roundSums);
+
+      // THEN returns raw pRound2 (roundSums ignored)
+      expect(result.value).toBe(0.95);
+    });
+
+    it('does not affect resolved rounds', () => {
+      // GIVEN a team that advanced through round 2 with roundSums
+      const team = makeTeam({ wins: 2, byes: 1 });
+      const roundSums = { 1: 64, 2: 32, 3: 16, 4: 8, 5: 4, 6: 2, 7: 1 };
+
+      // WHEN getting probability for round 2
+      const result = getConditionalProbability(team, 2, 2, roundSums);
+
+      // THEN returns 1 (resolved, not affected by roundSums)
+      expect(result.value).toBe(1);
+    });
+
+    it('does not affect eliminated teams', () => {
+      // GIVEN a team eliminated before checkpoint with roundSums
+      const team = makeTeam({ wins: 0, byes: 1 });
+      const roundSums = { 1: 64, 2: 32, 3: 16, 4: 8, 5: 4, 6: 2, 7: 1 };
+
+      // WHEN getting probability for round 3
+      const result = getConditionalProbability(team, 3, 2, roundSums);
+
+      // THEN returns 0 (eliminated, not affected by roundSums)
+      expect(result.value).toBe(0);
+    });
+
+    it('falls back to per-team conditional when roundSums not provided', () => {
+      // GIVEN a team alive at throughRound=2, no roundSums
+      const team = makeTeam({ wins: 1, byes: 1 });
+
+      // WHEN getting probability for round 3 without roundSums
+      const result = getConditionalProbability(team, 3, 2);
+
+      // THEN falls back to pRound3 / pRound2
+      expect(result.value).toBeCloseTo(0.8 / 0.95);
+    });
+  });
 });
 
 describe('formatPercent', () => {
