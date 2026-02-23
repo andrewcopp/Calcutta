@@ -31,6 +31,9 @@ function getConditionalProbability(
   const progress = team.wins + team.byes;
 
   if (throughRound === 0) {
+    if (team.byes >= round) {
+      return { value: 1, style: 'text-green-600 font-semibold' };
+    }
     const pKey = `pRound${round}` as keyof TeamPrediction;
     const raw = team[pKey] as number;
     return { value: raw, style: '' };
@@ -44,8 +47,8 @@ function getConditionalProbability(
     return { value: 0, style: 'text-muted-foreground' };
   }
 
-  // Future rounds: team is eliminated
-  if (team.isEliminated) {
+  // Future rounds: team was eliminated before this checkpoint
+  if (progress < throughRound) {
     return { value: 0, style: 'text-muted-foreground' };
   }
 
