@@ -39,9 +39,11 @@ data-science/airflow/logs/
 api
 backend/seed-simulations
 backend/migrate
+backend/import-bundles
 
 # Generated artifacts
 backend/exports/
+node_modules/
 
 out/
 .venv/

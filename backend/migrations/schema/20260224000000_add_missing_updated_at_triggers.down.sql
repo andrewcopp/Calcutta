@@ -1,0 +1,2 @@
+DROP TRIGGER IF EXISTS trg_compute_prediction_batches_updated_at ON compute.prediction_batches;
+DROP TRIGGER IF EXISTS trg_compute_predicted_team_values_updated_at ON compute.predicted_team_values;
