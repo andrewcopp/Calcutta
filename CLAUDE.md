@@ -21,10 +21,11 @@ make ops-migrate        # Run database migrations
 ### Testing
 ```bash
 make test                                            # All tests (backend + frontend + data science)
-make backend-test                                    # All Go tests
+make backend-test                                    # All Go unit tests (fast, no DB)
+make backend-integration-test                        # Go integration tests (requires Docker)
 make frontend-test                                   # All frontend tests (vitest)
 make ds-test                                         # All Python tests (pytest)
-go -C backend test ./...                             # Alternative
+go -C backend test ./...                             # Alternative (unit only)
 go -C backend test -v ./internal/app/bracket/...    # Specific package
 go -C backend test -v ./internal/app/bracket/ -run TestThatBracketBuilderGeneratesSameGameIDs  # Single test
 
@@ -160,7 +161,12 @@ Status codes: 200, 201, 204, 400, 401, 403, 404, 409, 423 (business rule lock), 
 2. **`TestThat{Scenario}` naming** - Descriptive behavior-focused names
 3. **GIVEN/WHEN/THEN structure** - Clear setup, action, assertion
 4. **Deterministic tests** - Fix time/randomness, sort before comparing
-5. **Unit tests only** - No DB/integration tests (pure logic only)
+
+### When to Unit Test (Default)
+- Pure functions (validation, computation, mapping, status derivation)
+- Business logic that takes domain models and returns domain models
+- Anything testable without I/O
+- No build tag needed — runs with `make backend-test`
 
 ```go
 func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
@@ -178,6 +184,21 @@ func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
 }
 ```
 
+### When to Integration Test
+- Adapter methods that execute SQL (CRUD, transactions, complex queries)
+- Constraint enforcement (unique violations, FK checks)
+- Multi-table joins and CTEs where SQL correctness is the concern
+- Transaction atomicity (ReplaceEntryTeams, ReplacePayouts)
+
+**Integration test conventions:**
+- Build tag: `//go:build integration` — runs only with `make backend-integration-test`
+- Same naming: `TestThat{Scenario}`, GIVEN/WHEN/THEN, one assertion per test
+- `TestMain` per package for shared container (via `testutil.StartPostgresContainer`)
+- `t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })` for isolation
+- Seed prerequisite data using repository methods, not raw SQL
+- File naming: `*_integration_test.go`
+
+### Frontend Tests
 Frontend tests follow the same conventions using Vitest:
 ```typescript
 describe('createEmptySlot', () => {
@@ -191,6 +212,7 @@ describe('createEmptySlot', () => {
 ## Database Rules
 
 - **All schema changes via versioned migrations** - No ad-hoc DDL on shared databases
+- **Use `/migrate` skill** to create new migration file pairs (generates timestamped `.up.sql` and `.down.sql`)
 - **Migration filenames:** `YYYYMMDDHHMMSS_description.up.sql` and `.down.sql`
 - **Never modify existing migrations** - Create new ones
 - **Soft deletes:** Use `deleted_at` timestamps
