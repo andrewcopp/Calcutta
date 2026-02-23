@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/jobqueue"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,6 +28,8 @@ type LabPipelineWorkerConfig struct {
 type LabPipelineWorker struct {
 	pool     *pgxpool.Pool
 	progress ProgressWriter
+	enqueuer *jobqueue.Enqueuer
+	claimer  *jobqueue.Claimer
 	sem      chan struct{}
 	cfg      LabPipelineWorkerConfig
 }
@@ -45,6 +48,8 @@ func NewLabPipelineWorker(pool *pgxpool.Pool, progress ProgressWriter, cfg LabPi
 	return &LabPipelineWorker{
 		pool:     pool,
 		progress: progress,
+		enqueuer: jobqueue.NewEnqueuer(pool),
+		claimer:  jobqueue.NewClaimer(pool),
 		sem:      make(chan struct{}, maxConcurrentLabPipelineJobs),
 		cfg:      cfg,
 	}

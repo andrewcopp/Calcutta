@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func (w *LabPipelineWorker) checkPipelineCompletion(ctx context.Context, pipelineRunID string) {
@@ -103,6 +104,15 @@ func (w *LabPipelineWorker) failLabPipelineJob(ctx context.Context, job *labPipe
 
 	if w.progress != nil {
 		w.progress.Update(ctx, job.RunKind, job.RunID, 1.0, "failed", msg)
+	}
+}
+
+// requeueLabPipelineJob puts a job back into the queue with a delay.
+// Used when a job can't complete yet (e.g. waiting for simulation data).
+func (w *LabPipelineWorker) requeueLabPipelineJob(ctx context.Context, job *labPipelineJob, delay time.Duration) {
+	retryAfter := time.Now().Add(delay)
+	if err := w.claimer.Requeue(ctx, job.RunKind, job.RunID, retryAfter); err != nil {
+		slog.Warn("lab_pipeline_worker requeue_job", "run_kind", job.RunKind, "run_id", job.RunID, "error", err)
 	}
 }
 

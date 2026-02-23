@@ -3,12 +3,10 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/jobqueue"
 )
 
 func (w *LabPipelineWorker) checkAndStartPendingPipelines(ctx context.Context) {
@@ -116,94 +114,28 @@ func (w *LabPipelineWorker) claimNextLabPipelineJob(ctx context.Context, workerI
 	if ctx == nil {
 		ctx = context.Background()
 	}
-
-	now := time.Now().UTC()
-	maxAttempts := w.cfg.RunJobsMaxAttempts
-	baseStaleSeconds := staleAfter.Seconds()
-	if baseStaleSeconds <= 0 {
-		baseStaleSeconds = defaultLabPipelineWorkerStaleAfter.Seconds()
+	if staleAfter <= 0 {
+		staleAfter = defaultLabPipelineWorkerStaleAfter
 	}
 
-	tx, err := w.pool.Begin(ctx)
+	kinds := []string{
+		jobqueue.KindLabPredictions,
+		jobqueue.KindLabOptimization,
+		jobqueue.KindLabEvaluation,
+	}
+	j, err := w.claimer.ClaimNext(ctx, kinds, workerID, w.cfg.RunJobsMaxAttempts, staleAfter)
 	if err != nil {
 		return nil, false, err
 	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
-		}
-	}()
-
-	// Fail stale jobs that exceeded max attempts
-	if _, err := tx.Exec(ctx, `
-		UPDATE derived.run_jobs
-		SET status = 'failed',
-			finished_at = NOW(),
-			error_message = COALESCE(error_message, 'max_attempts_exceeded'),
-			updated_at = NOW()
-		WHERE run_kind IN ('lab_predictions', 'lab_optimization', 'lab_evaluation')
-			AND status = 'running'
-			AND claimed_at IS NOT NULL
-			AND claimed_at < ($1::timestamptz - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
-			AND attempt >= $3
-	`, pgtype.Timestamptz{Time: now, Valid: true}, baseStaleSeconds, maxAttempts); err != nil {
-		return nil, false, err
+	if j == nil {
+		return nil, false, nil
 	}
 
-	// Claim next job
-	q := `
-		WITH candidate AS (
-			SELECT id
-			FROM derived.run_jobs
-			WHERE run_kind IN ('lab_predictions', 'lab_optimization', 'lab_evaluation')
-				AND attempt < $4
-				AND (
-					status = 'queued'
-					OR (
-						status = 'running'
-						AND claimed_at IS NOT NULL
-						AND claimed_at < ($1::timestamptz - make_interval(secs => ($2 * POWER(2, GREATEST(attempt - 1, 0)))))
-					)
-				)
-			ORDER BY created_at ASC
-			LIMIT 1
-			FOR UPDATE SKIP LOCKED
-		)
-		UPDATE derived.run_jobs j
-		SET status = 'running',
-			attempt = j.attempt + 1,
-			claimed_at = $1,
-			claimed_by = $3,
-			started_at = COALESCE(j.started_at, $1),
-			finished_at = NULL,
-			error_message = NULL,
-			updated_at = NOW()
-		FROM candidate
-		WHERE j.id = candidate.id
-		RETURNING j.run_id::text, j.run_key::text, j.run_kind, j.params_json::text
-	`
-
-	job := &labPipelineJob{}
-	var paramsStr string
-	if err := tx.QueryRow(ctx, q,
-		pgtype.Timestamptz{Time: now, Valid: true},
-		baseStaleSeconds,
-		workerID,
-		maxAttempts,
-	).Scan(&job.RunID, &job.RunKey, &job.RunKind, &paramsStr); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, false, nil
-		}
-		return nil, false, err
-	}
-	job.ClaimedAt = now
-	job.Params = json.RawMessage([]byte(paramsStr))
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, false, err
-	}
-	committed = true
-
-	return job, true, nil
+	return &labPipelineJob{
+		RunID:     j.RunID,
+		RunKey:    j.RunKey,
+		RunKind:   j.RunKind,
+		Params:    j.Params,
+		ClaimedAt: j.ClaimedAt,
+	}, true, nil
 }

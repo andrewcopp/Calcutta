@@ -186,56 +186,6 @@ func getImportStatus(t *testing.T, ctx context.Context, pool *pgxpool.Pool, uplo
 	return row.Status
 }
 
-// countPredictionBatches counts prediction batches for a tournament.
-func countPredictionBatches(t *testing.T, ctx context.Context, pool *pgxpool.Pool, tournamentID string) int {
-	t.Helper()
-
-	var count int
-	err := pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM compute.prediction_batches
-		WHERE tournament_id = $1::uuid AND deleted_at IS NULL
-	`, tournamentID).Scan(&count)
-	if err != nil {
-		t.Fatalf("failed to count prediction batches: %v", err)
-	}
-	return count
-}
-
-// countPredictedTeamValues counts predicted team values for a batch.
-func countPredictedTeamValues(t *testing.T, ctx context.Context, pool *pgxpool.Pool, batchID string) int {
-	t.Helper()
-
-	var count int
-	err := pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM compute.predicted_team_values
-		WHERE prediction_batch_id = $1::uuid AND deleted_at IS NULL
-	`, batchID).Scan(&count)
-	if err != nil {
-		t.Fatalf("failed to count predicted team values: %v", err)
-	}
-	return count
-}
-
-// getLatestBatchID returns the latest prediction batch ID for a tournament.
-func getLatestBatchID(t *testing.T, ctx context.Context, pool *pgxpool.Pool, tournamentID string) string {
-	t.Helper()
-
-	var batchID string
-	err := pool.QueryRow(ctx, `
-		SELECT id::text
-		FROM compute.prediction_batches
-		WHERE tournament_id = $1::uuid AND deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT 1
-	`, tournamentID).Scan(&batchID)
-	if err != nil {
-		t.Fatalf("failed to get latest batch ID: %v", err)
-	}
-	return batchID
-}
-
 // buildCompletedTournamentZIP creates a tournament ZIP where teams have wins
 // representing a completed tournament. The 1-seed in East is the champion (6 wins).
 func buildCompletedTournamentZIP(t *testing.T) []byte {

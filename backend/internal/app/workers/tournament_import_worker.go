@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/jobqueue"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/verifier"
@@ -25,11 +25,15 @@ const (
 )
 
 type TournamentImportWorker struct {
-	pool *pgxpool.Pool
+	pool     *pgxpool.Pool
+	enqueuer *jobqueue.Enqueuer
 }
 
 func NewTournamentImportWorker(pool *pgxpool.Pool) *TournamentImportWorker {
-	return &TournamentImportWorker{pool: pool}
+	return &TournamentImportWorker{
+		pool:     pool,
+		enqueuer: jobqueue.NewEnqueuer(pool),
+	}
 }
 
 func (w *TournamentImportWorker) Run(ctx context.Context) {
@@ -170,19 +174,22 @@ func (w *TournamentImportWorker) processTournamentImport(ctx context.Context, up
 }
 
 func (w *TournamentImportWorker) refreshPredictions(ctx context.Context, tournamentIDs []string) {
-	predSvc := prediction.New(w.pool)
 	for _, tid := range tournamentIDs {
-		result, err := predSvc.Run(ctx, prediction.RunParams{
-			TournamentID:         tid,
-			ProbabilitySourceKey: "kenpom",
+		params, _ := json.Marshal(map[string]string{
+			"tournamentId":         tid,
+			"probabilitySourceKey": "kenpom",
 		})
+		dedupKey := fmt.Sprintf("prediction:%s", tid)
+		result, err := w.enqueuer.Enqueue(ctx, jobqueue.KindRefreshPredictions, params, jobqueue.PriorityCoreApp, dedupKey)
 		if err != nil {
-			slog.Warn("prediction_refresh_failed", "tournament_id", tid, "error", err)
+			slog.Warn("prediction_enqueue_failed", "tournament_id", tid, "error", err)
 			continue
 		}
-		slog.Info("prediction_refresh_succeeded",
-			"tournament_id", tid, "batch_id", result.BatchID,
-			"team_count", result.TeamCount, "duration_ms", result.Duration.Milliseconds())
+		if result.Enqueued {
+			slog.Info("prediction_enqueued", "tournament_id", tid, "job_id", result.JobID)
+		} else {
+			slog.Info("prediction_deduplicated", "tournament_id", tid)
+		}
 	}
 }
 

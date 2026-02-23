@@ -92,7 +92,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	}
 	simDur := time.Since(simStart)
 
-	s.pruneOldBatches(ctx, setup.coreTournamentID, 1)
+	s.pruneOldBatches(ctx, setup.coreTournamentID, 3)
 
 	overallDur := time.Since(overallStart)
 	return &RunResult{

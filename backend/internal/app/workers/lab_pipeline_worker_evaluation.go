@@ -57,9 +57,16 @@ func (w *LabPipelineWorker) processEvaluationJob(ctx context.Context, workerID s
 	// Run evaluation using calcutta_evaluations service
 	evalService := appcalcuttaevaluations.New(w.pool,
 		appcalcuttaevaluations.WithTournamentResolver(dbadapters.NewTournamentQueryRepository(w.pool)),
+		appcalcuttaevaluations.WithEnqueuer(w.enqueuer),
 	)
 	result, err := evalService.EvaluateLabEntry(ctx, calcuttaID, labEntryBids, params.ExcludedEntryName)
 	if err != nil {
+		if errors.Is(err, appcalcuttaevaluations.ErrSimulationPending) {
+			// Simulation not ready — requeue this evaluation job with a delay
+			w.requeueLabPipelineJob(ctx, job, 30*time.Second)
+			slog.Info("lab_pipeline_worker evaluation_requeued", "run_id", job.RunID, "reason", "simulation_pending")
+			return true // not a failure
+		}
 		w.failLabPipelineJob(ctx, job, fmt.Errorf("evaluation failed: %w", err))
 		return false
 	}

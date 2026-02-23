@@ -9,7 +9,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/testutil"
 )
 
-func TestThatSuccessfulImportCreatesPredictionBatch(t *testing.T) {
+func TestThatSuccessfulImportEnqueuesPredictionJob(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
@@ -21,15 +21,21 @@ func TestThatSuccessfulImportCreatesPredictionBatch(t *testing.T) {
 	w := NewTournamentImportWorker(pool)
 	w.processTournamentImport(ctx, uploadID)
 
-	// THEN compute.prediction_batches has exactly 1 row for the tournament
-	tournamentID := getTournamentIDByImportKey(t, ctx, pool, "ncaa-tournament-2026")
-	count := countPredictionBatches(t, ctx, pool, tournamentID)
+	// THEN derived.run_jobs has a queued refresh_predictions job
+	var count int
+	err := pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM derived.run_jobs
+		WHERE run_kind = 'refresh_predictions' AND status = 'queued'
+	`).Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count prediction jobs: %v", err)
+	}
 	if count != 1 {
-		t.Errorf("expected 1 prediction batch, got %d", count)
+		t.Errorf("expected 1 queued prediction job, got %d", count)
 	}
 }
 
-func TestThatSuccessfulImportCreates68PredictedTeamValues(t *testing.T) {
+func TestThatSuccessfulImportDeduplicatesPredictionJob(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
@@ -37,16 +43,25 @@ func TestThatSuccessfulImportCreates68PredictedTeamValues(t *testing.T) {
 	zipBytes := buildTestTournamentZIP(t)
 	uploadID := insertPendingImport(t, ctx, pool, zipBytes)
 
-	// WHEN processTournamentImport runs
+	// WHEN processTournamentImport runs twice for the same tournament
 	w := NewTournamentImportWorker(pool)
 	w.processTournamentImport(ctx, uploadID)
 
-	// THEN compute.predicted_team_values has 68 rows in the batch
-	tournamentID := getTournamentIDByImportKey(t, ctx, pool, "ncaa-tournament-2026")
-	batchID := getLatestBatchID(t, ctx, pool, tournamentID)
-	count := countPredictedTeamValues(t, ctx, pool, batchID)
-	if count != 68 {
-		t.Errorf("expected 68 predicted team values, got %d", count)
+	// Re-insert so we can import again
+	uploadID2 := insertPendingImport(t, ctx, pool, zipBytes)
+	w.processTournamentImport(ctx, uploadID2)
+
+	// THEN derived.run_jobs still has exactly 1 queued refresh_predictions job (deduplicated)
+	var count int
+	err := pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM derived.run_jobs
+		WHERE run_kind = 'refresh_predictions' AND status = 'queued'
+	`).Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count prediction jobs: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 queued prediction job (deduplicated), got %d", count)
 	}
 }
 

@@ -27,9 +27,11 @@ func run() error {
 
 	runTournamentImportWorker := flag.Bool("tournament-import-worker", true, "Run the tournament import worker")
 	runLabPipelineWorker := flag.Bool("lab-pipeline-worker", true, "Run the lab pipeline worker")
+	runCoreComputeWorker := flag.Bool("core-compute-worker", true, "Run the core compute worker (predictions)")
+	runSimulationWorker := flag.Bool("simulation-worker", true, "Run the simulation worker")
 	flag.Parse()
 
-	if !*runTournamentImportWorker && !*runLabPipelineWorker {
+	if !*runTournamentImportWorker && !*runLabPipelineWorker && !*runCoreComputeWorker && !*runSimulationWorker {
 		flag.Usage()
 		return fmt.Errorf("no workers selected")
 	}
@@ -52,6 +54,8 @@ func run() error {
 		RunJobsMaxAttempts: cfg.RunJobsMaxAttempts,
 		WorkerID:           cfg.WorkerID,
 	})
+	coreComputeWorker := workers.NewCoreComputeWorker(pool)
+	simulationWorker := workers.NewSimulationWorker(pool)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -70,6 +74,20 @@ func run() error {
 		go func() {
 			defer wg.Done()
 			labPipelineWorker.Run(ctx)
+		}()
+	}
+	if *runCoreComputeWorker {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			coreComputeWorker.Run(ctx)
+		}()
+	}
+	if *runSimulationWorker {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			simulationWorker.Run(ctx)
 		}()
 	}
 

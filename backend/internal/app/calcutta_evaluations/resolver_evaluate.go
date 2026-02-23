@@ -2,11 +2,13 @@ package calcutta_evaluations
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"sort"
 	"sync"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/jobqueue"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"golang.org/x/sync/errgroup"
@@ -76,7 +78,9 @@ func (s *Service) EvaluateLabEntry(
 }
 
 // resolveSimulationBatchID returns the latest simulation batch ID for the
-// tournament, running simulations on-demand if none exist yet.
+// tournament. If none exists and an enqueuer is configured, it enqueues a
+// simulation job and returns ErrSimulationPending. If no enqueuer is set
+// (e.g. CLI tools), it runs simulations inline as a fallback.
 func (s *Service) resolveSimulationBatchID(ctx context.Context, tournamentID string) (string, error) {
 	batchID, ok, err := s.getLatestTournamentSimulationBatchID(ctx, tournamentID)
 	if err != nil {
@@ -91,6 +95,24 @@ func (s *Service) resolveSimulationBatchID(ctx context.Context, tournamentID str
 		return "", fmt.Errorf("failed to resolve season from tournament: %w", err)
 	}
 
+	// If enqueuer is available, enqueue async and return pending
+	if s.enqueuer != nil {
+		params, _ := json.Marshal(map[string]interface{}{
+			"season":               season,
+			"nSims":                10000,
+			"seed":                 42,
+			"startingStateKey":     "current",
+			"probabilitySourceKey": "lab_pipeline",
+		})
+		dedupKey := fmt.Sprintf("simulation:%s:current", tournamentID)
+		_, err := s.enqueuer.Enqueue(ctx, jobqueue.KindRunSimulation, params, jobqueue.PriorityLab, dedupKey)
+		if err != nil {
+			return "", fmt.Errorf("failed to enqueue simulation job: %w", err)
+		}
+		return "", ErrSimulationPending
+	}
+
+	// Inline fallback for CLI tools without the queue
 	simSvc := simulation.New(s.pool, simulation.WithTournamentResolver(s.tournamentResolver))
 	result, err := simSvc.Run(ctx, simulation.RunParams{
 		Season:               season,

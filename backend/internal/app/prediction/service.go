@@ -89,7 +89,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to store predictions: %w", err)
 	}
 
-	s.pruneOldBatches(ctx, p.TournamentID, 3)
+	s.pruneOldBatches(ctx, p.TournamentID, 5)
 
 	return &RunResult{
 		BatchID:              batchID,
