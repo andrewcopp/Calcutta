@@ -147,7 +147,7 @@ func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, to
 	var latestRunID string
 	if err := s.pool.QueryRow(ctx, `
 		SELECT id
-		FROM derived.game_outcome_runs
+		FROM compute.game_outcome_runs
 		WHERE tournament_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -173,7 +173,7 @@ func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, to
 func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID string) (map[MatchupKey]float64, int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT game_id, team1_id, team2_id, p_team1_wins
-		FROM derived.predicted_game_outcomes
+		FROM compute.predicted_game_outcomes
 		WHERE run_id = $1::uuid
 			AND deleted_at IS NULL
 	`, runID)

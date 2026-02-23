@@ -102,7 +102,7 @@ func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (st
 	var batchID string
 	err := s.pool.QueryRow(ctx, `
 		SELECT id::text
-		FROM derived.prediction_batches
+		FROM compute.prediction_batches
 		WHERE tournament_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -132,7 +132,7 @@ func (s *Service) GetTeamValues(ctx context.Context, batchID string) ([]Predicte
 			COALESCE(p_round_5, 0),
 			COALESCE(p_round_6, 0),
 			COALESCE(p_round_7, 0)
-		FROM derived.predicted_team_values
+		FROM compute.predicted_team_values
 		WHERE prediction_batch_id = $1::uuid
 			AND deleted_at IS NULL
 	`, batchID)
@@ -261,7 +261,7 @@ func (s *Service) storePredictions(
 	// Create batch record
 	var batchID string
 	err = tx.QueryRow(ctx, `
-		INSERT INTO derived.prediction_batches (
+		INSERT INTO compute.prediction_batches (
 			tournament_id,
 			probability_source_key,
 			game_outcome_spec_json
@@ -276,7 +276,7 @@ func (s *Service) storePredictions(
 	// Insert team values
 	for _, v := range values {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO derived.predicted_team_values (
+			INSERT INTO compute.predicted_team_values (
 				prediction_batch_id,
 				tournament_id,
 				team_id,

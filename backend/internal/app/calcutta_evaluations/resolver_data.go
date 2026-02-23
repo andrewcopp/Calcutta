@@ -19,12 +19,12 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, core
 	var batchID string
 	err := s.pool.QueryRow(ctx, `
 		SELECT b.id
-		FROM derived.simulated_tournaments b
+		FROM compute.simulated_tournaments b
 		WHERE b.tournament_id = $1
 			AND b.deleted_at IS NULL
 			AND EXISTS (
 				SELECT 1
-				FROM derived.simulated_teams st
+				FROM compute.simulated_teams st
 				WHERE st.tournament_id = $1
 					AND st.simulated_tournament_id = b.id
 					AND st.deleted_at IS NULL
@@ -72,7 +72,7 @@ func (s *Service) getSimulationsWithRules(ctx context.Context, tournamentID stri
 			sst.team_id,
 			sst.wins::int,
 			sst.byes::int
-		FROM derived.simulated_teams sst
+		FROM compute.simulated_teams sst
 		WHERE sst.tournament_id = $1
 			AND sst.simulated_tournament_id = $2
 			AND sst.deleted_at IS NULL

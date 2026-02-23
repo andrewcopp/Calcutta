@@ -1,7 +1,7 @@
 TRUNCATE TABLE
-    derived.simulated_teams,
-    derived.simulated_tournaments,
-    derived.simulation_state_teams,
-    derived.simulation_states,
-    derived.predicted_game_outcomes
+    compute.simulated_teams,
+    compute.simulated_tournaments,
+    compute.tournament_snapshot_teams,
+    compute.tournament_snapshots,
+    compute.predicted_game_outcomes
 CASCADE;

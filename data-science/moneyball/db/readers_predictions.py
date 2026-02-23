@@ -1,12 +1,12 @@
 """
 Prediction batch readers.
 
-Functions for reading predicted team values from derived.* tables
+Functions for reading predicted team values from compute.* tables
 (prediction_batches, predicted_team_values).
 
-DEPENDENCY NOTE: This module reads from these derived.* tables:
-  - derived.prediction_batches   (latest batch lookup by tournament)
-  - derived.predicted_team_values (team-level predictions: expected_points, p_round_*)
+DEPENDENCY NOTE: This module reads from these compute.* tables:
+  - compute.prediction_batches   (latest batch lookup by tournament)
+  - compute.predicted_team_values (team-level predictions: expected_points, p_round_*)
 These tables are populated by the Go prediction pipeline. If they are archived
 or renamed, the optimal_v3 feature set will break silently (the enrichment
 function returns zeros when no data is found).
@@ -38,7 +38,7 @@ def read_latest_predicted_team_values(
     """
     Get predicted team values from the latest prediction batch for a tournament.
 
-    Queries derived.prediction_batches to find the latest batch, then returns
+    Queries compute.prediction_batches to find the latest batch, then returns
     all predicted_team_values rows joined with team/school metadata.
 
     This is the canonical function for reading prediction batch data.
@@ -56,7 +56,7 @@ def read_latest_predicted_team_values(
             cur.execute("""
                 WITH latest_batch AS (
                     SELECT pb.id
-                    FROM derived.prediction_batches pb
+                    FROM compute.prediction_batches pb
                     WHERE pb.tournament_id = %s::uuid
                         AND pb.deleted_at IS NULL
                     ORDER BY pb.created_at DESC
@@ -67,7 +67,7 @@ def read_latest_predicted_team_values(
                     s.slug::text AS team_slug,
                     COALESCE(ptv.p_round_7, 0)::float AS p_championship,
                     COALESCE(ptv.expected_points, 0)::float AS expected_points
-                FROM derived.predicted_team_values ptv
+                FROM compute.predicted_team_values ptv
                 JOIN core.teams t ON t.id = ptv.team_id AND t.deleted_at IS NULL
                 JOIN core.schools s ON s.id = t.school_id AND s.deleted_at IS NULL
                 WHERE ptv.prediction_batch_id = (SELECT id FROM latest_batch)
@@ -90,7 +90,7 @@ def enrich_with_analytical_probabilities(
     """
     Enrich team dataset with analytical championship probabilities.
 
-    Reads from Go-generated predictions in derived.predicted_team_values.
+    Reads from Go-generated predictions in compute.predicted_team_values.
     Requires predictions to be pre-generated for the tournament.
 
     Args:
@@ -126,8 +126,8 @@ def enrich_with_analytical_probabilities(
         raise ValueError(
             f"No Go predictions found for tournament {tournament_id}. "
             "Run the prediction pipeline before training models that use "
-            "analytical features (derived.prediction_batches / "
-            "derived.predicted_team_values)."
+            "analytical features (compute.prediction_batches / "
+            "compute.predicted_team_values)."
         )
 
     # Add columns to dataframe
