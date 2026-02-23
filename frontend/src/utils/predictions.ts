@@ -1,20 +1,9 @@
 import { TeamPrediction } from '../schemas/tournament';
 
-export const EXPECTED_TEAMS_AT_ROUND: Record<number, number> = {
-  1: 64,
-  2: 32,
-  3: 16,
-  4: 8,
-  5: 4,
-  6: 2,
-  7: 1,
-};
-
 export function getConditionalProbability(
   team: TeamPrediction,
   round: number,
   throughRound: number,
-  roundSums?: Record<number, number>,
 ): { value: number; style: string } {
   const progress = team.wins + team.byes;
 
@@ -40,20 +29,10 @@ export function getConditionalProbability(
     return { value: 0, style: 'text-muted-foreground' };
   }
 
-  // Future rounds: team is alive — conditional probability
+  // Future rounds: team is alive — pRound is already conditional from backend
   const pKey = `pRound${round}` as keyof TeamPrediction;
-  const pCapKey = `pRound${throughRound}` as keyof TeamPrediction;
-  const pRound = team[pKey] as number;
-  const pCap = team[pCapKey] as number;
-
-  let conditional: number;
-  if (roundSums && roundSums[round] !== undefined) {
-    const expected = EXPECTED_TEAMS_AT_ROUND[round] ?? 1;
-    conditional = roundSums[round] > 0 ? Math.min((pRound / roundSums[round]) * expected, 1) : 0;
-  } else {
-    conditional = pCap > 0 ? Math.min(pRound / pCap, 1) : 0;
-  }
-  return { value: conditional, style: '' };
+  const raw = team[pKey] as number;
+  return { value: raw, style: '' };
 }
 
 export function formatPercent(value: number): string {

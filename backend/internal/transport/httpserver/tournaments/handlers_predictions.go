@@ -18,10 +18,9 @@ func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	batchID := r.URL.Query().Get("batch_id")
+	var throughRound int
 	if batchID == "" {
-		var found bool
-		var err error
-		batchID, found, err = h.app.Prediction.GetLatestBatchID(r.Context(), tournamentID)
+		batch, found, err := h.app.Prediction.GetLatestBatch(r.Context(), tournamentID)
 		if err != nil {
 			httperr.WriteFromErr(w, r, err, h.authUserID)
 			return
@@ -30,6 +29,15 @@ func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 			httperr.Write(w, r, http.StatusNotFound, "not_found", "No predictions found for this tournament", "")
 			return
 		}
+		batchID = batch.ID
+		throughRound = batch.ThroughRound
+	} else {
+		batch, err := h.app.Prediction.GetBatchSummary(r.Context(), batchID)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		throughRound = batch.ThroughRound
 	}
 
 	teamValues, err := h.app.Prediction.GetTeamValues(r.Context(), batchID)
@@ -44,7 +52,7 @@ func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewTournamentPredictionsResponse(tournamentID, batchID, teamValues, teams))
+	response.WriteJSON(w, http.StatusOK, dtos.NewTournamentPredictionsResponse(tournamentID, batchID, throughRound, teamValues, teams))
 }
 
 func (h *Handler) HandleListPredictionBatches(w http.ResponseWriter, r *http.Request) {

@@ -41,14 +41,15 @@ export function AdminPredictionsPage() {
 
   const teams = useMemo(() => predictionsQuery.data?.teams ?? [], [predictionsQuery.data]);
 
-  // Compute current max progress to determine default throughRound and available options
+  // Use throughRound from the API response (batch-level), falling back to max progress
+  const batchThroughRound = predictionsQuery.data?.throughRound ?? 0;
   const maxProgress = useMemo(
     () => teams.reduce((max, t) => Math.max(max, t.wins + t.byes), 0),
     [teams],
   );
 
-  // Auto-set throughRound when data loads
-  const effectiveThroughRound = throughRound ?? maxProgress;
+  // effectiveThroughRound: user override or batch's throughRound
+  const effectiveThroughRound = throughRound ?? batchThroughRound;
 
   // Build through-round options: 0 through maxProgress
   const throughRoundOptions = useMemo(() => {
@@ -59,28 +60,16 @@ export function AdminPredictionsPage() {
     return opts;
   }, [maxProgress]);
 
-  // Compute round sums for surviving teams to normalize conditional probabilities
-  const roundSums = useMemo(() => {
-    if (effectiveThroughRound === 0) return undefined;
-    const sums: Record<number, number> = {};
-    const survivors = teams.filter((t) => t.wins + t.byes >= effectiveThroughRound);
-    for (let round = 1; round <= 7; round++) {
-      const pKey = `pRound${round}` as keyof typeof survivors[0];
-      sums[round] = survivors.reduce((sum, t) => sum + (t[pKey] as number), 0);
-    }
-    return sums;
-  }, [teams, effectiveThroughRound]);
-
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => {
-      const aProb = getConditionalProbability(a, sortRound, effectiveThroughRound, roundSums);
-      const bProb = getConditionalProbability(b, sortRound, effectiveThroughRound, roundSums);
+      const aProb = getConditionalProbability(a, sortRound, effectiveThroughRound);
+      const bProb = getConditionalProbability(b, sortRound, effectiveThroughRound);
       if (bProb.value !== aProb.value) return bProb.value - aProb.value;
       if (a.region < b.region) return -1;
       if (a.region > b.region) return 1;
       return a.seed - b.seed;
     });
-  }, [teams, sortRound, effectiveThroughRound, roundSums]);
+  }, [teams, sortRound, effectiveThroughRound]);
 
   return (
     <PageContainer>
@@ -172,7 +161,7 @@ export function AdminPredictionsPage() {
                     <td className="px-3 py-2">{team.schoolName || '—'}</td>
                     {ROUND_ABBREVS.map((_, i) => {
                       const round = i + 1;
-                      const { value, style } = getConditionalProbability(team, round, effectiveThroughRound, roundSums);
+                      const { value, style } = getConditionalProbability(team, round, effectiveThroughRound);
                       return (
                         <td key={round} className={`px-2 py-2 text-right tabular-nums ${style}`}>
                           {formatPercent(value)}

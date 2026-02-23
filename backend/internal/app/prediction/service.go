@@ -60,9 +60,6 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load teams: %w", err)
 	}
-	if len(teams) != 68 {
-		return nil, fmt.Errorf("expected 68 teams, got %d", len(teams))
-	}
 
 	// Load scoring rules from database (use default calcutta for tournament)
 	rules, err := s.loadScoringRules(ctx, p.TournamentID)
@@ -73,18 +70,56 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		rules = DefaultScoringRules()
 	}
 
-	// Generate all theoretical matchups
-	matchups, err := GenerateAllTheoreticalMatchups(teams, p.GameOutcomeSpec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate matchups: %w", err)
+	// Detect tournament checkpoint from team progress.
+	// throughRound = 0 means pre-tournament (use existing full-field flow).
+	// throughRound > 0 means mid-tournament (use checkpoint flow with survivors only).
+	maxWins := 0
+	throughRound := 0
+	for _, t := range teams {
+		if t.Wins > maxWins {
+			maxWins = t.Wins
+		}
+	}
+	if maxWins > 0 {
+		for _, t := range teams {
+			if p := t.Wins + t.Byes; p > throughRound {
+				throughRound = p
+			}
+		}
 	}
 
-	// Calculate tournament values
-	teamValues := GenerateTournamentValues(matchups, rules)
+	var teamValues []PredictedTeamValue
+
+	if throughRound == 0 {
+		// Pre-tournament: require 68 teams and use full-field theoretical matchups
+		if len(teams) != 68 {
+			return nil, fmt.Errorf("expected 68 teams, got %d", len(teams))
+		}
+
+		matchups, err := GenerateAllTheoreticalMatchups(teams, p.GameOutcomeSpec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate matchups: %w", err)
+		}
+		teamValues = GenerateTournamentValues(matchups, rules)
+	} else {
+		// Mid-tournament: filter to survivors and generate from checkpoint
+		var survivors []TeamInput
+		for _, t := range teams {
+			if t.Wins+t.Byes >= throughRound {
+				survivors = append(survivors, t)
+			}
+		}
+
+		matchups, err := GenerateMatchupsFromCheckpoint(survivors, throughRound, p.GameOutcomeSpec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate checkpoint matchups: %w", err)
+		}
+		teamValues = GenerateTournamentValuesFromCheckpoint(teams, matchups, throughRound, rules)
+	}
 
 	// Store results
 	specJSON, _ := json.Marshal(p.GameOutcomeSpec)
-	batchID, err := s.storePredictions(ctx, p.TournamentID, p.ProbabilitySourceKey, specJSON, teamValues)
+	batchID, err := s.storePredictions(ctx, p.TournamentID, p.ProbabilitySourceKey, specJSON, teamValues, throughRound)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store predictions: %w", err)
 	}
@@ -128,7 +163,7 @@ func (s *Service) pruneOldBatches(ctx context.Context, tournamentID string, keep
 // ListBatches returns all non-deleted prediction batches for a tournament, newest first.
 func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]PredictionBatchSummary, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id::text, probability_source_key, created_at
+		SELECT id::text, probability_source_key, through_round, created_at
 		FROM compute.prediction_batches
 		WHERE tournament_id = $1::uuid
 			AND deleted_at IS NULL
@@ -142,7 +177,7 @@ func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]Predi
 	var batches []PredictionBatchSummary
 	for rows.Next() {
 		var b PredictionBatchSummary
-		if err := rows.Scan(&b.ID, &b.ProbabilitySourceKey, &b.CreatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.ProbabilitySourceKey, &b.ThroughRound, &b.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning prediction batch: %w", err)
 		}
 		batches = append(batches, b)
@@ -150,24 +185,51 @@ func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]Predi
 	return batches, rows.Err()
 }
 
-// GetLatestBatchID returns the most recent prediction batch for a tournament.
-func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (string, bool, error) {
-	var batchID string
+// GetLatestBatch returns the most recent prediction batch summary for a tournament.
+func (s *Service) GetLatestBatch(ctx context.Context, tournamentID string) (*PredictionBatchSummary, bool, error) {
+	var b PredictionBatchSummary
 	err := s.pool.QueryRow(ctx, `
-		SELECT id::text
+		SELECT id::text, probability_source_key, through_round, created_at
 		FROM compute.prediction_batches
 		WHERE tournament_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY created_at DESC
 		LIMIT 1
-	`, tournamentID).Scan(&batchID)
+	`, tournamentID).Scan(&b.ID, &b.ProbabilitySourceKey, &b.ThroughRound, &b.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", false, nil
+			return nil, false, nil
 		}
-		return "", false, fmt.Errorf("getting latest prediction batch: %w", err)
+		return nil, false, fmt.Errorf("getting latest prediction batch: %w", err)
 	}
-	return batchID, true, nil
+	return &b, true, nil
+}
+
+// GetLatestBatchID returns the most recent prediction batch ID for a tournament.
+func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (string, bool, error) {
+	batch, found, err := s.GetLatestBatch(ctx, tournamentID)
+	if err != nil || !found {
+		return "", found, err
+	}
+	return batch.ID, true, nil
+}
+
+// GetBatchSummary returns the summary for a specific batch.
+func (s *Service) GetBatchSummary(ctx context.Context, batchID string) (*PredictionBatchSummary, error) {
+	var b PredictionBatchSummary
+	err := s.pool.QueryRow(ctx, `
+		SELECT id::text, probability_source_key, through_round, created_at
+		FROM compute.prediction_batches
+		WHERE id = $1::uuid
+			AND deleted_at IS NULL
+	`, batchID).Scan(&b.ID, &b.ProbabilitySourceKey, &b.ThroughRound, &b.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("batch not found: %s", batchID)
+		}
+		return nil, fmt.Errorf("getting batch summary: %w", err)
+	}
+	return &b, nil
 }
 
 // GetTeamValues returns predicted team values for a batch.
@@ -246,7 +308,9 @@ func (s *Service) loadTeams(ctx context.Context, tournamentID string) ([]TeamInp
 			t.id::text,
 			t.seed,
 			t.region,
-			COALESCE(ks.net_rtg, 0) AS kenpom_net
+			COALESCE(ks.net_rtg, 0) AS kenpom_net,
+			t.wins,
+			COALESCE(t.byes, 0)
 		FROM core.teams t
 		LEFT JOIN core.team_kenpom_stats ks
 			ON ks.team_id = t.id
@@ -263,7 +327,7 @@ func (s *Service) loadTeams(ctx context.Context, tournamentID string) ([]TeamInp
 	var teams []TeamInput
 	for rows.Next() {
 		var t TeamInput
-		if err := rows.Scan(&t.ID, &t.Seed, &t.Region, &t.KenPomNet); err != nil {
+		if err := rows.Scan(&t.ID, &t.Seed, &t.Region, &t.KenPomNet, &t.Wins, &t.Byes); err != nil {
 			return nil, fmt.Errorf("scanning team: %w", err)
 		}
 		teams = append(teams, t)
@@ -304,6 +368,7 @@ func (s *Service) storePredictions(
 	probabilitySourceKey string,
 	specJSON []byte,
 	values []PredictedTeamValue,
+	throughRound int,
 ) (string, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -317,11 +382,12 @@ func (s *Service) storePredictions(
 		INSERT INTO compute.prediction_batches (
 			tournament_id,
 			probability_source_key,
-			game_outcome_spec_json
+			game_outcome_spec_json,
+			through_round
 		)
-		VALUES ($1::uuid, $2, $3::jsonb)
+		VALUES ($1::uuid, $2, $3::jsonb, $4)
 		RETURNING id::text
-	`, tournamentID, probabilitySourceKey, specJSON).Scan(&batchID)
+	`, tournamentID, probabilitySourceKey, specJSON, throughRound).Scan(&batchID)
 	if err != nil {
 		return "", fmt.Errorf("failed to create batch: %w", err)
 	}

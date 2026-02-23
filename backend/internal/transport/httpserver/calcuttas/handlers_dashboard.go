@@ -332,7 +332,7 @@ func attachProjectedEV(
 			Byes:         tt.Byes,
 			IsEliminated: tt.IsEliminated,
 		}
-		teamEV := prediction.ProjectedTeamEV(ptv, rules, tp)
+		teamEV := prediction.ProjectedTeamEV(ptv, rules, tp, 0)
 		evByPortfolio[pt.PortfolioID] += pt.OwnershipPercentage * teamEV
 	}
 
@@ -422,7 +422,7 @@ func computeRoundStandings(
 				if ok {
 					isEliminated := team.IsEliminated && progress <= cap
 					tp := prediction.TeamProgress{Wins: capped, Byes: 0, IsEliminated: isEliminated}
-					evByEntry[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp)
+					evByEntry[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp, 0)
 				}
 			}
 		}

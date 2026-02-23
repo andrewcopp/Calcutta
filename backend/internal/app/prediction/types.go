@@ -6,6 +6,7 @@ import "time"
 type PredictionBatchSummary struct {
 	ID                   string
 	ProbabilitySourceKey string
+	ThroughRound         int
 	CreatedAt            time.Time
 }
 
@@ -42,4 +43,6 @@ type TeamInput struct {
 	Seed      int
 	Region    string
 	KenPomNet float64
+	Wins      int // current tournament wins
+	Byes      int // 0 or 1
 }

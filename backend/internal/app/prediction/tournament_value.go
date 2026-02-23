@@ -133,6 +133,91 @@ func GenerateTournamentValues(matchups []PredictedMatchup, rules []scoring.Rule)
 	return results
 }
 
+// GenerateTournamentValuesFromCheckpoint computes expected points and round probabilities
+// from a mid-tournament checkpoint. All 68 teams are included in the output:
+// - Eliminated teams: pRound(1..progress) = 1.0, rest = 0.0
+// - Alive teams: pRound(1..throughRound) = 1.0, future rounds from matchup probabilities
+// ExpectedPoints = actualPoints + sum(pWinFutureRound * incPoints)
+func GenerateTournamentValuesFromCheckpoint(
+	allTeams []TeamInput,
+	remainingMatchups []PredictedMatchup,
+	throughRound int,
+	rules []scoring.Rule,
+) []PredictedTeamValue {
+	// Compute pWin by round from remaining matchups (same logic as GenerateTournamentValues)
+	type teamRoundKey struct {
+		teamID     string
+		roundOrder int
+	}
+	pWinByRound := make(map[teamRoundKey]float64)
+	for _, m := range remainingMatchups {
+		pWinByRound[teamRoundKey{m.Team1ID, m.RoundOrder}] += m.PMatchup * m.PTeam1WinsGivenMatchup
+		pWinByRound[teamRoundKey{m.Team2ID, m.RoundOrder}] += m.PMatchup * m.PTeam2WinsGivenMatchup
+	}
+
+	// Incremental points per round
+	incByRound := make(map[int]float64)
+	for r := 1; r <= 7; r++ {
+		ptsR := float64(scoring.PointsForProgress(rules, r, 0))
+		ptsRMinus1 := float64(scoring.PointsForProgress(rules, r-1, 0))
+		incByRound[r] = ptsR - ptsRMinus1
+	}
+
+	var results []PredictedTeamValue
+	for _, team := range allTeams {
+		progress := team.Wins + team.Byes
+		actualPoints := float64(scoring.PointsForProgress(rules, team.Wins, team.Byes))
+
+		var probs [7]float64
+		var expectedPoints float64
+
+		if progress < throughRound {
+			// Eliminated: pRound = 1.0 for rounds survived, 0.0 for rest
+			for r := 1; r <= 7; r++ {
+				if r <= progress {
+					probs[r-1] = 1.0
+				}
+			}
+			expectedPoints = actualPoints
+		} else {
+			// Alive: resolved rounds = 1.0, future rounds from matchup probs
+			for r := 1; r <= 7; r++ {
+				if r <= throughRound {
+					probs[r-1] = 1.0
+				} else {
+					probs[r-1] = pWinByRound[teamRoundKey{team.ID, r - 1}]
+				}
+			}
+			// Enforce monotonicity
+			for i := 1; i < 7; i++ {
+				if probs[i] > probs[i-1] {
+					probs[i] = probs[i-1]
+				}
+			}
+
+			// expectedPoints = actual + sum of future conditional points
+			expectedPoints = actualPoints
+			for r := throughRound + 1; r <= 7; r++ {
+				expectedPoints += probs[r-1] * incByRound[r]
+			}
+		}
+
+		results = append(results, PredictedTeamValue{
+			TeamID:         team.ID,
+			ExpectedPoints: expectedPoints,
+			PRound1:        probs[0],
+			PRound2:        probs[1],
+			PRound3:        probs[2],
+			PRound4:        probs[3],
+			PRound5:        probs[4],
+			PRound6:        probs[5],
+			PRound7:        probs[6],
+		})
+	}
+
+	return results
+}
+
 // DefaultScoringRules returns the standard NCAA tournament scoring rules.
 // This matches the default used in the Python implementation.
 func DefaultScoringRules() []scoring.Rule {

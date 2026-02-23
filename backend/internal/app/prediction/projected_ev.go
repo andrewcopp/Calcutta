@@ -17,7 +17,10 @@ type TeamProgress struct {
 // - Eliminated team: returns actual points earned so far
 // - Pre-tournament (0 wins, 0 byes): returns the full predicted expected points
 // - Alive mid-tournament: returns actual points + conditional expected remaining points
-func ProjectedTeamEV(ptv PredictedTeamValue, rules []scoring.Rule, tp TeamProgress) float64 {
+//
+// When throughRound > 0, the batch was generated from a checkpoint and pRound values
+// are already conditional on survival. The /pAlive division is skipped.
+func ProjectedTeamEV(ptv PredictedTeamValue, rules []scoring.Rule, tp TeamProgress, throughRound int) float64 {
 	actualPoints := float64(scoring.PointsForProgress(rules, tp.Wins, tp.Byes))
 
 	if tp.IsEliminated {
@@ -40,7 +43,11 @@ func ProjectedTeamEV(ptv PredictedTeamValue, rules []scoring.Rule, tp TeamProgre
 	for r := progress + 1; r <= maxRound; r++ {
 		pReachRound := pRoundByIndex(ptv, r)
 		incPoints := float64(scoring.PointsForProgress(rules, r, 0) - scoring.PointsForProgress(rules, r-1, 0))
-		conditionalRemaining += (pReachRound / pAlive) * incPoints
+		if throughRound > 0 {
+			conditionalRemaining += pReachRound * incPoints
+		} else {
+			conditionalRemaining += (pReachRound / pAlive) * incPoints
+		}
 	}
 
 	return actualPoints + conditionalRemaining

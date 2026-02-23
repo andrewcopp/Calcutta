@@ -255,6 +255,7 @@ func (r *ReplaceTeamsRequest) Validate() []string {
 type TournamentPredictionsResponse struct {
 	TournamentID string                   `json:"tournamentId"`
 	BatchID      string                   `json:"batchId"`
+	ThroughRound int                      `json:"throughRound"`
 	Teams        []TeamPredictionResponse `json:"teams"`
 }
 
@@ -282,6 +283,7 @@ type TeamPredictionResponse struct {
 func NewTournamentPredictionsResponse(
 	tournamentID string,
 	batchID string,
+	throughRound int,
 	values []prediction.PredictedTeamValue,
 	teams []*models.TournamentTeam,
 ) *TournamentPredictionsResponse {
@@ -293,6 +295,7 @@ func NewTournamentPredictionsResponse(
 	resp := &TournamentPredictionsResponse{
 		TournamentID: tournamentID,
 		BatchID:      batchID,
+		ThroughRound: throughRound,
 		Teams:        make([]TeamPredictionResponse, 0, len(values)),
 	}
 
@@ -331,6 +334,7 @@ func NewTournamentPredictionsResponse(
 type PredictionBatchResponse struct {
 	ID                   string    `json:"id"`
 	ProbabilitySourceKey string    `json:"probabilitySourceKey"`
+	ThroughRound         int       `json:"throughRound"`
 	CreatedAt            time.Time `json:"createdAt"`
 }
 
@@ -341,6 +345,7 @@ func NewPredictionBatchListResponse(batches []prediction.PredictionBatchSummary)
 		resp[i] = PredictionBatchResponse{
 			ID:                   b.ID,
 			ProbabilitySourceKey: b.ProbabilitySourceKey,
+			ThroughRound:         b.ThroughRound,
 			CreatedAt:            b.CreatedAt,
 		}
 	}

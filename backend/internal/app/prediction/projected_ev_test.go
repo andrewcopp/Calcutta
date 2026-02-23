@@ -34,7 +34,7 @@ func TestThatProjectedTeamEVReturnsActualPointsForEliminatedTeam(t *testing.T) {
 	tp := TeamProgress{Wins: 2, Byes: 0, IsEliminated: true}
 
 	// WHEN computing projected EV
-	result := ProjectedTeamEV(ptv, rules, tp)
+	result := ProjectedTeamEV(ptv, rules, tp, 0)
 
 	// THEN result equals actual points for 2 wins (10 + 20 = 30)
 	expected := 30.0
@@ -59,7 +59,7 @@ func TestThatProjectedTeamEVReturnsExpectedPointsPreTournament(t *testing.T) {
 	tp := TeamProgress{Wins: 0, Byes: 0, IsEliminated: false}
 
 	// WHEN computing projected EV
-	result := ProjectedTeamEV(ptv, rules, tp)
+	result := ProjectedTeamEV(ptv, rules, tp, 0)
 
 	// THEN result equals the pre-computed expected points
 	if math.Abs(result-150.0) > 0.001 {
@@ -87,7 +87,7 @@ func TestThatProjectedTeamEVComputesConditionalRemainingForAliveTeam(t *testing.
 	tp := TeamProgress{Wins: 1, Byes: 0, IsEliminated: false}
 
 	// WHEN computing projected EV
-	result := ProjectedTeamEV(ptv, rules, tp)
+	result := ProjectedTeamEV(ptv, rules, tp, 0)
 
 	// THEN result = actual(10) + conditional remaining
 	// progress = 1, pAlive = PRound1 = 1.0
@@ -116,7 +116,7 @@ func TestThatProjectedTeamEVFallsBackToActualWhenPAliveIsZero(t *testing.T) {
 	tp := TeamProgress{Wins: 2, Byes: 0, IsEliminated: false}
 
 	// WHEN computing projected EV
-	result := ProjectedTeamEV(ptv, rules, tp)
+	result := ProjectedTeamEV(ptv, rules, tp, 0)
 
 	// THEN falls back to actual points (10 + 20 = 30)
 	expected := 30.0
@@ -141,7 +141,7 @@ func TestThatProjectedTeamEVHandlesTeamWithBye(t *testing.T) {
 	tp := TeamProgress{Wins: 1, Byes: 1, IsEliminated: false}
 
 	// WHEN computing projected EV
-	result := ProjectedTeamEV(ptv, rules, tp)
+	result := ProjectedTeamEV(ptv, rules, tp, 0)
 
 	// THEN progress = 2, pAlive = PRound2 = 1.0, actual = PointsForProgress(1 win, 1 bye) = 30
 	// conditional remaining:

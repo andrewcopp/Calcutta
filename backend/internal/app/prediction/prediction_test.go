@@ -443,6 +443,137 @@ func TestThatFirstFourPairProbabilitiesSumToOne(t *testing.T) {
 	}
 }
 
+// --- Checkpoint tests ---
+
+func TestThatCheckpointMatchupsHavePMatchupOneForKnownGames(t *testing.T) {
+	// GIVEN survivors after R64 (throughRound=2): one team per bracket slot per region
+	allTeams := generateTestTeams()
+	// Simulate R64 results: only the higher seed survives each matchup
+	// For each region, 1-seed beats 16, 8 beats 9, 5 beats 12, etc.
+	winnerSeeds := []int{1, 8, 5, 4, 6, 3, 7, 2}
+	var survivors []TeamInput
+	for _, team := range allTeams {
+		for _, ws := range winnerSeeds {
+			if team.Seed == ws {
+				survivors = append(survivors, TeamInput{
+					ID:        team.ID,
+					Seed:      team.Seed,
+					Region:    team.Region,
+					KenPomNet: team.KenPomNet,
+					Wins:      1,
+					Byes:      1,
+				})
+				break
+			}
+		}
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating checkpoint matchups
+	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 2, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// THEN the first remaining round (R32) has pMatchup = 1.0 for each game
+	for _, m := range matchups {
+		if m.RoundOrder == 2 && math.Abs(m.PMatchup-1.0) > 0.001 {
+			t.Errorf("R32 game %s: pMatchup = %.4f, expected 1.0", m.GameID, m.PMatchup)
+		}
+	}
+}
+
+func TestThatCheckpointChampionshipProbsSumToOne(t *testing.T) {
+	// GIVEN 4 Final Four survivors (throughRound=5)
+	survivors := []TeamInput{
+		{ID: "t-east", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 4, Byes: 1},
+		{ID: "t-west", Seed: 2, Region: "West", KenPomNet: 20.0, Wins: 4, Byes: 1},
+		{ID: "t-south", Seed: 3, Region: "South", KenPomNet: 18.0, Wins: 4, Byes: 1},
+		{ID: "t-midwest", Seed: 1, Region: "Midwest", KenPomNet: 22.0, Wins: 4, Byes: 1},
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating checkpoint matchups and values
+	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 5, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+	values := GenerateTournamentValuesFromCheckpoint(survivors, matchups, 5, rules)
+
+	// THEN championship probabilities (PRound7) sum to 1.0
+	var pChampSum float64
+	for _, v := range values {
+		pChampSum += v.PRound7
+	}
+	if math.Abs(pChampSum-1.0) > 0.01 {
+		t.Errorf("championship probabilities sum = %.4f, expected 1.0", pChampSum)
+	}
+}
+
+func TestThatCheckpointValuesSetResolvedRoundsCorrectly(t *testing.T) {
+	// GIVEN a mix of alive and eliminated teams at throughRound=3
+	allTeams := []TeamInput{
+		{ID: "alive-1", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 2, Byes: 1},     // progress=3, alive
+		{ID: "alive-2", Seed: 2, Region: "West", KenPomNet: 20.0, Wins: 2, Byes: 1},     // progress=3, alive
+		{ID: "alive-3", Seed: 1, Region: "South", KenPomNet: 22.0, Wins: 2, Byes: 1},    // progress=3, alive
+		{ID: "alive-4", Seed: 1, Region: "Midwest", KenPomNet: 18.0, Wins: 2, Byes: 1},  // progress=3, alive
+		{ID: "elim-1", Seed: 16, Region: "East", KenPomNet: -10.0, Wins: 0, Byes: 1},    // progress=1, eliminated
+		{ID: "elim-2", Seed: 8, Region: "West", KenPomNet: 5.0, Wins: 1, Byes: 1},       // progress=2, eliminated
+	}
+	survivors := []TeamInput{allTeams[0], allTeams[1], allTeams[2], allTeams[3]}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 3, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating checkpoint values for all teams
+	values := GenerateTournamentValuesFromCheckpoint(allTeams, matchups, 3, rules)
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	// THEN eliminated team has 0.0 for rounds beyond its progress
+	elim1 := valueByID["elim-1"]
+	if elim1.PRound1 != 1.0 {
+		t.Errorf("eliminated team PRound1 = %.4f, expected 1.0", elim1.PRound1)
+	}
+	if elim1.PRound2 != 0.0 {
+		t.Errorf("eliminated team PRound2 = %.4f, expected 0.0", elim1.PRound2)
+	}
+}
+
+func TestThatCheckpointExpectedPointsIncludesActualPlusRemaining(t *testing.T) {
+	// GIVEN 4 F4 survivors at throughRound=5
+	survivors := []TeamInput{
+		{ID: "t-east", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 4, Byes: 1},
+		{ID: "t-west", Seed: 2, Region: "West", KenPomNet: 20.0, Wins: 4, Byes: 1},
+		{ID: "t-south", Seed: 3, Region: "South", KenPomNet: 18.0, Wins: 4, Byes: 1},
+		{ID: "t-midwest", Seed: 1, Region: "Midwest", KenPomNet: 22.0, Wins: 4, Byes: 1},
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateMatchupsFromCheckpoint(survivors, 5, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating checkpoint values
+	values := GenerateTournamentValuesFromCheckpoint(survivors, matchups, 5, rules)
+
+	// THEN each survivor's expectedPoints > actualPoints (they have future value)
+	actualPoints := float64(scoring.PointsForProgress(rules, 4, 1)) // 4 wins + 1 bye = progress 5 = 310
+	for _, v := range values {
+		if v.ExpectedPoints <= actualPoints {
+			t.Errorf("team %s: expectedPoints (%.2f) should be > actualPoints (%.2f)", v.TeamID, v.ExpectedPoints, actualPoints)
+		}
+	}
+}
+
 // generateTestTeams creates a realistic 68-team tournament field for testing.
 func generateTestTeams() []TeamInput {
 	regions := []string{"East", "West", "South", "Midwest"}

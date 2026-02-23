@@ -60,6 +60,7 @@ export type Season = z.infer<typeof SeasonSchema>;
 export const PredictionBatchSchema = z.object({
   id: z.string(),
   probabilitySourceKey: z.string(),
+  throughRound: z.number(),
   createdAt: z.string(),
 });
 
@@ -88,6 +89,7 @@ export type TeamPrediction = z.infer<typeof TeamPredictionSchema>;
 export const TournamentPredictionsSchema = z.object({
   tournamentId: z.string(),
   batchId: z.string(),
+  throughRound: z.number(),
   teams: z.array(TeamPredictionSchema),
 });
 
