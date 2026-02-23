@@ -87,21 +87,45 @@ func GenerateTournamentValues(matchups []PredictedMatchup, rules []scoring.Rule)
 		stats.pByRound[key.roundOrder] = pWin
 	}
 
-	// Build output
+	// Compute FF survival probability per team.
+	// Non-FF teams have pMatchup=1.0 in R64, so their sum is 1.0.
+	// FF teams have pMatchup=0.5 for each of their two possible R64 games.
+	ffSurvival := make(map[string]float64)
+	for _, m := range matchups {
+		if m.RoundOrder == 1 {
+			ffSurvival[m.Team1ID] += m.PMatchup
+			ffSurvival[m.Team2ID] += m.PMatchup
+		}
+	}
+
+	// Build output with shifted round mapping:
+	// PRound1 = FF survival, PRound2-7 = pByRound[1]-pByRound[6]
 	var results []PredictedTeamValue
 	for teamID, stats := range statsByTeam {
+		probs := [7]float64{
+			ffSurvival[teamID],
+			stats.pByRound[1], stats.pByRound[2], stats.pByRound[3],
+			stats.pByRound[4], stats.pByRound[5], stats.pByRound[6],
+		}
+		// Enforce monotonicity: each probability must be <= the previous
+		for i := 1; i < 7; i++ {
+			if probs[i] > probs[i-1] {
+				probs[i] = probs[i-1]
+			}
+		}
+
 		result := PredictedTeamValue{
 			TeamID:         teamID,
 			ExpectedPoints: stats.expectedPoints,
 			VariancePoints: stats.variancePoints,
 			StdPoints:      math.Sqrt(stats.variancePoints),
-			PRound1:        stats.pByRound[1],
-			PRound2:        stats.pByRound[2],
-			PRound3:        stats.pByRound[3],
-			PRound4:        stats.pByRound[4],
-			PRound5:        stats.pByRound[5],
-			PRound6:        stats.pByRound[6],
-			PRound7:        stats.pByRound[7],
+			PRound1:        probs[0],
+			PRound2:        probs[1],
+			PRound3:        probs[2],
+			PRound4:        probs[3],
+			PRound5:        probs[4],
+			PRound6:        probs[5],
+			PRound7:        probs[6],
 		}
 		results = append(results, result)
 	}

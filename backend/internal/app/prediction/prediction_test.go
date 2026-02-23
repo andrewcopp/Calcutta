@@ -110,7 +110,7 @@ func TestThatChampionshipProbabilitiesSumToOne(t *testing.T) {
 	// THEN championship probabilities sum to 1.0
 	var pChampSum float64
 	for _, v := range values {
-		pChampSum += v.PRound6
+		pChampSum += v.PRound7
 	}
 
 	if math.Abs(pChampSum-1.0) > 0.01 {
@@ -198,6 +198,105 @@ func TestThatChampionEarnsSixHundredThirtyPoints(t *testing.T) {
 	expectedTotal := 10 + 20 + 40 + 80 + 160 + 320 // 630
 	if totalPoints != expectedTotal {
 		t.Errorf("total points for champion = %d, expected %d", totalPoints, expectedTotal)
+	}
+}
+
+func TestThatNonFirstFourTeamsHaveFFProbabilityOfOne(t *testing.T) {
+	// GIVEN a 68-team tournament field with matchups
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values
+	values := GenerateTournamentValues(matchups, rules)
+
+	// THEN non-First Four teams have PRound1 (FF survival) = 1.0
+	ffTeamIDs := make(map[string]bool)
+	for _, team := range teams {
+		// FF teams are the extra 11-seeds and 16-seeds (seeds with >1 team per region)
+		regionSeedCount := make(map[string]int)
+		for _, t := range teams {
+			if t.Region == team.Region && t.Seed == team.Seed {
+				regionSeedCount[fmt.Sprintf("%s-%d", t.Region, t.Seed)]++
+			}
+		}
+		if regionSeedCount[fmt.Sprintf("%s-%d", team.Region, team.Seed)] > 1 {
+			ffTeamIDs[team.ID] = true
+		}
+	}
+
+	for _, v := range values {
+		if !ffTeamIDs[v.TeamID] && v.PRound1 != 1.0 {
+			t.Errorf("non-FF team %s: PRound1 = %.4f, expected 1.0", v.TeamID, v.PRound1)
+		}
+	}
+}
+
+func TestThatFirstFourTeamsHaveFFProbabilityLessThanOne(t *testing.T) {
+	// GIVEN a 68-team tournament field with matchups
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values
+	values := GenerateTournamentValues(matchups, rules)
+
+	// THEN First Four teams have PRound1 (FF survival) < 1.0
+	ffTeamIDs := make(map[string]bool)
+	for _, team := range teams {
+		regionSeedCount := 0
+		for _, t := range teams {
+			if t.Region == team.Region && t.Seed == team.Seed {
+				regionSeedCount++
+			}
+		}
+		if regionSeedCount > 1 {
+			ffTeamIDs[team.ID] = true
+		}
+	}
+
+	valueByID := make(map[string]PredictedTeamValue)
+	for _, v := range values {
+		valueByID[v.TeamID] = v
+	}
+
+	for id := range ffTeamIDs {
+		v := valueByID[id]
+		if v.PRound1 >= 1.0 {
+			t.Errorf("FF team %s: PRound1 = %.4f, expected < 1.0", id, v.PRound1)
+		}
+	}
+}
+
+func TestThatProbabilitiesAreMonotonicallyDecreasing(t *testing.T) {
+	// GIVEN a 68-team tournament field with matchups
+	teams := generateTestTeams()
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateAllTheoreticalMatchups(teams, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN generating tournament values
+	values := GenerateTournamentValues(matchups, rules)
+
+	// THEN all teams have monotonically decreasing probabilities
+	for _, v := range values {
+		probs := []float64{v.PRound1, v.PRound2, v.PRound3, v.PRound4, v.PRound5, v.PRound6, v.PRound7}
+		for i := 1; i < len(probs); i++ {
+			if probs[i] > probs[i-1] {
+				t.Errorf("team %s: PRound%d (%.4f) > PRound%d (%.4f)", v.TeamID, i+1, probs[i], i, probs[i-1])
+			}
+		}
 	}
 }
 
