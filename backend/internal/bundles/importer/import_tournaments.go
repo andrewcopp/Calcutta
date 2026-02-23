@@ -95,6 +95,8 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 
 		tournamentIDs = append(tournamentIDs, tournamentID)
 
+		deriveIsEliminated(b.Teams)
+
 		for _, team := range b.Teams {
 			var schoolID string
 			err := tx.QueryRow(ctx, `
@@ -149,4 +151,24 @@ func importTournaments(ctx context.Context, tx pgx.Tx, inDir string) (int, int, 
 	}
 
 	return len(paths), teamsInserted, tournamentIDs, nil
+}
+
+// deriveIsEliminated sets IsEliminated on each team based on single-elimination
+// logic: if any team has reached progress M (wins+byes), all teams with progress
+// less than M have been eliminated.
+func deriveIsEliminated(teams []bundles.TeamRecord) {
+	maxProgress := 0
+	for _, t := range teams {
+		if p := t.Wins + t.Byes; p > maxProgress {
+			maxProgress = p
+		}
+	}
+	if maxProgress == 0 {
+		return // tournament hasn't started
+	}
+	for i := range teams {
+		if teams[i].Wins+teams[i].Byes < maxProgress {
+			teams[i].IsEliminated = true
+		}
+	}
 }

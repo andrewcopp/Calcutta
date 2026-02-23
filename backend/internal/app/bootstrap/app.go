@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"context"
 	"time"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
@@ -48,7 +47,6 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService
 	a.Prediction = appprediction.New(pool)
-	a.Prediction.BackfillMissing(context.Background())
 	a.Analytics = analyticsService
 	a.Lab = labService
 	a.Auth = appauth.New(dbUserRepo, authRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)

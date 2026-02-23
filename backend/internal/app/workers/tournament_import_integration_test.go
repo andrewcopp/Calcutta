@@ -92,6 +92,29 @@ func TestThatFailedImportDoesNotCreatePredictions(t *testing.T) {
 	}
 }
 
+func TestThatSuccessfulImportDerivesIsEliminatedForCompletedTournament(t *testing.T) {
+	ctx := context.Background()
+	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
+
+	// GIVEN a pending tournament import with a completed tournament (champion has 6 wins)
+	zipBytes := buildCompletedTournamentZIP(t)
+	uploadID := insertPendingImport(t, ctx, pool, zipBytes)
+
+	// WHEN processTournamentImport runs
+	w := NewTournamentImportWorker(pool)
+	w.processTournamentImport(ctx, uploadID)
+
+	// THEN 67 teams are eliminated and 1 team (the champion) is alive
+	tournamentID := getTournamentIDByImportKey(t, ctx, pool, "ncaa-tournament-2025")
+	eliminated, alive := getTeamEliminationCounts(t, ctx, pool, tournamentID)
+	if eliminated != 67 {
+		t.Errorf("expected 67 eliminated teams, got %d", eliminated)
+	}
+	if alive != 1 {
+		t.Errorf("expected 1 alive team (champion), got %d", alive)
+	}
+}
+
 func TestThatFailedImportMarksStatusFailed(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
