@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
+	"github.com/andrewcopp/Calcutta/backend/internal/testutil"
 )
 
 func TestThatComputeEntryPlacementsAndPayoutsReturnsNilWhenEntriesNil(t *testing.T) {
@@ -15,8 +16,15 @@ func TestThatComputeEntryPlacementsAndPayoutsReturnsNilWhenEntriesNil(t *testing
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSortsByTotalPointsDescending(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 20, CreatedAt: time.Unix(2, 0)}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(1, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 20
+	e2.CreatedAt = time.Unix(2, 0)
 
 	sorted, _ := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1, e2}, nil)
 
@@ -26,8 +34,15 @@ func TestThatComputeEntryPlacementsAndPayoutsSortsByTotalPointsDescending(t *tes
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSortsTiesByCreatedDescending(t *testing.T) {
-	eOld := &models.CalcuttaEntry{ID: "old", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	eNew := &models.CalcuttaEntry{ID: "new", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
+	eOld := testutil.NewEntry()
+	eOld.ID = "old"
+	eOld.TotalPoints = 10
+	eOld.CreatedAt = time.Unix(1, 0)
+
+	eNew := testutil.NewEntry()
+	eNew.ID = "new"
+	eNew.TotalPoints = 10
+	eNew.CreatedAt = time.Unix(2, 0)
 
 	sorted, _ := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{eOld, eNew}, nil)
 
@@ -37,8 +52,15 @@ func TestThatComputeEntryPlacementsAndPayoutsSortsTiesByCreatedDescending(t *tes
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsMarksTiesWithinEpsilon(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10.00000, CreatedAt: time.Unix(2, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10.00001, CreatedAt: time.Unix(1, 0)}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10.00000
+	e1.CreatedAt = time.Unix(2, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10.00001
+	e2.CreatedAt = time.Unix(1, 0)
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1, e2}, nil)
 
@@ -48,8 +70,15 @@ func TestThatComputeEntryPlacementsAndPayoutsMarksTiesWithinEpsilon(t *testing.T
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSetsFinishPositionOneForTopEntry(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 20, CreatedAt: time.Unix(1, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 20
+	e1.CreatedAt = time.Unix(1, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(1, 0)
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e2, e1}, nil)
 
@@ -59,10 +88,23 @@ func TestThatComputeEntryPlacementsAndPayoutsSetsFinishPositionOneForTopEntry(t 
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSplitsPayoutAcrossTieGroup(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 100}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 50}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(2, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 100
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 50
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1, e2}, []*models.CalcuttaPayout{p1, p2})
 
@@ -72,10 +114,23 @@ func TestThatComputeEntryPlacementsAndPayoutsSplitsPayoutAcrossTieGroup(t *testi
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsDistributesRemainderToEarlierEntryInSortedOrder(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 100}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 99}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(2, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 100
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 99
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1, e2}, []*models.CalcuttaPayout{p1, p2})
 
@@ -85,8 +140,14 @@ func TestThatComputeEntryPlacementsAndPayoutsDistributesRemainderToEarlierEntryI
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsSetsInTheMoneyWhenPayoutPositive(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 1}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 1
 
 	_, results := ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1}, []*models.CalcuttaPayout{p1})
 
@@ -96,7 +157,11 @@ func TestThatComputeEntryPlacementsAndPayoutsSetsInTheMoneyWhenPayoutPositive(t 
 }
 
 func TestThatComputeEntryPlacementsAndPayoutsDoesNotMutateInputEntries(t *testing.T) {
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, FinishPosition: 999, CreatedAt: time.Unix(1, 0)}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.FinishPosition = 999
+	e1.CreatedAt = time.Unix(1, 0)
 
 	_, _ = ComputeEntryPlacementsAndPayouts([]*models.CalcuttaEntry{e1}, nil)
 
@@ -107,12 +172,32 @@ func TestThatComputeEntryPlacementsAndPayoutsDoesNotMutateInputEntries(t *testin
 
 func TestThatThreeWayTiePoolsAndSplitsPayoutsEvenly(t *testing.T) {
 	// GIVEN three entries tied at the same score with payouts for positions 1-3
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(3, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e3 := &models.CalcuttaEntry{ID: "e3", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 300}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 150}
-	p3 := &models.CalcuttaPayout{Position: 3, AmountCents: 150}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(3, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(2, 0)
+
+	e3 := testutil.NewEntry()
+	e3.ID = "e3"
+	e3.TotalPoints = 10
+	e3.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 300
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 150
+
+	p3 := testutil.NewPayout()
+	p3.Position = 3
+	p3.AmountCents = 150
 
 	// WHEN computing placements and payouts
 	_, results := ComputeEntryPlacementsAndPayouts(
@@ -128,12 +213,32 @@ func TestThatThreeWayTiePoolsAndSplitsPayoutsEvenly(t *testing.T) {
 
 func TestThatThreeWayTieDistributesRemainderToEarliestEntriesInSortedOrder(t *testing.T) {
 	// GIVEN three entries tied with a total pool that doesn't divide evenly by 3
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(3, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e3 := &models.CalcuttaEntry{ID: "e3", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 100}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 100}
-	p3 := &models.CalcuttaPayout{Position: 3, AmountCents: 100}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(3, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(2, 0)
+
+	e3 := testutil.NewEntry()
+	e3.ID = "e3"
+	e3.TotalPoints = 10
+	e3.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 100
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 100
+
+	p3 := testutil.NewPayout()
+	p3.Position = 3
+	p3.AmountCents = 100
 
 	// WHEN computing placements and payouts (300/3 = 100 each, 0 remainder)
 	_, results := ComputeEntryPlacementsAndPayouts(
@@ -144,13 +249,16 @@ func TestThatThreeWayTieDistributesRemainderToEarliestEntriesInSortedOrder(t *te
 	// THEN with remainder=1 scenario: use 301 total (100+101+100)
 	// Actually test with odd total: 100+100+101 = 301
 	// Re-setup with odd total
-	p3odd := &models.CalcuttaPayout{Position: 3, AmountCents: 101}
+	p3odd := testutil.NewPayout()
+	p3odd.Position = 3
+	p3odd.AmountCents = 101
+
 	_, results = ComputeEntryPlacementsAndPayouts(
 		[]*models.CalcuttaEntry{e1, e2, e3},
 		[]*models.CalcuttaPayout{p1, p2, p3odd},
 	)
 
-	// THEN 301/3 = 100 base, remainder=1 → first entry in sorted order gets extra cent
+	// THEN 301/3 = 100 base, remainder=1 -> first entry in sorted order gets extra cent
 	if results["e1"].PayoutCents != 101 {
 		t.Fatalf("expected first entry to get 101, got %d", results["e1"].PayoutCents)
 	}
@@ -161,12 +269,33 @@ func TestThatThreeWayTieDistributesRemainderToEarliestEntriesInSortedOrder(t *te
 
 func TestThatTieOutsidePayoutPositionsResultsInZeroPayout(t *testing.T) {
 	// GIVEN two entries tied at positions 3-4, with payouts only for positions 1-2
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 20, CreatedAt: time.Unix(4, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 15, CreatedAt: time.Unix(3, 0)}
-	e3 := &models.CalcuttaEntry{ID: "e3", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e4 := &models.CalcuttaEntry{ID: "e4", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 200}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 100}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 20
+	e1.CreatedAt = time.Unix(4, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 15
+	e2.CreatedAt = time.Unix(3, 0)
+
+	e3 := testutil.NewEntry()
+	e3.ID = "e3"
+	e3.TotalPoints = 10
+	e3.CreatedAt = time.Unix(2, 0)
+
+	e4 := testutil.NewEntry()
+	e4.ID = "e4"
+	e4.TotalPoints = 10
+	e4.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 200
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 100
 
 	// WHEN computing placements and payouts
 	_, results := ComputeEntryPlacementsAndPayouts(
@@ -185,14 +314,41 @@ func TestThatTieOutsidePayoutPositionsResultsInZeroPayout(t *testing.T) {
 
 func TestThatAllEntriesTiedResultsInEvenPayoutSplit(t *testing.T) {
 	// GIVEN four entries all tied at the same score with payouts for all positions
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(4, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(3, 0)}
-	e3 := &models.CalcuttaEntry{ID: "e3", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e4 := &models.CalcuttaEntry{ID: "e4", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 400}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 200}
-	p3 := &models.CalcuttaPayout{Position: 3, AmountCents: 200}
-	p4 := &models.CalcuttaPayout{Position: 4, AmountCents: 200}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(4, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(3, 0)
+
+	e3 := testutil.NewEntry()
+	e3.ID = "e3"
+	e3.TotalPoints = 10
+	e3.CreatedAt = time.Unix(2, 0)
+
+	e4 := testutil.NewEntry()
+	e4.ID = "e4"
+	e4.TotalPoints = 10
+	e4.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 400
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 200
+
+	p3 := testutil.NewPayout()
+	p3.Position = 3
+	p3.AmountCents = 200
+
+	p4 := testutil.NewPayout()
+	p4.Position = 4
+	p4.AmountCents = 200
 
 	// WHEN computing placements and payouts
 	_, results := ComputeEntryPlacementsAndPayouts(
@@ -208,8 +364,14 @@ func TestThatAllEntriesTiedResultsInEvenPayoutSplit(t *testing.T) {
 
 func TestThatSingleEntryPoolGetsFullPayoutWithNoTie(t *testing.T) {
 	// GIVEN a single entry with a payout
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 500}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 10
+	e1.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 500
 
 	// WHEN computing placements and payouts
 	_, results := ComputeEntryPlacementsAndPayouts(
@@ -228,13 +390,37 @@ func TestThatSingleEntryPoolGetsFullPayoutWithNoTie(t *testing.T) {
 
 func TestThatTieGroupSpanningPayoutBoundaryPoolsOnlyDefinedPayouts(t *testing.T) {
 	// GIVEN entries where a tie spans positions 2-4, but only positions 1-3 have payouts
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 20, CreatedAt: time.Unix(4, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 10, CreatedAt: time.Unix(3, 0)}
-	e3 := &models.CalcuttaEntry{ID: "e3", TotalPoints: 10, CreatedAt: time.Unix(2, 0)}
-	e4 := &models.CalcuttaEntry{ID: "e4", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
-	p1 := &models.CalcuttaPayout{Position: 1, AmountCents: 300}
-	p2 := &models.CalcuttaPayout{Position: 2, AmountCents: 150}
-	p3 := &models.CalcuttaPayout{Position: 3, AmountCents: 50}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 20
+	e1.CreatedAt = time.Unix(4, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 10
+	e2.CreatedAt = time.Unix(3, 0)
+
+	e3 := testutil.NewEntry()
+	e3.ID = "e3"
+	e3.TotalPoints = 10
+	e3.CreatedAt = time.Unix(2, 0)
+
+	e4 := testutil.NewEntry()
+	e4.ID = "e4"
+	e4.TotalPoints = 10
+	e4.CreatedAt = time.Unix(1, 0)
+
+	p1 := testutil.NewPayout()
+	p1.Position = 1
+	p1.AmountCents = 300
+
+	p2 := testutil.NewPayout()
+	p2.Position = 2
+	p2.AmountCents = 150
+
+	p3 := testutil.NewPayout()
+	p3.Position = 3
+	p3.AmountCents = 50
 
 	// WHEN computing placements and payouts
 	_, results := ComputeEntryPlacementsAndPayouts(
@@ -243,7 +429,7 @@ func TestThatTieGroupSpanningPayoutBoundaryPoolsOnlyDefinedPayouts(t *testing.T)
 	)
 
 	// THEN tie group at positions 2-4 pools payouts from positions 2+3+4 (150+50+0=200), split 3 ways
-	// 200/3 = 66 base, remainder=2 → first two in sorted order get 67
+	// 200/3 = 66 base, remainder=2 -> first two in sorted order get 67
 	if results["e2"].PayoutCents != 67 {
 		t.Fatalf("expected payout 67, got %d", results["e2"].PayoutCents)
 	}
@@ -254,9 +440,20 @@ func TestThatTieGroupSpanningPayoutBoundaryPoolsOnlyDefinedPayouts(t *testing.T)
 
 func TestThatNonTiedEntryAfterTieGroupGetsCorrectFinishPosition(t *testing.T) {
 	// GIVEN a 2-way tie at position 1, followed by a non-tied entry
-	e1 := &models.CalcuttaEntry{ID: "e1", TotalPoints: 20, CreatedAt: time.Unix(3, 0)}
-	e2 := &models.CalcuttaEntry{ID: "e2", TotalPoints: 20, CreatedAt: time.Unix(2, 0)}
-	e3 := &models.CalcuttaEntry{ID: "e3", TotalPoints: 10, CreatedAt: time.Unix(1, 0)}
+	e1 := testutil.NewEntry()
+	e1.ID = "e1"
+	e1.TotalPoints = 20
+	e1.CreatedAt = time.Unix(3, 0)
+
+	e2 := testutil.NewEntry()
+	e2.ID = "e2"
+	e2.TotalPoints = 20
+	e2.CreatedAt = time.Unix(2, 0)
+
+	e3 := testutil.NewEntry()
+	e3.ID = "e3"
+	e3.TotalPoints = 10
+	e3.CreatedAt = time.Unix(1, 0)
 
 	// WHEN computing placements and payouts
 	_, results := ComputeEntryPlacementsAndPayouts(
