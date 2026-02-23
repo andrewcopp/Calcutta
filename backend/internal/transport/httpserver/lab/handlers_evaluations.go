@@ -127,6 +127,32 @@ func (h *Handler) HandleGetEvaluationEntryProfile(w http.ResponseWriter, r *http
 	response.WriteJSON(w, http.StatusOK, profile)
 }
 
+// HandleGetEvaluationSummary handles GET /api/lab/evaluations/:id/summary
+func (h *Handler) HandleGetEvaluationSummary(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := strings.TrimSpace(vars["id"])
+	if id == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
+		return
+	}
+	if h.app == nil || h.app.Lab == nil {
+		httperr.Write(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
+		return
+	}
+
+	summary, err := h.app.Lab.GetEvaluationSummary(r.Context(), id)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, summary)
+}
+
 // Response types
 
 type listEvaluationsResponse struct {

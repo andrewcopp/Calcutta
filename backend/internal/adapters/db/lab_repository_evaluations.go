@@ -351,3 +351,95 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 
 	return &profile, nil
 }
+
+// UpdateEvaluationSummary persists the computed summary JSON for an evaluation.
+func (r *LabRepository) UpdateEvaluationSummary(ctx context.Context, evaluationID string, summaryJSON []byte) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE lab.evaluations SET summary_json = $2::jsonb WHERE id = $1::uuid`,
+		evaluationID, summaryJSON,
+	)
+	if err != nil {
+		return fmt.Errorf("updating evaluation summary %s: %w", evaluationID, err)
+	}
+	return nil
+}
+
+// GetBaselineEvaluation finds the naive_ev evaluation for the same calcutta
+// and starting state key. Returns nil (no error) if none found.
+func (r *LabRepository) GetBaselineEvaluation(ctx context.Context, calcuttaID, startingStateKey string) (*models.LabEvaluationDetail, error) {
+	query := `
+		SELECT
+			ev.id::text,
+			ev.entry_id::text,
+			ev.n_sims,
+			ev.seed,
+			ev.mean_normalized_payout,
+			ev.median_normalized_payout,
+			ev.p_top1,
+			ev.p_in_money,
+			ev.our_rank,
+			ev.created_at,
+			ev.updated_at,
+			im.name AS model_name,
+			im.kind AS model_kind,
+			c.id::text AS calcutta_id,
+			c.name AS calcutta_name,
+			e.starting_state_key
+		FROM lab.evaluations ev
+		JOIN lab.entries e ON e.id = ev.entry_id
+		JOIN lab.investment_models im ON im.id = e.investment_model_id
+		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		WHERE im.kind = 'naive_ev'
+			AND e.calcutta_id = $1::uuid
+			AND e.starting_state_key = $2
+			AND ev.deleted_at IS NULL
+			AND e.deleted_at IS NULL
+			AND im.deleted_at IS NULL
+		ORDER BY ev.created_at DESC
+		LIMIT 1
+	`
+
+	var ev models.LabEvaluationDetail
+	err := r.pool.QueryRow(ctx, query, calcuttaID, startingStateKey).Scan(
+		&ev.ID,
+		&ev.EntryID,
+		&ev.NSims,
+		&ev.Seed,
+		&ev.MeanNormalizedPayout,
+		&ev.MedianNormalizedPayout,
+		&ev.PTop1,
+		&ev.PInMoney,
+		&ev.OurRank,
+		&ev.CreatedAt,
+		&ev.UpdatedAt,
+		&ev.ModelName,
+		&ev.ModelKind,
+		&ev.CalcuttaID,
+		&ev.CalcuttaName,
+		&ev.StartingStateKey,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting baseline evaluation for calcutta %s: %w", calcuttaID, err)
+	}
+	return &ev, nil
+}
+
+// GetEvaluationSummaryJSON returns the raw summary_json for an evaluation.
+// Returns nil (no error) if the column is NULL.
+func (r *LabRepository) GetEvaluationSummaryJSON(ctx context.Context, evaluationID string) ([]byte, error) {
+	var raw []byte
+	err := r.pool.QueryRow(ctx,
+		`SELECT summary_json FROM lab.evaluations WHERE id = $1::uuid AND deleted_at IS NULL`,
+		evaluationID,
+	).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, &apperrors.NotFoundError{Resource: "evaluation", ID: evaluationID}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting evaluation summary %s: %w", evaluationID, err)
+	}
+	return raw, nil
+}

@@ -2,6 +2,7 @@ package lab
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -103,6 +104,68 @@ func (s *Service) GetEvaluationEntryResults(ctx context.Context, evaluationID st
 // GetEvaluationEntryProfile returns detailed profile for an entry result.
 func (s *Service) GetEvaluationEntryProfile(ctx context.Context, entryResultID string) (*models.LabEvaluationEntryProfile, error) {
 	return s.repo.GetEvaluationEntryProfile(ctx, entryResultID)
+}
+
+// GetEvaluationSummary returns the summary for an evaluation. If the summary
+// has not been computed yet, it generates it on-the-fly, persists it, and
+// returns it.
+func (s *Service) GetEvaluationSummary(ctx context.Context, evaluationID string) (*models.LabEvaluationSummary, error) {
+	// Check if summary already exists
+	raw, err := s.repo.GetEvaluationSummaryJSON(ctx, evaluationID)
+	if err != nil {
+		return nil, fmt.Errorf("checking existing summary: %w", err)
+	}
+	if raw != nil {
+		var summary models.LabEvaluationSummary
+		if err := json.Unmarshal(raw, &summary); err != nil {
+			return nil, fmt.Errorf("unmarshalling existing summary: %w", err)
+		}
+		return &summary, nil
+	}
+
+	// Generate on-the-fly
+	return s.generateAndPersistSummary(ctx, evaluationID)
+}
+
+// generateAndPersistSummary builds a new summary, persists it, and returns it.
+func (s *Service) generateAndPersistSummary(ctx context.Context, evaluationID string) (*models.LabEvaluationSummary, error) {
+	eval, err := s.repo.GetEvaluation(ctx, evaluationID)
+	if err != nil {
+		return nil, fmt.Errorf("getting evaluation: %w", err)
+	}
+
+	entryResults, err := s.repo.GetEvaluationEntryResults(ctx, evaluationID)
+	if err != nil {
+		return nil, fmt.Errorf("getting entry results: %w", err)
+	}
+
+	// Find "Our Strategy" entry result to get bids
+	var ourBids []models.LabEvaluationEntryBid
+	for _, er := range entryResults {
+		if er.EntryName == models.LabStrategyEntryName {
+			profile, profileErr := s.repo.GetEvaluationEntryProfile(ctx, er.ID)
+			if profileErr == nil && profile != nil {
+				ourBids = profile.Bids
+			}
+			break
+		}
+	}
+
+	// Try to find baseline (naive_ev) evaluation for comparison
+	baselineEval, _ := s.repo.GetBaselineEvaluation(ctx, eval.CalcuttaID, eval.StartingStateKey)
+
+	summary := BuildEvaluationSummary(entryResults, ourBids, baselineEval)
+
+	// Persist
+	summaryBytes, err := json.Marshal(summary)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling summary: %w", err)
+	}
+	if err := s.repo.UpdateEvaluationSummary(ctx, evaluationID, summaryBytes); err != nil {
+		return nil, fmt.Errorf("persisting summary: %w", err)
+	}
+
+	return summary, nil
 }
 
 // StartPipeline starts a new pipeline run for a model.

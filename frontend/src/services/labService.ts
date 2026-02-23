@@ -8,6 +8,7 @@ import {
   EvaluationDetailSchema,
   EvaluationEntryResultsResponseSchema,
   EvaluationEntryProfileSchema,
+  EvaluationSummarySchema,
   StartPipelineResponseSchema,
   ModelPipelineProgressSchema,
 } from '../schemas/lab';
@@ -50,6 +51,12 @@ export const labService = {
 
   async getEvaluation(id: string) {
     return apiClient.get(`/lab/evaluations/${encodeURIComponent(id)}`, { schema: EvaluationDetailSchema });
+  },
+
+  async getEvaluationSummary(evaluationId: string) {
+    return apiClient.get(`/lab/evaluations/${encodeURIComponent(evaluationId)}/summary`, {
+      schema: EvaluationSummarySchema,
+    });
   },
 
   async getEvaluationEntryResults(id: string) {

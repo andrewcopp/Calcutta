@@ -8,7 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { labService } from '../../services/labService';
-import type { EvaluationDetail, EvaluationEntryResult } from '../../schemas/lab';
+import type { EvaluationDetail, EvaluationEntryResult, EvaluationSummary } from '../../schemas/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
 import { formatPayoutX, formatPct } from '../../utils/labFormatters';
@@ -32,8 +32,15 @@ export function EvaluationDetailPage() {
     enabled: Boolean(evaluationId),
   });
 
+  const summaryQuery = useQuery<EvaluationSummary | null>({
+    queryKey: queryKeys.lab.evaluations.summary(evaluationId),
+    queryFn: () => (evaluationId ? labService.getEvaluationSummary(evaluationId) : Promise.resolve(null)),
+    enabled: Boolean(evaluationId),
+  });
+
   const evaluation = evaluationQuery.data;
   const entryResults = entryResultsQuery.data ?? [];
+  const summary = summaryQuery.data;
 
   if (evaluationQuery.isLoading) {
     return (
@@ -144,6 +151,61 @@ export function EvaluationDetailPage() {
           </div>
         ) : null}
       </Card>
+
+      {summary ? (
+        <Card className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Summary</h2>
+          <p className="text-sm text-foreground mb-4">{summary.keyInsight}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-accent rounded-lg">
+              <div className="text-xs text-muted-foreground mb-1">Percentile</div>
+              <div className="text-xl font-bold text-foreground">
+                {formatPct(summary.percentileRank, 0)}
+              </div>
+            </div>
+            <div className="text-center p-3 bg-accent rounded-lg">
+              <div className="text-xs text-muted-foreground mb-1">Field Size</div>
+              <div className="text-xl font-bold text-foreground">{summary.nEntries}</div>
+            </div>
+            {summary.vsBaseline ? (
+              <div
+                className={cn(
+                  'text-center p-3 rounded-lg col-span-2',
+                  summary.vsBaseline.interpretation === 'better'
+                    ? 'bg-green-50'
+                    : summary.vsBaseline.interpretation === 'worse'
+                      ? 'bg-red-50'
+                      : 'bg-accent',
+                )}
+              >
+                <div className="text-xs text-muted-foreground mb-1">vs Naive Baseline</div>
+                <div className="text-xl font-bold text-foreground">
+                  {summary.vsBaseline.meanPayoutDelta >= 0 ? '+' : ''}
+                  {summary.vsBaseline.meanPayoutDelta.toFixed(2)}x payout
+                </div>
+                <div className="text-xs text-muted-foreground capitalize">{summary.vsBaseline.interpretation}</div>
+              </div>
+            ) : null}
+          </div>
+          {summary.topHoldings.length > 0 ? (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Top Holdings</h3>
+              <div className="flex gap-2 flex-wrap">
+                {summary.topHoldings.map((h) => (
+                  <span
+                    key={`${h.schoolName}-${h.seed}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-accent rounded text-sm"
+                  >
+                    <span className="font-medium">{h.schoolName}</span>
+                    <span className="text-muted-foreground">({h.seed})</span>
+                    <span className="text-muted-foreground">{h.bidPoints}pts</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Card className="mb-6">
         <h2 className="text-lg font-semibold mb-3">All Entries Ranked by Mean Payout</h2>

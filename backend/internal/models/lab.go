@@ -140,17 +140,41 @@ type LabEntryDetailEnriched struct {
 
 // LabEvaluation represents a lab.evaluations row.
 type LabEvaluation struct {
-	ID                     string    `json:"id"`
-	EntryID                string    `json:"entryId"`
-	NSims                  int       `json:"nSims"`
-	Seed                   int       `json:"seed"`
-	MeanNormalizedPayout   *float64  `json:"meanNormalizedPayout,omitempty"`
-	MedianNormalizedPayout *float64  `json:"medianNormalizedPayout,omitempty"`
-	PTop1                  *float64  `json:"pTop1,omitempty"`
-	PInMoney               *float64  `json:"pInMoney,omitempty"`
-	OurRank                *int      `json:"ourRank,omitempty"`
-	CreatedAt              time.Time `json:"createdAt"`
-	UpdatedAt              time.Time `json:"updatedAt"`
+	ID                     string          `json:"id"`
+	EntryID                string          `json:"entryId"`
+	NSims                  int             `json:"nSims"`
+	Seed                   int             `json:"seed"`
+	MeanNormalizedPayout   *float64        `json:"meanNormalizedPayout,omitempty"`
+	MedianNormalizedPayout *float64        `json:"medianNormalizedPayout,omitempty"`
+	PTop1                  *float64        `json:"pTop1,omitempty"`
+	PInMoney               *float64        `json:"pInMoney,omitempty"`
+	OurRank                *int            `json:"ourRank,omitempty"`
+	SummaryJSON            json.RawMessage `json:"summaryJson,omitempty"`
+	CreatedAt              time.Time       `json:"createdAt"`
+	UpdatedAt              time.Time       `json:"updatedAt"`
+}
+
+// LabEvaluationSummary is the structured narrative computed for an evaluation.
+type LabEvaluationSummary struct {
+	PercentileRank float64                       `json:"percentileRank"`
+	VsBaseline     *LabEvaluationBaselineComparison `json:"vsBaseline,omitempty"`
+	NEntries       int                           `json:"nEntries"`
+	TopHoldings    []LabEvaluationTopHolding     `json:"topHoldings"`
+	KeyInsight     string                        `json:"keyInsight"`
+}
+
+// LabEvaluationBaselineComparison compares an evaluation to a naive_ev baseline.
+type LabEvaluationBaselineComparison struct {
+	MeanPayoutDelta float64 `json:"meanPayoutDelta"`
+	PTop1Delta      float64 `json:"pTop1Delta"`
+	Interpretation  string  `json:"interpretation"`
+}
+
+// LabEvaluationTopHolding represents a top bid by points in the strategy.
+type LabEvaluationTopHolding struct {
+	SchoolName string `json:"schoolName"`
+	Seed       int    `json:"seed"`
+	BidPoints  int    `json:"bidPoints"`
 }
 
 // LabEvaluationDetail is LabEvaluation with joined data for display.

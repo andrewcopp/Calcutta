@@ -18,6 +18,9 @@ type LabRepository interface {
 	GetEvaluation(ctx context.Context, id string) (*models.LabEvaluationDetail, error)
 	GetEvaluationEntryResults(ctx context.Context, evaluationID string) ([]models.LabEvaluationEntryResult, error)
 	GetEvaluationEntryProfile(ctx context.Context, entryResultID string) (*models.LabEvaluationEntryProfile, error)
+	UpdateEvaluationSummary(ctx context.Context, evaluationID string, summaryJSON []byte) error
+	GetBaselineEvaluation(ctx context.Context, calcuttaID, startingStateKey string) (*models.LabEvaluationDetail, error)
+	GetEvaluationSummaryJSON(ctx context.Context, evaluationID string) ([]byte, error)
 }
 
 // LabPipelineRepository extends LabRepository with pipeline-specific methods.

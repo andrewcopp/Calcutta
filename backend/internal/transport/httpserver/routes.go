@@ -106,6 +106,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		GetEvaluation:              s.requirePermission("lab.read", labHandler.HandleGetEvaluation),
 		GetEvaluationEntryResults:  s.requirePermission("lab.read", labHandler.HandleGetEvaluationEntryResults),
 		GetEvaluationEntryProfile:  s.requirePermission("lab.read", labHandler.HandleGetEvaluationEntryProfile),
+		GetEvaluationSummary:       s.requirePermission("lab.read", labHandler.HandleGetEvaluationSummary),
 	})
 
 	s.registerCalcuttaCoManagerRoutes(r)

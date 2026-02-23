@@ -17,6 +17,7 @@ from moneyball.models.market_priors import (
     compute_program_priors,
     compute_seed_priors,
 )
+from moneyball.validation import validate_dataframe
 
 FEATURE_SETS = [
     "basic",
@@ -255,13 +256,18 @@ def predict_market_share(
     seed_prior_k: float = 0.0,
     program_prior_k: float = 0.0,
 ) -> pd.DataFrame:
-    if train_team_dataset.empty:
-        raise ValueError("train_team_dataset must not be empty")
-    if predict_team_dataset.empty:
-        raise ValueError("predict_team_dataset must not be empty")
-
-    if "observed_team_share_of_pool" not in train_team_dataset.columns:
-        raise ValueError("train team_dataset missing observed_team_share_of_pool")
+    validate_dataframe(
+        train_team_dataset,
+        required_columns=["observed_team_share_of_pool"],
+        min_rows=1,
+        context="train_team_dataset",
+    )
+    validate_dataframe(
+        predict_team_dataset,
+        required_columns=["seed", "region", "kenpom_net"],
+        min_rows=1,
+        context="predict_team_dataset",
+    )
 
     fs = str(feature_set)
     tt = str(target_transform or "none").strip().lower()

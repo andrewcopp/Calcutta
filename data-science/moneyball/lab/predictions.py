@@ -37,6 +37,7 @@ from moneyball.lab.models import (
 from moneyball.models.predicted_market_share import (
     predict_market_share,
 )
+from moneyball.validation import validate_dataframe, PREDICTION_OUTPUT_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,12 @@ def _map_predictions(
         ValueError: If any team_slug in predictions has no team_id mapping,
             or if expected points are missing for a mapped team.
     """
+    validate_dataframe(
+        predictions_df,
+        required_columns=PREDICTION_OUTPUT_COLUMNS,
+        context="_map_predictions input",
+    )
+
     predictions: List[Prediction] = []
     skipped_slugs: List[str] = []
     for _, row in predictions_df.iterrows():

@@ -10,7 +10,7 @@ DC = docker compose -p $(DOCKER_PROJECT)
 .PHONY: logs-backend logs-worker logs-db logs-frontend logs-search logs-tail
 .PHONY: restart-backend restart-worker restart-frontend restart-db
 .PHONY: db-ping db-sizes db-activity db-vacuum api-health api-test
-.PHONY: register-models export-bundles import-bundles
+.PHONY: register-models export-bundles import-bundles ds-lock
 
 env-init:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -172,6 +172,9 @@ db-vacuum:
 	@echo "Done."
 
 # Data science
+ds-lock:
+	cd data-science && . .venv/bin/activate && pip-compile --output-file=requirements.txt pyproject.toml
+
 register-models:
 	@echo "Registering investment models..."
 	@$(ENV) cd data-science && \

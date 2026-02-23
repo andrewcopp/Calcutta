@@ -14,6 +14,10 @@ import pandas as pd
 
 # -- Constants ----------------------------------------------------------------
 
+# Approximate championship win rates by seed from NCAA tournament history
+# (1985-2024). Tail probabilities (seeds 13-16) are hand-smoothed due to
+# small sample sizes (zero or near-zero observed titles). Used as a feature
+# input for the ridge model, not as a prediction target.
 SEED_TITLE_PROBABILITY = {
     1: 0.20, 2: 0.12, 3: 0.08, 4: 0.05, 5: 0.03, 6: 0.02,
     7: 0.01, 8: 0.01, 9: 0.005, 10: 0.003, 11: 0.002,
@@ -21,12 +25,21 @@ SEED_TITLE_PROBABILITY = {
     16: 0.00001,
 }
 
+# Expected scoring-rule points based on average tournament advancement by
+# seed (1985-2024). These are on the Python feature-engineering scale and
+# differ from the Go-side constants in backend/internal/app/lab/enrich.go
+# (which uses 320 for a 1-seed vs 12 here). The Go constants reflect the
+# Calcutta scoring-rule point system; these reflect average round-by-round
+# survival used as a ridge feature.
 SEED_EXPECTED_POINTS = {
     1: 12, 2: 9, 3: 7, 4: 5, 5: 4, 6: 3, 7: 2, 8: 2,
     9: 1, 10: 1, 11: 1, 12: 1, 13: 0.5, 14: 0.3,
     15: 0.2, 16: 0.1,
 }
 
+# Programs selected by: 3+ NCAA championships OR 10+ Final Four appearances,
+# plus Gonzaga for sustained modern excellence (7 consecutive Sweet Sixteens,
+# 2 Final Fours, consistent top-5 KenPom). Keyed by school_slug.
 BLUE_BLOODS = {
     "duke",
     "north-carolina",

@@ -56,6 +56,8 @@ export const queryKeys = {
       detail: (evaluationId: string | null | undefined) => ['lab', 'evaluations', evaluationId ?? null] as const,
       entries: (evaluationId: string | null | undefined) =>
         ['lab', 'evaluations', evaluationId ?? null, 'entries'] as const,
+      summary: (evaluationId: string | null | undefined) =>
+        ['lab', 'evaluations', evaluationId ?? null, 'summary'] as const,
       byEntry: (entryId: string | null | undefined) => ['lab', 'evaluations', { entry_id: entryId ?? null }] as const,
     },
     entryResults: {

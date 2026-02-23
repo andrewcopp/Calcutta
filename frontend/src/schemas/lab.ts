@@ -209,3 +209,29 @@ export type ModelPipelineProgress = z.infer<typeof ModelPipelineProgressSchema>;
 export const EvaluationEntryResultsResponseSchema = z.object({
   items: z.array(EvaluationEntryResultSchema),
 });
+
+export const EvaluationTopHoldingSchema = z.object({
+  schoolName: z.string(),
+  seed: z.number(),
+  bidPoints: z.number(),
+});
+
+export type EvaluationTopHolding = z.infer<typeof EvaluationTopHoldingSchema>;
+
+export const EvaluationBaselineComparisonSchema = z.object({
+  meanPayoutDelta: z.number(),
+  pTop1Delta: z.number(),
+  interpretation: z.string(),
+});
+
+export type EvaluationBaselineComparison = z.infer<typeof EvaluationBaselineComparisonSchema>;
+
+export const EvaluationSummarySchema = z.object({
+  percentileRank: z.number(),
+  vsBaseline: EvaluationBaselineComparisonSchema.nullable().optional(),
+  nEntries: z.number(),
+  topHoldings: z.array(EvaluationTopHoldingSchema),
+  keyInsight: z.string(),
+});
+
+export type EvaluationSummary = z.infer<typeof EvaluationSummarySchema>;

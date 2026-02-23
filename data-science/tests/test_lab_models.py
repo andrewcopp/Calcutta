@@ -105,6 +105,34 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         self.assertEqual(result[0]["predictedMarketShare"], 0.0)
 
 
+class TestThatPredictionRejectsInvalidFields(unittest.TestCase):
+    """Test Prediction.__post_init__ field validation."""
+
+    def test_that_empty_team_id_raises(self) -> None:
+        """An empty team_id should raise ValueError."""
+        # GIVEN an empty team_id
+        # WHEN constructing
+        # THEN ValueError is raised
+        with self.assertRaises(ValueError):
+            Prediction(team_id="", predicted_market_share=0.05, expected_points=10.0)
+
+    def test_that_negative_market_share_raises(self) -> None:
+        """A negative predicted_market_share should raise ValueError."""
+        # GIVEN a negative market share
+        # WHEN constructing
+        # THEN ValueError is raised
+        with self.assertRaises(ValueError):
+            Prediction(team_id="team-a", predicted_market_share=-0.01, expected_points=10.0)
+
+    def test_that_zero_market_share_is_allowed(self) -> None:
+        """Zero market share is a valid value (16-seed may get 0)."""
+        # GIVEN zero market share
+        p = Prediction(team_id="team-a", predicted_market_share=0.0, expected_points=0.5)
+
+        # THEN no exception is raised
+        self.assertEqual(p.predicted_market_share, 0.0)
+
+
 class TestThatValidateModelParamsRejectsInvalidInput(unittest.TestCase):
     """Test validate_model_params() catches typos and unknown kinds."""
 

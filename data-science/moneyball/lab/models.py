@@ -64,6 +64,15 @@ class Prediction:
     predicted_market_share: float  # Expected share of total pool (0.0-1.0)
     expected_points: float  # Expected tournament points from KenPom simulation
 
+    def __post_init__(self) -> None:
+        if not self.team_id:
+            raise ValueError("Prediction.team_id must not be empty")
+        if self.predicted_market_share < 0:
+            raise ValueError(
+                f"Prediction.predicted_market_share must be non-negative, "
+                f"got {self.predicted_market_share}"
+            )
+
 
 @dataclass
 class Entry:
