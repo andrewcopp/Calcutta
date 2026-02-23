@@ -6,6 +6,7 @@ import {
   GrantModeratorResponseSchema,
   CompetitionSchema,
   SeasonSchema,
+  TournamentPredictionsSchema,
 } from '../schemas/tournament';
 import type { Tournament } from '../schemas/tournament';
 import { apiClient } from '../api/apiClient';
@@ -68,6 +69,12 @@ export const tournamentService = {
 
   async revokeTournamentModerator(tournamentId: string, userId: string): Promise<void> {
     await apiClient.delete(`/tournaments/${tournamentId}/moderators/${userId}`);
+  },
+
+  async getTournamentPredictions(tournamentId: string) {
+    return apiClient.get(`/tournaments/${tournamentId}/predictions`, {
+      schema: TournamentPredictionsSchema,
+    });
   },
 
   async updateKenPomStats(

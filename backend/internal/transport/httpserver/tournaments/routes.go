@@ -18,6 +18,7 @@ type Handlers struct {
 	ListSeasons          http.HandlerFunc
 	ReplaceTeams         http.HandlerFunc
 	UpdateKenPomStats    http.HandlerFunc
+	GetPredictions       http.HandlerFunc
 }
 
 func RegisterRoutes(r *mux.Router, h Handlers) {
@@ -30,6 +31,7 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/tournaments/{id}/teams", h.ReplaceTeams).Methods("PUT")
 	r.HandleFunc("/api/tournaments/{tournamentId}/teams/{teamId}", h.UpdateTeam).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/tournaments/{id}/kenpom", h.UpdateKenPomStats).Methods("PUT")
+	r.HandleFunc("/api/tournaments/{id}/predictions", h.GetPredictions).Methods("GET")
 	r.HandleFunc("/api/competitions", h.ListCompetitions).Methods("GET")
 	r.HandleFunc("/api/seasons", h.ListSeasons).Methods("GET")
 }

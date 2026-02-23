@@ -21,6 +21,7 @@ export const queryKeys = {
     detail: (id: string | null | undefined) => ['tournament', id ?? null] as const,
     teams: (id: string | null | undefined) => ['tournamentTeams', id ?? null] as const,
     moderators: (id: string | null | undefined) => ['tournamentModerators', id ?? null] as const,
+    predictions: (id: string | null | undefined) => ['tournamentPredictions', id ?? null] as const,
     competitions: () => ['competitions'] as const,
     seasons: () => ['seasons'] as const,
   },

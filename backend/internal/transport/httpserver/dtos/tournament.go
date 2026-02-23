@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
@@ -248,6 +249,82 @@ func (r *ReplaceTeamsRequest) Validate() []string {
 	}
 
 	return errs
+}
+
+// TournamentPredictionsResponse is the response for GET /api/tournaments/{id}/predictions.
+type TournamentPredictionsResponse struct {
+	TournamentID string                   `json:"tournamentId"`
+	BatchID      string                   `json:"batchId"`
+	Teams        []TeamPredictionResponse `json:"teams"`
+}
+
+// TeamPredictionResponse is a single team's prediction data.
+type TeamPredictionResponse struct {
+	TeamID         string  `json:"teamId"`
+	SchoolName     string  `json:"schoolName"`
+	Seed           int     `json:"seed"`
+	Region         string  `json:"region"`
+	Wins           int     `json:"wins"`
+	Byes           int     `json:"byes"`
+	IsEliminated   bool    `json:"isEliminated"`
+	PRound1        float64 `json:"pRound1"`
+	PRound2        float64 `json:"pRound2"`
+	PRound3        float64 `json:"pRound3"`
+	PRound4        float64 `json:"pRound4"`
+	PRound5        float64 `json:"pRound5"`
+	PRound6        float64 `json:"pRound6"`
+	PRound7        float64 `json:"pRound7"`
+	ExpectedPoints float64 `json:"expectedPoints"`
+}
+
+// NewTournamentPredictionsResponse builds the predictions response by joining
+// predicted team values with tournament team progress and school names.
+func NewTournamentPredictionsResponse(
+	tournamentID string,
+	batchID string,
+	values []prediction.PredictedTeamValue,
+	teams []*models.TournamentTeam,
+) *TournamentPredictionsResponse {
+	teamByID := make(map[string]*models.TournamentTeam, len(teams))
+	for _, t := range teams {
+		teamByID[t.ID] = t
+	}
+
+	resp := &TournamentPredictionsResponse{
+		TournamentID: tournamentID,
+		BatchID:      batchID,
+		Teams:        make([]TeamPredictionResponse, 0, len(values)),
+	}
+
+	for _, v := range values {
+		team := teamByID[v.TeamID]
+		if team == nil {
+			continue
+		}
+		schoolName := ""
+		if team.School != nil {
+			schoolName = team.School.Name
+		}
+		resp.Teams = append(resp.Teams, TeamPredictionResponse{
+			TeamID:         v.TeamID,
+			SchoolName:     schoolName,
+			Seed:           team.Seed,
+			Region:         team.Region,
+			Wins:           team.Wins,
+			Byes:           team.Byes,
+			IsEliminated:   team.IsEliminated,
+			PRound1:        v.PRound1,
+			PRound2:        v.PRound2,
+			PRound3:        v.PRound3,
+			PRound4:        v.PRound4,
+			PRound5:        v.PRound5,
+			PRound6:        v.PRound6,
+			PRound7:        v.PRound7,
+			ExpectedPoints: v.ExpectedPoints,
+		})
+	}
+
+	return resp
 }
 
 // BracketValidationErrorResponse is the error response for bracket validation failures.

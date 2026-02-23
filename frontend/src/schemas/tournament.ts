@@ -57,6 +57,34 @@ export const SeasonSchema = z.object({
 
 export type Season = z.infer<typeof SeasonSchema>;
 
+export const TeamPredictionSchema = z.object({
+  teamId: z.string(),
+  schoolName: z.string(),
+  seed: z.number(),
+  region: z.string(),
+  wins: z.number(),
+  byes: z.number(),
+  isEliminated: z.boolean(),
+  pRound1: z.number(),
+  pRound2: z.number(),
+  pRound3: z.number(),
+  pRound4: z.number(),
+  pRound5: z.number(),
+  pRound6: z.number(),
+  pRound7: z.number(),
+  expectedPoints: z.number(),
+});
+
+export type TeamPrediction = z.infer<typeof TeamPredictionSchema>;
+
+export const TournamentPredictionsSchema = z.object({
+  tournamentId: z.string(),
+  batchId: z.string(),
+  teams: z.array(TeamPredictionSchema),
+});
+
+export type TournamentPredictions = z.infer<typeof TournamentPredictionsSchema>;
+
 export const TournamentModeratorSchema = z.object({
   id: z.string(),
   email: z.string(),

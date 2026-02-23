@@ -40,6 +40,9 @@ const AdminPage = React.lazy(() => import('./pages/AdminPage').then((m) => ({ de
 const AdminKenPomPage = React.lazy(() =>
   import('./pages/AdminKenPomPage').then((m) => ({ default: m.AdminKenPomPage })),
 );
+const AdminPredictionsPage = React.lazy(() =>
+  import('./pages/AdminPredictionsPage').then((m) => ({ default: m.AdminPredictionsPage })),
+);
 const AdminTournamentImportsPage = React.lazy(() =>
   import('./pages/AdminTournamentImportsPage').then((m) => ({ default: m.AdminTournamentImportsPage })),
 );
@@ -264,6 +267,16 @@ const AppLayout: React.FC = () => {
                 <PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}>
                   <RouteErrorBoundary>
                     <AdminKenPomPage />
+                  </RouteErrorBoundary>
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/predictions"
+              element={
+                <PermissionProtectedRoute permission={PERMISSIONS.TOURNAMENT_GAME_WRITE}>
+                  <RouteErrorBoundary>
+                    <AdminPredictionsPage />
                   </RouteErrorBoundary>
                 </PermissionProtectedRoute>
               }

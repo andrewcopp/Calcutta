@@ -34,6 +34,15 @@ export function AdminPage() {
           </Link>
         )}
 
+        {canTournaments && (
+          <Link to="/admin/predictions" className="block">
+            <Card className="hover:shadow-md transition-shadow">
+              <h2 className="text-xl font-semibold mb-2">Predictions</h2>
+              <p className="text-muted-foreground">View pre-tournament advancement probabilities by round</p>
+            </Card>
+          </Link>
+        )}
+
         {canTournamentImports && (
           <Link to="/admin/tournament-imports" className="block">
             <Card className="hover:shadow-md transition-shadow">
