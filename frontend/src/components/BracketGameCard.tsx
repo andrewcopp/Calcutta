@@ -1,4 +1,4 @@
-import { BracketGame, BracketTeam } from '../types/bracket';
+import { BracketGame, BracketTeam } from '../schemas/bracket';
 
 interface BracketGameCardProps {
   game: BracketGame;

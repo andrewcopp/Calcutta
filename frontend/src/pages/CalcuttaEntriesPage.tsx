@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import { Calcutta } from '../types/calcutta';
+import { Calcutta } from '../schemas/calcutta';
 import { Alert } from '../components/ui/Alert';
 import { Card } from '../components/ui/Card';
 import { ErrorState } from '../components/ui/ErrorState';

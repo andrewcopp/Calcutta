@@ -13,7 +13,7 @@ import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { PipelineSummary } from '../../components/Lab/PipelineSummary';
 import { PipelineStatusTable } from '../../components/Lab/PipelineStatusTable';
 import { labService } from '../../services/labService';
-import type { InvestmentModel, ModelPipelineProgress } from '../../types/lab';
+import type { InvestmentModel, ModelPipelineProgress } from '../../schemas/lab';
 import { queryKeys } from '../../queryKeys';
 import { formatDate } from '../../utils/format';
 

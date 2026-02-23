@@ -1,4 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { server } from '../test/msw/server';
+
+// Disable MSW for this file — we mock fetch directly with vi.fn()
+beforeAll(() => server.close());
+afterAll(() => server.listen({ onUnhandledRequest: 'warn' }));
 
 // ---------------------------------------------------------------------------
 // apiClient relies on `fetch`, `localStorage`, and `window.location` at

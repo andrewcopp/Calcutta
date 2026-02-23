@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Tournament } from '../types/tournament';
+import { Tournament } from '../schemas/tournament';
 import { calcuttaService } from '../services/calcuttaService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';

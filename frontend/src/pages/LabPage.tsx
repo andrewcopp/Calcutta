@@ -7,9 +7,9 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { ModelLeaderboardCard } from '../components/Lab/ModelLeaderboardCard';
 import { labService } from '../services/labService';
-import type { LeaderboardResponse } from '../types/lab';
+import type { LeaderboardResponse } from '../schemas/lab';
 import { calcuttaService } from '../services/calcuttaService';
-import { Calcutta } from '../types/calcutta';
+import { Calcutta } from '../schemas/calcutta';
 import { queryKeys } from '../queryKeys';
 
 export function LabPage() {

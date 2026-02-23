@@ -1,33 +1,32 @@
 import { apiClient } from '../api/apiClient';
-import type {
-  AdminUsersListResponse,
-  AdminUserDetailResponse,
-  UserResponse,
-  AdminInviteUserResponse,
-  ListAPIKeysResponse,
-  CreateAPIKeyRequest,
-  CreateAPIKeyResponse,
-  TournamentExportResult,
-  TournamentImportStartResponse,
-  TournamentImportStatusResponse,
-} from '../types/admin';
+import type { TournamentExportResult, CreateAPIKeyRequest } from '../schemas/admin';
+import {
+  AdminUsersListResponseSchema,
+  AdminUserDetailResponseSchema,
+  UserResponseSchema,
+  AdminInviteUserResponseSchema,
+  ListAPIKeysResponseSchema,
+  CreateAPIKeyResponseSchema,
+  TournamentImportStartResponseSchema,
+  TournamentImportStatusResponseSchema,
+} from '../schemas/admin';
 
 export const adminService = {
-  async listUsers(status?: string): Promise<AdminUsersListResponse> {
+  async listUsers(status?: string) {
     const params = status ? `?status=${encodeURIComponent(status)}` : '';
-    return apiClient.get<AdminUsersListResponse>(`/admin/users${params}`);
+    return apiClient.get(`/admin/users${params}`, { schema: AdminUsersListResponseSchema });
   },
 
-  async setUserEmail(userId: string, email: string): Promise<UserResponse> {
-    return apiClient.patch<UserResponse>(`/admin/users/${userId}/email`, { email });
+  async setUserEmail(userId: string, email: string) {
+    return apiClient.patch(`/admin/users/${userId}/email`, { email }, { schema: UserResponseSchema });
   },
 
-  async sendInvite(userId: string): Promise<AdminInviteUserResponse> {
-    return apiClient.post<AdminInviteUserResponse>(`/admin/users/${userId}/invite/send`);
+  async sendInvite(userId: string) {
+    return apiClient.post(`/admin/users/${userId}/invite/send`, undefined, { schema: AdminInviteUserResponseSchema });
   },
 
-  async getUser(userId: string): Promise<AdminUserDetailResponse> {
-    return apiClient.get<AdminUserDetailResponse>(`/admin/users/${userId}`);
+  async getUser(userId: string) {
+    return apiClient.get(`/admin/users/${userId}`, { schema: AdminUserDetailResponseSchema });
   },
 
   async grantRole(userId: string, roleKey: string, scopeType?: string, scopeId?: string): Promise<void> {
@@ -42,14 +41,14 @@ export const adminService = {
     return apiClient.delete<void>(`/admin/users/${userId}/roles/${roleKey}${qs}`);
   },
 
-  async listApiKeys(): Promise<ListAPIKeysResponse> {
-    return apiClient.get<ListAPIKeysResponse>('/admin/api-keys');
+  async listApiKeys() {
+    return apiClient.get('/admin/api-keys', { schema: ListAPIKeysResponseSchema });
   },
 
-  async createApiKey(label: string): Promise<CreateAPIKeyResponse> {
+  async createApiKey(label: string) {
     const body: CreateAPIKeyRequest = {};
     if (label) body.label = label;
-    return apiClient.post<CreateAPIKeyResponse>('/admin/api-keys', body);
+    return apiClient.post('/admin/api-keys', body, { schema: CreateAPIKeyResponseSchema });
   },
 
   async revokeApiKey(id: string): Promise<void> {
@@ -71,13 +70,15 @@ export const adminService = {
     return { blob, filename };
   },
 
-  async startTournamentImport(file: File): Promise<TournamentImportStartResponse> {
+  async startTournamentImport(file: File) {
     const form = new FormData();
     form.append('file', file);
-    return apiClient.post<TournamentImportStartResponse>('/admin/tournament-imports/import', form);
+    return apiClient.post('/admin/tournament-imports/import', form, { schema: TournamentImportStartResponseSchema });
   },
 
-  async getTournamentImportStatus(uploadId: string): Promise<TournamentImportStatusResponse> {
-    return apiClient.get<TournamentImportStatusResponse>(`/admin/tournament-imports/import/${uploadId}`);
+  async getTournamentImportStatus(uploadId: string) {
+    return apiClient.get(`/admin/tournament-imports/import/${uploadId}`, {
+      schema: TournamentImportStatusResponseSchema,
+    });
   },
 };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CalcuttaWithRanking } from '../types/calcutta';
+import { CalcuttaWithRanking } from '../schemas/calcutta';
 import { groupCalcuttas } from './calcuttaListHelpers';
 
 function makeCalcutta(overrides: Partial<CalcuttaWithRanking> & { id: string }): CalcuttaWithRanking {

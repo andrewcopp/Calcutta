@@ -1,4 +1,4 @@
-import { CalcuttaWithRanking } from '../types/calcutta';
+import { CalcuttaWithRanking } from '../schemas/calcutta';
 
 export function getEffectiveDate(calcutta: CalcuttaWithRanking): string {
   return calcutta.tournamentStartingAt ?? calcutta.createdAt;

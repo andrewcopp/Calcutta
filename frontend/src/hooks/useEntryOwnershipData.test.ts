@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
+import type { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../schemas/calcutta';
+import type { TournamentTeam } from '../schemas/tournament';
 import { makeEntryTeam, makePortfolio, makePortfolioTeam, makeTournamentTeam } from '../test/factories';
 
 // ---------------------------------------------------------------------------

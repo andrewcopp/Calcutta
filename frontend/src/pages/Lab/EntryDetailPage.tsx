@@ -9,7 +9,7 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer } from '../../components/ui/Page';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { labService } from '../../services/labService';
-import type { EntryDetail, ListEvaluationsResponse, SortDir } from '../../types/lab';
+import type { EntryDetail, ListEvaluationsResponse, SortDir } from '../../schemas/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
 

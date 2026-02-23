@@ -1,4 +1,4 @@
-import { BracketGame, BracketRound, ROUND_ORDER } from '../types/bracket';
+import { BracketGame, BracketRound, ROUND_ORDER } from '../schemas/bracket';
 
 export function groupGamesByRound(games: BracketGame[]): Record<BracketRound, BracketGame[]> {
   const grouped = {} as Record<BracketRound, BracketGame[]>;

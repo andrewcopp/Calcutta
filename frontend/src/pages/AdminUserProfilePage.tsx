@@ -17,7 +17,7 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { formatDate } from '../utils/format';
-import type { RoleGrant } from '../types/admin';
+import type { RoleGrant } from '../schemas/admin';
 
 const ALL_ROLES = ['site_admin', 'tournament_admin', 'calcutta_admin', 'player', 'user_manager'];
 

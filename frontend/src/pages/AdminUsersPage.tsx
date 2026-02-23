@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
-import type { AdminUserListItem } from '../types/admin';
+import type { AdminUserListItem } from '../schemas/admin';
 import { toast } from '../lib/toast';
 import { queryKeys } from '../queryKeys';
 import { ErrorState } from '../components/ui/ErrorState';

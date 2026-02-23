@@ -1,5 +1,5 @@
-import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
-import type { TournamentTeam } from '../../types/tournament';
+import { CalcuttaEntry, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../schemas/calcutta';
+import type { TournamentTeam } from '../../schemas/tournament';
 import { Card } from '../../components/ui/Card';
 
 interface DashboardSummaryProps {

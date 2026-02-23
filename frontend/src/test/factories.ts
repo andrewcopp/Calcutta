@@ -5,8 +5,8 @@ import type {
   CalcuttaEntryTeam,
   CalcuttaPortfolio,
   CalcuttaPortfolioTeam,
-} from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
+} from '../schemas/calcutta';
+import type { TournamentTeam } from '../schemas/tournament';
 
 export function makeCalcutta(overrides: Partial<Calcutta> = {}): Calcutta {
   return {

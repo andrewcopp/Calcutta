@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-import type { CalcuttaEntry } from '../../types/calcutta';
+import type { CalcuttaEntry } from '../../schemas/calcutta';
 import { Alert } from '../../components/ui/Alert';
 import { Card } from '../../components/ui/Card';
 import { PageContainer, PageHeader } from '../../components/ui/Page';

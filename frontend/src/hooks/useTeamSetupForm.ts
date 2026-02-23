@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { Tournament, TournamentTeam } from '../types/tournament';
-import type { School } from '../types/school';
+import type { Tournament, TournamentTeam } from '../schemas/tournament';
+import type { School } from '../schemas/school';
 import { useTeamSetupMutations } from './useTeamSetupMutations';
 
 export interface TeamSlot {

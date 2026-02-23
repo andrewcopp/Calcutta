@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaDashboard } from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
+import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam, CalcuttaDashboard } from '../schemas/calcutta';
+import type { TournamentTeam } from '../schemas/tournament';
 
 export interface EntryTeamsData {
   calcuttaName: string;

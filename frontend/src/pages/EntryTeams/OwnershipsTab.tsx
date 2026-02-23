@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { OwnershipPieChart } from '../../components/charts/OwnershipPieChart';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Select } from '../../components/ui/Select';
-import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
+import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../schemas/calcutta';
 
 export function OwnershipsTab({
   ownershipShowAllTeams,

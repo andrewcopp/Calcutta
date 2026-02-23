@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { CalcuttaEntryTeam } from '../../types/calcutta';
-import type { TournamentTeam } from '../../types/tournament';
-import { School } from '../../types/school';
+import { CalcuttaEntryTeam } from '../../schemas/calcutta';
+import type { TournamentTeam } from '../../schemas/tournament';
+import { School } from '../../schemas/school';
 import { Select } from '../../components/ui/Select';
 import { SegmentedBar } from '../../components/SegmentedBar';
 import { createTeamSortComparator } from '../../utils/teamSort';

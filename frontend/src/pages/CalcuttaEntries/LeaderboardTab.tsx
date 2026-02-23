@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalcuttaEntry } from '../../types/calcutta';
+import { CalcuttaEntry } from '../../schemas/calcutta';
 import { formatDollarsFromCents } from '../../utils/format';
 
 interface LeaderboardTabProps {

@@ -6,7 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
-import type { Calcutta } from '../../types/calcutta';
+import type { Calcutta } from '../../schemas/calcutta';
 
 interface SettingsFormValues {
   name: string;

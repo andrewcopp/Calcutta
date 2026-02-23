@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../ui/Button';
-import type { ModelPipelineProgress } from '../../types/lab';
+import type { ModelPipelineProgress } from '../../schemas/lab';
 import { formatPayoutX } from '../../utils/labFormatters';
 
 type PipelineSummaryProps = {

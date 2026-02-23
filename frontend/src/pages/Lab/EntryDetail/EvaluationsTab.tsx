@@ -6,7 +6,7 @@ import { Alert } from '../../../components/ui/Alert';
 import { Card } from '../../../components/ui/Card';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { labService } from '../../../services/labService';
-import type { EvaluationEntryResult } from '../../../types/lab';
+import type { EvaluationEntryResult } from '../../../schemas/lab';
 import { cn } from '../../../lib/cn';
 import { queryKeys } from '../../../queryKeys';
 import { formatPayoutX, formatPct, getPayoutColor } from '../../../utils/labFormatters';

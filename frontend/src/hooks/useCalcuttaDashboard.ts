@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
 import { queryKeys } from '../queryKeys';
-import { CalcuttaDashboard } from '../types/calcutta';
+import { CalcuttaDashboard } from '../schemas/calcutta';
 
 export function useCalcuttaDashboard(calcuttaId: string | undefined) {
   return useQuery<CalcuttaDashboard>({

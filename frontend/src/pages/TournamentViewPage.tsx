@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { ROUND_LABELS, ROUND_ORDER } from '../types/bracket';
+import { ROUND_LABELS, ROUND_ORDER } from '../schemas/bracket';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { useBracket } from '../hooks/useBracket';

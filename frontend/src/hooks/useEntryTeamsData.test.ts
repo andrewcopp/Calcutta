@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CalcuttaDashboard, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
+import type { CalcuttaDashboard, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../schemas/calcutta';
 import type { EntryTeamsData } from './useEntryTeamsData';
 import {
   makeCalcutta,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { groupGamesByRound } from './groupGamesByRound';
-import type { BracketGame, BracketRound } from '../types/bracket';
-import { ROUND_ORDER } from '../types/bracket';
+import type { BracketGame, BracketRound } from '../schemas/bracket';
+import { ROUND_ORDER } from '../schemas/bracket';
 
 // ---------------------------------------------------------------------------
 // Helper to create a minimal BracketGame for testing purposes.

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../types/calcutta';
-import type { TournamentTeam } from '../../types/tournament';
-import { School } from '../../types/school';
+import { CalcuttaEntry, CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../../schemas/calcutta';
+import type { TournamentTeam } from '../../schemas/tournament';
+import { School } from '../../schemas/school';
 import { Select } from '../../components/ui/Select';
 import { getEntryColorById } from '../../utils/entryColors';
 import { OwnershipPieChart } from '../../components/charts/OwnershipPieChart';

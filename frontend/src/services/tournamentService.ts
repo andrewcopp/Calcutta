@@ -1,21 +1,30 @@
-import { Tournament, TournamentTeam, TournamentModerator, Competition, Season } from '../types/tournament';
+import { z } from 'zod';
+import {
+  TournamentSchema,
+  TournamentTeamSchema,
+  TournamentModeratorsResponseSchema,
+  GrantModeratorResponseSchema,
+  CompetitionSchema,
+  SeasonSchema,
+} from '../schemas/tournament';
+import type { Tournament } from '../schemas/tournament';
 import { apiClient } from '../api/apiClient';
 
 export const tournamentService = {
-  async getAllTournaments(): Promise<Tournament[]> {
-    return apiClient.get<Tournament[]>('/tournaments');
+  async getAllTournaments() {
+    return apiClient.get('/tournaments', { schema: z.array(TournamentSchema) });
   },
 
-  async getTournament(id: string): Promise<Tournament> {
-    return apiClient.get<Tournament>(`/tournaments/${id}`);
+  async getTournament(id: string) {
+    return apiClient.get(`/tournaments/${id}`, { schema: TournamentSchema });
   },
 
-  async getTournamentTeams(id: string): Promise<TournamentTeam[]> {
-    return apiClient.get<TournamentTeam[]>(`/tournaments/${id}/teams`);
+  async getTournamentTeams(id: string) {
+    return apiClient.get(`/tournaments/${id}/teams`, { schema: z.array(TournamentTeamSchema) });
   },
 
-  async createTournament(competition: string, year: number, rounds: number): Promise<Tournament> {
-    return apiClient.post<Tournament>('/tournaments', { competition, year, rounds });
+  async createTournament(competition: string, year: number, rounds: number) {
+    return apiClient.post('/tournaments', { competition, year, rounds }, { schema: TournamentSchema });
   },
 
   async updateTournament(
@@ -28,32 +37,31 @@ export const tournamentService = {
       finalFourBottomRight?: string;
     },
   ): Promise<Tournament> {
-    return apiClient.patch<Tournament>(`/tournaments/${id}`, updates);
+    return apiClient.patch(`/tournaments/${id}`, updates, { schema: TournamentSchema });
   },
 
-  async replaceTeams(
-    tournamentId: string,
-    teams: { schoolId: string; seed: number; region: string }[],
-  ): Promise<TournamentTeam[]> {
-    return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/teams`, { teams });
+  async replaceTeams(tournamentId: string, teams: { schoolId: string; seed: number; region: string }[]) {
+    return apiClient.put(`/tournaments/${tournamentId}/teams`, { teams }, { schema: z.array(TournamentTeamSchema) });
   },
 
-  async getCompetitions(): Promise<Competition[]> {
-    return apiClient.get<Competition[]>('/competitions');
+  async getCompetitions() {
+    return apiClient.get('/competitions', { schema: z.array(CompetitionSchema) });
   },
 
-  async getSeasons(): Promise<Season[]> {
-    return apiClient.get<Season[]>('/seasons');
+  async getSeasons() {
+    return apiClient.get('/seasons', { schema: z.array(SeasonSchema) });
   },
 
-  async getTournamentModerators(tournamentId: string): Promise<TournamentModerator[]> {
-    const res = await apiClient.get<{ moderators: TournamentModerator[] }>(`/tournaments/${tournamentId}/moderators`);
+  async getTournamentModerators(tournamentId: string) {
+    const res = await apiClient.get(`/tournaments/${tournamentId}/moderators`, {
+      schema: TournamentModeratorsResponseSchema,
+    });
     return res.moderators;
   },
 
-  async grantTournamentModerator(tournamentId: string, email: string): Promise<TournamentModerator> {
-    const res = await apiClient.post<{ moderator: TournamentModerator }>(`/tournaments/${tournamentId}/moderators`, {
-      email,
+  async grantTournamentModerator(tournamentId: string, email: string) {
+    const res = await apiClient.post(`/tournaments/${tournamentId}/moderators`, { email }, {
+      schema: GrantModeratorResponseSchema,
     });
     return res.moderator;
   },
@@ -65,7 +73,7 @@ export const tournamentService = {
   async updateKenPomStats(
     tournamentId: string,
     stats: { teamId: string; netRtg: number; oRtg: number; dRtg: number; adjT: number }[],
-  ): Promise<TournamentTeam[]> {
-    return apiClient.put<TournamentTeam[]>(`/tournaments/${tournamentId}/kenpom`, { stats });
+  ) {
+    return apiClient.put(`/tournaments/${tournamentId}/kenpom`, { stats }, { schema: z.array(TournamentTeamSchema) });
   },
 };

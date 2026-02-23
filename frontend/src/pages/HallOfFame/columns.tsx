@@ -1,5 +1,5 @@
 import { type ColumnDef } from '@tanstack/react-table';
-import { BestTeam, CareerLeaderboardRow, EntryLeaderboardRow, InvestmentLeaderboardRow } from '../../types/hallOfFame';
+import { BestTeam, CareerLeaderboardRow, EntryLeaderboardRow, InvestmentLeaderboardRow } from '../../schemas/hallOfFame';
 import { formatDollarsFromCents } from '../../utils/format';
 import { NormalizedValue } from './NormalizedValue';
 

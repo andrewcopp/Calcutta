@@ -1,35 +1,40 @@
-import { User, LoginRequest, SignupRequest, AuthResponse, InvitePreview } from '../types/user';
+import type { User, LoginRequest, SignupRequest } from '../schemas/user';
+import { AuthResponseSchema, InvitePreviewSchema, PermissionsResponseSchema } from '../schemas/user';
+import { UserProfileResponseSchema } from '../schemas/admin';
 import { apiClient, USER_KEY, PERMISSIONS_KEY } from '../api/apiClient';
-import type { UserProfileResponse } from '../types/admin';
-
-interface PermissionsResponse {
-  permissions: string[];
-}
 
 export const userService = {
   async login(request: LoginRequest): Promise<User> {
-    const res = await apiClient.post<AuthResponse>('/auth/login', request, { credentials: 'include' });
+    const res = await apiClient.post('/auth/login', request, {
+      credentials: 'include',
+      schema: AuthResponseSchema,
+    });
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     apiClient.setAccessToken(res.accessToken);
     return res.user;
   },
 
   async signup(request: SignupRequest): Promise<User> {
-    const res = await apiClient.post<AuthResponse>('/auth/signup', request, { credentials: 'include' });
+    const res = await apiClient.post('/auth/signup', request, {
+      credentials: 'include',
+      schema: AuthResponseSchema,
+    });
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     apiClient.setAccessToken(res.accessToken);
     return res.user;
   },
 
-  async previewInvite(token: string): Promise<InvitePreview> {
-    return apiClient.get<InvitePreview>(`/auth/invite/preview?token=${encodeURIComponent(token)}`);
+  async previewInvite(token: string) {
+    return apiClient.get(`/auth/invite/preview?token=${encodeURIComponent(token)}`, {
+      schema: InvitePreviewSchema,
+    });
   },
 
   async acceptInvite(token: string, password: string): Promise<User> {
-    const res = await apiClient.post<AuthResponse>(
+    const res = await apiClient.post(
       '/auth/invite/accept',
       { token, password },
-      { credentials: 'include' },
+      { credentials: 'include', schema: AuthResponseSchema },
     );
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     apiClient.setAccessToken(res.accessToken);
@@ -59,7 +64,7 @@ export const userService = {
 
   async fetchPermissions(): Promise<string[]> {
     try {
-      const res = await apiClient.get<PermissionsResponse>('/me/permissions');
+      const res = await apiClient.get('/me/permissions', { schema: PermissionsResponseSchema });
       const permissions = res.permissions ?? [];
       localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions));
       return permissions;
@@ -69,8 +74,8 @@ export const userService = {
     }
   },
 
-  async fetchProfile(): Promise<UserProfileResponse> {
-    return apiClient.get<UserProfileResponse>('/me/profile');
+  async fetchProfile() {
+    return apiClient.get('/me/profile', { schema: UserProfileResponseSchema });
   },
 
   getStoredPermissions(): string[] {

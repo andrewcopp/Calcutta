@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { adminService } from '../services/adminService';
-import type { TournamentImportStatusResponse } from '../types/admin';
+import type { TournamentImportStatusResponse } from '../schemas/admin';
 
 const MAX_POLL_ATTEMPTS = 120;
 

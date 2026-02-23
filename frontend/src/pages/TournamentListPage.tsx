@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Tournament } from '../types/tournament';
+import { Tournament } from '../schemas/tournament';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { ErrorState } from '../components/ui/ErrorState';

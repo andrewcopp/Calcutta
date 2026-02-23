@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import type { CalcuttaEntryTeam } from '../types/calcutta';
+import type { CalcuttaEntryTeam } from '../schemas/calcutta';
 
 interface EntryRosterCardProps {
   entryId: string;

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/cn';
 import { PipelineProgressBar } from './PipelineProgressBar';
-import type { LeaderboardEntry } from '../../types/lab';
+import type { LeaderboardEntry } from '../../schemas/lab';
 import { formatPayoutX, formatPct, getPayoutColor } from '../../utils/labFormatters';
 
 type ModelLeaderboardCardProps = {

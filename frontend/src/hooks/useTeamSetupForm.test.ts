@@ -14,8 +14,8 @@ import {
   collectTeamsForSubmission,
 } from './useTeamSetupForm';
 import type { RegionState } from './useTeamSetupForm';
-import type { Tournament, TournamentTeam } from '../types/tournament';
-import type { School } from '../types/school';
+import type { Tournament, TournamentTeam } from '../schemas/tournament';
+import type { School } from '../schemas/school';
 
 // ---------------------------------------------------------------------------
 // The hook orchestrates React state (useState, useMemo, useCallback) around

@@ -8,7 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { labService } from '../../services/labService';
-import type { EvaluationDetail, EvaluationEntryResult } from '../../types/lab';
+import type { EvaluationDetail, EvaluationEntryResult } from '../../schemas/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
 import { formatPayoutX, formatPct } from '../../utils/labFormatters';

@@ -5,7 +5,7 @@ import type {
   CalcuttaEntryTeam,
   CalcuttaPortfolio,
   CalcuttaPortfolioTeam,
-} from '../types/calcutta';
+} from '../schemas/calcutta';
 import type { CalcuttaEntriesData } from './useCalcuttaEntriesData';
 import {
   makeEntry,

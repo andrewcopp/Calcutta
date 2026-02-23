@@ -1,6 +1,6 @@
 import { Button } from '../../components/ui/Button';
 import { Combobox, type ComboboxOption } from '../../components/ui/Combobox';
-import { School } from '../../types/school';
+import { School } from '../../schemas/school';
 import { bracketOrder } from '../../utils/bracketOrder';
 
 interface TeamSlot {

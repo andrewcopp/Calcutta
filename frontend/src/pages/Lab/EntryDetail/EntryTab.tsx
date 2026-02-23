@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Alert } from '../../../components/ui/Alert';
 import { Card } from '../../../components/ui/Card';
 import { cn } from '../../../lib/cn';
-import type { EnrichedBid, EnrichedPrediction, SortDir } from '../../../types/lab';
+import type { EnrichedBid, EnrichedPrediction, SortDir } from '../../../schemas/lab';
 import { getRoiColor, formatRoi } from '../../../utils/labFormatters';
 import { OptimizerConfigCard } from './OptimizerConfigCard';
 import { EntryStatsCards } from './EntryStatsCards';

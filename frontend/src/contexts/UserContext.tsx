@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import type { User } from '../types/user';
+import type { User } from '../schemas/user';
 import { userService } from '../services/userService';
 
 export interface UserContextType {

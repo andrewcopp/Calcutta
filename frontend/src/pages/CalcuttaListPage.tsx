@@ -7,7 +7,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { CalcuttaListSkeleton } from '../components/skeletons/CalcuttaListSkeleton';
-import { CalcuttaWithRanking } from '../types/calcutta';
+import { CalcuttaWithRanking } from '../schemas/calcutta';
 import { calcuttaService } from '../services/calcuttaService';
 import { formatRelativeTime } from '../utils/format';
 import { groupCalcuttas } from '../utils/calcuttaListHelpers';

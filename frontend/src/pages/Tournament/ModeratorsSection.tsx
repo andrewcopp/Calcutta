@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TournamentModerator } from '../../types/tournament';
+import { TournamentModerator } from '../../schemas/tournament';
 import { tournamentService } from '../../services/tournamentService';
 import { queryKeys } from '../../queryKeys';
 import { Alert } from '../../components/ui/Alert';

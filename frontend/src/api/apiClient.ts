@@ -128,9 +128,12 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
   return retried;
 }
 
-type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
+type RequestOptions<T = unknown> = Omit<RequestInit, 'body'> & {
+  body?: unknown;
+  schema?: import('zod').ZodType<T>;
+};
 
-async function request<T>(path: string, options?: RequestOptions): Promise<T> {
+async function request<T>(path: string, options?: RequestOptions<T>): Promise<T> {
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 
   const { body: rawBody, ...requestInit } = options ?? {};
@@ -191,6 +194,9 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
     throw new ApiError(message, response.status, body);
   }
 
+  if (options?.schema) {
+    return options.schema.parse(body);
+  }
   return body as T;
 }
 
@@ -212,13 +218,14 @@ export const apiClient = {
     return fetchWithAuth(url, init, true);
   },
   setAccessToken,
-  get: <T>(path: string, options?: Omit<RequestOptions, 'method'>) => request<T>(path, { ...options, method: 'GET' }),
-  post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+  get: <T>(path: string, options?: Omit<RequestOptions<T>, 'method'>) =>
+    request<T>(path, { ...options, method: 'GET' }),
+  post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions<T>, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'POST', body }),
-  put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+  put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions<T>, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'PUT', body }),
-  patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+  patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions<T>, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'PATCH', body }),
-  delete: <T>(path: string, options?: Omit<RequestOptions, 'method'>) =>
+  delete: <T>(path: string, options?: Omit<RequestOptions<T>, 'method'>) =>
     request<T>(path, { ...options, method: 'DELETE' }),
 };

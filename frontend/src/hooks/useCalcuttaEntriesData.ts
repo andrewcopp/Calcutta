@@ -5,8 +5,8 @@ import {
   CalcuttaEntryTeam,
   CalcuttaEntry,
   CalcuttaDashboard,
-} from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
+} from '../schemas/calcutta';
+import type { TournamentTeam } from '../schemas/tournament';
 
 interface SeedInvestmentDatum {
   seed: number;

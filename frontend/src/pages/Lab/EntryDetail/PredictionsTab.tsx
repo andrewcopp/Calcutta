@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Card } from '../../../components/ui/Card';
 import { cn } from '../../../lib/cn';
-import type { EnrichedPrediction, SortDir } from '../../../types/lab';
+import type { EnrichedPrediction, SortDir } from '../../../schemas/lab';
 
 type PredSortKey = 'seed' | 'team' | 'rational' | 'predicted' | 'edge';
 

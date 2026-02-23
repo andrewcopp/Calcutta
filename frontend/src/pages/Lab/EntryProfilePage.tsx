@@ -8,7 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { PageContainer } from '../../components/ui/Page';
 import { labService } from '../../services/labService';
-import type { EvaluationEntryProfile } from '../../types/lab';
+import type { EvaluationEntryProfile } from '../../schemas/lab';
 import { cn } from '../../lib/cn';
 import { queryKeys } from '../../queryKeys';
 import { formatPayoutX, formatPct, getPayoutColor } from '../../utils/labFormatters';

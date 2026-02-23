@@ -7,8 +7,8 @@ import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
 import { toast } from '../lib/toast';
 import { computeBudgetRemaining, computeTeamCount, computeValidationErrors } from '../utils/bidValidation';
-import type { School } from '../types/school';
-import type { TournamentTeam } from '../types/tournament';
+import type { School } from '../schemas/school';
+import type { TournamentTeam } from '../schemas/tournament';
 import type { ComboboxOption } from '../components/ui/Combobox';
 
 const MIN_BID = 1;

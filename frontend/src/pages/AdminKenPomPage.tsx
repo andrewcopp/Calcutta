@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
-import { TournamentTeam } from '../types/tournament';
+import { TournamentTeam } from '../schemas/tournament';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';

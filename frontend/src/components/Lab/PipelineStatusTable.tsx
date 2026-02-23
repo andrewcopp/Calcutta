@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { CalcuttaPipelineStatus } from '../../types/lab';
+import type { CalcuttaPipelineStatus } from '../../schemas/lab';
 import { formatPayoutX } from '../../utils/labFormatters';
 
 type PipelineStatusTableProps = {

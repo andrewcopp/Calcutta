@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
-import type { CreateAPIKeyResponse } from '../types/admin';
+import type { CreateAPIKeyResponse } from '../schemas/admin';
 import { queryKeys } from '../queryKeys';
 import { Alert } from '../components/ui/Alert';
 import { Breadcrumb } from '../components/ui/Breadcrumb';

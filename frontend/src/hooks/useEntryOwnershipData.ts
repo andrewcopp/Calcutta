@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../types/calcutta';
-import type { TournamentTeam } from '../types/tournament';
+import { CalcuttaEntryTeam, CalcuttaPortfolio, CalcuttaPortfolioTeam } from '../schemas/calcutta';
+import type { TournamentTeam } from '../schemas/tournament';
 
 interface InvestorRanking {
   rank: number;
