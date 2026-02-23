@@ -1,7 +1,6 @@
 package calcuttas
 
 import (
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -180,13 +179,31 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeamsByEntry[entry.ID])
 		}
 
-		h.attachProjectedEV(r, calcutta, standingsByID, allPortfolios, allPortfolioTeams, tournamentTeams)
+		// Best-effort prediction loading for projected EV
+		var ptvByTeam map[string]prediction.PredictedTeamValue
+		batchID, found, batchErr := h.app.Prediction.GetLatestBatchID(r.Context(), calcutta.TournamentID)
+		if batchErr == nil && found {
+			teamValues, tvErr := h.app.Prediction.GetTeamValues(r.Context(), batchID)
+			if tvErr == nil {
+				ptvByTeam = make(map[string]prediction.PredictedTeamValue, len(teamValues))
+				for _, tv := range teamValues {
+					ptvByTeam[tv.TeamID] = tv
+				}
+			}
+		}
+
+		scoringRules := make([]scoring.Rule, len(rounds))
+		for i, rd := range rounds {
+			scoringRules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
+		}
+
+		attachProjectedEV(ptvByTeam, scoringRules, standingsByID, allPortfolios, allPortfolioTeams, tournamentTeams)
 
 		resp.Entries = dtos.NewEntryListResponse(entries, standingsByID)
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
-		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts)
+		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, ptvByTeam)
 	}
 
 	response.WriteJSON(w, http.StatusOK, resp)
@@ -281,46 +298,17 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 }
 
 // attachProjectedEV computes and attaches projected EV to each standing using prediction data.
-// This is best-effort: if any step fails, standings simply won't have projectedEv set.
-func (h *Handler) attachProjectedEV(
-	r *http.Request,
-	calcutta *models.Calcutta,
+// If ptvByTeam is nil, this is a no-op.
+func attachProjectedEV(
+	ptvByTeam map[string]prediction.PredictedTeamValue,
+	rules []scoring.Rule,
 	standingsByID map[string]*models.EntryStanding,
 	portfolios []*models.CalcuttaPortfolio,
 	portfolioTeams []*models.CalcuttaPortfolioTeam,
 	tournamentTeams []*models.TournamentTeam,
 ) {
-	ctx := r.Context()
-
-	batchID, found, err := h.app.Prediction.GetLatestBatchID(ctx, calcutta.TournamentID)
-	if err != nil {
-		slog.Debug("projected_ev_skip_batch", "error", err)
+	if ptvByTeam == nil {
 		return
-	}
-	if !found {
-		return
-	}
-
-	teamValues, err := h.app.Prediction.GetTeamValues(ctx, batchID)
-	if err != nil {
-		slog.Debug("projected_ev_skip_values", "error", err)
-		return
-	}
-
-	rounds, err := h.app.Calcutta.GetRounds(ctx, calcutta.ID)
-	if err != nil {
-		slog.Debug("projected_ev_skip_rounds", "error", err)
-		return
-	}
-
-	rules := make([]scoring.Rule, len(rounds))
-	for i, rd := range rounds {
-		rules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
-	}
-
-	ptvByTeam := make(map[string]prediction.PredictedTeamValue, len(teamValues))
-	for _, tv := range teamValues {
-		ptvByTeam[tv.TeamID] = tv
 	}
 
 	ttByID := make(map[string]*models.TournamentTeam, len(tournamentTeams))
@@ -371,6 +359,7 @@ func (h *Handler) attachProjectedEV(
 
 // computeRoundStandings computes standings at each round cap (0 through maxRound).
 // This lets the frontend show "as of" standings for any point in the tournament.
+// If ptvByTeam is non-nil, projected EV is computed at each cap using capped progress.
 func computeRoundStandings(
 	entries []*models.CalcuttaEntry,
 	portfolios []*models.CalcuttaPortfolio,
@@ -378,6 +367,7 @@ func computeRoundStandings(
 	tournamentTeams []*models.TournamentTeam,
 	rounds []*models.CalcuttaRound,
 	payouts []*models.CalcuttaPayout,
+	ptvByTeam map[string]prediction.PredictedTeamValue,
 ) []*dtos.RoundStandingGroup {
 	if len(rounds) == 0 {
 		return []*dtos.RoundStandingGroup{}
@@ -405,6 +395,11 @@ func computeRoundStandings(
 	groups := make([]*dtos.RoundStandingGroup, 0, maxRound+1)
 	for cap := 0; cap <= maxRound; cap++ {
 		pointsByEntry := make(map[string]float64)
+		var evByEntry map[string]float64
+		if ptvByTeam != nil {
+			evByEntry = make(map[string]float64)
+		}
+
 		for _, pt := range portfolioTeams {
 			team := teamByID[pt.TeamID]
 			if team == nil {
@@ -415,17 +410,27 @@ func computeRoundStandings(
 				continue
 			}
 			progress := team.Wins + team.Byes
-			if progress > cap {
-				progress = cap
+			capped := progress
+			if capped > cap {
+				capped = cap
 			}
-			teamPoints := scoring.PointsForProgress(rules, progress, 0)
+			teamPoints := scoring.PointsForProgress(rules, capped, 0)
 			pointsByEntry[entryID] += pt.OwnershipPercentage * float64(teamPoints)
+
+			if evByEntry != nil {
+				ptv, ok := ptvByTeam[pt.TeamID]
+				if ok {
+					isEliminated := team.IsEliminated && progress <= cap
+					tp := prediction.TeamProgress{Wins: capped, Byes: 0, IsEliminated: isEliminated}
+					evByEntry[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp)
+				}
+			}
 		}
 
 		standings := calcuttaapp.ComputeStandings(entries, pointsByEntry, payouts)
 		standingEntries := make([]*dtos.RoundStandingEntry, len(standings))
 		for i, s := range standings {
-			standingEntries[i] = &dtos.RoundStandingEntry{
+			entry := &dtos.RoundStandingEntry{
 				EntryID:        s.EntryID,
 				TotalPoints:    s.TotalPoints,
 				FinishPosition: s.FinishPosition,
@@ -433,6 +438,11 @@ func computeRoundStandings(
 				PayoutCents:    s.PayoutCents,
 				InTheMoney:     s.InTheMoney,
 			}
+			if evByEntry != nil {
+				ev := evByEntry[s.EntryID]
+				entry.ProjectedEV = &ev
+			}
+			standingEntries[i] = entry
 		}
 
 		groups = append(groups, &dtos.RoundStandingGroup{

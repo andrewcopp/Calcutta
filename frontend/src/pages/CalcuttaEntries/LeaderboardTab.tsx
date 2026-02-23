@@ -17,10 +17,7 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
   const [sortMode, setSortMode] = useState<SortMode>('actual');
   const [throughRound, setThroughRound] = useState<number | null>(null);
 
-  const isHistorical = throughRound !== null;
-  const effectiveSortMode = isHistorical ? 'actual' : sortMode;
-
-  const hasProjections = entries.some((e) => e.projectedEv != null);
+  const effectiveSortMode = sortMode;
 
   const roundOptions = useMemo(
     () => getRoundOptions(dashboard.roundStandings.map((g) => g.round)),
@@ -43,10 +40,12 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
         isTied: s.isTied,
         payoutCents: s.payoutCents,
         inTheMoney: s.inTheMoney,
-        projectedEv: undefined,
+        projectedEv: s.projectedEv,
       };
     });
   }, [entries, dashboard.roundStandings, throughRound]);
+
+  const hasProjections = displayEntries.some((e) => e.projectedEv != null);
 
   const sortedEntries = useMemo(() => {
     if (effectiveSortMode === 'projected') {
@@ -66,7 +65,6 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
           <Select
             value={effectiveSortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            disabled={isHistorical}
             className="w-auto"
           >
             <option value="actual">Actual Points</option>

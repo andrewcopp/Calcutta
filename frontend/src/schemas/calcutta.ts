@@ -103,6 +103,7 @@ export const RoundStandingEntrySchema = z.object({
   isTied: z.boolean(),
   payoutCents: z.number(),
   inTheMoney: z.boolean(),
+  projectedEv: z.number().optional(),
 });
 
 export type RoundStandingEntry = z.infer<typeof RoundStandingEntrySchema>;
