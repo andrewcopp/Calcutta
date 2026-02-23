@@ -7,6 +7,7 @@ import {
   CompetitionSchema,
   SeasonSchema,
   TournamentPredictionsSchema,
+  PredictionBatchSchema,
 } from '../schemas/tournament';
 import type { Tournament } from '../schemas/tournament';
 import { apiClient } from '../api/apiClient';
@@ -71,8 +72,15 @@ export const tournamentService = {
     await apiClient.delete(`/tournaments/${tournamentId}/moderators/${userId}`);
   },
 
-  async getTournamentPredictions(tournamentId: string) {
-    return apiClient.get(`/tournaments/${tournamentId}/predictions`, {
+  async getPredictionBatches(tournamentId: string) {
+    return apiClient.get(`/tournaments/${tournamentId}/prediction-batches`, {
+      schema: z.array(PredictionBatchSchema),
+    });
+  },
+
+  async getTournamentPredictions(tournamentId: string, batchId?: string) {
+    const params = batchId ? `?batch_id=${batchId}` : '';
+    return apiClient.get(`/tournaments/${tournamentId}/predictions${params}`, {
       schema: TournamentPredictionsSchema,
     });
   },

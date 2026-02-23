@@ -89,7 +89,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to store predictions: %w", err)
 	}
 
-	s.pruneOldBatches(ctx, p.TournamentID, 5)
+	s.pruneOldBatches(ctx, p.TournamentID, 10)
 
 	return &RunResult{
 		BatchID:              batchID,
@@ -123,6 +123,31 @@ func (s *Service) pruneOldBatches(ctx context.Context, tournamentID string, keep
 	if n := result.RowsAffected(); n > 0 {
 		slog.Info("prediction_prune_succeeded", "tournament_id", tournamentID, "batches_deleted", n)
 	}
+}
+
+// ListBatches returns all non-deleted prediction batches for a tournament, newest first.
+func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]PredictionBatchSummary, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id::text, probability_source_key, created_at
+		FROM compute.prediction_batches
+		WHERE tournament_id = $1::uuid
+			AND deleted_at IS NULL
+		ORDER BY created_at DESC
+	`, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("listing prediction batches: %w", err)
+	}
+	defer rows.Close()
+
+	var batches []PredictionBatchSummary
+	for rows.Next() {
+		var b PredictionBatchSummary
+		if err := rows.Scan(&b.ID, &b.ProbabilitySourceKey, &b.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning prediction batch: %w", err)
+		}
+		batches = append(batches, b)
+	}
+	return batches, rows.Err()
 }
 
 // GetLatestBatchID returns the most recent prediction batch for a tournament.

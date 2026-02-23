@@ -57,6 +57,14 @@ export const SeasonSchema = z.object({
 
 export type Season = z.infer<typeof SeasonSchema>;
 
+export const PredictionBatchSchema = z.object({
+  id: z.string(),
+  probabilitySourceKey: z.string(),
+  createdAt: z.string(),
+});
+
+export type PredictionBatch = z.infer<typeof PredictionBatchSchema>;
+
 export const TeamPredictionSchema = z.object({
   teamId: z.string(),
   schoolName: z.string(),

@@ -17,14 +17,19 @@ func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	batchID, found, err := h.app.Prediction.GetLatestBatchID(r.Context(), tournamentID)
-	if err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
-	}
-	if !found {
-		httperr.Write(w, r, http.StatusNotFound, "not_found", "No predictions found for this tournament", "")
-		return
+	batchID := r.URL.Query().Get("batch_id")
+	if batchID == "" {
+		var found bool
+		var err error
+		batchID, found, err = h.app.Prediction.GetLatestBatchID(r.Context(), tournamentID)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, h.authUserID)
+			return
+		}
+		if !found {
+			httperr.Write(w, r, http.StatusNotFound, "not_found", "No predictions found for this tournament", "")
+			return
+		}
 	}
 
 	teamValues, err := h.app.Prediction.GetTeamValues(r.Context(), batchID)
@@ -40,4 +45,21 @@ func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJSON(w, http.StatusOK, dtos.NewTournamentPredictionsResponse(tournamentID, batchID, teamValues, teams))
+}
+
+func (h *Handler) HandleListPredictionBatches(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	tournamentID := vars["id"]
+	if tournamentID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		return
+	}
+
+	batches, err := h.app.Prediction.ListBatches(r.Context(), tournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, dtos.NewPredictionBatchListResponse(batches))
 }

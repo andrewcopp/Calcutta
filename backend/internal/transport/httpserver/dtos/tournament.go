@@ -327,6 +327,26 @@ func NewTournamentPredictionsResponse(
 	return resp
 }
 
+// PredictionBatchResponse is a single batch entry for the batch list dropdown.
+type PredictionBatchResponse struct {
+	ID                   string    `json:"id"`
+	ProbabilitySourceKey string    `json:"probabilitySourceKey"`
+	CreatedAt            time.Time `json:"createdAt"`
+}
+
+// NewPredictionBatchListResponse maps a slice of batch summaries to DTOs.
+func NewPredictionBatchListResponse(batches []prediction.PredictionBatchSummary) []PredictionBatchResponse {
+	resp := make([]PredictionBatchResponse, len(batches))
+	for i, b := range batches {
+		resp[i] = PredictionBatchResponse{
+			ID:                   b.ID,
+			ProbabilitySourceKey: b.ProbabilitySourceKey,
+			CreatedAt:            b.CreatedAt,
+		}
+	}
+	return resp
+}
+
 // BracketValidationErrorResponse is the error response for bracket validation failures.
 type BracketValidationErrorResponse struct {
 	Code   string   `json:"code"`

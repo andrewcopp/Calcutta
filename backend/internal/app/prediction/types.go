@@ -1,5 +1,14 @@
 package prediction
 
+import "time"
+
+// PredictionBatchSummary is a lightweight view of a prediction batch for listing.
+type PredictionBatchSummary struct {
+	ID                   string
+	ProbabilitySourceKey string
+	CreatedAt            time.Time
+}
+
 // PredictedMatchup represents a potential game between two teams with probabilities.
 type PredictedMatchup struct {
 	GameID                 string
