@@ -181,9 +181,11 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 
 		// Best-effort prediction loading for projected EV
 		var ptvByTeam map[string]prediction.PredictedTeamValue
-		batchID, found, batchErr := h.app.Prediction.GetLatestBatchID(r.Context(), calcutta.TournamentID)
+		var batchThroughRound int
+		batch, found, batchErr := h.app.Prediction.GetLatestBatch(r.Context(), calcutta.TournamentID)
 		if batchErr == nil && found {
-			teamValues, tvErr := h.app.Prediction.GetTeamValues(r.Context(), batchID)
+			batchThroughRound = batch.ThroughRound
+			teamValues, tvErr := h.app.Prediction.GetTeamValues(r.Context(), batch.ID)
 			if tvErr == nil {
 				ptvByTeam = make(map[string]prediction.PredictedTeamValue, len(teamValues))
 				for _, tv := range teamValues {
@@ -197,13 +199,13 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			scoringRules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
 		}
 
-		attachProjectedEV(ptvByTeam, scoringRules, standingsByID, allPortfolios, allPortfolioTeams, tournamentTeams)
+		attachProjectedEV(ptvByTeam, scoringRules, standingsByID, allPortfolios, allPortfolioTeams, tournamentTeams, batchThroughRound)
 
 		resp.Entries = dtos.NewEntryListResponse(entries, standingsByID)
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
-		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, ptvByTeam)
+		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, ptvByTeam, batchThroughRound)
 	}
 
 	response.WriteJSON(w, http.StatusOK, resp)
@@ -306,6 +308,7 @@ func attachProjectedEV(
 	portfolios []*models.CalcuttaPortfolio,
 	portfolioTeams []*models.CalcuttaPortfolioTeam,
 	tournamentTeams []*models.TournamentTeam,
+	throughRound int,
 ) {
 	if ptvByTeam == nil {
 		return
@@ -332,7 +335,7 @@ func attachProjectedEV(
 			Byes:         tt.Byes,
 			IsEliminated: tt.IsEliminated,
 		}
-		teamEV := prediction.ProjectedTeamEV(ptv, rules, tp, 0)
+		teamEV := prediction.ProjectedTeamEV(ptv, rules, tp, throughRound)
 		evByPortfolio[pt.PortfolioID] += pt.OwnershipPercentage * teamEV
 	}
 
@@ -368,6 +371,7 @@ func computeRoundStandings(
 	rounds []*models.CalcuttaRound,
 	payouts []*models.CalcuttaPayout,
 	ptvByTeam map[string]prediction.PredictedTeamValue,
+	throughRound int,
 ) []*dtos.RoundStandingGroup {
 	if len(rounds) == 0 {
 		return []*dtos.RoundStandingGroup{}
@@ -422,7 +426,7 @@ func computeRoundStandings(
 				if ok {
 					isEliminated := team.IsEliminated && progress <= cap
 					tp := prediction.TeamProgress{Wins: capped, Byes: 0, IsEliminated: isEliminated}
-					evByEntry[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp, 0)
+					evByEntry[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp, throughRound)
 				}
 			}
 		}

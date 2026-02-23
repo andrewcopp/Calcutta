@@ -6,161 +6,67 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 )
 
-// GenerateTournamentValues computes expected points and round probabilities from matchups.
-// This is a port of the Python tournament_value.py module.
-func GenerateTournamentValues(matchups []PredictedMatchup, rules []scoring.Rule) []PredictedTeamValue {
-	// Calculate win probabilities by round for each team
-	// p_win = p_matchup * p_team_wins_given_matchup
-	type winRecord struct {
-		teamID     string
-		roundOrder int
-		pWin       float64
-	}
+type teamRoundKey struct {
+	teamID     string
+	roundOrder int
+}
 
-	var wins []winRecord
-	for _, m := range matchups {
-		if m.RoundOrder < 1 || m.RoundOrder > 7 {
-			continue
-		}
-		// Team 1 win probability
-		wins = append(wins, winRecord{
-			teamID:     m.Team1ID,
-			roundOrder: m.RoundOrder,
-			pWin:       m.PMatchup * m.PTeam1WinsGivenMatchup,
-		})
-		// Team 2 win probability
-		wins = append(wins, winRecord{
-			teamID:     m.Team2ID,
-			roundOrder: m.RoundOrder,
-			pWin:       m.PMatchup * m.PTeam2WinsGivenMatchup,
-		})
-	}
-
-	// Group by (team_id, round_order) and sum p_win
-	type teamRoundKey struct {
-		teamID     string
-		roundOrder int
-	}
-	pByRound := make(map[teamRoundKey]float64)
-	teamIDs := make(map[string]bool)
-
-	for _, w := range wins {
-		key := teamRoundKey{teamID: w.teamID, roundOrder: w.roundOrder}
-		pByRound[key] += w.pWin
-		teamIDs[w.teamID] = true
-	}
-
-	// Calculate incremental points for each round
-	// inc_by_round[r] = points_for_progress(r) - points_for_progress(r-1)
+// buildIncByRound computes the incremental points for reaching each progress level.
+func buildIncByRound(rules []scoring.Rule) map[int]float64 {
 	incByRound := make(map[int]float64)
 	for r := 1; r <= 7; r++ {
-		// For predictions, we use wins=r, byes=0 to get cumulative points
-		// Then subtract previous round's points
 		ptsR := float64(scoring.PointsForProgress(rules, r, 0))
 		ptsRMinus1 := float64(scoring.PointsForProgress(rules, r-1, 0))
 		incByRound[r] = ptsR - ptsRMinus1
 	}
-
-	// Calculate expected points and variance per team
-	type teamStats struct {
-		expectedPoints float64
-		variancePoints float64
-		pByRound       map[int]float64
-	}
-	statsByTeam := make(map[string]*teamStats)
-
-	for teamID := range teamIDs {
-		statsByTeam[teamID] = &teamStats{
-			pByRound: make(map[int]float64),
-		}
-	}
-
-	for key, pWin := range pByRound {
-		stats := statsByTeam[key.teamID]
-		if stats == nil {
-			continue
-		}
-
-		pointsInc := incByRound[key.roundOrder]
-		stats.expectedPoints += pWin * pointsInc
-		stats.variancePoints += pWin * (1 - pWin) * (pointsInc * pointsInc)
-		stats.pByRound[key.roundOrder] = pWin
-	}
-
-	// Compute FF survival probability per team.
-	// Non-FF teams have pMatchup=1.0 in R64, so their sum is 1.0.
-	// FF teams have pMatchup=0.5 for each of their two possible R64 games.
-	ffSurvival := make(map[string]float64)
-	for _, m := range matchups {
-		if m.RoundOrder == 1 {
-			ffSurvival[m.Team1ID] += m.PMatchup
-			ffSurvival[m.Team2ID] += m.PMatchup
-		}
-	}
-
-	// Build output with shifted round mapping:
-	// PRound1 = FF survival, PRound2-7 = pByRound[1]-pByRound[6]
-	var results []PredictedTeamValue
-	for teamID, stats := range statsByTeam {
-		probs := [7]float64{
-			ffSurvival[teamID],
-			stats.pByRound[1], stats.pByRound[2], stats.pByRound[3],
-			stats.pByRound[4], stats.pByRound[5], stats.pByRound[6],
-		}
-		// Enforce monotonicity: each probability must be <= the previous
-		for i := 1; i < 7; i++ {
-			if probs[i] > probs[i-1] {
-				probs[i] = probs[i-1]
-			}
-		}
-
-		result := PredictedTeamValue{
-			TeamID:         teamID,
-			ExpectedPoints: stats.expectedPoints,
-			VariancePoints: stats.variancePoints,
-			StdPoints:      math.Sqrt(stats.variancePoints),
-			PRound1:        probs[0],
-			PRound2:        probs[1],
-			PRound3:        probs[2],
-			PRound4:        probs[3],
-			PRound5:        probs[4],
-			PRound6:        probs[5],
-			PRound7:        probs[6],
-		}
-		results = append(results, result)
-	}
-
-	return results
+	return incByRound
 }
 
-// GenerateTournamentValuesFromCheckpoint computes expected points and round probabilities
-// from a mid-tournament checkpoint. All 68 teams are included in the output:
-// - Eliminated teams: pRound(1..progress) = 1.0, rest = 0.0
-// - Alive teams: pRound(1..throughRound) = 1.0, future rounds from matchup probabilities
-// ExpectedPoints = actualPoints + sum(pWinFutureRound * incPoints)
-func GenerateTournamentValuesFromCheckpoint(
+// aggregatePWinByRound sums pMatchup*pWin by (teamID, roundOrder) from matchups.
+func aggregatePWinByRound(matchups []PredictedMatchup) map[teamRoundKey]float64 {
+	result := make(map[teamRoundKey]float64)
+	for _, m := range matchups {
+		result[teamRoundKey{m.Team1ID, m.RoundOrder}] += m.PMatchup * m.PTeam1WinsGivenMatchup
+		result[teamRoundKey{m.Team2ID, m.RoundOrder}] += m.PMatchup * m.PTeam2WinsGivenMatchup
+	}
+	return result
+}
+
+// enforceMonotonicity ensures each probability is <= the previous one.
+func enforceMonotonicity(probs []float64) {
+	for i := 1; i < len(probs); i++ {
+		if probs[i] > probs[i-1] {
+			probs[i] = probs[i-1]
+		}
+	}
+}
+
+// GenerateTournamentValues computes expected points and round-by-round advancement
+// probabilities for all teams. This handles both pre-tournament (throughRound=0)
+// and mid-tournament checkpoint scenarios:
+//   - Eliminated teams (progress < throughRound): pRound = 1.0 up to progress, 0 after
+//   - Alive teams (progress >= throughRound): pRound = 1.0 up to throughRound, matchup probs after
+//   - ExpectedPoints = actualPoints + sum(pRound[r] * incrementalPoints[r]) for future rounds
+func GenerateTournamentValues(
 	allTeams []TeamInput,
-	remainingMatchups []PredictedMatchup,
+	matchups []PredictedMatchup,
 	throughRound int,
 	rules []scoring.Rule,
 ) []PredictedTeamValue {
-	// Compute pWin by round from remaining matchups (same logic as GenerateTournamentValues)
-	type teamRoundKey struct {
-		teamID     string
-		roundOrder int
-	}
-	pWinByRound := make(map[teamRoundKey]float64)
-	for _, m := range remainingMatchups {
-		pWinByRound[teamRoundKey{m.Team1ID, m.RoundOrder}] += m.PMatchup * m.PTeam1WinsGivenMatchup
-		pWinByRound[teamRoundKey{m.Team2ID, m.RoundOrder}] += m.PMatchup * m.PTeam2WinsGivenMatchup
-	}
+	pWinByRound := aggregatePWinByRound(matchups)
+	incByRound := buildIncByRound(rules)
 
-	// Incremental points per round
-	incByRound := make(map[int]float64)
-	for r := 1; r <= 7; r++ {
-		ptsR := float64(scoring.PointsForProgress(rules, r, 0))
-		ptsRMinus1 := float64(scoring.PointsForProgress(rules, r-1, 0))
-		incByRound[r] = ptsR - ptsRMinus1
+	// For throughRound=0: compute FF survival from R64 matchup participation.
+	// Non-FF teams get pMatchup sum = 1.0; FF teams get their FF win probability.
+	var ffSurvival map[string]float64
+	if throughRound == 0 {
+		ffSurvival = make(map[string]float64)
+		for _, m := range matchups {
+			if m.RoundOrder == 1 {
+				ffSurvival[m.Team1ID] += m.PMatchup
+				ffSurvival[m.Team2ID] += m.PMatchup
+			}
+		}
 	}
 
 	var results []PredictedTeamValue
@@ -170,9 +76,10 @@ func GenerateTournamentValuesFromCheckpoint(
 
 		var probs [7]float64
 		var expectedPoints float64
+		var variancePoints float64
 
-		if progress < throughRound {
-			// Eliminated: pRound = 1.0 for rounds survived, 0.0 for rest
+		if throughRound > 0 && progress < throughRound {
+			// Eliminated: pRound = 1.0 for rounds survived, 0.0 for rest.
 			for r := 1; r <= 7; r++ {
 				if r <= progress {
 					probs[r-1] = 1.0
@@ -180,31 +87,47 @@ func GenerateTournamentValuesFromCheckpoint(
 			}
 			expectedPoints = actualPoints
 		} else {
-			// Alive: resolved rounds = 1.0, future rounds from matchup probs
-			for r := 1; r <= 7; r++ {
+			// Alive (or pre-tournament where all teams start at progress 0).
+
+			// PRound1: FF survival for pre-tournament, 1.0 for mid-tournament.
+			if throughRound == 0 {
+				probs[0] = ffSurvival[team.ID]
+			} else {
+				probs[0] = 1.0
+			}
+
+			// PRound2-7: 1.0 for resolved rounds, matchup probs for future rounds.
+			for r := 2; r <= 7; r++ {
 				if r <= throughRound {
 					probs[r-1] = 1.0
 				} else {
 					probs[r-1] = pWinByRound[teamRoundKey{team.ID, r - 1}]
 				}
 			}
-			// Enforce monotonicity
-			for i := 1; i < 7; i++ {
-				if probs[i] > probs[i-1] {
-					probs[i] = probs[i-1]
-				}
-			}
 
-			// expectedPoints = actual + sum of future conditional points
+			enforceMonotonicity(probs[:])
+
+			// Expected points = actual + sum of future conditional points.
 			expectedPoints = actualPoints
 			for r := throughRound + 1; r <= 7; r++ {
 				expectedPoints += probs[r-1] * incByRound[r]
+			}
+
+			// Variance (pre-tournament only).
+			if throughRound == 0 {
+				for r := 1; r <= 7; r++ {
+					p := probs[r-1]
+					inc := incByRound[r]
+					variancePoints += p * (1 - p) * inc * inc
+				}
 			}
 		}
 
 		results = append(results, PredictedTeamValue{
 			TeamID:         team.ID,
 			ExpectedPoints: expectedPoints,
+			VariancePoints: variancePoints,
+			StdPoints:      math.Sqrt(variancePoints),
 			PRound1:        probs[0],
 			PRound2:        probs[1],
 			PRound3:        probs[2],

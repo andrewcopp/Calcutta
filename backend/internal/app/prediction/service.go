@@ -10,6 +10,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -71,37 +72,33 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		rules = DefaultScoringRules()
 	}
 
+	// Load Final Four config for correct region pairings
+	ffConfig, err := s.loadFinalFourConfig(ctx, p.TournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load final four config: %w", err)
+	}
+
 	// Determine checkpoint: use override if provided, otherwise auto-detect.
 	throughRound := detectThroughRoundFromTeams(teams)
 	if p.ThroughRound != nil {
 		throughRound = *p.ThroughRound
 	}
 
-	var teamValues []PredictedTeamValue
-
-	if throughRound >= 7 {
-		// Tournament complete: no remaining matchups, all values from actual results
-		teamValues = GenerateTournamentValuesFromCheckpoint(teams, nil, throughRound, rules)
-	} else {
-		// Pre-tournament (0) or mid-tournament (1-6): filter to survivors, generate matchups
+	var matchups []PredictedMatchup
+	if throughRound < 7 {
 		var survivors []TeamInput
 		for _, t := range teams {
 			if t.Wins+t.Byes >= throughRound {
 				survivors = append(survivors, t)
 			}
 		}
-
-		matchups, err := GenerateMatchups(survivors, throughRound, p.GameOutcomeSpec)
+		matchups, err = GenerateMatchups(survivors, throughRound, p.GameOutcomeSpec, ffConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate matchups: %w", err)
 		}
-
-		if throughRound == 0 {
-			teamValues = GenerateTournamentValues(matchups, rules)
-		} else {
-			teamValues = GenerateTournamentValuesFromCheckpoint(teams, matchups, throughRound, rules)
-		}
 	}
+
+	teamValues := GenerateTournamentValues(teams, matchups, throughRound, rules)
 
 	// Store results
 	specJSON, _ := json.Marshal(p.GameOutcomeSpec)
@@ -348,6 +345,34 @@ func (s *Service) GetExpectedPointsMap(ctx context.Context, tournamentID string)
 		result[v.TeamID] = v.ExpectedPoints
 	}
 	return result, nil
+}
+
+func (s *Service) loadFinalFourConfig(ctx context.Context, tournamentID string) (*models.FinalFourConfig, error) {
+	var tl, bl, tr, br *string
+	err := s.pool.QueryRow(ctx, `
+		SELECT final_four_top_left, final_four_bottom_left,
+			   final_four_top_right, final_four_bottom_right
+		FROM core.tournaments
+		WHERE id = $1::uuid AND deleted_at IS NULL
+	`, tournamentID).Scan(&tl, &bl, &tr, &br)
+	if err != nil {
+		return nil, fmt.Errorf("querying final four config: %w", err)
+	}
+	cfg := &models.FinalFourConfig{}
+	if tl != nil {
+		cfg.TopLeftRegion = *tl
+	}
+	if bl != nil {
+		cfg.BottomLeftRegion = *bl
+	}
+	if tr != nil {
+		cfg.TopRightRegion = *tr
+	}
+	if br != nil {
+		cfg.BottomRightRegion = *br
+	}
+	cfg.ApplyDefaults()
+	return cfg, nil
 }
 
 func (s *Service) loadTeams(ctx context.Context, tournamentID string) ([]TeamInput, error) {

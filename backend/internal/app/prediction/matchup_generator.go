@@ -5,14 +5,143 @@ import (
 	"sort"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
+
+// gameSetup describes one bracket game slot and the candidate teams on each side.
+type gameSetup struct {
+	gameID string
+	side1  []TeamInput
+	side2  []TeamInput
+}
+
+// Standard NCAA bracket seed pairings for the Round of 64.
+var r64Pairings = [][2]int{
+	{1, 16}, {8, 9}, {5, 12}, {4, 13},
+	{6, 11}, {3, 14}, {7, 10}, {2, 15},
+}
+
+// r32Groups defines which seed groups face off in the Round of 32.
+var r32Groups = [][2][]int{
+	{{1, 16}, {8, 9}},
+	{{5, 12}, {4, 13}},
+	{{6, 11}, {3, 14}},
+	{{7, 10}, {2, 15}},
+}
+
+// s16Groups defines which seed groups face off in the Sweet 16.
+var s16Groups = [][2][]int{
+	{{1, 16, 8, 9}, {5, 12, 4, 13}},
+	{{6, 11, 3, 14}, {7, 10, 2, 15}},
+}
+
+// topHalfSeeds and bottomHalfSeeds define the Elite 8 matchup within a region.
+var topHalfSeeds = []int{1, 16, 8, 9, 5, 12, 4, 13}
+var bottomHalfSeeds = []int{6, 11, 3, 14, 7, 10, 2, 15}
+
+// computeRound generates matchups for one round from the given game setups
+// and returns both the matchups and updated advance probabilities.
+func computeRound(
+	games []gameSetup,
+	pAdvance map[string]float64,
+	calcWinProb func(id1, id2 string) float64,
+	roundOrder int,
+) ([]PredictedMatchup, map[string]float64) {
+	var matchups []PredictedMatchup
+	for _, g := range games {
+		for _, t1 := range g.side1 {
+			for _, t2 := range g.side2 {
+				pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
+				p1Wins := calcWinProb(t1.ID, t2.ID)
+				matchups = append(matchups, PredictedMatchup{
+					GameID:                 g.gameID,
+					RoundOrder:             roundOrder,
+					Team1ID:                t1.ID,
+					Team2ID:                t2.ID,
+					PMatchup:               pMatch,
+					PTeam1WinsGivenMatchup: p1Wins,
+					PTeam2WinsGivenMatchup: 1.0 - p1Wins,
+				})
+			}
+		}
+	}
+	return matchups, computeAdvanceProbs(matchups)
+}
+
+// buildRegionalGames creates game setups for a single region at a given round.
+func buildRegionalGames(region string, regionTeams []TeamInput, round int) []gameSetup {
+	teamsBySeed := func(seed int) []TeamInput {
+		var result []TeamInput
+		for _, t := range regionTeams {
+			if t.Seed == seed {
+				result = append(result, t)
+			}
+		}
+		return result
+	}
+
+	teamsBySeeds := func(seeds []int) []TeamInput {
+		seedSet := make(map[int]bool, len(seeds))
+		for _, s := range seeds {
+			seedSet[s] = true
+		}
+		var result []TeamInput
+		for _, t := range regionTeams {
+			if seedSet[t.Seed] {
+				result = append(result, t)
+			}
+		}
+		return result
+	}
+
+	switch round {
+	case 1: // R64
+		games := make([]gameSetup, 0, len(r64Pairings))
+		for idx, seeds := range r64Pairings {
+			games = append(games, gameSetup{
+				gameID: fmt.Sprintf("R1-%s-%d", region, idx+1),
+				side1:  teamsBySeed(seeds[0]),
+				side2:  teamsBySeed(seeds[1]),
+			})
+		}
+		return games
+	case 2: // R32
+		games := make([]gameSetup, 0, len(r32Groups))
+		for idx, group := range r32Groups {
+			games = append(games, gameSetup{
+				gameID: fmt.Sprintf("R2-%s-%d", region, idx+1),
+				side1:  teamsBySeeds(group[0]),
+				side2:  teamsBySeeds(group[1]),
+			})
+		}
+		return games
+	case 3: // S16
+		games := make([]gameSetup, 0, len(s16Groups))
+		for idx, group := range s16Groups {
+			games = append(games, gameSetup{
+				gameID: fmt.Sprintf("R3-%s-%d", region, idx+1),
+				side1:  teamsBySeeds(group[0]),
+				side2:  teamsBySeeds(group[1]),
+			})
+		}
+		return games
+	case 4: // E8
+		return []gameSetup{{
+			gameID: fmt.Sprintf("R4-%s-1", region),
+			side1:  teamsBySeeds(topHalfSeeds),
+			side2:  teamsBySeeds(bottomHalfSeeds),
+		}}
+	}
+	return nil
+}
 
 // GenerateMatchups generates matchup predictions starting from a tournament checkpoint.
 // For throughRound == 0 (pre-tournament), it computes First Four win probabilities using
 // KenPom ratings and requires exactly 68 teams.
 // For throughRound >= 1, all survivors start with pAdvance = 1.0.
 // Rounds already resolved (< throughRound+1) are skipped.
-func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec) ([]PredictedMatchup, error) {
+// ffConfig determines the Final Four region pairings; if nil, defaults are applied.
+func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, error) {
 	if throughRound == 0 && len(teams) != 68 {
 		return nil, fmt.Errorf("expected 68 teams for pre-tournament predictions, got %d", len(teams))
 	}
@@ -22,9 +151,18 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 	}
 	spec.Normalize()
 
-	kenpomByID := make(map[string]float64)
+	if ffConfig == nil {
+		ffConfig = &models.FinalFourConfig{}
+		ffConfig.ApplyDefaults()
+	}
+
+	kenpomByID := make(map[string]float64, len(teams))
 	for _, t := range teams {
 		kenpomByID[t.ID] = t.KenPomNet
+	}
+
+	calcWinProb := func(id1, id2 string) float64 {
+		return spec.WinProb(kenpomByID[id1], kenpomByID[id2])
 	}
 
 	teamsByRegion := make(map[string][]TeamInput)
@@ -38,56 +176,10 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 	}
 	sort.Strings(regions)
 
-	calcWinProb := func(id1, id2 string) float64 {
-		return spec.WinProb(kenpomByID[id1], kenpomByID[id2])
-	}
-
-	makeMatchup := func(gameID string, roundOrder int, t1, t2 TeamInput, pMatchup float64) PredictedMatchup {
-		p1Wins := calcWinProb(t1.ID, t2.ID)
-		return PredictedMatchup{
-			GameID:                 gameID,
-			RoundOrder:             roundOrder,
-			Team1ID:                t1.ID,
-			Team2ID:                t2.ID,
-			PMatchup:               pMatchup,
-			PTeam1WinsGivenMatchup: p1Wins,
-			PTeam2WinsGivenMatchup: 1.0 - p1Wins,
-		}
-	}
-
-	teamsBySeed := func(regionTeams []TeamInput, seed int) []TeamInput {
-		var result []TeamInput
-		for _, t := range regionTeams {
-			if t.Seed == seed {
-				result = append(result, t)
-			}
-		}
-		return result
-	}
-
-	teamsBySeeds := func(regionTeams []TeamInput, seeds []int) []TeamInput {
-		seedSet := make(map[int]bool)
-		for _, s := range seeds {
-			seedSet[s] = true
-		}
-		var result []TeamInput
-		for _, t := range regionTeams {
-			if seedSet[t.Seed] {
-				result = append(result, t)
-			}
-		}
-		return result
-	}
-
-	matchupSeeds := [][2]int{
-		{1, 16}, {8, 9}, {5, 12}, {4, 13},
-		{6, 11}, {3, 14}, {7, 10}, {2, 15},
-	}
-
-	// Initialize pAdvance for all teams
-	pAdvance := make(map[string]float64)
+	// Initialize pAdvance for all teams.
+	pAdvance := make(map[string]float64, len(teams))
 	if throughRound < 1 {
-		// Pre-tournament: compute First Four win probabilities
+		// Pre-tournament: compute First Four win probabilities.
 		for _, t := range teams {
 			pAdvance[t.ID] = 1.0
 		}
@@ -105,7 +197,7 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 			}
 		}
 	} else {
-		// Mid-tournament: all survivors have pAdvance = 1.0
+		// Mid-tournament: all survivors have pAdvance = 1.0.
 		for _, t := range teams {
 			pAdvance[t.ID] = 1.0
 		}
@@ -113,163 +205,62 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 
 	var matchups []PredictedMatchup
 
-	// Round 1 (R64): only if throughRound < 2
-	if throughRound < 2 {
-		var r1Matchups []PredictedMatchup
-		for _, region := range regions {
-			regionTeams := teamsByRegion[region]
-			for idx, seeds := range matchupSeeds {
-				t1Teams := teamsBySeed(regionTeams, seeds[0])
-				t2Teams := teamsBySeed(regionTeams, seeds[1])
-				for _, t1 := range t1Teams {
-					for _, t2 := range t2Teams {
-						pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
-						r1Matchups = append(r1Matchups, makeMatchup(
-							fmt.Sprintf("R1-%s-%d", region, idx+1),
-							1, t1, t2, pMatch,
-						))
-					}
-				}
-			}
+	// Rounds 1-4: regional rounds (R64, R32, S16, E8).
+	for round := 1; round <= 4; round++ {
+		if throughRound >= round+1 {
+			continue
 		}
-		matchups = append(matchups, r1Matchups...)
-		pAdvance = computeAdvanceProbs(r1Matchups)
-	}
-
-	r2Games := []struct {
-		gameNum    int
-		side1Seeds []int
-		side2Seeds []int
-	}{
-		{1, []int{1, 16}, []int{8, 9}},
-		{2, []int{5, 12}, []int{4, 13}},
-		{3, []int{6, 11}, []int{3, 14}},
-		{4, []int{7, 10}, []int{2, 15}},
-	}
-
-	// Round 2 (R32): only if throughRound < 3
-	if throughRound < 3 {
-		var r2Matchups []PredictedMatchup
+		var games []gameSetup
 		for _, region := range regions {
-			regionTeams := teamsByRegion[region]
-			for _, game := range r2Games {
-				side1 := teamsBySeeds(regionTeams, game.side1Seeds)
-				side2 := teamsBySeeds(regionTeams, game.side2Seeds)
-				for _, t1 := range side1 {
-					for _, t2 := range side2 {
-						pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
-						r2Matchups = append(r2Matchups, makeMatchup(
-							fmt.Sprintf("R2-%s-%d", region, game.gameNum),
-							2, t1, t2, pMatch,
-						))
-					}
-				}
-			}
+			games = append(games, buildRegionalGames(region, teamsByRegion[region], round)...)
 		}
-		matchups = append(matchups, r2Matchups...)
-		pAdvance = computeAdvanceProbs(r2Matchups)
+		var roundMatchups []PredictedMatchup
+		roundMatchups, pAdvance = computeRound(games, pAdvance, calcWinProb, round)
+		matchups = append(matchups, roundMatchups...)
 	}
 
-	r3Games := []struct {
-		gameNum    int
-		side1Seeds []int
-		side2Seeds []int
-	}{
-		{1, []int{1, 16, 8, 9}, []int{5, 12, 4, 13}},
-		{2, []int{6, 11, 3, 14}, []int{7, 10, 2, 15}},
-	}
-
-	// Round 3 (S16): only if throughRound < 4
-	if throughRound < 4 {
-		var r3Matchups []PredictedMatchup
-		for _, region := range regions {
-			regionTeams := teamsByRegion[region]
-			for _, game := range r3Games {
-				side1 := teamsBySeeds(regionTeams, game.side1Seeds)
-				side2 := teamsBySeeds(regionTeams, game.side2Seeds)
-				for _, t1 := range side1 {
-					for _, t2 := range side2 {
-						pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
-						r3Matchups = append(r3Matchups, makeMatchup(
-							fmt.Sprintf("R3-%s-%d", region, game.gameNum),
-							3, t1, t2, pMatch,
-						))
-					}
-				}
-			}
-		}
-		matchups = append(matchups, r3Matchups...)
-		pAdvance = computeAdvanceProbs(r3Matchups)
-	}
-
-	topHalfSeeds := []int{1, 16, 8, 9, 5, 12, 4, 13}
-	bottomHalfSeeds := []int{6, 11, 3, 14, 7, 10, 2, 15}
-
-	// Round 4 (E8): only if throughRound < 5
-	if throughRound < 5 {
-		var r4Matchups []PredictedMatchup
-		for _, region := range regions {
-			regionTeams := teamsByRegion[region]
-			side1 := teamsBySeeds(regionTeams, topHalfSeeds)
-			side2 := teamsBySeeds(regionTeams, bottomHalfSeeds)
-			for _, t1 := range side1 {
-				for _, t2 := range side2 {
-					pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
-					r4Matchups = append(r4Matchups, makeMatchup(
-						fmt.Sprintf("R4-%s-1", region),
-						4, t1, t2, pMatch,
-					))
-				}
-			}
-		}
-		matchups = append(matchups, r4Matchups...)
-		pAdvance = computeAdvanceProbs(r4Matchups)
-	}
-
-	// Round 5 (F4): only if throughRound < 6 and we have 4 regions for bracket pairing
-	if throughRound < 6 && len(regions) >= 4 {
+	// Round 5 (Final Four semifinals): use ffConfig for pairings.
+	if throughRound < 6 {
 		ffPairings := [][2]string{
-			{regions[0], regions[1]},
-			{regions[2], regions[3]},
+			{ffConfig.TopLeftRegion, ffConfig.BottomLeftRegion},
+			{ffConfig.TopRightRegion, ffConfig.BottomRightRegion},
 		}
-		var r5Matchups []PredictedMatchup
+		var games []gameSetup
 		for gameNum, pairing := range ffPairings {
 			teams1 := teamsByRegion[pairing[0]]
 			teams2 := teamsByRegion[pairing[1]]
-			for _, t1 := range teams1 {
-				for _, t2 := range teams2 {
-					pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
-					r5Matchups = append(r5Matchups, makeMatchup(
-						fmt.Sprintf("R5-%d", gameNum+1),
-						5, t1, t2, pMatch,
-					))
-				}
+			if len(teams1) > 0 && len(teams2) > 0 {
+				games = append(games, gameSetup{
+					gameID: fmt.Sprintf("R5-%d", gameNum+1),
+					side1:  teams1,
+					side2:  teams2,
+				})
 			}
 		}
-		matchups = append(matchups, r5Matchups...)
-		pAdvance = computeAdvanceProbs(r5Matchups)
+		if len(games) > 0 {
+			var roundMatchups []PredictedMatchup
+			roundMatchups, pAdvance = computeRound(games, pAdvance, calcWinProb, 5)
+			matchups = append(matchups, roundMatchups...)
+		}
 	}
 
-	// Round 6 (NCG): only if throughRound < 7 and we have 4 regions for bracket pairing
-	if throughRound < 7 && len(regions) >= 4 {
-		side1Regions := []string{regions[0], regions[1]}
-		side2Regions := []string{regions[2], regions[3]}
-
+	// Round 6 (Championship): left bracket vs right bracket.
+	if throughRound < 7 {
 		var side1Teams, side2Teams []TeamInput
-		for _, r := range side1Regions {
+		for _, r := range []string{ffConfig.TopLeftRegion, ffConfig.BottomLeftRegion} {
 			side1Teams = append(side1Teams, teamsByRegion[r]...)
 		}
-		for _, r := range side2Regions {
+		for _, r := range []string{ffConfig.TopRightRegion, ffConfig.BottomRightRegion} {
 			side2Teams = append(side2Teams, teamsByRegion[r]...)
 		}
-
-		for _, t1 := range side1Teams {
-			for _, t2 := range side2Teams {
-				pMatch := pAdvance[t1.ID] * pAdvance[t2.ID]
-				matchups = append(matchups, makeMatchup(
-					"R6-1", 6, t1, t2, pMatch,
-				))
-			}
+		if len(side1Teams) > 0 && len(side2Teams) > 0 {
+			games := []gameSetup{{
+				gameID: "R6-1",
+				side1:  side1Teams,
+				side2:  side2Teams,
+			}}
+			roundMatchups, _ := computeRound(games, pAdvance, calcWinProb, 6)
+			matchups = append(matchups, roundMatchups...)
 		}
 	}
 

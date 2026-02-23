@@ -15,7 +15,7 @@ func TestThatGenerateMatchupsCreatesMatchupsForAllRounds(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating all theoretical matchups
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestThatPMatchupSumsToOneForEachGame(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating all theoretical matchups
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestThatWinProbabilitiesSumToOneForEachMatchup(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating all theoretical matchups
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,14 +79,14 @@ func TestThatAllTeamsHavePositiveExpectedPoints(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
 	// THEN all 68 teams have positive expected points
 	if len(values) != 68 {
@@ -98,14 +98,14 @@ func TestThatChampionshipProbabilitiesSumToOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
 	// THEN championship probabilities sum to 1.0
 	var pChampSum float64
@@ -122,12 +122,12 @@ func TestThatOneSeedHasHigherExpectedPointsThanSixteenSeed(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
 	// Build map of team_id -> expected_points
 	expectedByTeam := make(map[string]float64)
@@ -205,14 +205,14 @@ func TestThatNonFirstFourTeamsHaveFFProbabilityOfOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
 	// THEN non-First Four teams have PRound1 (FF survival) = 1.0
 	ffTeamIDs := make(map[string]bool)
@@ -240,14 +240,14 @@ func TestThatFirstFourTeamsHaveFFProbabilityLessThanOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
 	// THEN First Four teams have PRound1 (FF survival) < 1.0
 	ffTeamIDs := make(map[string]bool)
@@ -280,14 +280,14 @@ func TestThatProbabilitiesAreMonotonicallyDecreasing(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
 	// THEN all teams have monotonically decreasing probabilities
 	for _, v := range values {
@@ -304,14 +304,14 @@ func TestThatOneSeedReachesSweetSixteenMoreThanFiftyPercent(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values for the East 1-seed
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
@@ -335,14 +335,14 @@ func TestThatOneSeedChampionshipProbabilityExceedsFivePercent(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values for the East 1-seed
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
@@ -366,14 +366,14 @@ func TestThatSixteenSeedReachesSweetSixteenLessThanFivePercent(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values for non-FF 16-seeds
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
@@ -398,14 +398,14 @@ func TestThatStrongerFirstFourTeamHasHigherFFProbability(t *testing.T) {
 	// GIVEN a 68-team field where East has two 16-seeds: team-16 (KenPom -10.0) and team-65 (KenPom -12.0)
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
@@ -423,14 +423,14 @@ func TestThatFirstFourPairProbabilitiesSumToOne(t *testing.T) {
 	// GIVEN a 68-team field where East has two 16-seeds
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values
-	values := GenerateTournamentValues(matchups, rules)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
@@ -470,7 +470,7 @@ func TestThatCheckpointMatchupsHavePMatchupOneForKnownGames(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating checkpoint matchups
-	matchups, err := GenerateMatchups(survivors, 2, spec)
+	matchups, err := GenerateMatchups(survivors, 2, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -494,12 +494,12 @@ func TestThatCheckpointChampionshipProbsSumToOne(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating checkpoint matchups and values
-	matchups, err := GenerateMatchups(survivors, 5, spec)
+	matchups, err := GenerateMatchups(survivors, 5, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
-	values := GenerateTournamentValuesFromCheckpoint(survivors, matchups, 5, rules)
+	values := GenerateTournamentValues(survivors, matchups, 5, rules)
 
 	// THEN championship probabilities (PRound7) sum to 1.0
 	var pChampSum float64
@@ -524,14 +524,14 @@ func TestThatCheckpointValuesSetResolvedRoundsCorrectly(t *testing.T) {
 	survivors := []TeamInput{allTeams[0], allTeams[1], allTeams[2], allTeams[3]}
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
-	matchups, err := GenerateMatchups(survivors, 3, spec)
+	matchups, err := GenerateMatchups(survivors, 3, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating checkpoint values for all teams
-	values := GenerateTournamentValuesFromCheckpoint(allTeams, matchups, 3, rules)
+	values := GenerateTournamentValues(allTeams, matchups, 3, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
@@ -556,14 +556,14 @@ func TestThatCheckpointExpectedPointsIncludesActualPlusRemaining(t *testing.T) {
 		{ID: "t-midwest", Seed: 1, Region: "Midwest", KenPomNet: 22.0, Wins: 4, Byes: 1},
 	}
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(survivors, 5, spec)
+	matchups, err := GenerateMatchups(survivors, 5, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating checkpoint values
-	values := GenerateTournamentValuesFromCheckpoint(survivors, matchups, 5, rules)
+	values := GenerateTournamentValues(survivors, matchups, 5, rules)
 
 	// THEN each survivor's expectedPoints > actualPoints (they have future value)
 	actualPoints := float64(scoring.PointsForProgress(rules, 4, 1)) // 4 wins + 1 bye = progress 5 = 310
@@ -594,7 +594,7 @@ func TestThatCompletedTournamentProducesValuesForAllTeams(t *testing.T) {
 	rules := DefaultScoringRules()
 
 	// WHEN generating values with throughRound=7 and no remaining matchups
-	values := GenerateTournamentValuesFromCheckpoint(allTeams, nil, 7, rules)
+	values := GenerateTournamentValues(allTeams, nil, 7, rules)
 
 	// THEN all 68 teams have values
 	if len(values) != 68 {
@@ -608,7 +608,7 @@ func TestThatThroughRoundZeroProducesSixRoundsOfMatchups(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating matchups at throughRound=0
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -631,7 +631,7 @@ func TestThatThroughRoundZeroFirstFourPMatchupLessThanOne(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating matchups at throughRound=0
-	matchups, err := GenerateMatchups(teams, 0, spec)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -663,6 +663,135 @@ func TestThatThroughRoundZeroFirstFourPMatchupLessThanOne(t *testing.T) {
 	}
 	if !foundFFMatchup {
 		t.Error("expected to find R1 matchups involving First Four teams")
+	}
+}
+
+func TestThatChampionshipCheckpointGeneratesOneMatchup(t *testing.T) {
+	// GIVEN 2 finalists from opposite brackets at throughRound=6
+	survivors := []TeamInput{
+		{ID: "t-east", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 5, Byes: 1},
+		{ID: "t-south", Seed: 2, Region: "South", KenPomNet: 20.0, Wins: 5, Byes: 1},
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating checkpoint matchups
+	matchups, err := GenerateMatchups(survivors, 6, spec, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// THEN exactly 1 matchup at roundOrder=6
+	var r6Count int
+	for _, m := range matchups {
+		if m.RoundOrder == 6 {
+			r6Count++
+		}
+	}
+	if r6Count != 1 {
+		t.Errorf("expected 1 championship matchup, got %d", r6Count)
+	}
+}
+
+func TestThatChampionshipCheckpointProbsSumToOne(t *testing.T) {
+	// GIVEN 2 finalists from opposite brackets at throughRound=6
+	survivors := []TeamInput{
+		{ID: "t-east", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 5, Byes: 1},
+		{ID: "t-south", Seed: 2, Region: "South", KenPomNet: 20.0, Wins: 5, Byes: 1},
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating checkpoint matchups and values
+	matchups, err := GenerateMatchups(survivors, 6, spec, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+	values := GenerateTournamentValues(survivors, matchups, 6, rules)
+
+	// THEN PRound7 values sum to 1.0
+	var pChampSum float64
+	for _, v := range values {
+		pChampSum += v.PRound7
+	}
+	if math.Abs(pChampSum-1.0) > 0.01 {
+		t.Errorf("championship probabilities sum = %.4f, expected 1.0", pChampSum)
+	}
+}
+
+func TestThatChampionshipCheckpointFinalistsHaveNonZeroPRound7(t *testing.T) {
+	// GIVEN 2 finalists from opposite brackets at throughRound=6
+	survivors := []TeamInput{
+		{ID: "t-east", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 5, Byes: 1},
+		{ID: "t-south", Seed: 2, Region: "South", KenPomNet: 20.0, Wins: 5, Byes: 1},
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating checkpoint matchups and values
+	matchups, err := GenerateMatchups(survivors, 6, spec, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+	values := GenerateTournamentValues(survivors, matchups, 6, rules)
+
+	// THEN both finalists have non-zero championship probability
+	for _, v := range values {
+		if v.PRound7 <= 0.0 {
+			t.Errorf("team %s: PRound7 = %.4f, expected > 0.0", v.TeamID, v.PRound7)
+		}
+	}
+}
+
+// --- computeRound unit tests ---
+
+func TestThatComputeRoundProducesPMatchupFromPAdvance(t *testing.T) {
+	// GIVEN two teams with different advance probabilities
+	games := []gameSetup{{
+		gameID: "test-1",
+		side1:  []TeamInput{{ID: "a", KenPomNet: 20.0}},
+		side2:  []TeamInput{{ID: "b", KenPomNet: 15.0}},
+	}}
+	pAdvance := map[string]float64{"a": 0.8, "b": 0.6}
+	calcWinProb := func(id1, id2 string) float64 { return 0.7 }
+
+	// WHEN computing the round
+	matchups, newPAdv := computeRound(games, pAdvance, calcWinProb, 1)
+
+	// THEN pMatchup = pAdvance[a] * pAdvance[b] = 0.48
+	if len(matchups) != 1 {
+		t.Fatalf("expected 1 matchup, got %d", len(matchups))
+	}
+	if math.Abs(matchups[0].PMatchup-0.48) > 0.001 {
+		t.Errorf("pMatchup = %.4f, expected 0.48", matchups[0].PMatchup)
+	}
+
+	// AND new advance probs are computed correctly
+	expectedA := 0.48 * 0.7  // 0.336
+	expectedB := 0.48 * 0.3  // 0.144
+	if math.Abs(newPAdv["a"]-expectedA) > 0.001 {
+		t.Errorf("new pAdvance[a] = %.4f, expected %.4f", newPAdv["a"], expectedA)
+	}
+	if math.Abs(newPAdv["b"]-expectedB) > 0.001 {
+		t.Errorf("new pAdvance[b] = %.4f, expected %.4f", newPAdv["b"], expectedB)
+	}
+}
+
+func TestThatComputeRoundSetsRoundOrder(t *testing.T) {
+	// GIVEN a simple game setup
+	games := []gameSetup{{
+		gameID: "g1",
+		side1:  []TeamInput{{ID: "a"}},
+		side2:  []TeamInput{{ID: "b"}},
+	}}
+	pAdvance := map[string]float64{"a": 1.0, "b": 1.0}
+	calcWinProb := func(_, _ string) float64 { return 0.5 }
+
+	// WHEN computing with roundOrder=4
+	matchups, _ := computeRound(games, pAdvance, calcWinProb, 4)
+
+	// THEN matchup has correct round order
+	if matchups[0].RoundOrder != 4 {
+		t.Errorf("roundOrder = %d, expected 4", matchups[0].RoundOrder)
 	}
 }
 
