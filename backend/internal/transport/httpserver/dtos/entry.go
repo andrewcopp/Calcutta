@@ -103,15 +103,19 @@ type EntryTeamResponse struct {
 	EntryID   string                  `json:"entryId"`
 	TeamID    string                  `json:"teamId"`
 	BidPoints int                     `json:"bid"`
+	CreatedAt time.Time               `json:"createdAt"`
+	UpdatedAt time.Time               `json:"updatedAt"`
 	Team      *TournamentTeamResponse `json:"team,omitempty"`
 }
 
 func NewEntryTeamResponse(et *models.CalcuttaEntryTeam) *EntryTeamResponse {
 	resp := &EntryTeamResponse{
-		ID:      et.ID,
-		EntryID: et.EntryID,
-		TeamID:  et.TeamID,
+		ID:        et.ID,
+		EntryID:   et.EntryID,
+		TeamID:    et.TeamID,
 		BidPoints: et.BidPoints,
+		CreatedAt: et.CreatedAt,
+		UpdatedAt: et.UpdatedAt,
 	}
 	if et.Team != nil {
 		resp.Team = NewTournamentTeamResponse(et.Team, et.Team.School)

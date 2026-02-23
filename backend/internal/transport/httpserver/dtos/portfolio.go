@@ -43,6 +43,7 @@ type PortfolioTeamResponse struct {
 	OwnershipPercentage float64                 `json:"ownershipPercentage"`
 	ExpectedPoints      float64                 `json:"expectedPoints"`
 	ActualPoints        float64                 `json:"actualPoints"`
+	CreatedAt           time.Time               `json:"createdAt"`
 	UpdatedAt           time.Time               `json:"updatedAt"`
 	Team                *TournamentTeamResponse `json:"team,omitempty"`
 }
@@ -55,6 +56,7 @@ func NewPortfolioTeamResponse(pt *models.CalcuttaPortfolioTeam) *PortfolioTeamRe
 		OwnershipPercentage: pt.OwnershipPercentage,
 		ExpectedPoints:      pt.ExpectedPoints,
 		ActualPoints:        pt.ActualPoints,
+		CreatedAt:           pt.CreatedAt,
 		UpdatedAt:           pt.UpdatedAt,
 	}
 	if pt.Team != nil {
