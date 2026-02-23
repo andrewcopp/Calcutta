@@ -89,6 +89,8 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		return nil, fmt.Errorf("failed to store predictions: %w", err)
 	}
 
+	s.pruneOldBatches(ctx, p.TournamentID, 3)
+
 	return &RunResult{
 		BatchID:              batchID,
 		TournamentID:         p.TournamentID,
@@ -96,6 +98,31 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		TeamCount:            len(teamValues),
 		Duration:             time.Since(start),
 	}, nil
+}
+
+// pruneOldBatches deletes prediction batches older than the latest keepN
+// for a tournament. CASCADE on the FK auto-deletes predicted_team_values.
+// Best-effort: logs and continues on error.
+func (s *Service) pruneOldBatches(ctx context.Context, tournamentID string, keepN int) {
+	result, err := s.pool.Exec(ctx, `
+		DELETE FROM compute.prediction_batches
+		WHERE tournament_id = $1::uuid
+			AND deleted_at IS NULL
+			AND id NOT IN (
+				SELECT id FROM compute.prediction_batches
+				WHERE tournament_id = $1::uuid
+					AND deleted_at IS NULL
+				ORDER BY created_at DESC
+				LIMIT $2
+			)
+	`, tournamentID, keepN)
+	if err != nil {
+		slog.Warn("prediction_prune_failed", "tournament_id", tournamentID, "error", err)
+		return
+	}
+	if n := result.RowsAffected(); n > 0 {
+		slog.Info("prediction_prune_succeeded", "tournament_id", tournamentID, "batches_deleted", n)
+	}
 }
 
 // GetLatestBatchID returns the most recent prediction batch for a tournament.

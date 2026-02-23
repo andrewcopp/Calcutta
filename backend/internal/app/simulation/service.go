@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime"
 	"strings"
 	"time"
@@ -91,6 +92,8 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	}
 	simDur := time.Since(simStart)
 
+	s.pruneOldBatches(ctx, setup.coreTournamentID, 1)
+
 	overallDur := time.Since(overallStart)
 	return &RunResult{
 		CoreTournamentID:            setup.coreTournamentID,
@@ -102,6 +105,57 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		SimulateWriteDuration:       simDur,
 		OverallDuration:             overallDur,
 	}, nil
+}
+
+// pruneOldBatches deletes simulation batches older than the latest keepN
+// for a tournament. CASCADE on the FK auto-deletes simulated_teams.
+// After pruning batches, orphaned snapshots are also cleaned up.
+// Best-effort: logs and continues on error.
+func (s *Service) pruneOldBatches(ctx context.Context, coreTournamentID string, keepN int) {
+	result, err := s.pool.Exec(ctx, `
+		DELETE FROM compute.simulated_tournaments
+		WHERE tournament_id = $1::uuid
+			AND deleted_at IS NULL
+			AND id NOT IN (
+				SELECT id FROM compute.simulated_tournaments
+				WHERE tournament_id = $1::uuid
+					AND deleted_at IS NULL
+				ORDER BY created_at DESC
+				LIMIT $2
+			)
+	`, coreTournamentID, keepN)
+	if err != nil {
+		slog.Warn("simulation_prune_batches_failed", "tournament_id", coreTournamentID, "error", err)
+		return
+	}
+	if n := result.RowsAffected(); n > 0 {
+		slog.Info("simulation_prune_batches_succeeded", "tournament_id", coreTournamentID, "batches_deleted", n)
+	}
+
+	s.pruneOrphanedSnapshots(ctx, coreTournamentID)
+}
+
+// pruneOrphanedSnapshots deletes tournament snapshots that are no longer
+// referenced by any simulation batch for a given tournament.
+// CASCADE on tournament_snapshot_teams FK handles child rows.
+func (s *Service) pruneOrphanedSnapshots(ctx context.Context, coreTournamentID string) {
+	result, err := s.pool.Exec(ctx, `
+		DELETE FROM compute.tournament_snapshots
+		WHERE tournament_id = $1::uuid
+			AND id NOT IN (
+				SELECT DISTINCT tournament_snapshot_id
+				FROM compute.simulated_tournaments
+				WHERE tournament_id = $1::uuid
+					AND deleted_at IS NULL
+			)
+	`, coreTournamentID)
+	if err != nil {
+		slog.Warn("simulation_prune_snapshots_failed", "tournament_id", coreTournamentID, "error", err)
+		return
+	}
+	if n := result.RowsAffected(); n > 0 {
+		slog.Info("simulation_prune_snapshots_succeeded", "tournament_id", coreTournamentID, "snapshots_deleted", n)
+	}
 }
 
 // validateAndDefaultParams validates required fields and fills in defaults for
