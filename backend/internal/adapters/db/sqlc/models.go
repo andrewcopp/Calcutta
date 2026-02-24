@@ -58,10 +58,11 @@ type ComputePredictedTeamValue struct {
 	// Probability of reaching Championship game
 	PRound6 *float64
 	// Probability of winning Championship
-	PRound7   *float64
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	DeletedAt pgtype.Timestamptz
+	PRound7              *float64
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+	FavoritesTotalPoints *float64
 }
 
 // Stores metadata for prediction generation runs (analogous to simulated_tournaments for simulations)

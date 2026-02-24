@@ -70,6 +70,8 @@ func GenerateTournamentValues(
 		}
 	}
 
+	favMap := ComputeFavoritesBracket(allTeams, matchups, throughRound, rules)
+
 	var results []PredictedTeamValue
 	for _, team := range allTeams {
 		progress := team.Wins + team.Byes
@@ -125,17 +127,18 @@ func GenerateTournamentValues(
 		}
 
 		results = append(results, PredictedTeamValue{
-			TeamID:         team.ID,
-			ExpectedPoints: expectedPoints,
-			VariancePoints: variancePoints,
-			StdPoints:      math.Sqrt(variancePoints),
-			PRound1:        probs[0],
-			PRound2:        probs[1],
-			PRound3:        probs[2],
-			PRound4:        probs[3],
-			PRound5:        probs[4],
-			PRound6:        probs[5],
-			PRound7:        probs[6],
+			TeamID:               team.ID,
+			ExpectedPoints:       expectedPoints,
+			VariancePoints:       variancePoints,
+			StdPoints:            math.Sqrt(variancePoints),
+			PRound1:              probs[0],
+			PRound2:              probs[1],
+			PRound3:              probs[2],
+			PRound4:              probs[3],
+			PRound5:              probs[4],
+			PRound6:              probs[5],
+			PRound7:              probs[6],
+			FavoritesTotalPoints: favMap[team.ID],
 		})
 	}
 

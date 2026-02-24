@@ -24,13 +24,14 @@ type RoundStandingGroup struct {
 }
 
 type RoundStandingEntry struct {
-	EntryID        string   `json:"entryId"`
-	TotalPoints    float64  `json:"totalPoints"`
-	FinishPosition int      `json:"finishPosition"`
-	IsTied         bool     `json:"isTied"`
-	PayoutCents    int      `json:"payoutCents"`
-	InTheMoney     bool     `json:"inTheMoney"`
-	ProjectedEV    *float64 `json:"projectedEv,omitempty"`
+	EntryID            string   `json:"entryId"`
+	TotalPoints        float64  `json:"totalPoints"`
+	FinishPosition     int      `json:"finishPosition"`
+	IsTied             bool     `json:"isTied"`
+	PayoutCents        int      `json:"payoutCents"`
+	InTheMoney         bool     `json:"inTheMoney"`
+	ProjectedEV        *float64 `json:"projectedEv,omitempty"`
+	ProjectedFavorites *float64 `json:"projectedFavorites,omitempty"`
 }
 
 type CalcuttaWithRankingResponse struct {

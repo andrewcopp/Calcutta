@@ -42,6 +42,7 @@ func (r iteratorForBulkCreatePredictedTeamValues) Values() ([]interface{}, error
 		r.rows[0].PRound5,
 		r.rows[0].PRound6,
 		r.rows[0].PRound7,
+		r.rows[0].FavoritesTotalPoints,
 	}, nil
 }
 
@@ -50,5 +51,5 @@ func (r iteratorForBulkCreatePredictedTeamValues) Err() error {
 }
 
 func (q *Queries) BulkCreatePredictedTeamValues(ctx context.Context, arg []BulkCreatePredictedTeamValuesParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"compute", "predicted_team_values"}, []string{"prediction_batch_id", "tournament_id", "team_id", "expected_points", "variance_points", "std_points", "p_round_1", "p_round_2", "p_round_3", "p_round_4", "p_round_5", "p_round_6", "p_round_7"}, &iteratorForBulkCreatePredictedTeamValues{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"compute", "predicted_team_values"}, []string{"prediction_batch_id", "tournament_id", "team_id", "expected_points", "variance_points", "std_points", "p_round_1", "p_round_2", "p_round_3", "p_round_4", "p_round_5", "p_round_6", "p_round_7", "favorites_total_points"}, &iteratorForBulkCreatePredictedTeamValues{rows: arg})
 }

@@ -79,17 +79,18 @@ func (r *PredictionRepository) GetTeamValues(ctx context.Context, batchID string
 	out := make([]models.PredictedTeamValue, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, models.PredictedTeamValue{
-			TeamID:         row.TeamID,
-			ExpectedPoints: row.ExpectedPoints,
-			VariancePoints: row.VariancePoints,
-			StdPoints:      row.StdPoints,
-			PRound1:        row.PRound1,
-			PRound2:        row.PRound2,
-			PRound3:        row.PRound3,
-			PRound4:        row.PRound4,
-			PRound5:        row.PRound5,
-			PRound6:        row.PRound6,
-			PRound7:        row.PRound7,
+			TeamID:               row.TeamID,
+			ExpectedPoints:       row.ExpectedPoints,
+			VariancePoints:       row.VariancePoints,
+			StdPoints:            row.StdPoints,
+			PRound1:              row.PRound1,
+			PRound2:              row.PRound2,
+			PRound3:              row.PRound3,
+			PRound4:              row.PRound4,
+			PRound5:              row.PRound5,
+			PRound6:              row.PRound6,
+			PRound7:              row.PRound7,
+			FavoritesTotalPoints: row.FavoritesTotalPoints,
 		})
 	}
 	return out, nil
@@ -188,19 +189,20 @@ func (r *PredictionRepository) StorePredictions(
 	bulkParams := make([]sqlc.BulkCreatePredictedTeamValuesParams, len(values))
 	for i, v := range values {
 		bulkParams[i] = sqlc.BulkCreatePredictedTeamValuesParams{
-			PredictionBatchID: batchID,
-			TournamentID:      tournamentID,
-			TeamID:            v.TeamID,
-			ExpectedPoints:    v.ExpectedPoints,
-			VariancePoints:    &v.VariancePoints,
-			StdPoints:         &v.StdPoints,
-			PRound1:           &v.PRound1,
-			PRound2:           &v.PRound2,
-			PRound3:           &v.PRound3,
-			PRound4:           &v.PRound4,
-			PRound5:           &v.PRound5,
-			PRound6:           &v.PRound6,
-			PRound7:           &v.PRound7,
+			PredictionBatchID:    batchID,
+			TournamentID:         tournamentID,
+			TeamID:               v.TeamID,
+			ExpectedPoints:       v.ExpectedPoints,
+			VariancePoints:       &v.VariancePoints,
+			StdPoints:            &v.StdPoints,
+			PRound1:              &v.PRound1,
+			PRound2:              &v.PRound2,
+			PRound3:              &v.PRound3,
+			PRound4:              &v.PRound4,
+			PRound5:              &v.PRound5,
+			PRound6:              &v.PRound6,
+			PRound7:              &v.PRound7,
+			FavoritesTotalPoints: &v.FavoritesTotalPoints,
 		}
 	}
 	if _, err := qtx.BulkCreatePredictedTeamValues(ctx, bulkParams); err != nil {

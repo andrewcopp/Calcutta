@@ -31,7 +31,8 @@ SELECT
     COALESCE(p_round_4, 0) AS p_round_4,
     COALESCE(p_round_5, 0) AS p_round_5,
     COALESCE(p_round_6, 0) AS p_round_6,
-    COALESCE(p_round_7, 0) AS p_round_7
+    COALESCE(p_round_7, 0) AS p_round_7,
+    COALESCE(favorites_total_points, 0) AS favorites_total_points
 FROM compute.predicted_team_values
 WHERE prediction_batch_id = $1::uuid
     AND deleted_at IS NULL;
@@ -91,7 +92,8 @@ INSERT INTO compute.predicted_team_values (
     p_round_4,
     p_round_5,
     p_round_6,
-    p_round_7
+    p_round_7,
+    favorites_total_points
 )
 VALUES (
     sqlc.arg(prediction_batch_id)::uuid,
@@ -106,15 +108,17 @@ VALUES (
     sqlc.arg(p_round_4),
     sqlc.arg(p_round_5),
     sqlc.arg(p_round_6),
-    sqlc.arg(p_round_7)
+    sqlc.arg(p_round_7),
+    sqlc.arg(favorites_total_points)
 );
 
 -- name: BulkCreatePredictedTeamValues :copyfrom
 INSERT INTO compute.predicted_team_values (
     prediction_batch_id, tournament_id, team_id,
     expected_points, variance_points, std_points,
-    p_round_1, p_round_2, p_round_3, p_round_4, p_round_5, p_round_6, p_round_7
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+    p_round_1, p_round_2, p_round_3, p_round_4, p_round_5, p_round_6, p_round_7,
+    favorites_total_points
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
 
 -- name: PruneOldBatchesForCheckpoint :execrows
 DELETE FROM compute.prediction_batches pb_outer

@@ -5,7 +5,7 @@ import { formatDollarsFromCents } from '../../utils/format';
 import { getRoundOptions } from '../../utils/roundLabels';
 import { Select } from '../../components/ui/Select';
 
-type SortMode = 'actual' | 'projected';
+type SortMode = 'actual' | 'projected' | 'favorites';
 
 interface LeaderboardTabProps {
   calcuttaId: string;
@@ -41,11 +41,13 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
         payoutCents: s.payoutCents,
         inTheMoney: s.inTheMoney,
         projectedEv: s.projectedEv,
+        projectedFavorites: s.projectedFavorites,
       };
     });
   }, [entries, dashboard.roundStandings, throughRound]);
 
   const hasProjections = displayEntries.some((e) => e.projectedEv != null);
+  const hasFavorites = displayEntries.some((e) => e.projectedFavorites != null);
 
   const sortedEntries = useMemo(() => {
     if (effectiveSortMode === 'projected') {
@@ -55,20 +57,28 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
         return bVal - aVal;
       });
     }
+    if (effectiveSortMode === 'favorites') {
+      return [...displayEntries].sort((a, b) => {
+        const aVal = a.projectedFavorites ?? a.totalPoints ?? 0;
+        const bVal = b.projectedFavorites ?? b.totalPoints ?? 0;
+        return bVal - aVal;
+      });
+    }
     return displayEntries;
   }, [displayEntries, effectiveSortMode]);
 
   return (
     <div className="grid gap-4">
       <div className="flex gap-3 items-center">
-        {hasProjections && (
+        {(hasProjections || hasFavorites) && (
           <Select
             value={effectiveSortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="w-auto"
           >
             <option value="actual">Actual Points</option>
-            <option value="projected">Projected Finish</option>
+            {hasProjections && <option value="projected">Projected EV</option>}
+            {hasFavorites && <option value="favorites">Projected Favorites</option>}
           </Select>
         )}
 
@@ -121,9 +131,16 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
         const displayValue =
           effectiveSortMode === 'projected' && entry.projectedEv != null
             ? entry.projectedEv.toFixed(2)
-            : (entry.totalPoints ?? 0).toFixed(2);
+            : effectiveSortMode === 'favorites' && entry.projectedFavorites != null
+              ? entry.projectedFavorites.toFixed(2)
+              : (entry.totalPoints ?? 0).toFixed(2);
 
-        const displayLabel = effectiveSortMode === 'projected' ? 'projected' : 'points';
+        const displayLabel =
+          effectiveSortMode === 'projected'
+            ? 'projected'
+            : effectiveSortMode === 'favorites'
+              ? 'favorites'
+              : 'points';
 
         return (
           <Link

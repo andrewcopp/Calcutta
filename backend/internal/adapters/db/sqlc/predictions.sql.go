@@ -12,19 +12,20 @@ import (
 )
 
 type BulkCreatePredictedTeamValuesParams struct {
-	PredictionBatchID string
-	TournamentID      string
-	TeamID            string
-	ExpectedPoints    float64
-	VariancePoints    *float64
-	StdPoints         *float64
-	PRound1           *float64
-	PRound2           *float64
-	PRound3           *float64
-	PRound4           *float64
-	PRound5           *float64
-	PRound6           *float64
-	PRound7           *float64
+	PredictionBatchID    string
+	TournamentID         string
+	TeamID               string
+	ExpectedPoints       float64
+	VariancePoints       *float64
+	StdPoints            *float64
+	PRound1              *float64
+	PRound2              *float64
+	PRound3              *float64
+	PRound4              *float64
+	PRound5              *float64
+	PRound6              *float64
+	PRound7              *float64
+	FavoritesTotalPoints *float64
 }
 
 const createPredictedTeamValue = `-- name: CreatePredictedTeamValue :exec
@@ -41,7 +42,8 @@ INSERT INTO compute.predicted_team_values (
     p_round_4,
     p_round_5,
     p_round_6,
-    p_round_7
+    p_round_7,
+    favorites_total_points
 )
 VALUES (
     $1::uuid,
@@ -56,24 +58,26 @@ VALUES (
     $10,
     $11,
     $12,
-    $13
+    $13,
+    $14
 )
 `
 
 type CreatePredictedTeamValueParams struct {
-	PredictionBatchID string
-	TournamentID      string
-	TeamID            string
-	ExpectedPoints    float64
-	VariancePoints    *float64
-	StdPoints         *float64
-	PRound1           *float64
-	PRound2           *float64
-	PRound3           *float64
-	PRound4           *float64
-	PRound5           *float64
-	PRound6           *float64
-	PRound7           *float64
+	PredictionBatchID    string
+	TournamentID         string
+	TeamID               string
+	ExpectedPoints       float64
+	VariancePoints       *float64
+	StdPoints            *float64
+	PRound1              *float64
+	PRound2              *float64
+	PRound3              *float64
+	PRound4              *float64
+	PRound5              *float64
+	PRound6              *float64
+	PRound7              *float64
+	FavoritesTotalPoints *float64
 }
 
 func (q *Queries) CreatePredictedTeamValue(ctx context.Context, arg CreatePredictedTeamValueParams) error {
@@ -91,6 +95,7 @@ func (q *Queries) CreatePredictedTeamValue(ctx context.Context, arg CreatePredic
 		arg.PRound5,
 		arg.PRound6,
 		arg.PRound7,
+		arg.FavoritesTotalPoints,
 	)
 	return err
 }
@@ -191,24 +196,26 @@ SELECT
     COALESCE(p_round_4, 0) AS p_round_4,
     COALESCE(p_round_5, 0) AS p_round_5,
     COALESCE(p_round_6, 0) AS p_round_6,
-    COALESCE(p_round_7, 0) AS p_round_7
+    COALESCE(p_round_7, 0) AS p_round_7,
+    COALESCE(favorites_total_points, 0) AS favorites_total_points
 FROM compute.predicted_team_values
 WHERE prediction_batch_id = $1::uuid
     AND deleted_at IS NULL
 `
 
 type GetPredictedTeamValuesRow struct {
-	TeamID         string
-	ExpectedPoints float64
-	VariancePoints float64
-	StdPoints      float64
-	PRound1        float64
-	PRound2        float64
-	PRound3        float64
-	PRound4        float64
-	PRound5        float64
-	PRound6        float64
-	PRound7        float64
+	TeamID               string
+	ExpectedPoints       float64
+	VariancePoints       float64
+	StdPoints            float64
+	PRound1              float64
+	PRound2              float64
+	PRound3              float64
+	PRound4              float64
+	PRound5              float64
+	PRound6              float64
+	PRound7              float64
+	FavoritesTotalPoints float64
 }
 
 func (q *Queries) GetPredictedTeamValues(ctx context.Context, dollar_1 string) ([]GetPredictedTeamValuesRow, error) {
@@ -232,6 +239,7 @@ func (q *Queries) GetPredictedTeamValues(ctx context.Context, dollar_1 string) (
 			&i.PRound5,
 			&i.PRound6,
 			&i.PRound7,
+			&i.FavoritesTotalPoints,
 		); err != nil {
 			return nil, err
 		}

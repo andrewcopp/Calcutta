@@ -37,6 +37,7 @@ export const CalcuttaEntrySchema = z.object({
   inTheMoney: z.boolean().optional(),
   payoutCents: z.number().optional(),
   projectedEv: z.number().optional(),
+  projectedFavorites: z.number().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -104,6 +105,7 @@ export const RoundStandingEntrySchema = z.object({
   payoutCents: z.number(),
   inTheMoney: z.boolean(),
   projectedEv: z.number().optional(),
+  projectedFavorites: z.number().optional(),
 });
 
 export type RoundStandingEntry = z.infer<typeof RoundStandingEntrySchema>;

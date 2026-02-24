@@ -8,19 +8,20 @@ import (
 )
 
 type EntryResponse struct {
-	ID             string    `json:"id"`
-	Name           string    `json:"name"`
-	UserID         *string   `json:"userId,omitempty"`
-	CalcuttaID     string    `json:"calcuttaId"`
-	Status         string    `json:"status"`
-	TotalPoints    float64   `json:"totalPoints"`
-	FinishPosition int       `json:"finishPosition"`
-	InTheMoney     bool      `json:"inTheMoney"`
-	PayoutCents    int       `json:"payoutCents"`
-	IsTied         bool      `json:"isTied"`
-	ProjectedEV    *float64  `json:"projectedEv,omitempty"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
+	ID                 string    `json:"id"`
+	Name               string    `json:"name"`
+	UserID             *string   `json:"userId,omitempty"`
+	CalcuttaID         string    `json:"calcuttaId"`
+	Status             string    `json:"status"`
+	TotalPoints        float64   `json:"totalPoints"`
+	FinishPosition     int       `json:"finishPosition"`
+	InTheMoney         bool      `json:"inTheMoney"`
+	PayoutCents        int       `json:"payoutCents"`
+	IsTied             bool      `json:"isTied"`
+	ProjectedEV        *float64  `json:"projectedEv,omitempty"`
+	ProjectedFavorites *float64  `json:"projectedFavorites,omitempty"`
+	CreatedAt          time.Time `json:"createdAt"`
+	UpdatedAt          time.Time `json:"updatedAt"`
 }
 
 func NewEntryResponse(e *models.CalcuttaEntry, s *models.EntryStanding) *EntryResponse {
@@ -40,6 +41,7 @@ func NewEntryResponse(e *models.CalcuttaEntry, s *models.EntryStanding) *EntryRe
 		resp.PayoutCents = s.PayoutCents
 		resp.IsTied = s.IsTied
 		resp.ProjectedEV = s.ProjectedEV
+		resp.ProjectedFavorites = s.ProjectedFavorites
 	}
 	return resp
 }

@@ -15,17 +15,18 @@ type PredictionBatchSummary struct {
 // they represent how a team is expected to perform in the tournament
 // (advancement probabilities and expected scoring points).
 type PredictedTeamValue struct {
-	TeamID         string
-	ExpectedPoints float64
-	VariancePoints float64
-	StdPoints      float64
-	PRound1        float64
-	PRound2        float64
-	PRound3        float64
-	PRound4        float64
-	PRound5        float64
-	PRound6        float64
-	PRound7        float64
+	TeamID               string
+	ExpectedPoints       float64
+	VariancePoints       float64
+	StdPoints            float64
+	PRound1              float64
+	PRound2              float64
+	PRound3              float64
+	PRound4              float64
+	PRound5              float64
+	PRound6              float64
+	PRound7              float64
+	FavoritesTotalPoints float64
 }
 
 // MaxRounds is the total number of rounds in the NCAA tournament (including First Four).
