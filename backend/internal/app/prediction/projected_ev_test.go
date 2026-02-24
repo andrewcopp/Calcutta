@@ -125,6 +125,113 @@ func TestThatProjectedTeamEVFallsBackToActualWhenPAliveIsZero(t *testing.T) {
 	}
 }
 
+func TestThatProjectedTeamEVAtCheckpointEqualsActualPlusConditionalRemaining(t *testing.T) {
+	// GIVEN a checkpoint-3 batch where the team is at progress 3 (pAlive = 1.0)
+	ptv := PredictedTeamValue{
+		TeamID:         "team-1",
+		ExpectedPoints: 200.0,
+		PRound1:        1.0,
+		PRound2:        1.0,
+		PRound3:        1.0,  // pAlive at progress 3 = 1.0
+		PRound4:        0.60, // P(reach round 4 | alive at round 3)
+		PRound5:        0.30, // P(reach round 5 | alive at round 3)
+		PRound6:        0.10, // P(reach round 6 | alive at round 3)
+	}
+	rules := testRules()
+	tp := TeamProgress{Wins: 3, Byes: 0, IsEliminated: false}
+
+	// WHEN computing projected EV with throughRound=3
+	result := ProjectedTeamEV(ptv, rules, tp, 3)
+
+	// THEN actual = 10+20+40 = 70, pAlive = PRound3 = 1.0
+	// round 4: (0.60/1.0) * 80 = 48.0
+	// round 5: (0.30/1.0) * 160 = 48.0
+	// round 6: (0.10/1.0) * 320 = 32.0
+	// total = 70 + 48 + 48 + 32 = 198.0
+	expected := 198.0
+	if math.Abs(result-expected) > 0.001 {
+		t.Errorf("expected %.2f, got %.2f", expected, result)
+	}
+}
+
+func TestThatProjectedTeamEVBeyondCheckpointConditionsOnSurvival(t *testing.T) {
+	// GIVEN a checkpoint-3 batch where the team has advanced to progress 5
+	// PRound values are conditional on survival to round 3
+	ptv := PredictedTeamValue{
+		TeamID:         "team-1",
+		ExpectedPoints: 200.0,
+		PRound1:        1.0,
+		PRound2:        1.0,
+		PRound3:        1.0,
+		PRound4:        0.60,
+		PRound5:        0.30, // P(reach round 5 | alive at round 3)
+		PRound6:        0.10, // P(reach round 6 | alive at round 3)
+	}
+	rules := testRules()
+	tp := TeamProgress{Wins: 5, Byes: 0, IsEliminated: false}
+
+	// WHEN computing projected EV with throughRound=3
+	result := ProjectedTeamEV(ptv, rules, tp, 3)
+
+	// THEN actual = 10+20+40+80+160 = 310, pAlive = PRound5 = 0.30
+	// round 6: (0.10/0.30) * 320 = 106.667
+	// total = 310 + 106.667 ≈ 416.667
+	expected := 310.0 + (0.10/0.30)*320.0
+	if math.Abs(result-expected) > 0.001 {
+		t.Errorf("expected %.3f, got %.3f", expected, result)
+	}
+}
+
+func TestThatProjectedTeamEVReturnsActualPointsForEliminatedTeamAtCheckpoint(t *testing.T) {
+	// GIVEN a checkpoint-3 batch where the team was eliminated at progress 4
+	ptv := PredictedTeamValue{
+		TeamID:         "team-1",
+		ExpectedPoints: 200.0,
+		PRound1:        1.0,
+		PRound2:        1.0,
+		PRound3:        1.0,
+		PRound4:        0.60,
+		PRound5:        0.30,
+		PRound6:        0.10,
+	}
+	rules := testRules()
+	tp := TeamProgress{Wins: 4, Byes: 0, IsEliminated: true}
+
+	// WHEN computing projected EV with throughRound=3
+	result := ProjectedTeamEV(ptv, rules, tp, 3)
+
+	// THEN result equals actual points for 4 wins (10 + 20 + 40 + 80 = 150)
+	expected := 150.0
+	if math.Abs(result-expected) > 0.001 {
+		t.Errorf("expected %.2f, got %.2f", expected, result)
+	}
+}
+
+func TestThatProjectedTeamEVBeyondCheckpointFallsBackWhenPAliveIsZero(t *testing.T) {
+	// GIVEN a checkpoint-3 batch where team is at progress 5, but model predicted 0% for round 5
+	ptv := PredictedTeamValue{
+		TeamID:         "team-1",
+		ExpectedPoints: 200.0,
+		PRound1:        1.0,
+		PRound2:        1.0,
+		PRound3:        1.0,
+		PRound4:        0.60,
+		PRound5:        0.0, // model predicted 0% chance of reaching round 5
+		PRound6:        0.0,
+	}
+	rules := testRules()
+	tp := TeamProgress{Wins: 5, Byes: 0, IsEliminated: false}
+
+	// WHEN computing projected EV with throughRound=3
+	result := ProjectedTeamEV(ptv, rules, tp, 3)
+
+	// THEN falls back to actual points (10+20+40+80+160 = 310)
+	expected := 310.0
+	if math.Abs(result-expected) > 0.001 {
+		t.Errorf("expected %.2f, got %.2f", expected, result)
+	}
+}
+
 func TestThatProjectedTeamEVHandlesTeamWithBye(t *testing.T) {
 	// GIVEN a team with 1 bye and 1 win (progress = 2), still alive
 	ptv := PredictedTeamValue{
