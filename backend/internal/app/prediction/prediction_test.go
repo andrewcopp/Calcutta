@@ -795,6 +795,93 @@ func TestThatComputeRoundSetsRoundOrder(t *testing.T) {
 	}
 }
 
+// --- TournamentState tests ---
+
+func TestThatNewTournamentStatePartitionsSurvivors(t *testing.T) {
+	// GIVEN tournament data with some eliminated teams (progress < throughRound)
+	data := &TournamentData{
+		Teams: []TeamInput{
+			{ID: "alive-1", Wins: 2, Byes: 1}, // progress=3, survives
+			{ID: "alive-2", Wins: 3, Byes: 0}, // progress=3, survives
+			{ID: "elim-1", Wins: 1, Byes: 1},  // progress=2, eliminated
+			{ID: "elim-2", Wins: 0, Byes: 1},  // progress=1, eliminated
+		},
+		Rules:    DefaultScoringRules(),
+		FFConfig: nil,
+	}
+
+	// WHEN creating state at throughRound=3
+	state := NewTournamentState(data, 3)
+
+	// THEN survivors excludes eliminated teams
+	if len(state.Survivors) != 2 {
+		t.Errorf("expected 2 survivors, got %d", len(state.Survivors))
+	}
+}
+
+func TestThatNewTournamentStateRetainsAllTeams(t *testing.T) {
+	// GIVEN tournament data with 4 teams, some eliminated
+	data := &TournamentData{
+		Teams: []TeamInput{
+			{ID: "alive-1", Wins: 2, Byes: 1},
+			{ID: "alive-2", Wins: 3, Byes: 0},
+			{ID: "elim-1", Wins: 1, Byes: 1},
+			{ID: "elim-2", Wins: 0, Byes: 1},
+		},
+		Rules:    DefaultScoringRules(),
+		FFConfig: nil,
+	}
+
+	// WHEN creating state at throughRound=3
+	state := NewTournamentState(data, 3)
+
+	// THEN AllTeams includes all 4 teams
+	if len(state.AllTeams) != 4 {
+		t.Errorf("expected 4 AllTeams, got %d", len(state.AllTeams))
+	}
+}
+
+func TestThatNewTournamentStateAtZeroMakesAllTeamsSurvivors(t *testing.T) {
+	// GIVEN a full 68-team tournament field at pre-tournament
+	teams := generateTestTeams()
+	data := &TournamentData{
+		Teams:    teams,
+		Rules:    DefaultScoringRules(),
+		FFConfig: nil,
+	}
+
+	// WHEN creating state at throughRound=0
+	state := NewTournamentState(data, 0)
+
+	// THEN all 68 teams are survivors
+	if len(state.Survivors) != 68 {
+		t.Errorf("expected 68 survivors, got %d", len(state.Survivors))
+	}
+}
+
+func TestThatGeneratePredictionsProducesValuesForAllTeams(t *testing.T) {
+	// GIVEN a full 68-team tournament state at throughRound=0
+	teams := generateTestTeams()
+	data := &TournamentData{
+		Teams:    teams,
+		Rules:    DefaultScoringRules(),
+		FFConfig: nil,
+	}
+	state := NewTournamentState(data, 0)
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating predictions
+	values, err := generatePredictions(state, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// THEN values are produced for all 68 teams
+	if len(values) != 68 {
+		t.Errorf("expected 68 team values, got %d", len(values))
+	}
+}
+
 // generateTestTeams creates a realistic 68-team tournament field for testing.
 func generateTestTeams() []TeamInput {
 	regions := []string{"East", "West", "South", "Midwest"}

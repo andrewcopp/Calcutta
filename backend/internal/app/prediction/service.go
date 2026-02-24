@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
-	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
@@ -40,6 +39,33 @@ type RunResult struct {
 	Duration             time.Duration
 }
 
+// loadTournamentData loads teams, scoring rules, and final four config from the database.
+func (s *Service) loadTournamentData(ctx context.Context, tournamentID string) (*TournamentData, error) {
+	teams, err := s.repo.LoadTeams(ctx, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load teams: %w", err)
+	}
+
+	rules, err := s.repo.LoadScoringRules(ctx, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load scoring rules: %w", err)
+	}
+	if len(rules) == 0 {
+		rules = DefaultScoringRules()
+	}
+
+	ffConfig, err := s.repo.LoadFinalFourConfig(ctx, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load final four config: %w", err)
+	}
+
+	return &TournamentData{
+		Teams:    teams,
+		Rules:    rules,
+		FFConfig: ffConfig,
+	}, nil
+}
+
 // Run generates predictions for a tournament and stores them in the database.
 func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	start := time.Now()
@@ -55,44 +81,22 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	}
 	p.GameOutcomeSpec.Normalize()
 
-	teams, err := s.repo.LoadTeams(ctx, p.TournamentID)
+	data, err := s.loadTournamentData(ctx, p.TournamentID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load teams: %w", err)
+		return nil, err
 	}
 
-	rules, err := s.repo.LoadScoringRules(ctx, p.TournamentID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load scoring rules: %w", err)
-	}
-	if len(rules) == 0 {
-		rules = DefaultScoringRules()
-	}
-
-	ffConfig, err := s.repo.LoadFinalFourConfig(ctx, p.TournamentID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load final four config: %w", err)
-	}
-
-	throughRound := detectThroughRoundFromTeams(teams)
+	throughRound := detectThroughRoundFromTeams(data.Teams)
 	if p.ThroughRound != nil {
 		throughRound = *p.ThroughRound
 	}
 
-	var matchups []PredictedMatchup
-	if throughRound < models.MaxRounds {
-		var survivors []TeamInput
-		for _, t := range teams {
-			if t.Wins+t.Byes >= throughRound {
-				survivors = append(survivors, t)
-			}
-		}
-		matchups, err = GenerateMatchups(survivors, throughRound, p.GameOutcomeSpec, ffConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate matchups: %w", err)
-		}
-	}
+	state := NewTournamentState(data, throughRound)
 
-	teamValues := GenerateTournamentValues(teams, matchups, throughRound, rules)
+	teamValues, err := generatePredictions(state, p.GameOutcomeSpec)
+	if err != nil {
+		return nil, err
+	}
 
 	specJSON, _ := json.Marshal(p.GameOutcomeSpec)
 	batchID, err := s.repo.StorePredictions(ctx, p.TournamentID, p.ProbabilitySourceKey, specJSON, teamValues, throughRound)
@@ -114,30 +118,55 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 }
 
 // RunAllCheckpoints generates prediction batches for every checkpoint from
-// round 0 through the current tournament state.
+// round 0 through the current tournament state. Loads tournament data once
+// and reuses it across all checkpoints.
 func (s *Service) RunAllCheckpoints(ctx context.Context, p RunParams) ([]RunResult, error) {
 	if p.TournamentID == "" {
 		return nil, errors.New("TournamentID is required")
 	}
-
-	throughRound, err := s.DetectThroughRound(ctx, p.TournamentID)
-	if err != nil {
-		return nil, fmt.Errorf("detecting through round: %w", err)
+	if p.ProbabilitySourceKey == "" {
+		p.ProbabilitySourceKey = "kenpom"
 	}
+	if p.GameOutcomeSpec == nil {
+		p.GameOutcomeSpec = &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	}
+	p.GameOutcomeSpec.Normalize()
+
+	data, err := s.loadTournamentData(ctx, p.TournamentID)
+	if err != nil {
+		return nil, err
+	}
+
+	throughRound := detectThroughRoundFromTeams(data.Teams)
 
 	var results []RunResult
 	for cp := 0; cp <= throughRound; cp++ {
-		checkpoint := cp
-		result, err := s.Run(ctx, RunParams{
-			TournamentID:         p.TournamentID,
-			ProbabilitySourceKey: p.ProbabilitySourceKey,
-			GameOutcomeSpec:      p.GameOutcomeSpec,
-			ThroughRound:         &checkpoint,
-		})
+		start := time.Now()
+
+		state := NewTournamentState(data, cp)
+
+		teamValues, err := generatePredictions(state, p.GameOutcomeSpec)
 		if err != nil {
 			return nil, fmt.Errorf("prediction run failed for checkpoint %d: %w", cp, err)
 		}
-		results = append(results, *result)
+
+		specJSON, _ := json.Marshal(p.GameOutcomeSpec)
+		batchID, err := s.repo.StorePredictions(ctx, p.TournamentID, p.ProbabilitySourceKey, specJSON, teamValues, cp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to store predictions for checkpoint %d: %w", cp, err)
+		}
+
+		if _, err := s.repo.PruneOldBatchesForCheckpoint(ctx, p.TournamentID, cp, 1); err != nil {
+			slog.Warn("prediction_prune_failed", "tournament_id", p.TournamentID, "through_round", cp, "error", err)
+		}
+
+		results = append(results, RunResult{
+			BatchID:              batchID,
+			TournamentID:         p.TournamentID,
+			ProbabilitySourceKey: p.ProbabilitySourceKey,
+			TeamCount:            len(teamValues),
+			Duration:             time.Since(start),
+		})
 	}
 	return results, nil
 }
