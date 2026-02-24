@@ -67,8 +67,7 @@ def _prepare_features_set(
 
     if fs == "optimal":
         base = prepare_optimal_v1_features(df, base)
-
-    if fs == "optimal_v2":
+    elif fs == "optimal_v2":
         base = prepare_optimal_v2_features(
             df,
             base,
@@ -76,8 +75,7 @@ def _prepare_features_set(
             program_share_mean_by_slug=program_share_mean_by_slug,
             program_share_count_by_slug=program_share_count_by_slug,
         )
-
-    if fs == "optimal_v3":
+    elif fs == "optimal_v3":
         base = prepare_optimal_v3_features(df, base)
 
     X = pd.get_dummies(base, columns=["region"], dummy_na=True)

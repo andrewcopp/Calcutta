@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 )
 
@@ -102,7 +103,7 @@ func (w *LabPipelineWorker) processGoPredictions(ctx context.Context, workerID s
 	}
 
 	// Generate or get predictions using Go prediction service
-	predSvc := prediction.New(w.pool)
+	predSvc := prediction.New(dbadapters.NewPredictionRepository(w.pool))
 
 	// Check if we already have predictions for this tournament
 	batchID, found, err := predSvc.GetLatestBatchID(ctx, tournamentID)

@@ -44,9 +44,11 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 		ExcludedEntryName: cfg.ExcludedEntryName,
 	})
 
+	predictionRepo := dbadapters.NewPredictionRepository(pool)
+
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
 	a.Calcutta = calcuttaService
-	a.Prediction = appprediction.New(pool)
+	a.Prediction = appprediction.New(predictionRepo)
 	a.Analytics = analyticsService
 	a.Lab = labService
 	a.Auth = appauth.New(dbUserRepo, authRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)

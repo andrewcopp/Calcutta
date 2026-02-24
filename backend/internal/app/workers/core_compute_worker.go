@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/jobqueue"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -112,7 +113,7 @@ func (w *CoreComputeWorker) processRefreshPredictions(ctx context.Context, job *
 	}
 
 	start := time.Now()
-	predSvc := prediction.New(w.pool)
+	predSvc := prediction.New(dbadapters.NewPredictionRepository(w.pool))
 	results, err := predSvc.RunAllCheckpoints(ctx, prediction.RunParams{
 		TournamentID:         params.TournamentID,
 		ProbabilitySourceKey: sourceKey,

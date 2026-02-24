@@ -8,6 +8,124 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ComputeGameOutcomeRun struct {
+	ID           string
+	TournamentID string
+	ParamsJson   []byte
+	GitSha       *string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+	RunKey       string
+}
+
+type ComputePredictedGameOutcome struct {
+	ID           string
+	TournamentID string
+	GameID       string
+	Round        int32
+	Team1ID      string
+	Team2ID      string
+	PTeam1Wins   float64
+	PMatchup     float64
+	ModelVersion *string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+	RunID        pgtype.UUID
+}
+
+// Stores predicted expected points and round probabilities for each team (analogous to simulated_teams for simulations)
+type ComputePredictedTeamValue struct {
+	ID                string
+	PredictionBatchID string
+	TournamentID      string
+	TeamID            string
+	// Expected tournament points for 100% ownership of this team
+	ExpectedPoints float64
+	VariancePoints *float64
+	StdPoints      *float64
+	// Probability of winning first game (First Four or Round of 64)
+	PRound1 *float64
+	// Probability of reaching Round of 32
+	PRound2 *float64
+	// Probability of reaching Sweet 16
+	PRound3 *float64
+	// Probability of reaching Elite 8
+	PRound4 *float64
+	// Probability of reaching Final Four
+	PRound5 *float64
+	// Probability of reaching Championship game
+	PRound6 *float64
+	// Probability of winning Championship
+	PRound7   *float64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+}
+
+// Stores metadata for prediction generation runs (analogous to simulated_tournaments for simulations)
+type ComputePredictionBatch struct {
+	ID           string
+	TournamentID string
+	// Identifier for the probability model used (e.g., kenpom)
+	ProbabilitySourceKey string
+	// Parameters for the game outcome model (e.g., {"kind": "kenpom", "sigma": 10.0})
+	GameOutcomeSpecJson []byte
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	DeletedAt           pgtype.Timestamptz
+	ThroughRound        int32
+}
+
+type ComputeSimulatedTeam struct {
+	ID                    string
+	TournamentID          string
+	SimID                 int32
+	TeamID                string
+	Wins                  int32
+	Byes                  int32
+	IsEliminated          bool
+	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+	DeletedAt             pgtype.Timestamptz
+	SimulatedTournamentID pgtype.UUID
+}
+
+type ComputeSimulatedTournament struct {
+	ID                   string
+	TournamentID         string
+	TournamentSnapshotID string
+	NSims                int32
+	Seed                 int32
+	ProbabilitySourceKey string
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+}
+
+type ComputeTournamentSnapshot struct {
+	ID           string
+	TournamentID string
+	Source       string
+	Description  *string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+type ComputeTournamentSnapshotTeam struct {
+	ID                   string
+	TournamentSnapshotID string
+	TeamID               string
+	Wins                 int32
+	Byes                 int32
+	IsEliminated         bool
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+}
+
 type CoreApiKey struct {
 	ID         string
 	UserID     string
@@ -256,17 +374,6 @@ type CoreUser struct {
 	InvitedBy          pgtype.UUID
 }
 
-type DerivedGameOutcomeRun struct {
-	ID           string
-	TournamentID string
-	ParamsJson   []byte
-	GitSha       *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	RunKey       string
-}
-
 type DerivedPortfolio struct {
 	ID            string
 	EntryID       string
@@ -288,64 +395,6 @@ type DerivedPortfolioTeam struct {
 	DeletedAt           pgtype.Timestamptz
 }
 
-type DerivedPredictedGameOutcome struct {
-	ID           string
-	TournamentID string
-	GameID       string
-	Round        int32
-	Team1ID      string
-	Team2ID      string
-	PTeam1Wins   float64
-	PMatchup     float64
-	ModelVersion *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	RunID        pgtype.UUID
-}
-
-// Stores predicted expected points and round probabilities for each team (analogous to simulated_teams for simulations)
-type DerivedPredictedTeamValue struct {
-	ID                string
-	PredictionBatchID string
-	TournamentID      string
-	TeamID            string
-	// Expected tournament points for 100% ownership of this team
-	ExpectedPoints float64
-	VariancePoints *float64
-	StdPoints      *float64
-	// Probability of winning first game (First Four or Round of 64)
-	PRound1 *float64
-	// Probability of reaching Round of 32
-	PRound2 *float64
-	// Probability of reaching Sweet 16
-	PRound3 *float64
-	// Probability of reaching Elite 8
-	PRound4 *float64
-	// Probability of reaching Final Four
-	PRound5 *float64
-	// Probability of reaching Championship game
-	PRound6 *float64
-	// Probability of winning Championship
-	PRound7   *float64
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	DeletedAt pgtype.Timestamptz
-}
-
-// Stores metadata for prediction generation runs (analogous to simulated_tournaments for simulations)
-type DerivedPredictionBatch struct {
-	ID           string
-	TournamentID string
-	// Identifier for the probability model used (e.g., kenpom)
-	ProbabilitySourceKey string
-	// Parameters for the game outcome model (e.g., {"kind": "kenpom", "sigma": 10.0})
-	GameOutcomeSpecJson []byte
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	DeletedAt           pgtype.Timestamptz
-}
-
 type DerivedRunJob struct {
 	ID                string
 	RunKind           string
@@ -363,54 +412,9 @@ type DerivedRunJob struct {
 	ErrorMessage      *string
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
-}
-
-type DerivedSimulatedTeam struct {
-	ID                    string
-	TournamentID          string
-	SimID                 int32
-	TeamID                string
-	Wins                  int32
-	Byes                  int32
-	IsEliminated          bool
-	CreatedAt             pgtype.Timestamptz
-	UpdatedAt             pgtype.Timestamptz
-	DeletedAt             pgtype.Timestamptz
-	SimulatedTournamentID pgtype.UUID
-}
-
-type DerivedSimulatedTournament struct {
-	ID                   string
-	TournamentID         string
-	TournamentSnapshotID string
-	NSims                int32
-	Seed                 int32
-	ProbabilitySourceKey string
-	CreatedAt            pgtype.Timestamptz
-	UpdatedAt            pgtype.Timestamptz
-	DeletedAt            pgtype.Timestamptz
-}
-
-type DerivedTournamentSnapshot struct {
-	ID           string
-	TournamentID string
-	Source       string
-	Description  *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-type DerivedTournamentSnapshotTeam struct {
-	ID                   string
-	TournamentSnapshotID string
-	TeamID               string
-	Wins                 int32
-	Byes                 int32
-	IsEliminated         bool
-	CreatedAt            pgtype.Timestamptz
-	UpdatedAt            pgtype.Timestamptz
-	DeletedAt            pgtype.Timestamptz
+	Priority          int16
+	DedupKey          *string
+	RetryAfter        pgtype.Timestamptz
 }
 
 type LabEntry struct {

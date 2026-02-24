@@ -2,6 +2,7 @@ package prediction
 
 import (
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // TeamProgress represents the current tournament progress of a team.
@@ -32,7 +33,7 @@ func ProjectedTeamEV(ptv PredictedTeamValue, rules []scoring.Rule, tp TeamProgre
 		return ptv.ExpectedPoints
 	}
 
-	pAlive := pRoundByIndex(ptv, progress)
+	pAlive := ptv.PRoundByIndex(progress)
 	if pAlive <= 0 {
 		return actualPoints
 	}
@@ -41,7 +42,7 @@ func ProjectedTeamEV(ptv PredictedTeamValue, rules []scoring.Rule, tp TeamProgre
 
 	var conditionalRemaining float64
 	for r := progress + 1; r <= maxRound; r++ {
-		pReachRound := pRoundByIndex(ptv, r)
+		pReachRound := ptv.PRoundByIndex(r)
 		incPoints := float64(scoring.PointsForProgress(rules, r, 0) - scoring.PointsForProgress(rules, r-1, 0))
 		if throughRound > 0 {
 			conditionalRemaining += pReachRound * incPoints
@@ -53,29 +54,6 @@ func ProjectedTeamEV(ptv PredictedTeamValue, rules []scoring.Rule, tp TeamProgre
 	return actualPoints + conditionalRemaining
 }
 
-// pRoundByIndex returns the advancement probability for a given progress index.
-// Progress 1 = survived round 1 (PRound1), progress 2 = survived round 2 (PRound2), etc.
-func pRoundByIndex(ptv PredictedTeamValue, round int) float64 {
-	switch round {
-	case 1:
-		return ptv.PRound1
-	case 2:
-		return ptv.PRound2
-	case 3:
-		return ptv.PRound3
-	case 4:
-		return ptv.PRound4
-	case 5:
-		return ptv.PRound5
-	case 6:
-		return ptv.PRound6
-	case 7:
-		return ptv.PRound7
-	default:
-		return 0
-	}
-}
-
 // maxRoundFromRules returns the highest WinIndex present in the scoring rules.
 func maxRoundFromRules(rules []scoring.Rule) int {
 	max := 0
@@ -83,6 +61,9 @@ func maxRoundFromRules(rules []scoring.Rule) int {
 		if r.WinIndex > max {
 			max = r.WinIndex
 		}
+	}
+	if max == 0 {
+		return models.MaxRounds
 	}
 	return max
 }

@@ -1,0 +1,29 @@
+package ports
+
+import (
+	"context"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
+)
+
+type PredictionBatchReader interface {
+	ListBatches(ctx context.Context, tournamentID string) ([]models.PredictionBatchSummary, error)
+	GetLatestBatch(ctx context.Context, tournamentID string) (*models.PredictionBatchSummary, bool, error)
+	GetBatchSummary(ctx context.Context, batchID string) (*models.PredictionBatchSummary, error)
+	GetTeamValues(ctx context.Context, batchID string) ([]models.PredictedTeamValue, error)
+	LoadTeams(ctx context.Context, tournamentID string) ([]models.PredictionTeamInput, error)
+	LoadScoringRules(ctx context.Context, tournamentID string) ([]scoring.Rule, error)
+	LoadFinalFourConfig(ctx context.Context, tournamentID string) (*models.FinalFourConfig, error)
+	ListEligibleTournamentsForBackfill(ctx context.Context) ([]string, error)
+}
+
+type PredictionBatchWriter interface {
+	StorePredictions(ctx context.Context, tournamentID string, probSourceKey string, specJSON []byte, values []models.PredictedTeamValue, throughRound int) (string, error)
+	PruneOldBatchesForCheckpoint(ctx context.Context, tournamentID string, throughRound int, keepN int) (int64, error)
+}
+
+type PredictionRepository interface {
+	PredictionBatchReader
+	PredictionBatchWriter
+}

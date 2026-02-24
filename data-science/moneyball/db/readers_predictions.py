@@ -130,6 +130,15 @@ def enrich_with_analytical_probabilities(
             "compute.predicted_team_values)."
         )
 
+    # Warn about teams missing from Go predictions (will be zero-filled)
+    df_team_ids = set(df[id_col].astype(str).unique())
+    missing = df_team_ids - set(analytical_values.keys())
+    if missing:
+        logger.warning(
+            "Teams missing from Go predictions (zero-filled): %s (tournament=%s, %d/%d missing)",
+            sorted(missing)[:5], tournament_id, len(missing), len(df_team_ids),
+        )
+
     # Add columns to dataframe
     result = df.copy()
     result["predicted_p_championship"] = result[id_col].astype(str).map(

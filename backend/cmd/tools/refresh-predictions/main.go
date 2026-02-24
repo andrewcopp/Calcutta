@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -31,7 +32,8 @@ func main() {
 	}
 	defer pool.Close()
 
-	svc := prediction.New(pool)
+	repo := dbadapters.NewPredictionRepository(pool)
+	svc := prediction.New(repo)
 	results, err := svc.RunAllCheckpoints(ctx, prediction.RunParams{
 		TournamentID:         tournamentID,
 		ProbabilitySourceKey: "kenpom",

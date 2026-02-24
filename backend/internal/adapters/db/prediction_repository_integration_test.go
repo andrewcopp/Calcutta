@@ -1,18 +1,19 @@
 //go:build integration
 
-package prediction
+package db_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	db "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/testutil"
 )
 
 // --- helpers ---
 
-func seedTournament(t *testing.T, ctx context.Context) string {
+func seedTournamentForPredictions(t *testing.T, ctx context.Context) string {
 	t.Helper()
 	var compID string
 	err := pool.QueryRow(ctx, `
@@ -44,7 +45,7 @@ func seedTournament(t *testing.T, ctx context.Context) string {
 	return id
 }
 
-func insertPredictionBatch(t *testing.T, ctx context.Context, tournamentID string, throughRound int, createdAt time.Time) string {
+func insertPredictionBatchRaw(t *testing.T, ctx context.Context, tournamentID string, throughRound int, createdAt time.Time) string {
 	t.Helper()
 	var id string
 	err := pool.QueryRow(ctx, `
@@ -58,9 +59,8 @@ func insertPredictionBatch(t *testing.T, ctx context.Context, tournamentID strin
 	return id
 }
 
-func insertPredictedTeamValue(t *testing.T, ctx context.Context, batchID, tournamentID string) {
+func insertPredictedTeamValueRaw(t *testing.T, ctx context.Context, batchID, tournamentID string) {
 	t.Helper()
-	// Create a school and team to satisfy FKs.
 	var schoolID string
 	err := pool.QueryRow(ctx, `
 		INSERT INTO core.schools (name, slug) VALUES ('School-' || gen_random_uuid()::text, 'slug-' || gen_random_uuid()::text)
@@ -91,7 +91,7 @@ func insertPredictedTeamValue(t *testing.T, ctx context.Context, batchID, tourna
 	}
 }
 
-func countPredictionBatches(t *testing.T, ctx context.Context, tournamentID string) int {
+func countPredBatches(t *testing.T, ctx context.Context, tournamentID string) int {
 	t.Helper()
 	var count int
 	err := pool.QueryRow(ctx, `
@@ -104,7 +104,7 @@ func countPredictionBatches(t *testing.T, ctx context.Context, tournamentID stri
 	return count
 }
 
-func countPredictionBatchesForCheckpoint(t *testing.T, ctx context.Context, tournamentID string, throughRound int) int {
+func countPredBatchesForCheckpoint(t *testing.T, ctx context.Context, tournamentID string, throughRound int) int {
 	t.Helper()
 	var count int
 	err := pool.QueryRow(ctx, `
@@ -117,7 +117,7 @@ func countPredictionBatchesForCheckpoint(t *testing.T, ctx context.Context, tour
 	return count
 }
 
-func countPredictedTeamValues(t *testing.T, ctx context.Context, batchID string) int {
+func countPredTeamValues(t *testing.T, ctx context.Context, batchID string) int {
 	t.Helper()
 	var count int
 	err := pool.QueryRow(ctx, `
@@ -137,19 +137,19 @@ func TestThatPruneKeepsLatestThreePredictionBatches(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
 	// GIVEN a tournament with 4 prediction batches at throughRound=0
-	tid := seedTournament(t, ctx)
+	tid := seedTournamentForPredictions(t, ctx)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	insertPredictionBatch(t, ctx, tid, 0, base)
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(1*time.Hour))
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(2*time.Hour))
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(3*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 0, base)
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(1*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(2*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(3*time.Hour))
 
 	// WHEN pruning with keepN=3
-	svc := New(pool)
-	svc.pruneOldBatchesForCheckpoint(ctx, tid, 0, 3)
+	repo := db.NewPredictionRepository(pool)
+	_, _ = repo.PruneOldBatchesForCheckpoint(ctx, tid, 0, 3)
 
 	// THEN 3 batches remain
-	count := countPredictionBatches(t, ctx, tid)
+	count := countPredBatches(t, ctx, tid)
 	if count != 3 {
 		t.Errorf("expected 3 prediction batches, got %d", count)
 	}
@@ -160,18 +160,18 @@ func TestThatPruneCascadesDeleteToPredictedTeamValues(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
 	// GIVEN a tournament with 2 batches at throughRound=0, oldest has a child row
-	tid := seedTournament(t, ctx)
+	tid := seedTournamentForPredictions(t, ctx)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	oldBatchID := insertPredictionBatch(t, ctx, tid, 0, base)
-	insertPredictedTeamValue(t, ctx, oldBatchID, tid)
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(1*time.Hour))
+	oldBatchID := insertPredictionBatchRaw(t, ctx, tid, 0, base)
+	insertPredictedTeamValueRaw(t, ctx, oldBatchID, tid)
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(1*time.Hour))
 
 	// WHEN pruning with keepN=1
-	svc := New(pool)
-	svc.pruneOldBatchesForCheckpoint(ctx, tid, 0, 1)
+	repo := db.NewPredictionRepository(pool)
+	_, _ = repo.PruneOldBatchesForCheckpoint(ctx, tid, 0, 1)
 
 	// THEN the child row of the old batch is also deleted
-	count := countPredictedTeamValues(t, ctx, oldBatchID)
+	count := countPredTeamValues(t, ctx, oldBatchID)
 	if count != 0 {
 		t.Errorf("expected 0 predicted team values for pruned batch, got %d", count)
 	}
@@ -182,17 +182,17 @@ func TestThatPruneIsNoOpWhenFewerThanKeepNBatchesExist(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
 	// GIVEN a tournament with only 2 batches at throughRound=0
-	tid := seedTournament(t, ctx)
+	tid := seedTournamentForPredictions(t, ctx)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	insertPredictionBatch(t, ctx, tid, 0, base)
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(1*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 0, base)
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(1*time.Hour))
 
 	// WHEN pruning with keepN=3
-	svc := New(pool)
-	svc.pruneOldBatchesForCheckpoint(ctx, tid, 0, 3)
+	repo := db.NewPredictionRepository(pool)
+	_, _ = repo.PruneOldBatchesForCheckpoint(ctx, tid, 0, 3)
 
 	// THEN both batches remain
-	count := countPredictionBatches(t, ctx, tid)
+	count := countPredBatches(t, ctx, tid)
 	if count != 2 {
 		t.Errorf("expected 2 prediction batches, got %d", count)
 	}
@@ -203,20 +203,20 @@ func TestThatPredictionPruneOnlyAffectsSpecifiedTournament(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
 	// GIVEN two tournaments, each with 3 batches at throughRound=0
-	tidA := seedTournament(t, ctx)
-	tidB := seedTournament(t, ctx)
+	tidA := seedTournamentForPredictions(t, ctx)
+	tidB := seedTournamentForPredictions(t, ctx)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i := 0; i < 3; i++ {
-		insertPredictionBatch(t, ctx, tidA, 0, base.Add(time.Duration(i)*time.Hour))
-		insertPredictionBatch(t, ctx, tidB, 0, base.Add(time.Duration(i)*time.Hour))
+		insertPredictionBatchRaw(t, ctx, tidA, 0, base.Add(time.Duration(i)*time.Hour))
+		insertPredictionBatchRaw(t, ctx, tidB, 0, base.Add(time.Duration(i)*time.Hour))
 	}
 
 	// WHEN pruning tournament A with keepN=1
-	svc := New(pool)
-	svc.pruneOldBatchesForCheckpoint(ctx, tidA, 0, 1)
+	repo := db.NewPredictionRepository(pool)
+	_, _ = repo.PruneOldBatchesForCheckpoint(ctx, tidA, 0, 1)
 
 	// THEN tournament B still has 3 batches
-	count := countPredictionBatches(t, ctx, tidB)
+	count := countPredBatches(t, ctx, tidB)
 	if count != 3 {
 		t.Errorf("expected 3 prediction batches for tournament B, got %d", count)
 	}
@@ -227,20 +227,20 @@ func TestThatPruneForCheckpointOnlyAffectsMatchingThroughRound(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
 	// GIVEN a tournament with 3 batches at throughRound=0 and 2 batches at throughRound=3
-	tid := seedTournament(t, ctx)
+	tid := seedTournamentForPredictions(t, ctx)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	insertPredictionBatch(t, ctx, tid, 0, base)
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(1*time.Hour))
-	insertPredictionBatch(t, ctx, tid, 0, base.Add(2*time.Hour))
-	insertPredictionBatch(t, ctx, tid, 3, base.Add(3*time.Hour))
-	insertPredictionBatch(t, ctx, tid, 3, base.Add(4*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 0, base)
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(1*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 0, base.Add(2*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 3, base.Add(3*time.Hour))
+	insertPredictionBatchRaw(t, ctx, tid, 3, base.Add(4*time.Hour))
 
 	// WHEN pruning throughRound=0 with keepN=1
-	svc := New(pool)
-	svc.pruneOldBatchesForCheckpoint(ctx, tid, 0, 1)
+	repo := db.NewPredictionRepository(pool)
+	_, _ = repo.PruneOldBatchesForCheckpoint(ctx, tid, 0, 1)
 
 	// THEN throughRound=3 batches are unaffected
-	count := countPredictionBatchesForCheckpoint(t, ctx, tid, 3)
+	count := countPredBatchesForCheckpoint(t, ctx, tid, 3)
 	if count != 2 {
 		t.Errorf("expected 2 prediction batches for throughRound=3, got %d", count)
 	}

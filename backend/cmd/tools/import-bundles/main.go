@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 
+	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
@@ -55,7 +56,7 @@ func run() error {
 }
 
 func refreshPredictions(ctx context.Context, pool *pgxpool.Pool, tournamentIDs []string) {
-	predSvc := prediction.New(pool)
+	predSvc := prediction.New(dbadapters.NewPredictionRepository(pool))
 	for _, tid := range tournamentIDs {
 		results, err := predSvc.RunAllCheckpoints(ctx, prediction.RunParams{
 			TournamentID:         tid,

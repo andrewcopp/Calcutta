@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 type teamRoundKey struct {
@@ -14,7 +15,7 @@ type teamRoundKey struct {
 // buildIncByRound computes the incremental points for reaching each progress level.
 func buildIncByRound(rules []scoring.Rule) map[int]float64 {
 	incByRound := make(map[int]float64)
-	for r := 1; r <= 7; r++ {
+	for r := 1; r <= models.MaxRounds; r++ {
 		ptsR := float64(scoring.PointsForProgress(rules, r, 0))
 		ptsRMinus1 := float64(scoring.PointsForProgress(rules, r-1, 0))
 		incByRound[r] = ptsR - ptsRMinus1
@@ -74,13 +75,13 @@ func GenerateTournamentValues(
 		progress := team.Wins + team.Byes
 		actualPoints := float64(scoring.PointsForProgress(rules, team.Wins, team.Byes))
 
-		var probs [7]float64
+		var probs [models.MaxRounds]float64
 		var expectedPoints float64
 		var variancePoints float64
 
 		if throughRound > 0 && progress < throughRound {
 			// Eliminated: pRound = 1.0 for rounds survived, 0.0 for rest.
-			for r := 1; r <= 7; r++ {
+			for r := 1; r <= models.MaxRounds; r++ {
 				if r <= progress {
 					probs[r-1] = 1.0
 				}
@@ -97,7 +98,7 @@ func GenerateTournamentValues(
 			}
 
 			// PRound2-7: 1.0 for resolved rounds, matchup probs for future rounds.
-			for r := 2; r <= 7; r++ {
+			for r := 2; r <= models.MaxRounds; r++ {
 				if r <= throughRound {
 					probs[r-1] = 1.0
 				} else {
@@ -109,13 +110,13 @@ func GenerateTournamentValues(
 
 			// Expected points = actual + sum of future conditional points.
 			expectedPoints = actualPoints
-			for r := throughRound + 1; r <= 7; r++ {
+			for r := throughRound + 1; r <= models.MaxRounds; r++ {
 				expectedPoints += probs[r-1] * incByRound[r]
 			}
 
 			// Variance (pre-tournament only).
 			if throughRound == 0 {
-				for r := 1; r <= 7; r++ {
+				for r := 1; r <= models.MaxRounds; r++ {
 					p := probs[r-1]
 					inc := incByRound[r]
 					variancePoints += p * (1 - p) * inc * inc
