@@ -105,7 +105,7 @@ func TestThatEnrichPredictionsExpectedROIIsZeroWhenPredictedBidPointsIsZero(t *t
 	}
 }
 
-func TestThatEnrichPredictionsComputesNaivePointsUsingTotalPoolBudget(t *testing.T) {
+func TestThatEnrichPredictionsComputesRationalPointsUsingTotalPoolBudget(t *testing.T) {
 	// GIVEN two teams with a pool budget of 10000 and team-a has 75% of expected points
 	raw := &models.LabEntryRaw{
 		TotalPoolBudget: 10000,
@@ -124,18 +124,18 @@ func TestThatEnrichPredictionsComputesNaivePointsUsingTotalPoolBudget(t *testing
 	// WHEN enriching predictions
 	result := enrichPredictions(raw, teamEP, totalEP)
 
-	// THEN team-a naive points = 300/400 * 10000 = 7500
+	// THEN team-a rational points = 300/400 * 10000 = 7500
 	pred := findPredictionByTeamID(result, "team-a")
 	if pred == nil {
 		t.Fatal("expected prediction for team-a")
 	}
-	if pred.NaivePoints != 7500 {
-		t.Errorf("expected naive points 7500, got %d", pred.NaivePoints)
+	if pred.RationalPoints != 7500 {
+		t.Errorf("expected rational points 7500, got %d", pred.RationalPoints)
 	}
 }
 
 func TestThatEnrichPredictionsComputesPositiveEdgeForUndervaluedTeam(t *testing.T) {
-	// GIVEN a team with naive points 7500 and predicted bid points 5000
+	// GIVEN a team with rational points 7500 and predicted bid points 5000
 	raw := &models.LabEntryRaw{
 		TotalPoolBudget: 10000,
 		Teams: map[string]models.LabTeamInfo{
@@ -153,7 +153,7 @@ func TestThatEnrichPredictionsComputesPositiveEdgeForUndervaluedTeam(t *testing.
 	// WHEN enriching predictions
 	result := enrichPredictions(raw, teamEP, totalEP)
 
-	// THEN team-a has positive edge (naive 7500 > predicted 5000)
+	// THEN team-a has positive edge (rational 7500 > predicted 5000)
 	pred := findPredictionByTeamID(result, "team-a")
 	if pred == nil {
 		t.Fatal("expected prediction for team-a")
@@ -165,7 +165,7 @@ func TestThatEnrichPredictionsComputesPositiveEdgeForUndervaluedTeam(t *testing.
 }
 
 func TestThatEnrichPredictionsComputesNegativeEdgeForOvervaluedTeam(t *testing.T) {
-	// GIVEN a team with naive points 2500 and predicted bid points 3000
+	// GIVEN a team with rational points 2500 and predicted bid points 3000
 	raw := &models.LabEntryRaw{
 		TotalPoolBudget: 10000,
 		Teams: map[string]models.LabTeamInfo{
@@ -183,7 +183,7 @@ func TestThatEnrichPredictionsComputesNegativeEdgeForOvervaluedTeam(t *testing.T
 	// WHEN enriching predictions
 	result := enrichPredictions(raw, teamEP, totalEP)
 
-	// THEN team-b has negative edge (naive 2500 < predicted 3000)
+	// THEN team-b has negative edge (rational 2500 < predicted 3000)
 	pred := findPredictionByTeamID(result, "team-b")
 	if pred == nil {
 		t.Fatal("expected prediction for team-b")
@@ -194,7 +194,7 @@ func TestThatEnrichPredictionsComputesNegativeEdgeForOvervaluedTeam(t *testing.T
 }
 
 func TestThatEnrichPredictionsComputesCorrectEdgePercentValue(t *testing.T) {
-	// GIVEN a team where naive = 7500 and predicted bid = 5000
+	// GIVEN a team where rational = 7500 and predicted bid = 5000
 	raw := &models.LabEntryRaw{
 		TotalPoolBudget: 10000,
 		Teams: map[string]models.LabTeamInfo{
@@ -328,8 +328,8 @@ func TestThatEnrichPredictionsSkipsTeamNotInTeamMap(t *testing.T) {
 	}
 }
 
-func TestThatEnrichPredictionsEdgePercentIsZeroWhenNaivePointsIsZero(t *testing.T) {
-	// GIVEN a team with zero expected points (naive points will be 0)
+func TestThatEnrichPredictionsEdgePercentIsZeroWhenRationalPointsIsZero(t *testing.T) {
+	// GIVEN a team with zero expected points (rational points will be 0)
 	raw := &models.LabEntryRaw{
 		TotalPoolBudget: 4000,
 		Teams: map[string]models.LabTeamInfo{

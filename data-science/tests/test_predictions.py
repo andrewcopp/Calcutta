@@ -2,7 +2,7 @@
 Unit tests for moneyball.lab.predictions._map_predictions().
 
 Tests the mapping logic that resolves team slugs to team IDs and expected
-points, producing Prediction objects from a raw predictions DataFrame.
+points, producing MarketPrediction objects from a raw predictions DataFrame.
 """
 
 from __future__ import annotations
@@ -10,16 +10,16 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from moneyball.lab.models import Prediction
+from moneyball.lab.models import MarketPrediction
 from moneyball.lab.predictions import _map_predictions
 
 
 class TestThatMapPredictionsReturnsValidPredictions:
-    """Valid inputs produce the expected list of Prediction objects."""
+    """Valid inputs produce the expected list of MarketPrediction objects."""
 
     def test_that_all_slugs_map_to_predictions(self) -> None:
         """Every row in predictions_df with a matching team_id and expected points
-        produces a Prediction with the correct fields."""
+        produces a MarketPrediction with the correct fields."""
         # GIVEN a predictions DataFrame with three teams
         predictions_df = pd.DataFrame(
             {
@@ -41,9 +41,9 @@ class TestThatMapPredictionsReturnsValidPredictions:
         # WHEN mapping predictions
         result = _map_predictions(predictions_df, team_id_map, expected_points_map)
 
-        # THEN three Prediction objects are returned with correct values
+        # THEN three MarketPrediction objects are returned with correct values
         assert len(result) == 3
-        assert all(isinstance(p, Prediction) for p in result)
+        assert all(isinstance(p, MarketPrediction) for p in result)
         assert result[0].team_id == "id-duke"
         assert result[0].predicted_market_share == pytest.approx(0.10)
         assert result[0].expected_points == pytest.approx(12.5)

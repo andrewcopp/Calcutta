@@ -11,6 +11,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BulkCreatePredictedTeamValuesParams struct {
+	PredictionBatchID string
+	TournamentID      string
+	TeamID            string
+	ExpectedPoints    float64
+	VariancePoints    *float64
+	StdPoints         *float64
+	PRound1           *float64
+	PRound2           *float64
+	PRound3           *float64
+	PRound4           *float64
+	PRound5           *float64
+	PRound6           *float64
+	PRound7           *float64
+}
+
 const createPredictedTeamValue = `-- name: CreatePredictedTeamValue :exec
 INSERT INTO compute.predicted_team_values (
     prediction_batch_id,
@@ -27,30 +43,44 @@ INSERT INTO compute.predicted_team_values (
     p_round_6,
     p_round_7
 )
-VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+VALUES (
+    $1::uuid,
+    $2::uuid,
+    $3::uuid,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11,
+    $12,
+    $13
+)
 `
 
 type CreatePredictedTeamValueParams struct {
-	Column1        string
-	Column2        string
-	Column3        string
-	ExpectedPoints float64
-	VariancePoints *float64
-	StdPoints      *float64
-	PRound1        *float64
-	PRound2        *float64
-	PRound3        *float64
-	PRound4        *float64
-	PRound5        *float64
-	PRound6        *float64
-	PRound7        *float64
+	PredictionBatchID string
+	TournamentID      string
+	TeamID            string
+	ExpectedPoints    float64
+	VariancePoints    *float64
+	StdPoints         *float64
+	PRound1           *float64
+	PRound2           *float64
+	PRound3           *float64
+	PRound4           *float64
+	PRound5           *float64
+	PRound6           *float64
+	PRound7           *float64
 }
 
 func (q *Queries) CreatePredictedTeamValue(ctx context.Context, arg CreatePredictedTeamValueParams) error {
 	_, err := q.db.Exec(ctx, createPredictedTeamValue,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
+		arg.PredictionBatchID,
+		arg.TournamentID,
+		arg.TeamID,
 		arg.ExpectedPoints,
 		arg.VariancePoints,
 		arg.StdPoints,
@@ -77,17 +107,17 @@ RETURNING id::text
 `
 
 type CreatePredictionBatchParams struct {
-	Column1              string
+	TournamentID         string
 	ProbabilitySourceKey string
-	Column3              []byte
+	GameOutcomeSpecJson  []byte
 	ThroughRound         int32
 }
 
 func (q *Queries) CreatePredictionBatch(ctx context.Context, arg CreatePredictionBatchParams) (string, error) {
 	row := q.db.QueryRow(ctx, createPredictionBatch,
-		arg.Column1,
+		arg.TournamentID,
 		arg.ProbabilitySourceKey,
-		arg.Column3,
+		arg.GameOutcomeSpecJson,
 		arg.ThroughRound,
 	)
 	var id string
@@ -414,26 +444,26 @@ func (q *Queries) ListPredictionBatches(ctx context.Context, dollar_1 string) ([
 const pruneOldBatchesForCheckpoint = `-- name: PruneOldBatchesForCheckpoint :execrows
 DELETE FROM compute.prediction_batches pb_outer
 WHERE pb_outer.tournament_id = $1::uuid
-    AND pb_outer.through_round = $3
+    AND pb_outer.through_round = $2
     AND pb_outer.deleted_at IS NULL
     AND pb_outer.id NOT IN (
         SELECT pb_inner.id FROM compute.prediction_batches pb_inner
         WHERE pb_inner.tournament_id = $1::uuid
-            AND pb_inner.through_round = $3
+            AND pb_inner.through_round = $2
             AND pb_inner.deleted_at IS NULL
         ORDER BY pb_inner.created_at DESC
-        LIMIT $2
+        LIMIT $3
     )
 `
 
 type PruneOldBatchesForCheckpointParams struct {
-	Column1      string
-	Limit        int32
+	TournamentID string
 	ThroughRound int32
+	KeepN        int32
 }
 
 func (q *Queries) PruneOldBatchesForCheckpoint(ctx context.Context, arg PruneOldBatchesForCheckpointParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneOldBatchesForCheckpoint, arg.Column1, arg.Limit, arg.ThroughRound)
+	result, err := q.db.Exec(ctx, pruneOldBatchesForCheckpoint, arg.TournamentID, arg.ThroughRound, arg.KeepN)
 	if err != nil {
 		return 0, err
 	}

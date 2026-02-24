@@ -66,7 +66,7 @@ const epsilon = 0.001
 // enrichBids
 // ---------------------------------------------------------------------------
 
-func TestThatEnrichBidsComputesCorrectNaivePointsForSingleTeam(t *testing.T) {
+func TestThatEnrichBidsComputesCorrectRationalPointsForSingleTeam(t *testing.T) {
 	// GIVEN a single team with 100% of expected points and 1000 budget
 	raw := &models.LabEntryRaw{
 		Teams: map[string]models.LabTeamInfo{
@@ -83,17 +83,17 @@ func TestThatEnrichBidsComputesCorrectNaivePointsForSingleTeam(t *testing.T) {
 	// WHEN enriching bids
 	result := enrichBids(raw, teamEP, totalEP, totalBudget)
 
-	// THEN naive points for the only team equals the full budget
+	// THEN rational points for the only team equals the full budget
 	bid := findBidByTeamID(result, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
 	}
-	if bid.NaivePoints != 1000 {
-		t.Errorf("expected naive points 1000, got %d", bid.NaivePoints)
+	if bid.RationalPoints != 1000 {
+		t.Errorf("expected rational points 1000, got %d", bid.RationalPoints)
 	}
 }
 
-func TestThatEnrichBidsComputesProportionalNaivePoints(t *testing.T) {
+func TestThatEnrichBidsComputesProportionalRationalPoints(t *testing.T) {
 	// GIVEN two teams where team-a has 75% of expected points and budget is 1000
 	raw := &models.LabEntryRaw{
 		Teams: map[string]models.LabTeamInfo{
@@ -112,18 +112,18 @@ func TestThatEnrichBidsComputesProportionalNaivePoints(t *testing.T) {
 	// WHEN enriching bids
 	result := enrichBids(raw, teamEP, totalEP, totalBudget)
 
-	// THEN team-a gets 75% of budget = 750 naive points
+	// THEN team-a gets 75% of budget = 750 rational points
 	bid := findBidByTeamID(result, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
 	}
-	if bid.NaivePoints != 750 {
-		t.Errorf("expected naive points 750, got %d", bid.NaivePoints)
+	if bid.RationalPoints != 750 {
+		t.Errorf("expected rational points 750, got %d", bid.RationalPoints)
 	}
 }
 
 func TestThatEnrichBidsComputesPositiveEdgeForUndervaluedTeam(t *testing.T) {
-	// GIVEN a team whose actual bid (200) is lower than its naive allocation (750)
+	// GIVEN a team whose actual bid (200) is lower than its rational allocation (750)
 	raw := &models.LabEntryRaw{
 		Teams: map[string]models.LabTeamInfo{
 			"team-a": {Name: "Duke", Seed: 1, Region: "East"},
@@ -141,7 +141,7 @@ func TestThatEnrichBidsComputesPositiveEdgeForUndervaluedTeam(t *testing.T) {
 	// WHEN enriching bids
 	result := enrichBids(raw, teamEP, totalEP, totalBudget)
 
-	// THEN team-a has positive edge percent (undervalued: naive 750 > bid 200)
+	// THEN team-a has positive edge percent (undervalued: rational 750 > bid 200)
 	bid := findBidByTeamID(result, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
@@ -153,7 +153,7 @@ func TestThatEnrichBidsComputesPositiveEdgeForUndervaluedTeam(t *testing.T) {
 }
 
 func TestThatEnrichBidsComputesNegativeEdgeForOvervaluedTeam(t *testing.T) {
-	// GIVEN a team whose actual bid (800) is higher than its naive allocation (250)
+	// GIVEN a team whose actual bid (800) is higher than its rational allocation (250)
 	raw := &models.LabEntryRaw{
 		Teams: map[string]models.LabTeamInfo{
 			"team-a": {Name: "Duke", Seed: 1, Region: "East"},
@@ -171,7 +171,7 @@ func TestThatEnrichBidsComputesNegativeEdgeForOvervaluedTeam(t *testing.T) {
 	// WHEN enriching bids
 	result := enrichBids(raw, teamEP, totalEP, totalBudget)
 
-	// THEN team-b has negative edge percent (overvalued: naive 250 < bid 800)
+	// THEN team-b has negative edge percent (overvalued: rational 250 < bid 800)
 	bid := findBidByTeamID(result, "team-b")
 	if bid == nil {
 		t.Fatal("expected bid for team-b")
@@ -183,7 +183,7 @@ func TestThatEnrichBidsComputesNegativeEdgeForOvervaluedTeam(t *testing.T) {
 }
 
 func TestThatEnrichBidsComputesCorrectEdgePercentValue(t *testing.T) {
-	// GIVEN a team with naive points 750 and bid 200
+	// GIVEN a team with rational points 750 and bid 200
 	raw := &models.LabEntryRaw{
 		Teams: map[string]models.LabTeamInfo{
 			"team-a": {Name: "Duke", Seed: 1, Region: "East"},
@@ -398,8 +398,8 @@ func TestThatEnrichBidsPreservesNilExpectedROI(t *testing.T) {
 	}
 }
 
-func TestThatEnrichBidsEdgePercentIsZeroWhenNaivePointsIsZero(t *testing.T) {
-	// GIVEN a team with zero expected points (naive points will be 0)
+func TestThatEnrichBidsEdgePercentIsZeroWhenRationalPointsIsZero(t *testing.T) {
+	// GIVEN a team with zero expected points (rational points will be 0)
 	raw := &models.LabEntryRaw{
 		Teams: map[string]models.LabTeamInfo{
 			"team-a": {Name: "Duke", Seed: 1, Region: "East"},
@@ -421,7 +421,7 @@ func TestThatEnrichBidsEdgePercentIsZeroWhenNaivePointsIsZero(t *testing.T) {
 		t.Fatal("expected bid for team-a")
 	}
 	if bid.EdgePercent != 0.0 {
-		t.Errorf("expected edge percent 0.0 when naive is zero, got %f", bid.EdgePercent)
+		t.Errorf("expected edge percent 0.0 when rational is zero, got %f", bid.EdgePercent)
 	}
 }
 
@@ -440,13 +440,13 @@ func TestThatEnrichBidsHandlesZeroTotalBudget(t *testing.T) {
 	// WHEN enriching bids
 	result := enrichBids(raw, teamEP, totalEP, totalBudget)
 
-	// THEN naive points is zero (no budget to allocate)
+	// THEN rational points is zero (no budget to allocate)
 	bid := findBidByTeamID(result, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
 	}
-	if bid.NaivePoints != 0 {
-		t.Errorf("expected 0 naive points with zero budget, got %d", bid.NaivePoints)
+	if bid.RationalPoints != 0 {
+		t.Errorf("expected 0 rational points with zero budget, got %d", bid.RationalPoints)
 	}
 }
 
@@ -669,12 +669,12 @@ func TestThatEnrichEntryComputesBudgetFromBidSum(t *testing.T) {
 	// WHEN enriching the entry
 	result := EnrichEntry(raw)
 
-	// THEN each team gets 50% naive allocation = 500 each (equal seeds)
+	// THEN each team gets 50% rational allocation = 500 each (equal seeds)
 	bid := findBidByTeamID(result.Bids, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
 	}
-	if bid.NaivePoints != 500 {
-		t.Errorf("expected naive points 500 for equal-seed team with 1000 budget, got %d", bid.NaivePoints)
+	if bid.RationalPoints != 500 {
+		t.Errorf("expected rational points 500 for equal-seed team with 1000 budget, got %d", bid.RationalPoints)
 	}
 }

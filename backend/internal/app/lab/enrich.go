@@ -12,7 +12,7 @@ var SeedExpectedPoints = map[int]float64{
 }
 
 // EnrichEntry transforms a raw entry (from the database) into an enriched entry
-// with naive allocation, edge percent, and ROI calculations. This function is
+// with rational allocation, edge percent, and ROI calculations. This function is
 // pure (no DB access) -- all required data is passed in via the raw entry.
 func EnrichEntry(raw *models.LabEntryRaw) *models.LabEntryDetailEnriched {
 	result := &models.LabEntryDetailEnriched{
@@ -36,7 +36,7 @@ func EnrichEntry(raw *models.LabEntryRaw) *models.LabEntryDetailEnriched {
 	teamExpectedPoints := buildTeamExpectedPoints(raw)
 	totalExpectedPoints := sumValues(teamExpectedPoints)
 
-	// Calculate total budget from our bids (for naive allocation comparison).
+	// Calculate total budget from our bids (for rational allocation comparison).
 	totalBudget := 0
 	for _, b := range raw.Bids {
 		totalBudget += b.BidPoints
@@ -79,7 +79,7 @@ func sumValues(m map[string]float64) float64 {
 }
 
 // enrichBids builds enriched bids for ALL teams (not just those with bids > 0),
-// computing naive allocation and edge percent for each.
+// computing rational allocation and edge percent for each.
 func enrichBids(raw *models.LabEntryRaw, teamExpectedPoints map[string]float64, totalExpectedPoints float64, totalBudget int) []models.LabEnrichedBid {
 	// Index raw bids by team ID.
 	bidPointsByTeam := make(map[string]int, len(raw.Bids))
@@ -93,32 +93,32 @@ func enrichBids(raw *models.LabEntryRaw, teamExpectedPoints map[string]float64, 
 	for tid, ti := range raw.Teams {
 		bidPoints := bidPointsByTeam[tid] // 0 if not in map
 
-		// Naive allocation: team's expected points / total expected points * budget
-		naiveShare := teamExpectedPoints[tid] / totalExpectedPoints
-		naivePoints := int(naiveShare * float64(totalBudget))
+		// Rational allocation: team's expected points / total expected points * budget
+		rationalShare := teamExpectedPoints[tid] / totalExpectedPoints
+		rationalPoints := int(rationalShare * float64(totalBudget))
 
-		// Edge: (naive - bid) / naive * 100 (positive = undervalued opportunity)
+		// Edge: (rational - bid) / rational * 100 (positive = undervalued opportunity)
 		edgePercent := 0.0
-		if naivePoints > 0 {
-			edgePercent = float64(naivePoints-bidPoints) / float64(naivePoints) * 100
+		if rationalPoints > 0 {
+			edgePercent = float64(rationalPoints-bidPoints) / float64(rationalPoints) * 100
 		}
 
 		enriched = append(enriched, models.LabEnrichedBid{
-			TeamID:      tid,
-			SchoolName:  ti.Name,
-			Seed:        ti.Seed,
-			Region:      ti.Region,
-			BidPoints:   bidPoints,
-			NaivePoints: naivePoints,
-			EdgePercent: edgePercent,
-			ExpectedROI: expectedROIByTeam[tid],
+			TeamID:         tid,
+			SchoolName:     ti.Name,
+			Seed:           ti.Seed,
+			Region:         ti.Region,
+			BidPoints:      bidPoints,
+			RationalPoints: rationalPoints,
+			EdgePercent:    edgePercent,
+			ExpectedROI:    expectedROIByTeam[tid],
 		})
 	}
 	return enriched
 }
 
 // enrichPredictions builds enriched predictions with predicted bid points,
-// expected ROI, naive allocation, and edge percent.
+// expected ROI, rational allocation, and edge percent.
 func enrichPredictions(raw *models.LabEntryRaw, teamExpectedPoints map[string]float64, totalExpectedPoints float64) []models.LabEnrichedPrediction {
 	enriched := make([]models.LabEnrichedPrediction, 0, len(raw.Predictions))
 	for _, p := range raw.Predictions {
@@ -136,14 +136,14 @@ func enrichPredictions(raw *models.LabEntryRaw, teamExpectedPoints map[string]fl
 			expectedROI = p.ExpectedPoints / float64(predictedBidPoints)
 		}
 
-		// Naive allocation for comparison (also uses total pool budget for predictions).
-		naiveShare := teamExpectedPoints[p.TeamID] / totalExpectedPoints
-		naivePoints := int(naiveShare * float64(raw.TotalPoolBudget))
+		// Rational allocation for comparison (also uses total pool budget for predictions).
+		rationalShare := teamExpectedPoints[p.TeamID] / totalExpectedPoints
+		rationalPoints := int(rationalShare * float64(raw.TotalPoolBudget))
 
-		// Edge: (naive - predicted) / naive * 100
+		// Edge: (rational - predicted) / rational * 100
 		edgePercent := 0.0
-		if naivePoints > 0 {
-			edgePercent = float64(naivePoints-predictedBidPoints) / float64(naivePoints) * 100
+		if rationalPoints > 0 {
+			edgePercent = float64(rationalPoints-predictedBidPoints) / float64(rationalPoints) * 100
 		}
 
 		enriched = append(enriched, models.LabEnrichedPrediction{
@@ -155,7 +155,7 @@ func enrichPredictions(raw *models.LabEntryRaw, teamExpectedPoints map[string]fl
 			PredictedBidPoints:   predictedBidPoints,
 			ExpectedPoints:       p.ExpectedPoints,
 			ExpectedROI:          expectedROI,
-			NaivePoints:          naivePoints,
+			RationalPoints:       rationalPoints,
 			EdgePercent:          edgePercent,
 		})
 	}

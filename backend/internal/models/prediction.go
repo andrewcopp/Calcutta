@@ -10,8 +10,10 @@ type PredictionBatchSummary struct {
 	CreatedAt            time.Time
 }
 
-// PredictedTeamValue is the output of prediction calculations.
-// Contains expected points and round-by-round advancement probabilities.
+// PredictedTeamValue holds tournament outcome predictions for a single team,
+// derived from KenPom-based simulations. These are NOT market predictions —
+// they represent how a team is expected to perform in the tournament
+// (advancement probabilities and expected scoring points).
 type PredictedTeamValue struct {
 	TeamID         string
 	ExpectedPoints float64

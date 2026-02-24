@@ -29,7 +29,7 @@ interface EntryRow {
   schoolName: string;
   seed: number;
   region: string;
-  predPerformance: number; // naivePoints (budget-normalized expected value, same as Rational)
+  predPerformance: number; // rationalPoints (budget-normalized expected value, same as Rational)
   predInvestment: number; // predictedBidPoints from predictions
   ourInvestment: number; // bidPoints from bids
   predRoi: number; // predPerformance / predInvestment

@@ -80,7 +80,7 @@ export function EntryDetailPage() {
           cmp = a.schoolName.localeCompare(b.schoolName);
           break;
         case 'rational':
-          cmp = b.naivePoints - a.naivePoints;
+          cmp = b.rationalPoints - a.rationalPoints;
           break;
         case 'predicted':
           cmp = b.predictedBidPoints - a.predictedBidPoints;

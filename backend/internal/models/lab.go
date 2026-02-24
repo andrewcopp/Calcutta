@@ -64,7 +64,7 @@ type LabEnrichedPrediction struct {
 	PredictedBidPoints   int     `json:"predictedBidPoints"`
 	ExpectedPoints       float64 `json:"expectedPoints"`
 	ExpectedROI          float64 `json:"expectedRoi"`
-	NaivePoints          int     `json:"naivePoints"`
+	RationalPoints       int     `json:"rationalPoints"`
 	EdgePercent          float64 `json:"edgePercent"`
 }
 
@@ -75,16 +75,16 @@ type LabEntryBid struct {
 	ExpectedROI *float64 `json:"expectedRoi,omitempty"`
 }
 
-// LabEnrichedBid is LabEntryBid with team details and naive allocation for display.
+// LabEnrichedBid is LabEntryBid with team details and rational allocation for display.
 type LabEnrichedBid struct {
-	TeamID      string   `json:"teamId"`
-	SchoolName  string   `json:"schoolName"`
-	Seed        int      `json:"seed"`
-	Region      string   `json:"region"`
-	BidPoints   int      `json:"bidPoints"`
-	NaivePoints int      `json:"naivePoints"`
-	EdgePercent float64  `json:"edgePercent"`
-	ExpectedROI *float64 `json:"expectedRoi,omitempty"`
+	TeamID         string   `json:"teamId"`
+	SchoolName     string   `json:"schoolName"`
+	Seed           int      `json:"seed"`
+	Region         string   `json:"region"`
+	BidPoints      int      `json:"bidPoints"`
+	RationalPoints int      `json:"rationalPoints"`
+	EdgePercent    float64  `json:"edgePercent"`
+	ExpectedROI    *float64 `json:"expectedRoi,omitempty"`
 }
 
 // LabTeamInfo holds team metadata used during enrichment.

@@ -74,7 +74,7 @@ INSERT INTO compute.prediction_batches (
     game_outcome_spec_json,
     through_round
 )
-VALUES ($1::uuid, $2, $3::jsonb, $4)
+VALUES (sqlc.arg(tournament_id)::uuid, sqlc.arg(probability_source_key), sqlc.arg(game_outcome_spec_json)::jsonb, sqlc.arg(through_round))
 RETURNING id::text;
 
 -- name: CreatePredictedTeamValue :exec
@@ -93,20 +93,41 @@ INSERT INTO compute.predicted_team_values (
     p_round_6,
     p_round_7
 )
-VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+VALUES (
+    sqlc.arg(prediction_batch_id)::uuid,
+    sqlc.arg(tournament_id)::uuid,
+    sqlc.arg(team_id)::uuid,
+    sqlc.arg(expected_points),
+    sqlc.arg(variance_points),
+    sqlc.arg(std_points),
+    sqlc.arg(p_round_1),
+    sqlc.arg(p_round_2),
+    sqlc.arg(p_round_3),
+    sqlc.arg(p_round_4),
+    sqlc.arg(p_round_5),
+    sqlc.arg(p_round_6),
+    sqlc.arg(p_round_7)
+);
+
+-- name: BulkCreatePredictedTeamValues :copyfrom
+INSERT INTO compute.predicted_team_values (
+    prediction_batch_id, tournament_id, team_id,
+    expected_points, variance_points, std_points,
+    p_round_1, p_round_2, p_round_3, p_round_4, p_round_5, p_round_6, p_round_7
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
 
 -- name: PruneOldBatchesForCheckpoint :execrows
 DELETE FROM compute.prediction_batches pb_outer
-WHERE pb_outer.tournament_id = $1::uuid
-    AND pb_outer.through_round = $3
+WHERE pb_outer.tournament_id = sqlc.arg(tournament_id)::uuid
+    AND pb_outer.through_round = sqlc.arg(through_round)
     AND pb_outer.deleted_at IS NULL
     AND pb_outer.id NOT IN (
         SELECT pb_inner.id FROM compute.prediction_batches pb_inner
-        WHERE pb_inner.tournament_id = $1::uuid
-            AND pb_inner.through_round = $3
+        WHERE pb_inner.tournament_id = sqlc.arg(tournament_id)::uuid
+            AND pb_inner.through_round = sqlc.arg(through_round)
             AND pb_inner.deleted_at IS NULL
         ORDER BY pb_inner.created_at DESC
-        LIMIT $2
+        LIMIT sqlc.arg(keep_n)
     );
 
 -- name: ListEligibleTournamentsForBackfill :many

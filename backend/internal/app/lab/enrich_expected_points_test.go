@@ -189,20 +189,20 @@ func TestThatEnrichEntryUsessSeedFallbackWhenNoPredictions(t *testing.T) {
 	// WHEN enriching the entry
 	result := EnrichEntry(raw)
 
-	// THEN team-a (seed 1) naive allocation is proportional to seed 1 expected points
+	// THEN team-a (seed 1) rational allocation is proportional to seed 1 expected points
 	// seed 1 = 320, seed 16 = 1, total = 321
-	// naive for team-a = 320/321 * 1000 = 996 (int truncation)
+	// rational for team-a = 320/321 * 1000 = 996 (int truncation)
 	bid := findBidByTeamID(result.Bids, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
 	}
-	expectedNaive := int(SeedExpectedPoints[1] / (SeedExpectedPoints[1] + SeedExpectedPoints[16]) * 1000.0)
-	if bid.NaivePoints != expectedNaive {
-		t.Errorf("expected naive points %d, got %d", expectedNaive, bid.NaivePoints)
+	expectedRational := int(SeedExpectedPoints[1] / (SeedExpectedPoints[1] + SeedExpectedPoints[16]) * 1000.0)
+	if bid.RationalPoints != expectedRational {
+		t.Errorf("expected rational points %d, got %d", expectedRational, bid.RationalPoints)
 	}
 }
 
-func TestThatEnrichEntryUsesPredictionExpectedPointsForNaiveAllocation(t *testing.T) {
+func TestThatEnrichEntryUsesPredictionExpectedPointsForRationalAllocation(t *testing.T) {
 	// GIVEN an entry with predictions
 	raw := &models.LabEntryRaw{
 		ID:              "entry-1",
@@ -222,13 +222,13 @@ func TestThatEnrichEntryUsesPredictionExpectedPointsForNaiveAllocation(t *testin
 	// WHEN enriching the entry
 	result := EnrichEntry(raw)
 
-	// THEN bid naive allocation uses prediction expected points (600/(600+400) * 1000 = 600)
+	// THEN bid rational allocation uses prediction expected points (600/(600+400) * 1000 = 600)
 	bid := findBidByTeamID(result.Bids, "team-a")
 	if bid == nil {
 		t.Fatal("expected bid for team-a")
 	}
-	expectedNaive := int(600.0 / 1000.0 * 1000.0)
-	if bid.NaivePoints != expectedNaive {
-		t.Errorf("expected naive points %d, got %d", expectedNaive, bid.NaivePoints)
+	expectedRational := int(600.0 / 1000.0 * 1000.0)
+	if bid.RationalPoints != expectedRational {
+		t.Errorf("expected rational points %d, got %d", expectedRational, bid.RationalPoints)
 	}
 }

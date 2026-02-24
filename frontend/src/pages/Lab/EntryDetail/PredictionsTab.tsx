@@ -53,7 +53,7 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
   const excludedEntryName = optimizerParams?.excluded_entry_name as string | undefined;
 
   // Summary stats
-  const totalRational = predictions.reduce((sum, p) => sum + p.naivePoints, 0);
+  const totalRational = predictions.reduce((sum, p) => sum + p.rationalPoints, 0);
   const totalPredicted = predictions.reduce((sum, p) => sum + p.predictedBidPoints, 0);
 
   // Find biggest edge opportunities (where market might undervalue)
@@ -164,7 +164,7 @@ export function PredictionsTab({ predictions, sortKey, sortDir, onSort, optimize
                   <td className="px-3 py-2 text-sm text-foreground text-center">{pred.seed}</td>
                   <td className="px-3 py-2 text-sm text-muted-foreground">{pred.region}</td>
                   <td className="px-3 py-2 text-sm text-foreground text-right font-medium tabular-nums">
-                    {pred.naivePoints}
+                    {pred.rationalPoints}
                   </td>
                   <td className="px-3 py-2 text-sm text-foreground text-right font-medium tabular-nums">
                     {pred.predictedBidPoints}

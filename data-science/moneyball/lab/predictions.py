@@ -30,7 +30,7 @@ from moneyball.db.readers import (
 from moneyball.lab.models import (
     Entry,
     InvestmentModel,
-    Prediction,
+    MarketPrediction,
     create_entry_with_predictions,
     get_investment_model,
 )
@@ -164,9 +164,9 @@ def _map_predictions(
     predictions_df: pd.DataFrame,
     team_id_map: dict,
     expected_points_map: dict,
-) -> List[Prediction]:
+) -> List[MarketPrediction]:
     """
-    Map model predictions to Prediction objects using team IDs and expected points.
+    Map model predictions to MarketPrediction objects using team IDs and expected points.
 
     Iterates over predictions_df rows, resolving each team_slug to a team UUID
     and expected tournament points. Fails fast on missing expected points and
@@ -178,7 +178,7 @@ def _map_predictions(
         expected_points_map: Mapping from school_slug to expected tournament points.
 
     Returns:
-        List of Prediction objects, one per row in predictions_df that maps
+        List of MarketPrediction objects, one per row in predictions_df that maps
         successfully. Returns an empty list when predictions_df has no rows.
 
     Raises:
@@ -191,7 +191,7 @@ def _map_predictions(
         context="_map_predictions input",
     )
 
-    predictions: List[Prediction] = []
+    predictions: List[MarketPrediction] = []
     skipped_slugs: List[str] = []
     for _, row in predictions_df.iterrows():
         team_slug = row["team_slug"]
@@ -210,7 +210,7 @@ def _map_predictions(
             )
 
         predictions.append(
-            Prediction(
+            MarketPrediction(
                 team_id=team_id,
                 predicted_market_share=predicted_share,
                 expected_points=expected_points,

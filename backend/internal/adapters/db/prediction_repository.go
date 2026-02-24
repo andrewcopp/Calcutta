@@ -176,34 +176,35 @@ func (r *PredictionRepository) StorePredictions(
 	qtx := r.q.WithTx(tx)
 
 	batchID, err := qtx.CreatePredictionBatch(ctx, sqlc.CreatePredictionBatchParams{
-		Column1:              tournamentID,
+		TournamentID:         tournamentID,
 		ProbabilitySourceKey: probSourceKey,
-		Column3:              specJSON,
+		GameOutcomeSpecJson:  specJSON,
 		ThroughRound:         int32(throughRound),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create batch: %w", err)
 	}
 
-	for _, v := range values {
-		err = qtx.CreatePredictedTeamValue(ctx, sqlc.CreatePredictedTeamValueParams{
-			Column1:        batchID,
-			Column2:        tournamentID,
-			Column3:        v.TeamID,
-			ExpectedPoints: v.ExpectedPoints,
-			VariancePoints: &v.VariancePoints,
-			StdPoints:      &v.StdPoints,
-			PRound1:        &v.PRound1,
-			PRound2:        &v.PRound2,
-			PRound3:        &v.PRound3,
-			PRound4:        &v.PRound4,
-			PRound5:        &v.PRound5,
-			PRound6:        &v.PRound6,
-			PRound7:        &v.PRound7,
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to insert team value for %s: %w", v.TeamID, err)
+	bulkParams := make([]sqlc.BulkCreatePredictedTeamValuesParams, len(values))
+	for i, v := range values {
+		bulkParams[i] = sqlc.BulkCreatePredictedTeamValuesParams{
+			PredictionBatchID: batchID,
+			TournamentID:      tournamentID,
+			TeamID:            v.TeamID,
+			ExpectedPoints:    v.ExpectedPoints,
+			VariancePoints:    &v.VariancePoints,
+			StdPoints:         &v.StdPoints,
+			PRound1:           &v.PRound1,
+			PRound2:           &v.PRound2,
+			PRound3:           &v.PRound3,
+			PRound4:           &v.PRound4,
+			PRound5:           &v.PRound5,
+			PRound6:           &v.PRound6,
+			PRound7:           &v.PRound7,
 		}
+	}
+	if _, err := qtx.BulkCreatePredictedTeamValues(ctx, bulkParams); err != nil {
+		return "", fmt.Errorf("failed to bulk insert team values: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -215,8 +216,8 @@ func (r *PredictionRepository) StorePredictions(
 
 func (r *PredictionRepository) PruneOldBatchesForCheckpoint(ctx context.Context, tournamentID string, throughRound int, keepN int) (int64, error) {
 	return r.q.PruneOldBatchesForCheckpoint(ctx, sqlc.PruneOldBatchesForCheckpointParams{
-		Column1:      tournamentID,
-		Limit:        int32(keepN),
+		TournamentID: tournamentID,
+		KeepN:        int32(keepN),
 		ThroughRound: int32(throughRound),
 	})
 }

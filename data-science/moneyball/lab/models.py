@@ -54,7 +54,7 @@ class InvestmentModel:
 
 
 @dataclass
-class Prediction:
+class MarketPrediction:
     """A market prediction for a single team.
 
     This represents what the model predicts THE MARKET will bid.
@@ -66,10 +66,10 @@ class Prediction:
 
     def __post_init__(self) -> None:
         if not self.team_id:
-            raise ValueError("Prediction.team_id must not be empty")
+            raise ValueError("MarketPrediction.team_id must not be empty")
         if self.predicted_market_share < 0:
             raise ValueError(
-                f"Prediction.predicted_market_share must be non-negative, "
+                f"MarketPrediction.predicted_market_share must be non-negative, "
                 f"got {self.predicted_market_share}"
             )
 
@@ -91,7 +91,7 @@ class Entry:
     optimizer_kind: str
     optimizer_params: Dict[str, Any]
     starting_state_key: str
-    predictions: List[Prediction]  # Market predictions
+    predictions: List[MarketPrediction]  # Market predictions
     bids: List[Any]  # Optimized bids
     created_at: Optional[datetime] = None
 
@@ -206,16 +206,16 @@ def get_or_create_investment_model(
     return create_investment_model(name, kind, params, notes), True
 
 
-def serialize_predictions(predictions: List[Prediction]) -> List[Dict[str, Any]]:
+def serialize_predictions(predictions: List[MarketPrediction]) -> List[Dict[str, Any]]:
     """
-    Serialize Prediction objects to JSON-ready dicts.
+    Serialize MarketPrediction objects to JSON-ready dicts.
 
     This is the canonical serialization format used when writing predictions
     to lab.entries.predictions_json. Extracted as a pure function so it can
     be tested independently of the database.
 
     Args:
-        predictions: List of Prediction objects
+        predictions: List of MarketPrediction objects
 
     Returns:
         List of dicts with teamId, predictedMarketShare, expectedPoints
@@ -233,7 +233,7 @@ def serialize_predictions(predictions: List[Prediction]) -> List[Dict[str, Any]]
 def create_entry_with_predictions(
     investment_model_id: str,
     calcutta_id: str,
-    predictions: List[Prediction],
+    predictions: List[MarketPrediction],
     game_outcome_kind: str = "kenpom",
     game_outcome_params: Optional[Dict[str, Any]] = None,
     starting_state_key: str = "post_first_four",
@@ -248,7 +248,7 @@ def create_entry_with_predictions(
     Args:
         investment_model_id: ID of the investment model that generated predictions
         calcutta_id: ID of the calcutta
-        predictions: List of Prediction objects with market predictions
+        predictions: List of MarketPrediction objects with market predictions
         game_outcome_kind: Game outcome model type (default: kenpom)
         game_outcome_params: Game outcome model parameters
         starting_state_key: Tournament state

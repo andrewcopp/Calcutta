@@ -7,17 +7,17 @@ Tests the JSON serialization logic extracted from create_entry_with_predictions(
 import json
 import unittest
 
-from moneyball.lab.models import Prediction, serialize_predictions, validate_model_params
+from moneyball.lab.models import MarketPrediction, serialize_predictions, validate_model_params
 
 
 class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
     """Test serialize_predictions() produces the expected JSON structure."""
 
     def test_that_single_prediction_serializes_all_fields(self) -> None:
-        """A single Prediction should serialize to a dict with all three fields."""
+        """A single MarketPrediction should serialize to a dict with all three fields."""
         # GIVEN a single prediction
         predictions = [
-            Prediction(
+            MarketPrediction(
                 team_id="team-abc",
                 predicted_market_share=0.08,
                 expected_points=12.5,
@@ -34,12 +34,12 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         self.assertAlmostEqual(result[0]["expectedPoints"], 12.5)
 
     def test_that_multiple_predictions_preserve_order(self) -> None:
-        """Multiple Predictions should serialize in the same order they appear."""
+        """Multiple MarketPredictions should serialize in the same order they appear."""
         # GIVEN three predictions in a specific order
         predictions = [
-            Prediction(team_id="team-a", predicted_market_share=0.10, expected_points=15.0),
-            Prediction(team_id="team-b", predicted_market_share=0.05, expected_points=8.0),
-            Prediction(team_id="team-c", predicted_market_share=0.02, expected_points=3.0),
+            MarketPrediction(team_id="team-a", predicted_market_share=0.10, expected_points=15.0),
+            MarketPrediction(team_id="team-b", predicted_market_share=0.05, expected_points=8.0),
+            MarketPrediction(team_id="team-c", predicted_market_share=0.02, expected_points=3.0),
         ]
 
         # WHEN serializing
@@ -63,8 +63,8 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         """The serialized output must be valid JSON (no dataclass objects, no numpy types)."""
         # GIVEN predictions with various numeric values
         predictions = [
-            Prediction(team_id="team-1", predicted_market_share=0.123456789, expected_points=0.0),
-            Prediction(team_id="team-2", predicted_market_share=0.0, expected_points=999.99),
+            MarketPrediction(team_id="team-1", predicted_market_share=0.123456789, expected_points=0.0),
+            MarketPrediction(team_id="team-2", predicted_market_share=0.0, expected_points=999.99),
         ]
 
         # WHEN serializing and converting to JSON string
@@ -81,7 +81,7 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         """Each serialized prediction should have exactly teamId, predictedMarketShare, expectedPoints."""
         # GIVEN a prediction
         predictions = [
-            Prediction(team_id="team-x", predicted_market_share=0.05, expected_points=7.0),
+            MarketPrediction(team_id="team-x", predicted_market_share=0.05, expected_points=7.0),
         ]
 
         # WHEN serializing
@@ -95,7 +95,7 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         """A prediction with zero market share should not be dropped or altered."""
         # GIVEN a prediction with zero market share
         predictions = [
-            Prediction(team_id="team-16", predicted_market_share=0.0, expected_points=0.5),
+            MarketPrediction(team_id="team-16", predicted_market_share=0.0, expected_points=0.5),
         ]
 
         # WHEN serializing
@@ -105,8 +105,8 @@ class TestThatSerializePredictionsProducesCorrectJson(unittest.TestCase):
         self.assertEqual(result[0]["predictedMarketShare"], 0.0)
 
 
-class TestThatPredictionRejectsInvalidFields(unittest.TestCase):
-    """Test Prediction.__post_init__ field validation."""
+class TestThatMarketPredictionRejectsInvalidFields(unittest.TestCase):
+    """Test MarketPrediction.__post_init__ field validation."""
 
     def test_that_empty_team_id_raises(self) -> None:
         """An empty team_id should raise ValueError."""
@@ -114,7 +114,7 @@ class TestThatPredictionRejectsInvalidFields(unittest.TestCase):
         # WHEN constructing
         # THEN ValueError is raised
         with self.assertRaises(ValueError):
-            Prediction(team_id="", predicted_market_share=0.05, expected_points=10.0)
+            MarketPrediction(team_id="", predicted_market_share=0.05, expected_points=10.0)
 
     def test_that_negative_market_share_raises(self) -> None:
         """A negative predicted_market_share should raise ValueError."""
@@ -122,12 +122,12 @@ class TestThatPredictionRejectsInvalidFields(unittest.TestCase):
         # WHEN constructing
         # THEN ValueError is raised
         with self.assertRaises(ValueError):
-            Prediction(team_id="team-a", predicted_market_share=-0.01, expected_points=10.0)
+            MarketPrediction(team_id="team-a", predicted_market_share=-0.01, expected_points=10.0)
 
     def test_that_zero_market_share_is_allowed(self) -> None:
         """Zero market share is a valid value (16-seed may get 0)."""
         # GIVEN zero market share
-        p = Prediction(team_id="team-a", predicted_market_share=0.0, expected_points=0.5)
+        p = MarketPrediction(team_id="team-a", predicted_market_share=0.0, expected_points=0.5)
 
         # THEN no exception is raised
         self.assertEqual(p.predicted_market_share, 0.0)

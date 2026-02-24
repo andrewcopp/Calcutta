@@ -63,7 +63,7 @@ func (s *Service) ListEntries(ctx context.Context, filter models.LabListEntriesF
 	return s.repo.ListEntries(ctx, filter, page)
 }
 
-// GetEntryEnriched returns a single entry with enriched bids (team names, seeds, naive allocation).
+// GetEntryEnriched returns a single entry with enriched bids (team names, seeds, rational allocation).
 func (s *Service) GetEntryEnriched(ctx context.Context, id string) (*models.LabEntryDetailEnriched, error) {
 	raw, err := s.repo.GetEntryRaw(ctx, id)
 	if err != nil {

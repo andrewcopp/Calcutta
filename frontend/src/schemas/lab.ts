@@ -24,7 +24,7 @@ export const EnrichedPredictionSchema = z.object({
   predictedBidPoints: z.number(),
   expectedPoints: z.number(),
   expectedRoi: z.number(),
-  naivePoints: z.number(),
+  rationalPoints: z.number(),
   edgePercent: z.number(),
 });
 
@@ -36,7 +36,7 @@ export const EnrichedBidSchema = z.object({
   seed: z.number(),
   region: z.string(),
   bidPoints: z.number(),
-  naivePoints: z.number(),
+  rationalPoints: z.number(),
   edgePercent: z.number(),
   expectedRoi: z.number().nullable().optional(),
 });
