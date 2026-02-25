@@ -96,17 +96,11 @@ func ComputeFavoritesBracket(
 	}
 
 	// Compute total points for each team.
-	// At pre-tournament (throughRound==0), the R128 favorites bracket already accounts
-	// for play-in survival (BYE wins and FF wins), so byes from the DB are zeroed to
-	// avoid double-counting. At checkpoints (throughRound>0), R128 is already resolved
-	// and byes reflect actual progress.
+	// Team progress (Wins/Byes) is already capped to throughRound by NewTournamentState,
+	// so no special-casing is needed here.
 	result := make(map[string]float64, len(allTeams))
 	for _, t := range allTeams {
-		byes := t.Byes
-		if throughRound == 0 {
-			byes = 0
-		}
-		totalProgress := t.Wins + favoritesWins[t.ID] + byes
+		totalProgress := t.Wins + favoritesWins[t.ID] + t.Byes
 		result[t.ID] = float64(scoring.PointsForProgress(rules, totalProgress, 0))
 	}
 

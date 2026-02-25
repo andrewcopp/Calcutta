@@ -262,6 +262,40 @@ func TestThatCheckpointOneEVSumsToExpectedTotal(t *testing.T) {
 	}
 }
 
+func TestThatCompletedTournamentAtCheckpointZeroSumsToExpectedTotal(t *testing.T) {
+	// GIVEN a 68-team field with final wins/byes (as if tournament is complete)
+	teams := generateTestTeams()
+	for i := range teams {
+		teams[i].Byes = 1
+		if i == 0 {
+			teams[i].Wins = 6 // champion
+		} else if i < 4 {
+			teams[i].Wins = 4 // F4 losers
+		} else if i < 8 {
+			teams[i].Wins = 3 // E8 losers
+		} else {
+			teams[i].Wins = 1 // early losers
+		}
+	}
+	rules := DefaultScoringRules()
+	data := &TournamentData{Teams: teams, Rules: rules}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+
+	// WHEN generating predictions at throughRound=0 (pre-tournament checkpoint)
+	state := NewTournamentState(data, 0)
+	values, err := generatePredictions(state, spec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	evSum := sumExpectedPoints(values)
+
+	// THEN EV sum equals the tournament total (1920), not inflated by final progress
+	expected := expectedTournamentTotal(rules, 128)
+	if math.Abs(evSum-expected) > 0.01 {
+		t.Errorf("EV sum = %.4f, expected %.1f", evSum, expected)
+	}
+}
+
 func TestThatCheckpointOneFavoritesSumToExpectedTotal(t *testing.T) {
 	// GIVEN a 68-team field at checkpoint 1 (First Four resolved)
 	teams := generateCheckpoint1Teams()

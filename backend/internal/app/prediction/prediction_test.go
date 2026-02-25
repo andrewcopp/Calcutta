@@ -942,22 +942,25 @@ func TestThatFavoritesTotalPointsAreSimilarAcrossCheckpoints(t *testing.T) {
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 	rules := DefaultScoringRules()
 
-	// Checkpoint 0
+	// Checkpoint 0: use NewTournamentState to cap team progress
 	teams0 := generateTestTeamsWithByes()
-	matchups0, err := GenerateMatchups(teams0, 0, spec, nil)
+	data0 := &TournamentData{Teams: teams0, Rules: rules}
+	state0 := NewTournamentState(data0, 0)
+	matchups0, err := GenerateMatchups(state0.Survivors, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("checkpoint 0 matchups: %v", err)
 	}
-	fav0 := ComputeFavoritesBracket(teams0, matchups0, 0, rules)
+	fav0 := ComputeFavoritesBracket(state0.AllTeams, matchups0, 0, rules)
 
-	// Checkpoint 1
+	// Checkpoint 1: use NewTournamentState to cap team progress
 	teams1 := generateCheckpoint1Teams()
-	survivors1 := filterSurvivors(teams1, 1)
-	matchups1, err := GenerateMatchups(survivors1, 1, spec, nil)
+	data1 := &TournamentData{Teams: teams1, Rules: rules}
+	state1 := NewTournamentState(data1, 1)
+	matchups1, err := GenerateMatchups(state1.Survivors, 1, spec, nil)
 	if err != nil {
 		t.Fatalf("checkpoint 1 matchups: %v", err)
 	}
-	fav1 := ComputeFavoritesBracket(teams1, matchups1, 1, rules)
+	fav1 := ComputeFavoritesBracket(state1.AllTeams, matchups1, 1, rules)
 
 	// THEN the East 8-seed's Favorites total should be similar across checkpoints.
 	// Without the R64 fix, checkpoint 1 would miss R64 and produce much lower values.
@@ -990,6 +993,66 @@ func TestThatFavoritesBracketProcessesR64AtCheckpointOne(t *testing.T) {
 	team8Points := favMap["team-8"]
 	if team8Points < 10.0 {
 		t.Errorf("East 8-seed Favorites total = %.2f, expected >= 10 (R64 win should be included)", team8Points)
+	}
+}
+
+// --- capTeamProgress tests ---
+
+func TestThatCapTeamProgressReturnsUnchangedWhenBelowCap(t *testing.T) {
+	// GIVEN a team with progress 2
+	team := TeamInput{ID: "t1", Wins: 1, Byes: 1}
+
+	// WHEN capping at throughRound=3
+	capped := capTeamProgress(team, 3)
+
+	// THEN the team is unchanged
+	if capped.Wins != 1 || capped.Byes != 1 {
+		t.Errorf("expected Wins=1, Byes=1, got Wins=%d, Byes=%d", capped.Wins, capped.Byes)
+	}
+}
+
+func TestThatCapTeamProgressCapsToThroughRound(t *testing.T) {
+	// GIVEN a champion with Wins=6, Byes=1 (progress=7)
+	team := TeamInput{ID: "champ", Wins: 6, Byes: 1}
+
+	// WHEN capping at throughRound=0
+	capped := capTeamProgress(team, 0)
+
+	// THEN Wins=0, Byes=0
+	if capped.Wins != 0 || capped.Byes != 0 {
+		t.Errorf("expected Wins=0, Byes=0, got Wins=%d, Byes=%d", capped.Wins, capped.Byes)
+	}
+}
+
+func TestThatCapTeamProgressPreservesByesFirst(t *testing.T) {
+	// GIVEN a team with Wins=4, Byes=1 (progress=5)
+	team := TeamInput{ID: "t1", Wins: 4, Byes: 1}
+
+	// WHEN capping at throughRound=3
+	capped := capTeamProgress(team, 3)
+
+	// THEN Byes=1 preserved, Wins=2 (3 - 1)
+	if capped.Byes != 1 {
+		t.Errorf("expected Byes=1, got Byes=%d", capped.Byes)
+	}
+	if capped.Wins != 2 {
+		t.Errorf("expected Wins=2, got Wins=%d", capped.Wins)
+	}
+}
+
+func TestThatCapTeamProgressCapsWhenByesExceedThroughRound(t *testing.T) {
+	// GIVEN a team with Byes=3, Wins=0 (progress=3)
+	team := TeamInput{ID: "t1", Wins: 0, Byes: 3}
+
+	// WHEN capping at throughRound=2
+	capped := capTeamProgress(team, 2)
+
+	// THEN Byes=2, Wins=0
+	if capped.Byes != 2 {
+		t.Errorf("expected Byes=2, got Byes=%d", capped.Byes)
+	}
+	if capped.Wins != 0 {
+		t.Errorf("expected Wins=0, got Wins=%d", capped.Wins)
 	}
 }
 
