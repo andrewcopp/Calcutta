@@ -204,6 +204,55 @@ func TestThatChampionGetsExtraWinsInScoring(t *testing.T) {
 	}
 }
 
+func TestThatCompletedTournamentProducesSameResultsAsPreFinalFour(t *testing.T) {
+	// GIVEN two setups: one with pre-Final-Four progress, one with completed tournament
+	bracket := buildFinalFourBracket(
+		bracketTeam("A", "sa", 1, "East"),
+		bracketTeam("B", "sb", 2, "West"),
+		bracketTeam("C", "sc", 1, "South"),
+		bracketTeam("D", "sd", 2, "Midwest"),
+	)
+
+	entries := []*models.CalcuttaEntry{entry("e1")}
+	portfolios := []*models.CalcuttaPortfolio{portfolio("p1", "e1")}
+	pts := []*models.CalcuttaPortfolioTeam{portfolioTeam("p1", "A", 1.0)}
+	rounds := []*models.CalcuttaRound{
+		round(1, 10), round(2, 10), round(3, 10), round(4, 10),
+		round(5, 10), round(6, 10), round(7, 10),
+	}
+	payouts := []*models.CalcuttaPayout{}
+
+	// Pre-Final-Four: all teams at 4 wins + 1 bye = 5 progress
+	preTTs := []*models.TournamentTeam{
+		tournamentTeam("A", 4, 1, false),
+		tournamentTeam("B", 4, 1, false),
+		tournamentTeam("C", 4, 1, false),
+		tournamentTeam("D", 4, 1, false),
+	}
+
+	// Completed: A won championship (6 wins), C lost in final (5 wins),
+	// B and D lost in semis (4 wins each)
+	completedTTs := []*models.TournamentTeam{
+		tournamentTeam("A", 6, 1, false),
+		tournamentTeam("B", 4, 1, true),
+		tournamentTeam("C", 5, 1, true),
+		tournamentTeam("D", 4, 1, true),
+	}
+
+	preResult := ComputeFinalFourOutcomes(bracket, entries, portfolios, pts, preTTs, rounds, payouts)
+	completedResult := ComputeFinalFourOutcomes(bracket, entries, portfolios, pts, completedTTs, rounds, payouts)
+
+	// THEN both produce identical standings for each outcome
+	for i := range preResult {
+		prePoints := preResult[i].Standings[0].TotalPoints
+		completedPoints := completedResult[i].Standings[0].TotalPoints
+		if prePoints != completedPoints {
+			t.Errorf("outcome %d: pre-FF points (%.2f) != completed points (%.2f) for champion %s",
+				i, prePoints, completedPoints, preResult[i].Champion.TeamID)
+		}
+	}
+}
+
 func TestThatStandingsIncludePayouts(t *testing.T) {
 	// GIVEN two entries with payouts configured for 1st place
 	bracket := buildFinalFourBracket(

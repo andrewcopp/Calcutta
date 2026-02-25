@@ -104,6 +104,11 @@ func buildHypotheticalWins(
 	return extra
 }
 
+// eliteEightCap is the maximum progress (wins + byes) before the Final Four.
+// We cap here so hypothetical wins are added on top of pre-Final-Four state,
+// not on top of actual results that may already include FF/Championship wins.
+const eliteEightCap = 5
+
 // computePointsByEntry computes total points per entry for a hypothetical outcome.
 func computePointsByEntry(
 	portfolioTeams []*models.CalcuttaPortfolioTeam,
@@ -124,9 +129,9 @@ func computePointsByEntry(
 			continue
 		}
 
-		wins := team.Wins + hypotheticalWins[pt.TeamID]
-		byes := team.Byes
-		teamPoints := scoring.PointsForProgress(rules, wins, byes)
+		capped := prediction.ProgressAtRound(team.Wins, team.Byes, eliteEightCap)
+		wins := capped + hypotheticalWins[pt.TeamID]
+		teamPoints := scoring.PointsForProgress(rules, wins, 0)
 		pointsByEntry[entryID] += pt.OwnershipPercentage * float64(teamPoints)
 	}
 
