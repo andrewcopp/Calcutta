@@ -57,19 +57,6 @@ func GenerateTournamentValues(
 	pWinByRound := aggregatePWinByRound(matchups)
 	incByRound := buildIncByRound(rules)
 
-	// For throughRound=0: compute FF survival from R64 matchup participation.
-	// Non-FF teams get pMatchup sum = 1.0; FF teams get their FF win probability.
-	var ffSurvival map[string]float64
-	if throughRound == 0 {
-		ffSurvival = make(map[string]float64)
-		for _, m := range matchups {
-			if m.RoundOrder == 1 {
-				ffSurvival[m.Team1ID] += m.PMatchup
-				ffSurvival[m.Team2ID] += m.PMatchup
-			}
-		}
-	}
-
 	favMap := ComputeFavoritesBracket(allTeams, matchups, throughRound, rules)
 
 	var results []PredictedTeamValue
@@ -91,20 +78,14 @@ func GenerateTournamentValues(
 			expectedPoints = actualPoints
 		} else {
 			// Alive (or pre-tournament where all teams start at progress 0).
-
-			// PRound1: FF survival for pre-tournament, 1.0 for mid-tournament.
-			if throughRound == 0 {
-				probs[0] = ffSurvival[team.ID]
-			} else {
-				probs[0] = 1.0
-			}
-
-			// PRound2-7: 1.0 for resolved rounds, matchup probs for future rounds.
-			for r := 2; r <= models.MaxRounds; r++ {
-				if r <= throughRound {
+			// PRound(r) = P(wins game at round r), i.e. cumulative survival through round r.
+			// Fully resolved rounds (r < throughRound) get 1.0; the current round and
+			// future rounds use matchup probabilities from pWinByRound.
+			for r := 1; r <= models.MaxRounds; r++ {
+				if throughRound > 0 && r < throughRound {
 					probs[r-1] = 1.0
 				} else {
-					probs[r-1] = pWinByRound[teamRoundKey{team.ID, r - 1}]
+					probs[r-1] = pWinByRound[teamRoundKey{team.ID, r}]
 				}
 			}
 

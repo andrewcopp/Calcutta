@@ -107,10 +107,10 @@ func TestThatChampionshipProbabilitiesSumToOne(t *testing.T) {
 	// WHEN generating tournament values
 	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
-	// THEN championship probabilities sum to 1.0
+	// THEN championship probabilities (PRound6 = P(wins championship game)) sum to 1.0
 	var pChampSum float64
 	for _, v := range values {
-		pChampSum += v.PRound7
+		pChampSum += v.PRound6
 	}
 
 	if math.Abs(pChampSum-1.0) > 0.01 {
@@ -201,7 +201,7 @@ func TestThatChampionEarnsSixHundredThirtyPoints(t *testing.T) {
 	}
 }
 
-func TestThatNonFirstFourTeamsHaveFFProbabilityOfOne(t *testing.T) {
+func TestThatAllTeamsHavePRound1BetweenZeroAndOne(t *testing.T) {
 	// GIVEN a 68-team tournament field with matchups
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
@@ -214,24 +214,10 @@ func TestThatNonFirstFourTeamsHaveFFProbabilityOfOne(t *testing.T) {
 	// WHEN generating tournament values
 	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
-	// THEN non-First Four teams have PRound1 (FF survival) = 1.0
-	ffTeamIDs := make(map[string]bool)
-	for _, team := range teams {
-		// FF teams are the extra 11-seeds and 16-seeds (seeds with >1 team per region)
-		regionSeedCount := make(map[string]int)
-		for _, t := range teams {
-			if t.Region == team.Region && t.Seed == team.Seed {
-				regionSeedCount[fmt.Sprintf("%s-%d", t.Region, t.Seed)]++
-			}
-		}
-		if regionSeedCount[fmt.Sprintf("%s-%d", team.Region, team.Seed)] > 1 {
-			ffTeamIDs[team.ID] = true
-		}
-	}
-
+	// THEN all teams have 0 < PRound1 < 1.0 (no team is guaranteed to win R64)
 	for _, v := range values {
-		if !ffTeamIDs[v.TeamID] && v.PRound1 != 1.0 {
-			t.Errorf("non-FF team %s: PRound1 = %.4f, expected 1.0", v.TeamID, v.PRound1)
+		if v.PRound1 <= 0.0 || v.PRound1 >= 1.0 {
+			t.Errorf("team %s: PRound1 = %.4f, expected 0 < PRound1 < 1", v.TeamID, v.PRound1)
 		}
 	}
 }
@@ -249,7 +235,7 @@ func TestThatFirstFourTeamsHaveFFProbabilityLessThanOne(t *testing.T) {
 	// WHEN generating tournament values
 	values := GenerateTournamentValues(teams, matchups, 0, rules)
 
-	// THEN First Four teams have PRound1 (FF survival) < 1.0
+	// THEN First Four teams have PRound1 (P(wins R64)) < 1.0
 	ffTeamIDs := make(map[string]bool)
 	for _, team := range teams {
 		regionSeedCount := 0
@@ -325,9 +311,10 @@ func TestThatOneSeedReachesSweetSixteenMoreThanFiftyPercent(t *testing.T) {
 	}
 
 	// THEN the 1-seed has >50% probability of reaching the Sweet 16
+	// PRound2 = P(wins through R32) = P(reaches S16)
 	v := valueByID[oneSeedID]
-	if v.PRound3 <= 0.50 {
-		t.Errorf("1-seed PRound3 (reach S16) = %.4f, expected > 0.50", v.PRound3)
+	if v.PRound2 <= 0.50 {
+		t.Errorf("1-seed PRound2 (reach S16) = %.4f, expected > 0.50", v.PRound2)
 	}
 }
 
@@ -356,9 +343,10 @@ func TestThatOneSeedChampionshipProbabilityExceedsFivePercent(t *testing.T) {
 	}
 
 	// THEN the 1-seed has >5% championship probability
+	// PRound6 = P(wins championship game)
 	v := valueByID[oneSeedID]
-	if v.PRound7 <= 0.05 {
-		t.Errorf("1-seed PRound7 (win championship) = %.4f, expected > 0.05", v.PRound7)
+	if v.PRound6 <= 0.05 {
+		t.Errorf("1-seed PRound6 (win championship) = %.4f, expected > 0.05", v.PRound6)
 	}
 }
 
@@ -388,9 +376,10 @@ func TestThatSixteenSeedReachesSweetSixteenLessThanFivePercent(t *testing.T) {
 	}
 
 	// THEN the 16-seed has <5% probability of reaching the Sweet 16
+	// PRound2 = P(wins through R32) = P(reaches S16)
 	v := valueByID[sixteenSeedID]
-	if v.PRound3 >= 0.05 {
-		t.Errorf("16-seed PRound3 (reach S16) = %.4f, expected < 0.05", v.PRound3)
+	if v.PRound2 >= 0.05 {
+		t.Errorf("16-seed PRound2 (reach S16) = %.4f, expected < 0.05", v.PRound2)
 	}
 }
 
@@ -411,35 +400,11 @@ func TestThatStrongerFirstFourTeamHasHigherFFProbability(t *testing.T) {
 		valueByID[v.TeamID] = v
 	}
 
-	// THEN the stronger East 16-seed (team-16, KenPom -10.0) has higher PRound1 than the weaker one (team-65, KenPom -12.0)
+	// THEN the stronger East 16-seed (team-16, KenPom -10.0) has higher PRound1 (P(wins R64)) than the weaker one (team-65, KenPom -12.0)
 	stronger := valueByID["team-16"]
 	weaker := valueByID["team-65"]
 	if stronger.PRound1 <= weaker.PRound1 {
 		t.Errorf("stronger FF team PRound1 (%.4f) should be > weaker FF team PRound1 (%.4f)", stronger.PRound1, weaker.PRound1)
-	}
-}
-
-func TestThatFirstFourPairProbabilitiesSumToOne(t *testing.T) {
-	// GIVEN a 68-team field where East has two 16-seeds
-	teams := generateTestTeams()
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, err := GenerateMatchups(teams, 0, spec, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	rules := DefaultScoringRules()
-
-	// WHEN generating tournament values
-	values := GenerateTournamentValues(teams, matchups, 0, rules)
-	valueByID := make(map[string]PredictedTeamValue)
-	for _, v := range values {
-		valueByID[v.TeamID] = v
-	}
-
-	// THEN the East 16-seed pair PRound1 values sum to 1.0
-	pSum := valueByID["team-16"].PRound1 + valueByID["team-65"].PRound1
-	if math.Abs(pSum-1.0) > 0.001 {
-		t.Errorf("East 16-seed FF pair PRound1 sum = %.4f, expected 1.0", pSum)
 	}
 }
 
@@ -501,10 +466,10 @@ func TestThatCheckpointChampionshipProbsSumToOne(t *testing.T) {
 	rules := DefaultScoringRules()
 	values := GenerateTournamentValues(survivors, matchups, 5, rules)
 
-	// THEN championship probabilities (PRound7) sum to 1.0
+	// THEN championship probabilities (PRound6 = P(wins championship game)) sum to 1.0
 	var pChampSum float64
 	for _, v := range values {
-		pChampSum += v.PRound7
+		pChampSum += v.PRound6
 	}
 	if math.Abs(pChampSum-1.0) > 0.01 {
 		t.Errorf("championship probabilities sum = %.4f, expected 1.0", pChampSum)
@@ -708,17 +673,17 @@ func TestThatChampionshipCheckpointProbsSumToOne(t *testing.T) {
 	rules := DefaultScoringRules()
 	values := GenerateTournamentValues(survivors, matchups, 6, rules)
 
-	// THEN PRound7 values sum to 1.0
+	// THEN PRound6 (P(wins championship game)) values sum to 1.0
 	var pChampSum float64
 	for _, v := range values {
-		pChampSum += v.PRound7
+		pChampSum += v.PRound6
 	}
 	if math.Abs(pChampSum-1.0) > 0.01 {
 		t.Errorf("championship probabilities sum = %.4f, expected 1.0", pChampSum)
 	}
 }
 
-func TestThatChampionshipCheckpointFinalistsHaveNonZeroPRound7(t *testing.T) {
+func TestThatChampionshipCheckpointFinalistsHaveNonZeroPRound6(t *testing.T) {
 	// GIVEN 2 finalists from opposite brackets at throughRound=6
 	survivors := []TeamInput{
 		{ID: "t-east", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 5, Byes: 1},
@@ -736,8 +701,8 @@ func TestThatChampionshipCheckpointFinalistsHaveNonZeroPRound7(t *testing.T) {
 
 	// THEN both finalists have non-zero championship probability
 	for _, v := range values {
-		if v.PRound7 <= 0.0 {
-			t.Errorf("team %s: PRound7 = %.4f, expected > 0.0", v.TeamID, v.PRound7)
+		if v.PRound6 <= 0.0 {
+			t.Errorf("team %s: PRound6 = %.4f, expected > 0.0", v.TeamID, v.PRound6)
 		}
 	}
 }
