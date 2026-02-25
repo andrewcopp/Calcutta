@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { ResponsiveBump } from '@nivo/bump';
 import type { CalcuttaDashboard, CalcuttaEntry } from '../../schemas/calcutta';
-import { buildBumpChartData } from '../../utils/buildBumpChartData';
+import { buildBumpChartData, type RaceDatum } from '../../utils/buildBumpChartData';
 import { getEntryColorById } from '../../utils/entryColors';
 import { Select } from '../../components/ui/Select';
+import { RacePointTooltip } from './RacePointTooltip';
 
 type SortMode = 'actual' | 'projected' | 'favorites';
 
@@ -51,7 +52,7 @@ export function RaceTab({ entries, dashboard }: RaceTabProps) {
       )}
 
       <div style={{ height: chartHeight }}>
-        <ResponsiveBump
+        <ResponsiveBump<RaceDatum>
           data={data}
           colors={(series) => nameToColor.get(series.id as string) ?? '#6B7280'}
           lineWidth={3}
@@ -63,6 +64,8 @@ export function RaceTab({ entries, dashboard }: RaceTabProps) {
           inactivePointSize={6}
           pointBorderWidth={2}
           pointBorderColor={{ from: 'serie.color' }}
+          useMesh={true}
+          pointTooltip={RacePointTooltip}
           startLabel={true}
           startLabelPadding={16}
           endLabel={true}

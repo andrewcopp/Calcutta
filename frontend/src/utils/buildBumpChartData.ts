@@ -1,14 +1,18 @@
 import type { CalcuttaEntry, RoundStandingGroup } from '../schemas/calcutta';
 import { getRoundName } from './roundLabels';
 
-export interface BumpDatum {
+export interface RaceDatum {
   x: string;
   y: number;
+  totalPoints: number;
+  pointsDelta: number;
+  rankDelta: number;
+  projectedEv?: number;
 }
 
 export interface BumpSeries {
   id: string;
-  data: BumpDatum[];
+  data: RaceDatum[];
   [key: string]: unknown;
 }
 
@@ -23,13 +27,28 @@ function metricForEntry(
   return entry.totalPoints;
 }
 
-function rankEntries(values: { id: string; value: number }[]): Map<string, number> {
-  const sorted = [...values].sort((a, b) => b.value - a.value);
+function rankEntries(
+  values: { id: string; value: number }[],
+  tiebreaker?: Map<string, number>,
+): Map<string, number> {
+  const sorted = [...values].sort((a, b) => {
+    if (b.value !== a.value) return b.value - a.value;
+    if (tiebreaker) {
+      return (tiebreaker.get(b.id) ?? 0) - (tiebreaker.get(a.id) ?? 0);
+    }
+    return 0;
+  });
   const ranks = new Map<string, number>();
   let rank = 1;
   for (let i = 0; i < sorted.length; i++) {
-    if (i > 0 && sorted[i].value < sorted[i - 1].value) {
-      rank = i + 1;
+    if (i > 0) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      const prevTb = tiebreaker?.get(prev.id) ?? 0;
+      const currTb = tiebreaker?.get(curr.id) ?? 0;
+      if (curr.value < prev.value || (tiebreaker && currTb < prevTb)) {
+        rank = i + 1;
+      }
     }
     ranks.set(sorted[i].id, rank);
   }
@@ -47,24 +66,57 @@ export function buildBumpChartData(
   const maxRound = sorted[sorted.length - 1].round;
   const nameById = new Map(entries.map((e) => [e.id, e.name]));
 
-  const seriesMap = new Map<string, BumpDatum[]>();
+  const seriesMap = new Map<string, RaceDatum[]>();
   for (const entry of entries) {
     seriesMap.set(entry.id, []);
   }
 
+  const prevState = new Map<string, { rank: number; points: number }>();
+
   for (const group of sorted) {
     const label = getRoundName(group.round, maxRound);
+
+    const entryLookup = new Map(group.entries.map((e) => [e.entryId, e]));
+
     const values = group.entries.map((e) => ({
       id: e.entryId,
       value: metricForEntry(e, mode),
     }));
-    const ranks = rankEntries(values);
+
+    let tiebreaker: Map<string, number> | undefined;
+    if (mode === 'actual') {
+      const evMap = new Map<string, number>();
+      for (const e of group.entries) {
+        if (e.projectedEv != null) {
+          evMap.set(e.entryId, e.projectedEv);
+        }
+      }
+      if (evMap.size > 0) {
+        tiebreaker = evMap;
+      }
+    }
+
+    const ranks = rankEntries(values, tiebreaker);
 
     for (const entry of entries) {
       const data = seriesMap.get(entry.id);
-      if (data) {
-        data.push({ x: label, y: ranks.get(entry.id) ?? entries.length });
-      }
+      if (!data) continue;
+
+      const standing = entryLookup.get(entry.id);
+      const currentPoints = standing ? metricForEntry(standing, mode) : 0;
+      const currentRank = ranks.get(entry.id) ?? entries.length;
+      const prev = prevState.get(entry.id);
+
+      data.push({
+        x: label,
+        y: currentRank,
+        totalPoints: standing?.totalPoints ?? 0,
+        pointsDelta: prev ? currentPoints - prev.points : 0,
+        rankDelta: prev ? prev.rank - currentRank : 0,
+        projectedEv: standing?.projectedEv,
+      });
+
+      prevState.set(entry.id, { rank: currentRank, points: currentPoints });
     }
   }
 
