@@ -92,6 +92,19 @@ func (q *Queries) GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshT
 	return i, err
 }
 
+const revokeAllSessionsForUser = `-- name: RevokeAllSessionsForUser :exec
+UPDATE core.auth_sessions
+SET revoked_at = NOW(),
+    updated_at = NOW()
+WHERE user_id = $1
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeAllSessionsForUser(ctx context.Context, userID string) error {
+	_, err := q.db.Exec(ctx, revokeAllSessionsForUser, userID)
+	return err
+}
+
 const revokeAuthSession = `-- name: RevokeAuthSession :exec
 UPDATE core.auth_sessions
 SET revoked_at = NOW(),

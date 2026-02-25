@@ -25,6 +25,10 @@ export const adminService = {
     return apiClient.post(`/admin/users/${userId}/invite/send`, undefined, { schema: AdminInviteUserResponseSchema });
   },
 
+  async resetPassword(userId: string): Promise<void> {
+    await apiClient.post<void>(`/admin/users/${userId}/reset-password`);
+  },
+
   async getUser(userId: string) {
     return apiClient.get(`/admin/users/${userId}`, { schema: AdminUserDetailResponseSchema });
   },

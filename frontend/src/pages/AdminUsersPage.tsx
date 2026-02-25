@@ -16,6 +16,7 @@ import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
 import { SetEmailModal } from '../components/Admin/SetEmailModal';
 import { InviteConfirmModal } from '../components/Admin/InviteConfirmModal';
+import { ResetPasswordConfirmModal } from '../components/Admin/ResetPasswordConfirmModal';
 import { formatDate } from '../utils/format';
 
 type StatusFilter = '' | 'stub' | 'invited' | 'requires_password_setup' | 'active';
@@ -63,6 +64,7 @@ export function AdminUsersPage() {
 
   const [emailModalUser, setEmailModalUser] = useState<AdminUserListItem | null>(null);
   const [inviteModalUser, setInviteModalUser] = useState<AdminUserListItem | null>(null);
+  const [resetModalUser, setResetModalUser] = useState<AdminUserListItem | null>(null);
 
   const usersQuery = useQuery({
     queryKey: queryKeys.admin.users(statusFilter || undefined),
@@ -81,6 +83,11 @@ export function AdminUsersPage() {
     await adminService.sendInvite(userId);
     toast.success('Invite sent successfully.');
     await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    await adminService.resetPassword(userId);
+    toast.success('Password reset email sent.');
   };
 
   return (
@@ -175,7 +182,11 @@ export function AdminUsersPage() {
                         {u.lastInviteSentAt ? 'Resend Invite' : 'Send Invite'}
                       </Button>
                     )}
-                    {u.status === 'active' && <span className="text-muted-foreground/60 text-sm">-</span>}
+                    {u.status === 'active' && u.email && (
+                      <Button size="sm" variant="outline" onClick={() => setResetModalUser(u)}>
+                        Reset Password
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -211,6 +222,17 @@ export function AdminUsersPage() {
           userEmail={inviteModalUser.email ?? ''}
           lastInviteSentAt={inviteModalUser.lastInviteSentAt}
           onConfirm={handleSendInvite}
+        />
+      )}
+
+      {resetModalUser && (
+        <ResetPasswordConfirmModal
+          open={!!resetModalUser}
+          onClose={() => setResetModalUser(null)}
+          userId={resetModalUser.id}
+          userName={`${resetModalUser.firstName} ${resetModalUser.lastName}`}
+          userEmail={resetModalUser.email ?? ''}
+          onConfirm={handleResetPassword}
         />
       )}
     </PageContainer>

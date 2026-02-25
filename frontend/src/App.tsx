@@ -60,6 +60,12 @@ const HallOfFamePage = React.lazy(() => import('./pages/HallOfFamePage').then((m
 const AcceptInvitePage = React.lazy(() =>
   import('./pages/AcceptInvitePage').then((m) => ({ default: m.AcceptInvitePage })),
 );
+const ForgotPasswordPage = React.lazy(() =>
+  import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })),
+);
+const ResetPasswordPage = React.lazy(() =>
+  import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+);
 const RulesPage = React.lazy(() => import('./pages/RulesPage').then((m) => ({ default: m.RulesPage })));
 const CreateCalcuttaPage = React.lazy(() =>
   import('./pages/CreateCalcuttaPage').then((m) => ({ default: m.CreateCalcuttaPage })),
@@ -112,6 +118,22 @@ const AppLayout: React.FC = () => {
               element={
                 <RouteErrorBoundary>
                   <AcceptInvitePage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <RouteErrorBoundary>
+                  <ForgotPasswordPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <RouteErrorBoundary>
+                  <ResetPasswordPage />
                 </RouteErrorBoundary>
               }
             />

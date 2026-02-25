@@ -110,6 +110,10 @@ func (r *fakeAuthRepo) RevokeSession(_ context.Context, sessionID string) error 
 	return nil
 }
 
+func (r *fakeAuthRepo) RevokeAllSessionsForUser(_ context.Context, _ string) error {
+	return nil
+}
+
 func (r *fakeAuthRepo) IsUserActive(_ context.Context, userID string) (bool, error) {
 	return r.activeUsers[userID], nil
 }

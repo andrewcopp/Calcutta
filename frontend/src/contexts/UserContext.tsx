@@ -9,6 +9,7 @@ export interface UserContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
   acceptInvite: (token: string, password: string) => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -67,6 +68,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await fetchPermissions();
   };
 
+  const resetPassword = async (token: string, password: string) => {
+    const resetUser = await userService.resetPassword(token, password);
+    setUser(resetUser);
+    await fetchPermissions();
+  };
+
   const logout = () => {
     userService.logout();
     setUser(null);
@@ -77,7 +84,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <UserContext.Provider
-      value={{ user, permissions, permissionsLoading, login, signup, acceptInvite, logout, hasPermission }}
+      value={{ user, permissions, permissionsLoading, login, signup, acceptInvite, resetPassword, logout, hasPermission }}
     >
       {children}
     </UserContext.Provider>

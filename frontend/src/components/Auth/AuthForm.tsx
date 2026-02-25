@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -52,6 +53,13 @@ export function AuthForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          {isLogin && (
+            <div className="text-right mt-1">
+              <Link to="/forgot-password" className="text-sm text-primary hover:text-primary">
+                Forgot password?
+              </Link>
+            </div>
+          )}
         </div>
 
         {!isLogin && (

@@ -374,6 +374,10 @@ type CoreUser struct {
 	ExternalProvider   *string
 	ExternalProviderID *string
 	InvitedBy          pgtype.UUID
+	ResetTokenHash     *string
+	ResetExpiresAt     pgtype.Timestamptz
+	ResetConsumedAt    pgtype.Timestamptz
+	LastResetSentAt    pgtype.Timestamptz
 }
 
 type DerivedPortfolio struct {

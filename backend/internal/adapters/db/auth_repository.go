@@ -87,6 +87,13 @@ func (r *AuthRepository) RevokeSession(ctx context.Context, sessionID string) er
 	return nil
 }
 
+func (r *AuthRepository) RevokeAllSessionsForUser(ctx context.Context, userID string) error {
+	if err := r.q.RevokeAllSessionsForUser(ctx, userID); err != nil {
+		return fmt.Errorf("revoking all sessions for user %s: %w", userID, err)
+	}
+	return nil
+}
+
 func (r *AuthRepository) IsUserActive(ctx context.Context, userID string) (bool, error) {
 	if userID == "" {
 		return false, nil

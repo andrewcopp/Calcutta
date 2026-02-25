@@ -31,6 +31,7 @@ func (s *stubSessionRepo) RotateRefreshToken(_ context.Context, _, _ string, _ t
 	return nil
 }
 func (s *stubSessionRepo) RevokeSession(_ context.Context, _ string) error { return nil }
+func (s *stubSessionRepo) RevokeAllSessionsForUser(_ context.Context, _ string) error { return nil }
 func (s *stubSessionRepo) IsUserActive(_ context.Context, _ string) (bool, error) {
 	return false, nil
 }

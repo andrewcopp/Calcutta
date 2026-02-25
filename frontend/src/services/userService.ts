@@ -41,6 +41,21 @@ export const userService = {
     return res.user;
   },
 
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post<void>('/auth/forgot-password', { email });
+  },
+
+  async resetPassword(token: string, password: string): Promise<User> {
+    const res = await apiClient.post(
+      '/auth/reset-password',
+      { token, password },
+      { credentials: 'include', schema: AuthResponseSchema },
+    );
+    localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+    apiClient.setAccessToken(res.accessToken);
+    return res.user;
+  },
+
   logout(): void {
     void apiClient.post<void>('/auth/logout', undefined, { credentials: 'include' }).catch((err) => {
       console.error('Logout failed', err);

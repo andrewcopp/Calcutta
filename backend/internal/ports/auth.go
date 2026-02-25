@@ -31,6 +31,7 @@ type AuthSessionRepository interface {
 	GetSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (*models.AuthSession, error)
 	RotateRefreshToken(ctx context.Context, sessionID, newRefreshTokenHash string, newExpiresAt time.Time) error
 	RevokeSession(ctx context.Context, sessionID string) error
+	RevokeAllSessionsForUser(ctx context.Context, userID string) error
 	IsUserActive(ctx context.Context, userID string) (bool, error)
 }
 
