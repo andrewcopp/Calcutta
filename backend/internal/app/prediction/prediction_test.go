@@ -478,39 +478,46 @@ func TestThatCheckpointChampionshipProbsSumToOne(t *testing.T) {
 	}
 }
 
-func TestThatCheckpointValuesSetResolvedRoundsCorrectly(t *testing.T) {
-	// GIVEN a mix of alive and eliminated teams at throughRound=3
+// checkpointResolvedRoundsScenario returns values for a checkpoint-3 scenario with
+// both alive and eliminated teams.
+func checkpointResolvedRoundsScenario() map[string]PredictedTeamValue {
 	allTeams := []TeamInput{
-		{ID: "alive-1", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 2, Byes: 1},     // progress=3, alive
-		{ID: "alive-2", Seed: 2, Region: "West", KenPomNet: 20.0, Wins: 2, Byes: 1},     // progress=3, alive
-		{ID: "alive-3", Seed: 1, Region: "South", KenPomNet: 22.0, Wins: 2, Byes: 1},    // progress=3, alive
-		{ID: "alive-4", Seed: 1, Region: "Midwest", KenPomNet: 18.0, Wins: 2, Byes: 1},  // progress=3, alive
-		{ID: "elim-1", Seed: 16, Region: "East", KenPomNet: -10.0, Wins: 0, Byes: 1},    // progress=1, eliminated
-		{ID: "elim-2", Seed: 8, Region: "West", KenPomNet: 5.0, Wins: 1, Byes: 1},       // progress=2, eliminated
+		{ID: "alive-1", Seed: 1, Region: "East", KenPomNet: 25.0, Wins: 2, Byes: 1},
+		{ID: "alive-2", Seed: 2, Region: "West", KenPomNet: 20.0, Wins: 2, Byes: 1},
+		{ID: "alive-3", Seed: 1, Region: "South", KenPomNet: 22.0, Wins: 2, Byes: 1},
+		{ID: "alive-4", Seed: 1, Region: "Midwest", KenPomNet: 18.0, Wins: 2, Byes: 1},
+		{ID: "elim-1", Seed: 16, Region: "East", KenPomNet: -10.0, Wins: 0, Byes: 1},
+		{ID: "elim-2", Seed: 8, Region: "West", KenPomNet: 5.0, Wins: 1, Byes: 1},
 	}
 	survivors := []TeamInput{allTeams[0], allTeams[1], allTeams[2], allTeams[3]}
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-
-	matchups, err := GenerateMatchups(survivors, 3, spec, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	matchups, _ := GenerateMatchups(survivors, 3, spec, nil)
 	rules := DefaultScoringRules()
-
-	// WHEN generating checkpoint values for all teams
 	values := GenerateTournamentValues(allTeams, matchups, 3, rules)
 	valueByID := make(map[string]PredictedTeamValue)
 	for _, v := range values {
 		valueByID[v.TeamID] = v
 	}
+	return valueByID
+}
+
+func TestThatCheckpointEliminatedTeamHasOneForResolvedRound(t *testing.T) {
+	// GIVEN a mix of alive and eliminated teams at throughRound=3
+	valueByID := checkpointResolvedRoundsScenario()
+
+	// THEN eliminated team has 1.0 for its resolved round (progress=1)
+	if valueByID["elim-1"].PRound1 != 1.0 {
+		t.Errorf("eliminated team PRound1 = %.4f, expected 1.0", valueByID["elim-1"].PRound1)
+	}
+}
+
+func TestThatCheckpointEliminatedTeamHasZeroForUnresolvedRound(t *testing.T) {
+	// GIVEN a mix of alive and eliminated teams at throughRound=3
+	valueByID := checkpointResolvedRoundsScenario()
 
 	// THEN eliminated team has 0.0 for rounds beyond its progress
-	elim1 := valueByID["elim-1"]
-	if elim1.PRound1 != 1.0 {
-		t.Errorf("eliminated team PRound1 = %.4f, expected 1.0", elim1.PRound1)
-	}
-	if elim1.PRound2 != 0.0 {
-		t.Errorf("eliminated team PRound2 = %.4f, expected 0.0", elim1.PRound2)
+	if valueByID["elim-1"].PRound2 != 0.0 {
+		t.Errorf("eliminated team PRound2 = %.4f, expected 0.0", valueByID["elim-1"].PRound2)
 	}
 }
 
@@ -715,8 +722,9 @@ func TestThatChampionshipCheckpointFinalistsHaveNonZeroPRound7(t *testing.T) {
 
 // --- computeRound unit tests ---
 
-func TestThatComputeRoundProducesPMatchupFromPAdvance(t *testing.T) {
-	// GIVEN two teams with different advance probabilities
+// computeRoundScenario returns the matchups and new advance probabilities for a
+// simple two-team game with known advance probabilities.
+func computeRoundScenario() ([]PredictedMatchup, map[string]float64) {
 	games := []gameSetup{{
 		gameID: "test-1",
 		side1:  []TeamInput{{ID: "a", KenPomNet: 20.0}},
@@ -724,9 +732,12 @@ func TestThatComputeRoundProducesPMatchupFromPAdvance(t *testing.T) {
 	}}
 	pAdvance := map[string]float64{"a": 0.8, "b": 0.6}
 	calcWinProb := func(id1, id2 string) float64 { return 0.7 }
+	return computeRound(games, pAdvance, calcWinProb, 1)
+}
 
-	// WHEN computing the round
-	matchups, newPAdv := computeRound(games, pAdvance, calcWinProb, 1)
+func TestThatComputeRoundProducesPMatchup(t *testing.T) {
+	// GIVEN two teams with different advance probabilities
+	matchups, _ := computeRoundScenario()
 
 	// THEN pMatchup = pAdvance[a] * pAdvance[b] = 0.48
 	if len(matchups) != 1 {
@@ -735,13 +746,25 @@ func TestThatComputeRoundProducesPMatchupFromPAdvance(t *testing.T) {
 	if math.Abs(matchups[0].PMatchup-0.48) > 0.001 {
 		t.Errorf("pMatchup = %.4f, expected 0.48", matchups[0].PMatchup)
 	}
+}
 
-	// AND new advance probs are computed correctly
-	expectedA := 0.48 * 0.7  // 0.336
-	expectedB := 0.48 * 0.3  // 0.144
+func TestThatComputeRoundProducesCorrectPAdvanceForStrongerTeam(t *testing.T) {
+	// GIVEN two teams with different advance probabilities
+	_, newPAdv := computeRoundScenario()
+
+	// THEN stronger team's new advance prob = 0.48 * 0.7 = 0.336
+	expectedA := 0.48 * 0.7
 	if math.Abs(newPAdv["a"]-expectedA) > 0.001 {
 		t.Errorf("new pAdvance[a] = %.4f, expected %.4f", newPAdv["a"], expectedA)
 	}
+}
+
+func TestThatComputeRoundProducesCorrectPAdvanceForWeakerTeam(t *testing.T) {
+	// GIVEN two teams with different advance probabilities
+	_, newPAdv := computeRoundScenario()
+
+	// THEN weaker team's new advance prob = 0.48 * 0.3 = 0.144
+	expectedB := 0.48 * 0.3
 	if math.Abs(newPAdv["b"]-expectedB) > 0.001 {
 		t.Errorf("new pAdvance[b] = %.4f, expected %.4f", newPAdv["b"], expectedB)
 	}
@@ -1005,29 +1028,55 @@ func TestThatFavoritesBracketProcessesR64AtCheckpointOne(t *testing.T) {
 
 // --- capTeamProgress tests ---
 
-func TestThatCapTeamProgressReturnsUnchangedWhenBelowCap(t *testing.T) {
+func TestThatCapTeamProgressBelowCapPreservesWins(t *testing.T) {
 	// GIVEN a team with progress 2
 	team := TeamInput{ID: "t1", Wins: 1, Byes: 1}
 
 	// WHEN capping at throughRound=3
 	capped := capTeamProgress(team, 3)
 
-	// THEN the team is unchanged
-	if capped.Wins != 1 || capped.Byes != 1 {
-		t.Errorf("expected Wins=1, Byes=1, got Wins=%d, Byes=%d", capped.Wins, capped.Byes)
+	// THEN wins are preserved
+	if capped.Wins != 1 {
+		t.Errorf("expected Wins=1, got Wins=%d", capped.Wins)
 	}
 }
 
-func TestThatCapTeamProgressCapsToThroughRound(t *testing.T) {
+func TestThatCapTeamProgressBelowCapPreservesByes(t *testing.T) {
+	// GIVEN a team with progress 2
+	team := TeamInput{ID: "t1", Wins: 1, Byes: 1}
+
+	// WHEN capping at throughRound=3
+	capped := capTeamProgress(team, 3)
+
+	// THEN byes are preserved
+	if capped.Byes != 1 {
+		t.Errorf("expected Byes=1, got Byes=%d", capped.Byes)
+	}
+}
+
+func TestThatCapTeamProgressToZeroSetsWinsToZero(t *testing.T) {
 	// GIVEN a champion with Wins=6, Byes=1 (progress=7)
 	team := TeamInput{ID: "champ", Wins: 6, Byes: 1}
 
 	// WHEN capping at throughRound=0
 	capped := capTeamProgress(team, 0)
 
-	// THEN Wins=0, Byes=0
-	if capped.Wins != 0 || capped.Byes != 0 {
-		t.Errorf("expected Wins=0, Byes=0, got Wins=%d, Byes=%d", capped.Wins, capped.Byes)
+	// THEN Wins=0
+	if capped.Wins != 0 {
+		t.Errorf("expected Wins=0, got Wins=%d", capped.Wins)
+	}
+}
+
+func TestThatCapTeamProgressToZeroSetsByesToZero(t *testing.T) {
+	// GIVEN a champion with Wins=6, Byes=1 (progress=7)
+	team := TeamInput{ID: "champ", Wins: 6, Byes: 1}
+
+	// WHEN capping at throughRound=0
+	capped := capTeamProgress(team, 0)
+
+	// THEN Byes=0
+	if capped.Byes != 0 {
+		t.Errorf("expected Byes=0, got Byes=%d", capped.Byes)
 	}
 }
 
@@ -1038,26 +1087,46 @@ func TestThatCapTeamProgressPreservesByesFirst(t *testing.T) {
 	// WHEN capping at throughRound=3
 	capped := capTeamProgress(team, 3)
 
-	// THEN Byes=1 preserved, Wins=2 (3 - 1)
+	// THEN Byes=1 preserved
 	if capped.Byes != 1 {
 		t.Errorf("expected Byes=1, got Byes=%d", capped.Byes)
 	}
+}
+
+func TestThatCapTeamProgressPreservesByesFirstReducesWins(t *testing.T) {
+	// GIVEN a team with Wins=4, Byes=1 (progress=5)
+	team := TeamInput{ID: "t1", Wins: 4, Byes: 1}
+
+	// WHEN capping at throughRound=3
+	capped := capTeamProgress(team, 3)
+
+	// THEN Wins=2 (3 - 1 bye)
 	if capped.Wins != 2 {
 		t.Errorf("expected Wins=2, got Wins=%d", capped.Wins)
 	}
 }
 
-func TestThatCapTeamProgressCapsWhenByesExceedThroughRound(t *testing.T) {
+func TestThatCapTeamProgressWhenByesExceedThroughRoundReducesByes(t *testing.T) {
 	// GIVEN a team with Byes=3, Wins=0 (progress=3)
 	team := TeamInput{ID: "t1", Wins: 0, Byes: 3}
 
 	// WHEN capping at throughRound=2
 	capped := capTeamProgress(team, 2)
 
-	// THEN Byes=2, Wins=0
+	// THEN Byes=2
 	if capped.Byes != 2 {
 		t.Errorf("expected Byes=2, got Byes=%d", capped.Byes)
 	}
+}
+
+func TestThatCapTeamProgressWhenByesExceedThroughRoundKeepsWinsZero(t *testing.T) {
+	// GIVEN a team with Byes=3, Wins=0 (progress=3)
+	team := TeamInput{ID: "t1", Wins: 0, Byes: 3}
+
+	// WHEN capping at throughRound=2
+	capped := capTeamProgress(team, 2)
+
+	// THEN Wins=0
 	if capped.Wins != 0 {
 		t.Errorf("expected Wins=0, got Wins=%d", capped.Wins)
 	}

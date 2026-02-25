@@ -94,8 +94,8 @@ func TestThatBaselineComparisonIsNilWhenNoBaseline(t *testing.T) {
 	}
 }
 
-func TestThatTopHoldingsLimitedToThree(t *testing.T) {
-	// GIVEN 5 bids
+// fiveBidsSummary returns a summary built from 5 bids for top-holdings tests.
+func fiveBidsSummary() *models.LabEvaluationSummary {
 	bids := []models.LabEvaluationEntryBid{
 		{SchoolName: "Duke", Seed: 1, BidPoints: 20},
 		{SchoolName: "UNC", Seed: 2, BidPoints: 15},
@@ -107,14 +107,24 @@ func TestThatTopHoldingsLimitedToThree(t *testing.T) {
 		[]string{models.LabStrategyEntryName},
 		[]float64{1.5},
 	)
+	return BuildEvaluationSummary(results, bids, nil)
+}
 
-	// WHEN building summary
-	summary := BuildEvaluationSummary(results, bids, nil)
+func TestThatTopHoldingsLimitedToThree(t *testing.T) {
+	// GIVEN 5 bids
+	summary := fiveBidsSummary()
 
-	// THEN only top 3 holdings returned, sorted by bid points
+	// THEN only top 3 holdings returned
 	if len(summary.TopHoldings) != 3 {
 		t.Fatalf("expected 3 top holdings, got %d", len(summary.TopHoldings))
 	}
+}
+
+func TestThatTopHoldingsSortedByBidPointsDescending(t *testing.T) {
+	// GIVEN 5 bids
+	summary := fiveBidsSummary()
+
+	// THEN top holding is Duke (highest bid)
 	if summary.TopHoldings[0].SchoolName != "Duke" {
 		t.Errorf("expected top holding Duke, got %s", summary.TopHoldings[0].SchoolName)
 	}

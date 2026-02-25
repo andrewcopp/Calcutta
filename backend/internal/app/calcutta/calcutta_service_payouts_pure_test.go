@@ -216,8 +216,9 @@ func TestThatThreeWayTiePoolsAndSplitsPayoutsEvenly(t *testing.T) {
 	}
 }
 
-func TestThatThreeWayTieDistributesRemainderToEarliestEntriesInSortedOrder(t *testing.T) {
-	// GIVEN three entries tied with a total pool that doesn't divide evenly by 3
+// threeWayTieRemainderScenario returns standings for a 3-way tie where the pool
+// doesn't divide evenly (301/3 = 100 base, remainder=1).
+func threeWayTieRemainderScenario() map[string]*models.EntryStanding {
 	e1 := testutil.NewEntry()
 	e1.ID = "e1"
 	e1.CreatedAt = time.Unix(3, 0)
@@ -244,24 +245,36 @@ func TestThatThreeWayTieDistributesRemainderToEarliestEntriesInSortedOrder(t *te
 	p3odd.Position = 3
 	p3odd.AmountCents = 101
 
-	// WHEN computing standings (301/3 = 100 base, remainder=1)
-	byID := standingsByID(ComputeStandings(
+	return standingsByID(ComputeStandings(
 		[]*models.CalcuttaEntry{e1, e2, e3},
 		points,
 		[]*models.CalcuttaPayout{p1, p2, p3odd},
 	))
+}
 
-	// THEN first entry in sorted order gets extra cent
+func TestThatThreeWayTieRemainderFirstEntryGetsRemainderCent(t *testing.T) {
+	// GIVEN three entries tied with a total pool that doesn't divide evenly by 3
+	byID := threeWayTieRemainderScenario()
+
+	// THEN first entry in sorted order gets extra cent (301/3 = 100 + 1 remainder)
 	if byID["e1"].PayoutCents != 101 {
 		t.Fatalf("expected first entry to get 101, got %d", byID["e1"].PayoutCents)
 	}
+}
+
+func TestThatThreeWayTieRemainderSecondEntryGetsBasePayout(t *testing.T) {
+	// GIVEN three entries tied with a total pool that doesn't divide evenly by 3
+	byID := threeWayTieRemainderScenario()
+
+	// THEN second entry in sorted order gets base payout
 	if byID["e2"].PayoutCents != 100 {
 		t.Fatalf("expected second entry to get 100, got %d", byID["e2"].PayoutCents)
 	}
 }
 
-func TestThatTieOutsidePayoutPositionsResultsInZeroPayout(t *testing.T) {
-	// GIVEN two entries tied at positions 3-4, with payouts only for positions 1-2
+// tieOutsidePayoutScenario returns standings for entries where a tie at positions 3-4
+// falls outside the payout range (only positions 1-2 have payouts).
+func tieOutsidePayoutScenario() map[string]*models.EntryStanding {
 	e1 := testutil.NewEntry()
 	e1.ID = "e1"
 	e1.CreatedAt = time.Unix(4, 0)
@@ -288,17 +301,28 @@ func TestThatTieOutsidePayoutPositionsResultsInZeroPayout(t *testing.T) {
 	p2.Position = 2
 	p2.AmountCents = 100
 
-	// WHEN computing standings
-	byID := standingsByID(ComputeStandings(
+	return standingsByID(ComputeStandings(
 		[]*models.CalcuttaEntry{e1, e2, e3, e4},
 		points,
 		[]*models.CalcuttaPayout{p1, p2},
 	))
+}
 
-	// THEN tied entries at positions 3-4 are marked tied with zero payout
+func TestThatTieOutsidePayoutPositionsMarksTied(t *testing.T) {
+	// GIVEN two entries tied at positions 3-4, with payouts only for positions 1-2
+	byID := tieOutsidePayoutScenario()
+
+	// THEN tied entries at positions 3-4 are marked as tied
 	if !byID["e3"].IsTied {
 		t.Fatalf("expected e3 to be tied")
 	}
+}
+
+func TestThatTieOutsidePayoutPositionsResultsInZeroPayout(t *testing.T) {
+	// GIVEN two entries tied at positions 3-4, with payouts only for positions 1-2
+	byID := tieOutsidePayoutScenario()
+
+	// THEN tied entries at positions 3-4 receive zero payout
 	if byID["e3"].PayoutCents != 0 {
 		t.Fatalf("expected payout 0, got %d", byID["e3"].PayoutCents)
 	}
@@ -353,8 +377,8 @@ func TestThatAllEntriesTiedResultsInEvenPayoutSplit(t *testing.T) {
 	}
 }
 
-func TestThatSingleEntryPoolGetsFullPayoutWithNoTie(t *testing.T) {
-	// GIVEN a single entry with a payout
+// singleEntryPoolScenario returns standings for a single entry with a 500-cent payout.
+func singleEntryPoolScenario() map[string]*models.EntryStanding {
 	e1 := testutil.NewEntry()
 	e1.ID = "e1"
 	e1.CreatedAt = time.Unix(1, 0)
@@ -365,24 +389,36 @@ func TestThatSingleEntryPoolGetsFullPayoutWithNoTie(t *testing.T) {
 	p1.Position = 1
 	p1.AmountCents = 500
 
-	// WHEN computing standings
-	byID := standingsByID(ComputeStandings(
+	return standingsByID(ComputeStandings(
 		[]*models.CalcuttaEntry{e1},
 		points,
 		[]*models.CalcuttaPayout{p1},
 	))
+}
 
-	// THEN the single entry is not tied and gets the full payout
+func TestThatSingleEntryPoolIsNotTied(t *testing.T) {
+	// GIVEN a single entry with a payout
+	byID := singleEntryPoolScenario()
+
+	// THEN the single entry is not tied
 	if byID["e1"].IsTied {
 		t.Fatalf("expected single entry to not be tied")
 	}
+}
+
+func TestThatSingleEntryPoolGetsFullPayout(t *testing.T) {
+	// GIVEN a single entry with a payout
+	byID := singleEntryPoolScenario()
+
+	// THEN the single entry gets the full payout
 	if byID["e1"].PayoutCents != 500 {
 		t.Fatalf("expected payout 500, got %d", byID["e1"].PayoutCents)
 	}
 }
 
-func TestThatTieGroupSpanningPayoutBoundaryPoolsOnlyDefinedPayouts(t *testing.T) {
-	// GIVEN entries where a tie spans positions 2-4, but only positions 1-3 have payouts
+// tieSpanningPayoutBoundaryScenario returns standings for entries where a 3-way tie
+// at positions 2-4 spans the payout boundary (only positions 1-3 have payouts).
+func tieSpanningPayoutBoundaryScenario() map[string]*models.EntryStanding {
 	e1 := testutil.NewEntry()
 	e1.ID = "e1"
 	e1.CreatedAt = time.Unix(4, 0)
@@ -413,18 +449,29 @@ func TestThatTieGroupSpanningPayoutBoundaryPoolsOnlyDefinedPayouts(t *testing.T)
 	p3.Position = 3
 	p3.AmountCents = 50
 
-	// WHEN computing standings
-	byID := standingsByID(ComputeStandings(
+	return standingsByID(ComputeStandings(
 		[]*models.CalcuttaEntry{e1, e2, e3, e4},
 		points,
 		[]*models.CalcuttaPayout{p1, p2, p3},
 	))
+}
 
-	// THEN tie group at positions 2-4 pools payouts from positions 2+3+4 (150+50+0=200), split 3 ways
-	// 200/3 = 66 base, remainder=2 -> first two in sorted order get 67
+func TestThatTieGroupSpanningPayoutBoundaryRemainderToEarlierEntry(t *testing.T) {
+	// GIVEN entries where a tie spans positions 2-4, but only positions 1-3 have payouts
+	byID := tieSpanningPayoutBoundaryScenario()
+
+	// THEN tie group pools payouts from positions 2+3+4 (150+50+0=200), split 3 ways
+	// 200/3 = 66 base, remainder=2 -> first entry in sorted order gets 67
 	if byID["e2"].PayoutCents != 67 {
 		t.Fatalf("expected payout 67, got %d", byID["e2"].PayoutCents)
 	}
+}
+
+func TestThatTieGroupSpanningPayoutBoundaryBaseToLaterEntry(t *testing.T) {
+	// GIVEN entries where a tie spans positions 2-4, but only positions 1-3 have payouts
+	byID := tieSpanningPayoutBoundaryScenario()
+
+	// THEN the last entry in sorted order gets the base payout (no remainder)
 	if byID["e4"].PayoutCents != 66 {
 		t.Fatalf("expected payout 66, got %d", byID["e4"].PayoutCents)
 	}

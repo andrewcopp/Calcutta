@@ -8,13 +8,13 @@ import (
 )
 
 func BuildBracketStructure(tournamentID string, teams []*models.TournamentTeam, finalFour *models.FinalFourConfig) (*models.BracketStructure, error) {
-	if len(teams) != 68 {
-		return nil, fmt.Errorf("expected 68 teams, got %d", len(teams))
+	if len(teams) != TotalTournamentTeams {
+		return nil, fmt.Errorf("expected %d teams, got %d", TotalTournamentTeams, len(teams))
 	}
 
 	bracket := &models.BracketStructure{
 		TournamentID: tournamentID,
-		Regions:      []string{"East", "West", "South", "Midwest"},
+		Regions:      append([]string{}, Regions...),
 		Games:        make(map[string]*models.BracketGame),
 		FinalFour:    finalFour,
 	}
@@ -66,9 +66,9 @@ func buildRegionalBracket(bracket *models.BracketStructure, region string, teams
 	}
 
 	round64Games := buildRoundOf64(bracket, region, teams, firstFourWinners)
-	round32Games := buildRegionalRound(bracket, region, models.RoundOf32, round64Games, 9)
-	sweet16Games := buildRegionalRound(bracket, region, models.RoundSweet16, round32Games, 5)
-	elite8Games := buildRegionalRound(bracket, region, models.RoundElite8, sweet16Games, 3)
+	round32Games := buildRegionalRound(bracket, region, models.RoundOf32, round64Games, SeedPairSumR32)
+	sweet16Games := buildRegionalRound(bracket, region, models.RoundSweet16, round32Games, SeedPairSumS16)
+	elite8Games := buildRegionalRound(bracket, region, models.RoundElite8, sweet16Games, SeedPairSumE8)
 	championGameID := buildRegionalChampionship(bracket, region, elite8Games)
 
 	return championGameID, nil
@@ -84,7 +84,7 @@ func buildRoundOf64(bracket *models.BracketStructure, region string, teams []*mo
 			continue
 		}
 
-		opponentSeed := 17 - team.Seed
+		opponentSeed := SeedPairSumR64 - team.Seed
 		if processed[opponentSeed] {
 			continue
 		}
@@ -306,24 +306,5 @@ func toBracketTeam(team *models.TournamentTeam) *models.BracketTeam {
 }
 
 func getSortOrder(round models.BracketRound, region string, index int) int {
-	regionOrder := map[string]int{
-		"East":    0,
-		"West":    1,
-		"South":   2,
-		"Midwest": 3,
-	}
-
-	baseOrder := regionOrder[region] * 1000
-
-	roundOrder := map[models.BracketRound]int{
-		models.RoundFirstFour:    0,
-		models.RoundOf64:         100,
-		models.RoundOf32:         200,
-		models.RoundSweet16:      300,
-		models.RoundElite8:       400,
-		models.RoundFinalFour:    500,
-		models.RoundChampionship: 600,
-	}
-
-	return baseOrder + roundOrder[round] + index
+	return regionSortOrder[region]*RegionSortMultiplier + roundSortOffset[round] + index
 }

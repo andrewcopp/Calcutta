@@ -66,7 +66,6 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	})
 
 	s.registerBracketRoutes(r)
-	s.registerPortfolioRoutes(r)
 
 	cHandler := calcuttas.NewHandlerWithAuthUserID(s.app, s.authzRepo, s.authzRepo, authUserID)
 	calcuttas.RegisterRoutes(r, calcuttas.Handlers{
@@ -133,10 +132,6 @@ func (s *Server) registerBracketRoutes(r *mux.Router) {
 	r.HandleFunc("/api/tournaments/{id}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
-}
-
-func (s *Server) registerPortfolioRoutes(r *mux.Router) {
-	r.HandleFunc("/api/portfolios/{id}/teams", s.portfolioTeamsHandler).Methods("GET")
 }
 
 func (s *Server) registerCalcuttaCoManagerRoutes(r *mux.Router) {

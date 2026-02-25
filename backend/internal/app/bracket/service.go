@@ -190,8 +190,8 @@ func (s *Service) ValidateBracketSetup(ctx context.Context, tournamentID string)
 // ValidateBracketSetupTeams validates that the teams slice represents a valid 68-team tournament bracket.
 // This is a pure function that can be tested without mocking repositories.
 func ValidateBracketSetupTeams(teams []*models.TournamentTeam) error {
-	if len(teams) != 68 {
-		return fmt.Errorf("tournament must have exactly 68 teams, has %d", len(teams))
+	if len(teams) != TotalTournamentTeams {
+		return fmt.Errorf("tournament must have exactly %d teams, has %d", TotalTournamentTeams, len(teams))
 	}
 
 	regionCounts := make(map[string]int)
@@ -199,10 +199,9 @@ func ValidateBracketSetupTeams(teams []*models.TournamentTeam) error {
 		regionCounts[team.Region]++
 	}
 
-	expectedRegions := []string{"East", "West", "South", "Midwest"}
-	for _, region := range expectedRegions {
+	for _, region := range Regions {
 		count := regionCounts[region]
-		if count < 16 {
+		if count < TeamsPerRegion {
 			return fmt.Errorf("region %s must have at least 16 teams, has %d", region, count)
 		}
 	}
@@ -218,15 +217,15 @@ func ValidateBracketSetupTeams(teams []*models.TournamentTeam) error {
 		regionSeedCounts[key]++
 	}
 
-	for _, region := range expectedRegions {
-		for seed := 1; seed <= 16; seed++ {
+	for _, region := range Regions {
+		for seed := 1; seed <= TeamsPerRegion; seed++ {
 			key := regionSeed{region: region, seed: seed}
 			count := regionSeedCounts[key]
 
 			if count == 0 {
 				return fmt.Errorf("region %s is missing seed %d", region, seed)
 			}
-			if count > 2 {
+			if count > MaxTeamsPerSeed {
 				return fmt.Errorf("region %s has %d teams with seed %d (max 2 for play-in game)", region, count, seed)
 			}
 		}
