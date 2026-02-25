@@ -56,7 +56,8 @@ func run() error {
 }
 
 func refreshPredictions(ctx context.Context, pool *pgxpool.Pool, tournamentIDs []string) {
-	predSvc := prediction.New(dbadapters.NewPredictionRepository(pool))
+	predRepo := dbadapters.NewPredictionRepository(pool)
+	predSvc := prediction.New(prediction.Ports{Batches: predRepo, Tournament: predRepo})
 	for _, tid := range tournamentIDs {
 		results, err := predSvc.RunAllCheckpoints(ctx, prediction.RunParams{
 			TournamentID:         tid,

@@ -115,6 +115,26 @@ func ComputeEntryProjections(
 	return computeProjectionsForCheckpoint(cp, rules, portfolioToEntry, portfolioTeams, tournamentTeams)
 }
 
+// capTournamentTeams returns a copy of teams with progress capped at roundCap.
+// Byes are folded into wins, and teams eliminated beyond the cap are treated as alive.
+func capTournamentTeams(teams []TournamentTeamInput, roundCap int) []TournamentTeamInput {
+	out := make([]TournamentTeamInput, len(teams))
+	for i, tt := range teams {
+		progress := tt.Wins + tt.Byes
+		capped := progress
+		if capped > roundCap {
+			capped = roundCap
+		}
+		out[i] = TournamentTeamInput{
+			ID:           tt.ID,
+			Wins:         capped,
+			Byes:         0,
+			IsEliminated: tt.IsEliminated && progress <= roundCap,
+		}
+	}
+	return out
+}
+
 // ComputeRoundProjections computes projected EV and Favorites for each entry
 // at a specific round cap using the best matching checkpoint.
 // Returns nil if no suitable checkpoint exists.
@@ -130,39 +150,7 @@ func ComputeRoundProjections(
 	if cp == nil {
 		return nil
 	}
-
-	ttByID := make(map[string]TournamentTeamInput, len(tournamentTeams))
-	for _, tt := range tournamentTeams {
-		ttByID[tt.ID] = tt
-	}
-
-	ev := make(map[string]float64)
-	fav := make(map[string]float64)
-	for _, pt := range portfolioTeams {
-		ptv, ok := cp.PTVByTeam[pt.TeamID]
-		if !ok {
-			continue
-		}
-		tt, ok := ttByID[pt.TeamID]
-		if !ok {
-			continue
-		}
-		entryID := portfolioToEntry[pt.PortfolioID]
-		if entryID == "" {
-			continue
-		}
-		progress := tt.Wins + tt.Byes
-		capped := progress
-		if capped > roundCap {
-			capped = roundCap
-		}
-		isEliminated := tt.IsEliminated && progress <= roundCap
-		tp := TeamProgress{Wins: capped, Byes: 0, IsEliminated: isEliminated}
-		ev[entryID] += pt.OwnershipPercentage * ProjectedTeamEV(ptv, rules, tp, cp.ThroughRound)
-		fav[entryID] += pt.OwnershipPercentage * ptv.FavoritesTotalPoints
-	}
-
-	return &EntryProjections{EV: ev, Favorites: fav}
+	return computeProjectionsForCheckpoint(cp, rules, portfolioToEntry, portfolioTeams, capTournamentTeams(tournamentTeams, roundCap))
 }
 
 func computeProjectionsForCheckpoint(

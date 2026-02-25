@@ -103,7 +103,8 @@ func (w *LabPipelineWorker) processGoPredictions(ctx context.Context, workerID s
 	}
 
 	// Generate or get predictions using Go prediction service
-	predSvc := prediction.New(dbadapters.NewPredictionRepository(w.pool))
+	predRepo := dbadapters.NewPredictionRepository(w.pool)
+	predSvc := prediction.New(prediction.Ports{Batches: predRepo, Tournament: predRepo})
 
 	// Check if we already have predictions for this tournament
 	batchID, found, err := predSvc.GetLatestBatchID(ctx, tournamentID)

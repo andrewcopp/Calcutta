@@ -793,7 +793,7 @@ func TestThatPredictionServiceRunCreatesTeamValuesForAllTeams(t *testing.T) {
 	seedCalcuttaWithScoringRules(t, ctx, seed.tournamentID)
 
 	repo := db.NewPredictionRepository(pool)
-	svc := prediction.New(repo)
+	svc := prediction.New(prediction.Ports{Batches: repo, Tournament: repo})
 
 	// WHEN running predictions end-to-end
 	result, err := svc.Run(ctx, prediction.RunParams{

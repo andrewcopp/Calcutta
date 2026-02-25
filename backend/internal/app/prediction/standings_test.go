@@ -164,6 +164,69 @@ func TestThatComputeEntryProjectionsAggregatesFavoritesAcrossPortfolioTeams(t *t
 	}
 }
 
+func TestThatCapTournamentTeamsCapsWinsAtRoundCap(t *testing.T) {
+	// GIVEN a team with 4 wins and round cap 2
+	teams := []TournamentTeamInput{
+		{ID: "t1", Wins: 4, Byes: 0, IsEliminated: false},
+	}
+
+	// WHEN capping at round 2
+	result := capTournamentTeams(teams, 2)
+
+	// THEN wins are capped at 2
+	if result[0].Wins != 2 {
+		t.Errorf("expected Wins=2, got %d", result[0].Wins)
+	}
+}
+
+func TestThatCapTournamentTeamsZeroesByesAndFoldsIntoWins(t *testing.T) {
+	// GIVEN a team with 1 win and 1 bye, round cap 3
+	teams := []TournamentTeamInput{
+		{ID: "t1", Wins: 1, Byes: 1, IsEliminated: false},
+	}
+
+	// WHEN capping at round 3
+	result := capTournamentTeams(teams, 3)
+
+	// THEN byes are zeroed and progress (2) is in wins
+	if result[0].Wins != 2 {
+		t.Errorf("expected Wins=2, got %d", result[0].Wins)
+	}
+	if result[0].Byes != 0 {
+		t.Errorf("expected Byes=0, got %d", result[0].Byes)
+	}
+}
+
+func TestThatCapTournamentTeamsTreatsEliminatedBeyondCapAsAlive(t *testing.T) {
+	// GIVEN a team eliminated at progress 4, round cap 2
+	teams := []TournamentTeamInput{
+		{ID: "t1", Wins: 4, Byes: 0, IsEliminated: true},
+	}
+
+	// WHEN capping at round 2
+	result := capTournamentTeams(teams, 2)
+
+	// THEN team is treated as alive (progress 4 > cap 2)
+	if result[0].IsEliminated {
+		t.Error("expected IsEliminated=false for team eliminated beyond cap")
+	}
+}
+
+func TestThatCapTournamentTeamsPreservesEliminationAtOrBelowCap(t *testing.T) {
+	// GIVEN a team eliminated at progress 2, round cap 3
+	teams := []TournamentTeamInput{
+		{ID: "t1", Wins: 2, Byes: 0, IsEliminated: true},
+	}
+
+	// WHEN capping at round 3
+	result := capTournamentTeams(teams, 3)
+
+	// THEN elimination is preserved (progress 2 <= cap 3)
+	if !result[0].IsEliminated {
+		t.Error("expected IsEliminated=true for team eliminated at or below cap")
+	}
+}
+
 func TestThatComputeRoundProjectionsReturnsNilWhenNoCheckpointMatchesCap(t *testing.T) {
 	// GIVEN checkpoints only at round 3
 	checkpoints := []CheckpointData{

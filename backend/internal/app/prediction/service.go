@@ -12,14 +12,20 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
+// Ports defines the dependencies for the prediction service.
+type Ports struct {
+	Batches    ports.PredictionRepository
+	Tournament ports.TournamentDataLoader
+}
+
 // Service handles prediction generation and storage.
 type Service struct {
-	repo ports.PredictionRepository
+	ports Ports
 }
 
 // New creates a new prediction service.
-func New(repo ports.PredictionRepository) *Service {
-	return &Service{repo: repo}
+func New(p Ports) *Service {
+	return &Service{ports: p}
 }
 
 // RunParams configures a prediction run.
@@ -51,12 +57,12 @@ type RunResult struct {
 
 // loadTournamentData loads teams, scoring rules, and final four config from the database.
 func (s *Service) loadTournamentData(ctx context.Context, tournamentID string) (*TournamentData, error) {
-	teams, err := s.repo.LoadTeams(ctx, tournamentID)
+	teams, err := s.ports.Tournament.LoadTeams(ctx, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load teams: %w", err)
 	}
 
-	rules, err := s.repo.LoadScoringRules(ctx, tournamentID)
+	rules, err := s.ports.Tournament.LoadScoringRules(ctx, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load scoring rules: %w", err)
 	}
@@ -64,7 +70,7 @@ func (s *Service) loadTournamentData(ctx context.Context, tournamentID string) (
 		rules = DefaultScoringRules()
 	}
 
-	ffConfig, err := s.repo.LoadFinalFourConfig(ctx, tournamentID)
+	ffConfig, err := s.ports.Tournament.LoadFinalFourConfig(ctx, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load final four config: %w", err)
 	}
@@ -88,12 +94,12 @@ func (s *Service) runForCheckpoint(ctx context.Context, tournamentID string, dat
 	}
 
 	specJSON, _ := json.Marshal(spec)
-	batchID, err := s.repo.StorePredictions(ctx, tournamentID, probSourceKey, specJSON, teamValues, throughRound)
+	batchID, err := s.ports.Batches.StorePredictions(ctx, tournamentID, probSourceKey, specJSON, teamValues, throughRound)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store predictions for checkpoint %d: %w", throughRound, err)
 	}
 
-	if _, err := s.repo.PruneOldBatchesForCheckpoint(ctx, tournamentID, throughRound, 1); err != nil {
+	if _, err := s.ports.Batches.PruneOldBatchesForCheckpoint(ctx, tournamentID, throughRound, 1); err != nil {
 		slog.Warn("prediction_prune_failed", "tournament_id", tournamentID, "through_round", throughRound, "error", err)
 	}
 
@@ -155,7 +161,7 @@ func (s *Service) RunAllCheckpoints(ctx context.Context, p RunParams) ([]RunResu
 
 // DetectThroughRound loads teams for the tournament and returns the current checkpoint.
 func (s *Service) DetectThroughRound(ctx context.Context, tournamentID string) (int, error) {
-	teams, err := s.repo.LoadTeams(ctx, tournamentID)
+	teams, err := s.ports.Tournament.LoadTeams(ctx, tournamentID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to load teams: %w", err)
 	}
@@ -183,17 +189,17 @@ func detectThroughRoundFromTeams(teams []TeamInput) int {
 
 // ListBatches returns all non-deleted prediction batches for a tournament, newest first.
 func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]PredictionBatch, error) {
-	return s.repo.ListBatches(ctx, tournamentID)
+	return s.ports.Batches.ListBatches(ctx, tournamentID)
 }
 
 // GetLatestBatch returns the most recent prediction batch for a tournament.
 func (s *Service) GetLatestBatch(ctx context.Context, tournamentID string) (*PredictionBatch, bool, error) {
-	return s.repo.GetLatestBatch(ctx, tournamentID)
+	return s.ports.Batches.GetLatestBatch(ctx, tournamentID)
 }
 
 // GetLatestBatchID returns the most recent prediction batch ID for a tournament.
 func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (string, bool, error) {
-	batch, found, err := s.repo.GetLatestBatch(ctx, tournamentID)
+	batch, found, err := s.ports.Batches.GetLatestBatch(ctx, tournamentID)
 	if err != nil || !found {
 		return "", found, err
 	}
@@ -202,12 +208,12 @@ func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (st
 
 // GetBatchSummary returns the batch metadata for a specific batch ID.
 func (s *Service) GetBatchSummary(ctx context.Context, batchID string) (*PredictionBatch, error) {
-	return s.repo.GetBatchSummary(ctx, batchID)
+	return s.ports.Batches.GetBatchSummary(ctx, batchID)
 }
 
 // GetTeamValues returns predicted team values for a batch.
 func (s *Service) GetTeamValues(ctx context.Context, batchID string) ([]PredictedTeamValue, error) {
-	return s.repo.GetTeamValues(ctx, batchID)
+	return s.ports.Batches.GetTeamValues(ctx, batchID)
 }
 
 // GetExpectedPointsMap returns a map of team_id -> expected_points for a tournament.
@@ -220,7 +226,7 @@ func (s *Service) GetExpectedPointsMap(ctx context.Context, tournamentID string)
 		return nil, fmt.Errorf("no prediction batch found for tournament %s", tournamentID)
 	}
 
-	values, err := s.repo.GetTeamValues(ctx, batchID)
+	values, err := s.ports.Batches.GetTeamValues(ctx, batchID)
 	if err != nil {
 		return nil, fmt.Errorf("getting team values: %w", err)
 	}
@@ -235,7 +241,7 @@ func (s *Service) GetExpectedPointsMap(ctx context.Context, tournamentID string)
 // BackfillMissing generates predictions for any tournament that has 68 teams
 // with KenPom data and scoring rules but no prediction batch.
 func (s *Service) BackfillMissing(ctx context.Context) int {
-	tournamentIDs, err := s.repo.ListEligibleTournamentsForBackfill(ctx)
+	tournamentIDs, err := s.ports.Batches.ListEligibleTournamentsForBackfill(ctx)
 	if err != nil {
 		slog.Warn("prediction_backfill_query_failed", "error", err)
 		return 0

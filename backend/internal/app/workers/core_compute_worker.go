@@ -113,7 +113,8 @@ func (w *CoreComputeWorker) processRefreshPredictions(ctx context.Context, job *
 	}
 
 	start := time.Now()
-	predSvc := prediction.New(dbadapters.NewPredictionRepository(w.pool))
+	predRepo := dbadapters.NewPredictionRepository(w.pool)
+	predSvc := prediction.New(prediction.Ports{Batches: predRepo, Tournament: predRepo})
 	results, err := predSvc.RunAllCheckpoints(ctx, prediction.RunParams{
 		TournamentID:         params.TournamentID,
 		ProbabilitySourceKey: sourceKey,

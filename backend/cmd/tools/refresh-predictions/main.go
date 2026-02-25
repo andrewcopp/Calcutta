@@ -33,7 +33,7 @@ func main() {
 	defer pool.Close()
 
 	repo := dbadapters.NewPredictionRepository(pool)
-	svc := prediction.New(repo)
+	svc := prediction.New(prediction.Ports{Batches: repo, Tournament: repo})
 	results, err := svc.RunAllCheckpoints(ctx, prediction.RunParams{
 		TournamentID:         tournamentID,
 		ProbabilitySourceKey: "kenpom",
