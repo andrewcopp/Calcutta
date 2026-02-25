@@ -117,6 +117,25 @@ export const RoundStandingGroupSchema = z.object({
 
 export type RoundStandingGroup = z.infer<typeof RoundStandingGroupSchema>;
 
+export const FinalFourTeamSchema = z.object({
+  teamId: z.string(),
+  schoolId: z.string(),
+  seed: z.number(),
+  region: z.string(),
+});
+
+export type FinalFourTeam = z.infer<typeof FinalFourTeamSchema>;
+
+export const FinalFourOutcomeSchema = z.object({
+  semifinal1Winner: FinalFourTeamSchema,
+  semifinal2Winner: FinalFourTeamSchema,
+  champion: FinalFourTeamSchema,
+  runnerUp: FinalFourTeamSchema,
+  entries: z.array(RoundStandingEntrySchema),
+});
+
+export type FinalFourOutcome = z.infer<typeof FinalFourOutcomeSchema>;
+
 export const CalcuttaDashboardSchema = z.object({
   calcutta: CalcuttaSchema,
   tournamentStartingAt: z.string().optional(),
@@ -131,6 +150,7 @@ export const CalcuttaDashboardSchema = z.object({
   schools: z.array(SchoolSchema),
   tournamentTeams: z.array(TournamentTeamSchema),
   roundStandings: z.array(RoundStandingGroupSchema),
+  finalFourOutcomes: z.array(FinalFourOutcomeSchema).optional(),
 });
 
 export type CalcuttaDashboard = z.infer<typeof CalcuttaDashboardSchema>;

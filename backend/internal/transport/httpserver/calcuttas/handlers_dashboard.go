@@ -211,6 +211,34 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
 		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, checkpoints)
+
+		bracket, err := h.app.Bracket.GetBracket(r.Context(), calcutta.TournamentID)
+		if err == nil && bracket != nil {
+			if ffOutcomes := calcuttaapp.ComputeFinalFourOutcomes(bracket, entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts); ffOutcomes != nil {
+				ffResponses := make([]*dtos.FinalFourOutcomeResponse, len(ffOutcomes))
+				for i, o := range ffOutcomes {
+					standingEntries := make([]*dtos.RoundStandingEntry, len(o.Standings))
+					for j, s := range o.Standings {
+						standingEntries[j] = &dtos.RoundStandingEntry{
+							EntryID:        s.EntryID,
+							TotalPoints:    s.TotalPoints,
+							FinishPosition: s.FinishPosition,
+							IsTied:         s.IsTied,
+							PayoutCents:    s.PayoutCents,
+							InTheMoney:     s.InTheMoney,
+						}
+					}
+					ffResponses[i] = &dtos.FinalFourOutcomeResponse{
+						Semifinal1Winner: dtos.NewFinalFourTeam(o.Semifinal1Winner),
+						Semifinal2Winner: dtos.NewFinalFourTeam(o.Semifinal2Winner),
+						Champion:         dtos.NewFinalFourTeam(o.Champion),
+						RunnerUp:         dtos.NewFinalFourTeam(o.RunnerUp),
+						Entries:          standingEntries,
+					}
+				}
+				resp.FinalFourOutcomes = ffResponses
+			}
+		}
 	}
 
 	response.WriteJSON(w, http.StatusOK, resp)

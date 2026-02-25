@@ -13,6 +13,7 @@ import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentsTab } from './CalcuttaEntries/InvestmentsTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
 import { OwnershipsTab } from './CalcuttaEntries/OwnershipsTab';
+import { FinalFourTab } from './CalcuttaEntries/FinalFourTab';
 import { BiddingOpenView } from './CalcuttaEntries/BiddingOpenView';
 import { DashboardSummary } from './CalcuttaEntries/DashboardSummary';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
@@ -31,7 +32,7 @@ import { formatDate } from '../utils/format';
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const validTabs = ['leaderboard', 'race', 'investment', 'ownership', 'returns', 'statistics'] as const;
+  const validTabs = ['leaderboard', 'race', 'investment', 'ownership', 'returns', 'statistics', 'final-four'] as const;
   const tabParam = searchParams.get('tab');
   const activeTab = validTabs.includes(tabParam as (typeof validTabs)[number]) ? tabParam! : 'leaderboard';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
@@ -195,6 +196,9 @@ export function CalcuttaEntriesPage() {
           <TabsTrigger value="ownership">Shares</TabsTrigger>
           <TabsTrigger value="returns">Scoring</TabsTrigger>
           <TabsTrigger value="statistics">Pool Stats</TabsTrigger>
+          {dashboardData?.finalFourOutcomes && dashboardData.finalFourOutcomes.length > 0 && (
+            <TabsTrigger value="final-four">Final Four</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="leaderboard">
@@ -233,6 +237,15 @@ export function CalcuttaEntriesPage() {
             tournamentTeams={tournamentTeams}
             allCalcuttaPortfolios={allCalcuttaPortfolios}
             allCalcuttaPortfolioTeams={allCalcuttaPortfolioTeams}
+          />
+        </TabsContent>
+
+        <TabsContent value="final-four">
+          <FinalFourTab
+            entries={entries}
+            dashboard={dashboardData!}
+            schools={schools}
+            tournamentTeams={tournamentTeams}
           />
         </TabsContent>
 

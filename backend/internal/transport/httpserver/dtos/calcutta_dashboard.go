@@ -1,6 +1,10 @@
 package dtos
 
-import "time"
+import (
+	"time"
+
+	"github.com/andrewcopp/Calcutta/backend/internal/models"
+)
 
 type CalcuttaDashboardResponse struct {
 	Calcutta             *CalcuttaResponse         `json:"calcutta"`
@@ -15,7 +19,8 @@ type CalcuttaDashboardResponse struct {
 	PortfolioTeams       []*PortfolioTeamResponse  `json:"portfolioTeams"`
 	Schools              []*SchoolResponse         `json:"schools"`
 	TournamentTeams      []*TournamentTeamResponse `json:"tournamentTeams"`
-	RoundStandings       []*RoundStandingGroup     `json:"roundStandings"`
+	RoundStandings       []*RoundStandingGroup        `json:"roundStandings"`
+	FinalFourOutcomes    []*FinalFourOutcomeResponse  `json:"finalFourOutcomes,omitempty"`
 }
 
 type RoundStandingGroup struct {
@@ -32,6 +37,33 @@ type RoundStandingEntry struct {
 	InTheMoney         bool     `json:"inTheMoney"`
 	ProjectedEV        *float64 `json:"projectedEv,omitempty"`
 	ProjectedFavorites *float64 `json:"projectedFavorites,omitempty"`
+}
+
+type FinalFourTeam struct {
+	TeamID   string `json:"teamId"`
+	SchoolID string `json:"schoolId"`
+	Seed     int    `json:"seed"`
+	Region   string `json:"region"`
+}
+
+type FinalFourOutcomeResponse struct {
+	Semifinal1Winner *FinalFourTeam        `json:"semifinal1Winner"`
+	Semifinal2Winner *FinalFourTeam        `json:"semifinal2Winner"`
+	Champion         *FinalFourTeam        `json:"champion"`
+	RunnerUp         *FinalFourTeam        `json:"runnerUp"`
+	Entries          []*RoundStandingEntry `json:"entries"`
+}
+
+func NewFinalFourTeam(bt *models.BracketTeam) *FinalFourTeam {
+	if bt == nil {
+		return nil
+	}
+	return &FinalFourTeam{
+		TeamID:   bt.TeamID,
+		SchoolID: bt.SchoolID,
+		Seed:     bt.Seed,
+		Region:   bt.Region,
+	}
 }
 
 type CalcuttaWithRankingResponse struct {
