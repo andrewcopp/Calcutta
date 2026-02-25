@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/jobqueue"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/archive"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/importer"
 	"github.com/andrewcopp/Calcutta/backend/internal/bundles/verifier"
@@ -25,14 +24,12 @@ const (
 )
 
 type TournamentImportWorker struct {
-	pool     *pgxpool.Pool
-	enqueuer *jobqueue.Enqueuer
+	pool *pgxpool.Pool
 }
 
 func NewTournamentImportWorker(pool *pgxpool.Pool) *TournamentImportWorker {
 	return &TournamentImportWorker{
-		pool:     pool,
-		enqueuer: jobqueue.NewEnqueuer(pool),
+		pool: pool,
 	}
 }
 
@@ -119,7 +116,7 @@ func (w *TournamentImportWorker) processTournamentImport(ctx context.Context, up
 		return
 	}
 
-	report, err := func() (*importer.Report, error) {
+	_, err := func() (*importer.Report, error) {
 		q := sqlc.New(w.pool)
 		zipBytes, err := q.GetTournamentImportArchive(ctx, uploadID)
 		if err != nil {
@@ -168,28 +165,6 @@ func (w *TournamentImportWorker) processTournamentImport(ctx context.Context, up
 	if err != nil {
 		w.failTournamentImport(ctx, uploadID, err)
 		return
-	}
-
-	w.refreshPredictions(ctx, report.TournamentIDs)
-}
-
-func (w *TournamentImportWorker) refreshPredictions(ctx context.Context, tournamentIDs []string) {
-	for _, tid := range tournamentIDs {
-		params, _ := json.Marshal(map[string]string{
-			"tournamentId":         tid,
-			"probabilitySourceKey": "kenpom",
-		})
-		dedupKey := fmt.Sprintf("prediction:%s", tid)
-		result, err := w.enqueuer.Enqueue(ctx, jobqueue.KindRefreshPredictions, params, jobqueue.PriorityCoreApp, dedupKey)
-		if err != nil {
-			slog.Warn("prediction_enqueue_failed", "tournament_id", tid, "error", err)
-			continue
-		}
-		if result.Enqueued {
-			slog.Info("prediction_enqueued", "tournament_id", tid, "job_id", result.JobID)
-		} else {
-			slog.Info("prediction_deduplicated", "tournament_id", tid)
-		}
 	}
 }
 

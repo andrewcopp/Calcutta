@@ -13,3 +13,10 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
 }
+
+type UserMergeRepository interface {
+	MergeUsers(ctx context.Context, sourceUserID, targetUserID, mergedBy string) (*models.UserMerge, error)
+	ListStubUsers(ctx context.Context) ([]*models.User, error)
+	FindMergeCandidates(ctx context.Context, userID string) ([]*models.User, error)
+	ListMergeHistory(ctx context.Context, userID string) ([]*models.UserMerge, error)
+}

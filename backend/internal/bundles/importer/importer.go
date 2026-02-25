@@ -9,18 +9,15 @@ import (
 )
 
 type Report struct {
-	StartedAt       time.Time `json:"startedAt"`
-	FinishedAt      time.Time `json:"finishedAt"`
-	DryRun          bool      `json:"dryRun"`
-	Schools         int       `json:"schools"`
-	Tournaments     int       `json:"tournaments"`
-	TournamentTeams int       `json:"tournamentTeams"`
-	TournamentIDs   []string  `json:"tournamentIds"`
-	Calcuttas       int       `json:"calcuttas"`
-	Entries         int       `json:"entries"`
-	Bids            int       `json:"bids"`
-	Payouts         int       `json:"payouts"`
-	Rounds          int       `json:"rounds"`
+	StartedAt time.Time `json:"startedAt"`
+	FinishedAt time.Time `json:"finishedAt"`
+	DryRun    bool      `json:"dryRun"`
+	Calcuttas int       `json:"calcuttas"`
+	Entries   int       `json:"entries"`
+	StubUsers int       `json:"stubUsers"`
+	Bids      int       `json:"bids"`
+	Payouts   int       `json:"payouts"`
+	Rounds    int       `json:"rounds"`
 }
 
 type Options struct {
@@ -46,12 +43,9 @@ func ImportFromDir(ctx context.Context, pool *pgxpool.Pool, inDir string, opts O
 	if err != nil {
 		return report, err
 	}
-	report.Schools = counts.schools
-	report.Tournaments = counts.tournaments
-	report.TournamentTeams = counts.teams
-	report.TournamentIDs = counts.tournamentIDs
 	report.Calcuttas = counts.calcuttas
 	report.Entries = counts.entries
+	report.StubUsers = counts.stubUsers
 	report.Bids = counts.bids
 	report.Payouts = counts.payouts
 	report.Rounds = counts.rounds
@@ -69,40 +63,24 @@ func ImportFromDir(ctx context.Context, pool *pgxpool.Pool, inDir string, opts O
 }
 
 type importCounts struct {
-	schools       int
-	tournaments   int
-	teams         int
-	tournamentIDs []string
-	calcuttas     int
-	entries       int
-	bids          int
-	payouts       int
-	rounds        int
+	calcuttas int
+	entries   int
+	stubUsers int
+	bids      int
+	payouts   int
+	rounds    int
 }
 
 func importAll(ctx context.Context, tx pgx.Tx, inDir string) (importCounts, error) {
 	var c importCounts
 
-	sc, err := importSchools(ctx, tx, inDir)
-	if err != nil {
-		return c, err
-	}
-	c.schools = sc
-
-	tc, teams, tournamentIDs, err := importTournaments(ctx, tx, inDir)
-	if err != nil {
-		return c, err
-	}
-	c.tournaments = tc
-	c.teams = teams
-	c.tournamentIDs = tournamentIDs
-
-	cc, entries, bids, payouts, rounds, err := importCalcuttas(ctx, tx, inDir)
+	cc, entries, stubUsers, bids, payouts, rounds, err := importCalcuttas(ctx, tx, inDir)
 	if err != nil {
 		return c, err
 	}
 	c.calcuttas = cc
 	c.entries = entries
+	c.stubUsers = stubUsers
 	c.bids = bids
 	c.payouts = payouts
 	c.rounds = rounds

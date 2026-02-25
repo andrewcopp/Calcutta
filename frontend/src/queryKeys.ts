@@ -3,6 +3,9 @@ export const queryKeys = {
     users: (status?: string) => ['admin', 'users', status ?? null] as const,
     userDetail: (userId: string | null | undefined) => ['admin', 'users', 'detail', userId ?? null] as const,
     apiKeys: () => ['admin', 'apiKeys'] as const,
+    stubs: () => ['admin', 'users', 'stubs'] as const,
+    mergeCandidates: (userId: string) => ['admin', 'users', 'merge-candidates', userId] as const,
+    mergeHistory: (userId: string) => ['admin', 'users', 'merges', userId] as const,
   },
   profile: {
     me: () => ['profile', 'me'] as const,

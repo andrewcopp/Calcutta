@@ -13,6 +13,7 @@ import (
 	appprediction "github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
 	apptournament "github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
+	appusermgmt "github.com/andrewcopp/Calcutta/backend/internal/app/usermanagement"
 	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -57,6 +58,9 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	a.Auth = appauth.New(dbUserRepo, authRepo, tm, time.Duration(cfg.RefreshTokenTTLHours)*time.Hour)
 	a.School = appschool.New(dbSchoolRepo)
 	a.Tournament = apptournament.New(dbTournamentRepo)
+
+	userMergeRepo := dbadapters.NewUserMergeRepository(pool)
+	a.UserManagement = appusermgmt.New(appusermgmt.Ports{Merges: userMergeRepo})
 
 	return a, nil
 }

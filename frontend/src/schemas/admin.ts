@@ -142,6 +142,61 @@ export type TournamentExportResult = {
   filename: string;
 };
 
+// --- User Merge Schemas ---
+
+export const StubUserSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().nullable().optional(),
+  status: z.string(),
+  createdAt: z.string(),
+});
+
+export type StubUser = z.infer<typeof StubUserSchema>;
+
+export const StubUsersListResponseSchema = z.object({
+  items: z.array(StubUserSchema),
+});
+
+export type StubUsersListResponse = z.infer<typeof StubUsersListResponseSchema>;
+
+export const MergeCandidateSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().nullable().optional(),
+  status: z.string(),
+  createdAt: z.string(),
+});
+
+export type MergeCandidate = z.infer<typeof MergeCandidateSchema>;
+
+export const MergeCandidatesListResponseSchema = z.object({
+  items: z.array(MergeCandidateSchema),
+});
+
+export type MergeCandidatesListResponse = z.infer<typeof MergeCandidatesListResponseSchema>;
+
+export const UserMergeResponseSchema = z.object({
+  id: z.string(),
+  sourceUserId: z.string(),
+  targetUserId: z.string(),
+  mergedBy: z.string(),
+  entriesMoved: z.number(),
+  invitationsMoved: z.number(),
+  grantsMoved: z.number(),
+  createdAt: z.string(),
+});
+
+export type UserMergeResponse = z.infer<typeof UserMergeResponseSchema>;
+
+export const MergeHistoryResponseSchema = z.object({
+  items: z.array(UserMergeResponseSchema),
+});
+
+export type MergeHistoryResponse = z.infer<typeof MergeHistoryResponseSchema>;
+
 export const UserProfileResponseSchema = z.object({
   id: z.string(),
   email: z.string().nullable(),

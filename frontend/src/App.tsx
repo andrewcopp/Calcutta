@@ -50,6 +50,9 @@ const AdminApiKeysPage = React.lazy(() =>
   import('./pages/AdminApiKeysPage').then((m) => ({ default: m.AdminApiKeysPage })),
 );
 const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
+const AdminUserMergePage = React.lazy(() =>
+  import('./pages/AdminUserMergePage').then((m) => ({ default: m.AdminUserMergePage })),
+);
 const AdminUserProfilePage = React.lazy(() =>
   import('./pages/AdminUserProfilePage').then((m) => ({ default: m.AdminUserProfilePage })),
 );
@@ -269,6 +272,16 @@ const AppLayout: React.FC = () => {
                 <PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_READ}>
                   <RouteErrorBoundary>
                     <AdminUserProfilePage />
+                  </RouteErrorBoundary>
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/user-merges"
+              element={
+                <PermissionProtectedRoute permission={PERMISSIONS.ADMIN_USERS_WRITE}>
+                  <RouteErrorBoundary>
+                    <AdminUserMergePage />
                   </RouteErrorBoundary>
                 </PermissionProtectedRoute>
               }

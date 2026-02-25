@@ -27,8 +27,15 @@ type Report struct {
 
 func VerifyDirAgainstDB(ctx context.Context, pool *pgxpool.Pool, inDir string) (Report, error) {
 	var mismatches []Mismatch
-	mismatches = append(mismatches, verifySchools(ctx, pool, inDir)...)
-	mismatches = append(mismatches, verifyTournaments(ctx, pool, inDir)...)
+
+	// Schools and tournaments are now seeded via migrations, so only verify
+	// if the bundle directory contains those files.
+	if _, err := os.Stat(filepath.Join(inDir, "schools.json")); err == nil {
+		mismatches = append(mismatches, verifySchools(ctx, pool, inDir)...)
+	}
+	if paths, _ := filepath.Glob(filepath.Join(inDir, "tournaments", "*.json")); len(paths) > 0 {
+		mismatches = append(mismatches, verifyTournaments(ctx, pool, inDir)...)
+	}
 	mismatches = append(mismatches, verifyCalcuttas(ctx, pool, inDir)...)
 
 	r := Report{OK: len(mismatches) == 0, MismatchCount: len(mismatches)}

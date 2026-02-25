@@ -9,6 +9,7 @@ export function AdminPage() {
   const canTournamentImports = useHasPermission(PERMISSIONS.ADMIN_BUNDLES_EXPORT);
   const canApiKeys = useHasPermission(PERMISSIONS.ADMIN_API_KEYS_WRITE);
   const canUsers = useHasPermission(PERMISSIONS.ADMIN_USERS_READ);
+  const canUserMerge = useHasPermission(PERMISSIONS.ADMIN_USERS_WRITE);
   const canHof = useHasPermission(PERMISSIONS.ADMIN_HOF_READ);
 
   return (
@@ -66,6 +67,15 @@ export function AdminPage() {
             <Card className="hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold mb-2">Users</h2>
               <p className="text-muted-foreground">View users and their roles/permissions</p>
+            </Card>
+          </Link>
+        )}
+
+        {canUserMerge && (
+          <Link to="/admin/user-merges" className="block">
+            <Card className="hover:shadow-md transition-shadow">
+              <h2 className="text-xl font-semibold mb-2">User Merge</h2>
+              <p className="text-muted-foreground">Consolidate stub users from historical imports with real accounts</p>
             </Card>
           </Link>
         )}

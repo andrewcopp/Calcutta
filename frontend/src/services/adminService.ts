@@ -9,6 +9,10 @@ import {
   CreateAPIKeyResponseSchema,
   TournamentImportStartResponseSchema,
   TournamentImportStatusResponseSchema,
+  StubUsersListResponseSchema,
+  MergeCandidatesListResponseSchema,
+  UserMergeResponseSchema,
+  MergeHistoryResponseSchema,
 } from '../schemas/admin';
 
 export const adminService = {
@@ -84,5 +88,23 @@ export const adminService = {
     return apiClient.get(`/admin/tournament-imports/import/${uploadId}`, {
       schema: TournamentImportStatusResponseSchema,
     });
+  },
+
+  // --- User Merge ---
+
+  async listStubUsers() {
+    return apiClient.get('/admin/users/stubs', { schema: StubUsersListResponseSchema });
+  },
+
+  async findMergeCandidates(userId: string) {
+    return apiClient.get(`/admin/users/${userId}/merge-candidates`, { schema: MergeCandidatesListResponseSchema });
+  },
+
+  async mergeUsers(sourceUserId: string, targetUserId: string) {
+    return apiClient.post('/admin/users/merge', { sourceUserId, targetUserId }, { schema: UserMergeResponseSchema });
+  },
+
+  async listMergeHistory(userId: string) {
+    return apiClient.get(`/admin/users/${userId}/merges`, { schema: MergeHistoryResponseSchema });
   },
 };
