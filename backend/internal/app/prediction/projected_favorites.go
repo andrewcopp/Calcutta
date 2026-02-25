@@ -42,8 +42,10 @@ func ComputeFavoritesBracket(
 		}
 	}
 
-	// Process each round in order.
-	for round := throughRound + 1; round <= maxRound; round++ {
+	// Process each round in order. Start from round 1 so that all generated
+	// matchups are processed; rounds before the checkpoint have no matchups
+	// (the matchup generator skips them), so the loop body is a no-op.
+	for round := 1; round <= maxRound; round++ {
 		roundMatchups := matchupsByRound[round]
 
 		// Group matchups by game ID.

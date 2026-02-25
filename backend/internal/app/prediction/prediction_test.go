@@ -882,6 +882,238 @@ func TestThatGeneratePredictionsProducesValuesForAllTeams(t *testing.T) {
 	}
 }
 
+// --- Double-counting and Favorites regression tests ---
+
+func TestThatCheckpointZeroEVDoesNotDoubleCountByePoints(t *testing.T) {
+	// GIVEN two identical 68-team fields — one with Byes=0, one with Byes=1
+	teamsNoByes := generateTestTeams()
+	teamsWithByes := generateTestTeams()
+	for i := range teamsWithByes {
+		teamsWithByes[i].Byes = 1
+	}
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	rules := DefaultScoringRules()
+
+	// Matchups are identical since they depend on seeds/KenPom, not Byes
+	matchups, err := GenerateMatchups(teamsNoByes, 0, spec, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	valuesNoByes := GenerateTournamentValues(teamsNoByes, matchups, 0, rules)
+	valuesWithByes := GenerateTournamentValues(teamsWithByes, matchups, 0, rules)
+
+	evByTeam := func(values []PredictedTeamValue) map[string]float64 {
+		m := make(map[string]float64)
+		for _, v := range values {
+			m[v.TeamID] = v.ExpectedPoints
+		}
+		return m
+	}
+	noByes := evByTeam(valuesNoByes)
+	withByes := evByTeam(valuesWithByes)
+
+	// THEN a non-FF 1-seed's EV should be the same regardless of Byes.
+	// The bye gives already-earned progress that shifts points from "future" to "actual"
+	// but shouldn't change the total EV.
+	// With the double-counting bug, withByes would be ~10 points higher.
+	teamID := "team-1" // East 1-seed (non-FF)
+	diff := withByes[teamID] - noByes[teamID]
+	if math.Abs(diff) > 1.0 {
+		t.Errorf("East 1-seed EV: noByes=%.2f, withByes=%.2f, diff=%.2f (expected ~0)",
+			noByes[teamID], withByes[teamID], diff)
+	}
+}
+
+func TestThatEVIsConsistentAcrossCheckpoints(t *testing.T) {
+	// GIVEN predictions at checkpoint 0 (Byes=1) and checkpoint 1 (after FF resolved)
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	rules := DefaultScoringRules()
+
+	// Checkpoint 0: non-FF teams have Byes=1
+	teams0 := generateTestTeamsWithByes()
+	matchups0, err := GenerateMatchups(teams0, 0, spec, nil)
+	if err != nil {
+		t.Fatalf("checkpoint 0 matchups: %v", err)
+	}
+	values0 := GenerateTournamentValues(teams0, matchups0, 0, rules)
+
+	// Checkpoint 1: FF resolved, survivors have progress >= 1
+	teams1 := generateCheckpoint1Teams()
+	survivors1 := filterSurvivors(teams1, 1)
+	matchups1, err := GenerateMatchups(survivors1, 1, spec, nil)
+	if err != nil {
+		t.Fatalf("checkpoint 1 matchups: %v", err)
+	}
+	values1 := GenerateTournamentValues(teams1, matchups1, 1, rules)
+
+	findEV := func(values []PredictedTeamValue, teamID string) float64 {
+		for _, v := range values {
+			if v.TeamID == teamID {
+				return v.ExpectedPoints
+			}
+		}
+		return 0
+	}
+
+	// THEN the East 1-seed's EV should not change by more than 10% between checkpoints
+	teamID := "team-1" // East 1-seed
+	ev0 := findEV(values0, teamID)
+	ev1 := findEV(values1, teamID)
+
+	if ev1 < ev0*0.90 || ev1 > ev0*1.10 {
+		t.Errorf("East 1-seed EV: checkpoint0=%.2f, checkpoint1=%.2f (>10%% change)", ev0, ev1)
+	}
+}
+
+func TestThatFavoritesTotalPointsAreSimilarAcrossCheckpoints(t *testing.T) {
+	// GIVEN Favorites computed at checkpoint 0 (Byes=1) and checkpoint 1 (FF resolved)
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	rules := DefaultScoringRules()
+
+	// Checkpoint 0
+	teams0 := generateTestTeamsWithByes()
+	matchups0, err := GenerateMatchups(teams0, 0, spec, nil)
+	if err != nil {
+		t.Fatalf("checkpoint 0 matchups: %v", err)
+	}
+	fav0 := ComputeFavoritesBracket(teams0, matchups0, 0, rules)
+
+	// Checkpoint 1
+	teams1 := generateCheckpoint1Teams()
+	survivors1 := filterSurvivors(teams1, 1)
+	matchups1, err := GenerateMatchups(survivors1, 1, spec, nil)
+	if err != nil {
+		t.Fatalf("checkpoint 1 matchups: %v", err)
+	}
+	fav1 := ComputeFavoritesBracket(teams1, matchups1, 1, rules)
+
+	// THEN the East 8-seed's Favorites total should be similar across checkpoints.
+	// Without the R64 fix, checkpoint 1 would miss R64 and produce much lower values.
+	teamID := "team-8" // East 8-seed
+	diff := math.Abs(fav0[teamID] - fav1[teamID])
+	if diff > 5.0 {
+		t.Errorf("East 8-seed Favorites: checkpoint0=%.2f, checkpoint1=%.2f, diff=%.2f (expected similar)",
+			fav0[teamID], fav1[teamID], diff)
+	}
+}
+
+func TestThatFavoritesBracketProcessesR64AtCheckpointOne(t *testing.T) {
+	// GIVEN survivors at checkpoint 1 with R64 matchups
+	teams := generateCheckpoint1Teams()
+	survivors := filterSurvivors(teams, 1)
+	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	matchups, err := GenerateMatchups(survivors, 1, spec, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	rules := DefaultScoringRules()
+
+	// WHEN computing the Favorites bracket
+	favMap := ComputeFavoritesBracket(teams, matchups, 1, rules)
+
+	// THEN the East 8-seed (KenPom 10.0) should beat the 9-seed (KenPom 7.5) in R64,
+	// giving it a Favorites total reflecting the R64 win.
+	// With R64 win: totalWins=0+1=1, progress=1+1=2, points>=30
+	// Without R64 win (bug): totalWins=0, progress=0+1=1, points=10
+	team8Points := favMap["team-8"]
+	if team8Points < 30.0 {
+		t.Errorf("East 8-seed Favorites total = %.2f, expected >= 30 (R64 win should be included)", team8Points)
+	}
+}
+
+// generateTestTeamsWithByes creates a 68-team field where non-FF teams have Byes=1.
+func generateTestTeamsWithByes() []TeamInput {
+	teams := generateTestTeams()
+	ffTeamIDs := identifyFFTeamIDs(teams)
+	for i := range teams {
+		if !ffTeamIDs[teams[i].ID] {
+			teams[i].Byes = 1
+		}
+	}
+	return teams
+}
+
+// generateCheckpoint1Teams creates a 68-team field reflecting First Four results.
+// The stronger KenPom team wins each FF matchup.
+func generateCheckpoint1Teams() []TeamInput {
+	teams := generateTestTeams()
+	ffTeamIDs := identifyFFTeamIDs(teams)
+
+	// Determine FF winners by KenPom within each FF pair.
+	ffPairs := identifyFFPairs(teams)
+	ffWinners := make(map[string]bool)
+	for _, pair := range ffPairs {
+		if pair[0].KenPomNet >= pair[1].KenPomNet {
+			ffWinners[pair[0].ID] = true
+		} else {
+			ffWinners[pair[1].ID] = true
+		}
+	}
+
+	for i := range teams {
+		if ffTeamIDs[teams[i].ID] {
+			if ffWinners[teams[i].ID] {
+				teams[i].Wins = 1
+			}
+			// FF losers: Wins=0, Byes=0 → progress=0 (eliminated at throughRound=1)
+		} else {
+			teams[i].Byes = 1
+		}
+	}
+	return teams
+}
+
+// identifyFFTeamIDs returns IDs of First Four teams (seeds with >1 team in a region).
+func identifyFFTeamIDs(teams []TeamInput) map[string]bool {
+	type regionSeed struct {
+		region string
+		seed   int
+	}
+	counts := make(map[regionSeed]int)
+	for _, t := range teams {
+		counts[regionSeed{t.Region, t.Seed}]++
+	}
+	result := make(map[string]bool)
+	for _, t := range teams {
+		if counts[regionSeed{t.Region, t.Seed}] > 1 {
+			result[t.ID] = true
+		}
+	}
+	return result
+}
+
+// identifyFFPairs returns pairs of First Four teams grouped by region+seed.
+func identifyFFPairs(teams []TeamInput) [][2]TeamInput {
+	type regionSeed struct {
+		region string
+		seed   int
+	}
+	groups := make(map[regionSeed][]TeamInput)
+	for _, t := range teams {
+		key := regionSeed{t.Region, t.Seed}
+		groups[key] = append(groups[key], t)
+	}
+	var pairs [][2]TeamInput
+	for _, group := range groups {
+		if len(group) == 2 {
+			pairs = append(pairs, [2]TeamInput{group[0], group[1]})
+		}
+	}
+	return pairs
+}
+
+// filterSurvivors returns teams with progress >= throughRound.
+func filterSurvivors(teams []TeamInput, throughRound int) []TeamInput {
+	var result []TeamInput
+	for _, t := range teams {
+		if t.Wins+t.Byes >= throughRound {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
 // generateTestTeams creates a realistic 68-team tournament field for testing.
 func generateTestTeams() []TeamInput {
 	regions := []string{"East", "West", "South", "Midwest"}

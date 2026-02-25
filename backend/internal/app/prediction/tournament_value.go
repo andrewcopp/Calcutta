@@ -111,8 +111,14 @@ func GenerateTournamentValues(
 			enforceMonotonicity(probs[:])
 
 			// Expected points = actual + sum of future conditional points.
+			// Start from max(throughRound+1, progress+1) so that rounds already
+			// reflected in actualPoints are not counted again in the probability sum.
 			expectedPoints = actualPoints
-			for r := throughRound + 1; r <= models.MaxRounds; r++ {
+			startRound := throughRound + 1
+			if progress >= startRound {
+				startRound = progress + 1
+			}
+			for r := startRound; r <= models.MaxRounds; r++ {
 				expectedPoints += probs[r-1] * incByRound[r]
 			}
 
