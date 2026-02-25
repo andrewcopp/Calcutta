@@ -181,7 +181,7 @@ func TestThatNCAAgamesPerRoundHasSevenRounds(t *testing.T) {
 	result := NCAAgamesPerRound()
 
 	// THEN there are 7 rounds
-	expected := []int{4, 32, 16, 8, 4, 2, 1}
+	expected := []int{64, 32, 16, 8, 4, 2, 1}
 	if len(result) != len(expected) {
 		t.Fatalf("expected %v, got %v", expected, result)
 	}

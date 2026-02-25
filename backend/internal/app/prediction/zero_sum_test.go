@@ -74,7 +74,7 @@ func fourTeamValues() ([]PredictedTeamValue, []scoring.Rule) {
 	r2Matchups, _ := computeRound(finalGames, pAdv, calcWinProb, 2)
 
 	allMatchups := append(r1Matchups, r2Matchups...)
-	values := GenerateTournamentValues(teams, allMatchups, 0, rules, nil)
+	values := GenerateTournamentValues(teams, allMatchups, 0, rules)
 	return values, rules
 }
 
@@ -159,7 +159,7 @@ func eightTeamValues() ([]PredictedTeamValue, []scoring.Rule) {
 
 	allMatchups := append(r1Matchups, r2Matchups...)
 	allMatchups = append(allMatchups, r3Matchups...)
-	values := GenerateTournamentValues(teams, allMatchups, 0, rules, nil)
+	values := GenerateTournamentValues(teams, allMatchups, 0, rules)
 	return values, rules
 }
 
@@ -197,14 +197,14 @@ func TestThatFullTournamentEVSumsToTournamentTotal(t *testing.T) {
 	// GIVEN a 68-team tournament field with real matchup generation
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, pPlayinSurvival, err := GenerateMatchups(teams, 0, spec, nil)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating tournament values and summing EVs
-	values := GenerateTournamentValues(teams, matchups, 0, rules, pPlayinSurvival)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	evSum := sumExpectedPoints(values)
 
 	// THEN the sum equals the expected NCAA total (1920)
@@ -218,14 +218,14 @@ func TestThatFullTournamentFavoritesSumToTournamentTotal(t *testing.T) {
 	// GIVEN a 68-team tournament field with real matchup generation
 	teams := generateTestTeams()
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, pPlayinSurvival, err := GenerateMatchups(teams, 0, spec, nil)
+	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN computing tournament values and summing Favorites
-	values := GenerateTournamentValues(teams, matchups, 0, rules, pPlayinSurvival)
+	values := GenerateTournamentValues(teams, matchups, 0, rules)
 	favSum := sumFavoritesPoints(values)
 
 	// THEN the sum equals the Favorites total (1920)
@@ -242,18 +242,18 @@ func TestThatCheckpointOneEVSumsToExpectedTotal(t *testing.T) {
 	teams := generateCheckpoint1Teams()
 	survivors := filterSurvivors(teams, 1)
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, pPlayinSurvival, err := GenerateMatchups(survivors, 1, spec, nil)
+	matchups, err := GenerateMatchups(survivors, 1, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN generating values for all teams and summing EVs
-	values := GenerateTournamentValues(teams, matchups, 1, rules, pPlayinSurvival)
+	values := GenerateTournamentValues(teams, matchups, 1, rules)
 	evSum := sumExpectedPoints(values)
 
 	// THEN the sum equals 1920 (same as pre-tournament).
-	// With WinIndex 1=0, play-in survival awards no points, so the pool total
+	// With WinIndex 1=0, R128 survival awards no points, so the pool total
 	// is conserved across the First Four checkpoint. All 64 alive teams have
 	// actualPoints=0 and the future rounds sum to 1920.
 	expected := 1920.0
@@ -267,18 +267,18 @@ func TestThatCheckpointOneFavoritesSumToExpectedTotal(t *testing.T) {
 	teams := generateCheckpoint1Teams()
 	survivors := filterSurvivors(teams, 1)
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	matchups, _, err := GenerateMatchups(survivors, 1, spec, nil)
+	matchups, err := GenerateMatchups(survivors, 1, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	rules := DefaultScoringRules()
 
 	// WHEN computing values and summing Favorites
-	values := GenerateTournamentValues(teams, matchups, 1, rules, nil)
+	values := GenerateTournamentValues(teams, matchups, 1, rules)
 	favSum := sumFavoritesPoints(values)
 
 	// THEN the sum equals 1920 (same as pre-tournament).
-	// With WinIndex 1=0, play-in survival awards no points, so the Favorites
+	// With WinIndex 1=0, R128 survival awards no points, so the Favorites
 	// total is conserved across the First Four checkpoint.
 	expected := 1920.0
 	if math.Abs(favSum-expected) > 0.01 {

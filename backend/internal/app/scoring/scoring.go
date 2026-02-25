@@ -35,10 +35,10 @@ func GamesPerRoundForBracket(numTeams int) []int {
 	return result
 }
 
-// NCAAgamesPerRound returns the games per round for the full 68-team NCAA tournament:
-// 4 First Four games, 32 R64, 16 R32, 8 S16, 4 E8, 2 FF, 1 Championship.
+// NCAAgamesPerRound returns the games per round for the 128-team symmetric bracket model:
+// 64 R128 (60 BYE + 4 First Four), 32 R64, 16 R32, 8 S16, 4 E8, 2 FF, 1 Championship.
 func NCAAgamesPerRound() []int {
-	return []int{4, 32, 16, 8, 4, 2, 1}
+	return []int{64, 32, 16, 8, 4, 2, 1}
 }
 
 func PointsForProgress(rules []Rule, wins int, byes int) int {

@@ -1,6 +1,8 @@
 package prediction
 
 import (
+	"strings"
+
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 )
 
@@ -29,6 +31,15 @@ func ComputeFavoritesBracket(
 	for _, t := range allTeams {
 		if t.Wins+t.Byes >= throughRound {
 			alive[t.ID] = true
+		}
+	}
+	// Add BYE sentinels from matchups so R128 games can be resolved.
+	for _, m := range matchups {
+		if strings.HasPrefix(m.Team1ID, byePrefix) {
+			alive[m.Team1ID] = true
+		}
+		if strings.HasPrefix(m.Team2ID, byePrefix) {
+			alive[m.Team2ID] = true
 		}
 	}
 
@@ -84,27 +95,18 @@ func ComputeFavoritesBracket(
 		}
 	}
 
-	// Check if rules have a play-in round (WinIndex 1 awards 0 points).
-	hasPlayin := false
-	for _, r := range rules {
-		if r.WinIndex == 1 && r.PointsAwarded == 0 {
-			hasPlayin = true
-			break
-		}
-	}
-
 	// Compute total points for each team.
+	// At pre-tournament (throughRound==0), the R128 favorites bracket already accounts
+	// for play-in survival (BYE wins and FF wins), so byes from the DB are zeroed to
+	// avoid double-counting. At checkpoints (throughRound>0), R128 is already resolved
+	// and byes reflect actual progress.
 	result := make(map[string]float64, len(allTeams))
 	for _, t := range allTeams {
-		totalWins := t.Wins + favoritesWins[t.ID]
 		byes := t.Byes
-		// When rules include a play-in round (WinIndex 1=0), pre-tournament teams
-		// with Byes=0 that win at least one game implicitly survived the play-in.
-		// Add 1 bye so progress reaches WinIndex 7 for a champion.
-		if hasPlayin && throughRound == 0 && byes == 0 && favoritesWins[t.ID] > 0 {
-			byes = 1
+		if throughRound == 0 {
+			byes = 0
 		}
-		totalProgress := totalWins + byes
+		totalProgress := t.Wins + favoritesWins[t.ID] + byes
 		result[t.ID] = float64(scoring.PointsForProgress(rules, totalProgress, 0))
 	}
 

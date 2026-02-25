@@ -49,17 +49,14 @@ func enforceMonotonicity(probs []float64) {
 //   - Alive teams (progress >= throughRound): pRound = 1.0 up to throughRound, matchup probs after
 //   - ExpectedPoints = actualPoints + sum(pRound[r] * incrementalPoints[r]) for future rounds
 //
-// PRound semantics (shifted): PRound[r] = P(reached progress level r).
-//   - PRound1 = P(survived play-in): 1.0 for bye teams, <1.0 for FF teams
-//   - PRound2..PRound7 map to matchup rounds 1..6 (R64 through Championship)
-//
-// pPlayinSurvival maps teamID -> P(survived play-in). If nil, all teams get 1.0.
+// PRound semantics (128-team symmetric model): PRound[r] maps directly to matchup round r.
+//   - PRound1 = P(wins R128): 1.0 for bye teams, <1.0 for FF teams
+//   - PRound2..PRound7 map to R64 through Championship
 func GenerateTournamentValues(
 	allTeams []TeamInput,
 	matchups []PredictedMatchup,
 	throughRound int,
 	rules []scoring.Rule,
-	pPlayinSurvival map[string]float64,
 ) []PredictedTeamValue {
 	pWinByRound := aggregatePWinByRound(matchups)
 	incByRound := buildIncByRound(rules)
@@ -85,25 +82,12 @@ func GenerateTournamentValues(
 			expectedPoints = actualPoints
 		} else {
 			// Alive (or pre-tournament where all teams start at progress 0).
-			if pPlayinSurvival != nil {
-				// Shifted mapping (NCAA): PRound1 = play-in survival, PRound r maps to matchup round r-1.
-				probs[0] = pPlayinSurvival[team.ID]
-				for r := 2; r <= models.MaxRounds; r++ {
-					matchupRound := r - 1
-					if throughRound > 0 && r <= throughRound {
-						probs[r-1] = 1.0
-					} else {
-						probs[r-1] = pWinByRound[teamRoundKey{team.ID, matchupRound}]
-					}
-				}
-			} else {
-				// Direct mapping: PRound r maps to matchup round r (no play-in shift).
-				for r := 1; r <= models.MaxRounds; r++ {
-					if throughRound > 0 && r < throughRound {
-						probs[r-1] = 1.0
-					} else {
-						probs[r-1] = pWinByRound[teamRoundKey{team.ID, r}]
-					}
+			// Direct mapping: PRound r maps to matchup round r.
+			for r := 1; r <= models.MaxRounds; r++ {
+				if throughRound > 0 && r <= throughRound {
+					probs[r-1] = 1.0
+				} else {
+					probs[r-1] = pWinByRound[teamRoundKey{team.ID, r}]
 				}
 			}
 
@@ -151,11 +135,12 @@ func GenerateTournamentValues(
 }
 
 // DefaultScoringRules returns the standard NCAA tournament scoring rules.
-// WinIndex 1 = play-in survival (bye or First Four win) which awards 0 points.
+// In the 128-team symmetric model:
+// WinIndex 1 = R128 win (bye or First Four win) which awards 0 points.
 // WinIndex 2-7 map to R64 through Championship wins.
 func DefaultScoringRules() []scoring.Rule {
 	return []scoring.Rule{
-		{WinIndex: 1, PointsAwarded: 0},   // Play-in survival (bye or FF win)
+		{WinIndex: 1, PointsAwarded: 0},   // R128 win (bye or FF win)
 		{WinIndex: 2, PointsAwarded: 10},  // Round of 64 win
 		{WinIndex: 3, PointsAwarded: 20},  // Round of 32 win
 		{WinIndex: 4, PointsAwarded: 40},  // Sweet 16 win

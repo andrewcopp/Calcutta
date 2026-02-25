@@ -3,6 +3,7 @@ package prediction
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
@@ -39,6 +40,9 @@ var s16Groups = [][2][]int{
 var topHalfSeeds = []int{1, 16, 8, 9, 5, 12, 4, 13}
 var bottomHalfSeeds = []int{6, 11, 3, 14, 7, 10, 2, 15}
 
+// byePrefix is the sentinel prefix for phantom BYE opponents in the R128 model.
+const byePrefix = "BYE-"
+
 // computeRound generates matchups for one round from the given game setups
 // and returns both the matchups and updated advance probabilities.
 func computeRound(
@@ -69,6 +73,7 @@ func computeRound(
 }
 
 // buildRegionalGames creates game setups for a single region at a given round.
+// Rounds 2-5 correspond to R64, R32, S16, E8 in the 128-team symmetric model.
 func buildRegionalGames(region string, regionTeams []TeamInput, round int) []gameSetup {
 	teamsBySeed := func(seed int) []TeamInput {
 		var result []TeamInput
@@ -95,29 +100,19 @@ func buildRegionalGames(region string, regionTeams []TeamInput, round int) []gam
 	}
 
 	switch round {
-	case 1: // R64
+	case 2: // R64
 		games := make([]gameSetup, 0, len(r64Pairings))
 		for idx, seeds := range r64Pairings {
 			games = append(games, gameSetup{
-				gameID: fmt.Sprintf("R1-%s-%d", region, idx+1),
+				gameID: fmt.Sprintf("R2-%s-%d", region, idx+1),
 				side1:  teamsBySeed(seeds[0]),
 				side2:  teamsBySeed(seeds[1]),
 			})
 		}
 		return games
-	case 2: // R32
+	case 3: // R32
 		games := make([]gameSetup, 0, len(r32Groups))
 		for idx, group := range r32Groups {
-			games = append(games, gameSetup{
-				gameID: fmt.Sprintf("R2-%s-%d", region, idx+1),
-				side1:  teamsBySeeds(group[0]),
-				side2:  teamsBySeeds(group[1]),
-			})
-		}
-		return games
-	case 3: // S16
-		games := make([]gameSetup, 0, len(s16Groups))
-		for idx, group := range s16Groups {
 			games = append(games, gameSetup{
 				gameID: fmt.Sprintf("R3-%s-%d", region, idx+1),
 				side1:  teamsBySeeds(group[0]),
@@ -125,9 +120,19 @@ func buildRegionalGames(region string, regionTeams []TeamInput, round int) []gam
 			})
 		}
 		return games
-	case 4: // E8
+	case 4: // S16
+		games := make([]gameSetup, 0, len(s16Groups))
+		for idx, group := range s16Groups {
+			games = append(games, gameSetup{
+				gameID: fmt.Sprintf("R4-%s-%d", region, idx+1),
+				side1:  teamsBySeeds(group[0]),
+				side2:  teamsBySeeds(group[1]),
+			})
+		}
+		return games
+	case 5: // E8
 		return []gameSetup{{
-			gameID: fmt.Sprintf("R4-%s-1", region),
+			gameID: fmt.Sprintf("R5-%s-1", region),
 			side1:  teamsBySeeds(topHalfSeeds),
 			side2:  teamsBySeeds(bottomHalfSeeds),
 		}}
@@ -135,15 +140,62 @@ func buildRegionalGames(region string, regionTeams []TeamInput, round int) []gam
 	return nil
 }
 
+// buildR128Games creates Round 1 game setups for the 128-team symmetric model.
+// Seeds with 1 team get a phantom BYE opponent (guaranteed win).
+// Seeds with 2 teams (First Four) play a real game.
+// Returns the game setups and any BYE sentinel TeamInputs that were created.
+func buildR128Games(region string, regionTeams []TeamInput) ([]gameSetup, []TeamInput) {
+	seedGroups := make(map[int][]TeamInput)
+	for _, t := range regionTeams {
+		seedGroups[t.Seed] = append(seedGroups[t.Seed], t)
+	}
+
+	var games []gameSetup
+	var byeTeams []TeamInput
+	gameIdx := 1
+
+	// Process seeds in bracket order (matching r64Pairings) so each R128 game
+	// feeds into the correct R64 slot.
+	for _, pairing := range r64Pairings {
+		for _, seed := range []int{pairing[0], pairing[1]} {
+			group := seedGroups[seed]
+			if len(group) == 2 {
+				// Real First Four game.
+				games = append(games, gameSetup{
+					gameID: fmt.Sprintf("R1-%s-%d", region, gameIdx),
+					side1:  []TeamInput{group[0]},
+					side2:  []TeamInput{group[1]},
+				})
+			} else if len(group) == 1 {
+				// Phantom BYE game: real team vs BYE sentinel.
+				byeID := fmt.Sprintf("%s%s-%d", byePrefix, region, seed)
+				bye := TeamInput{ID: byeID, Seed: seed, Region: region}
+				byeTeams = append(byeTeams, bye)
+				games = append(games, gameSetup{
+					gameID: fmt.Sprintf("R1-%s-%d", region, gameIdx),
+					side1:  []TeamInput{group[0]},
+					side2:  []TeamInput{bye},
+				})
+			}
+			gameIdx++
+		}
+	}
+
+	return games, byeTeams
+}
+
 // GenerateMatchups generates matchup predictions starting from a tournament checkpoint.
-// For throughRound == 0 (pre-tournament), it computes First Four win probabilities using
-// KenPom ratings and requires exactly 68 teams.
+// The tournament is modeled as a 128-team symmetric binary tree where 60 phantom BYE
+// opponents guarantee Round 1 wins, making all 7 rounds structurally identical.
+//
+// For throughRound == 0 (pre-tournament), it requires exactly 68 teams and creates
+// BYE sentinels to fill the R128 bracket.
 // For throughRound >= 1, all survivors start with pAdvance = 1.0.
-// Rounds already resolved (< throughRound+1) are skipped.
+// Rounds already resolved (<= throughRound) are skipped.
 // ffConfig determines the Final Four region pairings; if nil, defaults are applied.
-func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, map[string]float64, error) {
+func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, error) {
 	if throughRound == 0 && len(teams) != 68 {
-		return nil, nil, fmt.Errorf("expected 68 teams for pre-tournament predictions, got %d", len(teams))
+		return nil, fmt.Errorf("expected 68 teams for pre-tournament predictions, got %d", len(teams))
 	}
 
 	if spec == nil {
@@ -162,6 +214,13 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 	}
 
 	calcWinProb := func(id1, id2 string) float64 {
+		// BYE opponents always lose.
+		if strings.HasPrefix(id2, byePrefix) {
+			return 1.0
+		}
+		if strings.HasPrefix(id1, byePrefix) {
+			return 0.0
+		}
 		return spec.WinProb(kenpomByID[id1], kenpomByID[id2])
 	}
 
@@ -176,46 +235,33 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 	}
 	sort.Strings(regions)
 
-	// Initialize pAdvance for all teams.
+	// Initialize pAdvance for all real teams.
 	pAdvance := make(map[string]float64, len(teams))
-	if throughRound < 1 {
-		// Pre-tournament: compute First Four win probabilities.
-		for _, t := range teams {
-			pAdvance[t.ID] = 1.0
-		}
-		for _, region := range regions {
-			seedGroups := make(map[int][]TeamInput)
-			for _, t := range teamsByRegion[region] {
-				seedGroups[t.Seed] = append(seedGroups[t.Seed], t)
-			}
-			for _, group := range seedGroups {
-				if len(group) == 2 {
-					p := calcWinProb(group[0].ID, group[1].ID)
-					pAdvance[group[0].ID] = p
-					pAdvance[group[1].ID] = 1.0 - p
-				}
-			}
-		}
-	} else {
-		// Mid-tournament: all survivors have pAdvance = 1.0.
-		for _, t := range teams {
-			pAdvance[t.ID] = 1.0
-		}
-	}
-
-	// Capture play-in survival probabilities before the round loop modifies pAdvance.
-	// For pre-tournament: 1.0 for bye teams, <1.0 for FF teams.
-	// For mid-tournament: all 1.0 (play-in already resolved).
-	pPlayinSurvival := make(map[string]float64, len(pAdvance))
-	for id, p := range pAdvance {
-		pPlayinSurvival[id] = p
+	for _, t := range teams {
+		pAdvance[t.ID] = 1.0
 	}
 
 	var matchups []PredictedMatchup
 
-	// Rounds 1-4: regional rounds (R64, R32, S16, E8).
-	for round := 1; round <= 4; round++ {
-		if throughRound >= round+1 {
+	// Round 1 (R128): phantom BYE games + real First Four games.
+	if throughRound < 1 {
+		var r128Games []gameSetup
+		for _, region := range regions {
+			games, byeTeams := buildR128Games(region, teamsByRegion[region])
+			r128Games = append(r128Games, games...)
+			// Add BYE sentinels to pAdvance with probability 1.0.
+			for _, bye := range byeTeams {
+				pAdvance[bye.ID] = 1.0
+			}
+		}
+		var roundMatchups []PredictedMatchup
+		roundMatchups, pAdvance = computeRound(r128Games, pAdvance, calcWinProb, 1)
+		matchups = append(matchups, roundMatchups...)
+	}
+
+	// Rounds 2-5: regional rounds (R64, R32, S16, E8).
+	for round := 2; round <= 5; round++ {
+		if throughRound >= round {
 			continue
 		}
 		var games []gameSetup
@@ -227,7 +273,7 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 		matchups = append(matchups, roundMatchups...)
 	}
 
-	// Round 5 (Final Four semifinals): use ffConfig for pairings.
+	// Round 6 (Final Four semifinals): use ffConfig for pairings.
 	if throughRound < 6 {
 		ffPairings := [][2]string{
 			{ffConfig.TopLeftRegion, ffConfig.BottomLeftRegion},
@@ -239,7 +285,7 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 			teams2 := teamsByRegion[pairing[1]]
 			if len(teams1) > 0 && len(teams2) > 0 {
 				games = append(games, gameSetup{
-					gameID: fmt.Sprintf("R5-%d", gameNum+1),
+					gameID: fmt.Sprintf("R6-%d", gameNum+1),
 					side1:  teams1,
 					side2:  teams2,
 				})
@@ -247,12 +293,12 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 		}
 		if len(games) > 0 {
 			var roundMatchups []PredictedMatchup
-			roundMatchups, pAdvance = computeRound(games, pAdvance, calcWinProb, 5)
+			roundMatchups, pAdvance = computeRound(games, pAdvance, calcWinProb, 6)
 			matchups = append(matchups, roundMatchups...)
 		}
 	}
 
-	// Round 6 (Championship): left bracket vs right bracket.
+	// Round 7 (Championship): left bracket vs right bracket.
 	if throughRound < 7 {
 		var side1Teams, side2Teams []TeamInput
 		for _, r := range []string{ffConfig.TopLeftRegion, ffConfig.BottomLeftRegion} {
@@ -263,16 +309,16 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 		}
 		if len(side1Teams) > 0 && len(side2Teams) > 0 {
 			games := []gameSetup{{
-				gameID: "R6-1",
+				gameID: "R7-1",
 				side1:  side1Teams,
 				side2:  side2Teams,
 			}}
-			roundMatchups, _ := computeRound(games, pAdvance, calcWinProb, 6)
+			roundMatchups, _ := computeRound(games, pAdvance, calcWinProb, 7)
 			matchups = append(matchups, roundMatchups...)
 		}
 	}
 
-	return matchups, pPlayinSurvival, nil
+	return matchups, nil
 }
 
 // computeAdvanceProbs computes each team's probability of advancing past the given round.
