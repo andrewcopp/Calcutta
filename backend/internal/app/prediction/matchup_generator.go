@@ -141,9 +141,9 @@ func buildRegionalGames(region string, regionTeams []TeamInput, round int) []gam
 // For throughRound >= 1, all survivors start with pAdvance = 1.0.
 // Rounds already resolved (< throughRound+1) are skipped.
 // ffConfig determines the Final Four region pairings; if nil, defaults are applied.
-func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, error) {
+func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, map[string]float64, error) {
 	if throughRound == 0 && len(teams) != 68 {
-		return nil, fmt.Errorf("expected 68 teams for pre-tournament predictions, got %d", len(teams))
+		return nil, nil, fmt.Errorf("expected 68 teams for pre-tournament predictions, got %d", len(teams))
 	}
 
 	if spec == nil {
@@ -201,6 +201,14 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 		for _, t := range teams {
 			pAdvance[t.ID] = 1.0
 		}
+	}
+
+	// Capture play-in survival probabilities before the round loop modifies pAdvance.
+	// For pre-tournament: 1.0 for bye teams, <1.0 for FF teams.
+	// For mid-tournament: all 1.0 (play-in already resolved).
+	pPlayinSurvival := make(map[string]float64, len(pAdvance))
+	for id, p := range pAdvance {
+		pPlayinSurvival[id] = p
 	}
 
 	var matchups []PredictedMatchup
@@ -264,7 +272,7 @@ func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game
 		}
 	}
 
-	return matchups, nil
+	return matchups, pPlayinSurvival, nil
 }
 
 // computeAdvanceProbs computes each team's probability of advancing past the given round.

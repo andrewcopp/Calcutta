@@ -84,11 +84,27 @@ func ComputeFavoritesBracket(
 		}
 	}
 
+	// Check if rules have a play-in round (WinIndex 1 awards 0 points).
+	hasPlayin := false
+	for _, r := range rules {
+		if r.WinIndex == 1 && r.PointsAwarded == 0 {
+			hasPlayin = true
+			break
+		}
+	}
+
 	// Compute total points for each team.
 	result := make(map[string]float64, len(allTeams))
 	for _, t := range allTeams {
 		totalWins := t.Wins + favoritesWins[t.ID]
-		totalProgress := totalWins + t.Byes
+		byes := t.Byes
+		// When rules include a play-in round (WinIndex 1=0), pre-tournament teams
+		// with Byes=0 that win at least one game implicitly survived the play-in.
+		// Add 1 bye so progress reaches WinIndex 7 for a champion.
+		if hasPlayin && throughRound == 0 && byes == 0 && favoritesWins[t.ID] > 0 {
+			byes = 1
+		}
+		totalProgress := totalWins + byes
 		result[t.ID] = float64(scoring.PointsForProgress(rules, totalProgress, 0))
 	}
 

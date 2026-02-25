@@ -154,6 +154,44 @@ func TestThatTournamentTotalForSixtyFourTeamBracketIsNineteenTwenty(t *testing.T
 	}
 }
 
+func TestThatNCAATournamentTotalIsNineteenTwenty(t *testing.T) {
+	// GIVEN the NCAA 7-rule scoring with NCAAgamesPerRound
+	rules := []Rule{
+		{WinIndex: 1, PointsAwarded: 0},
+		{WinIndex: 2, PointsAwarded: 10},
+		{WinIndex: 3, PointsAwarded: 20},
+		{WinIndex: 4, PointsAwarded: 40},
+		{WinIndex: 5, PointsAwarded: 80},
+		{WinIndex: 6, PointsAwarded: 160},
+		{WinIndex: 7, PointsAwarded: 320},
+	}
+
+	// WHEN computing tournament total with NCAA games per round
+	total := TournamentTotal(rules, NCAAgamesPerRound())
+
+	// THEN total is 4*0 + 32*10 + 16*20 + 8*40 + 4*80 + 2*160 + 1*320 = 1920
+	if total != 1920 {
+		t.Fatalf("expected 1920, got %d", total)
+	}
+}
+
+func TestThatNCAAgamesPerRoundHasSevenRounds(t *testing.T) {
+	// GIVEN the NCAA games per round
+	// WHEN getting the value
+	result := NCAAgamesPerRound()
+
+	// THEN there are 7 rounds
+	expected := []int{4, 32, 16, 8, 4, 2, 1}
+	if len(result) != len(expected) {
+		t.Fatalf("expected %v, got %v", expected, result)
+	}
+	for i := range expected {
+		if result[i] != expected[i] {
+			t.Fatalf("expected %v, got %v", expected, result)
+		}
+	}
+}
+
 func TestThatTournamentTotalIsZeroForEmptyGames(t *testing.T) {
 	// GIVEN rules but no games
 	rules := []Rule{{WinIndex: 1, PointsAwarded: 10}}
