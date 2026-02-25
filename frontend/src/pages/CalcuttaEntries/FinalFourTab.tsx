@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CalcuttaDashboard, CalcuttaEntry, FinalFourOutcome } from '../../schemas/calcutta';
 import type { School } from '../../schemas/school';
 import type { TournamentTeam } from '../../schemas/tournament';
@@ -42,7 +42,7 @@ export function FinalFourTab({ entries, dashboard, schools, tournamentTeams }: F
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {outcomes.map((outcome, index) => (
         <OutcomeCard
           key={index}
@@ -62,41 +62,23 @@ interface OutcomeCardProps {
 }
 
 function OutcomeCard({ outcome, resolveTeamName, entryNameById }: OutcomeCardProps) {
-  const [expanded, setExpanded] = useState(false);
-
   const championName = resolveTeamName(outcome.champion.teamId, outcome.champion.schoolId);
   const runnerUpName = resolveTeamName(outcome.runnerUp.teamId, outcome.runnerUp.schoolId);
   const semi1Name = resolveTeamName(outcome.semifinal1Winner.teamId, outcome.semifinal1Winner.schoolId);
   const semi2Name = resolveTeamName(outcome.semifinal2Winner.teamId, outcome.semifinal2Winner.schoolId);
 
-  const displayEntries = expanded ? outcome.entries : outcome.entries.slice(0, 10);
+  const displayEntries = outcome.entries.slice(0, 10);
 
   return (
     <Card padding="default" className="overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-left"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">
-              {championName} defeats {runnerUpName}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Semis: {semi1Name} &middot; {semi2Name}
-            </p>
-          </div>
-          <svg
-            className={`h-5 w-5 text-muted-foreground/60 transition-transform ${expanded ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </div>
-      </button>
+      <div>
+        <h3 className="text-lg font-semibold">
+          {championName} defeats {runnerUpName}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Semis: {semi1Name} &middot; {semi2Name}
+        </p>
+      </div>
 
       <div className="mt-3 space-y-1">
         {displayEntries.map((standing) => {
@@ -111,22 +93,14 @@ function OutcomeCard({ outcome, resolveTeamName, entryNameById }: OutcomeCardPro
                 isInTheMoney ? 'bg-accent/50 font-medium' : ''
               }`}
             >
-              <span>
+              <span className="truncate mr-2">
                 {standing.finishPosition}. {name}
                 {isInTheMoney && <span className="text-muted-foreground">{payoutText}</span>}
               </span>
-              <span className="tabular-nums">{standing.totalPoints.toFixed(2)} pts</span>
+              <span className="tabular-nums shrink-0">{standing.totalPoints.toFixed(2)} pts</span>
             </div>
           );
         })}
-        {!expanded && outcome.entries.length > 10 && (
-          <button
-            onClick={() => setExpanded(true)}
-            className="text-sm text-primary hover:underline px-2 py-1"
-          >
-            Show all {outcome.entries.length} entries
-          </button>
-        )}
       </div>
     </Card>
   );
