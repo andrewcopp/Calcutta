@@ -69,7 +69,7 @@ function OutcomeCard({ outcome, resolveTeamName, entryNameById }: OutcomeCardPro
   const semi1Name = resolveTeamName(outcome.semifinal1Winner.teamId, outcome.semifinal1Winner.schoolId);
   const semi2Name = resolveTeamName(outcome.semifinal2Winner.teamId, outcome.semifinal2Winner.schoolId);
 
-  const displayEntries = expanded ? outcome.entries : outcome.entries.slice(0, 5);
+  const displayEntries = expanded ? outcome.entries : outcome.entries.slice(0, 10);
 
   return (
     <Card padding="default" className="overflow-hidden">
@@ -119,7 +119,7 @@ function OutcomeCard({ outcome, resolveTeamName, entryNameById }: OutcomeCardPro
             </div>
           );
         })}
-        {!expanded && outcome.entries.length > 5 && (
+        {!expanded && outcome.entries.length > 10 && (
           <button
             onClick={() => setExpanded(true)}
             className="text-sm text-primary hover:underline px-2 py-1"
