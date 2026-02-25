@@ -8,6 +8,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
 import { LeaderboardTab } from './CalcuttaEntries/LeaderboardTab';
+import { RaceTab } from './CalcuttaEntries/RaceTab';
 import { StatisticsTab } from './CalcuttaEntries/StatisticsTab';
 import { InvestmentsTab } from './CalcuttaEntries/InvestmentsTab';
 import { ReturnsTab } from './CalcuttaEntries/ReturnsTab';
@@ -30,7 +31,7 @@ import { formatDate } from '../utils/format';
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const validTabs = ['leaderboard', 'investment', 'ownership', 'returns', 'statistics'] as const;
+  const validTabs = ['leaderboard', 'race', 'investment', 'ownership', 'returns', 'statistics'] as const;
   const tabParam = searchParams.get('tab');
   const activeTab = validTabs.includes(tabParam as (typeof validTabs)[number]) ? tabParam! : 'leaderboard';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
@@ -189,6 +190,7 @@ export function CalcuttaEntriesPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="leaderboard">Standings</TabsTrigger>
+          <TabsTrigger value="race">Race</TabsTrigger>
           <TabsTrigger value="investment">Bids</TabsTrigger>
           <TabsTrigger value="ownership">Shares</TabsTrigger>
           <TabsTrigger value="returns">Scoring</TabsTrigger>
@@ -197,6 +199,10 @@ export function CalcuttaEntriesPage() {
 
         <TabsContent value="leaderboard">
           <LeaderboardTab calcuttaId={calcuttaId} entries={entries} dashboard={dashboardData!} />
+        </TabsContent>
+
+        <TabsContent value="race">
+          <RaceTab entries={entries} dashboard={dashboardData!} />
         </TabsContent>
 
         <TabsContent value="investment">

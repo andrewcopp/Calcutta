@@ -22,6 +22,12 @@ const ROUND_NAMES_7: Record<number, string> = {
   7: 'Championship',
 };
 
+export function getRoundName(round: number, maxRound: number): string {
+  if (round === 0) return 'Start';
+  const nameMap = maxRound >= 7 ? ROUND_NAMES_7 : ROUND_NAMES_6;
+  return nameMap[round] ?? `Round ${round}`;
+}
+
 export function getRoundOptions(rounds: number[]): RoundOption[] {
   if (rounds.length === 0) return [];
 
