@@ -115,19 +115,24 @@ func ComputeEntryProjections(
 	return computeProjectionsForCheckpoint(cp, rules, portfolioToEntry, portfolioTeams, tournamentTeams)
 }
 
-// capTournamentTeams returns a copy of teams with progress capped at roundCap.
+// ProgressAtRound returns the effective progress (wins + byes) capped at the given round.
+func ProgressAtRound(wins, byes, round int) int {
+	progress := wins + byes
+	if progress > round {
+		return round
+	}
+	return progress
+}
+
+// snapshotTeamsAtRound returns a copy of teams with progress capped at roundCap.
 // Byes are folded into wins, and teams eliminated beyond the cap are treated as alive.
-func capTournamentTeams(teams []TournamentTeamInput, roundCap int) []TournamentTeamInput {
+func snapshotTeamsAtRound(teams []TournamentTeamInput, roundCap int) []TournamentTeamInput {
 	out := make([]TournamentTeamInput, len(teams))
 	for i, tt := range teams {
 		progress := tt.Wins + tt.Byes
-		capped := progress
-		if capped > roundCap {
-			capped = roundCap
-		}
 		out[i] = TournamentTeamInput{
 			ID:           tt.ID,
-			Wins:         capped,
+			Wins:         ProgressAtRound(tt.Wins, tt.Byes, roundCap),
 			Byes:         0,
 			IsEliminated: tt.IsEliminated && progress <= roundCap,
 		}
@@ -150,7 +155,7 @@ func ComputeRoundProjections(
 	if cp == nil {
 		return nil
 	}
-	return computeProjectionsForCheckpoint(cp, rules, portfolioToEntry, portfolioTeams, capTournamentTeams(tournamentTeams, roundCap))
+	return computeProjectionsForCheckpoint(cp, rules, portfolioToEntry, portfolioTeams, snapshotTeamsAtRound(tournamentTeams, roundCap))
 }
 
 func computeProjectionsForCheckpoint(

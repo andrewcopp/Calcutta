@@ -351,11 +351,7 @@ func computeRoundStandings(
 			if entryID == "" {
 				continue
 			}
-			progress := team.Wins + team.Byes
-			capped := progress
-			if capped > cap {
-				capped = cap
-			}
+			capped := prediction.ProgressAtRound(team.Wins, team.Byes, cap)
 			teamPoints := scoring.PointsForProgress(rules, capped, 0)
 			pointsByEntry[entryID] += pt.OwnershipPercentage * float64(teamPoints)
 		}

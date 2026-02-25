@@ -1026,14 +1026,14 @@ func TestThatFavoritesBracketProcessesR64AtCheckpointOne(t *testing.T) {
 	}
 }
 
-// --- capTeamProgress tests ---
+// --- snapshotTeamAtCheckpoint tests ---
 
-func TestThatCapTeamProgressBelowCapPreservesWins(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointBelowCapPreservesWins(t *testing.T) {
 	// GIVEN a team with progress 2
 	team := TeamInput{ID: "t1", Wins: 1, Byes: 1}
 
 	// WHEN capping at throughRound=3
-	capped := capTeamProgress(team, 3)
+	capped := snapshotTeamAtCheckpoint(team, 3)
 
 	// THEN wins are preserved
 	if capped.Wins != 1 {
@@ -1041,12 +1041,12 @@ func TestThatCapTeamProgressBelowCapPreservesWins(t *testing.T) {
 	}
 }
 
-func TestThatCapTeamProgressBelowCapPreservesByes(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointBelowCapPreservesByes(t *testing.T) {
 	// GIVEN a team with progress 2
 	team := TeamInput{ID: "t1", Wins: 1, Byes: 1}
 
 	// WHEN capping at throughRound=3
-	capped := capTeamProgress(team, 3)
+	capped := snapshotTeamAtCheckpoint(team, 3)
 
 	// THEN byes are preserved
 	if capped.Byes != 1 {
@@ -1054,12 +1054,12 @@ func TestThatCapTeamProgressBelowCapPreservesByes(t *testing.T) {
 	}
 }
 
-func TestThatCapTeamProgressToZeroSetsWinsToZero(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointToZeroSetsWinsToZero(t *testing.T) {
 	// GIVEN a champion with Wins=6, Byes=1 (progress=7)
 	team := TeamInput{ID: "champ", Wins: 6, Byes: 1}
 
 	// WHEN capping at throughRound=0
-	capped := capTeamProgress(team, 0)
+	capped := snapshotTeamAtCheckpoint(team, 0)
 
 	// THEN Wins=0
 	if capped.Wins != 0 {
@@ -1067,12 +1067,12 @@ func TestThatCapTeamProgressToZeroSetsWinsToZero(t *testing.T) {
 	}
 }
 
-func TestThatCapTeamProgressToZeroSetsByesToZero(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointToZeroSetsByesToZero(t *testing.T) {
 	// GIVEN a champion with Wins=6, Byes=1 (progress=7)
 	team := TeamInput{ID: "champ", Wins: 6, Byes: 1}
 
 	// WHEN capping at throughRound=0
-	capped := capTeamProgress(team, 0)
+	capped := snapshotTeamAtCheckpoint(team, 0)
 
 	// THEN Byes=0
 	if capped.Byes != 0 {
@@ -1080,12 +1080,12 @@ func TestThatCapTeamProgressToZeroSetsByesToZero(t *testing.T) {
 	}
 }
 
-func TestThatCapTeamProgressPreservesByesFirst(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointPreservesByesFirst(t *testing.T) {
 	// GIVEN a team with Wins=4, Byes=1 (progress=5)
 	team := TeamInput{ID: "t1", Wins: 4, Byes: 1}
 
 	// WHEN capping at throughRound=3
-	capped := capTeamProgress(team, 3)
+	capped := snapshotTeamAtCheckpoint(team, 3)
 
 	// THEN Byes=1 preserved
 	if capped.Byes != 1 {
@@ -1093,12 +1093,12 @@ func TestThatCapTeamProgressPreservesByesFirst(t *testing.T) {
 	}
 }
 
-func TestThatCapTeamProgressPreservesByesFirstReducesWins(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointPreservesByesFirstReducesWins(t *testing.T) {
 	// GIVEN a team with Wins=4, Byes=1 (progress=5)
 	team := TeamInput{ID: "t1", Wins: 4, Byes: 1}
 
 	// WHEN capping at throughRound=3
-	capped := capTeamProgress(team, 3)
+	capped := snapshotTeamAtCheckpoint(team, 3)
 
 	// THEN Wins=2 (3 - 1 bye)
 	if capped.Wins != 2 {
@@ -1106,12 +1106,12 @@ func TestThatCapTeamProgressPreservesByesFirstReducesWins(t *testing.T) {
 	}
 }
 
-func TestThatCapTeamProgressWhenByesExceedThroughRoundReducesByes(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointWhenByesExceedThroughRoundReducesByes(t *testing.T) {
 	// GIVEN a team with Byes=3, Wins=0 (progress=3)
 	team := TeamInput{ID: "t1", Wins: 0, Byes: 3}
 
 	// WHEN capping at throughRound=2
-	capped := capTeamProgress(team, 2)
+	capped := snapshotTeamAtCheckpoint(team, 2)
 
 	// THEN Byes=2
 	if capped.Byes != 2 {
@@ -1119,12 +1119,12 @@ func TestThatCapTeamProgressWhenByesExceedThroughRoundReducesByes(t *testing.T) 
 	}
 }
 
-func TestThatCapTeamProgressWhenByesExceedThroughRoundKeepsWinsZero(t *testing.T) {
+func TestThatSnapshotTeamAtCheckpointWhenByesExceedThroughRoundKeepsWinsZero(t *testing.T) {
 	// GIVEN a team with Byes=3, Wins=0 (progress=3)
 	team := TeamInput{ID: "t1", Wins: 0, Byes: 3}
 
 	// WHEN capping at throughRound=2
-	capped := capTeamProgress(team, 2)
+	capped := snapshotTeamAtCheckpoint(team, 2)
 
 	// THEN Wins=0
 	if capped.Wins != 0 {

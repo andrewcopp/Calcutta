@@ -164,14 +164,58 @@ func TestThatComputeEntryProjectionsAggregatesFavoritesAcrossPortfolioTeams(t *t
 	}
 }
 
-func TestThatCapTournamentTeamsCapsWinsAtRoundCap(t *testing.T) {
+func TestThatProgressAtRoundReturnsSumWhenBelowRound(t *testing.T) {
+	// GIVEN 1 win and 1 bye with round cap 4
+	// WHEN computing progress at round
+	result := ProgressAtRound(1, 1, 4)
+
+	// THEN returns progress unchanged (2)
+	if result != 2 {
+		t.Errorf("expected 2, got %d", result)
+	}
+}
+
+func TestThatProgressAtRoundReturnsRoundWhenAbove(t *testing.T) {
+	// GIVEN 3 wins and 1 bye with round cap 2
+	// WHEN computing progress at round
+	result := ProgressAtRound(3, 1, 2)
+
+	// THEN returns round as cap (2)
+	if result != 2 {
+		t.Errorf("expected 2, got %d", result)
+	}
+}
+
+func TestThatProgressAtRoundZeroReturnsZero(t *testing.T) {
+	// GIVEN 3 wins and 1 bye with round cap 0
+	// WHEN computing progress at round
+	result := ProgressAtRound(3, 1, 0)
+
+	// THEN returns 0
+	if result != 0 {
+		t.Errorf("expected 0, got %d", result)
+	}
+}
+
+func TestThatProgressAtRoundReturnsProgressWhenExactlyEqual(t *testing.T) {
+	// GIVEN 2 wins and 1 bye with round cap 3
+	// WHEN computing progress at round
+	result := ProgressAtRound(2, 1, 3)
+
+	// THEN returns progress (3)
+	if result != 3 {
+		t.Errorf("expected 3, got %d", result)
+	}
+}
+
+func TestThatSnapshotTeamsAtRoundCapsWinsAtRoundCap(t *testing.T) {
 	// GIVEN a team with 4 wins and round cap 2
 	teams := []TournamentTeamInput{
 		{ID: "t1", Wins: 4, Byes: 0, IsEliminated: false},
 	}
 
 	// WHEN capping at round 2
-	result := capTournamentTeams(teams, 2)
+	result := snapshotTeamsAtRound(teams, 2)
 
 	// THEN wins are capped at 2
 	if result[0].Wins != 2 {
@@ -179,14 +223,14 @@ func TestThatCapTournamentTeamsCapsWinsAtRoundCap(t *testing.T) {
 	}
 }
 
-func TestThatCapTournamentTeamsZeroesByesAndFoldsIntoWins(t *testing.T) {
+func TestThatSnapshotTeamsAtRoundZeroesByesAndFoldsIntoWins(t *testing.T) {
 	// GIVEN a team with 1 win and 1 bye, round cap 3
 	teams := []TournamentTeamInput{
 		{ID: "t1", Wins: 1, Byes: 1, IsEliminated: false},
 	}
 
 	// WHEN capping at round 3
-	result := capTournamentTeams(teams, 3)
+	result := snapshotTeamsAtRound(teams, 3)
 
 	// THEN byes are zeroed and progress (2) is in wins
 	if result[0].Wins != 2 {
@@ -197,14 +241,14 @@ func TestThatCapTournamentTeamsZeroesByesAndFoldsIntoWins(t *testing.T) {
 	}
 }
 
-func TestThatCapTournamentTeamsTreatsEliminatedBeyondCapAsAlive(t *testing.T) {
+func TestThatSnapshotTeamsAtRoundTreatsEliminatedBeyondCapAsAlive(t *testing.T) {
 	// GIVEN a team eliminated at progress 4, round cap 2
 	teams := []TournamentTeamInput{
 		{ID: "t1", Wins: 4, Byes: 0, IsEliminated: true},
 	}
 
 	// WHEN capping at round 2
-	result := capTournamentTeams(teams, 2)
+	result := snapshotTeamsAtRound(teams, 2)
 
 	// THEN team is treated as alive (progress 4 > cap 2)
 	if result[0].IsEliminated {
@@ -212,14 +256,14 @@ func TestThatCapTournamentTeamsTreatsEliminatedBeyondCapAsAlive(t *testing.T) {
 	}
 }
 
-func TestThatCapTournamentTeamsPreservesEliminationAtOrBelowCap(t *testing.T) {
+func TestThatSnapshotTeamsAtRoundPreservesEliminationAtOrBelowCap(t *testing.T) {
 	// GIVEN a team eliminated at progress 2, round cap 3
 	teams := []TournamentTeamInput{
 		{ID: "t1", Wins: 2, Byes: 0, IsEliminated: true},
 	}
 
 	// WHEN capping at round 3
-	result := capTournamentTeams(teams, 3)
+	result := snapshotTeamsAtRound(teams, 3)
 
 	// THEN elimination is preserved (progress 2 <= cap 3)
 	if !result[0].IsEliminated {

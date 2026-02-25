@@ -21,9 +21,9 @@ type TournamentState struct {
 	FFConfig     *models.FinalFourConfig
 }
 
-// capTeamProgress caps a team's progress (Wins + Byes) to throughRound.
+// snapshotTeamAtCheckpoint caps a team's progress (Wins + Byes) to throughRound.
 // Byes are preserved first (up to the cap), then Wins fill the remainder.
-func capTeamProgress(team TeamInput, throughRound int) TeamInput {
+func snapshotTeamAtCheckpoint(team TeamInput, throughRound int) TeamInput {
 	progress := team.Wins + team.Byes
 	if progress <= throughRound {
 		return team
@@ -42,7 +42,7 @@ func capTeamProgress(team TeamInput, throughRound int) TeamInput {
 func NewTournamentState(data *TournamentData, throughRound int) *TournamentState {
 	cappedTeams := make([]TeamInput, len(data.Teams))
 	for i, t := range data.Teams {
-		cappedTeams[i] = capTeamProgress(t, throughRound)
+		cappedTeams[i] = snapshotTeamAtCheckpoint(t, throughRound)
 	}
 
 	var survivors []TeamInput
