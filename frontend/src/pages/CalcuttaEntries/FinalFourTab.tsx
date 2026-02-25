@@ -76,7 +76,7 @@ function OutcomeCard({ outcome, resolveTeamName, entryNameById }: OutcomeCardPro
           {championName} defeats {runnerUpName}
         </h3>
         <p className="text-sm text-muted-foreground">
-          Semis: {semi1Name} &middot; {semi2Name}
+          {semi1Name} &middot; {semi2Name}
         </p>
       </div>
 
