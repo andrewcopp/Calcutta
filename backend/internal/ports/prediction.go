@@ -8,9 +8,9 @@ import (
 )
 
 type PredictionBatchReader interface {
-	ListBatches(ctx context.Context, tournamentID string) ([]models.PredictionBatchSummary, error)
-	GetLatestBatch(ctx context.Context, tournamentID string) (*models.PredictionBatchSummary, bool, error)
-	GetBatchSummary(ctx context.Context, batchID string) (*models.PredictionBatchSummary, error)
+	ListBatches(ctx context.Context, tournamentID string) ([]models.PredictionBatch, error)
+	GetLatestBatch(ctx context.Context, tournamentID string) (*models.PredictionBatch, bool, error)
+	GetBatchSummary(ctx context.Context, batchID string) (*models.PredictionBatch, error)
 	GetTeamValues(ctx context.Context, batchID string) ([]models.PredictedTeamValue, error)
 	LoadTeams(ctx context.Context, tournamentID string) ([]models.PredictionTeamInput, error)
 	LoadScoringRules(ctx context.Context, tournamentID string) ([]scoring.Rule, error)

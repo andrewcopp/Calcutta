@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
 )
@@ -13,14 +13,14 @@ import (
 // KenPomProvider implements ProbabilityProvider using KenPom net ratings
 // and a logistic model to estimate win probabilities.
 type KenPomProvider struct {
-	Spec        *simulation_game_outcomes.Spec
+	Spec        *winprob.Model
 	NetByTeamID map[string]float64
 	Overrides   map[MatchupKey]float64
 }
 
 // NewKenPomProvider creates a KenPomProvider from a spec, net ratings by team
 // ID, and optional per-matchup probability overrides.
-func NewKenPomProvider(spec *simulation_game_outcomes.Spec, netByTeamID map[string]float64, overrides map[MatchupKey]float64) *KenPomProvider {
+func NewKenPomProvider(spec *winprob.Model, netByTeamID map[string]float64, overrides map[MatchupKey]float64) *KenPomProvider {
 	return &KenPomProvider{
 		Spec:        spec,
 		NetByTeamID: netByTeamID,

@@ -1,7 +1,6 @@
 package calcuttas
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -181,20 +180,37 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Best-effort prediction loading: load all checkpoint batches
-		checkpointPredictions := loadCheckpointPredictions(r.Context(), h.app.Prediction, calcutta.TournamentID)
+		checkpoints := h.app.Prediction.LoadCheckpointPredictions(r.Context(), calcutta.TournamentID)
 
 		scoringRules := make([]scoring.Rule, len(rounds))
 		for i, rd := range rounds {
 			scoringRules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
 		}
 
-		attachProjections(checkpointPredictions, scoringRules, standingsByID, allPortfolios, allPortfolioTeams, tournamentTeams)
+		portfolioToEntry := prediction.BuildPortfolioToEntry(allPortfolios)
+		ptInputs := prediction.ToPortfolioTeamInputs(allPortfolioTeams)
+		ttInputs := prediction.ToTournamentTeamInputs(tournamentTeams)
+
+		if proj := prediction.ComputeEntryProjections(checkpoints, scoringRules, portfolioToEntry, ptInputs, ttInputs); proj != nil {
+			for entryID, ev := range proj.EV {
+				if s, ok := standingsByID[entryID]; ok {
+					v := ev
+					s.ProjectedEV = &v
+				}
+			}
+			for entryID, fav := range proj.Favorites {
+				if s, ok := standingsByID[entryID]; ok {
+					v := fav
+					s.ProjectedFavorites = &v
+				}
+			}
+		}
 
 		resp.Entries = dtos.NewEntryListResponse(entries, standingsByID)
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
-		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, checkpointPredictions)
+		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, checkpoints)
 	}
 
 	response.WriteJSON(w, http.StatusOK, resp)
@@ -288,141 +304,6 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 	response.WriteJSON(w, http.StatusOK, results)
 }
 
-// checkpointData holds prediction data for a single checkpoint (through_round).
-type checkpointData struct {
-	throughRound int
-	ptvByTeam    map[string]prediction.PredictedTeamValue
-}
-
-// loadCheckpointPredictions loads all prediction batches for a tournament,
-// deduplicates by through_round (keeping the most recent), and returns
-// a slice of checkpoint data sorted by through_round ascending.
-func loadCheckpointPredictions(ctx context.Context, svc *prediction.Service, tournamentID string) []checkpointData {
-	batches, err := svc.ListBatches(ctx, tournamentID)
-	if err != nil || len(batches) == 0 {
-		return nil
-	}
-
-	// Deduplicate by through_round (batches are sorted by created_at DESC, so first wins).
-	seen := make(map[int]bool)
-	var uniqueBatches []prediction.PredictionBatchSummary
-	for _, b := range batches {
-		if !seen[b.ThroughRound] {
-			seen[b.ThroughRound] = true
-			uniqueBatches = append(uniqueBatches, b)
-		}
-	}
-
-	var result []checkpointData
-	for _, b := range uniqueBatches {
-		teamValues, err := svc.GetTeamValues(ctx, b.ID)
-		if err != nil {
-			continue
-		}
-		ptvByTeam := make(map[string]prediction.PredictedTeamValue, len(teamValues))
-		for _, tv := range teamValues {
-			ptvByTeam[tv.TeamID] = tv
-		}
-		result = append(result, checkpointData{
-			throughRound: b.ThroughRound,
-			ptvByTeam:    ptvByTeam,
-		})
-	}
-
-	return result
-}
-
-// bestCheckpointForCap returns the checkpoint with the highest throughRound <= cap.
-// Returns nil if no checkpoint qualifies.
-func bestCheckpointForCap(checkpoints []checkpointData, cap int) *checkpointData {
-	var best *checkpointData
-	for i := range checkpoints {
-		if checkpoints[i].throughRound <= cap {
-			if best == nil || checkpoints[i].throughRound > best.throughRound {
-				best = &checkpoints[i]
-			}
-		}
-	}
-	return best
-}
-
-// latestCheckpoint returns the checkpoint with the highest throughRound.
-func latestCheckpoint(checkpoints []checkpointData) *checkpointData {
-	if len(checkpoints) == 0 {
-		return nil
-	}
-	best := &checkpoints[0]
-	for i := 1; i < len(checkpoints); i++ {
-		if checkpoints[i].throughRound > best.throughRound {
-			best = &checkpoints[i]
-		}
-	}
-	return best
-}
-
-// attachProjections computes and attaches projected EV and Favorites to each standing.
-// Uses the latest checkpoint's batch for entry-level projections.
-func attachProjections(
-	checkpoints []checkpointData,
-	rules []scoring.Rule,
-	standingsByID map[string]*models.EntryStanding,
-	portfolios []*models.CalcuttaPortfolio,
-	portfolioTeams []*models.CalcuttaPortfolioTeam,
-	tournamentTeams []*models.TournamentTeam,
-) {
-	cp := latestCheckpoint(checkpoints)
-	if cp == nil {
-		return
-	}
-
-	ttByID := make(map[string]*models.TournamentTeam, len(tournamentTeams))
-	for _, tt := range tournamentTeams {
-		ttByID[tt.ID] = tt
-	}
-
-	portfolioToEntry := make(map[string]string, len(portfolios))
-	for _, p := range portfolios {
-		portfolioToEntry[p.ID] = p.EntryID
-	}
-
-	entryEV := make(map[string]float64)
-	entryFav := make(map[string]float64)
-	for _, pt := range portfolioTeams {
-		ptv, ok := cp.ptvByTeam[pt.TeamID]
-		if !ok {
-			continue
-		}
-		tt := ttByID[pt.TeamID]
-		if tt == nil {
-			continue
-		}
-		entryID := portfolioToEntry[pt.PortfolioID]
-		if entryID == "" {
-			continue
-		}
-		tp := prediction.TeamProgress{
-			Wins:         tt.Wins,
-			Byes:         tt.Byes,
-			IsEliminated: tt.IsEliminated,
-		}
-		entryEV[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp, cp.throughRound)
-		entryFav[entryID] += pt.OwnershipPercentage * ptv.FavoritesTotalPoints
-	}
-
-	for entryID, ev := range entryEV {
-		if s, ok := standingsByID[entryID]; ok {
-			v := ev
-			s.ProjectedEV = &v
-		}
-	}
-	for entryID, fav := range entryFav {
-		if s, ok := standingsByID[entryID]; ok {
-			v := fav
-			s.ProjectedFavorites = &v
-		}
-	}
-}
-
 // computeRoundStandings computes standings at each round cap (0 through maxRound).
 // This lets the frontend show "as of" standings for any point in the tournament.
 // Each cap uses the checkpoint batch with the highest throughRound <= cap, so
@@ -434,7 +315,7 @@ func computeRoundStandings(
 	tournamentTeams []*models.TournamentTeam,
 	rounds []*models.CalcuttaRound,
 	payouts []*models.CalcuttaPayout,
-	checkpoints []checkpointData,
+	checkpoints []prediction.CheckpointData,
 ) []*dtos.RoundStandingGroup {
 	if len(rounds) == 0 {
 		return []*dtos.RoundStandingGroup{}
@@ -454,28 +335,13 @@ func computeRoundStandings(
 		teamByID[tt.ID] = tt
 	}
 
-	portfolioToEntry := make(map[string]string, len(portfolios))
-	for _, p := range portfolios {
-		portfolioToEntry[p.ID] = p.EntryID
-	}
-
-	hasPredictions := len(checkpoints) > 0
+	portfolioToEntry := prediction.BuildPortfolioToEntry(portfolios)
+	ptInputs := prediction.ToPortfolioTeamInputs(portfolioTeams)
+	ttInputs := prediction.ToTournamentTeamInputs(tournamentTeams)
 
 	groups := make([]*dtos.RoundStandingGroup, 0, maxRound+1)
 	for cap := 0; cap <= maxRound; cap++ {
 		pointsByEntry := make(map[string]float64)
-		var evByEntry map[string]float64
-		var favByEntry map[string]float64
-		var capCheckpoint *checkpointData
-
-		if hasPredictions {
-			capCheckpoint = bestCheckpointForCap(checkpoints, cap)
-		}
-		if capCheckpoint != nil {
-			evByEntry = make(map[string]float64)
-			favByEntry = make(map[string]float64)
-		}
-
 		for _, pt := range portfolioTeams {
 			team := teamByID[pt.TeamID]
 			if team == nil {
@@ -492,19 +358,11 @@ func computeRoundStandings(
 			}
 			teamPoints := scoring.PointsForProgress(rules, capped, 0)
 			pointsByEntry[entryID] += pt.OwnershipPercentage * float64(teamPoints)
-
-			if capCheckpoint != nil {
-				ptv, ok := capCheckpoint.ptvByTeam[pt.TeamID]
-				if ok {
-					isEliminated := team.IsEliminated && progress <= cap
-					tp := prediction.TeamProgress{Wins: capped, Byes: 0, IsEliminated: isEliminated}
-					evByEntry[entryID] += pt.OwnershipPercentage * prediction.ProjectedTeamEV(ptv, rules, tp, capCheckpoint.throughRound)
-					favByEntry[entryID] += pt.OwnershipPercentage * ptv.FavoritesTotalPoints
-				}
-			}
 		}
 
 		standings := calcuttaapp.ComputeStandings(entries, pointsByEntry, payouts)
+		proj := prediction.ComputeRoundProjections(checkpoints, rules, portfolioToEntry, ptInputs, ttInputs, cap)
+
 		standingEntries := make([]*dtos.RoundStandingEntry, len(standings))
 		for i, s := range standings {
 			entry := &dtos.RoundStandingEntry{
@@ -515,12 +373,10 @@ func computeRoundStandings(
 				PayoutCents:    s.PayoutCents,
 				InTheMoney:     s.InTheMoney,
 			}
-			if evByEntry != nil {
-				ev := evByEntry[s.EntryID]
+			if proj != nil {
+				ev := proj.EV[s.EntryID]
 				entry.ProjectedEV = &ev
-			}
-			if favByEntry != nil {
-				fav := favByEntry[s.EntryID]
+				fav := proj.Favorites[s.EntryID]
 				entry.ProjectedFavorites = &fav
 			}
 			standingEntries[i] = entry

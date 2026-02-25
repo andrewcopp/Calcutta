@@ -4,7 +4,7 @@ import "github.com/andrewcopp/Calcutta/backend/internal/models"
 
 // Type aliases preserve existing import paths (prediction.PredictedTeamValue, etc.)
 // while the canonical definitions live in models.
-type PredictionBatchSummary = models.PredictionBatchSummary
+type PredictionBatch = models.PredictionBatch
 type PredictedTeamValue = models.PredictedTeamValue
 type TeamInput = models.PredictionTeamInput
 

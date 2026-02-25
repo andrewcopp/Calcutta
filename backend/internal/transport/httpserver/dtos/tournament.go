@@ -338,8 +338,8 @@ type PredictionBatchResponse struct {
 	CreatedAt            time.Time `json:"createdAt"`
 }
 
-// NewPredictionBatchListResponse maps a slice of batch summaries to DTOs.
-func NewPredictionBatchListResponse(batches []prediction.PredictionBatchSummary) []PredictionBatchResponse {
+// NewPredictionBatchListResponse maps a slice of prediction batches to DTOs.
+func NewPredictionBatchListResponse(batches []prediction.PredictionBatch) []PredictionBatchResponse {
 	resp := make([]PredictionBatchResponse, len(batches))
 	for i, b := range batches {
 		resp[i] = PredictionBatchResponse{

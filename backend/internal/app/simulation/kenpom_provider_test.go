@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 )
 
 func TestThatKenPomProviderReturnsOverrideProbabilityWhenMatchupKeyExists(t *testing.T) {
@@ -41,7 +41,7 @@ func TestThatKenPomProviderReturnsFiftyWhenSpecIsNil(t *testing.T) {
 
 func TestThatKenPomProviderReturnsFiftyWhenTeam1RatingMissing(t *testing.T) {
 	// GIVEN a provider where team1 has no rating
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	provider := KenPomProvider{
 		Spec:        spec,
 		NetByTeamID: map[string]float64{"b": 5.0},
@@ -58,7 +58,7 @@ func TestThatKenPomProviderReturnsFiftyWhenTeam1RatingMissing(t *testing.T) {
 
 func TestThatKenPomProviderReturnsFiftyWhenTeam2RatingMissing(t *testing.T) {
 	// GIVEN a provider where team2 has no rating
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	provider := KenPomProvider{
 		Spec:        spec,
 		NetByTeamID: map[string]float64{"a": 10.0},
@@ -75,7 +75,7 @@ func TestThatKenPomProviderReturnsFiftyWhenTeam2RatingMissing(t *testing.T) {
 
 func TestThatKenPomProviderUsesSpecWinProbWhenBothRatingsPresent(t *testing.T) {
 	// GIVEN a provider with both ratings and a spec (sigma=10)
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	provider := KenPomProvider{
 		Spec:        spec,
 		NetByTeamID: map[string]float64{"a": 20.0, "b": 10.0},

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 )
 
 // --- helpers ---
@@ -196,7 +196,7 @@ func TestThatEightTeamFavoritesSumToTournamentTotal(t *testing.T) {
 func TestThatFullTournamentEVSumsToTournamentTotal(t *testing.T) {
 	// GIVEN a 68-team tournament field with real matchup generation
 	teams := generateTestTeams()
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -217,7 +217,7 @@ func TestThatFullTournamentEVSumsToTournamentTotal(t *testing.T) {
 func TestThatFullTournamentFavoritesSumToTournamentTotal(t *testing.T) {
 	// GIVEN a 68-team tournament field with real matchup generation
 	teams := generateTestTeams()
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	matchups, err := GenerateMatchups(teams, 0, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -241,7 +241,7 @@ func TestThatCheckpointOneEVSumsToExpectedTotal(t *testing.T) {
 	// GIVEN a 68-team field at checkpoint 1 (First Four resolved)
 	teams := generateCheckpoint1Teams()
 	survivors := filterSurvivors(teams, 1)
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	matchups, err := GenerateMatchups(survivors, 1, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -279,7 +279,7 @@ func TestThatCompletedTournamentAtCheckpointZeroSumsToExpectedTotal(t *testing.T
 	}
 	rules := DefaultScoringRules()
 	data := &TournamentData{Teams: teams, Rules: rules}
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN generating predictions at throughRound=0 (pre-tournament checkpoint)
 	state := NewTournamentState(data, 0)
@@ -300,7 +300,7 @@ func TestThatCheckpointOneFavoritesSumToExpectedTotal(t *testing.T) {
 	// GIVEN a 68-team field at checkpoint 1 (First Four resolved)
 	teams := generateCheckpoint1Teams()
 	survivors := filterSurvivors(teams, 1)
-	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+	spec := &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	matchups, err := GenerateMatchups(survivors, 1, spec, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

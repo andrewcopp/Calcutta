@@ -2,8 +2,8 @@ package models
 
 import "time"
 
-// PredictionBatchSummary is a lightweight view of a prediction batch for listing.
-type PredictionBatchSummary struct {
+// PredictionBatch is a lightweight view of a prediction batch for listing.
+type PredictionBatch struct {
 	ID                   string
 	ProbabilitySourceKey string
 	ThroughRound         int

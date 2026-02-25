@@ -3,13 +3,13 @@ package prediction
 import (
 	"fmt"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
 // generatePredictions is a pure computation pipeline: matchups -> tournament values.
 // No context, no repo, no side effects.
-func generatePredictions(state *TournamentState, spec *simulation_game_outcomes.Spec) ([]PredictedTeamValue, error) {
+func generatePredictions(state *TournamentState, spec *winprob.Model) ([]PredictedTeamValue, error) {
 	var matchups []PredictedMatchup
 	if state.ThroughRound < models.MaxRounds {
 		var err error

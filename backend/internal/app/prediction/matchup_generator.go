@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
@@ -193,13 +193,13 @@ func buildR128Games(region string, regionTeams []TeamInput) ([]gameSetup, []Team
 // For throughRound >= 1, all survivors start with pAdvance = 1.0.
 // Rounds already resolved (<= throughRound) are skipped.
 // ffConfig determines the Final Four region pairings; if nil, defaults are applied.
-func GenerateMatchups(teams []TeamInput, throughRound int, spec *simulation_game_outcomes.Spec, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, error) {
+func GenerateMatchups(teams []TeamInput, throughRound int, spec *winprob.Model, ffConfig *models.FinalFourConfig) ([]PredictedMatchup, error) {
 	if throughRound == 0 && len(teams) != 68 {
 		return nil, fmt.Errorf("expected 68 teams for pre-tournament predictions, got %d", len(teams))
 	}
 
 	if spec == nil {
-		spec = &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
+		spec = &winprob.Model{Kind: "kenpom", Sigma: 10.0}
 	}
 	spec.Normalize()
 

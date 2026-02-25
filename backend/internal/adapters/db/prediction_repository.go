@@ -22,14 +22,14 @@ func NewPredictionRepository(pool *pgxpool.Pool) *PredictionRepository {
 	return &PredictionRepository{pool: pool, q: sqlc.New(pool)}
 }
 
-func (r *PredictionRepository) ListBatches(ctx context.Context, tournamentID string) ([]models.PredictionBatchSummary, error) {
+func (r *PredictionRepository) ListBatches(ctx context.Context, tournamentID string) ([]models.PredictionBatch, error) {
 	rows, err := r.q.ListPredictionBatches(ctx, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("listing prediction batches: %w", err)
 	}
-	out := make([]models.PredictionBatchSummary, 0, len(rows))
+	out := make([]models.PredictionBatch, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, models.PredictionBatchSummary{
+		out = append(out, models.PredictionBatch{
 			ID:                   row.ID,
 			ProbabilitySourceKey: row.ProbabilitySourceKey,
 			ThroughRound:         int(row.ThroughRound),
@@ -39,7 +39,7 @@ func (r *PredictionRepository) ListBatches(ctx context.Context, tournamentID str
 	return out, nil
 }
 
-func (r *PredictionRepository) GetLatestBatch(ctx context.Context, tournamentID string) (*models.PredictionBatchSummary, bool, error) {
+func (r *PredictionRepository) GetLatestBatch(ctx context.Context, tournamentID string) (*models.PredictionBatch, bool, error) {
 	row, err := r.q.GetLatestPredictionBatch(ctx, tournamentID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -47,7 +47,7 @@ func (r *PredictionRepository) GetLatestBatch(ctx context.Context, tournamentID 
 		}
 		return nil, false, fmt.Errorf("getting latest prediction batch: %w", err)
 	}
-	return &models.PredictionBatchSummary{
+	return &models.PredictionBatch{
 		ID:                   row.ID,
 		ProbabilitySourceKey: row.ProbabilitySourceKey,
 		ThroughRound:         int(row.ThroughRound),
@@ -55,7 +55,7 @@ func (r *PredictionRepository) GetLatestBatch(ctx context.Context, tournamentID 
 	}, true, nil
 }
 
-func (r *PredictionRepository) GetBatchSummary(ctx context.Context, batchID string) (*models.PredictionBatchSummary, error) {
+func (r *PredictionRepository) GetBatchSummary(ctx context.Context, batchID string) (*models.PredictionBatch, error) {
 	row, err := r.q.GetPredictionBatchByID(ctx, batchID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -63,7 +63,7 @@ func (r *PredictionRepository) GetBatchSummary(ctx context.Context, batchID stri
 		}
 		return nil, fmt.Errorf("getting batch summary: %w", err)
 	}
-	return &models.PredictionBatchSummary{
+	return &models.PredictionBatch{
 		ID:                   row.ID,
 		ProbabilitySourceKey: row.ProbabilitySourceKey,
 		ThroughRound:         int(row.ThroughRound),

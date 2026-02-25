@@ -10,7 +10,7 @@ import (
 	"time"
 
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,7 +49,7 @@ type RunParams struct {
 	ProbabilitySourceKey string
 	StartingStateKey     string
 	GameOutcomeRunID     *string
-	GameOutcomeSpec      *simulation_game_outcomes.Spec
+	GameOutcomeSpec      *winprob.Model
 }
 
 type RunResult struct {

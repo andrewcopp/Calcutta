@@ -1,29 +1,29 @@
-package simulation_game_outcomes
+package winprob
 
 import (
 	"math"
 	"testing"
 )
 
-func TestThatValidateReturnsErrorForNilSpec(t *testing.T) {
-	// GIVEN a nil spec
-	var s *Spec
+func TestThatValidateReturnsErrorForNilModel(t *testing.T) {
+	// GIVEN a nil model
+	var m *Model
 
 	// WHEN Validate is called
-	err := s.Validate()
+	err := m.Validate()
 
 	// THEN an error is returned
 	if err == nil {
-		t.Error("expected error for nil spec")
+		t.Error("expected error for nil model")
 	}
 }
 
 func TestThatValidateReturnsErrorForUnsupportedKind(t *testing.T) {
-	// GIVEN a spec with an unsupported kind
-	s := &Spec{Kind: "unknown", Sigma: 10.0}
+	// GIVEN a model with an unsupported kind
+	m := &Model{Kind: "unknown", Sigma: 10.0}
 
 	// WHEN Validate is called
-	err := s.Validate()
+	err := m.Validate()
 
 	// THEN an error is returned
 	if err == nil {
@@ -32,11 +32,11 @@ func TestThatValidateReturnsErrorForUnsupportedKind(t *testing.T) {
 }
 
 func TestThatValidateReturnsErrorForNonPositiveSigma(t *testing.T) {
-	// GIVEN a spec with a non-positive sigma
-	s := &Spec{Kind: "kenpom", Sigma: 0}
+	// GIVEN a model with a non-positive sigma
+	m := &Model{Kind: "kenpom", Sigma: 0}
 
 	// WHEN Validate is called
-	err := s.Validate()
+	err := m.Validate()
 
 	// THEN an error is returned
 	if err == nil {
@@ -44,12 +44,12 @@ func TestThatValidateReturnsErrorForNonPositiveSigma(t *testing.T) {
 	}
 }
 
-func TestThatValidateSucceedsForValidSpec(t *testing.T) {
-	// GIVEN a valid spec
-	s := &Spec{Kind: "kenpom", Sigma: 10.0}
+func TestThatValidateSucceedsForValidModel(t *testing.T) {
+	// GIVEN a valid model
+	m := &Model{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN Validate is called
-	err := s.Validate()
+	err := m.Validate()
 
 	// THEN no error is returned
 	if err != nil {
@@ -58,37 +58,37 @@ func TestThatValidateSucceedsForValidSpec(t *testing.T) {
 }
 
 func TestThatNormalizeDefaultsKindToKenpom(t *testing.T) {
-	// GIVEN a spec with an empty kind
-	s := &Spec{Kind: "", Sigma: 10.0}
+	// GIVEN a model with an empty kind
+	m := &Model{Kind: "", Sigma: 10.0}
 
 	// WHEN Normalize is called
-	s.Normalize()
+	m.Normalize()
 
 	// THEN kind is set to "kenpom"
-	if s.Kind != "kenpom" {
-		t.Errorf("expected kind 'kenpom', got %q", s.Kind)
+	if m.Kind != "kenpom" {
+		t.Errorf("expected kind 'kenpom', got %q", m.Kind)
 	}
 }
 
 func TestThatNormalizeDefaultsSigmaTo10(t *testing.T) {
-	// GIVEN a spec with a non-positive sigma
-	s := &Spec{Kind: "kenpom", Sigma: 0}
+	// GIVEN a model with a non-positive sigma
+	m := &Model{Kind: "kenpom", Sigma: 0}
 
 	// WHEN Normalize is called
-	s.Normalize()
+	m.Normalize()
 
 	// THEN sigma is set to 10.0
-	if s.Sigma != 10.0 {
-		t.Errorf("expected sigma 10.0, got %f", s.Sigma)
+	if m.Sigma != 10.0 {
+		t.Errorf("expected sigma 10.0, got %f", m.Sigma)
 	}
 }
 
 func TestThatWinProbReturns0Point5ForEqualTeams(t *testing.T) {
-	// GIVEN a spec and two teams with equal net ratings
-	s := &Spec{Kind: "kenpom", Sigma: 10.0}
+	// GIVEN a model and two teams with equal net ratings
+	m := &Model{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN WinProb is called with equal ratings
-	prob := s.WinProb(5.0, 5.0)
+	prob := m.WinProb(5.0, 5.0)
 
 	// THEN the probability is 0.5
 	if math.Abs(prob-0.5) > 1e-9 {
@@ -97,11 +97,11 @@ func TestThatWinProbReturns0Point5ForEqualTeams(t *testing.T) {
 }
 
 func TestThatWinProbFavorsBetterTeam(t *testing.T) {
-	// GIVEN a spec and two teams where team1 is better
-	s := &Spec{Kind: "kenpom", Sigma: 10.0}
+	// GIVEN a model and two teams where team1 is better
+	m := &Model{Kind: "kenpom", Sigma: 10.0}
 
 	// WHEN WinProb is called with team1 having higher rating
-	prob := s.WinProb(20.0, 5.0)
+	prob := m.WinProb(20.0, 5.0)
 
 	// THEN team1 has greater than 50% probability
 	if prob <= 0.5 {

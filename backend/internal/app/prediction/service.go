@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/andrewcopp/Calcutta/backend/internal/app/simulation_game_outcomes"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/winprob"
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
 )
 
@@ -25,9 +25,19 @@ func New(repo ports.PredictionRepository) *Service {
 // RunParams configures a prediction run.
 type RunParams struct {
 	TournamentID         string
-	ProbabilitySourceKey string                        // e.g., "kenpom"
-	GameOutcomeSpec      *simulation_game_outcomes.Spec // KenPom parameters
-	ThroughRound         *int                           // Override checkpoint; nil = auto-detect from team progress
+	ProbabilitySourceKey string         // e.g., "kenpom"
+	GameOutcomeSpec      *winprob.Model // KenPom parameters
+	ThroughRound         *int           // Override checkpoint; nil = auto-detect from team progress
+}
+
+func (p *RunParams) applyDefaults() {
+	if p.ProbabilitySourceKey == "" {
+		p.ProbabilitySourceKey = "kenpom"
+	}
+	if p.GameOutcomeSpec == nil {
+		p.GameOutcomeSpec = &winprob.Model{Kind: "kenpom", Sigma: 10.0}
+	}
+	p.GameOutcomeSpec.Normalize()
 }
 
 // RunResult holds the output of a prediction run.
@@ -66,20 +76,42 @@ func (s *Service) loadTournamentData(ctx context.Context, tournamentID string) (
 	}, nil
 }
 
-// Run generates predictions for a tournament and stores them in the database.
-func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
+// runForCheckpoint generates predictions for a single checkpoint and stores them.
+func (s *Service) runForCheckpoint(ctx context.Context, tournamentID string, data *TournamentData, spec *winprob.Model, probSourceKey string, throughRound int) (*RunResult, error) {
 	start := time.Now()
 
+	state := NewTournamentState(data, throughRound)
+
+	teamValues, err := generatePredictions(state, spec)
+	if err != nil {
+		return nil, fmt.Errorf("prediction run failed for checkpoint %d: %w", throughRound, err)
+	}
+
+	specJSON, _ := json.Marshal(spec)
+	batchID, err := s.repo.StorePredictions(ctx, tournamentID, probSourceKey, specJSON, teamValues, throughRound)
+	if err != nil {
+		return nil, fmt.Errorf("failed to store predictions for checkpoint %d: %w", throughRound, err)
+	}
+
+	if _, err := s.repo.PruneOldBatchesForCheckpoint(ctx, tournamentID, throughRound, 1); err != nil {
+		slog.Warn("prediction_prune_failed", "tournament_id", tournamentID, "through_round", throughRound, "error", err)
+	}
+
+	return &RunResult{
+		BatchID:              batchID,
+		TournamentID:         tournamentID,
+		ProbabilitySourceKey: probSourceKey,
+		TeamCount:            len(teamValues),
+		Duration:             time.Since(start),
+	}, nil
+}
+
+// Run generates predictions for a tournament and stores them in the database.
+func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 	if p.TournamentID == "" {
 		return nil, errors.New("TournamentID is required")
 	}
-	if p.ProbabilitySourceKey == "" {
-		p.ProbabilitySourceKey = "kenpom"
-	}
-	if p.GameOutcomeSpec == nil {
-		p.GameOutcomeSpec = &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	}
-	p.GameOutcomeSpec.Normalize()
+	p.applyDefaults()
 
 	data, err := s.loadTournamentData(ctx, p.TournamentID)
 	if err != nil {
@@ -91,30 +123,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) (*RunResult, error) {
 		throughRound = *p.ThroughRound
 	}
 
-	state := NewTournamentState(data, throughRound)
-
-	teamValues, err := generatePredictions(state, p.GameOutcomeSpec)
-	if err != nil {
-		return nil, err
-	}
-
-	specJSON, _ := json.Marshal(p.GameOutcomeSpec)
-	batchID, err := s.repo.StorePredictions(ctx, p.TournamentID, p.ProbabilitySourceKey, specJSON, teamValues, throughRound)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store predictions: %w", err)
-	}
-
-	if _, err := s.repo.PruneOldBatchesForCheckpoint(ctx, p.TournamentID, throughRound, 1); err != nil {
-		slog.Warn("prediction_prune_failed", "tournament_id", p.TournamentID, "through_round", throughRound, "error", err)
-	}
-
-	return &RunResult{
-		BatchID:              batchID,
-		TournamentID:         p.TournamentID,
-		ProbabilitySourceKey: p.ProbabilitySourceKey,
-		TeamCount:            len(teamValues),
-		Duration:             time.Since(start),
-	}, nil
+	return s.runForCheckpoint(ctx, p.TournamentID, data, p.GameOutcomeSpec, p.ProbabilitySourceKey, throughRound)
 }
 
 // RunAllCheckpoints generates prediction batches for every checkpoint from
@@ -124,13 +133,7 @@ func (s *Service) RunAllCheckpoints(ctx context.Context, p RunParams) ([]RunResu
 	if p.TournamentID == "" {
 		return nil, errors.New("TournamentID is required")
 	}
-	if p.ProbabilitySourceKey == "" {
-		p.ProbabilitySourceKey = "kenpom"
-	}
-	if p.GameOutcomeSpec == nil {
-		p.GameOutcomeSpec = &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
-	}
-	p.GameOutcomeSpec.Normalize()
+	p.applyDefaults()
 
 	data, err := s.loadTournamentData(ctx, p.TournamentID)
 	if err != nil {
@@ -141,32 +144,11 @@ func (s *Service) RunAllCheckpoints(ctx context.Context, p RunParams) ([]RunResu
 
 	var results []RunResult
 	for cp := 0; cp <= throughRound; cp++ {
-		start := time.Now()
-
-		state := NewTournamentState(data, cp)
-
-		teamValues, err := generatePredictions(state, p.GameOutcomeSpec)
+		result, err := s.runForCheckpoint(ctx, p.TournamentID, data, p.GameOutcomeSpec, p.ProbabilitySourceKey, cp)
 		if err != nil {
-			return nil, fmt.Errorf("prediction run failed for checkpoint %d: %w", cp, err)
+			return nil, err
 		}
-
-		specJSON, _ := json.Marshal(p.GameOutcomeSpec)
-		batchID, err := s.repo.StorePredictions(ctx, p.TournamentID, p.ProbabilitySourceKey, specJSON, teamValues, cp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to store predictions for checkpoint %d: %w", cp, err)
-		}
-
-		if _, err := s.repo.PruneOldBatchesForCheckpoint(ctx, p.TournamentID, cp, 1); err != nil {
-			slog.Warn("prediction_prune_failed", "tournament_id", p.TournamentID, "through_round", cp, "error", err)
-		}
-
-		results = append(results, RunResult{
-			BatchID:              batchID,
-			TournamentID:         p.TournamentID,
-			ProbabilitySourceKey: p.ProbabilitySourceKey,
-			TeamCount:            len(teamValues),
-			Duration:             time.Since(start),
-		})
+		results = append(results, *result)
 	}
 	return results, nil
 }
@@ -200,12 +182,12 @@ func detectThroughRoundFromTeams(teams []TeamInput) int {
 }
 
 // ListBatches returns all non-deleted prediction batches for a tournament, newest first.
-func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]PredictionBatchSummary, error) {
+func (s *Service) ListBatches(ctx context.Context, tournamentID string) ([]PredictionBatch, error) {
 	return s.repo.ListBatches(ctx, tournamentID)
 }
 
-// GetLatestBatch returns the most recent prediction batch summary for a tournament.
-func (s *Service) GetLatestBatch(ctx context.Context, tournamentID string) (*PredictionBatchSummary, bool, error) {
+// GetLatestBatch returns the most recent prediction batch for a tournament.
+func (s *Service) GetLatestBatch(ctx context.Context, tournamentID string) (*PredictionBatch, bool, error) {
 	return s.repo.GetLatestBatch(ctx, tournamentID)
 }
 
@@ -218,8 +200,8 @@ func (s *Service) GetLatestBatchID(ctx context.Context, tournamentID string) (st
 	return batch.ID, true, nil
 }
 
-// GetBatchSummary returns the summary for a specific batch.
-func (s *Service) GetBatchSummary(ctx context.Context, batchID string) (*PredictionBatchSummary, error) {
+// GetBatchSummary returns the batch metadata for a specific batch ID.
+func (s *Service) GetBatchSummary(ctx context.Context, batchID string) (*PredictionBatch, error) {
 	return s.repo.GetBatchSummary(ctx, batchID)
 }
 

@@ -15,9 +15,7 @@ interface PredictionsTabProps {
 }
 
 function getEdgeColor(edge: number): string {
-  if (edge >= 25) return 'bg-success/10';
   if (edge >= 10) return 'bg-success/10';
-  if (edge <= -25) return 'bg-destructive/10';
   if (edge <= -10) return 'bg-destructive/10';
   return '';
 }
