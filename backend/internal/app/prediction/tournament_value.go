@@ -43,11 +43,12 @@ func enforceMonotonicity(probs []float64) {
 }
 
 // GenerateTournamentValues computes expected points and round-by-round advancement
-// probabilities for all teams. This handles both pre-tournament (throughRound=0)
-// and mid-tournament checkpoint scenarios:
-//   - Eliminated teams (progress < throughRound): pRound = 1.0 up to progress, 0 after
-//   - Alive teams (progress >= throughRound): pRound = 1.0 up to throughRound, matchup probs after
-//   - ExpectedPoints = actualPoints + sum(pRound[r] * incrementalPoints[r]) for future rounds
+// probabilities for all teams. The computation is split into three phases:
+//
+//   - ACTUAL: deterministic points from team progress at this checkpoint. No model needed.
+//   - PROJECTED: forward-looking probabilities and expected points for remaining rounds.
+//   - COMBINE: ExpectedPoints = actualPoints + projectedEV,
+//     FavoritesTotalPoints = PointsForProgress(progress + futureWins).
 //
 // PRound semantics (128-team symmetric model): PRound[r] maps directly to matchup round r.
 //   - PRound1 = P(wins R128): 1.0 for bye teams, <1.0 for FF teams
@@ -61,48 +62,36 @@ func GenerateTournamentValues(
 	pWinByRound := aggregatePWinByRound(matchups)
 	incByRound := buildIncByRound(rules)
 
-	favMap := ComputeFavoritesBracket(allTeams, matchups, throughRound, rules)
+	futureWins := computeFavoritesFutureWins(allTeams, matchups, throughRound)
 
 	var results []PredictedTeamValue
 	for _, team := range allTeams {
 		progress := team.Wins + team.Byes
+		isEliminated := throughRound > 0 && progress < throughRound
+
+		// ── ACTUAL (what has happened) ──
 		actualPoints := float64(scoring.PointsForProgress(rules, team.Wins, team.Byes))
 
+		// ── PROJECTED (what we think will happen) ──
 		var probs [models.MaxRounds]float64
-		var expectedPoints float64
+		var projectedEV float64
 		var variancePoints float64
 
-		if throughRound > 0 && progress < throughRound {
-			// Eliminated: pRound = 1.0 for rounds survived, 0.0 for rest.
-			for r := 1; r <= models.MaxRounds; r++ {
-				if r <= progress {
-					probs[r-1] = 1.0
-				}
-			}
-			expectedPoints = actualPoints
-		} else {
-			// Alive (or pre-tournament where all teams start at progress 0).
-			// Direct mapping: PRound r maps to matchup round r.
-			for r := 1; r <= models.MaxRounds; r++ {
-				if throughRound > 0 && r <= throughRound {
-					probs[r-1] = 1.0
-				} else {
-					probs[r-1] = pWinByRound[teamRoundKey{team.ID, r}]
-				}
-			}
+		// Fill actual rounds with 1.0.
+		for r := 1; r <= progress; r++ {
+			probs[r-1] = 1.0
+		}
 
+		if !isEliminated {
+			// Fill projected rounds from matchup model.
+			for r := throughRound + 1; r <= models.MaxRounds; r++ {
+				probs[r-1] = pWinByRound[teamRoundKey{team.ID, r}]
+			}
 			enforceMonotonicity(probs[:])
 
-			// Expected points = actual + sum of future conditional points.
-			// Start from max(throughRound+1, progress+1) so that rounds already
-			// reflected in actualPoints are not counted again in the probability sum.
-			expectedPoints = actualPoints
-			startRound := throughRound + 1
-			if progress >= startRound {
-				startRound = progress + 1
-			}
-			for r := startRound; r <= models.MaxRounds; r++ {
-				expectedPoints += probs[r-1] * incByRound[r]
+			// Projected EV = sum of future probability * incremental points.
+			for r := progress + 1; r <= models.MaxRounds; r++ {
+				projectedEV += probs[r-1] * incByRound[r]
 			}
 
 			// Variance (pre-tournament only).
@@ -115,8 +104,14 @@ func GenerateTournamentValues(
 			}
 		}
 
+		// ── COMBINE ──
+		expectedPoints := actualPoints + projectedEV
+		favoritesTotalPoints := float64(scoring.PointsForProgress(
+			rules, progress+futureWins[team.ID], 0))
+
 		results = append(results, PredictedTeamValue{
 			TeamID:               team.ID,
+			ActualPoints:         actualPoints,
 			ExpectedPoints:       expectedPoints,
 			VariancePoints:       variancePoints,
 			StdPoints:            math.Sqrt(variancePoints),
@@ -127,7 +122,7 @@ func GenerateTournamentValues(
 			PRound5:              probs[4],
 			PRound6:              probs[5],
 			PRound7:              probs[6],
-			FavoritesTotalPoints: favMap[team.ID],
+			FavoritesTotalPoints: favoritesTotalPoints,
 		})
 	}
 

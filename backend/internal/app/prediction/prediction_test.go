@@ -938,7 +938,7 @@ func TestThatEVIsConsistentAcrossCheckpoints(t *testing.T) {
 }
 
 func TestThatFavoritesTotalPointsAreSimilarAcrossCheckpoints(t *testing.T) {
-	// GIVEN Favorites computed at checkpoint 0 (Byes=1) and checkpoint 1 (FF resolved)
+	// GIVEN predictions computed at checkpoint 0 (Byes=1) and checkpoint 1 (FF resolved)
 	spec := &simulation_game_outcomes.Spec{Kind: "kenpom", Sigma: 10.0}
 	rules := DefaultScoringRules()
 
@@ -950,7 +950,7 @@ func TestThatFavoritesTotalPointsAreSimilarAcrossCheckpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("checkpoint 0 matchups: %v", err)
 	}
-	fav0 := ComputeFavoritesBracket(state0.AllTeams, matchups0, 0, rules)
+	values0 := GenerateTournamentValues(state0.AllTeams, matchups0, 0, rules)
 
 	// Checkpoint 1: use NewTournamentState to cap team progress
 	teams1 := generateCheckpoint1Teams()
@@ -960,15 +960,25 @@ func TestThatFavoritesTotalPointsAreSimilarAcrossCheckpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("checkpoint 1 matchups: %v", err)
 	}
-	fav1 := ComputeFavoritesBracket(state1.AllTeams, matchups1, 1, rules)
+	values1 := GenerateTournamentValues(state1.AllTeams, matchups1, 1, rules)
+
+	findFav := func(values []PredictedTeamValue, teamID string) float64 {
+		for _, v := range values {
+			if v.TeamID == teamID {
+				return v.FavoritesTotalPoints
+			}
+		}
+		return 0
+	}
 
 	// THEN the East 8-seed's Favorites total should be similar across checkpoints.
-	// Without the R64 fix, checkpoint 1 would miss R64 and produce much lower values.
 	teamID := "team-8" // East 8-seed
-	diff := math.Abs(fav0[teamID] - fav1[teamID])
+	fav0 := findFav(values0, teamID)
+	fav1 := findFav(values1, teamID)
+	diff := math.Abs(fav0 - fav1)
 	if diff > 5.0 {
 		t.Errorf("East 8-seed Favorites: checkpoint0=%.2f, checkpoint1=%.2f, diff=%.2f (expected similar)",
-			fav0[teamID], fav1[teamID], diff)
+			fav0, fav1, diff)
 	}
 }
 
@@ -981,18 +991,15 @@ func TestThatFavoritesBracketProcessesR64AtCheckpointOne(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	rules := DefaultScoringRules()
 
-	// WHEN computing the Favorites bracket
-	favMap := ComputeFavoritesBracket(teams, matchups, 1, rules)
+	// WHEN computing future wins in the favorites bracket
+	futureWins := computeFavoritesFutureWins(teams, matchups, 1)
 
 	// THEN the East 8-seed (KenPom 10.0) should beat the 9-seed (KenPom 7.5) in R64,
-	// giving it a Favorites total reflecting the R64 win.
-	// With R64 win: totalWins=0+1=1, progress=1+1=2, points=0+10=10
-	// Without R64 win (bug): totalWins=0, progress=0+1=1, points=0
-	team8Points := favMap["team-8"]
-	if team8Points < 10.0 {
-		t.Errorf("East 8-seed Favorites total = %.2f, expected >= 10 (R64 win should be included)", team8Points)
+	// giving it at least 1 future win.
+	team8Wins := futureWins["team-8"]
+	if team8Wins < 1 {
+		t.Errorf("East 8-seed future wins = %d, expected >= 1 (R64 win should be included)", team8Wins)
 	}
 }
 

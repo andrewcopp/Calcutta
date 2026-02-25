@@ -63,6 +63,7 @@ type ComputePredictedTeamValue struct {
 	UpdatedAt            pgtype.Timestamptz
 	DeletedAt            pgtype.Timestamptz
 	FavoritesTotalPoints *float64
+	ActualPoints         *float64
 }
 
 // Stores metadata for prediction generation runs (analogous to simulated_tournaments for simulations)

@@ -15,6 +15,7 @@ type BulkCreatePredictedTeamValuesParams struct {
 	PredictionBatchID    string
 	TournamentID         string
 	TeamID               string
+	ActualPoints         *float64
 	ExpectedPoints       float64
 	VariancePoints       *float64
 	StdPoints            *float64
@@ -33,6 +34,7 @@ INSERT INTO compute.predicted_team_values (
     prediction_batch_id,
     tournament_id,
     team_id,
+    actual_points,
     expected_points,
     variance_points,
     std_points,
@@ -59,7 +61,8 @@ VALUES (
     $11,
     $12,
     $13,
-    $14
+    $14,
+    $15
 )
 `
 
@@ -67,6 +70,7 @@ type CreatePredictedTeamValueParams struct {
 	PredictionBatchID    string
 	TournamentID         string
 	TeamID               string
+	ActualPoints         *float64
 	ExpectedPoints       float64
 	VariancePoints       *float64
 	StdPoints            *float64
@@ -85,6 +89,7 @@ func (q *Queries) CreatePredictedTeamValue(ctx context.Context, arg CreatePredic
 		arg.PredictionBatchID,
 		arg.TournamentID,
 		arg.TeamID,
+		arg.ActualPoints,
 		arg.ExpectedPoints,
 		arg.VariancePoints,
 		arg.StdPoints,
@@ -187,6 +192,7 @@ func (q *Queries) GetLatestPredictionBatch(ctx context.Context, dollar_1 string)
 const getPredictedTeamValues = `-- name: GetPredictedTeamValues :many
 SELECT
     team_id::text,
+    COALESCE(actual_points, 0) AS actual_points,
     expected_points,
     COALESCE(variance_points, 0) AS variance_points,
     COALESCE(std_points, 0) AS std_points,
@@ -205,6 +211,7 @@ WHERE prediction_batch_id = $1::uuid
 
 type GetPredictedTeamValuesRow struct {
 	TeamID               string
+	ActualPoints         float64
 	ExpectedPoints       float64
 	VariancePoints       float64
 	StdPoints            float64
@@ -229,6 +236,7 @@ func (q *Queries) GetPredictedTeamValues(ctx context.Context, dollar_1 string) (
 		var i GetPredictedTeamValuesRow
 		if err := rows.Scan(
 			&i.TeamID,
+			&i.ActualPoints,
 			&i.ExpectedPoints,
 			&i.VariancePoints,
 			&i.StdPoints,

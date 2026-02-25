@@ -2,27 +2,24 @@ package prediction
 
 import (
 	"strings"
-
-	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 )
 
-// ComputeFavoritesBracket computes projected total points for each team by
-// resolving every remaining game in favor of the higher-probability team.
-// This produces a single deterministic bracket outcome.
+// computeFavoritesFutureWins resolves every remaining game in favor of the
+// higher-probability team and returns the number of additional wins each team
+// earns beyond their current progress. This is purely about future matchup
+// resolution — scoring is the caller's responsibility.
 //
 // Parameters:
 //   - allTeams: all teams in the tournament (including eliminated)
 //   - matchups: predicted matchups from GenerateMatchups (only future rounds)
 //   - throughRound: the checkpoint round (rounds <= throughRound are resolved)
-//   - rules: scoring rules for point calculation
 //
-// Returns a map of teamID -> total points under the favorites bracket.
-func ComputeFavoritesBracket(
+// Returns a map of teamID -> future wins from the favorites bracket.
+func computeFavoritesFutureWins(
 	allTeams []TeamInput,
 	matchups []PredictedMatchup,
 	throughRound int,
-	rules []scoring.Rule,
-) map[string]float64 {
+) map[string]int {
 	// Track how many additional wins each team gets in the favorites bracket.
 	favoritesWins := make(map[string]int)
 
@@ -95,14 +92,5 @@ func ComputeFavoritesBracket(
 		}
 	}
 
-	// Compute total points for each team.
-	// Team progress (Wins/Byes) is already capped to throughRound by NewTournamentState,
-	// so no special-casing is needed here.
-	result := make(map[string]float64, len(allTeams))
-	for _, t := range allTeams {
-		totalProgress := t.Wins + favoritesWins[t.ID] + t.Byes
-		result[t.ID] = float64(scoring.PointsForProgress(rules, totalProgress, 0))
-	}
-
-	return result
+	return favoritesWins
 }

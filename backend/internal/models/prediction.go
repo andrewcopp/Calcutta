@@ -16,6 +16,7 @@ type PredictionBatchSummary struct {
 // (advancement probabilities and expected scoring points).
 type PredictedTeamValue struct {
 	TeamID               string
+	ActualPoints         float64
 	ExpectedPoints       float64
 	VariancePoints       float64
 	StdPoints            float64

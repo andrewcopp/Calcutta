@@ -80,6 +80,7 @@ func (r *PredictionRepository) GetTeamValues(ctx context.Context, batchID string
 	for _, row := range rows {
 		out = append(out, models.PredictedTeamValue{
 			TeamID:               row.TeamID,
+			ActualPoints:         row.ActualPoints,
 			ExpectedPoints:       row.ExpectedPoints,
 			VariancePoints:       row.VariancePoints,
 			StdPoints:            row.StdPoints,
@@ -192,6 +193,7 @@ func (r *PredictionRepository) StorePredictions(
 			PredictionBatchID:    batchID,
 			TournamentID:         tournamentID,
 			TeamID:               v.TeamID,
+			ActualPoints:         &v.ActualPoints,
 			ExpectedPoints:       v.ExpectedPoints,
 			VariancePoints:       &v.VariancePoints,
 			StdPoints:            &v.StdPoints,

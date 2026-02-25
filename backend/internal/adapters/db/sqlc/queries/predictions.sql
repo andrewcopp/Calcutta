@@ -22,6 +22,7 @@ WHERE id = $1::uuid
 -- name: GetPredictedTeamValues :many
 SELECT
     team_id::text,
+    COALESCE(actual_points, 0) AS actual_points,
     expected_points,
     COALESCE(variance_points, 0) AS variance_points,
     COALESCE(std_points, 0) AS std_points,
@@ -83,6 +84,7 @@ INSERT INTO compute.predicted_team_values (
     prediction_batch_id,
     tournament_id,
     team_id,
+    actual_points,
     expected_points,
     variance_points,
     std_points,
@@ -99,6 +101,7 @@ VALUES (
     sqlc.arg(prediction_batch_id)::uuid,
     sqlc.arg(tournament_id)::uuid,
     sqlc.arg(team_id)::uuid,
+    sqlc.arg(actual_points),
     sqlc.arg(expected_points),
     sqlc.arg(variance_points),
     sqlc.arg(std_points),
@@ -115,10 +118,10 @@ VALUES (
 -- name: BulkCreatePredictedTeamValues :copyfrom
 INSERT INTO compute.predicted_team_values (
     prediction_batch_id, tournament_id, team_id,
-    expected_points, variance_points, std_points,
+    actual_points, expected_points, variance_points, std_points,
     p_round_1, p_round_2, p_round_3, p_round_4, p_round_5, p_round_6, p_round_7,
     favorites_total_points
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
 
 -- name: PruneOldBatchesForCheckpoint :execrows
 DELETE FROM compute.prediction_batches pb_outer
