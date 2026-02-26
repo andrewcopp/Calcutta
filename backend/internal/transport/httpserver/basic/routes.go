@@ -28,6 +28,6 @@ func RegisterRoutes(r *mux.Router, opts Options, h Handlers) {
 	if opts.MetricsEnabled {
 		r.HandleFunc("/metrics", h.Metrics).Methods("GET")
 	}
-	r.HandleFunc("/api/health", h.Health).Methods("GET")
-	r.HandleFunc("/api/ready", h.Ready).Methods("GET")
+	r.HandleFunc("/api/v1/health", h.Health).Methods("GET")
+	r.HandleFunc("/api/v1/ready", h.Ready).Methods("GET")
 }

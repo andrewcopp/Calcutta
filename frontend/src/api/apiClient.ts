@@ -22,7 +22,7 @@ function resolveApiUrl(): string {
 }
 
 export const API_URL = resolveApiUrl();
-const API_BASE_URL = `${API_URL}/api`;
+const API_BASE_URL = `${API_URL}/api/v1`;
 
 export const ACCESS_TOKEN_KEY = 'accessToken';
 export const USER_KEY = 'user';
@@ -85,7 +85,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 function isAuthUrl(url: string): boolean {
-  return url.includes('/api/auth/');
+  return url.includes('/api/v1/auth/');
 }
 
 async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boolean): Promise<Response> {
@@ -107,7 +107,8 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
     localStorage.removeItem(USER_KEY);
     if (typeof window !== 'undefined') {
       console.warn('Session expired, redirecting to login');
-      window.location.href = '/login?expired=true';
+      const returnTo = window.location.pathname + window.location.search;
+      window.location.href = `/login?expired=true&returnTo=${encodeURIComponent(returnTo)}`;
     }
     return response;
   }
@@ -121,7 +122,8 @@ async function fetchWithAuth(url: string, init: RequestInit, allowRefresh: boole
     localStorage.removeItem(USER_KEY);
     if (typeof window !== 'undefined') {
       console.warn('Session expired after retry, redirecting to login');
-      window.location.href = '/login?expired=true';
+      const returnTo = window.location.pathname + window.location.search;
+      window.location.href = `/login?expired=true&returnTo=${encodeURIComponent(returnTo)}`;
     }
   }
 
@@ -186,10 +188,16 @@ async function request<T>(path: string, options?: RequestOptions<T>): Promise<T>
   const body = await parseBody();
 
   if (!response.ok) {
+    const errorObj = body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
+    const nestedError = errorObj?.error && typeof errorObj.error === 'object'
+      ? (errorObj.error as Record<string, unknown>)
+      : null;
     const message =
-      (body && typeof body === 'object' && 'message' in (body as Record<string, unknown>)
-        ? String((body as Record<string, unknown>).message)
-        : response.statusText) || `Request failed with status ${response.status}`;
+      (nestedError && typeof nestedError.message === 'string'
+        ? nestedError.message
+        : errorObj && typeof errorObj.message === 'string'
+          ? errorObj.message
+          : response.statusText) || `Request failed with status ${response.status}`;
 
     throw new ApiError(message, response.status, body);
   }

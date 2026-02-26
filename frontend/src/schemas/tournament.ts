@@ -105,7 +105,7 @@ export const TournamentModeratorSchema = z.object({
 export type TournamentModerator = z.infer<typeof TournamentModeratorSchema>;
 
 export const TournamentModeratorsResponseSchema = z.object({
-  moderators: z.array(TournamentModeratorSchema),
+  items: z.array(TournamentModeratorSchema),
 });
 
 export const GrantModeratorResponseSchema = z.object({

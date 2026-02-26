@@ -6,6 +6,7 @@ export type { School } from '../schemas/school';
 
 export const schoolService = {
   async getSchools() {
-    return apiClient.get('/schools', { schema: z.array(SchoolSchema) });
+    const res = await apiClient.get('/schools', { schema: z.object({ items: z.array(SchoolSchema) }) });
+    return res.items;
   },
 };

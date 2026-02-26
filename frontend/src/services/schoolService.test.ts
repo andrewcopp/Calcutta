@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { schoolService } from './schoolService';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 describe('schoolService', () => {
   describe('getSchools', () => {
@@ -19,7 +19,7 @@ describe('schoolService', () => {
     it('throws when response missing required field', async () => {
       server.use(
         http.get(`${BASE}/schools`, () => {
-          return HttpResponse.json([{ id: 'sch-1' }]);
+          return HttpResponse.json({ items: [{ id: 'sch-1' }] });
         }),
       );
 
@@ -29,7 +29,7 @@ describe('schoolService', () => {
     it('returns empty array when API returns empty list', async () => {
       server.use(
         http.get(`${BASE}/schools`, () => {
-          return HttpResponse.json([]);
+          return HttpResponse.json({ items: [] });
         }),
       );
 

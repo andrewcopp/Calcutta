@@ -129,7 +129,7 @@ describe('computeValidationErrors', () => {
     const errors = computeValidationErrors(bids, defaultConfig, []);
 
     // THEN an error about minimum bid is present
-    expect(errors).toContain('All bids must be at least 1 credits');
+    expect(errors).toContain('All bids must be at least 1 credit');
   });
 
   it('reports bid exceeds max with team name when available', () => {
@@ -186,7 +186,7 @@ describe('computeValidationErrors', () => {
 
     // THEN both the min-teams and min-bid errors are present
     expect(errors).toContain('Select at least 3 teams');
-    expect(errors).toContain('All bids must be at least 1 credits');
+    expect(errors).toContain('All bids must be at least 1 credit');
   });
 
   it('does not report over-budget at exact zero remaining', () => {

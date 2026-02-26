@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { hallOfFameService } from './hallOfFameService';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 describe('hallOfFameService', () => {
   describe('getBestTeams', () => {

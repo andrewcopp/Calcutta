@@ -69,5 +69,5 @@ func (h *Handler) HandleListPredictionBatches(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewPredictionBatchListResponse(batches))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewPredictionBatchListResponse(batches)})
 }

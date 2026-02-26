@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { calcuttaService } from './calcuttaService';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 describe('calcuttaService', () => {
   describe('getAllCalcuttas', () => {
@@ -17,7 +17,7 @@ describe('calcuttaService', () => {
     it('throws when calcutta missing required field', async () => {
       server.use(
         http.get(`${BASE}/calcuttas`, () => {
-          return HttpResponse.json([{ id: 'calc-1' }]);
+          return HttpResponse.json({ items: [{ id: 'calc-1' }] });
         }),
       );
 

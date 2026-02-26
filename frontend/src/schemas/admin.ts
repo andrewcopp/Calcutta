@@ -58,7 +58,6 @@ export type ListAPIKeysResponse = z.infer<typeof ListAPIKeysResponseSchema>;
 export const AdminInviteUserResponseSchema = z.object({
   userId: z.string(),
   email: z.string(),
-  inviteToken: z.string(),
   inviteExpiresAt: z.string(),
   status: z.string(),
 });

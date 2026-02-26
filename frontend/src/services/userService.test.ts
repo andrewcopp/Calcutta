@@ -4,7 +4,7 @@ import { server } from '../test/msw/server';
 import { userService } from './userService';
 import { USER_KEY, PERMISSIONS_KEY } from '../api/apiClient';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 beforeEach(() => {
   localStorage.clear();

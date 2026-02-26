@@ -12,7 +12,8 @@ import { apiClient } from '../api/apiClient';
 
 export const calcuttaService = {
   async getAllCalcuttas() {
-    return apiClient.get('/calcuttas', { schema: z.array(CalcuttaSchema) });
+    const res = await apiClient.get('/calcuttas', { schema: z.object({ items: z.array(CalcuttaSchema) }) });
+    return res.items;
   },
 
   async getCalcutta(id: string) {
@@ -49,9 +50,10 @@ export const calcuttaService = {
   },
 
   async getEntryTeams(entryId: string, calcuttaId: string) {
-    return apiClient.get(`/calcuttas/${calcuttaId}/entries/${entryId}/teams`, {
-      schema: z.array(CalcuttaEntryTeamSchema),
+    const res = await apiClient.get(`/calcuttas/${calcuttaId}/entries/${entryId}/teams`, {
+      schema: z.object({ items: z.array(CalcuttaEntryTeamSchema) }),
     });
+    return res.items;
   },
 
   async getCalcuttaDashboard(calcuttaId: string) {

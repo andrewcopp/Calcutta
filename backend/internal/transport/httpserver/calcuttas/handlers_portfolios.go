@@ -69,5 +69,5 @@ func (h *Handler) HandleListEntryPortfolios(w http.ResponseWriter, r *http.Reque
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, dtos.NewPortfolioListResponse(portfolios))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewPortfolioListResponse(portfolios)})
 }

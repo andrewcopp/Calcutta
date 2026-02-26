@@ -24,7 +24,7 @@ export function ResetPasswordPage() {
     }
   }, [user, token, resetConsumed]);
 
-  const passwordValid = password.length >= 8;
+  const passwordValid = password.length >= 12;
   const passwordsMatch = password === confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +37,7 @@ export function ResetPasswordPage() {
     }
 
     if (!passwordValid) {
-      setError('Password must be at least 8 characters.');
+      setError('Password must be at least 12 characters.');
       return;
     }
 
@@ -143,7 +143,7 @@ export function ResetPasswordPage() {
                 required
                 autoFocus
               />
-              <p className="mt-1 text-xs text-muted-foreground">Must be at least 8 characters</p>
+              <p className="mt-1 text-xs text-muted-foreground">Must be at least 12 characters</p>
             </div>
 
             <div>

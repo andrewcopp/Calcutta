@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { adminService } from './adminService';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 describe('adminService', () => {
   describe('listUsers', () => {
@@ -37,7 +37,6 @@ describe('adminService', () => {
     it('returns invite response', async () => {
       const result = await adminService.sendInvite('user-1');
 
-      expect(result.inviteToken).toBe('tok-invite');
       expect(result.status).toBe('invited');
     });
   });

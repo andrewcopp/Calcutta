@@ -44,7 +44,7 @@ export function computeValidationErrors(
 
   Object.entries(bidsByTeamId).forEach(([teamId, bid]) => {
     if (bid < MIN_BID) {
-      errors.push(`All bids must be at least ${MIN_BID} credits`);
+      errors.push(`All bids must be at least ${MIN_BID} credit${MIN_BID === 1 ? '' : 's'}`);
     }
     if (bid > config.maxBidPoints) {
       const team = teams.find((t) => t.id === teamId);

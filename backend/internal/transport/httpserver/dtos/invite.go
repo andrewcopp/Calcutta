@@ -20,7 +20,6 @@ func (r *AcceptInviteRequest) Validate() error {
 type AdminInviteUserResponse struct {
 	UserID        string `json:"userId"`
 	Email         string `json:"email"`
-	InviteToken   string `json:"inviteToken"`
 	InviteExpires string `json:"inviteExpiresAt"`
 	Status        string `json:"status"`
 }

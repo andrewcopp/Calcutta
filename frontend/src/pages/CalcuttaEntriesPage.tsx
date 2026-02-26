@@ -32,7 +32,7 @@ import { formatDate } from '../utils/format';
 export function CalcuttaEntriesPage() {
   const { calcuttaId } = useParams<{ calcuttaId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const validTabs = ['leaderboard', 'race', 'investment', 'ownership', 'returns', 'statistics', 'final-four'] as const;
+  const validTabs = ['leaderboard', 'race', 'bids', 'shares', 'scoring', 'statistics', 'final-four'] as const;
   const tabParam = searchParams.get('tab');
   const activeTab = validTabs.includes(tabParam as (typeof validTabs)[number]) ? tabParam! : 'leaderboard';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
@@ -192,9 +192,9 @@ export function CalcuttaEntriesPage() {
         <TabsList>
           <TabsTrigger value="leaderboard">Standings</TabsTrigger>
           <TabsTrigger value="race">Race</TabsTrigger>
-          <TabsTrigger value="investment">Bids</TabsTrigger>
-          <TabsTrigger value="ownership">Shares</TabsTrigger>
-          <TabsTrigger value="returns">Scoring</TabsTrigger>
+          <TabsTrigger value="bids">Bids</TabsTrigger>
+          <TabsTrigger value="shares">Shares</TabsTrigger>
+          <TabsTrigger value="scoring">Scoring</TabsTrigger>
           <TabsTrigger value="statistics">Pool Stats</TabsTrigger>
           {dashboardData?.finalFourOutcomes && dashboardData.finalFourOutcomes.length > 0 && (
             <TabsTrigger value="final-four">Final Four</TabsTrigger>
@@ -209,7 +209,7 @@ export function CalcuttaEntriesPage() {
           <RaceTab entries={entries} dashboard={dashboardData!} />
         </TabsContent>
 
-        <TabsContent value="investment">
+        <TabsContent value="bids">
           <InvestmentsTab
             entries={entries}
             schools={schools}
@@ -218,7 +218,7 @@ export function CalcuttaEntriesPage() {
           />
         </TabsContent>
 
-        <TabsContent value="ownership">
+        <TabsContent value="shares">
           <OwnershipsTab
             entries={entries}
             schools={schools}
@@ -230,7 +230,7 @@ export function CalcuttaEntriesPage() {
           />
         </TabsContent>
 
-        <TabsContent value="returns">
+        <TabsContent value="scoring">
           <ReturnsTab
             entries={entries}
             schools={schools}

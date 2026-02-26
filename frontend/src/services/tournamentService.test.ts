@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { tournamentService } from './tournamentService';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 describe('tournamentService', () => {
   describe('getAllTournaments', () => {
@@ -17,7 +17,7 @@ describe('tournamentService', () => {
     it('throws when tournament missing required field', async () => {
       server.use(
         http.get(`${BASE}/tournaments`, () => {
-          return HttpResponse.json([{ id: 'tourn-1' }]);
+          return HttpResponse.json({ items: [{ id: 'tourn-1' }] });
         }),
       );
 

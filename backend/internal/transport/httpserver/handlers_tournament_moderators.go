@@ -55,7 +55,7 @@ func (s *Server) listTournamentModeratorsHandler(w http.ResponseWriter, r *http.
 		})
 	}
 
-	response.WriteJSON(w, http.StatusOK, map[string]any{"moderators": moderators})
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": moderators})
 }
 
 func (s *Server) grantTournamentModeratorHandler(w http.ResponseWriter, r *http.Request) {

@@ -14,7 +14,8 @@ import { apiClient } from '../api/apiClient';
 
 export const tournamentService = {
   async getAllTournaments() {
-    return apiClient.get('/tournaments', { schema: z.array(TournamentSchema) });
+    const res = await apiClient.get('/tournaments', { schema: z.object({ items: z.array(TournamentSchema) }) });
+    return res.items;
   },
 
   async getTournament(id: string) {
@@ -22,7 +23,8 @@ export const tournamentService = {
   },
 
   async getTournamentTeams(id: string) {
-    return apiClient.get(`/tournaments/${id}/teams`, { schema: z.array(TournamentTeamSchema) });
+    const res = await apiClient.get(`/tournaments/${id}/teams`, { schema: z.object({ items: z.array(TournamentTeamSchema) }) });
+    return res.items;
   },
 
   async createTournament(competition: string, year: number, rounds: number) {
@@ -43,22 +45,25 @@ export const tournamentService = {
   },
 
   async replaceTeams(tournamentId: string, teams: { schoolId: string; seed: number; region: string }[]) {
-    return apiClient.put(`/tournaments/${tournamentId}/teams`, { teams }, { schema: z.array(TournamentTeamSchema) });
+    const res = await apiClient.put(`/tournaments/${tournamentId}/teams`, { teams }, { schema: z.object({ items: z.array(TournamentTeamSchema) }) });
+    return res.items;
   },
 
   async getCompetitions() {
-    return apiClient.get('/competitions', { schema: z.array(CompetitionSchema) });
+    const res = await apiClient.get('/competitions', { schema: z.object({ items: z.array(CompetitionSchema) }) });
+    return res.items;
   },
 
   async getSeasons() {
-    return apiClient.get('/seasons', { schema: z.array(SeasonSchema) });
+    const res = await apiClient.get('/seasons', { schema: z.object({ items: z.array(SeasonSchema) }) });
+    return res.items;
   },
 
   async getTournamentModerators(tournamentId: string) {
     const res = await apiClient.get(`/tournaments/${tournamentId}/moderators`, {
       schema: TournamentModeratorsResponseSchema,
     });
-    return res.moderators;
+    return res.items;
   },
 
   async grantTournamentModerator(tournamentId: string, email: string) {
@@ -73,9 +78,10 @@ export const tournamentService = {
   },
 
   async getPredictionBatches(tournamentId: string) {
-    return apiClient.get(`/tournaments/${tournamentId}/prediction-batches`, {
-      schema: z.array(PredictionBatchSchema),
+    const res = await apiClient.get(`/tournaments/${tournamentId}/prediction-batches`, {
+      schema: z.object({ items: z.array(PredictionBatchSchema) }),
     });
+    return res.items;
   },
 
   async getTournamentPredictions(tournamentId: string, batchId?: string) {
@@ -89,6 +95,7 @@ export const tournamentService = {
     tournamentId: string,
     stats: { teamId: string; netRtg: number; oRtg: number; dRtg: number; adjT: number }[],
   ) {
-    return apiClient.put(`/tournaments/${tournamentId}/kenpom`, { stats }, { schema: z.array(TournamentTeamSchema) });
+    const res = await apiClient.put(`/tournaments/${tournamentId}/kenpom`, { stats }, { schema: z.object({ items: z.array(TournamentTeamSchema) }) });
+    return res.items;
   },
 };

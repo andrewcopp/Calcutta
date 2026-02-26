@@ -55,7 +55,7 @@ func (s *Server) listCalcuttaCoManagersHandler(w http.ResponseWriter, r *http.Re
 		})
 	}
 
-	response.WriteJSON(w, http.StatusOK, map[string]any{"coManagers": coManagers})
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": coManagers})
 }
 
 func (s *Server) grantCalcuttaCoManagerHandler(w http.ResponseWriter, r *http.Request) {

@@ -81,6 +81,21 @@ func (m *TokenManager) VerifyAccessToken(token string, now time.Time) (*AccessTo
 	}
 
 	enc := base64.RawURLEncoding
+
+	headerJSON, err := enc.DecodeString(parts[0])
+	if err != nil {
+		return nil, errors.New("invalid token header encoding")
+	}
+	var header struct {
+		Alg string `json:"alg"`
+	}
+	if err := json.Unmarshal(headerJSON, &header); err != nil {
+		return nil, errors.New("invalid token header")
+	}
+	if header.Alg != "HS256" {
+		return nil, fmt.Errorf("unsupported algorithm: %s", header.Alg)
+	}
+
 	signingInput := parts[0] + "." + parts[1]
 	sig, err := enc.DecodeString(parts[2])
 	if err != nil {

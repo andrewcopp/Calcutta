@@ -69,5 +69,5 @@ func (h *Handler) HandleUpdateKenPomStats(w http.ResponseWriter, r *http.Request
 	for _, team := range teams {
 		resp = append(resp, dtos.NewTournamentTeamResponse(team, team.School))
 	}
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }

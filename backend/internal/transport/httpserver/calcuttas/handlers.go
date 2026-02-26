@@ -61,7 +61,7 @@ func (h *Handler) HandleListCalcuttas(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := dtos.NewCalcuttaListResponse(result)
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }
 
 func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {

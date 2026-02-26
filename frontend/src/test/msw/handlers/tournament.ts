@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 const validTournament = {
   id: 'tourn-1',
@@ -29,7 +29,7 @@ export const tournamentHandlers = [
   http.get(`${BASE}/tournaments`, ({ request }) => {
     const url = new URL(request.url);
     if (url.pathname.endsWith('/tournaments')) {
-      return HttpResponse.json([validTournament]);
+      return HttpResponse.json({ items: [validTournament] });
     }
     return HttpResponse.json(validTournament);
   }),
@@ -39,7 +39,7 @@ export const tournamentHandlers = [
   }),
 
   http.get(`${BASE}/tournaments/:id/teams`, () => {
-    return HttpResponse.json([validTeam]);
+    return HttpResponse.json({ items: [validTeam] });
   }),
 
   http.post(`${BASE}/tournaments`, () => {
@@ -51,20 +51,20 @@ export const tournamentHandlers = [
   }),
 
   http.put(`${BASE}/tournaments/:id/teams`, () => {
-    return HttpResponse.json([validTeam]);
+    return HttpResponse.json({ items: [validTeam] });
   }),
 
   http.get(`${BASE}/competitions`, () => {
-    return HttpResponse.json([{ id: 'comp-1', name: 'NCAA' }]);
+    return HttpResponse.json({ items: [{ id: 'comp-1', name: 'NCAA' }] });
   }),
 
   http.get(`${BASE}/seasons`, () => {
-    return HttpResponse.json([{ id: 'season-1', year: 2025 }]);
+    return HttpResponse.json({ items: [{ id: 'season-1', year: 2025 }] });
   }),
 
   http.get(`${BASE}/tournaments/:id/moderators`, () => {
     return HttpResponse.json({
-      moderators: [{ id: 'mod-1', email: 'mod@test.com', firstName: 'Mod', lastName: 'User' }],
+      items: [{ id: 'mod-1', email: 'mod@test.com', firstName: 'Mod', lastName: 'User' }],
     });
   }),
 
@@ -79,11 +79,13 @@ export const tournamentHandlers = [
   }),
 
   http.put(`${BASE}/tournaments/:id/kenpom`, () => {
-    return HttpResponse.json([
-      {
-        ...validTeam,
-        kenPom: { netRtg: 25.5, oRtg: 118.0, dRtg: 92.5, adjT: 68.0 },
-      },
-    ]);
+    return HttpResponse.json({
+      items: [
+        {
+          ...validTeam,
+          kenPom: { netRtg: 25.5, oRtg: 118.0, dRtg: 92.5, adjT: 68.0 },
+        },
+      ],
+    });
   }),
 ];

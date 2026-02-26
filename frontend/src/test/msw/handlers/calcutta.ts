@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 const validCalcutta = {
   id: 'calc-1',
@@ -75,7 +75,7 @@ export const calcuttaHandlers = [
   }),
 
   http.get(`${BASE}/calcuttas/:id/entries/:entryId/teams`, () => {
-    return HttpResponse.json([validEntryTeam]);
+    return HttpResponse.json({ items: [validEntryTeam] });
   }),
 
   http.get(`${BASE}/calcuttas/:id/payouts`, () => {
@@ -89,7 +89,7 @@ export const calcuttaHandlers = [
   }),
 
   http.get(`${BASE}/calcuttas`, () => {
-    return HttpResponse.json([validCalcutta]);
+    return HttpResponse.json({ items: [validCalcutta] });
   }),
 
   http.post(`${BASE}/calcuttas/:id/entries`, () => {

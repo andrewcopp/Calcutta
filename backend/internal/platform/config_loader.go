@@ -433,6 +433,7 @@ func LoadConfigFromEnv() (Config, error) {
 		PythonBin:                       pythonBin,
 		RunJobsMaxAttempts:              runJobsMaxAttempts,
 		WorkerID:                        workerID,
+		TrustProxyHeaders:               envBool("TRUST_PROXY_HEADERS", false),
 		CookieSecure:                    cookieSecure,
 		CookieSameSite:                  cookieSameSite,
 	}

@@ -32,7 +32,7 @@ func (h *Handler) HandleListTournamentTeams(w http.ResponseWriter, r *http.Reque
 	for _, team := range teams {
 		resp = append(resp, dtos.NewTournamentTeamResponse(team, team.School))
 	}
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }
 
 func (h *Handler) HandleCreateTournamentTeam(w http.ResponseWriter, r *http.Request) {
@@ -189,5 +189,5 @@ func (h *Handler) HandleReplaceTeams(w http.ResponseWriter, r *http.Request) {
 	for _, team := range teams {
 		resp = append(resp, dtos.NewTournamentTeamResponse(team, team.School))
 	}
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }

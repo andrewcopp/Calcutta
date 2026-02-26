@@ -36,5 +36,5 @@ func (s *Server) schoolsHandler(w http.ResponseWriter, r *http.Request) {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, dtos.NewSchoolListResponse(schools))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewSchoolListResponse(schools)})
 }

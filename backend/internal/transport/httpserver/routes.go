@@ -33,9 +33,9 @@ func (s *Server) registerBasicRoutes(r *mux.Router) {
 }
 
 func (s *Server) registerProtectedRoutes(r *mux.Router) {
-	r.HandleFunc("/api/me/permissions", s.mePermissionsHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/me/profile", s.meProfileHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/schools", s.schoolsHandler).Methods("GET")
+	r.HandleFunc("/api/v1/me/permissions", s.mePermissionsHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/me/profile", s.meProfileHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/schools", s.schoolsHandler).Methods("GET")
 
 	tHandler := tournaments.NewHandlerWithAuthUserID(s.app, authUserID)
 	tournaments.RegisterRoutes(r, tournaments.Handlers{
@@ -107,50 +107,50 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 
 func (s *Server) registerAuthRoutes(r *mux.Router) {
 	// Auth
-	r.HandleFunc("/api/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
-r.HandleFunc("/api/auth/invite/preview", s.previewInviteHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/auth/invite/accept", s.acceptInviteHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/auth/forgot-password", s.forgotPasswordHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/auth/reset-password", s.resetPasswordHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/auth/refresh", s.refreshHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/auth/logout", s.logoutHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
+r.HandleFunc("/api/v1/auth/invite/preview", s.previewInviteHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/auth/invite/accept", s.acceptInviteHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/auth/forgot-password", s.forgotPasswordHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/auth/reset-password", s.resetPasswordHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/auth/refresh", s.refreshHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/auth/logout", s.logoutHandler).Methods("POST", "OPTIONS")
 }
 
 func (s *Server) registerBracketRoutes(r *mux.Router) {
 	// Bracket management
-	r.HandleFunc("/api/tournaments/{id}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{id}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{id}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{id}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerCalcuttaCoManagerRoutes(r *mux.Router) {
-	r.HandleFunc("/api/calcuttas/{id}/co-managers", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.listCalcuttaCoManagersHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/calcuttas/{id}/co-managers", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.grantCalcuttaCoManagerHandler)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/calcuttas/{id}/co-managers/{userId}", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.revokeCalcuttaCoManagerHandler)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/calcuttas/{id}/co-managers", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.listCalcuttaCoManagersHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/calcuttas/{id}/co-managers", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.grantCalcuttaCoManagerHandler)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/calcuttas/{id}/co-managers/{userId}", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.revokeCalcuttaCoManagerHandler)).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerTournamentModeratorRoutes(r *mux.Router) {
-	r.HandleFunc("/api/tournaments/{id}/moderators", s.requirePermission("tournament.game.write", s.listTournamentModeratorsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{id}/moderators", s.requirePermission("tournament.game.write", s.grantTournamentModeratorHandler)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/tournaments/{id}/moderators/{userId}", s.requirePermission("tournament.game.write", s.revokeTournamentModeratorHandler)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{id}/moderators", s.requirePermission("tournament.game.write", s.listTournamentModeratorsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{id}/moderators", s.requirePermission("tournament.game.write", s.grantTournamentModeratorHandler)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{id}/moderators/{userId}", s.requirePermission("tournament.game.write", s.revokeTournamentModeratorHandler)).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerAnalyticsRoutes(r *mux.Router) {
 	// Analytics
-	r.HandleFunc("/api/analytics", s.requirePermission("admin.analytics.read", s.analyticsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/seeds", s.requirePermission("admin.analytics.read", s.seedAnalyticsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/regions", s.requirePermission("admin.analytics.read", s.regionAnalyticsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/teams", s.requirePermission("admin.analytics.read", s.teamAnalyticsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/variance", s.requirePermission("admin.analytics.read", s.seedVarianceAnalyticsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/seed-investment-distribution", s.requirePermission("admin.analytics.read", s.seedInvestmentDistributionHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/analytics/best-investments", s.requirePermission("admin.analytics.read", s.bestInvestmentsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics", s.requirePermission("admin.analytics.read", s.analyticsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/seeds", s.requirePermission("admin.analytics.read", s.seedAnalyticsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/regions", s.requirePermission("admin.analytics.read", s.regionAnalyticsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/teams", s.requirePermission("admin.analytics.read", s.teamAnalyticsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/variance", s.requirePermission("admin.analytics.read", s.seedVarianceAnalyticsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/seed-investment-distribution", s.requirePermission("admin.analytics.read", s.seedInvestmentDistributionHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/analytics/best-investments", s.requirePermission("admin.analytics.read", s.bestInvestmentsHandler)).Methods("GET", "OPTIONS")
 }
 
 func (s *Server) registerHallOfFameRoutes(r *mux.Router) {
 	// Hall of Fame
-	r.HandleFunc("/api/hall-of-fame/best-teams", s.requirePermission("admin.hof.read", s.hofBestTeamsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/hall-of-fame/best-investments", s.requirePermission("admin.hof.read", s.hofBestInvestmentsHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/hall-of-fame/best-entries", s.requirePermission("admin.hof.read", s.hofBestEntriesHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/hall-of-fame/best-careers", s.requirePermission("admin.hof.read", s.hofBestCareersHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/hall-of-fame/best-teams", s.requirePermission("admin.hof.read", s.hofBestTeamsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/hall-of-fame/best-investments", s.requirePermission("admin.hof.read", s.hofBestInvestmentsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/hall-of-fame/best-entries", s.requirePermission("admin.hof.read", s.hofBestEntriesHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/hall-of-fame/best-careers", s.requirePermission("admin.hof.read", s.hofBestCareersHandler)).Methods("GET", "OPTIONS")
 }

@@ -151,7 +151,7 @@ func (h *Handler) HandleListCalcuttaEntries(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewEntryListResponse(entries, standingsByID))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewEntryListResponse(entries, standingsByID)})
 }
 
 func (h *Handler) HandleListEntryTeams(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +222,7 @@ func (h *Handler) HandleListEntryTeams(w http.ResponseWriter, r *http.Request) {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, dtos.NewEntryTeamListResponse(teams))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewEntryTeamListResponse(teams)})
 }
 
 func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
@@ -300,5 +300,5 @@ func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, dtos.NewEntryTeamListResponse(updatedTeams))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewEntryTeamListResponse(updatedTeams)})
 }

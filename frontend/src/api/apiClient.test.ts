@@ -40,7 +40,7 @@ const localStorageMock: Storage = {
 vi.stubGlobal('localStorage', localStorageMock);
 
 // -- window.location stub --
-const locationMock = { href: '' };
+const locationMock = { href: '', pathname: '/pools/123', search: '?tab=bids' };
 vi.stubGlobal('window', { location: locationMock });
 
 // -- fetch stub --
@@ -67,6 +67,8 @@ beforeEach(async () => {
   vi.clearAllMocks();
   for (const k of Object.keys(localStore)) delete localStore[k];
   locationMock.href = '';
+  locationMock.pathname = '/pools/123';
+  locationMock.search = '?tab=bids';
 
   // Re-import so the module picks up a fresh `refreshInFlight = null`
   const mod = await import('./apiClient');
@@ -116,9 +118,9 @@ describe('token refresh deduplication', () => {
 
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) return refreshPromise;
+      if (url.includes('/api/v1/auth/refresh')) return refreshPromise;
       // First call for each request returns 401, retry returns 200
-      if (url.includes('/api/first') || url.includes('/api/second')) {
+      if (url.includes('/first') || url.includes('/second')) {
         // Return 401 for initial calls, 200 for retries
         const callsForUrl = fetchMock.mock.calls.filter(
           (c) => (typeof c[0] === 'string' ? c[0] : c[0].toString()) === url,
@@ -143,7 +145,7 @@ describe('token refresh deduplication', () => {
     // THEN only one refresh request was made
     const refreshCalls = fetchMock.mock.calls.filter((c) => {
       const url = typeof c[0] === 'string' ? c[0] : c[0].toString();
-      return url.includes('/api/auth/refresh');
+      return url.includes('/api/v1/auth/refresh');
     });
     expect(refreshCalls).toHaveLength(1);
   });
@@ -153,7 +155,7 @@ describe('token refresh deduplication', () => {
     let callCount = 0;
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         callCount++;
         return Promise.resolve(jsonResponse(200, { accessToken: `token-${callCount}` }));
       }
@@ -170,7 +172,7 @@ describe('token refresh deduplication', () => {
     // THEN two separate refresh requests were made (not deduplicated)
     const refreshCalls = fetchMock.mock.calls.filter((c) => {
       const url = typeof c[0] === 'string' ? c[0] : c[0].toString();
-      return url.includes('/api/auth/refresh');
+      return url.includes('/api/v1/auth/refresh');
     });
     expect(refreshCalls).toHaveLength(2);
   });
@@ -188,7 +190,7 @@ describe('retry on 401', () => {
 
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(jsonResponse(200, { accessToken: 'fresh-token' }));
       }
       attempt++;
@@ -212,7 +214,7 @@ describe('retry on 401', () => {
 
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(jsonResponse(200, { accessToken: 'fresh-token' }));
       }
       attempt++;
@@ -237,7 +239,7 @@ describe('retry on 401', () => {
 
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(jsonResponse(200, { accessToken: 'new-access-token' }));
       }
       attempt++;
@@ -261,7 +263,7 @@ describe('retry on 401', () => {
 
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(jsonResponse(403, { message: 'Forbidden' }));
       }
       return Promise.resolve(jsonResponse(401, { message: 'Unauthorized' }));
@@ -278,7 +280,7 @@ describe('retry on 401', () => {
     // GIVEN a fetch that returns 401 and a refresh that fails
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(jsonResponse(500, { message: 'Server error' }));
       }
       return Promise.resolve(jsonResponse(401, { message: 'Unauthorized' }));
@@ -287,8 +289,8 @@ describe('retry on 401', () => {
     // WHEN making a request that triggers a 401 -> failed refresh
     await apiClient.get('/protected').catch(() => {});
 
-    // THEN the user is redirected to the login page with expired flag
-    expect(locationMock.href).toBe('/login?expired=true');
+    // THEN the user is redirected to the login page with expired flag and returnTo
+    expect(locationMock.href).toBe('/login?expired=true&returnTo=%2Fpools%2F123%3Ftab%3Dbids');
   });
 
   it('does not attempt refresh for auth endpoints', async () => {
@@ -307,7 +309,7 @@ describe('retry on 401', () => {
     // THEN no refresh request was made
     const refreshCalls = fetchMock.mock.calls.filter((c) => {
       const url = typeof c[0] === 'string' ? c[0] : c[0].toString();
-      return url.includes('/api/auth/refresh');
+      return url.includes('/api/v1/auth/refresh');
     });
     expect(refreshCalls).toHaveLength(0);
   });
@@ -316,7 +318,7 @@ describe('retry on 401', () => {
     // GIVEN a first fetch returning 401, a successful refresh, and a retry also returning 401
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(jsonResponse(200, { accessToken: 'new-token' }));
       }
       // Both the initial and retry requests return 401
@@ -326,8 +328,8 @@ describe('retry on 401', () => {
     // WHEN making a request where even the retry fails
     await apiClient.get('/protected').catch(() => {});
 
-    // THEN the user is redirected to the login page with expired flag
-    expect(locationMock.href).toBe('/login?expired=true');
+    // THEN the user is redirected to the login page with expired flag and returnTo
+    expect(locationMock.href).toBe('/login?expired=true&returnTo=%2Fpools%2F123%3Ftab%3Dbids');
   });
 
   it('stores user data from refresh response when present', async () => {
@@ -336,7 +338,7 @@ describe('retry on 401', () => {
 
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/auth/refresh')) {
+      if (url.includes('/api/v1/auth/refresh')) {
         return Promise.resolve(
           jsonResponse(200, {
             accessToken: 'refreshed-token',
@@ -461,6 +463,17 @@ describe('error parsing', () => {
 
     // THEN the error name is "ApiError"
     expect((error as Error).name).toBe('ApiError');
+  });
+
+  it('extracts message from nested error envelope', async () => {
+    // GIVEN a 400 response with the standard error envelope format
+    fetchMock.mockResolvedValue(jsonResponse(400, { error: { code: 'validation_error', message: 'email is required' } }));
+
+    // WHEN making a request
+    const error = await apiClient.get('/bad-request').catch((e: unknown) => e);
+
+    // THEN the error message is extracted from the nested envelope
+    expect((error as Error).message).toBe('email is required');
   });
 });
 

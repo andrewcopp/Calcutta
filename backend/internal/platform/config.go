@@ -49,6 +49,9 @@ type Config struct {
 	RunJobsMaxAttempts int
 	WorkerID           string
 
+	// Proxy
+	TrustProxyHeaders bool
+
 	// Environment
 	AppEnv string // "development" or "production"
 

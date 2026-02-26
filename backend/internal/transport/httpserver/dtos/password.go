@@ -3,12 +3,14 @@ package dtos
 import "strings"
 
 func ValidatePassword(password string) error {
-	trimmed := strings.TrimSpace(password)
-	if trimmed == "" {
+	if strings.TrimSpace(password) == "" {
 		return ErrFieldRequired("password")
 	}
-	if len(trimmed) < 8 {
-		return ErrFieldInvalid("password", "must be at least 8 characters")
+	if len(password) < 12 {
+		return ErrFieldInvalid("password", "must be at least 12 characters")
+	}
+	if len(password) > 128 {
+		return ErrFieldInvalid("password", "must be at most 128 characters")
 	}
 	return nil
 }

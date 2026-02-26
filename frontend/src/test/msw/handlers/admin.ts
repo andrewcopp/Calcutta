@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 const validUser = {
   id: 'user-1',
@@ -51,7 +51,6 @@ export const adminHandlers = [
     return HttpResponse.json({
       userId: 'user-1',
       email: 'test@example.com',
-      inviteToken: 'tok-invite',
       inviteExpiresAt: '2026-02-01T00:00:00Z',
       status: 'invited',
     });

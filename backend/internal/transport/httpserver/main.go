@@ -45,9 +45,9 @@ func Run() error {
 	// Router
 	r := mux.NewRouter()
 	r.Use(requestIDMiddleware)
-	r.Use(loggingMiddleware)
+	r.Use(server.loggingMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.AllowedOrigins))
-	r.Use(rateLimitMiddleware(cfg.RateLimitRPM))
+	r.Use(server.rateLimitMiddleware(cfg.RateLimitRPM))
 	r.Use(middleware.MaxBodyBytesMiddleware(cfg.HTTPMaxBodyBytes))
 	r.Use(server.authenticateMiddleware)
 

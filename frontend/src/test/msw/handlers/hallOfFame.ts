@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = 'http://localhost:8080/api/v1';
 
 export const hallOfFameHandlers = [
   http.get(`${BASE}/hall-of-fame/best-teams`, () => {

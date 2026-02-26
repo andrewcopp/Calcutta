@@ -37,9 +37,9 @@ type adminAPIKeyListResponse struct {
 }
 
 func (s *Server) registerAdminAPIKeyRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/api-keys", s.requirePermission("admin.api_keys.write", s.adminAPIKeysCreateHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/api-keys", s.requirePermission("admin.api_keys.write", s.adminAPIKeysListHandler)).Methods("GET")
-	r.HandleFunc("/api/admin/api-keys/{id}", s.requirePermission("admin.api_keys.write", s.adminAPIKeysRevokeHandler)).Methods("DELETE")
+	r.HandleFunc("/api/v1/admin/api-keys", s.requirePermission("admin.api_keys.write", s.adminAPIKeysCreateHandler)).Methods("POST")
+	r.HandleFunc("/api/v1/admin/api-keys", s.requirePermission("admin.api_keys.write", s.adminAPIKeysListHandler)).Methods("GET")
+	r.HandleFunc("/api/v1/admin/api-keys/{id}", s.requirePermission("admin.api_keys.write", s.adminAPIKeysRevokeHandler)).Methods("DELETE")
 }
 
 func (s *Server) adminAPIKeysCreateHandler(w http.ResponseWriter, r *http.Request) {

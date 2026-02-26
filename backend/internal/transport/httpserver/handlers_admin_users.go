@@ -40,14 +40,14 @@ type adminUsersListResponse struct {
 }
 
 func (s *Server) registerAdminUsersRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/users", s.requirePermission("admin.users.read", s.adminUsersListHandler)).Methods("GET")
-	r.HandleFunc("/api/admin/users/{id}/email", s.requirePermission("admin.users.write", s.adminUsersSetEmailHandler)).Methods("PATCH")
-	r.HandleFunc("/api/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}/invite/send", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}/reset-password", s.requirePermission("admin.users.write", s.adminResetPasswordHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}", s.requirePermission("admin.users.read", s.adminUserDetailHandler)).Methods("GET")
-	r.HandleFunc("/api/admin/users/{id}/roles", s.requirePermission("admin.users.write", s.adminGrantRoleHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/users/{id}/roles/{roleKey}", s.requirePermission("admin.users.write", s.adminRevokeRoleHandler)).Methods("DELETE")
+	r.HandleFunc("/api/v1/admin/users", s.requirePermission("admin.users.read", s.adminUsersListHandler)).Methods("GET")
+	r.HandleFunc("/api/v1/admin/users/{id}/email", s.requirePermission("admin.users.write", s.adminUsersSetEmailHandler)).Methods("PATCH")
+	r.HandleFunc("/api/v1/admin/users/{id}/invite", s.requirePermission("admin.users.write", s.adminUsersInviteHandler)).Methods("POST")
+	r.HandleFunc("/api/v1/admin/users/{id}/invite/send", s.requirePermission("admin.users.write", s.adminUsersInviteSendHandler)).Methods("POST")
+	r.HandleFunc("/api/v1/admin/users/{id}/reset-password", s.requirePermission("admin.users.write", s.adminResetPasswordHandler)).Methods("POST")
+	r.HandleFunc("/api/v1/admin/users/{id}", s.requirePermission("admin.users.read", s.adminUserDetailHandler)).Methods("GET")
+	r.HandleFunc("/api/v1/admin/users/{id}/roles", s.requirePermission("admin.users.write", s.adminGrantRoleHandler)).Methods("POST")
+	r.HandleFunc("/api/v1/admin/users/{id}/roles/{roleKey}", s.requirePermission("admin.users.write", s.adminRevokeRoleHandler)).Methods("DELETE")
 }
 
 func (s *Server) adminUsersSetEmailHandler(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +136,7 @@ func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request)
 	now := time.Now().UTC()
 	expiresAt := now.Add(7 * 24 * time.Hour)
 
-	inviteToken, email, err := s.generateInviteToken(r.Context(), userID, now, expiresAt, false, nil)
+	_, email, err := s.generateInviteToken(r.Context(), userID, now, expiresAt, false, nil)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
@@ -145,7 +145,6 @@ func (s *Server) adminUsersInviteHandler(w http.ResponseWriter, r *http.Request)
 	response.WriteJSON(w, http.StatusOK, dtos.AdminInviteUserResponse{
 		UserID:        userID,
 		Email:         email,
-		InviteToken:   inviteToken,
 		InviteExpires: expiresAt.Format(time.RFC3339),
 		Status:        "requires_password_setup",
 	})
@@ -217,7 +216,6 @@ func (s *Server) adminUsersInviteSendHandler(w http.ResponseWriter, r *http.Requ
 	response.WriteJSON(w, http.StatusOK, dtos.AdminInviteUserResponse{
 		UserID:        userID,
 		Email:         email,
-		InviteToken:   inviteToken,
 		InviteExpires: expiresAt.Format(time.RFC3339),
 		Status:        "requires_password_setup",
 	})

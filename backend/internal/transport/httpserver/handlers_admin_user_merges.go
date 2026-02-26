@@ -13,10 +13,10 @@ import (
 )
 
 func (s *Server) registerAdminUserMergeRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/users/stubs", s.requirePermission("admin.users.read", s.adminListStubUsersHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/admin/users/merge", s.requirePermission("admin.users.write", s.adminMergeUsersHandler)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/admin/users/{id}/merge-candidates", s.requirePermission("admin.users.read", s.adminFindMergeCandidatesHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/admin/users/{id}/merges", s.requirePermission("admin.users.read", s.adminListMergeHistoryHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/admin/users/stubs", s.requirePermission("admin.users.read", s.adminListStubUsersHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/admin/users/merge", s.requirePermission("admin.users.write", s.adminMergeUsersHandler)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/admin/users/{id}/merge-candidates", s.requirePermission("admin.users.read", s.adminFindMergeCandidatesHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/admin/users/{id}/merges", s.requirePermission("admin.users.read", s.adminListMergeHistoryHandler)).Methods("GET", "OPTIONS")
 }
 
 func (s *Server) adminListStubUsersHandler(w http.ResponseWriter, r *http.Request) {

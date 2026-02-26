@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Server) registerAdminAnalyticsRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/analytics/export", s.requirePermission("admin.analytics.export", s.adminAnalyticsExportHandler)).Methods("GET")
+	r.HandleFunc("/api/v1/admin/analytics/export", s.requirePermission("admin.analytics.export", s.adminAnalyticsExportHandler)).Methods("GET")
 }
 
 func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Request) {

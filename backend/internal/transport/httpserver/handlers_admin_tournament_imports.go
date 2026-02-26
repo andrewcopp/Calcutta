@@ -41,9 +41,9 @@ type adminTournamentImportStatusResponse struct {
 }
 
 func (s *Server) registerAdminTournamentImportRoutes(r *mux.Router) {
-	r.HandleFunc("/api/admin/tournament-imports/export", s.requirePermission("admin.bundles.export", s.adminTournamentImportsExportHandler)).Methods("GET")
-	r.HandleFunc("/api/admin/tournament-imports/import", s.requirePermission("admin.bundles.import", s.adminTournamentImportsImportHandler)).Methods("POST")
-	r.HandleFunc("/api/admin/tournament-imports/import/{uploadId}", s.requirePermission("admin.bundles.read", s.adminTournamentImportsImportStatusHandler)).Methods("GET")
+	r.HandleFunc("/api/v1/admin/tournament-imports/export", s.requirePermission("admin.bundles.export", s.adminTournamentImportsExportHandler)).Methods("GET")
+	r.HandleFunc("/api/v1/admin/tournament-imports/import", s.requirePermission("admin.bundles.import", s.adminTournamentImportsImportHandler)).Methods("POST")
+	r.HandleFunc("/api/v1/admin/tournament-imports/import/{uploadId}", s.requirePermission("admin.bundles.read", s.adminTournamentImportsImportStatusHandler)).Methods("GET")
 }
 
 func (s *Server) adminTournamentImportsExportHandler(w http.ResponseWriter, r *http.Request) {

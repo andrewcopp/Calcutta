@@ -110,7 +110,7 @@ func (h *Handler) HandleListInvitations(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewInvitationListResponse(invitations))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewInvitationListResponse(invitations)})
 }
 
 func (h *Handler) HandleAcceptInvitation(w http.ResponseWriter, r *http.Request) {
@@ -231,5 +231,5 @@ func (h *Handler) HandleListMyInvitations(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, dtos.NewInvitationListResponse(invitations))
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewInvitationListResponse(invitations)})
 }

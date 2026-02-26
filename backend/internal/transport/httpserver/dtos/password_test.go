@@ -16,8 +16,8 @@ func TestThatEmptyPasswordIsRejected(t *testing.T) {
 }
 
 func TestThatShortPasswordIsRejected(t *testing.T) {
-	// GIVEN a 7-character password
-	password := "abcdefg"
+	// GIVEN an 11-character password
+	password := "abcdefghijk"
 
 	// WHEN validating the password
 	err := ValidatePassword(password)
@@ -28,9 +28,9 @@ func TestThatShortPasswordIsRejected(t *testing.T) {
 	}
 }
 
-func TestThatEightCharPasswordIsAccepted(t *testing.T) {
-	// GIVEN an 8-character password
-	password := "abcdefgh"
+func TestThatTwelveCharPasswordIsAccepted(t *testing.T) {
+	// GIVEN a 12-character password
+	password := "abcdefghijkl"
 
 	// WHEN validating the password
 	err := ValidatePassword(password)
@@ -38,5 +38,21 @@ func TestThatEightCharPasswordIsAccepted(t *testing.T) {
 	// THEN no error is returned
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestThatPasswordOverMaxLengthIsRejected(t *testing.T) {
+	// GIVEN a 129-character password
+	password := ""
+	for i := 0; i < 129; i++ {
+		password += "a"
+	}
+
+	// WHEN validating the password
+	err := ValidatePassword(password)
+
+	// THEN an invalid error is returned
+	if err == nil {
+		t.Error("expected error for password exceeding max length")
 	}
 }

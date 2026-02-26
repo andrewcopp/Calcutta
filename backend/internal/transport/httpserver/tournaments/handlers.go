@@ -58,7 +58,7 @@ func (h *Handler) HandleListTournaments(w http.ResponseWriter, r *http.Request) 
 
 		resp = append(resp, dtos.NewTournamentResponse(&tournament, winnerName))
 	}
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }
 
 func (h *Handler) HandleGetTournament(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +212,7 @@ func (h *Handler) HandleListCompetitions(w http.ResponseWriter, r *http.Request)
 	for _, c := range competitions {
 		resp = append(resp, dtos.CompetitionResponse{ID: c.ID, Name: c.Name})
 	}
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }
 
 func (h *Handler) HandleListSeasons(w http.ResponseWriter, r *http.Request) {
@@ -225,6 +225,6 @@ func (h *Handler) HandleListSeasons(w http.ResponseWriter, r *http.Request) {
 	for _, s := range seasons {
 		resp = append(resp, dtos.SeasonResponse{ID: s.ID, Year: s.Year})
 	}
-	response.WriteJSON(w, http.StatusOK, resp)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }
 
