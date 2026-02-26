@@ -16,7 +16,7 @@ import (
 var validRoleKeys = map[string]bool{
 	"site_admin":       true,
 	"tournament_admin": true,
-	"calcutta_admin":   true,
+	"pool_admin":       true,
 	"player":           true,
 	"user_manager":     true,
 }
@@ -24,9 +24,9 @@ var validRoleKeys = map[string]bool{
 var validRoleScopes = map[string]map[string]bool{
 	"site_admin":       {"global": true},
 	"user_manager":     {"global": true},
-	"calcutta_admin":   {"global": true, "calcutta": true},
+	"pool_admin":       {"global": true, "pool": true},
 	"tournament_admin": {"global": true, "tournament": true},
-	"player":           {"global": true, "calcutta": true},
+	"player":           {"global": true, "pool": true},
 }
 
 func (s *Server) meProfileHandler(w http.ResponseWriter, r *http.Request) {

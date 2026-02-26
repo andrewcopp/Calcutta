@@ -49,15 +49,15 @@ type KenPomRecord struct {
 	AdjT   float64 `json:"adj_t"`
 }
 
-type CalcuttaBundle struct {
-	Version     int            `json:"version"`
-	GeneratedAt time.Time      `json:"generated_at"`
-	Tournament  TournamentRef  `json:"tournament"`
-	Calcutta    CalcuttaRecord `json:"calcutta"`
-	Rounds      []RoundRecord  `json:"rounds"`
-	Payouts     []PayoutRecord `json:"payouts"`
-	Entries     []EntryRecord  `json:"entries"`
-	Bids        []EntryTeamBid `json:"bids"`
+type PoolBundle struct {
+	Version     int              `json:"version"`
+	GeneratedAt time.Time        `json:"generated_at"`
+	Tournament  TournamentRef    `json:"tournament"`
+	Pool        PoolRecord       `json:"pool"`
+	Rounds      []RoundRecord    `json:"rounds"`
+	Payouts     []PayoutRecord   `json:"payouts"`
+	Portfolios  []PortfolioRecord `json:"portfolios"`
+	Investments []InvestmentRecord `json:"investments"`
 }
 
 type TournamentRef struct {
@@ -65,7 +65,7 @@ type TournamentRef struct {
 	Name      string `json:"name"`
 }
 
-type CalcuttaRecord struct {
+type PoolRecord struct {
 	Key   string   `json:"key"`
 	Name  string   `json:"name"`
 	Owner *UserRef `json:"owner,omitempty"`
@@ -87,15 +87,15 @@ type PayoutRecord struct {
 	AmountCents int `json:"amount_cents"`
 }
 
-type EntryRecord struct {
+type PortfolioRecord struct {
 	Key       string  `json:"key"`
 	Name      string  `json:"name"`
 	UserName  *string `json:"user_name,omitempty"`
 	UserEmail *string `json:"user_email,omitempty"`
 }
 
-type EntryTeamBid struct {
-	EntryKey   string `json:"entry_key"`
-	SchoolSlug string `json:"school_slug"`
-	Bid        int    `json:"bid"`
+type InvestmentRecord struct {
+	PortfolioKey string `json:"portfolio_key"`
+	SchoolSlug   string `json:"school_slug"`
+	Credits      int    `json:"credits"`
 }

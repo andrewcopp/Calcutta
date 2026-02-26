@@ -1,0 +1,125 @@
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { poolService } from '../../services/poolService';
+import { queryKeys } from '../../queryKeys';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Alert } from '../../components/ui/Alert';
+import type { Pool } from '../../schemas/pool';
+
+interface SettingsFormValues {
+  name: string;
+  minTeams: number;
+  maxTeams: number;
+  maxInvestmentCredits: number;
+}
+
+interface SettingsFormProps {
+  poolId: string;
+  pool: Pool;
+  onSuccess: () => void;
+}
+
+export function SettingsForm({ poolId, pool, onSuccess }: SettingsFormProps) {
+  const queryClient = useQueryClient();
+
+  const [form, setForm] = useState<SettingsFormValues>({
+    name: pool.name,
+    minTeams: pool.minTeams,
+    maxTeams: pool.maxTeams,
+    maxInvestmentCredits: pool.maxInvestmentCredits,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (updates: Parameters<typeof poolService.updatePool>[1]) => {
+      return poolService.updatePool(poolId, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pools.settings(poolId) });
+      onSuccess();
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateMutation.mutate(form);
+  };
+
+  return (
+    <>
+      {updateMutation.isError && (
+        <Alert variant="error" className="mb-4">
+          {updateMutation.error instanceof Error ? updateMutation.error.message : 'Failed to save settings'}
+        </Alert>
+      )}
+
+      <Card>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
+              Pool Name
+            </label>
+            <Input
+              id="name"
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="minTeams" className="block text-sm font-medium text-foreground mb-1">
+                Min Teams per Portfolio
+              </label>
+              <Input
+                id="minTeams"
+                type="number"
+                min={1}
+                value={form.minTeams}
+                onChange={(e) => setForm({ ...form, minTeams: parseInt(e.target.value) || 0 })}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="maxTeams" className="block text-sm font-medium text-foreground mb-1">
+                Max Teams per Portfolio
+              </label>
+              <Input
+                id="maxTeams"
+                type="number"
+                min={1}
+                value={form.maxTeams}
+                onChange={(e) => setForm({ ...form, maxTeams: parseInt(e.target.value) || 0 })}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="maxInvestmentCredits" className="block text-sm font-medium text-foreground mb-1">
+                Max Credits per Team
+              </label>
+              <Input
+                id="maxInvestmentCredits"
+                type="number"
+                min={1}
+                value={form.maxInvestmentCredits}
+                onChange={(e) => setForm({ ...form, maxInvestmentCredits: parseInt(e.target.value) || 0 })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Button type="submit" loading={updateMutation.isPending}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </>
+  );
+}

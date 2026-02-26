@@ -114,15 +114,15 @@ func (r *AnalyticsRepository) GetSeedInvestmentPoints(ctx context.Context) ([]po
 	out := make([]ports.SeedInvestmentPointData, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.SeedInvestmentPointData{
-			Seed:             int(row.Seed),
-			TournamentName:   row.TournamentName,
-			TournamentYear:   int(row.TournamentYear),
-			CalcuttaID:       row.CalcuttaID,
-			TeamID:           row.TeamID,
-			SchoolName:       row.SchoolName,
-			TotalBid:         row.TotalBid,
-			CalcuttaTotalBid: row.CalcuttaTotalBid,
-			NormalizedBid:    row.NormalizedBid,
+			Seed:           int(row.Seed),
+			TournamentName: row.TournamentName,
+			TournamentYear: int(row.TournamentYear),
+			PoolID:         row.PoolID,
+			TeamID:         row.TeamID,
+			SchoolName:     row.SchoolName,
+			TotalBid:       row.TotalBid,
+			PoolTotalBid:   row.PoolTotalBid,
+			NormalizedBid:  row.NormalizedBid,
 		})
 	}
 
@@ -138,21 +138,21 @@ func (r *AnalyticsRepository) GetBestInvestments(ctx context.Context, limit int)
 	out := make([]ports.BestInvestmentData, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.BestInvestmentData{
-			TournamentName:   row.TournamentName,
-			TournamentYear:   int(row.TournamentYear),
-			CalcuttaID:       row.CalcuttaID,
-			TeamID:           row.TeamID,
-			SchoolName:       row.SchoolName,
-			Seed:             int(row.Seed),
-			Region:           row.Region,
-			TeamPoints:       row.TeamPoints,
-			TotalBid:         row.TotalBid,
-			CalcuttaTotalBid: row.CalcuttaTotalBid,
-			CalcuttaTotalPts: row.CalcuttaTotalPoints,
-			InvestmentShare:  row.InvestmentShare,
-			PointsShare:      row.PointsShare,
-			RawROI:           row.RawRoi,
-			NormalizedROI:    row.NormalizedRoi,
+			TournamentName:      row.TournamentName,
+			TournamentYear:      int(row.TournamentYear),
+			PoolID:              row.PoolID,
+			TeamID:              row.TeamID,
+			SchoolName:          row.SchoolName,
+			Seed:                int(row.Seed),
+			Region:              row.Region,
+			TeamPoints:          row.TeamPoints,
+			TotalBid:            row.TotalBid,
+			PoolTotalInvestment: row.PoolTotalInvestment,
+			PoolTotalPoints:     row.PoolTotalPoints,
+			InvestmentShare:     row.InvestmentShare,
+			PointsShare:         row.PointsShare,
+			RawROI:              row.RawRoi,
+			NormalizedROI:       row.NormalizedRoi,
 		})
 	}
 
@@ -170,9 +170,9 @@ func (r *AnalyticsRepository) GetBestInvestmentBids(ctx context.Context, limit i
 		out = append(out, ports.InvestmentLeaderboardData{
 			TournamentName:      row.TournamentName,
 			TournamentYear:      int(row.TournamentYear),
-			CalcuttaID:          row.CalcuttaID,
-			EntryID:             row.EntryID,
-			EntryName:           row.EntryName,
+			PoolID:              row.PoolID,
+			PortfolioID:         row.PortfolioID,
+			PortfolioName:       row.PortfolioName,
 			TeamID:              row.TeamID,
 			SchoolName:          row.SchoolName,
 			Seed:                int(row.Seed),
@@ -197,9 +197,9 @@ func (r *AnalyticsRepository) GetBestEntries(ctx context.Context, limit int) ([]
 		out = append(out, ports.EntryLeaderboardData{
 			TournamentName:    row.TournamentName,
 			TournamentYear:    int(row.TournamentYear),
-			CalcuttaID:        row.CalcuttaID,
-			EntryID:           row.EntryID,
-			EntryName:         row.EntryName,
+			PoolID:            row.PoolID,
+			PortfolioID:       row.PortfolioID,
+			PortfolioName:     row.PortfolioName,
 			TotalReturns:      row.TotalReturns,
 			TotalParticipants: int(row.TotalParticipants),
 			AverageReturns:    row.AverageReturns,
@@ -219,15 +219,15 @@ func (r *AnalyticsRepository) GetBestCareers(ctx context.Context, limit int) ([]
 	out := make([]ports.CareerLeaderboardData, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, ports.CareerLeaderboardData{
-			EntryName:              row.EntryName,
-			Years:                  int(row.Years),
-			BestFinish:             int(row.BestFinish),
-			Wins:                   int(row.Wins),
-			Podiums:                int(row.Podiums),
-			InTheMoneys:            int(row.InTheMoneys),
-			Top10s:                 int(row.Top10s),
-			CareerEarningsCents:    int(row.CareerEarningsCents),
-			ActiveInLatestCalcutta: row.ActiveInLatestCalcutta,
+			PortfolioName:       row.PortfolioName,
+			Years:               int(row.Years),
+			BestFinish:          int(row.BestFinish),
+			Wins:                int(row.Wins),
+			Podiums:             int(row.Podiums),
+			InTheMoneys:         int(row.InTheMoneys),
+			Top10s:              int(row.Top10s),
+			CareerEarningsCents: int(row.CareerEarningsCents),
+			ActiveInLatestPool:  row.ActiveInLatestPool,
 		})
 	}
 

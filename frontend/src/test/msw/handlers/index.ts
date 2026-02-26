@@ -3,7 +3,7 @@ import { userHandlers } from './user';
 import { bracketHandlers } from './bracket';
 import { hallOfFameHandlers } from './hallOfFame';
 import { tournamentHandlers } from './tournament';
-import { calcuttaHandlers } from './calcutta';
+import { poolHandlers } from './pool';
 import { adminHandlers } from './admin';
 import { labHandlers } from './lab';
 
@@ -13,7 +13,7 @@ export const handlers = [
   ...bracketHandlers,
   ...hallOfFameHandlers,
   ...tournamentHandlers,
-  ...calcuttaHandlers,
+  ...poolHandlers,
   ...adminHandlers,
   ...labHandlers,
 ];

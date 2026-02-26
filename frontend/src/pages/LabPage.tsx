@@ -8,8 +8,8 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { ModelLeaderboardCard } from '../components/Lab/ModelLeaderboardCard';
 import { labService } from '../services/labService';
 import type { LeaderboardResponse } from '../schemas/lab';
-import { calcuttaService } from '../services/calcuttaService';
-import { Calcutta } from '../schemas/calcutta';
+import { poolService } from '../services/poolService';
+import type { Pool } from '../schemas/pool';
 import { queryKeys } from '../queryKeys';
 
 export function LabPage() {
@@ -18,9 +18,9 @@ export function LabPage() {
     queryFn: () => labService.getLeaderboard(),
   });
 
-  const calcuttasQuery = useQuery<Calcutta[]>({
-    queryKey: queryKeys.calcuttas.all(),
-    queryFn: () => calcuttaService.getAllCalcuttas(),
+  const poolsQuery = useQuery<Pool[]>({
+    queryKey: queryKeys.pools.all(),
+    queryFn: () => poolService.getAllPools(),
   });
 
   const items = [...(leaderboardQuery.data?.items ?? [])].sort((a, b) => {
@@ -28,20 +28,20 @@ export function LabPage() {
     const bTop1 = b.avgPTop1 ?? 0;
     return bTop1 - aTop1;
   });
-  const totalCalcuttas = calcuttasQuery.data?.length ?? 0;
+  const totalPools = poolsQuery.data?.length ?? 0;
 
-  const isLoading = leaderboardQuery.isLoading || calcuttasQuery.isLoading;
-  const isError = leaderboardQuery.isError || calcuttasQuery.isError;
+  const isLoading = leaderboardQuery.isLoading || poolsQuery.isLoading;
+  const isError = leaderboardQuery.isError || poolsQuery.isError;
 
   if (isError) {
-    const firstError = leaderboardQuery.error ?? calcuttasQuery.error;
+    const firstError = leaderboardQuery.error ?? poolsQuery.error;
     return (
       <PageContainer>
         <ErrorState
           error={firstError}
           onRetry={() => {
             if (leaderboardQuery.isError) leaderboardQuery.refetch();
-            if (calcuttasQuery.isError) calcuttasQuery.refetch();
+            if (poolsQuery.isError) poolsQuery.refetch();
           }}
         />
       </PageContainer>
@@ -52,7 +52,7 @@ export function LabPage() {
     <PageContainer>
       <PageHeader
         title="Lab"
-        subtitle={`${items.length} model${items.length !== 1 ? 's' : ''} registered${totalCalcuttas > 0 ? ` across ${totalCalcuttas} calcutta${totalCalcuttas !== 1 ? 's' : ''}` : ''}`}
+        subtitle={`${items.length} model${items.length !== 1 ? 's' : ''} registered${totalPools > 0 ? ` across ${totalPools} pool${totalPools !== 1 ? 's' : ''}` : ''}`}
       />
 
       {isLoading ? <LoadingState label="Loading leaderboard..." layout="inline" /> : null}
@@ -68,7 +68,7 @@ export function LabPage() {
               key={entry.investmentModelId}
               entry={entry}
               rank={index + 1}
-              totalCalcuttas={totalCalcuttas}
+              totalPools={totalPools}
             />
           ))}
         </div>

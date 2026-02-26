@@ -1,4 +1,4 @@
-import type { CalcuttaEntry, RoundStandingGroup } from '../schemas/calcutta';
+import type { Portfolio, RoundStandingGroup } from '../schemas/pool';
 import { getRoundName } from './roundLabels';
 
 export interface RaceDatum {
@@ -18,13 +18,13 @@ export interface BumpSeries {
 
 type Mode = 'actual' | 'projected' | 'favorites';
 
-function metricForEntry(
-  entry: { totalPoints: number; expectedValue?: number; projectedFavorites?: number },
+function metricForPortfolio(
+  standing: { totalReturns: number; expectedValue?: number; projectedFavorites?: number },
   mode: Mode,
 ): number {
-  if (mode === 'projected') return entry.expectedValue ?? entry.totalPoints;
-  if (mode === 'favorites') return entry.projectedFavorites ?? entry.totalPoints;
-  return entry.totalPoints;
+  if (mode === 'projected') return standing.expectedValue ?? standing.totalReturns;
+  if (mode === 'favorites') return standing.projectedFavorites ?? standing.totalReturns;
+  return standing.totalReturns;
 }
 
 function rankEntries(
@@ -56,7 +56,7 @@ function rankEntries(
 }
 
 export function buildBumpChartData(
-  entries: CalcuttaEntry[],
+  entries: Portfolio[],
   roundStandings: RoundStandingGroup[],
   mode: Mode,
 ): BumpSeries[] {
@@ -76,11 +76,11 @@ export function buildBumpChartData(
   for (const group of sorted) {
     const label = getRoundName(group.round, maxRound);
 
-    const entryLookup = new Map(group.entries.map((e) => [e.entryId, e]));
+    const portfolioLookup = new Map(group.entries.map((e) => [e.portfolioId, e]));
 
     const values = group.entries.map((e) => ({
-      id: e.entryId,
-      value: metricForEntry(e, mode),
+      id: e.portfolioId,
+      value: metricForPortfolio(e, mode),
     }));
 
     let tiebreaker: Map<string, number> | undefined;
@@ -88,7 +88,7 @@ export function buildBumpChartData(
       const evMap = new Map<string, number>();
       for (const e of group.entries) {
         if (e.expectedValue != null) {
-          evMap.set(e.entryId, e.expectedValue);
+          evMap.set(e.portfolioId, e.expectedValue);
         }
       }
       if (evMap.size > 0) {
@@ -102,15 +102,15 @@ export function buildBumpChartData(
       const data = seriesMap.get(entry.id);
       if (!data) continue;
 
-      const standing = entryLookup.get(entry.id);
-      const currentPoints = standing ? metricForEntry(standing, mode) : 0;
+      const standing = portfolioLookup.get(entry.id);
+      const currentPoints = standing ? metricForPortfolio(standing, mode) : 0;
       const currentRank = ranks.get(entry.id) ?? entries.length;
       const prev = prevState.get(entry.id);
 
       data.push({
         x: label,
         y: currentRank,
-        totalPoints: standing?.totalPoints ?? 0,
+        totalPoints: standing?.totalReturns ?? 0,
         pointsDelta: prev ? currentPoints - prev.points : 0,
         rankDelta: prev ? prev.rank - currentRank : 0,
         expectedValue: standing?.expectedValue,

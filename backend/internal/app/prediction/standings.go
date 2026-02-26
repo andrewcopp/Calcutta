@@ -197,17 +197,17 @@ func computeProjectionsForCheckpoint(
 	return &EntryProjections{EV: ev, Favorites: fav}
 }
 
-// BuildPortfolioToEntry builds a portfolio ID → entry ID lookup map.
-func BuildPortfolioToEntry(portfolios []*models.CalcuttaPortfolio) map[string]string {
-	m := make(map[string]string, len(portfolios))
-	for _, p := range portfolios {
-		m[p.ID] = p.EntryID
+// BuildSummaryToPortfolioMap builds an ownership summary ID → portfolio ID lookup map.
+func BuildSummaryToPortfolioMap(summaries []*models.OwnershipSummary) map[string]string {
+	m := make(map[string]string, len(summaries))
+	for _, s := range summaries {
+		m[s.ID] = s.PortfolioID
 	}
 	return m
 }
 
-// ToPortfolioTeamInputs converts domain portfolio teams to the minimal input type.
-func ToPortfolioTeamInputs(pts []*models.CalcuttaPortfolioTeam) []PortfolioTeamInput {
+// ToPortfolioTeamInputs converts domain ownership details to the minimal input type.
+func ToPortfolioTeamInputs(pts []*models.OwnershipDetail) []PortfolioTeamInput {
 	out := make([]PortfolioTeamInput, len(pts))
 	for i, pt := range pts {
 		out[i] = PortfolioTeamInput{

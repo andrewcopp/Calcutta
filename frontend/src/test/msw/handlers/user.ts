@@ -23,7 +23,7 @@ export const userHandlers = [
   http.get(`${BASE}/auth/invite/preview`, () => {
     return HttpResponse.json({
       firstName: 'Test',
-      calcuttaName: 'Test Pool',
+      poolName: 'Test Pool',
       commissionerName: 'Commissioner',
     });
   }),
@@ -41,7 +41,7 @@ export const userHandlers = [
 
   http.get(`${BASE}/me/permissions`, () => {
     return HttpResponse.json({
-      permissions: ['admin', 'manage_calcuttas'],
+      permissions: ['admin', 'manage_pools'],
     });
   }),
 

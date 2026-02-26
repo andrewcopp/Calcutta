@@ -35,7 +35,7 @@ describe('userService', () => {
     it('returns invite preview', async () => {
       const preview = await userService.previewInvite('tok-abc');
 
-      expect(preview.calcuttaName).toBe('Test Pool');
+      expect(preview.poolName).toBe('Test Pool');
       expect(preview.commissionerName).toBe('Commissioner');
     });
 
@@ -96,7 +96,7 @@ describe('userService', () => {
     it('returns permissions and stores them', async () => {
       const perms = await userService.fetchPermissions();
 
-      expect(perms).toEqual(['admin', 'manage_calcuttas']);
+      expect(perms).toEqual(['admin', 'manage_pools']);
       expect(localStorage.getItem(PERMISSIONS_KEY)).toBeTruthy();
     });
 

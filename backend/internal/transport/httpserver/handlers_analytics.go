@@ -65,7 +65,7 @@ func (s *Server) hofBestEntriesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := dtos.ToEntryLeaderboardResponse(results)
+	resp := dtos.ToPortfolioLeaderboardResponse(results)
 
 	response.WriteJSON(w, http.StatusOK, resp)
 }

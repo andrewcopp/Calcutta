@@ -33,7 +33,7 @@ export function Header() {
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-6">
             <Link to="/" className="text-xl font-bold text-header-text">
-              <span className="text-blue-400">C</span>alcutta
+              <span className="text-blue-400">M</span>arch Markets
             </Link>
             <nav className="hidden md:flex space-x-4">
               {navLinks

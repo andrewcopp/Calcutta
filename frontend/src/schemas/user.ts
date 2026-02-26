@@ -28,7 +28,7 @@ export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 
 export const InvitePreviewSchema = z.object({
   firstName: z.string(),
-  calcuttaName: z.string(),
+  poolName: z.string(),
   commissionerName: z.string(),
   tournamentStartingAt: z.string().optional(),
 });

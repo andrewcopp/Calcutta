@@ -124,8 +124,8 @@ func (r *PredictionRepository) LoadScoringRules(ctx context.Context, tournamentI
 	out := make([]scoring.Rule, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, scoring.Rule{
-			WinIndex:      int(row.CsrWinIndex),
-			PointsAwarded: int(row.CsrPointsAwarded),
+			WinIndex:      int(row.PsrWinIndex),
+			PointsAwarded: int(row.PsrPointsAwarded),
 		})
 	}
 	return out, nil

@@ -22,13 +22,13 @@ func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	tournamentID := r.URL.Query().Get("tournamentId")
-	calcuttaID := r.URL.Query().Get("calcuttaId")
+	poolID := r.URL.Query().Get("poolId")
 	if tournamentID == "" {
 		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "tournamentId is required", "tournamentId")
 		return
 	}
-	if calcuttaID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "calcuttaId is required", "calcuttaId")
+	if poolID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "poolId is required", "poolId")
 		return
 	}
 
@@ -38,7 +38,7 @@ func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tmpDir, err := os.MkdirTemp("", "calcutta-analytics-snapshot-*")
+	tmpDir, err := os.MkdirTemp("", "pool-analytics-snapshot-*")
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return
@@ -52,7 +52,7 @@ func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Requ
 		tmpDir,
 		generatedAt,
 		tournamentID,
-		calcuttaID,
+		poolID,
 		analytics_snapshot.ExportInputs{Bracket: bracket},
 	)
 	if err != nil {
@@ -66,7 +66,7 @@ func (s *Server) adminAnalyticsExportHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	filename := "analytics-" + res.Manifest.TournamentKey + "-" + res.Manifest.CalcuttaKey + "-" + generatedAt.Format("20060102-150405") + ".zip"
+	filename := "analytics-" + res.Manifest.TournamentKey + "-" + res.Manifest.PoolKey + "-" + generatedAt.Format("20060102-150405") + ".zip"
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	w.WriteHeader(http.StatusOK)

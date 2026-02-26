@@ -127,9 +127,9 @@ func seedTestSchoolsAndTournament(t *testing.T, ctx context.Context, pool *pgxpo
 	}
 }
 
-// buildTestCalcuttaZIP creates a valid calcutta import ZIP containing only
-// a calcutta JSON with default scoring rules (no schools or tournaments).
-func buildTestCalcuttaZIP(t *testing.T, tournamentImportKey string) []byte {
+// buildTestPoolZIP creates a valid pool import ZIP containing only
+// a pool JSON with default scoring rules (no schools or tournaments).
+func buildTestPoolZIP(t *testing.T, tournamentImportKey string) []byte {
 	t.Helper()
 
 	tmpDir, err := os.MkdirTemp("", "test-bundle-*")
@@ -140,14 +140,14 @@ func buildTestCalcuttaZIP(t *testing.T, tournamentImportKey string) []byte {
 
 	ownerFirst := "Test"
 	ownerLast := "Commissioner"
-	calcuttaBundle := bundles.CalcuttaBundle{
+	poolBundle := bundles.PoolBundle{
 		Version:     1,
 		GeneratedAt: time.Now().UTC(),
 		Tournament: bundles.TournamentRef{
 			ImportKey: tournamentImportKey,
 			Name:      "NCAA Tournament 2026",
 		},
-		Calcutta: bundles.CalcuttaRecord{
+		Pool: bundles.PoolRecord{
 			Key:  "test-pool",
 			Name: "Test Pool",
 			Owner: &bundles.UserRef{
@@ -164,8 +164,8 @@ func buildTestCalcuttaZIP(t *testing.T, tournamentImportKey string) []byte {
 			{Round: 6, Points: 320},
 		},
 	}
-	if err := bundles.WriteJSON(filepath.Join(tmpDir, "calcuttas", tournamentImportKey, "test-pool.json"), calcuttaBundle); err != nil {
-		t.Fatalf("failed to write calcutta json: %v", err)
+	if err := bundles.WriteJSON(filepath.Join(tmpDir, "pools", tournamentImportKey, "test-pool.json"), poolBundle); err != nil {
+		t.Fatalf("failed to write pool json: %v", err)
 	}
 
 	zipBytes, err := archive.ZipDir(tmpDir)

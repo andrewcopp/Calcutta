@@ -6,17 +6,17 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-// isCalcuttaAdminOrOwner checks if a user has calcutta management authority.
+// isPoolAdminOrOwner checks if a user has pool management authority.
 // Uses a single HasPermission call that resolves both global grants (site_admin)
-// and calcutta-scoped grants (calcutta_admin). Falls back to owner_id check
+// and pool-scoped grants (pool_admin). Falls back to owner_id check
 // for backwards compatibility.
-func isCalcuttaAdminOrOwner(ctx context.Context, authz AuthorizationChecker, userID string, calcutta *models.Calcutta) (bool, error) {
-	if calcutta != nil && calcutta.OwnerID == userID {
+func isPoolAdminOrOwner(ctx context.Context, authz AuthorizationChecker, userID string, pool *models.Pool) (bool, error) {
+	if pool != nil && pool.OwnerID == userID {
 		return true, nil
 	}
 
 	if authz != nil {
-		ok, err := authz.HasPermission(ctx, userID, "calcutta", calcutta.ID, permissionAdminOverride)
+		ok, err := authz.HasPermission(ctx, userID, "pool", pool.ID, permissionAdminOverride)
 		if err != nil {
 			return false, err
 		}

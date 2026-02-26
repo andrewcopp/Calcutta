@@ -25,7 +25,7 @@ export function RulesPage() {
 
         <div className="space-y-8">
           <Card className="shadow-lg">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">What is a Calcutta pool?</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">What is a March Markets pool?</h2>
             <p className="text-muted-foreground">
               Instead of picking 63 games, you invest credits in a small portfolio of teams. You own a percentage of
               each team, and your score is based on how far those teams advance.

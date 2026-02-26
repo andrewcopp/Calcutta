@@ -16,7 +16,7 @@ export function ScoringCard() {
           <li>Win the title: 1050 pts</li>
         </ul>
         <p className="text-muted-foreground mt-4">
-          Your score is each team's points multiplied by your ownership percentage, totaled across your portfolio.
+          Your returns are each team's points multiplied by your ownership percentage, totaled across your portfolio.
         </p>
       </div>
     </Card>

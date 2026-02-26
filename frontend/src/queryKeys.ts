@@ -34,18 +34,18 @@ export const queryKeys = {
     validation: (tournamentId: string | null | undefined) => ['tournaments', 'bracket', 'validation', tournamentId ?? null] as const,
     detail: (tournamentId: string | null | undefined) => ['tournaments', 'bracket', 'detail', tournamentId ?? null] as const,
   },
-  calcuttas: {
-    all: (userId?: string | null) => ['calcuttas', userId ?? null] as const,
-    listWithRankings: (userId?: string | null) => ['calcuttasWithRankings', userId ?? null] as const,
-    dashboard: (calcuttaId: string | null | undefined) => ['calcuttaDashboard', calcuttaId ?? null] as const,
-    entryTeams: (calcuttaId: string | null | undefined, entryId: string | null | undefined) =>
-      ['calcuttaEntryTeams', calcuttaId ?? null, entryId ?? null] as const,
-    settings: (calcuttaId: string | null | undefined) => ['calcuttaSettings', calcuttaId ?? null] as const,
-    payouts: (calcuttaId: string | null | undefined) => ['calcuttaPayouts', calcuttaId ?? null] as const,
+  pools: {
+    all: (userId?: string | null) => ['pools', userId ?? null] as const,
+    listWithRankings: (userId?: string | null) => ['poolsWithRankings', userId ?? null] as const,
+    dashboard: (poolId: string | null | undefined) => ['poolDashboard', poolId ?? null] as const,
+    investments: (poolId: string | null | undefined, portfolioId: string | null | undefined) =>
+      ['poolInvestments', poolId ?? null, portfolioId ?? null] as const,
+    settings: (poolId: string | null | undefined) => ['poolSettings', poolId ?? null] as const,
+    payouts: (poolId: string | null | undefined) => ['poolPayouts', poolId ?? null] as const,
   },
-  bidding: {
-    page: (calcuttaId: string | null | undefined, entryId: string | null | undefined) =>
-      ['biddingPage', calcuttaId ?? null, entryId ?? null] as const,
+  investing: {
+    page: (poolId: string | null | undefined, portfolioId: string | null | undefined) =>
+      ['investingPage', poolId ?? null, portfolioId ?? null] as const,
   },
   lab: {
     leaderboard: () => ['lab', 'models', 'leaderboard'] as const,
@@ -55,8 +55,8 @@ export const queryKeys = {
         ['lab', 'models', modelId ?? null, 'pipeline-progress'] as const,
     },
     entries: {
-      byModelAndCalcutta: (modelId: string | null | undefined, calcuttaId: string | null | undefined) =>
-        ['lab', 'entries', 'by-model-calcutta', modelId ?? null, calcuttaId ?? null] as const,
+      byModelAndPool: (modelId: string | null | undefined, poolId: string | null | undefined) =>
+        ['lab', 'entries', 'by-model-pool', modelId ?? null, poolId ?? null] as const,
     },
     evaluations: {
       detail: (evaluationId: string | null | undefined) => ['lab', 'evaluations', evaluationId ?? null] as const,

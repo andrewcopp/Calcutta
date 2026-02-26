@@ -154,69 +154,9 @@ type CoreAuthSession struct {
 	DeletedAt        pgtype.Timestamptz
 }
 
-type CoreCalcutta struct {
-	ID            string
-	TournamentID  string
-	OwnerID       string
-	Name          string
-	MinTeams      int32
-	MaxTeams      int32
-	MaxBidPoints  int32
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	DeletedAt     pgtype.Timestamptz
-	BudgetPoints  int32
-	Visibility    string
-	CreatedBy     string
-	EntryFeeCents int32
-}
-
-type CoreCalcuttaInvitation struct {
-	ID         string
-	CalcuttaID string
-	UserID     string
-	InvitedBy  string
-	Status     string
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-	DeletedAt  pgtype.Timestamptz
-	RevokedAt  pgtype.Timestamptz
-}
-
-type CoreCalcuttaScoringRule struct {
-	ID            string
-	CalcuttaID    string
-	WinIndex      int32
-	PointsAwarded int32
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	DeletedAt     pgtype.Timestamptz
-}
-
 type CoreCompetition struct {
 	ID        string
 	Name      string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	DeletedAt pgtype.Timestamptz
-}
-
-type CoreEntry struct {
-	ID         string
-	Name       string
-	UserID     pgtype.UUID
-	CalcuttaID string
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-	DeletedAt  pgtype.Timestamptz
-	Status     string
-}
-
-type CoreEntryTeam struct {
-	ID        string
-	EntryID   string
-	TeamID    string
-	BidPoints int32
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	DeletedAt pgtype.Timestamptz
@@ -247,9 +187,19 @@ type CoreIdempotencyKey struct {
 	DeletedAt      pgtype.Timestamptz
 }
 
+type CoreInvestment struct {
+	ID          string
+	PortfolioID string
+	TeamID      string
+	Credits     int32
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
 type CorePayout struct {
 	ID          string
-	CalcuttaID  string
+	PoolID      string
 	Position    int32
 	AmountCents int32
 	CreatedAt   pgtype.Timestamptz
@@ -264,6 +214,56 @@ type CorePermission struct {
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	DeletedAt   pgtype.Timestamptz
+}
+
+type CorePool struct {
+	ID                   string
+	TournamentID         string
+	OwnerID              string
+	Name                 string
+	MinTeams             int32
+	MaxTeams             int32
+	MaxInvestmentCredits int32
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+	BudgetCredits        int32
+	Visibility           string
+	CreatedBy            string
+	EntryFeeCents        int32
+}
+
+type CorePoolInvitation struct {
+	ID        string
+	PoolID    string
+	UserID    string
+	InvitedBy string
+	Status    string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+	RevokedAt pgtype.Timestamptz
+}
+
+type CorePoolScoringRule struct {
+	ID            string
+	PoolID        string
+	WinIndex      int32
+	PointsAwarded int32
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	DeletedAt     pgtype.Timestamptz
+}
+
+type CorePortfolio struct {
+	ID        string
+	Name      string
+	UserID    pgtype.UUID
+	PoolID    string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+	Status    string
 }
 
 type CoreRole struct {
@@ -394,25 +394,25 @@ type CoreUserMerge struct {
 	CreatedAt        pgtype.Timestamptz
 }
 
-type DerivedPortfolio struct {
-	ID            string
-	EntryID       string
-	MaximumPoints int64
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     interface{}
-	DeletedAt     pgtype.Timestamptz
-}
-
-type DerivedPortfolioTeam struct {
+type DerivedOwnershipDetail struct {
 	ID                  interface{}
 	PortfolioID         string
 	TeamID              string
 	OwnershipPercentage float64
-	ActualPoints        int32
-	ExpectedPoints      int32
+	ActualReturns       int32
+	ExpectedReturns     int32
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           interface{}
 	DeletedAt           pgtype.Timestamptz
+}
+
+type DerivedOwnershipSummary struct {
+	ID             string
+	PortfolioID    string
+	MaximumReturns int64
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      interface{}
+	DeletedAt      pgtype.Timestamptz
 }
 
 type DerivedRunJob struct {

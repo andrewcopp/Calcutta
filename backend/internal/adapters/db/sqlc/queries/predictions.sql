@@ -61,12 +61,12 @@ WHERE t.tournament_id = $1::uuid
 ORDER BY t.region, t.seed;
 
 -- name: GetScoringRulesForTournament :many
-SELECT csr.win_index::int, csr.points_awarded::int
-FROM core.calcutta_scoring_rules csr
-JOIN core.calcuttas c ON c.id = csr.calcutta_id AND c.deleted_at IS NULL
-WHERE c.tournament_id = $1::uuid
-    AND csr.deleted_at IS NULL
-ORDER BY csr.win_index ASC
+SELECT psr.win_index::int, psr.points_awarded::int
+FROM core.pool_scoring_rules psr
+JOIN core.pools p ON p.id = psr.pool_id AND p.deleted_at IS NULL
+WHERE p.tournament_id = $1::uuid
+    AND psr.deleted_at IS NULL
+ORDER BY psr.win_index ASC
 LIMIT 10;
 
 -- name: CreatePredictionBatch :one
@@ -155,7 +155,7 @@ WHERE t.deleted_at IS NULL
         WHERE tt.tournament_id = t.id AND ks.deleted_at IS NULL
     )
     AND EXISTS (
-        SELECT 1 FROM core.calcutta_scoring_rules csr
-        JOIN core.calcuttas c ON c.id = csr.calcutta_id AND c.deleted_at IS NULL
-        WHERE c.tournament_id = t.id AND csr.deleted_at IS NULL
+        SELECT 1 FROM core.pool_scoring_rules psr
+        JOIN core.pools p ON p.id = psr.pool_id AND p.deleted_at IS NULL
+        WHERE p.tournament_id = t.id AND psr.deleted_at IS NULL
     );

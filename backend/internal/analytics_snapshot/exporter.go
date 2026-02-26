@@ -22,9 +22,9 @@ type Manifest struct {
 	TournamentKey  string `json:"tournament_key"`
 	TournamentName string `json:"tournament_name"`
 
-	CalcuttaID   string `json:"calcutta_id"`
-	CalcuttaKey  string `json:"calcutta_key"`
-	CalcuttaName string `json:"calcutta_name"`
+	PoolID   string `json:"pool_id"`
+	PoolKey  string `json:"pool_key"`
+	PoolName string `json:"pool_name"`
 
 	RowCounts map[string]int `json:"row_counts"`
 	Notes     string         `json:"notes"`
@@ -38,7 +38,7 @@ type ExportInputs struct {
 	Bracket *models.BracketStructure
 }
 
-func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time, tournamentID string, calcuttaID string, inputs ExportInputs) (ExportResult, error) {
+func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time, tournamentID string, poolID string, inputs ExportInputs) (ExportResult, error) {
 	var res ExportResult
 
 	tournamentKey, tournamentName, rounds, err := loadTournament(ctx, pool, tournamentID)
@@ -46,7 +46,7 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 		return res, err
 	}
 
-	calcuttaKey, calcuttaName, err := loadCalcutta(ctx, pool, calcuttaID, tournamentID)
+	poolKey, poolName, err := loadPool(ctx, pool, poolID, tournamentID)
 	if err != nil {
 		return res, err
 	}
@@ -56,22 +56,22 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 		return res, err
 	}
 
-	entriesRows, err := loadEntries(ctx, pool, calcuttaID)
+	portfoliosRows, err := loadPortfolios(ctx, pool, poolID)
 	if err != nil {
 		return res, err
 	}
 
-	entryBidsRows, err := loadEntryBids(ctx, pool, calcuttaID, tournamentKey, schoolSlugByID)
+	portfolioInvestmentsRows, err := loadPortfolioInvestments(ctx, pool, poolID, tournamentKey, schoolSlugByID)
 	if err != nil {
 		return res, err
 	}
 
-	roundScoringRows, err := loadRoundScoring(ctx, pool, calcuttaID)
+	roundScoringRows, err := loadRoundScoring(ctx, pool, poolID)
 	if err != nil {
 		return res, err
 	}
 
-	payoutRows, err := loadPayouts(ctx, pool, calcuttaID)
+	payoutRows, err := loadPayouts(ctx, pool, poolID)
 	if err != nil {
 		return res, err
 	}
@@ -93,15 +93,15 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 	}
 	rowCounts["games.csv"] = len(gamesRows.rows)
 
-	if err := writeCSV(filepath.Join(outDir, "entries.csv"), entriesRows.header, entriesRows.rows); err != nil {
+	if err := writeCSV(filepath.Join(outDir, "portfolios.csv"), portfoliosRows.header, portfoliosRows.rows); err != nil {
 		return res, err
 	}
-	rowCounts["entries.csv"] = len(entriesRows.rows)
+	rowCounts["portfolios.csv"] = len(portfoliosRows.rows)
 
-	if err := writeCSV(filepath.Join(outDir, "entry_bids.csv"), entryBidsRows.header, entryBidsRows.rows); err != nil {
+	if err := writeCSV(filepath.Join(outDir, "portfolio_investments.csv"), portfolioInvestmentsRows.header, portfolioInvestmentsRows.rows); err != nil {
 		return res, err
 	}
-	rowCounts["entry_bids.csv"] = len(entryBidsRows.rows)
+	rowCounts["portfolio_investments.csv"] = len(portfolioInvestmentsRows.rows)
 
 	if err := writeCSV(filepath.Join(outDir, "round_scoring.csv"), roundScoringRows.header, roundScoringRows.rows); err != nil {
 		return res, err
@@ -119,9 +119,9 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 		TournamentID:   tournamentID,
 		TournamentKey:  tournamentKey,
 		TournamentName: tournamentName,
-		CalcuttaID:     calcuttaID,
-		CalcuttaKey:    calcuttaKey,
-		CalcuttaName:   calcuttaName,
+		PoolID:         poolID,
+		PoolKey:        poolKey,
+		PoolName:       poolName,
 		RowCounts:      rowCounts,
 		Notes:          fmt.Sprintf("games.csv is derived from bracket builder using team region/seed and team progress (wins+byes+is_eliminated). Tournament rounds=%d.", rounds),
 	}
@@ -173,20 +173,20 @@ func loadTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID string
 	return
 }
 
-func loadCalcutta(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentID string) (key string, name string, err error) {
+func loadPool(ctx context.Context, dbPool *pgxpool.Pool, poolID string, tournamentID string) (key string, name string, err error) {
 	var tID string
-	err = pool.QueryRow(ctx, `
+	err = dbPool.QueryRow(ctx, `
 		SELECT tournament_id, name
-		FROM core.calcuttas
+		FROM core.pools
 		WHERE id = $1 AND deleted_at IS NULL
-	`, calcuttaID).Scan(&tID, &name)
+	`, poolID).Scan(&tID, &name)
 	if err != nil {
 		return "", "", err
 	}
 	if tID != tournamentID {
-		return "", "", fmt.Errorf("calcutta %s does not belong to tournament %s", calcuttaID, tournamentID)
+		return "", "", fmt.Errorf("pool %s does not belong to tournament %s", poolID, tournamentID)
 	}
-	key = "calcutta-" + calcuttaID
+	key = "pool-" + poolID
 	return key, name, nil
 }
 
@@ -257,30 +257,30 @@ func loadTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID string) (ma
 	return slugBySchoolID, csvTable{header: header, rows: rows}, nil
 }
 
-func loadEntries(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (csvTable, error) {
-	r, err := pool.Query(ctx, `
+func loadPortfolios(ctx context.Context, dbPool *pgxpool.Pool, poolID string) (csvTable, error) {
+	r, err := dbPool.Query(ctx, `
 		SELECT id, name
-		FROM core.entries
-		WHERE calcutta_id = $1 AND deleted_at IS NULL
+		FROM core.portfolios
+		WHERE pool_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at ASC
-	`, calcuttaID)
+	`, poolID)
 	if err != nil {
 		return csvTable{}, err
 	}
 	defer r.Close()
 
-	header := []string{"calcutta_key", "entry_key", "entry_name"}
+	header := []string{"pool_key", "portfolio_key", "portfolio_name"}
 	rows := make([][]string, 0)
 
-	calcuttaKey := "calcutta-" + calcuttaID
+	poolKey := "pool-" + poolID
 
 	for r.Next() {
 		var id, name string
 		if err := r.Scan(&id, &name); err != nil {
 			return csvTable{}, err
 		}
-		entryKey := calcuttaKey + ":entry-" + id
-		rows = append(rows, []string{calcuttaKey, entryKey, name})
+		portfolioKey := poolKey + ":portfolio-" + id
+		rows = append(rows, []string{poolKey, portfolioKey, name})
 	}
 	if err := r.Err(); err != nil {
 		return csvTable{}, err
@@ -289,35 +289,35 @@ func loadEntries(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (cs
 	return csvTable{header: header, rows: rows}, nil
 }
 
-func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, tournamentKey string, schoolSlugByID map[string]string) (csvTable, error) {
-	r, err := pool.Query(ctx, `
+func loadPortfolioInvestments(ctx context.Context, dbPool *pgxpool.Pool, poolID string, tournamentKey string, schoolSlugByID map[string]string) (csvTable, error) {
+	r, err := dbPool.Query(ctx, `
 		SELECT
-			et.id,
-			e.id,
+			inv.id,
+			p.id,
 			t.school_id,
-			et.bid_points
-		FROM core.entry_teams et
-		JOIN core.entries e ON e.id = et.entry_id
-		JOIN core.teams t ON t.id = et.team_id
-		WHERE e.calcutta_id = $1 AND et.deleted_at IS NULL AND e.deleted_at IS NULL AND t.deleted_at IS NULL
-		ORDER BY e.created_at ASC
-	`, calcuttaID)
+			inv.credits
+		FROM core.investments inv
+		JOIN core.portfolios p ON p.id = inv.portfolio_id
+		JOIN core.teams t ON t.id = inv.team_id
+		WHERE p.pool_id = $1 AND inv.deleted_at IS NULL AND p.deleted_at IS NULL AND t.deleted_at IS NULL
+		ORDER BY p.created_at ASC
+	`, poolID)
 	if err != nil {
 		return csvTable{}, err
 	}
 	defer r.Close()
 
-	calcuttaKey := "calcutta-" + calcuttaID
-	header := []string{"calcutta_key", "entry_key", "team_key", "bid_points"}
+	poolKey := "pool-" + poolID
+	header := []string{"pool_key", "portfolio_key", "team_key", "credits"}
 	rows := make([][]string, 0)
 
 	for r.Next() {
-		var _bidID, entryID, schoolID string
-		var bid int
-		if err := r.Scan(&_bidID, &entryID, &schoolID, &bid); err != nil {
+		var _investmentID, portfolioID, schoolID string
+		var credits int
+		if err := r.Scan(&_investmentID, &portfolioID, &schoolID, &credits); err != nil {
 			return csvTable{}, err
 		}
-		eKey := calcuttaKey + ":entry-" + entryID
+		pKey := poolKey + ":portfolio-" + portfolioID
 		slug := schoolSlugByID[schoolID]
 		teamKey := ""
 		if slug != "" {
@@ -325,7 +325,7 @@ func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, t
 		} else {
 			teamKey = tournamentKey + ":school-" + schoolID
 		}
-		rows = append(rows, []string{calcuttaKey, eKey, teamKey, strconv.Itoa(bid)})
+		rows = append(rows, []string{poolKey, pKey, teamKey, strconv.Itoa(credits)})
 	}
 	if err := r.Err(); err != nil {
 		return csvTable{}, err
@@ -334,28 +334,28 @@ func loadEntryBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, t
 	return csvTable{header: header, rows: rows}, nil
 }
 
-func loadRoundScoring(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (csvTable, error) {
-	r, err := pool.Query(ctx, `
+func loadRoundScoring(ctx context.Context, dbPool *pgxpool.Pool, poolID string) (csvTable, error) {
+	r, err := dbPool.Query(ctx, `
 		SELECT r.win_index, r.points_awarded
-		FROM core.calcutta_scoring_rules r
-		WHERE r.calcutta_id = $1 AND r.deleted_at IS NULL
+		FROM core.pool_scoring_rules r
+		WHERE r.pool_id = $1 AND r.deleted_at IS NULL
 		ORDER BY r.win_index ASC
-	`, calcuttaID)
+	`, poolID)
 	if err != nil {
 		return csvTable{}, err
 	}
 	defer r.Close()
 
-	header := []string{"calcutta_key", "round", "points"}
+	header := []string{"pool_key", "round", "points"}
 	rows := make([][]string, 0)
-	calcuttaKey := "calcutta-" + calcuttaID
+	poolKey := "pool-" + poolID
 
 	for r.Next() {
 		var round, points int
 		if err := r.Scan(&round, &points); err != nil {
 			return csvTable{}, err
 		}
-		rows = append(rows, []string{calcuttaKey, strconv.Itoa(round), strconv.Itoa(points)})
+		rows = append(rows, []string{poolKey, strconv.Itoa(round), strconv.Itoa(points)})
 	}
 	if err := r.Err(); err != nil {
 		return csvTable{}, err
@@ -364,28 +364,28 @@ func loadRoundScoring(ctx context.Context, pool *pgxpool.Pool, calcuttaID string
 	return csvTable{header: header, rows: rows}, nil
 }
 
-func loadPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) (csvTable, error) {
-	r, err := pool.Query(ctx, `
+func loadPayouts(ctx context.Context, dbPool *pgxpool.Pool, poolID string) (csvTable, error) {
+	r, err := dbPool.Query(ctx, `
 		SELECT p.position, p.amount_cents
 		FROM core.payouts p
-		WHERE p.calcutta_id = $1 AND p.deleted_at IS NULL
+		WHERE p.pool_id = $1 AND p.deleted_at IS NULL
 		ORDER BY p.position ASC
-	`, calcuttaID)
+	`, poolID)
 	if err != nil {
 		return csvTable{}, err
 	}
 	defer r.Close()
 
-	header := []string{"calcutta_key", "position", "amount_cents"}
+	header := []string{"pool_key", "position", "amount_cents"}
 	rows := make([][]string, 0)
-	calcuttaKey := "calcutta-" + calcuttaID
+	poolKey := "pool-" + poolID
 
 	for r.Next() {
 		var pos, amount int
 		if err := r.Scan(&pos, &amount); err != nil {
 			return csvTable{}, err
 		}
-		rows = append(rows, []string{calcuttaKey, strconv.Itoa(pos), strconv.Itoa(amount)})
+		rows = append(rows, []string{poolKey, strconv.Itoa(pos), strconv.Itoa(amount)})
 	}
 	if err := r.Err(); err != nil {
 		return csvTable{}, err

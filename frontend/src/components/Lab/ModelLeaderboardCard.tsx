@@ -8,7 +8,7 @@ import { formatPayoutX, formatPct, getPayoutColor } from '../../utils/labFormatt
 type ModelLeaderboardCardProps = {
   entry: LeaderboardEntry;
   rank: number;
-  totalCalcuttas: number;
+  totalPools: number;
 };
 
 function getTop1ColorClass(p?: number | null): string {
@@ -18,7 +18,7 @@ function getTop1ColorClass(p?: number | null): string {
   return 'text-gray-700';
 }
 
-export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeaderboardCardProps) {
+export function ModelLeaderboardCard({ entry, rank, totalPools }: ModelLeaderboardCardProps) {
   const navigate = useNavigate();
 
   const hasPredictions = entry.nEntriesWithPredictions > 0;
@@ -26,7 +26,7 @@ export function ModelLeaderboardCard({ entry, rank, totalCalcuttas }: ModelLeade
   const hasEvaluations = entry.nCalcuttasWithEvaluations > 0;
 
   const coverageText =
-    totalCalcuttas > 0 ? `${entry.nCalcuttasWithEvaluations}/${totalCalcuttas}` : `${entry.nCalcuttasWithEvaluations}`;
+    totalPools > 0 ? `${entry.nCalcuttasWithEvaluations}/${totalPools}` : `${entry.nCalcuttasWithEvaluations}`;
 
   return (
     <div

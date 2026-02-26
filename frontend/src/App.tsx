@@ -13,17 +13,23 @@ import { UserProvider } from './contexts/UserContext';
 import { LoadingState } from './components/ui/LoadingState';
 
 // Lazy-loaded page components
-const CalcuttaListPage = React.lazy(() =>
-  import('./pages/CalcuttaListPage').then((m) => ({ default: m.CalcuttaListPage })),
+const PoolListPage = React.lazy(() =>
+  import('./pages/PoolListPage').then((m) => ({ default: m.PoolListPage })),
 );
-const CalcuttaEntriesPage = React.lazy(() =>
-  import('./pages/CalcuttaEntriesPage').then((m) => ({ default: m.CalcuttaEntriesPage })),
+const PoolPortfoliosPage = React.lazy(() =>
+  import('./pages/PoolPortfoliosPage').then((m) => ({ default: m.PoolPortfoliosPage })),
 );
-const CalcuttaTeamsPage = React.lazy(() =>
-  import('./pages/CalcuttaTeamsPage').then((m) => ({ default: m.CalcuttaTeamsPage })),
+const PoolTeamsPage = React.lazy(() =>
+  import('./pages/PoolTeamsPage').then((m) => ({ default: m.PoolTeamsPage })),
 );
-const EntryTeamsPage = React.lazy(() => import('./pages/EntryTeamsPage').then((m) => ({ default: m.EntryTeamsPage })));
-const BiddingPage = React.lazy(() => import('./pages/BiddingPage').then((m) => ({ default: m.BiddingPage })));
+const PoolSettingsPage = React.lazy(() =>
+  import('./pages/PoolSettingsPage').then((m) => ({ default: m.PoolSettingsPage })),
+);
+const CreatePoolPage = React.lazy(() =>
+  import('./pages/CreatePoolPage').then((m) => ({ default: m.CreatePoolPage })),
+);
+const PortfolioInvestmentsPage = React.lazy(() => import('./pages/PortfolioInvestmentsPage').then((m) => ({ default: m.PortfolioInvestmentsPage })));
+const InvestingPage = React.lazy(() => import('./pages/InvestingPage').then((m) => ({ default: m.InvestingPage })));
 const TournamentListPage = React.lazy(() =>
   import('./pages/TournamentListPage').then((m) => ({ default: m.TournamentListPage })),
 );
@@ -70,12 +76,6 @@ const ResetPasswordPage = React.lazy(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
 );
 const RulesPage = React.lazy(() => import('./pages/RulesPage').then((m) => ({ default: m.RulesPage })));
-const CreateCalcuttaPage = React.lazy(() =>
-  import('./pages/CreateCalcuttaPage').then((m) => ({ default: m.CreateCalcuttaPage })),
-);
-const CalcuttaSettingsPage = React.lazy(() =>
-  import('./pages/CalcuttaSettingsPage').then((m) => ({ default: m.CalcuttaSettingsPage })),
-);
 const LabPage = React.lazy(() => import('./pages/LabPage').then((m) => ({ default: m.LabPage })));
 const ModelDetailPage = React.lazy(() =>
   import('./pages/Lab/ModelDetailPage').then((m) => ({ default: m.ModelDetailPage })),
@@ -162,7 +162,7 @@ const AppLayout: React.FC = () => {
               path="/pools"
               element={
                 <RouteErrorBoundary>
-                  <CalcuttaListPage />
+                  <PoolListPage />
                 </RouteErrorBoundary>
               }
             />
@@ -171,7 +171,7 @@ const AppLayout: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <RouteErrorBoundary>
-                    <CreateCalcuttaPage />
+                    <CreatePoolPage />
                   </RouteErrorBoundary>
                 </ProtectedRoute>
               }
@@ -357,45 +357,45 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/pools/:calcuttaId"
+              path="/pools/:poolId"
               element={
                 <RouteErrorBoundary>
-                  <CalcuttaEntriesPage />
+                  <PoolPortfoliosPage />
                 </RouteErrorBoundary>
               }
             />
             <Route
-              path="/pools/:calcuttaId/settings"
+              path="/pools/:poolId/settings"
               element={
                 <ProtectedRoute>
                   <RouteErrorBoundary>
-                    <CalcuttaSettingsPage />
+                    <PoolSettingsPage />
                   </RouteErrorBoundary>
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/pools/:calcuttaId/teams"
+              path="/pools/:poolId/teams"
               element={
                 <RouteErrorBoundary>
-                  <CalcuttaTeamsPage />
+                  <PoolTeamsPage />
                 </RouteErrorBoundary>
               }
             />
             <Route
-              path="/pools/:calcuttaId/entries/:entryId"
+              path="/pools/:poolId/portfolios/:portfolioId"
               element={
                 <RouteErrorBoundary>
-                  <EntryTeamsPage />
+                  <PortfolioInvestmentsPage />
                 </RouteErrorBoundary>
               }
             />
             <Route
-              path="/pools/:calcuttaId/entries/:entryId/bid"
+              path="/pools/:poolId/portfolios/:portfolioId/invest"
               element={
                 <ProtectedRoute>
                   <RouteErrorBoundary>
-                    <BiddingPage />
+                    <InvestingPage />
                   </RouteErrorBoundary>
                 </ProtectedRoute>
               }

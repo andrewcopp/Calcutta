@@ -6,7 +6,7 @@ function RouteErrorFallback() {
   return (
     <div className="flex items-center justify-center py-24">
       <div className="max-w-md w-full bg-card rounded-lg shadow-md p-8 text-center">
-        <h2 className="text-xl font-bold text-foreground mb-2">Something went wrong</h2>
+        <h2 className="text-xl font-bold text-foreground mb-2">Technical foul</h2>
         <p className="text-muted-foreground mb-6">
           This section encountered an error. The rest of the app should still work.
         </p>

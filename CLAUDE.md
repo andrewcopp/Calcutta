@@ -39,7 +39,7 @@ cd frontend && npm run lint                              # Frontend linting
 make sqlc-generate      # Regenerate SQL type-safe wrappers from queries
 ```
 
-SQLC pipeline: write SQL in `backend/internal/adapters/db/sqlc/queries/*.sql` → run `make sqlc-generate` → generated Go in `backend/internal/adapters/db/sqlc/*.sql.go`. Query annotations (`-- name: GetCalcutta :one`) control generated method signatures. Config in `backend/sqlc.yaml`.
+SQLC pipeline: write SQL in `backend/internal/adapters/db/sqlc/queries/*.sql` → run `make sqlc-generate` → generated Go in `backend/internal/adapters/db/sqlc/*.sql.go`. Query annotations (`-- name: GetPool :one`) control generated method signatures. Config in `backend/sqlc.yaml`.
 
 ### Data Science
 ```bash
@@ -74,10 +74,10 @@ make api-test ENDPOINT="/api/..."    # Test endpoint (supports METHOD, DATA)
 
 ### Directory Structure
 - `backend/cmd/` - Runnable binaries (api, migrate, workers, tools)
-- `backend/internal/app/` - Feature services (~15 domains: bracket, calcutta, scoring, analytics, etc.)
+- `backend/internal/app/` - Feature services (~15 domains: bracket, pool, scoring, analytics, etc.)
 - `backend/internal/adapters/` - Database and external API implementations
 - `backend/internal/transport/httpserver/` - HTTP handlers (`handlers_*.go`), DTOs (`dtos/`), middleware (`middleware/`)
-- `backend/internal/ports/` - Interface contracts (CalcuttaRepository, EntryRepository, etc.)
+- `backend/internal/ports/` - Interface contracts (PoolRepository, PortfolioRepository, etc.)
 - `backend/internal/models/` - Domain structs mirroring database tables
 - `backend/internal/auth/` - Token manager, session/API key/chain authenticators
 - `backend/internal/platform/` - Config loading, logger, pgx pool, mailer
@@ -98,12 +98,12 @@ Services depend on small interfaces in `internal/ports`, not concrete implementa
 `backend/internal/app/bootstrap/app.go` creates the `App` struct with all services. Each service takes a `Ports` struct of interfaces:
 
 ```go
-// Example: calcutta service depends on port interfaces, not concrete repos
+// Example: pool service depends on port interfaces, not concrete repos
 type Ports struct {
-    Calcuttas       ports.CalcuttaRepository
-    Entries         ports.EntryRepository
+    Pools           ports.PoolRepository
+    Portfolios      ports.PortfolioRepository
     Payouts         ports.PayoutRepository
-    PortfolioReader ports.PortfolioReader
+    OwnershipReader ports.OwnershipReader
 }
 ```
 
@@ -118,8 +118,9 @@ Adapters in `internal/adapters/db/` implement these interfaces, wrapping SQLC-ge
 - **Function size:** 20-60 LOC (orchestration may be longer)
 
 ### Database Schemas
-- **`core.*`** - Production tables (calcuttas, entries, teams, tournaments, users)
-- **`derived.*`** - Simulation/sandbox infrastructure (simulation_runs, simulated_calcuttas)
+- **`core.*`** - Production tables (pools, portfolios, investments, teams, tournaments, users)
+- **`derived.*`** - Views for ownership summaries and details
+- **`compute.*`** - Predictions and simulations (prediction_batches, predicted_team_values)
 - **`lab.*`** - R&D schema (investment_models, entries, evaluations)
 - **`archive.*`** - Deprecated tables
 
@@ -188,7 +189,7 @@ func TestThatFirstFourGameForElevenSeedHasDeterministicID(t *testing.T) {
 - Adapter methods that execute SQL (CRUD, transactions, complex queries)
 - Constraint enforcement (unique violations, FK checks)
 - Multi-table joins and CTEs where SQL correctness is the concern
-- Transaction atomicity (ReplaceEntryTeams, ReplacePayouts)
+- Transaction atomicity (ReplaceInvestments, ReplacePayouts)
 
 **Integration test conventions:**
 - Build tag: `//go:build integration` — runs only with `make backend-integration-test`
@@ -223,7 +224,8 @@ describe('createEmptySlot', () => {
 ## Domain Units
 
 Explicit naming prevents mixing in-game currency with real money:
-- **Points** (in-game): `budget_points`, `bid_amount_points`, `payout_points`
+- **Credits** (in-game): `budget_credits`, `credits` (investment amount), `max_investment_credits`
+- **Returns** (in-game scoring): `actual_returns`, `expected_returns`, `total_returns`
 - **Cents/Dollars** (real money): `entry_fee_cents`, `prize_amount_cents`
 
 ## Naming Conventions

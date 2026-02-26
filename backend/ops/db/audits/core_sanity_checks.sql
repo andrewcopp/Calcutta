@@ -6,11 +6,11 @@ SELECT 'tournaments' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) F
 SELECT 'schools' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.schools WHERE deleted_at IS NULL) AS core_count;
 SELECT 'teams' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.teams WHERE deleted_at IS NULL) AS core_count;
 SELECT 'kenpom_stats' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.team_kenpom_stats WHERE deleted_at IS NULL) AS core_count;
-SELECT 'calcuttas' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.calcuttas WHERE deleted_at IS NULL) AS core_count;
-SELECT 'entries' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.entries WHERE deleted_at IS NULL) AS core_count;
-SELECT 'entry_teams' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.entry_teams WHERE deleted_at IS NULL) AS core_count;
+SELECT 'pools' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.pools WHERE deleted_at IS NULL) AS core_count;
+SELECT 'portfolios' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.portfolios WHERE deleted_at IS NULL) AS core_count;
+SELECT 'investments' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.investments WHERE deleted_at IS NULL) AS core_count;
 SELECT 'payouts' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.payouts WHERE deleted_at IS NULL) AS core_count;
-SELECT 'scoring_rules' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.calcutta_scoring_rules WHERE deleted_at IS NULL) AS core_count;
+SELECT 'scoring_rules' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.pool_scoring_rules WHERE deleted_at IS NULL) AS core_count;
 
 -- Seasons should cover all tournaments (we only backfilled tournaments with a computed year)
 SELECT 'seasons' AS metric, NULL::bigint AS public_count, (SELECT COUNT(*) FROM core.seasons) AS core_count;
@@ -26,27 +26,27 @@ FROM core.teams t
 LEFT JOIN core.tournaments tr ON tr.id = t.tournament_id
 WHERE t.deleted_at IS NULL AND tr.id IS NULL;
 
-SELECT 'orphan_core_entries_calcutta' AS metric, COUNT(*) AS n
-FROM core.entries e
-LEFT JOIN core.calcuttas c ON c.id = e.calcutta_id
-WHERE e.deleted_at IS NULL AND c.id IS NULL;
-
-SELECT 'orphan_core_entry_teams_entry' AS metric, COUNT(*) AS n
-FROM core.entry_teams et
-LEFT JOIN core.entries e ON e.id = et.entry_id
-WHERE et.deleted_at IS NULL AND e.id IS NULL;
-
-SELECT 'orphan_core_entry_teams_team' AS metric, COUNT(*) AS n
-FROM core.entry_teams et
-LEFT JOIN core.teams t ON t.id = et.team_id
-WHERE et.deleted_at IS NULL AND t.id IS NULL;
-
-SELECT 'orphan_core_payouts_calcutta' AS metric, COUNT(*) AS n
-FROM core.payouts p
-LEFT JOIN core.calcuttas c ON c.id = p.calcutta_id
+SELECT 'orphan_core_portfolios_pool' AS metric, COUNT(*) AS n
+FROM core.portfolios p
+LEFT JOIN core.pools c ON c.id = p.pool_id
 WHERE p.deleted_at IS NULL AND c.id IS NULL;
 
-SELECT 'orphan_core_scoring_rules_calcutta' AS metric, COUNT(*) AS n
-FROM core.calcutta_scoring_rules r
-LEFT JOIN core.calcuttas c ON c.id = r.calcutta_id
+SELECT 'orphan_core_investments_portfolio' AS metric, COUNT(*) AS n
+FROM core.investments i
+LEFT JOIN core.portfolios p ON p.id = i.portfolio_id
+WHERE i.deleted_at IS NULL AND p.id IS NULL;
+
+SELECT 'orphan_core_investments_team' AS metric, COUNT(*) AS n
+FROM core.investments i
+LEFT JOIN core.teams t ON t.id = i.team_id
+WHERE i.deleted_at IS NULL AND t.id IS NULL;
+
+SELECT 'orphan_core_payouts_pool' AS metric, COUNT(*) AS n
+FROM core.payouts p
+LEFT JOIN core.pools c ON c.id = p.pool_id
+WHERE p.deleted_at IS NULL AND c.id IS NULL;
+
+SELECT 'orphan_core_scoring_rules_pool' AS metric, COUNT(*) AS n
+FROM core.pool_scoring_rules r
+LEFT JOIN core.pools c ON c.id = r.pool_id
 WHERE r.deleted_at IS NULL AND c.id IS NULL;

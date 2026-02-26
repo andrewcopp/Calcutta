@@ -1,10 +1,10 @@
 package models
 
-// EntryStanding holds point-in-time computed values for an entry.
-// Unlike CalcuttaEntry (who), this represents how they're doing (when).
-type EntryStanding struct {
-	EntryID            string
-	TotalPoints        float64
+// PortfolioStanding holds point-in-time computed values for a portfolio.
+// Unlike Portfolio (who), this represents how they're doing (when).
+type PortfolioStanding struct {
+	PortfolioID        string
+	TotalReturns       float64
 	FinishPosition     int
 	IsTied             bool
 	PayoutCents        int

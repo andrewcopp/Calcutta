@@ -13,9 +13,9 @@ func TestThatSuccessfulImportMarksStatusSucceeded(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
-	// GIVEN a pending tournament import with a valid calcutta ZIP bundle
+	// GIVEN a pending tournament import with a valid pool ZIP bundle
 	seedTestSchoolsAndTournament(t, ctx, pool, "ncaa-tournament-2026", 68)
-	zipBytes := buildTestCalcuttaZIP(t, "ncaa-tournament-2026")
+	zipBytes := buildTestPoolZIP(t, "ncaa-tournament-2026")
 	uploadID := insertPendingImport(t, ctx, pool, zipBytes)
 
 	// WHEN processTournamentImport runs

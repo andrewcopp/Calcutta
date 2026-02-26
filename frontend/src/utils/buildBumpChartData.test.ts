@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildBumpChartData } from './buildBumpChartData';
-import { makeEntry } from '../test/factories';
-import type { RoundStandingGroup } from '../schemas/calcutta';
+import { makePortfolio } from '../test/factories';
+import type { RoundStandingGroup } from '../schemas/pool';
 
 function makeStandingGroup(
   round: number,
@@ -10,8 +10,8 @@ function makeStandingGroup(
   return {
     round,
     entries: entries.map((e) => ({
-      entryId: e.entryId,
-      totalPoints: e.totalPoints,
+      portfolioId: e.entryId,
+      totalReturns: e.totalPoints,
       finishPosition: 0,
       isTied: false,
       payoutCents: 0,
@@ -24,13 +24,13 @@ function makeStandingGroup(
 
 describe('buildBumpChartData', () => {
   it('returns empty when fewer than 2 rounds', () => {
-    const entries = [makeEntry({ id: 'e1' })];
+    const entries = [makePortfolio({ id: 'e1' })];
     const standings = [makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 10 }])];
     expect(buildBumpChartData(entries, standings, 'actual')).toEqual([]);
   });
 
   it('uses entry name as series id', () => {
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0 },
@@ -46,7 +46,7 @@ describe('buildBumpChartData', () => {
   });
 
   it('ranks higher-scoring entries with lower rank number', () => {
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0 },
@@ -64,9 +64,9 @@ describe('buildBumpChartData', () => {
 
   it('assigns same rank to tied entries', () => {
     const entries = [
-      makeEntry({ id: 'e1', name: 'Alice' }),
-      makeEntry({ id: 'e2', name: 'Bob' }),
-      makeEntry({ id: 'e3', name: 'Carol' }),
+      makePortfolio({ id: 'e1', name: 'Alice' }),
+      makePortfolio({ id: 'e2', name: 'Bob' }),
+      makePortfolio({ id: 'e3', name: 'Carol' }),
     ];
     const standings = [
       makeStandingGroup(0, [
@@ -87,7 +87,7 @@ describe('buildBumpChartData', () => {
   });
 
   it('produces one data point per round per entry', () => {
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0 },
@@ -107,7 +107,7 @@ describe('buildBumpChartData', () => {
   });
 
   it('uses projected EV when mode is projected', () => {
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0, expectedValue: 50 },
@@ -124,7 +124,7 @@ describe('buildBumpChartData', () => {
   });
 
   it('uses round names as x-axis labels', () => {
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' })];
     const standings = [
       makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 0 }]),
       makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 5 }]),
@@ -138,7 +138,7 @@ describe('buildBumpChartData', () => {
 describe('tiebreaker', () => {
   it('breaks ties using projected EV in actual mode', () => {
     // GIVEN two entries with same actual points but different EV
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0, expectedValue: 80 },
@@ -159,7 +159,7 @@ describe('tiebreaker', () => {
 
   it('preserves tied ranks when no projected EV available', () => {
     // GIVEN two entries with same points and no EV
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0 },
@@ -182,7 +182,7 @@ describe('tiebreaker', () => {
 
   it('does not use EV tiebreaker in projected mode', () => {
     // GIVEN two entries with same projected EV
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0, expectedValue: 50 },
@@ -207,7 +207,7 @@ describe('tiebreaker', () => {
 describe('datum metadata', () => {
   it('includes totalPoints in datum', () => {
     // GIVEN an entry with 15 total points
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' })];
     const standings = [
       makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 0 }]),
       makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 15 }]),
@@ -222,7 +222,7 @@ describe('datum metadata', () => {
 
   it('computes pointsDelta as difference from previous round', () => {
     // GIVEN an entry gaining points across rounds
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' })];
     const standings = [
       makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 0 }]),
       makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 10 }]),
@@ -238,7 +238,7 @@ describe('datum metadata', () => {
 
   it('computes rankDelta as improvement since previous round', () => {
     // GIVEN Alice overtakes Bob in round 2
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
         { entryId: 'e1', totalPoints: 0 },
@@ -263,7 +263,7 @@ describe('datum metadata', () => {
 
   it('sets deltas to zero for first round', () => {
     // GIVEN an entry at round 0
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' })];
     const standings = [
       makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 5 }]),
       makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 10 }]),
@@ -278,7 +278,7 @@ describe('datum metadata', () => {
 
   it('sets rankDelta to zero for first round', () => {
     // GIVEN an entry at round 0
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' })];
     const standings = [
       makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 5 }]),
       makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 10 }]),
@@ -293,7 +293,7 @@ describe('datum metadata', () => {
 
   it('includes expectedValue in datum when available', () => {
     // GIVEN an entry with projected EV
-    const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
+    const entries = [makePortfolio({ id: 'e1', name: 'Alice' })];
     const standings = [
       makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 0, expectedValue: 95.5 }]),
       makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 10, expectedValue: 88.3 }]),

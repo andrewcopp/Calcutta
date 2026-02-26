@@ -19,30 +19,30 @@ func (r *CreateInvitationRequest) Validate() error {
 }
 
 type InvitationResponse struct {
-	ID         string     `json:"id"`
-	CalcuttaID string     `json:"calcuttaId"`
-	UserID     string     `json:"userId"`
-	InvitedBy  string     `json:"invitedBy"`
-	Status     string     `json:"status"`
-	RevokedAt  *time.Time `json:"revokedAt,omitempty"`
-	CreatedAt  time.Time  `json:"createdAt"`
-	UpdatedAt  time.Time  `json:"updatedAt"`
+	ID        string     `json:"id"`
+	PoolID    string     `json:"poolId"`
+	UserID    string     `json:"userId"`
+	InvitedBy string     `json:"invitedBy"`
+	Status    string     `json:"status"`
+	RevokedAt *time.Time `json:"revokedAt,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
-func NewInvitationResponse(i *models.CalcuttaInvitation) *InvitationResponse {
+func NewInvitationResponse(i *models.PoolInvitation) *InvitationResponse {
 	return &InvitationResponse{
-		ID:         i.ID,
-		CalcuttaID: i.CalcuttaID,
-		UserID:     i.UserID,
-		InvitedBy:  i.InvitedBy,
-		Status:     i.Status,
-		RevokedAt:  i.RevokedAt,
-		CreatedAt:  i.CreatedAt,
-		UpdatedAt:  i.UpdatedAt,
+		ID:        i.ID,
+		PoolID:    i.PoolID,
+		UserID:    i.UserID,
+		InvitedBy: i.InvitedBy,
+		Status:    i.Status,
+		RevokedAt: i.RevokedAt,
+		CreatedAt: i.CreatedAt,
+		UpdatedAt: i.UpdatedAt,
 	}
 }
 
-func NewInvitationListResponse(invitations []*models.CalcuttaInvitation) []*InvitationResponse {
+func NewInvitationListResponse(invitations []*models.PoolInvitation) []*InvitationResponse {
 	if invitations == nil {
 		return []*InvitationResponse{}
 	}

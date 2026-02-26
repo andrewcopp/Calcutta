@@ -1,8 +1,8 @@
 /**
  * Shared multi-level sort comparator for team rows.
  *
- * Every CalcuttaEntries tab (Investment, Ownership, Returns) and the
- * EntryTeams InvestmentsTab share identical seed / region / team name
+ * Every PoolPortfolios tab (Investment, Ownership, Returns) and the
+ * PortfolioInvestments InvestmentsTab share identical seed / region / team name
  * fallback logic. This module extracts that logic into a single
  * reusable comparator.
  */

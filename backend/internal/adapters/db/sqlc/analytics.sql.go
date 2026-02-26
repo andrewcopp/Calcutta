@@ -10,20 +10,20 @@ import (
 )
 
 const getRegionAnalytics = `-- name: GetRegionAnalytics :many
-WITH entry_bids AS (
+WITH portfolio_investments AS (
   SELECT
-    cet.team_id,
-    ce.calcutta_id,
-    cet.bid_points::float AS bid_points,
-    SUM(cet.bid_points::float) OVER (
-      PARTITION BY ce.calcutta_id, cet.team_id
-    ) AS team_total_bid_points,
+    inv.team_id,
+    p.pool_id,
+    inv.credits::float AS credits,
+    SUM(inv.credits::float) OVER (
+      PARTITION BY p.pool_id, inv.team_id
+    ) AS team_total_credits,
     tt.wins,
     tt.byes
-  FROM core.entry_teams cet
-  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  WHERE cet.deleted_at IS NULL
+  FROM core.investments inv
+  JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = inv.team_id AND tt.deleted_at IS NULL
+  WHERE inv.deleted_at IS NULL
 ),
 team_agg AS (
   SELECT
@@ -31,16 +31,16 @@ team_agg AS (
     COALESCE(
       SUM(
         CASE
-          WHEN team_total_bid_points > 0 THEN
-            core.calcutta_points_for_progress(calcutta_id, wins, byes)::float
-            * (bid_points / team_total_bid_points)
+          WHEN team_total_credits > 0 THEN
+            core.pool_returns_for_progress(pool_id, wins, byes)::float
+            * (credits / team_total_credits)
           ELSE 0
         END
       ),
       0
     )::float AS total_points,
-    COALESCE(SUM(bid_points), 0)::float AS total_investment
-  FROM entry_bids
+    COALESCE(SUM(credits), 0)::float AS total_investment
+  FROM portfolio_investments
   GROUP BY team_id
 )
 SELECT
@@ -88,20 +88,20 @@ func (q *Queries) GetRegionAnalytics(ctx context.Context) ([]GetRegionAnalyticsR
 }
 
 const getSeedAnalytics = `-- name: GetSeedAnalytics :many
-WITH entry_bids AS (
+WITH portfolio_investments AS (
   SELECT
-    cet.team_id,
-    ce.calcutta_id,
-    cet.bid_points::float AS bid_points,
-    SUM(cet.bid_points::float) OVER (
-      PARTITION BY ce.calcutta_id, cet.team_id
-    ) AS team_total_bid_points,
+    inv.team_id,
+    p.pool_id,
+    inv.credits::float AS credits,
+    SUM(inv.credits::float) OVER (
+      PARTITION BY p.pool_id, inv.team_id
+    ) AS team_total_credits,
     tt.wins,
     tt.byes
-  FROM core.entry_teams cet
-  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  WHERE cet.deleted_at IS NULL
+  FROM core.investments inv
+  JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = inv.team_id AND tt.deleted_at IS NULL
+  WHERE inv.deleted_at IS NULL
 ),
 team_agg AS (
   SELECT
@@ -109,16 +109,16 @@ team_agg AS (
     COALESCE(
       SUM(
         CASE
-          WHEN team_total_bid_points > 0 THEN
-            core.calcutta_points_for_progress(calcutta_id, wins, byes)::float
-            * (bid_points / team_total_bid_points)
+          WHEN team_total_credits > 0 THEN
+            core.pool_returns_for_progress(pool_id, wins, byes)::float
+            * (credits / team_total_credits)
           ELSE 0
         END
       ),
       0
     )::float AS total_points,
-    COALESCE(SUM(bid_points), 0)::float AS total_investment
-  FROM entry_bids
+    COALESCE(SUM(credits), 0)::float AS total_investment
+  FROM portfolio_investments
   GROUP BY team_id
 )
 SELECT
@@ -166,24 +166,24 @@ func (q *Queries) GetSeedAnalytics(ctx context.Context) ([]GetSeedAnalyticsRow, 
 }
 
 const getSeedInvestmentPoints = `-- name: GetSeedInvestmentPoints :many
-WITH team_bids AS (
+WITH team_investments AS (
   SELECT
     tt.seed,
     (comp.name || ' (' || seas.year || ')')::text AS tournament_name,
     seas.year::int AS tournament_year,
-    c.id AS calcutta_id,
+    c.id AS pool_id,
     tt.id AS team_id,
     s.name AS school_name,
-    SUM(cet.bid_points)::float AS total_bid
-  FROM core.entry_teams cet
-  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
+    SUM(inv.credits)::float AS total_bid
+  FROM core.investments inv
+  JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+  JOIN core.pools c ON c.id = p.pool_id AND c.deleted_at IS NULL
   JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
   JOIN core.competitions comp ON comp.id = t.competition_id
   JOIN core.seasons seas ON seas.id = t.season_id
-  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = inv.team_id AND tt.deleted_at IS NULL
   JOIN core.schools s ON s.id = tt.school_id AND s.deleted_at IS NULL
-  WHERE cet.deleted_at IS NULL
+  WHERE inv.deleted_at IS NULL
     AND (tt.byes > 0 OR tt.wins > 0)
   GROUP BY tt.seed, comp.name, tournament_year, c.id, tt.id, s.name
 )
@@ -191,26 +191,26 @@ SELECT
   seed,
   tournament_name,
   tournament_year,
-  calcutta_id,
+  pool_id,
   team_id,
   school_name,
   total_bid,
-  SUM(total_bid) OVER (PARTITION BY calcutta_id)::float AS calcutta_total_bid,
-  (total_bid / NULLIF(SUM(total_bid) OVER (PARTITION BY calcutta_id), 0))::float AS normalized_bid
-FROM team_bids
-ORDER BY tournament_year DESC, calcutta_id, seed ASC, school_name ASC
+  SUM(total_bid) OVER (PARTITION BY pool_id)::float AS pool_total_bid,
+  (total_bid / NULLIF(SUM(total_bid) OVER (PARTITION BY pool_id), 0))::float AS normalized_bid
+FROM team_investments
+ORDER BY tournament_year DESC, pool_id, seed ASC, school_name ASC
 `
 
 type GetSeedInvestmentPointsRow struct {
-	Seed             int32
-	TournamentName   string
-	TournamentYear   int32
-	CalcuttaID       string
-	TeamID           string
-	SchoolName       string
-	TotalBid         float64
-	CalcuttaTotalBid float64
-	NormalizedBid    float64
+	Seed           int32
+	TournamentName string
+	TournamentYear int32
+	PoolID         string
+	TeamID         string
+	SchoolName     string
+	TotalBid       float64
+	PoolTotalBid   float64
+	NormalizedBid  float64
 }
 
 func (q *Queries) GetSeedInvestmentPoints(ctx context.Context) ([]GetSeedInvestmentPointsRow, error) {
@@ -226,11 +226,11 @@ func (q *Queries) GetSeedInvestmentPoints(ctx context.Context) ([]GetSeedInvestm
 			&i.Seed,
 			&i.TournamentName,
 			&i.TournamentYear,
-			&i.CalcuttaID,
+			&i.PoolID,
 			&i.TeamID,
 			&i.SchoolName,
 			&i.TotalBid,
-			&i.CalcuttaTotalBid,
+			&i.PoolTotalBid,
 			&i.NormalizedBid,
 		); err != nil {
 			return nil, err
@@ -244,18 +244,18 @@ func (q *Queries) GetSeedInvestmentPoints(ctx context.Context) ([]GetSeedInvestm
 }
 
 const getSeedVarianceAnalytics = `-- name: GetSeedVarianceAnalytics :many
-WITH team_bids AS (
+WITH team_investments AS (
   SELECT
     tt.seed,
-    c.id AS calcutta_id,
+    c.id AS pool_id,
     tt.id AS team_id,
-    SUM(cet.bid_points)::float AS total_bid,
-    core.calcutta_points_for_progress(c.id, tt.wins, tt.byes)::float AS actual_points
-  FROM core.entry_teams cet
-  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN core.calcuttas c ON c.id = ce.calcutta_id AND c.deleted_at IS NULL
-  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  WHERE cet.deleted_at IS NULL
+    SUM(inv.credits)::float AS total_bid,
+    core.pool_returns_for_progress(c.id, tt.wins, tt.byes)::float AS actual_points
+  FROM core.investments inv
+  JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+  JOIN core.pools c ON c.id = p.pool_id AND c.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = inv.team_id AND tt.deleted_at IS NULL
+  WHERE inv.deleted_at IS NULL
     AND (tt.byes > 0 OR tt.wins > 0)
   GROUP BY tt.seed, c.id, tt.id
 ),
@@ -263,11 +263,11 @@ normalized AS (
   SELECT
     seed,
     CASE
-      WHEN SUM(total_bid) OVER (PARTITION BY calcutta_id) > 0 THEN (total_bid / SUM(total_bid) OVER (PARTITION BY calcutta_id))
+      WHEN SUM(total_bid) OVER (PARTITION BY pool_id) > 0 THEN (total_bid / SUM(total_bid) OVER (PARTITION BY pool_id))
       ELSE 0
     END::float AS normalized_bid,
     actual_points
-  FROM team_bids
+  FROM team_investments
 )
 SELECT
   seed,
@@ -319,21 +319,21 @@ func (q *Queries) GetSeedVarianceAnalytics(ctx context.Context) ([]GetSeedVarian
 }
 
 const getTeamAnalytics = `-- name: GetTeamAnalytics :many
-WITH entry_bids AS (
+WITH portfolio_investments AS (
   SELECT
-    cet.team_id,
-    ce.calcutta_id,
-    cet.bid_points::float AS bid_points,
-    SUM(cet.bid_points::float) OVER (
-      PARTITION BY ce.calcutta_id, cet.team_id
-    ) AS team_total_bid_points,
+    inv.team_id,
+    p.pool_id,
+    inv.credits::float AS credits,
+    SUM(inv.credits::float) OVER (
+      PARTITION BY p.pool_id, inv.team_id
+    ) AS team_total_credits,
     tt.school_id,
     tt.wins,
     tt.byes
-  FROM core.entry_teams cet
-  JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-  JOIN core.teams tt ON tt.id = cet.team_id AND tt.deleted_at IS NULL
-  WHERE cet.deleted_at IS NULL
+  FROM core.investments inv
+  JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+  JOIN core.teams tt ON tt.id = inv.team_id AND tt.deleted_at IS NULL
+  WHERE inv.deleted_at IS NULL
 ),
 team_agg AS (
   SELECT
@@ -342,16 +342,16 @@ team_agg AS (
     COALESCE(
       SUM(
         CASE
-          WHEN team_total_bid_points > 0 THEN
-            core.calcutta_points_for_progress(calcutta_id, wins, byes)::float
-            * (bid_points / team_total_bid_points)
+          WHEN team_total_credits > 0 THEN
+            core.pool_returns_for_progress(pool_id, wins, byes)::float
+            * (credits / team_total_credits)
           ELSE 0
         END
       ),
       0
     )::float AS total_points,
-    COALESCE(SUM(bid_points), 0)::float AS total_investment
-  FROM entry_bids
+    COALESCE(SUM(credits), 0)::float AS total_investment
+  FROM portfolio_investments
   GROUP BY team_id, school_id
 )
 SELECT

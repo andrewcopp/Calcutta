@@ -86,7 +86,7 @@ export const bestCareersColumns: ColumnDef<CareerLeaderboardRow, unknown>[] = [
     accessorKey: 'entryName',
     header: 'Name',
     cell: ({ row }) => (
-      <span className={row.original.activeInLatestCalcutta ? 'font-bold' : 'font-medium'}>
+      <span className={row.original.activeInLatestPool ? 'font-bold' : 'font-medium'}>
         {row.original.entryName}
       </span>
     ),
@@ -94,7 +94,7 @@ export const bestCareersColumns: ColumnDef<CareerLeaderboardRow, unknown>[] = [
   { accessorKey: 'years', header: 'Years' },
   { accessorKey: 'bestFinish', header: 'Best Finish' },
   { accessorKey: 'wins', header: 'Wins' },
-  { accessorKey: 'podiums', header: 'Podiums' },
+  { accessorKey: 'podiums', header: 'Top 3' },
   { accessorKey: 'inTheMoneys', header: 'Payouts' },
   { accessorKey: 'top10s', header: 'Top 10s' },
   {

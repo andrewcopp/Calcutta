@@ -36,7 +36,7 @@ func VerifyDirAgainstDB(ctx context.Context, pool *pgxpool.Pool, inDir string) (
 	if paths, _ := filepath.Glob(filepath.Join(inDir, "tournaments", "*.json")); len(paths) > 0 {
 		mismatches = append(mismatches, verifyTournaments(ctx, pool, inDir)...)
 	}
-	mismatches = append(mismatches, verifyCalcuttas(ctx, pool, inDir)...)
+	mismatches = append(mismatches, verifyPools(ctx, pool, inDir)...)
 
 	r := Report{OK: len(mismatches) == 0, MismatchCount: len(mismatches)}
 	if len(mismatches) > 0 {
@@ -215,8 +215,8 @@ func verifyTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID
 	return out
 }
 
-func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mismatch {
-	root := filepath.Join(inDir, "calcuttas")
+func verifyPools(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mismatch {
+	root := filepath.Join(inDir, "pools")
 
 	var paths []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -235,60 +235,60 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
-		return []Mismatch{{Where: "calcuttas", What: err.Error()}}
+		return []Mismatch{{Where: "pools", What: err.Error()}}
 	}
 	sort.Strings(paths)
 
 	var out []Mismatch
 	for _, path := range paths {
-		var b bundles.CalcuttaBundle
+		var b bundles.PoolBundle
 		if err := bundles.ReadJSON(path, &b); err != nil {
-			out = append(out, Mismatch{Where: "calcuttas", What: err.Error()})
+			out = append(out, Mismatch{Where: "pools", What: err.Error()})
 			continue
 		}
 
 		var tournamentID string
 		err := pool.QueryRow(ctx, `SELECT id FROM core.tournaments WHERE import_key = $1 AND deleted_at IS NULL`, b.Tournament.ImportKey).Scan(&tournamentID)
 		if err != nil {
-			out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: "tournament missing"})
+			out = append(out, Mismatch{Where: "pools:" + b.Pool.Key, What: "tournament missing"})
 			continue
 		}
 
-		var calcuttaID string
-		var calcuttaName string
+		var poolID string
+		var poolName string
 		var ownerEmail string
 		err = pool.QueryRow(ctx, `
-			SELECT c.id, c.name, COALESCE(u.email, '')
-			FROM core.calcuttas c
-			JOIN core.users u ON u.id = c.owner_id
-			WHERE c.name = $1 AND c.tournament_id = $2 AND c.deleted_at IS NULL AND u.deleted_at IS NULL
-		`, b.Calcutta.Name, tournamentID).Scan(&calcuttaID, &calcuttaName, &ownerEmail)
+			SELECT p.id, p.name, COALESCE(u.email, '')
+			FROM core.pools p
+			JOIN core.users u ON u.id = p.owner_id
+			WHERE p.name = $1 AND p.tournament_id = $2 AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+		`, b.Pool.Name, tournamentID).Scan(&poolID, &poolName, &ownerEmail)
 		if err != nil {
-			out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: "missing in db"})
+			out = append(out, Mismatch{Where: "pools:" + b.Pool.Key, What: "missing in db"})
 			continue
 		}
 
-		if calcuttaName != b.Calcutta.Name {
-			out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: fmt.Sprintf("name mismatch db=%q bundle=%q", calcuttaName, b.Calcutta.Name)})
+		if poolName != b.Pool.Name {
+			out = append(out, Mismatch{Where: "pools:" + b.Pool.Key, What: fmt.Sprintf("name mismatch db=%q bundle=%q", poolName, b.Pool.Name)})
 		}
-		if b.Calcutta.Owner != nil && b.Calcutta.Owner.Email != nil {
-			if ownerEmail != *b.Calcutta.Owner.Email {
-				out = append(out, Mismatch{Where: "calcuttas:" + b.Calcutta.Key, What: fmt.Sprintf("owner email mismatch db=%q bundle=%q", ownerEmail, *b.Calcutta.Owner.Email)})
+		if b.Pool.Owner != nil && b.Pool.Owner.Email != nil {
+			if ownerEmail != *b.Pool.Owner.Email {
+				out = append(out, Mismatch{Where: "pools:" + b.Pool.Key, What: fmt.Sprintf("owner email mismatch db=%q bundle=%q", ownerEmail, *b.Pool.Owner.Email)})
 			}
 		}
 
-		out = append(out, verifyScoringRules(ctx, pool, calcuttaID, b.Calcutta.Key, b.Rounds)...)
-		out = append(out, verifyCalcuttaPayouts(ctx, pool, calcuttaID, b.Calcutta.Key, b.Payouts)...)
-		out = append(out, verifyCalcuttaEntriesAndBids(ctx, pool, calcuttaID, b.Calcutta.Key, b.Entries, b.Bids)...)
+		out = append(out, verifyScoringRules(ctx, pool, poolID, b.Pool.Key, b.Rounds)...)
+		out = append(out, verifyPoolPayouts(ctx, pool, poolID, b.Pool.Key, b.Payouts)...)
+		out = append(out, verifyPoolPortfoliosAndInvestments(ctx, pool, poolID, b.Pool.Key, b.Portfolios, b.Investments)...)
 	}
 
 	return out
 }
 
-func verifyScoringRules(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, rounds []bundles.RoundRecord) []Mismatch {
-	rows, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.calcutta_scoring_rules WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
+func verifyScoringRules(ctx context.Context, pool *pgxpool.Pool, poolID, poolKey string, rounds []bundles.RoundRecord) []Mismatch {
+	rows, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.pool_scoring_rules WHERE pool_id = $1 AND deleted_at IS NULL`, poolID)
 	if err != nil {
-		return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "pool_scoring_rules:" + poolKey, What: err.Error()}}
 	}
 	defer rows.Close()
 
@@ -296,32 +296,32 @@ func verifyScoringRules(ctx context.Context, pool *pgxpool.Pool, calcuttaID, cal
 	for rows.Next() {
 		var r, p int
 		if err := rows.Scan(&r, &p); err != nil {
-			return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}
+			return []Mismatch{{Where: "pool_scoring_rules:" + poolKey, What: err.Error()}}
 		}
 		inDB[r] = p
 	}
 	if err := rows.Err(); err != nil {
-		return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "pool_scoring_rules:" + poolKey, What: err.Error()}}
 	}
 
 	var out []Mismatch
 	for _, rr := range rounds {
 		p, ok := inDB[rr.Round]
 		if !ok {
-			out = append(out, Mismatch{Where: "calcutta_scoring_rules:" + calcuttaKey, What: fmt.Sprintf("missing round %d", rr.Round)})
+			out = append(out, Mismatch{Where: "pool_scoring_rules:" + poolKey, What: fmt.Sprintf("missing round %d", rr.Round)})
 			continue
 		}
 		if p != rr.Points {
-			out = append(out, Mismatch{Where: "calcutta_scoring_rules:" + calcuttaKey, What: fmt.Sprintf("round %d points mismatch db=%d bundle=%d", rr.Round, p, rr.Points)})
+			out = append(out, Mismatch{Where: "pool_scoring_rules:" + poolKey, What: fmt.Sprintf("round %d points mismatch db=%d bundle=%d", rr.Round, p, rr.Points)})
 		}
 	}
 	return out
 }
 
-func verifyCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, payouts []bundles.PayoutRecord) []Mismatch {
-	rows, err := pool.Query(ctx, `SELECT position, amount_cents FROM core.payouts WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
+func verifyPoolPayouts(ctx context.Context, pool *pgxpool.Pool, poolID, poolKey string, payouts []bundles.PayoutRecord) []Mismatch {
+	rows, err := pool.Query(ctx, `SELECT position, amount_cents FROM core.payouts WHERE pool_id = $1 AND deleted_at IS NULL`, poolID)
 	if err != nil {
-		return []Mismatch{{Where: "calcutta_payouts:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "pool_payouts:" + poolKey, What: err.Error()}}
 	}
 	defer rows.Close()
 
@@ -329,41 +329,41 @@ func verifyCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID, 
 	for rows.Next() {
 		var pos, cents int
 		if err := rows.Scan(&pos, &cents); err != nil {
-			return []Mismatch{{Where: "calcutta_payouts:" + calcuttaKey, What: err.Error()}}
+			return []Mismatch{{Where: "pool_payouts:" + poolKey, What: err.Error()}}
 		}
 		inDB[pos] = cents
 	}
 	if err := rows.Err(); err != nil {
-		return []Mismatch{{Where: "calcutta_payouts:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "pool_payouts:" + poolKey, What: err.Error()}}
 	}
 
 	var out []Mismatch
 	for _, p := range payouts {
 		c, ok := inDB[p.Position]
 		if !ok {
-			out = append(out, Mismatch{Where: "calcutta_payouts:" + calcuttaKey, What: fmt.Sprintf("missing payout position %d", p.Position)})
+			out = append(out, Mismatch{Where: "pool_payouts:" + poolKey, What: fmt.Sprintf("missing payout position %d", p.Position)})
 			continue
 		}
 		if c != p.AmountCents {
-			out = append(out, Mismatch{Where: "calcutta_payouts:" + calcuttaKey, What: fmt.Sprintf("payout %d cents mismatch db=%d bundle=%d", p.Position, c, p.AmountCents)})
+			out = append(out, Mismatch{Where: "pool_payouts:" + poolKey, What: fmt.Sprintf("payout %d cents mismatch db=%d bundle=%d", p.Position, c, p.AmountCents)})
 		}
 	}
 	return out
 }
 
-func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, entries []bundles.EntryRecord, bids []bundles.EntryTeamBid) []Mismatch {
+func verifyPoolPortfoliosAndInvestments(ctx context.Context, pool *pgxpool.Pool, poolID, poolKey string, portfolios []bundles.PortfolioRecord, investments []bundles.InvestmentRecord) []Mismatch {
 	rows, err := pool.Query(ctx, `
-		SELECT e.id, e.name, COALESCE(u.email, '')
-		FROM core.entries e
-		LEFT JOIN core.users u ON u.id = e.user_id
-		WHERE e.calcutta_id = $1 AND e.deleted_at IS NULL
-	`, calcuttaID)
+		SELECT p.id, p.name, COALESCE(u.email, '')
+		FROM core.portfolios p
+		LEFT JOIN core.users u ON u.id = p.user_id
+		WHERE p.pool_id = $1 AND p.deleted_at IS NULL
+	`, poolID)
 	if err != nil {
-		return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "pool_portfolios:" + poolKey, What: err.Error()}}
 	}
 	defer rows.Close()
 
-	// Map by entry name for lookup (since we no longer have legacy IDs)
+	// Map by portfolio name for lookup (since we no longer have legacy IDs)
 	inDBByName := map[string]struct {
 		id    string
 		email string
@@ -371,7 +371,7 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcu
 	for rows.Next() {
 		var id, n, e string
 		if err := rows.Scan(&id, &n, &e); err != nil {
-			return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
+			return []Mismatch{{Where: "pool_portfolios:" + poolKey, What: err.Error()}}
 		}
 		inDBByName[n] = struct {
 			id    string
@@ -379,77 +379,77 @@ func verifyCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcu
 		}{id: id, email: e}
 	}
 	if err := rows.Err(); err != nil {
-		return []Mismatch{{Where: "calcutta_entries:" + calcuttaKey, What: err.Error()}}
+		return []Mismatch{{Where: "pool_portfolios:" + poolKey, What: err.Error()}}
 	}
 
-	// Build entry name to ID mapping for bid verification
-	entryIDByName := make(map[string]string, len(entries))
+	// Build portfolio name to ID mapping for investment verification
+	portfolioIDByName := make(map[string]string, len(portfolios))
 	var out []Mismatch
-	for _, e := range entries {
-		db, ok := inDBByName[e.Name]
+	for _, pf := range portfolios {
+		db, ok := inDBByName[pf.Name]
 		if !ok {
-			out = append(out, Mismatch{Where: "calcutta_entries:" + calcuttaKey, What: fmt.Sprintf("missing entry_key %s", e.Key)})
+			out = append(out, Mismatch{Where: "pool_portfolios:" + poolKey, What: fmt.Sprintf("missing portfolio_key %s", pf.Key)})
 			continue
 		}
-		entryIDByName[e.Name] = db.id
-		if e.UserEmail != nil {
-			if db.email != *e.UserEmail {
-				out = append(out, Mismatch{Where: "calcutta_entries:" + calcuttaKey, What: fmt.Sprintf("entry %s email mismatch db=%q bundle=%q", e.Key, db.email, *e.UserEmail)})
+		portfolioIDByName[pf.Name] = db.id
+		if pf.UserEmail != nil {
+			if db.email != *pf.UserEmail {
+				out = append(out, Mismatch{Where: "pool_portfolios:" + poolKey, What: fmt.Sprintf("portfolio %s email mismatch db=%q bundle=%q", pf.Key, db.email, *pf.UserEmail)})
 			}
 		}
 	}
 
 	rows, err = pool.Query(ctx, `
-		SELECT et.entry_id, s.slug, et.bid_points
-		FROM core.entry_teams et
-		JOIN core.entries e ON e.id = et.entry_id
-		JOIN core.teams t ON t.id = et.team_id
+		SELECT inv.portfolio_id, s.slug, inv.credits
+		FROM core.investments inv
+		JOIN core.portfolios p ON p.id = inv.portfolio_id
+		JOIN core.teams t ON t.id = inv.team_id
 		JOIN core.schools s ON s.id = t.school_id
-		WHERE e.calcutta_id = $1 AND et.deleted_at IS NULL AND e.deleted_at IS NULL AND t.deleted_at IS NULL AND s.deleted_at IS NULL
-	`, calcuttaID)
+		WHERE p.pool_id = $1 AND inv.deleted_at IS NULL AND p.deleted_at IS NULL AND t.deleted_at IS NULL AND s.deleted_at IS NULL
+	`, poolID)
 	if err != nil {
-		return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
+		return append(out, Mismatch{Where: "pool_investments:" + poolKey, What: err.Error()})
 	}
 	defer rows.Close()
 
-	bidDB := map[string]int{}
+	investmentDB := map[string]int{}
 	for rows.Next() {
-		var entryID, schoolSlug string
-		var bid int
-		if err := rows.Scan(&entryID, &schoolSlug, &bid); err != nil {
-			return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
+		var portfolioID, schoolSlug string
+		var credits int
+		if err := rows.Scan(&portfolioID, &schoolSlug, &credits); err != nil {
+			return append(out, Mismatch{Where: "pool_investments:" + poolKey, What: err.Error()})
 		}
-		bidDB[entryID+":"+schoolSlug] = bid
+		investmentDB[portfolioID+":"+schoolSlug] = credits
 	}
 	if err := rows.Err(); err != nil {
-		return append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: err.Error()})
+		return append(out, Mismatch{Where: "pool_investments:" + poolKey, What: err.Error()})
 	}
 
-	// Build entry key to name mapping
-	entryNameByKey := make(map[string]string, len(entries))
-	for _, e := range entries {
-		entryNameByKey[e.Key] = e.Name
+	// Build portfolio key to name mapping
+	portfolioNameByKey := make(map[string]string, len(portfolios))
+	for _, pf := range portfolios {
+		portfolioNameByKey[pf.Key] = pf.Name
 	}
 
-	for _, b := range bids {
-		entryName, ok := entryNameByKey[b.EntryKey]
-		if !ok || entryName == "" {
-			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid references unknown entry_key %s", b.EntryKey)})
+	for _, inv := range investments {
+		portfolioName, ok := portfolioNameByKey[inv.PortfolioKey]
+		if !ok || portfolioName == "" {
+			out = append(out, Mismatch{Where: "pool_investments:" + poolKey, What: fmt.Sprintf("investment references unknown portfolio_key %s", inv.PortfolioKey)})
 			continue
 		}
-		entryID, ok := entryIDByName[entryName]
-		if !ok || entryID == "" {
-			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid entry %s not found in db", entryName)})
+		portfolioID, ok := portfolioIDByName[portfolioName]
+		if !ok || portfolioID == "" {
+			out = append(out, Mismatch{Where: "pool_investments:" + poolKey, What: fmt.Sprintf("investment portfolio %s not found in db", portfolioName)})
 			continue
 		}
-		k := entryID + ":" + b.SchoolSlug
-		v, ok := bidDB[k]
+		k := portfolioID + ":" + inv.SchoolSlug
+		v, ok := investmentDB[k]
 		if !ok {
-			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("missing bid %s", k)})
+			out = append(out, Mismatch{Where: "pool_investments:" + poolKey, What: fmt.Sprintf("missing investment %s", k)})
 			continue
 		}
-		if v != b.Bid {
-			out = append(out, Mismatch{Where: "calcutta_bids:" + calcuttaKey, What: fmt.Sprintf("bid mismatch %s db=%d bundle=%d", k, v, b.Bid)})
+		if v != inv.Credits {
+			out = append(out, Mismatch{Where: "pool_investments:" + poolKey, What: fmt.Sprintf("investment mismatch %s db=%d bundle=%d", k, v, inv.Credits)})
 		}
 	}
 	return out

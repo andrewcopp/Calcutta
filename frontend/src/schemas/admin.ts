@@ -85,7 +85,7 @@ export const TournamentImportReportSchema = z.object({
   schools: z.number(),
   tournaments: z.number(),
   tournamentTeams: z.number(),
-  calcuttas: z.number(),
+  pools: z.number(),
   entries: z.number(),
   bids: z.number(),
   payouts: z.number(),
@@ -212,7 +212,7 @@ export type UserProfileResponse = z.infer<typeof UserProfileResponseSchema>;
 
 export const RoleGrantSchema = z.object({
   key: z.string(),
-  scopeType: z.enum(['global', 'calcutta', 'tournament']),
+  scopeType: z.enum(['global', 'pool', 'tournament']),
   scopeId: z.string().optional(),
   scopeName: z.string().optional(),
 });

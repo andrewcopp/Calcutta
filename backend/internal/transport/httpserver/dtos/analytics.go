@@ -52,11 +52,11 @@ type SeedInvestmentPoint struct {
 	Seed             int     `json:"seed"`
 	TournamentName   string  `json:"tournamentName"`
 	TournamentYear   int     `json:"tournamentYear"`
-	CalcuttaID       string  `json:"calcuttaId"`
+	PoolID           string  `json:"poolId"`
 	TeamID           string  `json:"teamId"`
 	SchoolName       string  `json:"schoolName"`
 	TotalBid         float64 `json:"totalBid"`
-	CalcuttaTotalBid float64 `json:"calcuttaTotalBid"`
+	PoolTotalBid     float64 `json:"poolTotalBid"`
 	NormalizedBid    float64 `json:"normalizedBid"`
 }
 
@@ -80,15 +80,15 @@ type SeedInvestmentDistributionResponse struct {
 type BestTeam struct {
 	TournamentName   string  `json:"tournamentName"`
 	TournamentYear   int     `json:"tournamentYear"`
-	CalcuttaID       string  `json:"calcuttaId"`
+	PoolID           string  `json:"poolId"`
 	TeamID           string  `json:"teamId"`
 	SchoolName       string  `json:"schoolName"`
 	Seed             int     `json:"seed"`
 	Region           string  `json:"region"`
 	TeamPoints       float64 `json:"teamPoints"`
 	TotalBid         float64 `json:"totalBid"`
-	CalcuttaTotalBid float64 `json:"calcuttaTotalBid"`
-	CalcuttaTotalPts float64 `json:"calcuttaTotalPoints"`
+	PoolTotalBid     float64 `json:"poolTotalBid"`
+	PoolTotalPts     float64 `json:"poolTotalPoints"`
 	InvestmentShare  float64 `json:"investmentShare"`
 	PointsShare      float64 `json:"pointsShare"`
 	RawROI           float64 `json:"rawROI"`
@@ -102,15 +102,15 @@ type BestTeamsResponse struct {
 type BestInvestment struct {
 	TournamentName   string  `json:"tournamentName"`
 	TournamentYear   int     `json:"tournamentYear"`
-	CalcuttaID       string  `json:"calcuttaId"`
+	PoolID           string  `json:"poolId"`
 	TeamID           string  `json:"teamId"`
 	SchoolName       string  `json:"schoolName"`
 	Seed             int     `json:"seed"`
 	Region           string  `json:"region"`
 	TeamPoints       float64 `json:"teamPoints"`
 	TotalBid         float64 `json:"totalBid"`
-	CalcuttaTotalBid float64 `json:"calcuttaTotalBid"`
-	CalcuttaTotalPts float64 `json:"calcuttaTotalPoints"`
+	PoolTotalBid     float64 `json:"poolTotalBid"`
+	PoolTotalPts     float64 `json:"poolTotalPoints"`
 	InvestmentShare  float64 `json:"investmentShare"`
 	PointsShare      float64 `json:"pointsShare"`
 	RawROI           float64 `json:"rawROI"`
@@ -124,9 +124,9 @@ type BestInvestmentsResponse struct {
 type InvestmentLeaderboardRow struct {
 	TournamentName      string  `json:"tournamentName"`
 	TournamentYear      int     `json:"tournamentYear"`
-	CalcuttaID          string  `json:"calcuttaId"`
-	EntryID             string  `json:"entryId"`
-	EntryName           string  `json:"entryName"`
+	PoolID              string  `json:"poolId"`
+	PortfolioID         string  `json:"portfolioId"`
+	PortfolioName       string  `json:"portfolioName"`
 	TeamID              string  `json:"teamId"`
 	SchoolName          string  `json:"schoolName"`
 	Seed                int     `json:"seed"`
@@ -140,32 +140,32 @@ type InvestmentLeaderboardResponse struct {
 	Items []InvestmentLeaderboardRow `json:"items"`
 }
 
-type EntryLeaderboardRow struct {
+type PortfolioLeaderboardRow struct {
 	TournamentName    string  `json:"tournamentName"`
 	TournamentYear    int     `json:"tournamentYear"`
-	CalcuttaID        string  `json:"calcuttaId"`
-	EntryID           string  `json:"entryId"`
-	EntryName         string  `json:"entryName"`
+	PoolID            string  `json:"poolId"`
+	PortfolioID       string  `json:"portfolioId"`
+	PortfolioName     string  `json:"portfolioName"`
 	TotalReturns      float64 `json:"totalReturns"`
 	TotalParticipants int     `json:"totalParticipants"`
 	AverageReturns    float64 `json:"averageReturns"`
 	NormalizedReturns float64 `json:"normalizedReturns"`
 }
 
-type EntryLeaderboardResponse struct {
-	Items []EntryLeaderboardRow `json:"items"`
+type PortfolioLeaderboardResponse struct {
+	Items []PortfolioLeaderboardRow `json:"items"`
 }
 
 type CareerLeaderboardRow struct {
-	EntryName              string `json:"entryName"`
-	Years                  int    `json:"years"`
-	BestFinish             int    `json:"bestFinish"`
-	Wins                   int    `json:"wins"`
-	Podiums                int    `json:"podiums"`
-	InTheMoneys            int    `json:"inTheMoneys"`
-	Top10s                 int    `json:"top10s"`
-	CareerEarningsCents    int    `json:"careerEarningsCents"`
-	ActiveInLatestCalcutta bool   `json:"activeInLatestCalcutta"`
+	PortfolioName       string `json:"portfolioName"`
+	Years               int    `json:"years"`
+	BestFinish          int    `json:"bestFinish"`
+	Wins                int    `json:"wins"`
+	Podiums             int    `json:"podiums"`
+	InTheMoneys         int    `json:"inTheMoneys"`
+	Top10s              int    `json:"top10s"`
+	CareerEarningsCents int    `json:"careerEarningsCents"`
+	ActiveInLatestPool  bool   `json:"activeInLatestPool"`
 }
 
 type CareerLeaderboardResponse struct {

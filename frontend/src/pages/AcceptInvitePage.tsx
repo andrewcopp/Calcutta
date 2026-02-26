@@ -149,7 +149,7 @@ export function AcceptInvitePage() {
               <h2 className="text-2xl font-bold mb-2 text-center">Welcome, {preview.firstName}!</h2>
               <div className="text-center mb-6">
                 <p className="text-muted-foreground">
-                  You've been invited to <span className="font-semibold">"{preview.calcuttaName}"</span>
+                  You've been invited to <span className="font-semibold">"{preview.poolName}"</span>
                 </p>
                 <p className="text-muted-foreground text-sm">organized by {preview.commissionerName}</p>
                 {preview.tournamentStartingAt && (

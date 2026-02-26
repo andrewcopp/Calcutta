@@ -43,7 +43,7 @@ export function HallOfFamePage() {
   const filteredCareers = useMemo(() => {
     if (!bestCareersQuery.data) return [];
     return hideInactiveCareers
-      ? bestCareersQuery.data.items.filter((c) => c.activeInLatestCalcutta)
+      ? bestCareersQuery.data.items.filter((c) => c.activeInLatestPool)
       : bestCareersQuery.data.items;
   }, [bestCareersQuery.data, hideInactiveCareers]);
 
@@ -156,7 +156,7 @@ export function HallOfFamePage() {
             <h2 className="text-xl font-semibold mb-2">Best Careers</h2>
             <p className="text-sm text-muted-foreground mb-4">
               Who's been the most consistent over the years? Ranked by average annual performance, with tie breaks on
-              wins, podiums, payouts, and top-10 finishes.
+              wins, top-3 finishes, payouts, and top-10 finishes.
             </p>
 
             <div className="mb-4 flex items-center gap-2">

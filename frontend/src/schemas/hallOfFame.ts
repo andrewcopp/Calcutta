@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const InvestmentLeaderboardRowSchema = z.object({
   tournamentName: z.string(),
   tournamentYear: z.number(),
-  calcuttaId: z.string(),
+  poolId: z.string(),
   entryId: z.string(),
   entryName: z.string(),
   teamId: z.string(),
@@ -26,15 +26,15 @@ export type InvestmentLeaderboardResponse = z.infer<typeof InvestmentLeaderboard
 export const BestTeamSchema = z.object({
   tournamentName: z.string(),
   tournamentYear: z.number(),
-  calcuttaId: z.string(),
+  poolId: z.string(),
   teamId: z.string(),
   schoolName: z.string(),
   seed: z.number(),
   region: z.string(),
   teamPoints: z.number(),
   totalBid: z.number(),
-  calcuttaTotalBid: z.number(),
-  calcuttaTotalPoints: z.number(),
+  poolTotalBid: z.number(),
+  poolTotalPoints: z.number(),
   investmentShare: z.number(),
   pointsShare: z.number(),
   rawROI: z.number(),
@@ -52,7 +52,7 @@ export type BestTeamsResponse = z.infer<typeof BestTeamsResponseSchema>;
 export const EntryLeaderboardRowSchema = z.object({
   tournamentName: z.string(),
   tournamentYear: z.number(),
-  calcuttaId: z.string(),
+  poolId: z.string(),
   entryId: z.string(),
   entryName: z.string(),
   totalReturns: z.number(),
@@ -78,7 +78,7 @@ export const CareerLeaderboardRowSchema = z.object({
   inTheMoneys: z.number(),
   top10s: z.number(),
   careerEarningsCents: z.number(),
-  activeInLatestCalcutta: z.boolean(),
+  activeInLatestPool: z.boolean(),
 });
 
 export type CareerLeaderboardRow = z.infer<typeof CareerLeaderboardRowSchema>;

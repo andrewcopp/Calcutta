@@ -35,7 +35,7 @@ export function HeroSection({ scrollY, prefersReducedMotion, revealClass }: Hero
             </Link>
           </div>
           <div className={`transition-all duration-700 ease-out ${revealClass}`}>
-            <div className="text-xs font-semibold tracking-wider text-blue-200">CALCUTTA INVESTMENT POOL</div>
+            <div className="text-xs font-semibold tracking-wider text-blue-200">MARCH MARKETS</div>
             <h1 className="mt-4 text-5xl sm:text-6xl font-bold tracking-tight">
               Invest.
               <span className="text-blue-300"> Own.</span>

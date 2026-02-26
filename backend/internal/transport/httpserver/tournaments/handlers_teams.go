@@ -86,7 +86,7 @@ func (h *Handler) HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	team, err := h.app.Calcutta.GetTournamentTeam(r.Context(), teamID)
+	team, err := h.app.Pool.GetTournamentTeam(r.Context(), teamID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return

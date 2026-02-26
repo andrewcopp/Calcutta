@@ -86,15 +86,15 @@ func ToSeedInvestmentDistributionResponse(result *analytics.SeedInvestmentDistri
 	out.Items = make([]SeedInvestmentPoint, 0, len(result.Points))
 	for _, p := range result.Points {
 		out.Items = append(out.Items, SeedInvestmentPoint{
-			Seed:             p.Seed,
-			TournamentName:   p.TournamentName,
-			TournamentYear:   p.TournamentYear,
-			CalcuttaID:       p.CalcuttaID,
-			TeamID:           p.TeamID,
-			SchoolName:       p.SchoolName,
-			TotalBid:         p.TotalBid,
-			CalcuttaTotalBid: p.CalcuttaTotalBid,
-			NormalizedBid:    p.NormalizedBid,
+			Seed:           p.Seed,
+			TournamentName: p.TournamentName,
+			TournamentYear: p.TournamentYear,
+			PoolID:         p.PoolID,
+			TeamID:         p.TeamID,
+			SchoolName:     p.SchoolName,
+			TotalBid:       p.TotalBid,
+			PoolTotalBid:   p.PoolTotalBid,
+			NormalizedBid:  p.NormalizedBid,
 		})
 	}
 
@@ -120,21 +120,21 @@ func ToBestTeamsResponse(results []analytics.BestInvestmentResult) BestTeamsResp
 	out := BestTeamsResponse{Items: make([]BestTeam, 0, len(results))}
 	for _, bi := range results {
 		out.Items = append(out.Items, BestTeam{
-			TournamentName:   bi.TournamentName,
-			TournamentYear:   bi.TournamentYear,
-			CalcuttaID:       bi.CalcuttaID,
-			TeamID:           bi.TeamID,
-			SchoolName:       bi.SchoolName,
-			Seed:             bi.Seed,
-			Region:           bi.Region,
-			TeamPoints:       bi.TeamPoints,
-			TotalBid:         bi.TotalBid,
-			CalcuttaTotalBid: bi.CalcuttaTotalBid,
-			CalcuttaTotalPts: bi.CalcuttaTotalPts,
-			InvestmentShare:  bi.InvestmentShare,
-			PointsShare:      bi.PointsShare,
-			RawROI:           bi.RawROI,
-			NormalizedROI:    bi.NormalizedROI,
+			TournamentName:  bi.TournamentName,
+			TournamentYear:  bi.TournamentYear,
+			PoolID:          bi.PoolID,
+			TeamID:          bi.TeamID,
+			SchoolName:      bi.SchoolName,
+			Seed:            bi.Seed,
+			Region:          bi.Region,
+			TeamPoints:      bi.TeamPoints,
+			TotalBid:        bi.TotalBid,
+			PoolTotalBid:    bi.PoolTotalInvestment,
+			PoolTotalPts:    bi.PoolTotalPoints,
+			InvestmentShare: bi.InvestmentShare,
+			PointsShare:     bi.PointsShare,
+			RawROI:          bi.RawROI,
+			NormalizedROI:   bi.NormalizedROI,
 		})
 	}
 	return out
@@ -144,21 +144,21 @@ func ToBestInvestmentsResponse(results []analytics.BestInvestmentResult) BestInv
 	out := BestInvestmentsResponse{Items: make([]BestInvestment, 0, len(results))}
 	for _, bi := range results {
 		out.Items = append(out.Items, BestInvestment{
-			TournamentName:   bi.TournamentName,
-			TournamentYear:   bi.TournamentYear,
-			CalcuttaID:       bi.CalcuttaID,
-			TeamID:           bi.TeamID,
-			SchoolName:       bi.SchoolName,
-			Seed:             bi.Seed,
-			Region:           bi.Region,
-			TeamPoints:       bi.TeamPoints,
-			TotalBid:         bi.TotalBid,
-			CalcuttaTotalBid: bi.CalcuttaTotalBid,
-			CalcuttaTotalPts: bi.CalcuttaTotalPts,
-			InvestmentShare:  bi.InvestmentShare,
-			PointsShare:      bi.PointsShare,
-			RawROI:           bi.RawROI,
-			NormalizedROI:    bi.NormalizedROI,
+			TournamentName:  bi.TournamentName,
+			TournamentYear:  bi.TournamentYear,
+			PoolID:          bi.PoolID,
+			TeamID:          bi.TeamID,
+			SchoolName:      bi.SchoolName,
+			Seed:            bi.Seed,
+			Region:          bi.Region,
+			TeamPoints:      bi.TeamPoints,
+			TotalBid:        bi.TotalBid,
+			PoolTotalBid:    bi.PoolTotalInvestment,
+			PoolTotalPts:    bi.PoolTotalPoints,
+			InvestmentShare: bi.InvestmentShare,
+			PointsShare:     bi.PointsShare,
+			RawROI:          bi.RawROI,
+			NormalizedROI:   bi.NormalizedROI,
 		})
 	}
 	return out
@@ -170,9 +170,9 @@ func ToInvestmentLeaderboardResponse(results []analytics.InvestmentLeaderboardRe
 		out.Items = append(out.Items, InvestmentLeaderboardRow{
 			TournamentName:      inv.TournamentName,
 			TournamentYear:      inv.TournamentYear,
-			CalcuttaID:          inv.CalcuttaID,
-			EntryID:             inv.EntryID,
-			EntryName:           inv.EntryName,
+			PoolID:              inv.PoolID,
+			PortfolioID:         inv.PortfolioID,
+			PortfolioName:       inv.PortfolioName,
 			TeamID:              inv.TeamID,
 			SchoolName:          inv.SchoolName,
 			Seed:                inv.Seed,
@@ -185,15 +185,15 @@ func ToInvestmentLeaderboardResponse(results []analytics.InvestmentLeaderboardRe
 	return out
 }
 
-func ToEntryLeaderboardResponse(results []analytics.EntryLeaderboardResult) EntryLeaderboardResponse {
-	out := EntryLeaderboardResponse{Items: make([]EntryLeaderboardRow, 0, len(results))}
+func ToPortfolioLeaderboardResponse(results []analytics.EntryLeaderboardResult) PortfolioLeaderboardResponse {
+	out := PortfolioLeaderboardResponse{Items: make([]PortfolioLeaderboardRow, 0, len(results))}
 	for _, e := range results {
-		out.Items = append(out.Items, EntryLeaderboardRow{
+		out.Items = append(out.Items, PortfolioLeaderboardRow{
 			TournamentName:    e.TournamentName,
 			TournamentYear:    e.TournamentYear,
-			CalcuttaID:        e.CalcuttaID,
-			EntryID:           e.EntryID,
-			EntryName:         e.EntryName,
+			PoolID:            e.PoolID,
+			PortfolioID:       e.PortfolioID,
+			PortfolioName:     e.PortfolioName,
 			TotalReturns:      e.TotalReturns,
 			TotalParticipants: e.TotalParticipants,
 			AverageReturns:    e.AverageReturns,
@@ -207,15 +207,15 @@ func ToCareerLeaderboardResponse(results []analytics.CareerLeaderboardResult) Ca
 	out := CareerLeaderboardResponse{Items: make([]CareerLeaderboardRow, 0, len(results))}
 	for _, c := range results {
 		out.Items = append(out.Items, CareerLeaderboardRow{
-			EntryName:              c.EntryName,
-			Years:                  c.Years,
-			BestFinish:             c.BestFinish,
-			Wins:                   c.Wins,
-			Podiums:                c.Podiums,
-			InTheMoneys:            c.InTheMoneys,
-			Top10s:                 c.Top10s,
-			CareerEarningsCents:    c.CareerEarningsCents,
-			ActiveInLatestCalcutta: c.ActiveInLatestCalcutta,
+			PortfolioName:       c.PortfolioName,
+			Years:               c.Years,
+			BestFinish:          c.BestFinish,
+			Wins:                c.Wins,
+			Podiums:             c.Podiums,
+			InTheMoneys:         c.InTheMoneys,
+			Top10s:              c.Top10s,
+			CareerEarningsCents: c.CareerEarningsCents,
+			ActiveInLatestPool:  c.ActiveInLatestPool,
 		})
 	}
 	return out

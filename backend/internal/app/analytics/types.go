@@ -57,11 +57,11 @@ type SeedInvestmentPointResult struct {
 	Seed             int
 	TournamentName   string
 	TournamentYear   int
-	CalcuttaID       string
+	PoolID           string
 	TeamID           string
 	SchoolName       string
 	TotalBid         float64
-	CalcuttaTotalBid float64
+	PoolTotalBid     float64
 	NormalizedBid    float64
 }
 
@@ -80,30 +80,30 @@ type SeedInvestmentSummaryResult struct {
 
 // BestInvestmentResult holds data for a single top-performing investment.
 type BestInvestmentResult struct {
-	TournamentName   string
-	TournamentYear   int
-	CalcuttaID       string
-	TeamID           string
-	SchoolName       string
-	Seed             int
-	Region           string
-	TeamPoints       float64
-	TotalBid         float64
-	CalcuttaTotalBid float64
-	CalcuttaTotalPts float64
-	InvestmentShare  float64
-	PointsShare      float64
-	RawROI           float64
-	NormalizedROI    float64
+	TournamentName      string
+	TournamentYear      int
+	PoolID              string
+	TeamID              string
+	SchoolName          string
+	Seed                int
+	Region              string
+	TeamPoints          float64
+	TotalBid            float64
+	PoolTotalInvestment float64
+	PoolTotalPoints     float64
+	InvestmentShare     float64
+	PointsShare         float64
+	RawROI              float64
+	NormalizedROI       float64
 }
 
 // InvestmentLeaderboardResult holds data for a single investment bid leaderboard entry.
 type InvestmentLeaderboardResult struct {
 	TournamentName      string
 	TournamentYear      int
-	CalcuttaID          string
-	EntryID             string
-	EntryName           string
+	PoolID              string
+	PortfolioID         string
+	PortfolioName       string
 	TeamID              string
 	SchoolName          string
 	Seed                int
@@ -117,9 +117,9 @@ type InvestmentLeaderboardResult struct {
 type EntryLeaderboardResult struct {
 	TournamentName    string
 	TournamentYear    int
-	CalcuttaID        string
-	EntryID           string
-	EntryName         string
+	PoolID            string
+	PortfolioID       string
+	PortfolioName     string
 	TotalReturns      float64
 	TotalParticipants int
 	AverageReturns    float64
@@ -128,15 +128,15 @@ type EntryLeaderboardResult struct {
 
 // CareerLeaderboardResult holds career-level statistics for a participant.
 type CareerLeaderboardResult struct {
-	EntryName              string
-	Years                  int
-	BestFinish             int
-	Wins                   int
-	Podiums                int
-	InTheMoneys            int
-	Top10s                 int
-	CareerEarningsCents    int
-	ActiveInLatestCalcutta bool
+	PortfolioName       string
+	Years               int
+	BestFinish          int
+	Wins                int
+	Podiums             int
+	InTheMoneys         int
+	Top10s              int
+	CareerEarningsCents int
+	ActiveInLatestPool  bool
 }
 
 // AnalyticsResult holds the combined analytics results for all dimensions.

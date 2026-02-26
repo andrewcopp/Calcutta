@@ -29,7 +29,7 @@ export function EarnSection({ revealClass }: EarnSectionProps) {
       <div className={`transition-all duration-700 ease-out ${revealClass}`}>
         <div className="text-xs font-semibold tracking-wider text-blue-200">EARN</div>
         <div className="mt-3 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">Multiple paths to points</h2>
+          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">Multiple paths to returns</h2>
           <div className="text-sm text-white/70 max-w-md">
             Four archetypes can contribute in different ways — a small slice of a favorite, or a bigger slice of the
             right dark horse.
@@ -51,7 +51,7 @@ export function EarnSection({ revealClass }: EarnSectionProps) {
                   axisLine={{ stroke: 'rgba(255,255,255,0.25)' }}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`${value.toFixed(1)} points`, 'Contribution']}
+                  formatter={(value: number) => [`${value.toFixed(1)} returns`, 'Contribution']}
                   contentStyle={darkTooltipContentStyle}
                   labelStyle={darkTooltipLabelStyle}
                   itemStyle={darkTooltipItemStyle}

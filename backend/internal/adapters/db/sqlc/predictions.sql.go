@@ -286,18 +286,18 @@ func (q *Queries) GetPredictionBatchByID(ctx context.Context, dollar_1 string) (
 }
 
 const getScoringRulesForTournament = `-- name: GetScoringRulesForTournament :many
-SELECT csr.win_index::int, csr.points_awarded::int
-FROM core.calcutta_scoring_rules csr
-JOIN core.calcuttas c ON c.id = csr.calcutta_id AND c.deleted_at IS NULL
-WHERE c.tournament_id = $1::uuid
-    AND csr.deleted_at IS NULL
-ORDER BY csr.win_index ASC
+SELECT psr.win_index::int, psr.points_awarded::int
+FROM core.pool_scoring_rules psr
+JOIN core.pools p ON p.id = psr.pool_id AND p.deleted_at IS NULL
+WHERE p.tournament_id = $1::uuid
+    AND psr.deleted_at IS NULL
+ORDER BY psr.win_index ASC
 LIMIT 10
 `
 
 type GetScoringRulesForTournamentRow struct {
-	CsrWinIndex      int32
-	CsrPointsAwarded int32
+	PsrWinIndex      int32
+	PsrPointsAwarded int32
 }
 
 func (q *Queries) GetScoringRulesForTournament(ctx context.Context, dollar_1 string) ([]GetScoringRulesForTournamentRow, error) {
@@ -309,7 +309,7 @@ func (q *Queries) GetScoringRulesForTournament(ctx context.Context, dollar_1 str
 	var items []GetScoringRulesForTournamentRow
 	for rows.Next() {
 		var i GetScoringRulesForTournamentRow
-		if err := rows.Scan(&i.CsrWinIndex, &i.CsrPointsAwarded); err != nil {
+		if err := rows.Scan(&i.PsrWinIndex, &i.PsrPointsAwarded); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -391,9 +391,9 @@ WHERE t.deleted_at IS NULL
         WHERE tt.tournament_id = t.id AND ks.deleted_at IS NULL
     )
     AND EXISTS (
-        SELECT 1 FROM core.calcutta_scoring_rules csr
-        JOIN core.calcuttas c ON c.id = csr.calcutta_id AND c.deleted_at IS NULL
-        WHERE c.tournament_id = t.id AND csr.deleted_at IS NULL
+        SELECT 1 FROM core.pool_scoring_rules psr
+        JOIN core.pools p ON p.id = psr.pool_id AND p.deleted_at IS NULL
+        WHERE p.tournament_id = t.id AND psr.deleted_at IS NULL
     )
 `
 

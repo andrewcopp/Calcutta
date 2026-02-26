@@ -26,21 +26,21 @@ func (s *Service) GetBestInvestments(ctx context.Context, limit int) ([]BestInve
 	results := make([]BestInvestmentResult, 0, len(data))
 	for _, d := range data {
 		results = append(results, BestInvestmentResult{
-			TournamentName:   d.TournamentName,
-			TournamentYear:   d.TournamentYear,
-			CalcuttaID:       d.CalcuttaID,
-			TeamID:           d.TeamID,
-			SchoolName:       d.SchoolName,
-			Seed:             d.Seed,
-			Region:           d.Region,
-			TeamPoints:       d.TeamPoints,
-			TotalBid:         d.TotalBid,
-			CalcuttaTotalBid: d.CalcuttaTotalBid,
-			CalcuttaTotalPts: d.CalcuttaTotalPts,
-			InvestmentShare:  d.InvestmentShare,
-			PointsShare:      d.PointsShare,
-			RawROI:           d.RawROI,
-			NormalizedROI:    d.NormalizedROI,
+			TournamentName:      d.TournamentName,
+			TournamentYear:      d.TournamentYear,
+			PoolID:              d.PoolID,
+			TeamID:              d.TeamID,
+			SchoolName:          d.SchoolName,
+			Seed:                d.Seed,
+			Region:              d.Region,
+			TeamPoints:          d.TeamPoints,
+			TotalBid:            d.TotalBid,
+			PoolTotalInvestment: d.PoolTotalInvestment,
+			PoolTotalPoints:     d.PoolTotalPoints,
+			InvestmentShare:     d.InvestmentShare,
+			PointsShare:         d.PointsShare,
+			RawROI:              d.RawROI,
+			NormalizedROI:       d.NormalizedROI,
 		})
 	}
 
@@ -58,15 +58,15 @@ func (s *Service) GetBestCareers(ctx context.Context, limit int) ([]CareerLeader
 	results := make([]CareerLeaderboardResult, 0, len(data))
 	for _, d := range data {
 		results = append(results, CareerLeaderboardResult{
-			EntryName:              d.EntryName,
-			Years:                  d.Years,
-			BestFinish:             d.BestFinish,
-			Wins:                   d.Wins,
-			Podiums:                d.Podiums,
-			InTheMoneys:            d.InTheMoneys,
-			Top10s:                 d.Top10s,
-			CareerEarningsCents:    d.CareerEarningsCents,
-			ActiveInLatestCalcutta: d.ActiveInLatestCalcutta,
+			PortfolioName:       d.PortfolioName,
+			Years:               d.Years,
+			BestFinish:          d.BestFinish,
+			Wins:                d.Wins,
+			Podiums:             d.Podiums,
+			InTheMoneys:         d.InTheMoneys,
+			Top10s:              d.Top10s,
+			CareerEarningsCents: d.CareerEarningsCents,
+			ActiveInLatestPool:  d.ActiveInLatestPool,
 		})
 	}
 
@@ -86,9 +86,9 @@ func (s *Service) GetBestInvestmentBids(ctx context.Context, limit int) ([]Inves
 		results = append(results, InvestmentLeaderboardResult{
 			TournamentName:      d.TournamentName,
 			TournamentYear:      d.TournamentYear,
-			CalcuttaID:          d.CalcuttaID,
-			EntryID:             d.EntryID,
-			EntryName:           d.EntryName,
+			PoolID:              d.PoolID,
+			PortfolioID:         d.PortfolioID,
+			PortfolioName:       d.PortfolioName,
 			TeamID:              d.TeamID,
 			SchoolName:          d.SchoolName,
 			Seed:                d.Seed,
@@ -115,9 +115,9 @@ func (s *Service) GetBestEntries(ctx context.Context, limit int) ([]EntryLeaderb
 		results = append(results, EntryLeaderboardResult{
 			TournamentName:    d.TournamentName,
 			TournamentYear:    d.TournamentYear,
-			CalcuttaID:        d.CalcuttaID,
-			EntryID:           d.EntryID,
-			EntryName:         d.EntryName,
+			PoolID:            d.PoolID,
+			PortfolioID:       d.PortfolioID,
+			PortfolioName:     d.PortfolioName,
 			TotalReturns:      d.TotalReturns,
 			TotalParticipants: d.TotalParticipants,
 			AverageReturns:    d.AverageReturns,
@@ -139,15 +139,15 @@ func (s *Service) GetSeedInvestmentDistribution(ctx context.Context) (*SeedInves
 
 	for _, d := range data {
 		points = append(points, SeedInvestmentPointResult{
-			Seed:             d.Seed,
-			TournamentName:   d.TournamentName,
-			TournamentYear:   d.TournamentYear,
-			CalcuttaID:       d.CalcuttaID,
-			TeamID:           d.TeamID,
-			SchoolName:       d.SchoolName,
-			TotalBid:         d.TotalBid,
-			CalcuttaTotalBid: d.CalcuttaTotalBid,
-			NormalizedBid:    d.NormalizedBid,
+			Seed:           d.Seed,
+			TournamentName: d.TournamentName,
+			TournamentYear: d.TournamentYear,
+			PoolID:         d.PoolID,
+			TeamID:         d.TeamID,
+			SchoolName:     d.SchoolName,
+			TotalBid:       d.TotalBid,
+			PoolTotalBid:   d.PoolTotalBid,
+			NormalizedBid:  d.NormalizedBid,
 		})
 
 		bySeed[d.Seed] = append(bySeed[d.Seed], d.NormalizedBid)

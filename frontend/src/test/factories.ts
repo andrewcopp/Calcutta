@@ -1,68 +1,68 @@
 import type {
-  Calcutta,
-  CalcuttaDashboard,
-  CalcuttaEntry,
-  CalcuttaEntryTeam,
-  CalcuttaPortfolio,
-  CalcuttaPortfolioTeam,
-} from '../schemas/calcutta';
+  Pool,
+  PoolDashboard,
+  Portfolio,
+  Investment,
+  OwnershipSummary,
+  OwnershipDetail,
+} from '../schemas/pool';
 import type { TournamentTeam } from '../schemas/tournament';
 
-export function makeCalcutta(overrides: Partial<Calcutta> = {}): Calcutta {
+export function makePool(overrides: Partial<Pool> = {}): Pool {
   return {
-    id: 'calc-1',
-    name: 'Test Calcutta',
+    id: 'pool-1',
+    name: 'Test Pool',
     tournamentId: 'tourn-1',
     ownerId: 'owner-1',
     minTeams: 3,
     maxTeams: 10,
-    maxBidPoints: 50,
-    budgetPoints: 100,
+    maxInvestmentCredits: 50,
+    budgetCredits: 100,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
 
-export function makeEntry(overrides: Partial<CalcuttaEntry> & { id: string }): CalcuttaEntry {
+export function makePortfolio(overrides: Partial<Portfolio> & { id: string }): Portfolio {
   return {
-    name: 'Entry',
-    calcuttaId: 'calc-1',
+    name: 'Portfolio',
+    poolId: 'pool-1',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
 
-export function makeEntryTeam(
-  overrides: Partial<CalcuttaEntryTeam> & { id: string; entryId: string; teamId: string },
-): CalcuttaEntryTeam {
+export function makeInvestment(
+  overrides: Partial<Investment> & { id: string; portfolioId: string; teamId: string },
+): Investment {
   return {
-    bidPoints: 10,
+    credits: 10,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
 
-export function makePortfolio(
-  overrides: Partial<CalcuttaPortfolio> & { id: string; entryId: string },
-): CalcuttaPortfolio {
+export function makeOwnershipSummary(
+  overrides: Partial<OwnershipSummary> & { id: string; portfolioId: string },
+): OwnershipSummary {
   return {
-    maximumPoints: 100,
+    maximumReturns: 100,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
 
-export function makePortfolioTeam(
-  overrides: Partial<CalcuttaPortfolioTeam> & { id: string; portfolioId: string; teamId: string },
-): CalcuttaPortfolioTeam {
+export function makeOwnershipDetail(
+  overrides: Partial<OwnershipDetail> & { id: string; ownershipSummaryId: string; teamId: string },
+): OwnershipDetail {
   return {
     ownershipPercentage: 1,
-    actualPoints: 0,
-    expectedPoints: 0,
+    actualReturns: 0,
+    expectedReturns: 0,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -85,15 +85,15 @@ export function makeTournamentTeam(
   };
 }
 
-export function makeDashboard(overrides: Partial<CalcuttaDashboard> = {}): CalcuttaDashboard {
+export function makeDashboard(overrides: Partial<PoolDashboard> = {}): PoolDashboard {
   return {
-    calcutta: makeCalcutta(),
-    biddingOpen: false,
-    totalEntries: 0,
-    entries: [],
-    entryTeams: [],
+    pool: makePool(),
+    investingOpen: false,
+    totalPortfolios: 0,
     portfolios: [],
-    portfolioTeams: [],
+    investments: [],
+    ownershipSummaries: [],
+    ownershipDetails: [],
     schools: [],
     tournamentTeams: [],
     roundStandings: [],

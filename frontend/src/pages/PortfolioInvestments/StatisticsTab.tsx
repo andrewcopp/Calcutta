@@ -1,0 +1,67 @@
+import { Investment, OwnershipSummary, OwnershipDetail } from '../../schemas/pool';
+import type { TournamentTeam } from '../../schemas/tournament';
+import { Card } from '../../components/ui/Card';
+import { PortfolioScores } from './PortfolioScores';
+
+type StatisticsTabProps = {
+  ownershipSummaries: OwnershipSummary[];
+  ownershipDetails: OwnershipDetail[];
+  teams: Investment[];
+  tournamentTeams: TournamentTeam[];
+  schools: { id: string; name: string }[];
+};
+
+export function StatisticsTab({ ownershipSummaries, ownershipDetails, teams, tournamentTeams, schools }: StatisticsTabProps) {
+  if (ownershipSummaries.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm py-4">
+        No portfolio statistics available yet. Stats light up after tip-off.
+      </p>
+    );
+  }
+
+  const ownershipSummary = ownershipSummaries[0];
+
+  const totalInvestment = teams.reduce((sum, t) => sum + t.credits, 0);
+  const actualReturns = ownershipDetails.reduce((sum, pt) => sum + pt.actualReturns, 0);
+  const expectedReturns = ownershipDetails.reduce((sum, pt) => sum + pt.expectedReturns, 0);
+
+  const eliminatedSet = new Set(tournamentTeams.filter((tt) => tt.isEliminated).map((tt) => tt.id));
+  const teamsAlive = ownershipDetails.filter((pt) => !eliminatedSet.has(pt.teamId)).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card padding="compact">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Total Invested</p>
+          <p className="text-2xl font-bold text-foreground">{totalInvestment}</p>
+          <p className="text-xs text-muted-foreground mt-1">credits spent</p>
+        </Card>
+        <Card padding="compact">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Earned Returns</p>
+          <p className="text-2xl font-bold text-foreground">{actualReturns.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">earned so far</p>
+        </Card>
+        <Card padding="compact">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Projected Returns</p>
+          <p className="text-2xl font-bold text-foreground">{expectedReturns.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">if all teams win out</p>
+        </Card>
+        <Card padding="compact">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Teams Alive</p>
+          <p className="text-2xl font-bold text-foreground">
+            {teamsAlive} <span className="text-base font-normal text-muted-foreground">of {ownershipDetails.length}</span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">still competing</p>
+        </Card>
+      </div>
+
+      <PortfolioScores
+        ownershipSummary={ownershipSummary}
+        teams={ownershipDetails}
+        tournamentTeams={tournamentTeams}
+        schools={schools}
+      />
+    </div>
+  );
+}

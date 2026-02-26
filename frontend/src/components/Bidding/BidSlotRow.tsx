@@ -2,11 +2,11 @@ import React, { useRef, useEffect } from 'react';
 import { Combobox } from '../ui/Combobox';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/cn';
-import type { BidSlot, TeamComboboxOption, TeamWithSchool } from '../../hooks/useBidding';
+import type { InvestmentSlot, TeamComboboxOption, TeamWithSchool } from '../../hooks/useInvesting';
 
 interface BidSlotRowProps {
   slotIndex: number;
-  slot: BidSlot;
+  slot: InvestmentSlot;
   teamOptions: TeamComboboxOption[];
   usedTeamIds: Set<string>;
   teams: TeamWithSchool[];
@@ -69,10 +69,10 @@ function BidSlotRowComponent({
   };
 
   const validationError =
-    slot.bidAmount > 0
-      ? slot.bidAmount < minBid
+    slot.investmentAmount > 0
+      ? slot.investmentAmount < minBid
         ? `Min ${minBid} credits`
-        : slot.bidAmount > maxBidPoints
+        : slot.investmentAmount > maxBidPoints
           ? `Max ${maxBidPoints} credits`
           : undefined
       : undefined;
@@ -102,7 +102,7 @@ function BidSlotRowComponent({
                   min="0"
                   max={maxBidPoints}
                   step="1"
-                  value={slot.bidAmount || ''}
+                  value={slot.investmentAmount || ''}
                   onChange={handleBidChange}
                   placeholder="0"
                   className={cn('pr-10 text-right', {

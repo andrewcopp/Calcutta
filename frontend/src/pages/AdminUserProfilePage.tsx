@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
-import { calcuttaService } from '../services/calcuttaService';
+import { poolService } from '../services/poolService';
 import { tournamentService } from '../services/tournamentService';
 import { queryKeys } from '../queryKeys';
 import { toast } from '../lib/toast';
@@ -19,14 +19,14 @@ import { Select } from '../components/ui/Select';
 import { formatDate } from '../utils/format';
 import type { RoleGrant } from '../schemas/admin';
 
-const ALL_ROLES = ['site_admin', 'tournament_admin', 'calcutta_admin', 'player', 'user_manager'];
+const ALL_ROLES = ['site_admin', 'tournament_admin', 'pool_admin', 'player', 'user_manager'];
 
 const ROLE_SCOPES: Record<string, string[]> = {
   site_admin: ['global'],
   user_manager: ['global'],
-  calcutta_admin: ['global', 'calcutta'],
+  pool_admin: ['global', 'pool'],
   tournament_admin: ['global', 'tournament'],
-  player: ['global', 'calcutta'],
+  player: ['global', 'pool'],
 };
 
 function roleGrantKey(g: RoleGrant): string {
@@ -57,7 +57,7 @@ export function AdminUserProfilePage() {
   const queryClient = useQueryClient();
   const canWrite = useHasPermission(PERMISSIONS.ADMIN_USERS_WRITE);
   const [selectedRole, setSelectedRole] = useState('');
-  const [selectedScopeType, setSelectedScopeType] = useState<'global' | 'calcutta' | 'tournament'>('global');
+  const [selectedScopeType, setSelectedScopeType] = useState<'global' | 'pool' | 'tournament'>('global');
   const [selectedScopeId, setSelectedScopeId] = useState('');
 
   const userQuery = useQuery({
@@ -66,9 +66,9 @@ export function AdminUserProfilePage() {
     enabled: Boolean(userId),
   });
 
-  const calcuttasQuery = useQuery({
-    queryKey: queryKeys.calcuttas.all(),
-    queryFn: () => calcuttaService.getAllCalcuttas(),
+  const poolsQuery = useQuery({
+    queryKey: queryKeys.pools.all(),
+    queryFn: () => poolService.getAllPools(),
     enabled: canWrite,
   });
 
@@ -113,7 +113,7 @@ export function AdminUserProfilePage() {
   function handleRoleChange(role: string) {
     setSelectedRole(role);
     const scopes = ROLE_SCOPES[role] ?? ['global'];
-    setSelectedScopeType(scopes.length === 1 ? (scopes[0] as 'global' | 'calcutta' | 'tournament') : 'global');
+    setSelectedScopeType(scopes.length === 1 ? (scopes[0] as 'global' | 'pool' | 'tournament') : 'global');
     setSelectedScopeId('');
   }
 
@@ -207,7 +207,7 @@ export function AdminUserProfilePage() {
                   <Select
                     value={selectedScopeType}
                     onChange={(e) => {
-                      setSelectedScopeType(e.target.value as 'global' | 'calcutta' | 'tournament');
+                      setSelectedScopeType(e.target.value as 'global' | 'pool' | 'tournament');
                       setSelectedScopeId('');
                     }}
                     className="w-40"
@@ -220,10 +220,10 @@ export function AdminUserProfilePage() {
                   </Select>
                 )}
 
-                {selectedRole && selectedScopeType === 'calcutta' && (
+                {selectedRole && selectedScopeType === 'pool' && (
                   <Select value={selectedScopeId} onChange={(e) => setSelectedScopeId(e.target.value)} className="w-48">
-                    <option value="">Select calcutta...</option>
-                    {(calcuttasQuery.data ?? []).map((c) => (
+                    <option value="">Select pool...</option>
+                    {(poolsQuery.data ?? []).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>

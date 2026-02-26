@@ -41,7 +41,7 @@ func ExportToDir(ctx context.Context, pool *pgxpool.Pool, outDir string, generat
 	if err := exportTournaments(ctx, pool, outDir, generatedAt); err != nil {
 		return err
 	}
-	if err := exportCalcuttas(ctx, pool, outDir, generatedAt); err != nil {
+	if err := exportPools(ctx, pool, outDir, generatedAt); err != nil {
 		return err
 	}
 	return nil
@@ -179,53 +179,53 @@ func loadTournamentTeams(ctx context.Context, pool *pgxpool.Pool, tournamentID s
 	return out, nil
 }
 
-func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time) error {
+func exportPools(ctx context.Context, pool *pgxpool.Pool, outDir string, generatedAt time.Time) error {
 	r, err := pool.Query(ctx, `
 		SELECT
-			c.id,
-			c.name,
-			c.owner_id,
+			p.id,
+			p.name,
+			p.owner_id,
 			t.import_key,
 			comp.name || ' (' || seas.year || ')' AS tournament_name,
 			COALESCE(u.email, ''),
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
-		FROM core.calcuttas c
-		JOIN core.tournaments t ON t.id = c.tournament_id
+		FROM core.pools p
+		JOIN core.tournaments t ON t.id = p.tournament_id
 		JOIN core.competitions comp ON comp.id = t.competition_id
 		JOIN core.seasons seas ON seas.id = t.season_id
-		JOIN core.users u ON u.id = c.owner_id
-		WHERE c.deleted_at IS NULL AND t.deleted_at IS NULL AND u.deleted_at IS NULL
-		ORDER BY seas.year ASC, c.created_at ASC
+		JOIN core.users u ON u.id = p.owner_id
+		WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL AND u.deleted_at IS NULL
+		ORDER BY seas.year ASC, p.created_at ASC
 	`)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
-	usedCalcuttaKeysByTournament := make(map[string]map[string]int)
+	usedPoolKeysByTournament := make(map[string]map[string]int)
 
 	for r.Next() {
-		var calcuttaID, calcuttaName, ownerID, tournamentKey, tournamentName string
+		var poolID, poolName, ownerID, tournamentKey, tournamentName string
 		var email, first, last string
-		if err := r.Scan(&calcuttaID, &calcuttaName, &ownerID, &tournamentKey, &tournamentName, &email, &first, &last); err != nil {
+		if err := r.Scan(&poolID, &poolName, &ownerID, &tournamentKey, &tournamentName, &email, &first, &last); err != nil {
 			return err
 		}
 
-		if usedCalcuttaKeysByTournament[tournamentKey] == nil {
-			usedCalcuttaKeysByTournament[tournamentKey] = make(map[string]int)
+		if usedPoolKeysByTournament[tournamentKey] == nil {
+			usedPoolKeysByTournament[tournamentKey] = make(map[string]int)
 		}
-		calcuttaKey := uniquifyKey("calcutta-"+slugify(calcuttaName), usedCalcuttaKeysByTournament[tournamentKey])
+		poolKey := uniquifyKey("pool-"+slugify(poolName), usedPoolKeysByTournament[tournamentKey])
 
-		rounds, err := loadScoringRules(ctx, pool, calcuttaID)
+		rounds, err := loadScoringRules(ctx, pool, poolID)
 		if err != nil {
 			return err
 		}
-		payouts, err := loadCalcuttaPayouts(ctx, pool, calcuttaID)
+		payouts, err := loadPoolPayouts(ctx, pool, poolID)
 		if err != nil {
 			return err
 		}
-		entries, bids, err := loadCalcuttaEntriesAndBids(ctx, pool, calcuttaID, calcuttaKey)
+		portfolios, investments, err := loadPoolPortfoliosAndInvestments(ctx, pool, poolID, poolKey)
 		if err != nil {
 			return err
 		}
@@ -241,22 +241,22 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 			owner.LastName = &last
 		}
 
-		bundle := bundles.CalcuttaBundle{
+		bundle := bundles.PoolBundle{
 			Version:     1,
 			GeneratedAt: generatedAt,
 			Tournament:  bundles.TournamentRef{ImportKey: tournamentKey, Name: tournamentName},
-			Calcutta: bundles.CalcuttaRecord{
-				Key:   calcuttaKey,
-				Name:  calcuttaName,
+			Pool: bundles.PoolRecord{
+				Key:   poolKey,
+				Name:  poolName,
 				Owner: owner,
 			},
-			Rounds:  rounds,
-			Payouts: payouts,
-			Entries: entries,
-			Bids:    bids,
+			Rounds:      rounds,
+			Payouts:     payouts,
+			Portfolios:  portfolios,
+			Investments: investments,
 		}
 
-		path := filepath.Join(outDir, "calcuttas", tournamentKey, fmt.Sprintf("%s.json", calcuttaKey))
+		path := filepath.Join(outDir, "pools", tournamentKey, fmt.Sprintf("%s.json", poolKey))
 		if err := bundles.WriteJSON(path, bundle); err != nil {
 			return err
 		}
@@ -264,8 +264,8 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 	return r.Err()
 }
 
-func loadScoringRules(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]bundles.RoundRecord, error) {
-	r, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.calcutta_scoring_rules WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY win_index ASC`, calcuttaID)
+func loadScoringRules(ctx context.Context, pool *pgxpool.Pool, poolID string) ([]bundles.RoundRecord, error) {
+	r, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.pool_scoring_rules WHERE pool_id = $1 AND deleted_at IS NULL ORDER BY win_index ASC`, poolID)
 	if err != nil {
 		return nil, err
 	}
@@ -282,8 +282,8 @@ func loadScoringRules(ctx context.Context, pool *pgxpool.Pool, calcuttaID string
 	return out, r.Err()
 }
 
-func loadCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]bundles.PayoutRecord, error) {
-	r, err := pool.Query(ctx, `SELECT position, amount_cents FROM core.payouts WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY position ASC`, calcuttaID)
+func loadPoolPayouts(ctx context.Context, pool *pgxpool.Pool, poolID string) ([]bundles.PayoutRecord, error) {
+	r, err := pool.Query(ctx, `SELECT position, amount_cents FROM core.payouts WHERE pool_id = $1 AND deleted_at IS NULL ORDER BY position ASC`, poolID)
 	if err != nil {
 		return nil, err
 	}
@@ -300,39 +300,39 @@ func loadCalcuttaPayouts(ctx context.Context, pool *pgxpool.Pool, calcuttaID str
 	return out, r.Err()
 }
 
-func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, calcuttaKey string) ([]bundles.EntryRecord, []bundles.EntryTeamBid, error) {
+func loadPoolPortfoliosAndInvestments(ctx context.Context, pool *pgxpool.Pool, poolID string, poolKey string) ([]bundles.PortfolioRecord, []bundles.InvestmentRecord, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			e.id,
-			e.name,
+			p.id,
+			p.name,
 			COALESCE(u.email, ''),
 			COALESCE(u.first_name, ''),
 			COALESCE(u.last_name, '')
-		FROM core.entries e
-		LEFT JOIN core.users u ON u.id = e.user_id
-		WHERE e.calcutta_id = $1 AND e.deleted_at IS NULL
-		ORDER BY e.created_at ASC
-	`, calcuttaID)
+		FROM core.portfolios p
+		LEFT JOIN core.users u ON u.id = p.user_id
+		WHERE p.pool_id = $1 AND p.deleted_at IS NULL
+		ORDER BY p.created_at ASC
+	`, poolID)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer r.Close()
 
-	usedEntryKeys := make(map[string]int)
-	entryKeyByEntryID := make(map[string]string)
+	usedPortfolioKeys := make(map[string]int)
+	portfolioKeyByPortfolioID := make(map[string]string)
 
-	entries := make([]bundles.EntryRecord, 0)
+	portfolios := make([]bundles.PortfolioRecord, 0)
 	for r.Next() {
-		var entryID, name string
+		var portfolioID, name string
 		var email, first, last string
-		if err := r.Scan(&entryID, &name, &email, &first, &last); err != nil {
+		if err := r.Scan(&portfolioID, &name, &email, &first, &last); err != nil {
 			return nil, nil, err
 		}
 
-		base := "entry-" + slugify(name)
-		entryKey := uniquifyKey(base, usedEntryKeys)
-		entryKey = fmt.Sprintf("%s:%s", calcuttaKey, entryKey)
-		entryKeyByEntryID[entryID] = entryKey
+		base := "portfolio-" + slugify(name)
+		portfolioKey := uniquifyKey(base, usedPortfolioKeys)
+		portfolioKey = fmt.Sprintf("%s:%s", poolKey, portfolioKey)
+		portfolioKeyByPortfolioID[portfolioID] = portfolioKey
 
 		var userName *string
 		if first != "" || last != "" {
@@ -347,48 +347,48 @@ func loadCalcuttaEntriesAndBids(ctx context.Context, pool *pgxpool.Pool, calcutt
 			userEmail = &email
 		}
 
-		entries = append(entries, bundles.EntryRecord{Key: entryKey, Name: name, UserName: userName, UserEmail: userEmail})
+		portfolios = append(portfolios, bundles.PortfolioRecord{Key: portfolioKey, Name: name, UserName: userName, UserEmail: userEmail})
 	}
 	if err := r.Err(); err != nil {
 		return nil, nil, err
 	}
 
-	bids, err := loadCalcuttaBids(ctx, pool, calcuttaID, entryKeyByEntryID)
+	investments, err := loadPoolInvestments(ctx, pool, poolID, portfolioKeyByPortfolioID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Key < entries[j].Key })
-	return entries, bids, nil
+	sort.Slice(portfolios, func(i, j int) bool { return portfolios[i].Key < portfolios[j].Key })
+	return portfolios, investments, nil
 }
 
-func loadCalcuttaBids(ctx context.Context, pool *pgxpool.Pool, calcuttaID string, entryKeyByEntryID map[string]string) ([]bundles.EntryTeamBid, error) {
+func loadPoolInvestments(ctx context.Context, pool *pgxpool.Pool, poolID string, portfolioKeyByPortfolioID map[string]string) ([]bundles.InvestmentRecord, error) {
 	r, err := pool.Query(ctx, `
 		SELECT
-			et.entry_id,
-			et.bid_points,
+			inv.portfolio_id,
+			inv.credits,
 			s.slug
-		FROM core.entry_teams et
-		JOIN core.entries e ON e.id = et.entry_id
-		JOIN core.teams t ON t.id = et.team_id
+		FROM core.investments inv
+		JOIN core.portfolios p ON p.id = inv.portfolio_id
+		JOIN core.teams t ON t.id = inv.team_id
 		JOIN core.schools s ON s.id = t.school_id
-		WHERE e.calcutta_id = $1 AND et.deleted_at IS NULL AND t.deleted_at IS NULL AND s.deleted_at IS NULL AND e.deleted_at IS NULL
-		ORDER BY e.created_at ASC, s.name ASC
-	`, calcuttaID)
+		WHERE p.pool_id = $1 AND inv.deleted_at IS NULL AND t.deleted_at IS NULL AND s.deleted_at IS NULL AND p.deleted_at IS NULL
+		ORDER BY p.created_at ASC, s.name ASC
+	`, poolID)
 	if err != nil {
 		return nil, err
 	}
 	defer r.Close()
 
-	out := make([]bundles.EntryTeamBid, 0)
+	out := make([]bundles.InvestmentRecord, 0)
 	for r.Next() {
-		var entryID, schoolSlug string
-		var bid int
-		if err := r.Scan(&entryID, &bid, &schoolSlug); err != nil {
+		var portfolioID, schoolSlug string
+		var credits int
+		if err := r.Scan(&portfolioID, &credits, &schoolSlug); err != nil {
 			return nil, err
 		}
-		entryKey := entryKeyByEntryID[entryID]
-		out = append(out, bundles.EntryTeamBid{EntryKey: entryKey, SchoolSlug: schoolSlug, Bid: bid})
+		portfolioKey := portfolioKeyByPortfolioID[portfolioID]
+		out = append(out, bundles.InvestmentRecord{PortfolioKey: portfolioKey, SchoolSlug: schoolSlug, Credits: credits})
 	}
 	if err := r.Err(); err != nil {
 		return nil, err

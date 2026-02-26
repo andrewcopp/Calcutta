@@ -2,8 +2,8 @@ package httpserver
 
 import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
-	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/calcuttas"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/lab"
+	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/pools"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/tournaments"
 	"github.com/gorilla/mux"
 )
@@ -56,26 +56,26 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 
 	s.registerBracketRoutes(r)
 
-	cHandler := calcuttas.NewHandlerWithAuthUserID(s.app, s.authzRepo, s.authzRepo, authUserID)
-	calcuttas.RegisterRoutes(r, calcuttas.Handlers{
-		ListCalcuttas:             cHandler.HandleListCalcuttas,
-		CreateCalcutta:            cHandler.HandleCreateCalcutta,
-		GetCalcutta:               cHandler.HandleGetCalcutta,
-		GetDashboard:              cHandler.HandleGetDashboard,
-		UpdateCalcutta:            cHandler.HandleUpdateCalcutta,
-		ListCalcuttaEntries:       cHandler.HandleListCalcuttaEntries,
-		CreateEntry:               cHandler.HandleCreateEntry,
-		CreateInvitation:          cHandler.HandleCreateInvitation,
-		ListInvitations:           cHandler.HandleListInvitations,
-		AcceptInvitation:          cHandler.HandleAcceptInvitation,
-		RevokeInvitation:          cHandler.HandleRevokeInvitation,
-		ListMyInvitations:         cHandler.HandleListMyInvitations,
-		ListEntryTeams:            cHandler.HandleListEntryTeams,
-		ListEntryPortfolios:       cHandler.HandleListEntryPortfolios,
-		UpdateEntry:               idempotencyMiddleware(s.idempotencyRepo, cHandler.HandleUpdateEntry),
-		Reinvite:                  cHandler.HandleReinvite,
-		ListPayouts:               cHandler.HandleListPayouts,
-		ReplacePayouts:            cHandler.HandleReplacePayouts,
+	pHandler := pools.NewHandlerWithAuthUserID(s.app, s.authzRepo, s.authzRepo, authUserID)
+	pools.RegisterRoutes(r, pools.Handlers{
+		ListPools:               pHandler.HandleListPools,
+		CreatePool:              pHandler.HandleCreatePool,
+		GetPool:                 pHandler.HandleGetPool,
+		GetDashboard:            pHandler.HandleGetDashboard,
+		UpdatePool:              pHandler.HandleUpdatePool,
+		ListPortfolios:          pHandler.HandleListPortfolios,
+		CreatePortfolio:         pHandler.HandleCreatePortfolio,
+		CreateInvitation:        pHandler.HandleCreateInvitation,
+		ListInvitations:         pHandler.HandleListInvitations,
+		AcceptInvitation:        pHandler.HandleAcceptInvitation,
+		RevokeInvitation:        pHandler.HandleRevokeInvitation,
+		ListMyInvitations:       pHandler.HandleListMyInvitations,
+		ListInvestments:         pHandler.HandleListInvestments,
+		ListOwnership:           pHandler.HandleListOwnership,
+		UpdatePortfolio:         idempotencyMiddleware(s.idempotencyRepo, pHandler.HandleUpdatePortfolio),
+		Reinvite:                pHandler.HandleReinvite,
+		ListPayouts:             pHandler.HandleListPayouts,
+		ReplacePayouts:          pHandler.HandleReplacePayouts,
 	})
 
 	// Lab endpoints (lab.* schema)
@@ -98,7 +98,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		GetEvaluationSummary:       s.requirePermission("lab.read", labHandler.HandleGetEvaluationSummary),
 	})
 
-	s.registerCalcuttaCoManagerRoutes(r)
+	s.registerPoolCoManagerRoutes(r)
 	s.registerTournamentModeratorRoutes(r)
 	s.registerAnalyticsRoutes(r)
 	s.registerHallOfFameRoutes(r)
@@ -123,12 +123,6 @@ func (s *Server) registerBracketRoutes(r *mux.Router) {
 	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
-}
-
-func (s *Server) registerCalcuttaCoManagerRoutes(r *mux.Router) {
-	r.HandleFunc("/api/v1/calcuttas/{id}/co-managers", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.listCalcuttaCoManagersHandler)).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/calcuttas/{id}/co-managers", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.grantCalcuttaCoManagerHandler)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/calcuttas/{id}/co-managers/{userId}", s.requirePermissionWithScope("calcutta.config.write", "calcutta", "id", s.revokeCalcuttaCoManagerHandler)).Methods("DELETE", "OPTIONS")
 }
 
 func (s *Server) registerTournamentModeratorRoutes(r *mux.Router) {

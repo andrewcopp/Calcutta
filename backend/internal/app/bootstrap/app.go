@@ -8,7 +8,7 @@ import (
 	appanalytics "github.com/andrewcopp/Calcutta/backend/internal/app/analytics"
 	appauth "github.com/andrewcopp/Calcutta/backend/internal/app/auth"
 	appbracket "github.com/andrewcopp/Calcutta/backend/internal/app/bracket"
-	appcalcutta "github.com/andrewcopp/Calcutta/backend/internal/app/calcutta"
+	apppool "github.com/andrewcopp/Calcutta/backend/internal/app/pool"
 	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
 	appprediction "github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	appschool "github.com/andrewcopp/Calcutta/backend/internal/app/school"
@@ -24,16 +24,16 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	dbSchoolRepo := dbadapters.NewSchoolRepository(pool)
 	dbTournamentRepo := dbadapters.NewTournamentRepository(pool)
 
-	calcuttaRepo := dbadapters.NewCalcuttaRepository(pool)
-	invitationRepo := dbadapters.NewCalcuttaInvitationRepository(pool)
-	calcuttaService := appcalcutta.New(appcalcutta.Ports{
-		Calcuttas:       calcuttaRepo,
-		Entries:         calcuttaRepo,
-		Payouts:         calcuttaRepo,
-		PortfolioReader: calcuttaRepo,
-		ScoringRules:    calcuttaRepo,
-		TeamReader:      calcuttaRepo,
-		Invitations:     invitationRepo,
+	poolRepo := dbadapters.NewPoolRepository(pool)
+	invitationRepo := dbadapters.NewPoolInvitationRepository(pool)
+	poolService := apppool.New(apppool.Ports{
+		Pools:           poolRepo,
+		Portfolios:      poolRepo,
+		Payouts:         poolRepo,
+		OwnershipReader: poolRepo,
+		ScoringRules:    poolRepo,
+		TeamReader:      poolRepo,
+		PoolInvitations: invitationRepo,
 	})
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)
@@ -48,7 +48,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 	predictionRepo := dbadapters.NewPredictionRepository(pool)
 
 	a := &app.App{Bracket: appbracket.New(dbTournamentRepo)}
-	a.Calcutta = calcuttaService
+	a.Pool = poolService
 	a.Prediction = appprediction.New(appprediction.Ports{
 		Batches:    predictionRepo,
 		Tournament: predictionRepo,

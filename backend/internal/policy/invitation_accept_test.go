@@ -11,11 +11,11 @@ import (
 
 func TestThatUnauthenticatedUserCannotAcceptInvitation(t *testing.T) {
 	// GIVEN no authenticated user
-	calcutta := &models.Calcutta{ID: "c1", OwnerID: "owner"}
+	pool := &models.Pool{ID: "p1", OwnerID: "owner"}
 	tournament := &models.Tournament{ID: "t1"}
 
 	// WHEN checking accept invitation permission
-	decision, err := CanAcceptInvitation(context.Background(), nil, "", calcutta, tournament, time.Now())
+	decision, err := CanAcceptInvitation(context.Background(), nil, "", pool, tournament, time.Now())
 
 	// THEN access is denied with unauthorized status
 	if err != nil {
@@ -26,8 +26,8 @@ func TestThatUnauthenticatedUserCannotAcceptInvitation(t *testing.T) {
 	}
 }
 
-func TestThatNilCalcuttaRejectsInvitationAcceptance(t *testing.T) {
-	// GIVEN a nil calcutta
+func TestThatNilPoolRejectsInvitationAcceptance(t *testing.T) {
+	// GIVEN a nil pool
 	tournament := &models.Tournament{ID: "t1"}
 
 	// WHEN checking accept invitation permission
@@ -44,10 +44,10 @@ func TestThatNilCalcuttaRejectsInvitationAcceptance(t *testing.T) {
 
 func TestThatNilTournamentRejectsInvitationAcceptance(t *testing.T) {
 	// GIVEN a nil tournament
-	calcutta := &models.Calcutta{ID: "c1", OwnerID: "owner"}
+	pool := &models.Pool{ID: "p1", OwnerID: "owner"}
 
 	// WHEN checking accept invitation permission
-	decision, err := CanAcceptInvitation(context.Background(), nil, "user1", calcutta, nil, time.Now())
+	decision, err := CanAcceptInvitation(context.Background(), nil, "user1", pool, nil, time.Now())
 
 	// THEN access is denied with bad request status
 	if err != nil {
@@ -60,13 +60,13 @@ func TestThatNilTournamentRejectsInvitationAcceptance(t *testing.T) {
 
 func TestThatNonAdminCannotAcceptInvitationAfterTournamentStarts(t *testing.T) {
 	// GIVEN a tournament that has already started and a non-admin user
-	calcutta := &models.Calcutta{ID: "c1", OwnerID: "owner"}
+	pool := &models.Pool{ID: "p1", OwnerID: "owner"}
 	startingAt := time.Now().Add(-24 * time.Hour)
 	tournament := &models.Tournament{ID: "t1", StartingAt: &startingAt}
 	authz := &mockAuthzChecker{result: false}
 
 	// WHEN checking accept invitation permission
-	decision, err := CanAcceptInvitation(context.Background(), authz, "regular-user", calcutta, tournament, time.Now())
+	decision, err := CanAcceptInvitation(context.Background(), authz, "regular-user", pool, tournament, time.Now())
 
 	// THEN access is denied with locked status
 	if err != nil {
@@ -79,13 +79,13 @@ func TestThatNonAdminCannotAcceptInvitationAfterTournamentStarts(t *testing.T) {
 
 func TestThatNonAdminCanAcceptInvitationBeforeTournamentStarts(t *testing.T) {
 	// GIVEN a tournament that has not started and a non-admin user
-	calcutta := &models.Calcutta{ID: "c1", OwnerID: "owner"}
+	pool := &models.Pool{ID: "p1", OwnerID: "owner"}
 	startingAt := time.Now().Add(24 * time.Hour)
 	tournament := &models.Tournament{ID: "t1", StartingAt: &startingAt}
 	authz := &mockAuthzChecker{result: false}
 
 	// WHEN checking accept invitation permission
-	decision, err := CanAcceptInvitation(context.Background(), authz, "regular-user", calcutta, tournament, time.Now())
+	decision, err := CanAcceptInvitation(context.Background(), authz, "regular-user", pool, tournament, time.Now())
 
 	// THEN access is allowed
 	if err != nil {
@@ -98,12 +98,12 @@ func TestThatNonAdminCanAcceptInvitationBeforeTournamentStarts(t *testing.T) {
 
 func TestThatAdminCanAcceptInvitationAfterTournamentStarts(t *testing.T) {
 	// GIVEN a tournament that has already started and an admin user
-	calcutta := &models.Calcutta{ID: "c1", OwnerID: "owner"}
+	pool := &models.Pool{ID: "p1", OwnerID: "owner"}
 	startingAt := time.Now().Add(-24 * time.Hour)
 	tournament := &models.Tournament{ID: "t1", StartingAt: &startingAt}
 
-	// WHEN checking accept invitation permission as the calcutta owner
-	decision, err := CanAcceptInvitation(context.Background(), nil, "owner", calcutta, tournament, time.Now())
+	// WHEN checking accept invitation permission as the pool owner
+	decision, err := CanAcceptInvitation(context.Background(), nil, "owner", pool, tournament, time.Now())
 
 	// THEN access is allowed
 	if err != nil {

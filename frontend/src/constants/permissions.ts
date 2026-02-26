@@ -5,7 +5,7 @@ export const PERMISSIONS = {
   ADMIN_BUNDLES_EXPORT: 'admin.bundles.export',
   ADMIN_HOF_READ: 'admin.hof.read',
   TOURNAMENT_GAME_WRITE: 'tournament.game.write',
-  CALCUTTA_CONFIG_WRITE: 'calcutta.config.write',
+  POOL_CONFIG_WRITE: 'pool.config.write',
   ADMIN_USERS_WRITE: 'admin.users.write',
   LAB_READ: 'lab.read',
 } as const;
@@ -16,5 +16,5 @@ export const ADMIN_PERMISSIONS = [
   PERMISSIONS.ADMIN_BUNDLES_EXPORT,
   PERMISSIONS.ADMIN_HOF_READ,
   PERMISSIONS.TOURNAMENT_GAME_WRITE,
-  PERMISSIONS.CALCUTTA_CONFIG_WRITE,
+  PERMISSIONS.POOL_CONFIG_WRITE,
 ] as const;

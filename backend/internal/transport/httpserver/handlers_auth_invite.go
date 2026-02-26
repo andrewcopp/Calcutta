@@ -30,7 +30,7 @@ func (s *Server) previewInviteHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	h := coreauth.HashInviteToken(rawToken)
 
-	var firstName, calcuttaName, commissionerName string
+	var firstName, poolName, commissionerName string
 	var tournamentStartingAt *time.Time
 
 	err := s.pool.QueryRow(r.Context(), `
@@ -40,8 +40,8 @@ func (s *Server) previewInviteHandler(w http.ResponseWriter, r *http.Request) {
 			comm.first_name || ' ' || comm.last_name,
 			t.starting_at
 		FROM core.users u
-		JOIN core.calcutta_invitations ci ON ci.user_id = u.id AND ci.deleted_at IS NULL
-		JOIN core.calcuttas c ON c.id = ci.calcutta_id AND c.deleted_at IS NULL
+		JOIN core.pool_invitations ci ON ci.user_id = u.id AND ci.deleted_at IS NULL
+		JOIN core.pools c ON c.id = ci.pool_id AND c.deleted_at IS NULL
 		JOIN core.users comm ON comm.id = ci.invited_by AND comm.deleted_at IS NULL
 		LEFT JOIN core.tournaments t ON t.id = c.tournament_id AND t.deleted_at IS NULL
 		WHERE u.invite_token_hash = $1
@@ -50,7 +50,7 @@ func (s *Server) previewInviteHandler(w http.ResponseWriter, r *http.Request) {
 		  AND u.invite_expires_at IS NOT NULL
 		  AND u.invite_expires_at > $2
 		LIMIT 1
-	`, h, now).Scan(&firstName, &calcuttaName, &commissionerName, &tournamentStartingAt)
+	`, h, now).Scan(&firstName, &poolName, &commissionerName, &tournamentStartingAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httperr.Write(w, r, http.StatusNotFound, "not_found", "invite not found or expired", "")
@@ -62,7 +62,7 @@ func (s *Server) previewInviteHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp := dtos.InvitePreviewResponse{
 		FirstName:        firstName,
-		CalcuttaName:     calcuttaName,
+		PoolName:         poolName,
 		CommissionerName: commissionerName,
 	}
 	if tournamentStartingAt != nil {

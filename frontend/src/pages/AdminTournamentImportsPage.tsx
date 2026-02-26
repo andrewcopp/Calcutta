@@ -176,8 +176,8 @@ export function AdminTournamentImportsPage() {
                   <div className="font-medium">{result.importReport.tournaments}</div>
                   <div className="text-muted-foreground">Teams</div>
                   <div className="font-medium">{result.importReport.tournamentTeams}</div>
-                  <div className="text-muted-foreground">Calcuttas</div>
-                  <div className="font-medium">{result.importReport.calcuttas}</div>
+                  <div className="text-muted-foreground">Pools</div>
+                  <div className="font-medium">{result.importReport.pools}</div>
                   <div className="text-muted-foreground">Entries</div>
                   <div className="font-medium">{result.importReport.entries}</div>
                   <div className="text-muted-foreground">Bids</div>
