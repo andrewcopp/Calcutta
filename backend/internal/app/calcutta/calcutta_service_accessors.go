@@ -146,6 +146,10 @@ func (s *Service) ReplaceEntryTeams(ctx context.Context, entryID string, teams [
 	return s.ports.Entries.ReplaceEntryTeams(ctx, entryID, teams)
 }
 
+func (s *Service) UpdateEntryStatus(ctx context.Context, id string, status string) error {
+	return s.ports.Entries.UpdateEntryStatus(ctx, id, status)
+}
+
 func (s *Service) GetPortfoliosByEntry(ctx context.Context, entryID string) ([]*models.CalcuttaPortfolio, error) {
 	return s.ports.PortfolioReader.GetPortfoliosByEntry(ctx, entryID)
 }
@@ -170,8 +174,8 @@ func (s *Service) GetCalcuttasByUser(ctx context.Context, userID string) ([]*mod
 	return s.ports.Calcuttas.GetByUserID(ctx, userID)
 }
 
-func (s *Service) GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error) {
-	return s.ports.Rounds.GetRounds(ctx, calcuttaID)
+func (s *Service) GetScoringRules(ctx context.Context, calcuttaID string) ([]*models.ScoringRule, error) {
+	return s.ports.ScoringRules.GetScoringRules(ctx, calcuttaID)
 }
 
 func (s *Service) GetCalcuttasByTournament(ctx context.Context, tournamentID string) ([]*models.Calcutta, error) {

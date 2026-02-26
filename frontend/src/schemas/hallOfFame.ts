@@ -18,7 +18,7 @@ export const InvestmentLeaderboardRowSchema = z.object({
 export type InvestmentLeaderboardRow = z.infer<typeof InvestmentLeaderboardRowSchema>;
 
 export const InvestmentLeaderboardResponseSchema = z.object({
-  investments: z.array(InvestmentLeaderboardRowSchema),
+  items: z.array(InvestmentLeaderboardRowSchema),
 });
 
 export type InvestmentLeaderboardResponse = z.infer<typeof InvestmentLeaderboardResponseSchema>;
@@ -44,7 +44,7 @@ export const BestTeamSchema = z.object({
 export type BestTeam = z.infer<typeof BestTeamSchema>;
 
 export const BestTeamsResponseSchema = z.object({
-  teams: z.array(BestTeamSchema),
+  items: z.array(BestTeamSchema),
 });
 
 export type BestTeamsResponse = z.infer<typeof BestTeamsResponseSchema>;
@@ -64,7 +64,7 @@ export const EntryLeaderboardRowSchema = z.object({
 export type EntryLeaderboardRow = z.infer<typeof EntryLeaderboardRowSchema>;
 
 export const EntryLeaderboardResponseSchema = z.object({
-  entries: z.array(EntryLeaderboardRowSchema),
+  items: z.array(EntryLeaderboardRowSchema),
 });
 
 export type EntryLeaderboardResponse = z.infer<typeof EntryLeaderboardResponseSchema>;
@@ -84,7 +84,7 @@ export const CareerLeaderboardRowSchema = z.object({
 export type CareerLeaderboardRow = z.infer<typeof CareerLeaderboardRowSchema>;
 
 export const CareerLeaderboardResponseSchema = z.object({
-  careers: z.array(CareerLeaderboardRowSchema),
+  items: z.array(CareerLeaderboardRowSchema),
 });
 
 export type CareerLeaderboardResponse = z.infer<typeof CareerLeaderboardResponseSchema>;

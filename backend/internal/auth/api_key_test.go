@@ -28,7 +28,7 @@ func TestThatNewAPIKeyFromReaderUsesProvidedBytes(t *testing.T) {
 	}
 
 	// THEN
-	want := base64.RawURLEncoding.EncodeToString(b)
+	want := "mmk_" + base64.RawURLEncoding.EncodeToString(b)
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}

@@ -69,9 +69,7 @@ export const tournamentHandlers = [
   }),
 
   http.post(`${BASE}/tournaments/:id/moderators`, () => {
-    return HttpResponse.json({
-      moderator: { id: 'mod-2', email: 'new@test.com', firstName: 'New', lastName: 'Mod' },
-    });
+    return HttpResponse.json({ id: 'mod-2', email: 'new@test.com', firstName: 'New', lastName: 'Mod' });
   }),
 
   http.delete(`${BASE}/tournaments/:id/moderators/:userId`, () => {

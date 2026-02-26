@@ -108,6 +108,7 @@ export const TournamentModeratorsResponseSchema = z.object({
   items: z.array(TournamentModeratorSchema),
 });
 
+/** @deprecated The grant moderator endpoint now returns the moderator directly. */
 export const GrantModeratorResponseSchema = z.object({
   moderator: TournamentModeratorSchema,
 });

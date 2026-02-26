@@ -7,7 +7,7 @@ export interface RaceDatum {
   totalPoints: number;
   pointsDelta: number;
   rankDelta: number;
-  projectedEv?: number;
+  expectedValue?: number;
 }
 
 export interface BumpSeries {
@@ -19,10 +19,10 @@ export interface BumpSeries {
 type Mode = 'actual' | 'projected' | 'favorites';
 
 function metricForEntry(
-  entry: { totalPoints: number; projectedEv?: number; projectedFavorites?: number },
+  entry: { totalPoints: number; expectedValue?: number; projectedFavorites?: number },
   mode: Mode,
 ): number {
-  if (mode === 'projected') return entry.projectedEv ?? entry.totalPoints;
+  if (mode === 'projected') return entry.expectedValue ?? entry.totalPoints;
   if (mode === 'favorites') return entry.projectedFavorites ?? entry.totalPoints;
   return entry.totalPoints;
 }
@@ -87,8 +87,8 @@ export function buildBumpChartData(
     if (mode === 'actual') {
       const evMap = new Map<string, number>();
       for (const e of group.entries) {
-        if (e.projectedEv != null) {
-          evMap.set(e.entryId, e.projectedEv);
+        if (e.expectedValue != null) {
+          evMap.set(e.entryId, e.expectedValue);
         }
       }
       if (evMap.size > 0) {
@@ -113,7 +113,7 @@ export function buildBumpChartData(
         totalPoints: standing?.totalPoints ?? 0,
         pointsDelta: prev ? currentPoints - prev.points : 0,
         rankDelta: prev ? prev.rank - currentRank : 0,
-        projectedEv: standing?.projectedEv,
+        expectedValue: standing?.expectedValue,
       });
 
       prevState.set(entry.id, { rank: currentRank, points: currentPoints });

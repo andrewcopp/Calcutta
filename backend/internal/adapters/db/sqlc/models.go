@@ -155,19 +155,20 @@ type CoreAuthSession struct {
 }
 
 type CoreCalcutta struct {
-	ID           string
-	TournamentID string
-	OwnerID      string
-	Name         string
-	MinTeams     int32
-	MaxTeams     int32
-	MaxBidPoints int32
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	BudgetPoints int32
-	Visibility   string
-	CreatedBy    string
+	ID            string
+	TournamentID  string
+	OwnerID       string
+	Name          string
+	MinTeams      int32
+	MaxTeams      int32
+	MaxBidPoints  int32
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	DeletedAt     pgtype.Timestamptz
+	BudgetPoints  int32
+	Visibility    string
+	CreatedBy     string
+	EntryFeeCents int32
 }
 
 type CoreCalcuttaInvitation struct {
@@ -208,6 +209,7 @@ type CoreEntry struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	DeletedAt  pgtype.Timestamptz
+	Status     string
 }
 
 type CoreEntryTeam struct {
@@ -288,6 +290,7 @@ type CoreSchool struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	DeletedAt pgtype.Timestamptz
+	ShortName *string
 }
 
 type CoreSeason struct {
@@ -378,6 +381,17 @@ type CoreUser struct {
 	ResetExpiresAt     pgtype.Timestamptz
 	ResetConsumedAt    pgtype.Timestamptz
 	LastResetSentAt    pgtype.Timestamptz
+}
+
+type CoreUserMerge struct {
+	ID               string
+	SourceUserID     string
+	TargetUserID     string
+	MergedBy         string
+	EntriesMoved     int32
+	InvitationsMoved int32
+	GrantsMoved      int32
+	CreatedAt        pgtype.Timestamptz
 }
 
 type DerivedPortfolio struct {

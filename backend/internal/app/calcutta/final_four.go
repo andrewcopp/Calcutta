@@ -24,7 +24,7 @@ func ComputeFinalFourOutcomes(
 	portfolios []*models.CalcuttaPortfolio,
 	portfolioTeams []*models.CalcuttaPortfolioTeam,
 	tournamentTeams []*models.TournamentTeam,
-	rounds []*models.CalcuttaRound,
+	scoringRules []*models.ScoringRule,
 	payouts []*models.CalcuttaPayout,
 ) []*FinalFourOutcome {
 	if bracket == nil {
@@ -45,9 +45,9 @@ func ComputeFinalFourOutcomes(
 		{semi2.Team1, semi2.Team2},
 	}
 
-	rules := make([]scoring.Rule, len(rounds))
-	for i, rd := range rounds {
-		rules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
+	rules := make([]scoring.Rule, len(scoringRules))
+	for i, sr := range scoringRules {
+		rules[i] = scoring.Rule{WinIndex: sr.WinIndex, PointsAwarded: sr.PointsAwarded}
 	}
 
 	teamByID := make(map[string]*models.TournamentTeam, len(tournamentTeams))

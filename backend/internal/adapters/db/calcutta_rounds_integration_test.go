@@ -10,7 +10,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/testutil"
 )
 
-func TestThatCreatedRoundCanBeRetrievedByCalcuttaID(t *testing.T) {
+func TestThatCreatedScoringRuleCanBeRetrievedByCalcuttaID(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() {
 		if err := testutil.TruncateAll(ctx, pool); err != nil {
@@ -21,31 +21,31 @@ func TestThatCreatedRoundCanBeRetrievedByCalcuttaID(t *testing.T) {
 	// GIVEN a calcutta exists
 	base := mustSeedBase(t, ctx)
 
-	// WHEN creating a round and then retrieving rounds
-	round := &models.CalcuttaRound{
-		CalcuttaID: base.calcutta.ID,
-		Round:      1,
-		Points:     10,
+	// WHEN creating a scoring rule and then retrieving scoring rules
+	rule := &models.ScoringRule{
+		CalcuttaID:    base.calcutta.ID,
+		WinIndex:      1,
+		PointsAwarded: 10,
 	}
-	if err := base.calcuttaRepo.CreateRound(ctx, round); err != nil {
-		t.Fatalf("creating round: %v", err)
+	if err := base.calcuttaRepo.CreateScoringRule(ctx, rule); err != nil {
+		t.Fatalf("creating scoring rule: %v", err)
 	}
 
-	rounds, err := base.calcuttaRepo.GetRounds(ctx, base.calcutta.ID)
+	rules, err := base.calcuttaRepo.GetScoringRules(ctx, base.calcutta.ID)
 	if err != nil {
-		t.Fatalf("getting rounds: %v", err)
+		t.Fatalf("getting scoring rules: %v", err)
 	}
 
-	// THEN exactly one round is returned with the correct points
-	if len(rounds) != 1 {
-		t.Fatalf("expected 1 round, got %d", len(rounds))
+	// THEN exactly one scoring rule is returned with the correct points
+	if len(rules) != 1 {
+		t.Fatalf("expected 1 scoring rule, got %d", len(rules))
 	}
-	if rounds[0].Points != 10 {
-		t.Errorf("expected points 10, got %d", rounds[0].Points)
+	if rules[0].PointsAwarded != 10 {
+		t.Errorf("expected points_awarded 10, got %d", rules[0].PointsAwarded)
 	}
 }
 
-func TestThatCreateRoundRejectsNegativeWinIndex(t *testing.T) {
+func TestThatCreateScoringRuleRejectsNegativeWinIndex(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() {
 		if err := testutil.TruncateAll(ctx, pool); err != nil {
@@ -56,13 +56,13 @@ func TestThatCreateRoundRejectsNegativeWinIndex(t *testing.T) {
 	// GIVEN a calcutta exists
 	base := mustSeedBase(t, ctx)
 
-	// WHEN creating a round with a negative win index
-	round := &models.CalcuttaRound{
-		CalcuttaID: base.calcutta.ID,
-		Round:      -1,
-		Points:     10,
+	// WHEN creating a scoring rule with a negative win index
+	rule := &models.ScoringRule{
+		CalcuttaID:    base.calcutta.ID,
+		WinIndex:      -1,
+		PointsAwarded: 10,
 	}
-	err := base.calcuttaRepo.CreateRound(ctx, round)
+	err := base.calcuttaRepo.CreateScoringRule(ctx, rule)
 
 	// THEN the error is non-nil (CHECK constraint violation)
 	if err == nil {
@@ -70,7 +70,7 @@ func TestThatCreateRoundRejectsNegativeWinIndex(t *testing.T) {
 	}
 }
 
-func TestThatCreateRoundRejectsNegativePointsAwarded(t *testing.T) {
+func TestThatCreateScoringRuleRejectsNegativePointsAwarded(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() {
 		if err := testutil.TruncateAll(ctx, pool); err != nil {
@@ -81,13 +81,13 @@ func TestThatCreateRoundRejectsNegativePointsAwarded(t *testing.T) {
 	// GIVEN a calcutta exists
 	base := mustSeedBase(t, ctx)
 
-	// WHEN creating a round with negative points
-	round := &models.CalcuttaRound{
-		CalcuttaID: base.calcutta.ID,
-		Round:      1,
-		Points:     -5,
+	// WHEN creating a scoring rule with negative points
+	rule := &models.ScoringRule{
+		CalcuttaID:    base.calcutta.ID,
+		WinIndex:      1,
+		PointsAwarded: -5,
 	}
-	err := base.calcuttaRepo.CreateRound(ctx, round)
+	err := base.calcuttaRepo.CreateScoringRule(ctx, rule)
 
 	// THEN the error is non-nil (CHECK constraint violation)
 	if err == nil {
@@ -95,7 +95,7 @@ func TestThatCreateRoundRejectsNegativePointsAwarded(t *testing.T) {
 	}
 }
 
-func TestThatCreateRoundAllowsZeroPointsAwarded(t *testing.T) {
+func TestThatCreateScoringRuleAllowsZeroPointsAwarded(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() {
 		if err := testutil.TruncateAll(ctx, pool); err != nil {
@@ -106,13 +106,13 @@ func TestThatCreateRoundAllowsZeroPointsAwarded(t *testing.T) {
 	// GIVEN a calcutta exists
 	base := mustSeedBase(t, ctx)
 
-	// WHEN creating a round with zero points (bye round)
-	round := &models.CalcuttaRound{
-		CalcuttaID: base.calcutta.ID,
-		Round:      0,
-		Points:     0,
+	// WHEN creating a scoring rule with zero points (bye round)
+	rule := &models.ScoringRule{
+		CalcuttaID:    base.calcutta.ID,
+		WinIndex:      0,
+		PointsAwarded: 0,
 	}
-	err := base.calcuttaRepo.CreateRound(ctx, round)
+	err := base.calcuttaRepo.CreateScoringRule(ctx, rule)
 
 	// THEN no error occurs
 	if err != nil {

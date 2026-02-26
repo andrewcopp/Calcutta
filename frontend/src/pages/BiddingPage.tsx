@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { PageContainer, PageHeader } from '../components/ui/Page';
 import { Alert } from '../components/ui/Alert';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -34,6 +33,7 @@ export function BiddingPage() {
     handleSlotSearchChange,
     handleSlotBidChange,
     handleSubmit,
+    handleCancel,
   } = useBidding();
 
   if (!calcuttaId || !entryId) {
@@ -75,9 +75,7 @@ export function BiddingPage() {
         subtitle={`Budget: ${BUDGET} credits | Teams: ${MIN_TEAMS}-${MAX_TEAMS} | Max per team: ${MAX_BID} credits`}
         actions={
           <div className="flex gap-2">
-            <Link to={`/pools/${calcuttaId}`}>
-              <Button variant="secondary">Cancel</Button>
-            </Link>
+            <Button variant="secondary" onClick={handleCancel}>Cancel</Button>
             <Button
               onClick={handleSubmit}
               disabled={!isValid || updateEntryMutation.isPending}

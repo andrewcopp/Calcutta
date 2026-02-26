@@ -13,9 +13,9 @@ import (
 
 func (h *Handler) HandleListEntryPortfolios(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	entryID := vars["id"]
+	entryID := vars["entryId"]
 	if entryID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "entryId")
 		return
 	}
 

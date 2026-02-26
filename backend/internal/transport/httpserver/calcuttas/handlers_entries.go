@@ -227,9 +227,9 @@ func (h *Handler) HandleListEntryTeams(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	entryID := vars["id"]
+	entryID := vars["entryId"]
 	if entryID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Entry ID is required", "entryId")
 		return
 	}
 
@@ -295,10 +295,30 @@ func (h *Handler) HandleUpdateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), entryID)
+	if err := h.app.Calcutta.UpdateEntryStatus(r.Context(), entryID, "submitted"); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	updatedEntry, err := h.app.Calcutta.GetEntry(r.Context(), entryID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, map[string]any{"items": dtos.NewEntryTeamListResponse(updatedTeams)})
+
+	_, standings, err := h.app.Calcutta.GetEntries(r.Context(), updatedEntry.CalcuttaID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	var standing *models.EntryStanding
+	for _, s := range standings {
+		if s.EntryID == entryID {
+			standing = s
+			break
+		}
+	}
+
+	response.WriteJSON(w, http.StatusOK, dtos.NewEntryResponse(updatedEntry, standing))
 }

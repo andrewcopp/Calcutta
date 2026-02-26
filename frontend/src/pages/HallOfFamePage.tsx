@@ -43,8 +43,8 @@ export function HallOfFamePage() {
   const filteredCareers = useMemo(() => {
     if (!bestCareersQuery.data) return [];
     return hideInactiveCareers
-      ? bestCareersQuery.data.careers.filter((c) => c.activeInLatestCalcutta)
-      : bestCareersQuery.data.careers;
+      ? bestCareersQuery.data.items.filter((c) => c.activeInLatestCalcutta)
+      : bestCareersQuery.data.items;
   }, [bestCareersQuery.data, hideInactiveCareers]);
 
   return (
@@ -88,7 +88,7 @@ export function HallOfFamePage() {
             )}
 
             {bestTeamsQuery.data && (
-              <DataTable columns={bestTeamsColumns} data={bestTeamsQuery.data.teams} pagination pageSize={25} />
+              <DataTable columns={bestTeamsColumns} data={bestTeamsQuery.data.items} pagination pageSize={25} />
             )}
           </Card>
         </TabsContent>
@@ -117,7 +117,7 @@ export function HallOfFamePage() {
             {bestInvestmentsQuery.data && (
               <DataTable
                 columns={bestInvestmentsColumns}
-                data={bestInvestmentsQuery.data.investments}
+                data={bestInvestmentsQuery.data.items}
                 pagination
                 pageSize={25}
               />
@@ -146,7 +146,7 @@ export function HallOfFamePage() {
             )}
 
             {bestEntriesQuery.data && (
-              <DataTable columns={bestEntriesColumns} data={bestEntriesQuery.data.entries} pagination pageSize={25} />
+              <DataTable columns={bestEntriesColumns} data={bestEntriesQuery.data.items} pagination pageSize={25} />
             )}
           </Card>
         </TabsContent>

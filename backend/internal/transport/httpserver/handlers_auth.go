@@ -12,6 +12,8 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
 )
 
+const refreshCookieName = "mm_refresh_token"
+
 func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var req dtos.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -38,7 +40,7 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie("refresh_token")
+	c, err := r.Cookie(refreshCookieName)
 	if err != nil || c.Value == "" {
 		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Refresh token missing", "")
 		return
@@ -54,7 +56,7 @@ func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie("refresh_token")
+	c, err := r.Cookie(refreshCookieName)
 	if err == nil && c.Value != "" {
 		_ = s.app.Auth.Logout(r.Context(), c.Value)
 	}
@@ -64,9 +66,9 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) setRefreshCookie(w http.ResponseWriter, refreshToken string, expiresAt time.Time) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
+		Name:     refreshCookieName,
 		Value:    refreshToken,
-		Path:     "/api/auth",
+		Path:     "/api/v1/auth",
 		Expires:  expiresAt,
 		HttpOnly: true,
 		Secure:   s.cookieSecure,
@@ -76,9 +78,9 @@ func (s *Server) setRefreshCookie(w http.ResponseWriter, refreshToken string, ex
 
 func (s *Server) clearRefreshCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
+		Name:     refreshCookieName,
 		Value:    "",
-		Path:     "/api/auth",
+		Path:     "/api/v1/auth",
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		HttpOnly: true,

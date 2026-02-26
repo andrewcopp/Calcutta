@@ -31,8 +31,8 @@ export function EntryRosterCard({
       <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <Badge variant={entryStatus === 'accepted' ? 'success' : 'secondary'}>
-            {entryStatus === 'accepted' ? 'Bids locked' : 'In Progress'}
+          <Badge variant={entryStatus === 'submitted' ? 'success' : 'secondary'}>
+            {entryStatus === 'submitted' ? 'Bids locked' : 'In Progress'}
           </Badge>
         </div>
         {canEdit && (

@@ -21,6 +21,8 @@ type AccessTokenClaims struct {
 	Sid string `json:"sid"`
 	Iat int64  `json:"iat"`
 	Exp int64  `json:"exp"`
+	Iss string `json:"iss"`
+	Ver int    `json:"ver"`
 }
 
 func NewTokenManager(secret string, accessTTL time.Duration) (*TokenManager, error) {
@@ -49,9 +51,11 @@ func (m *TokenManager) IssueAccessToken(userID, sessionID string, now time.Time)
 		Sid: sessionID,
 		Iat: now.Unix(),
 		Exp: now.Add(m.accessTTL).Unix(),
+		Iss: "calcutta",
+		Ver: 1,
 	}
 
-	headerJSON, err := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT"})
+	headerJSON, err := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT", "kid": "v1"})
 	if err != nil {
 		return "", nil, err
 	}

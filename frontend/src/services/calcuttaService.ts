@@ -61,14 +61,14 @@ export const calcuttaService = {
   },
 
   async getCalcuttasWithRankings() {
-    const res = await apiClient.get('/calcuttas/list-with-rankings', {
+    const res = await apiClient.get('/calcuttas?include=rankings', {
       schema: z.object({ items: z.array(CalcuttaWithRankingSchema) }),
     });
     return res.items;
   },
 
-  async updateEntry(entryId: string, teams: Array<{ teamId: string; bidPoints: number }>) {
-    return apiClient.patch(`/entries/${entryId}`, { teams }, { schema: CalcuttaEntrySchema });
+  async updateEntry(calcuttaId: string, entryId: string, teams: Array<{ teamId: string; bidPoints: number }>) {
+    return apiClient.patch(`/calcuttas/${calcuttaId}/entries/${entryId}`, { teams }, { schema: CalcuttaEntrySchema });
   },
 
   async getPayouts(calcuttaId: string) {

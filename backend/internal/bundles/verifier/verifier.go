@@ -277,7 +277,7 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 			}
 		}
 
-		out = append(out, verifyCalcuttaRounds(ctx, pool, calcuttaID, b.Calcutta.Key, b.Rounds)...)
+		out = append(out, verifyScoringRules(ctx, pool, calcuttaID, b.Calcutta.Key, b.Rounds)...)
 		out = append(out, verifyCalcuttaPayouts(ctx, pool, calcuttaID, b.Calcutta.Key, b.Payouts)...)
 		out = append(out, verifyCalcuttaEntriesAndBids(ctx, pool, calcuttaID, b.Calcutta.Key, b.Entries, b.Bids)...)
 	}
@@ -285,7 +285,7 @@ func verifyCalcuttas(ctx context.Context, pool *pgxpool.Pool, inDir string) []Mi
 	return out
 }
 
-func verifyCalcuttaRounds(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, rounds []bundles.RoundRecord) []Mismatch {
+func verifyScoringRules(ctx context.Context, pool *pgxpool.Pool, calcuttaID, calcuttaKey string, rounds []bundles.RoundRecord) []Mismatch {
 	rows, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.calcutta_scoring_rules WHERE calcutta_id = $1 AND deleted_at IS NULL`, calcuttaID)
 	if err != nil {
 		return []Mismatch{{Where: "calcutta_scoring_rules:" + calcuttaKey, What: err.Error()}}

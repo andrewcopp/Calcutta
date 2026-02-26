@@ -58,15 +58,15 @@ func (r *CreateCalcuttaRequest) ToModel() *models.Calcutta {
 	}
 }
 
-func (r *CreateCalcuttaRequest) ToScoringRules() []*models.CalcuttaRound {
-	rounds := make([]*models.CalcuttaRound, len(r.ScoringRules))
-	for i, rule := range r.ScoringRules {
-		rounds[i] = &models.CalcuttaRound{
-			Round:  rule.WinIndex,
-			Points: rule.PointsAwarded,
+func (r *CreateCalcuttaRequest) ToScoringRules() []*models.ScoringRule {
+	rules := make([]*models.ScoringRule, len(r.ScoringRules))
+	for i, input := range r.ScoringRules {
+		rules[i] = &models.ScoringRule{
+			WinIndex:      input.WinIndex,
+			PointsAwarded: input.PointsAwarded,
 		}
 	}
-	return rounds
+	return rules
 }
 
 type CalcuttaAbilities struct {

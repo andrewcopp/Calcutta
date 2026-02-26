@@ -217,7 +217,7 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 		}
 		calcuttaKey := uniquifyKey("calcutta-"+slugify(calcuttaName), usedCalcuttaKeysByTournament[tournamentKey])
 
-		rounds, err := loadCalcuttaRounds(ctx, pool, calcuttaID)
+		rounds, err := loadScoringRules(ctx, pool, calcuttaID)
 		if err != nil {
 			return err
 		}
@@ -264,7 +264,7 @@ func exportCalcuttas(ctx context.Context, pool *pgxpool.Pool, outDir string, gen
 	return r.Err()
 }
 
-func loadCalcuttaRounds(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]bundles.RoundRecord, error) {
+func loadScoringRules(ctx context.Context, pool *pgxpool.Pool, calcuttaID string) ([]bundles.RoundRecord, error) {
 	r, err := pool.Query(ctx, `SELECT win_index AS round, points_awarded AS points FROM core.calcutta_scoring_rules WHERE calcutta_id = $1 AND deleted_at IS NULL ORDER BY win_index ASC`, calcuttaID)
 	if err != nil {
 		return nil, err

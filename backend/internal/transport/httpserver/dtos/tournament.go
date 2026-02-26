@@ -352,12 +352,6 @@ func NewPredictionBatchListResponse(batches []prediction.PredictionBatch) []Pred
 	return resp
 }
 
-// BracketValidationErrorResponse is the error response for bracket validation failures.
-type BracketValidationErrorResponse struct {
-	Code   string   `json:"code"`
-	Errors []string `json:"errors"`
-}
-
 // CompetitionResponse is the response for a competition.
 type CompetitionResponse struct {
 	ID   string `json:"id"`

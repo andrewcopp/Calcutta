@@ -84,7 +84,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		tournamentTeamResponses = append(tournamentTeamResponses, dtos.NewTournamentTeamResponse(team, team.School))
 	}
 
-	rounds, err := h.app.Calcutta.GetRounds(r.Context(), calcuttaID)
+	scoringRules, err := h.app.Calcutta.GetScoringRules(r.Context(), calcuttaID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
@@ -118,12 +118,6 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentUserEntry != nil {
-		userTeams, err := h.app.Calcutta.GetEntryTeams(r.Context(), currentUserEntry.ID)
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-			return
-		}
-		currentUserEntry.Status = calcuttaapp.DeriveEntryStatus(userTeams)
 		resp.CurrentUserEntry = dtos.NewEntryResponse(currentUserEntry, standingsByID[currentUserEntry.ID])
 	}
 
@@ -175,27 +169,23 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 			allPortfolioTeams = append(allPortfolioTeams, teams...)
 		}
 
-		for _, entry := range entries {
-			entry.Status = calcuttaapp.DeriveEntryStatus(entryTeamsByEntry[entry.ID])
-		}
-
 		// Best-effort prediction loading: load all checkpoint batches
 		checkpoints := h.app.Prediction.LoadCheckpointPredictions(r.Context(), calcutta.TournamentID)
 
-		scoringRules := make([]scoring.Rule, len(rounds))
-		for i, rd := range rounds {
-			scoringRules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
+		rules := make([]scoring.Rule, len(scoringRules))
+		for i, sr := range scoringRules {
+			rules[i] = scoring.Rule{WinIndex: sr.WinIndex, PointsAwarded: sr.PointsAwarded}
 		}
 
 		portfolioToEntry := prediction.BuildPortfolioToEntry(allPortfolios)
 		ptInputs := prediction.ToPortfolioTeamInputs(allPortfolioTeams)
 		ttInputs := prediction.ToTournamentTeamInputs(tournamentTeams)
 
-		if proj := prediction.ComputeEntryProjections(checkpoints, scoringRules, portfolioToEntry, ptInputs, ttInputs); proj != nil {
+		if proj := prediction.ComputeEntryProjections(checkpoints, rules, portfolioToEntry, ptInputs, ttInputs); proj != nil {
 			for entryID, ev := range proj.EV {
 				if s, ok := standingsByID[entryID]; ok {
 					v := ev
-					s.ProjectedEV = &v
+					s.ExpectedValue = &v
 				}
 			}
 			for entryID, fav := range proj.Favorites {
@@ -210,11 +200,11 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		resp.EntryTeams = dtos.NewEntryTeamListResponse(allEntryTeams)
 		resp.Portfolios = dtos.NewPortfolioListResponse(allPortfolios)
 		resp.PortfolioTeams = dtos.NewPortfolioTeamListResponse(allPortfolioTeams)
-		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts, checkpoints)
+		resp.RoundStandings = computeRoundStandings(entries, allPortfolios, allPortfolioTeams, tournamentTeams, scoringRules, payouts, checkpoints)
 
 		bracket, err := h.app.Bracket.GetBracket(r.Context(), calcutta.TournamentID)
 		if err == nil && bracket != nil {
-			if ffOutcomes := calcuttaapp.ComputeFinalFourOutcomes(bracket, entries, allPortfolios, allPortfolioTeams, tournamentTeams, rounds, payouts); ffOutcomes != nil {
+			if ffOutcomes := calcuttaapp.ComputeFinalFourOutcomes(bracket, entries, allPortfolios, allPortfolioTeams, tournamentTeams, scoringRules, payouts); ffOutcomes != nil {
 				ffResponses := make([]*dtos.FinalFourOutcomeResponse, len(ffOutcomes))
 				for i, o := range ffOutcomes {
 					standingEntries := make([]*dtos.RoundStandingEntry, len(o.Standings))
@@ -244,33 +234,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http.Request) {
-	userID := ""
-	if h.authUserID != nil {
-		userID = h.authUserID(r.Context())
-	}
-	if userID == "" {
-		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
-		return
-	}
-
-	isAdmin, err := h.authz.HasPermission(r.Context(), userID, "global", "", "calcutta.config.write")
-	if err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
-	}
-
-	var calcuttas []*models.Calcutta
-	if isAdmin {
-		calcuttas, err = h.app.Calcutta.GetAllCalcuttas(r.Context())
-	} else {
-		calcuttas, err = h.app.Calcutta.GetCalcuttasByUser(r.Context(), userID)
-	}
-	if err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
-	}
-
+func (h *Handler) listCalcuttasWithRankings(w http.ResponseWriter, r *http.Request, userID string, calcuttas []*models.Calcutta) {
 	tournaments, err := h.app.Tournament.List(r.Context())
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
@@ -341,20 +305,20 @@ func computeRoundStandings(
 	portfolios []*models.CalcuttaPortfolio,
 	portfolioTeams []*models.CalcuttaPortfolioTeam,
 	tournamentTeams []*models.TournamentTeam,
-	rounds []*models.CalcuttaRound,
+	scoringRules []*models.ScoringRule,
 	payouts []*models.CalcuttaPayout,
 	checkpoints []prediction.CheckpointData,
 ) []*dtos.RoundStandingGroup {
-	if len(rounds) == 0 {
+	if len(scoringRules) == 0 {
 		return []*dtos.RoundStandingGroup{}
 	}
 
-	rules := make([]scoring.Rule, len(rounds))
+	rules := make([]scoring.Rule, len(scoringRules))
 	maxRound := 0
-	for i, rd := range rounds {
-		rules[i] = scoring.Rule{WinIndex: rd.Round, PointsAwarded: rd.Points}
-		if rd.Round > maxRound {
-			maxRound = rd.Round
+	for i, sr := range scoringRules {
+		rules[i] = scoring.Rule{WinIndex: sr.WinIndex, PointsAwarded: sr.PointsAwarded}
+		if sr.WinIndex > maxRound {
+			maxRound = sr.WinIndex
 		}
 	}
 
@@ -399,7 +363,7 @@ func computeRoundStandings(
 			}
 			if proj != nil {
 				ev := proj.EV[s.EntryID]
-				entry.ProjectedEV = &ev
+				entry.ExpectedValue = &ev
 				fav := proj.Favorites[s.EntryID]
 				entry.ProjectedFavorites = &fav
 			}

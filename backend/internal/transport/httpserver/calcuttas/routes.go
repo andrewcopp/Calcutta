@@ -8,7 +8,6 @@ import (
 
 type Handlers struct {
 	ListCalcuttas             http.HandlerFunc
-	ListCalcuttasWithRankings http.HandlerFunc
 	CreateCalcutta            http.HandlerFunc
 	GetCalcutta               http.HandlerFunc
 	GetDashboard              http.HandlerFunc
@@ -33,7 +32,6 @@ const uuidPattern = `[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/v1/calcuttas", h.ListCalcuttas).Methods("GET")
 	r.HandleFunc("/api/v1/calcuttas", h.CreateCalcutta).Methods("POST")
-	r.HandleFunc("/api/v1/calcuttas/list-with-rankings", h.ListCalcuttasWithRankings).Methods("GET")
 	r.HandleFunc("/api/v1/calcuttas/{id:"+uuidPattern+"}/dashboard", h.GetDashboard).Methods("GET")
 	r.HandleFunc("/api/v1/calcuttas/{id:"+uuidPattern+"}", h.GetCalcutta).Methods("GET")
 	r.HandleFunc("/api/v1/calcuttas/{id:"+uuidPattern+"}", h.UpdateCalcutta).Methods("PATCH")
@@ -48,6 +46,6 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/v1/calcuttas/{id:"+uuidPattern+"}/payouts", h.ListPayouts).Methods("GET")
 	r.HandleFunc("/api/v1/calcuttas/{id:"+uuidPattern+"}/payouts", h.ReplacePayouts).Methods("PUT")
 	r.HandleFunc("/api/v1/calcuttas/{calcuttaId:"+uuidPattern+"}/entries/{entryId:"+uuidPattern+"}/teams", h.ListEntryTeams).Methods("GET")
-	r.HandleFunc("/api/v1/entries/{id:"+uuidPattern+"}/portfolios", h.ListEntryPortfolios).Methods("GET")
-	r.HandleFunc("/api/v1/entries/{id:"+uuidPattern+"}", h.UpdateEntry).Methods("PATCH")
+	r.HandleFunc("/api/v1/calcuttas/{calcuttaId:"+uuidPattern+"}/entries/{entryId:"+uuidPattern+"}/portfolios", h.ListEntryPortfolios).Methods("GET")
+	r.HandleFunc("/api/v1/calcuttas/{calcuttaId:"+uuidPattern+"}/entries/{entryId:"+uuidPattern+"}", h.UpdateEntry).Methods("PATCH")
 }

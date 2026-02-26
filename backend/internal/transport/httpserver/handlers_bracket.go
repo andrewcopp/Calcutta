@@ -12,9 +12,9 @@ import (
 
 func (s *Server) getBracketHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 
@@ -86,9 +86,9 @@ func (s *Server) unselectWinnerHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) validateBracketSetupHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 

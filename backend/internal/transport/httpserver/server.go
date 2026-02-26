@@ -34,6 +34,10 @@ type Server struct {
 }
 
 func NewServer(pool *pgxpool.Pool, cfg platform.Config) (*Server, error) {
+	if cfg.AuthMode == "dev" && cfg.AppEnv != "" && cfg.AppEnv != "development" {
+		return nil, fmt.Errorf("dev auth mode is not allowed in %s environment", cfg.AppEnv)
+	}
+
 	authRepo := dbadapters.NewAuthRepository(pool)
 	authzRepo := dbadapters.NewAuthorizationRepository(pool)
 	userRepo := dbadapters.NewUserRepository(pool)
@@ -112,7 +116,7 @@ func computeCookieSettings(cfg platform.Config) (secure bool, sameSite http.Same
 	// Default: secure in production, not in development
 	secure = env != "development"
 	if secure {
-		sameSite = http.SameSiteNoneMode
+		sameSite = http.SameSiteLaxMode
 	} else {
 		sameSite = http.SameSiteLaxMode
 	}

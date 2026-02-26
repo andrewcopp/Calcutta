@@ -229,36 +229,36 @@ func (r *CalcuttaRepository) Update(ctx context.Context, calcutta *models.Calcut
 	return nil
 }
 
-func (r *CalcuttaRepository) GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error) {
-	rows, err := r.q.ListCalcuttaRounds(ctx, calcuttaID)
+func (r *CalcuttaRepository) GetScoringRules(ctx context.Context, calcuttaID string) ([]*models.ScoringRule, error) {
+	rows, err := r.q.ListScoringRules(ctx, calcuttaID)
 	if err != nil {
-		return nil, fmt.Errorf("listing calcutta rounds for calcutta %s: %w", calcuttaID, err)
+		return nil, fmt.Errorf("listing scoring rules for calcutta %s: %w", calcuttaID, err)
 	}
 
-	out := make([]*models.CalcuttaRound, 0, len(rows))
+	out := make([]*models.ScoringRule, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, &models.CalcuttaRound{
-			ID:         row.ID,
-			CalcuttaID: row.CalcuttaID,
-			Round:      int(row.Round),
-			Points:     int(row.Points),
-			CreatedAt:  row.CreatedAt.Time,
-			UpdatedAt:  row.UpdatedAt.Time,
-			DeletedAt:  nil,
+		out = append(out, &models.ScoringRule{
+			ID:            row.ID,
+			CalcuttaID:    row.CalcuttaID,
+			WinIndex:      int(row.Round),
+			PointsAwarded: int(row.Points),
+			CreatedAt:     row.CreatedAt.Time,
+			UpdatedAt:     row.UpdatedAt.Time,
+			DeletedAt:     nil,
 		})
 	}
 	return out, nil
 }
 
-func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.CalcuttaRound) error {
+func (r *CalcuttaRepository) CreateScoringRule(ctx context.Context, rule *models.ScoringRule) error {
 	now := time.Now()
-	round.ID = uuid.New().String()
-	round.CreatedAt = now
-	round.UpdatedAt = now
+	rule.ID = uuid.New().String()
+	rule.CreatedAt = now
+	rule.UpdatedAt = now
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return fmt.Errorf("beginning transaction to create calcutta round: %w", err)
+		return fmt.Errorf("beginning transaction to create scoring rule: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -267,20 +267,20 @@ func (r *CalcuttaRepository) CreateRound(ctx context.Context, round *models.Calc
 	}()
 
 	qtx := r.q.WithTx(tx)
-	params := sqlc.CreateCalcuttaRoundParams{
-		ID:            round.ID,
-		CalcuttaID:    round.CalcuttaID,
-		WinIndex:      int32(round.Round),
-		PointsAwarded: int32(round.Points),
-		CreatedAt:     pgtype.Timestamptz{Time: round.CreatedAt, Valid: true},
-		UpdatedAt:     pgtype.Timestamptz{Time: round.UpdatedAt, Valid: true},
+	params := sqlc.CreateScoringRuleParams{
+		ID:            rule.ID,
+		CalcuttaID:    rule.CalcuttaID,
+		WinIndex:      int32(rule.WinIndex),
+		PointsAwarded: int32(rule.PointsAwarded),
+		CreatedAt:     pgtype.Timestamptz{Time: rule.CreatedAt, Valid: true},
+		UpdatedAt:     pgtype.Timestamptz{Time: rule.UpdatedAt, Valid: true},
 	}
-	if err = qtx.CreateCalcuttaRound(ctx, params); err != nil {
-		return fmt.Errorf("creating calcutta round: %w", err)
+	if err = qtx.CreateScoringRule(ctx, params); err != nil {
+		return fmt.Errorf("creating scoring rule: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("committing transaction to create calcutta round: %w", err)
+		return fmt.Errorf("committing transaction to create scoring rule: %w", err)
 	}
 	return nil
 }

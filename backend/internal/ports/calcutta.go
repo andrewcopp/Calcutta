@@ -34,6 +34,7 @@ type EntryReader interface {
 type EntryWriter interface {
 	CreateEntry(ctx context.Context, entry *models.CalcuttaEntry) error
 	ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error
+	UpdateEntryStatus(ctx context.Context, id string, status string) error
 }
 
 type EntryRepository interface {
@@ -49,17 +50,17 @@ type PortfolioReader interface {
 	GetPortfolioTeamsByPortfolioIDs(ctx context.Context, portfolioIDs []string) (map[string][]*models.CalcuttaPortfolioTeam, error)
 }
 
-type RoundReader interface {
-	GetRounds(ctx context.Context, calcuttaID string) ([]*models.CalcuttaRound, error)
+type ScoringRuleReader interface {
+	GetScoringRules(ctx context.Context, calcuttaID string) ([]*models.ScoringRule, error)
 }
 
-type RoundWriter interface {
-	CreateRound(ctx context.Context, round *models.CalcuttaRound) error
+type ScoringRuleWriter interface {
+	CreateScoringRule(ctx context.Context, rule *models.ScoringRule) error
 }
 
-type RoundRepository interface {
-	RoundReader
-	RoundWriter
+type ScoringRuleRepository interface {
+	ScoringRuleReader
+	ScoringRuleWriter
 }
 
 type PayoutReader interface {

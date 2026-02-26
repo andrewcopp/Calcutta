@@ -62,7 +62,7 @@ describe('calcuttaService', () => {
       const entry = await calcuttaService.createEntry('calc-1', 'My Entry');
 
       expect(entry.id).toBe('entry-1');
-      expect(entry.status).toBe('accepted');
+      expect(entry.status).toBe('submitted');
     });
   });
 
@@ -108,7 +108,7 @@ describe('calcuttaService', () => {
 
   describe('updateEntry', () => {
     it('returns updated entry', async () => {
-      const entry = await calcuttaService.updateEntry('entry-1', [{ teamId: 'team-1', bidPoints: 20 }]);
+      const entry = await calcuttaService.updateEntry('calc-1', 'entry-1', [{ teamId: 'team-1', bidPoints: 20 }]);
 
       expect(entry.id).toBe('entry-1');
     });

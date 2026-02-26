@@ -156,8 +156,8 @@ export function CalcuttaEntriesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
-                    <Badge variant={currentUserEntry.status === 'accepted' ? 'success' : 'secondary'}>
-                      {currentUserEntry.status === 'accepted' ? 'Bids locked' : 'In Progress'}
+                    <Badge variant={currentUserEntry.status === 'submitted' ? 'success' : 'secondary'}>
+                      {currentUserEntry.status === 'submitted' ? 'Bids locked' : 'In Progress'}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {userTeams.length} teams &middot; {totalSpent} / {budgetPoints} credits

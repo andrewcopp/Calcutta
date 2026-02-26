@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	dbadapters "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
+	coreauth "github.com/andrewcopp/Calcutta/backend/internal/auth"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 	"github.com/golang-migrate/migrate/v4"
@@ -117,7 +118,7 @@ func bootstrapAdmin(cfg platform.Config) error {
 	}
 
 	if user == nil {
-		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), coreauth.BcryptCost)
 		if err != nil {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}

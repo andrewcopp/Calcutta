@@ -128,7 +128,7 @@ func (s *Server) acceptInviteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), coreauth.BcryptCost)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, authUserID)
 		return

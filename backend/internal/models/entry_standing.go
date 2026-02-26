@@ -9,6 +9,6 @@ type EntryStanding struct {
 	IsTied             bool
 	PayoutCents        int
 	InTheMoney         bool
-	ProjectedEV        *float64
+	ExpectedValue      *float64
 	ProjectedFavorites *float64
 }

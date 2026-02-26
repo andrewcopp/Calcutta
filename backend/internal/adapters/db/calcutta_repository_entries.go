@@ -60,6 +60,7 @@ func (r *CalcuttaRepository) GetEntries(ctx context.Context, calcuttaID string) 
 			Name:       row.Name,
 			UserID:     uuidToPtrString(row.UserID),
 			CalcuttaID: row.CalcuttaID,
+			Status:     row.Status,
 			CreatedAt:  row.CreatedAt.Time,
 			UpdatedAt:  row.UpdatedAt.Time,
 			DeletedAt:  TimestamptzToPtrTime(row.DeletedAt),
@@ -83,6 +84,7 @@ func (r *CalcuttaRepository) GetEntry(ctx context.Context, id string) (*models.C
 		Name:       row.Name,
 		UserID:     uuidToPtrString(row.UserID),
 		CalcuttaID: row.CalcuttaID,
+		Status:     row.Status,
 		CreatedAt:  row.CreatedAt.Time,
 		UpdatedAt:  row.UpdatedAt.Time,
 		DeletedAt:  TimestamptzToPtrTime(row.DeletedAt),
@@ -171,6 +173,13 @@ func (r *CalcuttaRepository) GetEntryTeamsByEntryIDs(ctx context.Context, entryI
 		out[row.EntryID] = append(out[row.EntryID], team)
 	}
 	return out, nil
+}
+
+func (r *CalcuttaRepository) UpdateEntryStatus(ctx context.Context, id string, status string) error {
+	if err := r.q.UpdateEntryStatus(ctx, sqlc.UpdateEntryStatusParams{ID: id, Status: status}); err != nil {
+		return fmt.Errorf("updating entry status for %s: %w", id, err)
+	}
+	return nil
 }
 
 func (r *CalcuttaRepository) ReplaceEntryTeams(ctx context.Context, entryID string, teams []*models.CalcuttaEntryTeam) error {

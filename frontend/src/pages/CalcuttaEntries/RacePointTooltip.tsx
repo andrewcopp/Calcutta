@@ -37,8 +37,8 @@ export function RacePointTooltip({ point }: RacePointTooltipProps) {
         <span>Points: {data.totalPoints.toFixed(2)}</span>
         {pointsDeltaStr && <span className="text-xs">{pointsDeltaStr}</span>}
       </div>
-      {data.projectedEv != null && (
-        <div className="text-muted-foreground">EV: {data.projectedEv.toFixed(2)}</div>
+      {data.expectedValue != null && (
+        <div className="text-muted-foreground">EV: {data.expectedValue.toFixed(2)}</div>
       )}
     </div>
   );

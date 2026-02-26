@@ -5,7 +5,7 @@ import type { RoundStandingGroup } from '../schemas/calcutta';
 
 function makeStandingGroup(
   round: number,
-  entries: { entryId: string; totalPoints: number; projectedEv?: number; projectedFavorites?: number }[],
+  entries: { entryId: string; totalPoints: number; expectedValue?: number; projectedFavorites?: number }[],
 ): RoundStandingGroup {
   return {
     round,
@@ -16,7 +16,7 @@ function makeStandingGroup(
       isTied: false,
       payoutCents: 0,
       inTheMoney: false,
-      projectedEv: e.projectedEv,
+      expectedValue: e.expectedValue,
       projectedFavorites: e.projectedFavorites,
     })),
   };
@@ -110,12 +110,12 @@ describe('buildBumpChartData', () => {
     const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
-        { entryId: 'e1', totalPoints: 0, projectedEv: 50 },
-        { entryId: 'e2', totalPoints: 0, projectedEv: 40 },
+        { entryId: 'e1', totalPoints: 0, expectedValue: 50 },
+        { entryId: 'e2', totalPoints: 0, expectedValue: 40 },
       ]),
       makeStandingGroup(1, [
-        { entryId: 'e1', totalPoints: 5, projectedEv: 30 },
-        { entryId: 'e2', totalPoints: 3, projectedEv: 45 },
+        { entryId: 'e1', totalPoints: 5, expectedValue: 30 },
+        { entryId: 'e2', totalPoints: 3, expectedValue: 45 },
       ]),
     ];
     const result = buildBumpChartData(entries, standings, 'projected');
@@ -141,12 +141,12 @@ describe('tiebreaker', () => {
     const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
-        { entryId: 'e1', totalPoints: 0, projectedEv: 80 },
-        { entryId: 'e2', totalPoints: 0, projectedEv: 120 },
+        { entryId: 'e1', totalPoints: 0, expectedValue: 80 },
+        { entryId: 'e2', totalPoints: 0, expectedValue: 120 },
       ]),
       makeStandingGroup(1, [
-        { entryId: 'e1', totalPoints: 10, projectedEv: 80 },
-        { entryId: 'e2', totalPoints: 10, projectedEv: 120 },
+        { entryId: 'e1', totalPoints: 10, expectedValue: 80 },
+        { entryId: 'e2', totalPoints: 10, expectedValue: 120 },
       ]),
     ];
 
@@ -185,12 +185,12 @@ describe('tiebreaker', () => {
     const entries = [makeEntry({ id: 'e1', name: 'Alice' }), makeEntry({ id: 'e2', name: 'Bob' })];
     const standings = [
       makeStandingGroup(0, [
-        { entryId: 'e1', totalPoints: 0, projectedEv: 50 },
-        { entryId: 'e2', totalPoints: 0, projectedEv: 50 },
+        { entryId: 'e1', totalPoints: 0, expectedValue: 50 },
+        { entryId: 'e2', totalPoints: 0, expectedValue: 50 },
       ]),
       makeStandingGroup(1, [
-        { entryId: 'e1', totalPoints: 5, projectedEv: 50 },
-        { entryId: 'e2', totalPoints: 3, projectedEv: 50 },
+        { entryId: 'e1', totalPoints: 5, expectedValue: 50 },
+        { entryId: 'e2', totalPoints: 3, expectedValue: 50 },
       ]),
     ];
 
@@ -291,18 +291,18 @@ describe('datum metadata', () => {
     expect(result[0].data[0].rankDelta).toBe(0);
   });
 
-  it('includes projectedEv in datum when available', () => {
+  it('includes expectedValue in datum when available', () => {
     // GIVEN an entry with projected EV
     const entries = [makeEntry({ id: 'e1', name: 'Alice' })];
     const standings = [
-      makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 0, projectedEv: 95.5 }]),
-      makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 10, projectedEv: 88.3 }]),
+      makeStandingGroup(0, [{ entryId: 'e1', totalPoints: 0, expectedValue: 95.5 }]),
+      makeStandingGroup(1, [{ entryId: 'e1', totalPoints: 10, expectedValue: 88.3 }]),
     ];
 
     // WHEN building chart data
     const result = buildBumpChartData(entries, standings, 'actual');
 
-    // THEN datum includes projectedEv
-    expect(result[0].data[1].projectedEv).toBe(88.3);
+    // THEN datum includes expectedValue
+    expect(result[0].data[1].expectedValue).toBe(88.3);
   });
 });

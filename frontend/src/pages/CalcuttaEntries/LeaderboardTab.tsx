@@ -40,20 +40,20 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
         isTied: s.isTied,
         payoutCents: s.payoutCents,
         inTheMoney: s.inTheMoney,
-        projectedEv: s.projectedEv,
+        expectedValue: s.expectedValue,
         projectedFavorites: s.projectedFavorites,
       };
     });
   }, [entries, dashboard.roundStandings, throughRound]);
 
-  const hasProjections = displayEntries.some((e) => e.projectedEv != null);
+  const hasProjections = displayEntries.some((e) => e.expectedValue != null);
   const hasFavorites = displayEntries.some((e) => e.projectedFavorites != null);
 
   const sortedEntries = useMemo(() => {
     if (effectiveSortMode === 'projected') {
       return [...displayEntries].sort((a, b) => {
-        const aVal = a.projectedEv ?? a.totalPoints ?? 0;
-        const bVal = b.projectedEv ?? b.totalPoints ?? 0;
+        const aVal = a.expectedValue ?? a.totalPoints ?? 0;
+        const bVal = b.expectedValue ?? b.totalPoints ?? 0;
         return bVal - aVal;
       });
     }
@@ -129,8 +129,8 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
           : 'text-primary';
 
         const displayValue =
-          effectiveSortMode === 'projected' && entry.projectedEv != null
-            ? entry.projectedEv.toFixed(2)
+          effectiveSortMode === 'projected' && entry.expectedValue != null
+            ? entry.expectedValue.toFixed(2)
             : effectiveSortMode === 'favorites' && entry.projectedFavorites != null
               ? entry.projectedFavorites.toFixed(2)
               : (entry.totalPoints ?? 0).toFixed(2);

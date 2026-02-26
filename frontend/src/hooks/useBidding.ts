@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calcuttaService } from '../services/calcuttaService';
@@ -89,6 +89,8 @@ export function useBidding() {
 
   const [slots, setSlots] = useState<BidSlot[]>([]);
   const initializedRef = useRef(false);
+  const initialBidsRef = useRef<Record<string, number>>({});
+  const [isDirty, setIsDirty] = useState(false);
 
   const biddingQuery = useQuery({
     queryKey: queryKeys.bidding.page(calcuttaId, entryId),
@@ -140,12 +142,37 @@ export function useBidding() {
       const { initialBids, teams: loadedTeams } = biddingQuery.data;
       const maxTeams = biddingQuery.data.calcutta?.maxTeams ?? 10;
       setSlots(initializeSlotsFromBids(initialBids, loadedTeams, maxTeams));
+      initialBidsRef.current = { ...initialBids };
       initializedRef.current = true;
     }
   }, [biddingQuery.data]);
 
   // Derive bidsByTeamId from slots for validation/budget computation
   const bidsByTeamId = useMemo(() => deriveBidsByTeamId(slots), [slots]);
+
+  // Track dirty state by comparing current bids to initial bids
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    const initial = initialBidsRef.current;
+    const currentKeys = Object.keys(bidsByTeamId);
+    const initialKeys = Object.keys(initial);
+    if (currentKeys.length !== initialKeys.length) {
+      setIsDirty(true);
+      return;
+    }
+    const changed = currentKeys.some((k) => bidsByTeamId[k] !== initial[k]);
+    setIsDirty(changed);
+  }, [bidsByTeamId]);
+
+  // Warn on browser navigation (close tab, refresh) when form is dirty
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   // Team options for combobox
   const teamOptions = useMemo(() => deriveTeamOptions(teams), [teams]);
@@ -155,8 +182,8 @@ export function useBidding() {
 
   const updateEntryMutation = useMutation({
     mutationFn: async (teamsPayload: Array<{ teamId: string; bidPoints: number }>) => {
-      if (!entryId) throw new Error('Missing entry ID');
-      return calcuttaService.updateEntry(entryId, teamsPayload);
+      if (!calcuttaId || !entryId) throw new Error('Missing calcutta or entry ID');
+      return calcuttaService.updateEntry(calcuttaId, entryId, teamsPayload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.dashboard(calcuttaId) });
@@ -239,6 +266,14 @@ export function useBidding() {
     updateEntryMutation.mutate(teamsPayload);
   };
 
+  const handleCancel = () => {
+    if (isDirty) {
+      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+      if (!confirmed) return;
+    }
+    navigate(`/pools/${calcuttaId}`);
+  };
+
   return {
     // IDs
     calcuttaId,
@@ -267,6 +302,7 @@ export function useBidding() {
     teamCount,
     validationErrors,
     isValid,
+    isDirty,
 
     // Slot handlers
     handleSlotSelect,
@@ -276,5 +312,6 @@ export function useBidding() {
 
     // Submit
     handleSubmit,
+    handleCancel,
   };
 }

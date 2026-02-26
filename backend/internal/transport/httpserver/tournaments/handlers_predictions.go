@@ -11,13 +11,13 @@ import (
 
 func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 
-	batchID := r.URL.Query().Get("batch_id")
+	batchID := r.URL.Query().Get("batchId")
 	var throughRound int
 	if batchID == "" {
 		batch, found, err := h.app.Prediction.GetLatestBatch(r.Context(), tournamentID)
@@ -57,9 +57,9 @@ func (h *Handler) HandleGetPredictions(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleListPredictionBatches(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 

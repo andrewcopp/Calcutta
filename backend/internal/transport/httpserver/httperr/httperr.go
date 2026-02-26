@@ -13,10 +13,11 @@ import (
 )
 
 type apiError struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	Field     string `json:"field,omitempty"`
-	RequestID string `json:"requestId"`
+	Code      string   `json:"code"`
+	Message   string   `json:"message"`
+	Field     string   `json:"field,omitempty"`
+	RequestID string   `json:"requestId"`
+	Errors    []string `json:"errors,omitempty"`
 }
 
 type apiErrorEnvelope struct {
@@ -31,6 +32,18 @@ func Write(w http.ResponseWriter, r *http.Request, status int, code string, mess
 			Message:   message,
 			Field:     field,
 			RequestID: requestID,
+		},
+	})
+}
+
+func WriteMultiError(w http.ResponseWriter, r *http.Request, status int, code string, message string, errors []string) {
+	requestID := requestctx.GetRequestID(r.Context())
+	response.WriteJSON(w, status, apiErrorEnvelope{
+		Error: apiError{
+			Code:      code,
+			Message:   message,
+			RequestID: requestID,
+			Errors:    errors,
 		},
 	})
 }

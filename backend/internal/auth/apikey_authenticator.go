@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 	"time"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/ports"
@@ -23,7 +24,11 @@ func NewAPIKeyAuthenticator(keys ports.APIKeyReader, users ports.UserRepository)
 }
 
 func (a *APIKeyAuthenticator) Authenticate(ctx context.Context, token string) (*ports.AuthIdentity, error) {
-	sum := sha256.Sum256([]byte(token))
+	raw := token
+	if strings.HasPrefix(raw, "mmk_") {
+		raw = raw[4:]
+	}
+	sum := sha256.Sum256([]byte(raw))
 	h := hex.EncodeToString(sum[:])
 
 	k, err := a.keys.GetActiveByHash(ctx, h, a.now())

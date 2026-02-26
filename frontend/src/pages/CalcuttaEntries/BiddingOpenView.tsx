@@ -22,8 +22,8 @@ interface BiddingOpenViewProps {
   onCreateEntry: () => void;
 }
 
-const statusLabelMap: Record<string, string> = { incomplete: 'In Progress', accepted: 'Bids locked' };
-const statusVariantMap: Record<string, string> = { incomplete: 'secondary', accepted: 'success' };
+const statusLabelMap: Record<string, string> = { draft: 'In Progress', submitted: 'Bids locked' };
+const statusVariantMap: Record<string, string> = { draft: 'secondary', submitted: 'success' };
 
 export function BiddingOpenView({
   calcuttaId,
@@ -110,7 +110,7 @@ export function BiddingOpenView({
 
       <div className="mt-4 text-sm text-muted-foreground text-center flex items-center justify-center gap-1.5">
         <IconUsers className="h-4 w-4" />
-        {totalEntries} {totalEntries === 1 ? 'entry' : 'entries'} submitted
+        {totalEntries} {totalEntries === 1 ? 'portfolio' : 'portfolios'} submitted
       </div>
     </PageContainer>
   );

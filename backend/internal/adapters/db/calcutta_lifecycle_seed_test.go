@@ -107,12 +107,12 @@ func mustSeedLifecycleTournament(t *testing.T, ctx context.Context) lifecycleFix
 		{2, 25},
 	}
 	for _, sr := range scoringRules {
-		round := &models.CalcuttaRound{
-			CalcuttaID: calcutta.ID,
-			Round:      sr.winIndex,
-			Points:     sr.points,
+		rule := &models.ScoringRule{
+			CalcuttaID:    calcutta.ID,
+			WinIndex:      sr.winIndex,
+			PointsAwarded: sr.points,
 		}
-		if err := calcuttaRepo.CreateRound(ctx, round); err != nil {
+		if err := calcuttaRepo.CreateScoringRule(ctx, rule); err != nil {
 			t.Fatalf("creating scoring rule (win_index=%d): %v", sr.winIndex, err)
 		}
 	}

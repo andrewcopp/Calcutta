@@ -31,12 +31,12 @@ export const CalcuttaEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
   calcuttaId: z.string(),
-  status: z.enum(['incomplete', 'accepted']).optional(),
+  status: z.enum(['draft', 'submitted']).optional(),
   totalPoints: z.number().optional(),
   finishPosition: z.number().optional(),
   inTheMoney: z.boolean().optional(),
   payoutCents: z.number().optional(),
-  projectedEv: z.number().optional(),
+  expectedValue: z.number().optional(),
   projectedFavorites: z.number().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -104,7 +104,7 @@ export const RoundStandingEntrySchema = z.object({
   isTied: z.boolean(),
   payoutCents: z.number(),
   inTheMoney: z.boolean(),
-  projectedEv: z.number().optional(),
+  expectedValue: z.number().optional(),
   projectedFavorites: z.number().optional(),
 });
 

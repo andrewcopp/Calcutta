@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -124,6 +127,50 @@ func TestThatVerifyAccessTokenRejectsExpiredToken(t *testing.T) {
 	// THEN
 	if verifyErr == nil {
 		t.Fatalf("expected error")
+	}
+}
+
+func TestThatIssuedTokenContainsKidIssAndVerClaims(t *testing.T) {
+	// GIVEN a token manager
+	mgr, err := NewTokenManager("secret", 15*time.Minute)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	now := time.Unix(1700000000, 0).UTC()
+
+	// WHEN issuing a token
+	tok, _, err := mgr.IssueAccessToken("user-1", "sess-1", now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// THEN the raw header contains kid="v1" and payload contains iss="calcutta", ver=1
+	parts := strings.Split(tok, ".")
+	headerJSON, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		t.Fatalf("failed to decode header: %v", err)
+	}
+	var header map[string]string
+	if err := json.Unmarshal(headerJSON, &header); err != nil {
+		t.Fatalf("failed to unmarshal header: %v", err)
+	}
+	if header["kid"] != "v1" {
+		t.Errorf("expected kid=v1, got %q", header["kid"])
+	}
+
+	payloadJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("failed to decode payload: %v", err)
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(payloadJSON, &payload); err != nil {
+		t.Fatalf("failed to unmarshal payload: %v", err)
+	}
+	if payload["iss"] != "calcutta" {
+		t.Errorf("expected iss=calcutta, got %v", payload["iss"])
+	}
+	if payload["ver"] != float64(1) {
+		t.Errorf("expected ver=1, got %v", payload["ver"])
 	}
 }
 

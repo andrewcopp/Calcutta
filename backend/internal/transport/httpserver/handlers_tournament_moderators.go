@@ -90,13 +90,11 @@ func (s *Server) grantTournamentModeratorHandler(w http.ResponseWriter, r *http.
 	if user.Email != nil {
 		email = *user.Email
 	}
-	response.WriteJSON(w, http.StatusCreated, map[string]any{
-		"moderator": moderatorResponse{
-			ID:        user.ID,
-			Email:     email,
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-		},
+	response.WriteJSON(w, http.StatusCreated, moderatorResponse{
+		ID:        user.ID,
+		Email:     email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
 	})
 }
 

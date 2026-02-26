@@ -59,7 +59,6 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 	cHandler := calcuttas.NewHandlerWithAuthUserID(s.app, s.authzRepo, s.authzRepo, authUserID)
 	calcuttas.RegisterRoutes(r, calcuttas.Handlers{
 		ListCalcuttas:             cHandler.HandleListCalcuttas,
-		ListCalcuttasWithRankings: cHandler.HandleListCalcuttasWithRankings,
 		CreateCalcutta:            cHandler.HandleCreateCalcutta,
 		GetCalcutta:               cHandler.HandleGetCalcutta,
 		GetDashboard:              cHandler.HandleGetDashboard,
@@ -106,20 +105,22 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 }
 
 func (s *Server) registerAuthRoutes(r *mux.Router) {
-	// Auth
-	r.HandleFunc("/api/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
-r.HandleFunc("/api/v1/auth/invite/preview", s.previewInviteHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/auth/invite/accept", s.acceptInviteHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/auth/forgot-password", s.forgotPasswordHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/auth/reset-password", s.resetPasswordHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/auth/refresh", s.refreshHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/auth/logout", s.logoutHandler).Methods("POST", "OPTIONS")
+	authRouter := r.NewRoute().Subrouter()
+	authRouter.Use(s.rateLimitMiddleware(10)) // 10 req/min per IP for auth endpoints
+
+	authRouter.HandleFunc("/api/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/api/v1/auth/invite/preview", s.previewInviteHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/api/v1/auth/invite/accept", s.acceptInviteHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/api/v1/auth/forgot-password", s.forgotPasswordHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/api/v1/auth/reset-password", s.resetPasswordHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/api/v1/auth/refresh", s.refreshHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/api/v1/auth/logout", s.logoutHandler).Methods("POST", "OPTIONS")
 }
 
 func (s *Server) registerBracketRoutes(r *mux.Router) {
 	// Bracket management
-	r.HandleFunc("/api/v1/tournaments/{id}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/tournaments/{id}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket", s.getBracketHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/validate", s.validateBracketSetupHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.selectWinnerHandler)).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/tournaments/{tournamentId}/bracket/games/{gameId}/winner", s.requirePermissionWithScope("tournament.game.write", "tournament", "tournamentId", s.unselectWinnerHandler)).Methods("DELETE", "OPTIONS")
 }

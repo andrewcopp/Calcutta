@@ -17,9 +17,9 @@ import (
 
 func (h *Handler) HandleListTournamentTeams(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 
@@ -37,9 +37,9 @@ func (h *Handler) HandleListTournamentTeams(w http.ResponseWriter, r *http.Reque
 
 func (h *Handler) HandleCreateTournamentTeam(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 	var req dtos.CreateTournamentTeamRequest
@@ -142,9 +142,9 @@ func (h *Handler) HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleReplaceTeams(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 
@@ -155,10 +155,7 @@ func (h *Handler) HandleReplaceTeams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if errs := req.Validate(); len(errs) > 0 {
-		response.WriteJSON(w, http.StatusBadRequest, dtos.BracketValidationErrorResponse{
-			Code:   "validation_error",
-			Errors: errs,
-		})
+		httperr.WriteMultiError(w, r, http.StatusBadRequest, "validation_error", "Request validation failed", errs)
 		return
 	}
 
@@ -175,10 +172,7 @@ func (h *Handler) HandleReplaceTeams(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var bve *apptournament.BracketValidationError
 		if errors.As(err, &bve) {
-			response.WriteJSON(w, http.StatusBadRequest, dtos.BracketValidationErrorResponse{
-				Code:   "bracket_validation_error",
-				Errors: bve.Errors,
-			})
+			httperr.WriteMultiError(w, r, http.StatusBadRequest, "bracket_validation_error", "Bracket validation failed", bve.Errors)
 			return
 		}
 		httperr.WriteFromErr(w, r, err, h.authUserID)

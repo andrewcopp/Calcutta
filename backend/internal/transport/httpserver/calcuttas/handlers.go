@@ -49,18 +49,23 @@ func (h *Handler) HandleListCalcuttas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var result []*models.Calcutta
+	var calcuttas []*models.Calcutta
 	if isAdmin {
-		result, err = h.app.Calcutta.GetAllCalcuttas(r.Context())
+		calcuttas, err = h.app.Calcutta.GetAllCalcuttas(r.Context())
 	} else {
-		result, err = h.app.Calcutta.GetCalcuttasByUser(r.Context(), userID)
+		calcuttas, err = h.app.Calcutta.GetCalcuttasByUser(r.Context(), userID)
 	}
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
 
-	resp := dtos.NewCalcuttaListResponse(result)
+	if r.URL.Query().Get("include") == "rankings" {
+		h.listCalcuttasWithRankings(w, r, userID, calcuttas)
+		return
+	}
+
+	resp := dtos.NewCalcuttaListResponse(calcuttas)
 	response.WriteJSON(w, http.StatusOK, map[string]any{"items": resp})
 }
 
@@ -119,8 +124,8 @@ func (h *Handler) HandleCreateCalcutta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rounds := req.ToScoringRules()
-	if err := h.app.Calcutta.CreateCalcuttaWithRounds(r.Context(), calcutta, rounds); err != nil {
+	scoringRules := req.ToScoringRules()
+	if err := h.app.Calcutta.CreateCalcuttaWithScoringRules(r.Context(), calcutta, scoringRules); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}

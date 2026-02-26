@@ -346,12 +346,12 @@ func seedCalcuttaWithScoringRules(t *testing.T, ctx context.Context, tournamentI
 
 	pointsPerRound := []int{0, 10, 20, 40, 80, 160}
 	for i, pts := range pointsPerRound {
-		round := &models.CalcuttaRound{
-			CalcuttaID: calcutta.ID,
-			Round:      i + 1,
-			Points:     pts,
+		rule := &models.ScoringRule{
+			CalcuttaID:    calcutta.ID,
+			WinIndex:      i + 1,
+			PointsAwarded: pts,
 		}
-		if err := calcuttaRepo.CreateRound(ctx, round); err != nil {
+		if err := calcuttaRepo.CreateScoringRule(ctx, rule); err != nil {
 			t.Fatalf("creating scoring rule %d: %v", i+1, err)
 		}
 	}

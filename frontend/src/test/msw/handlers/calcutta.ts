@@ -19,7 +19,7 @@ const validEntry = {
   id: 'entry-1',
   name: 'Test Entry',
   calcuttaId: 'calc-1',
-  status: 'accepted' as const,
+  status: 'submitted' as const,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -34,16 +34,20 @@ const validEntryTeam = {
 };
 
 export const calcuttaHandlers = [
-  http.get(`${BASE}/calcuttas/list-with-rankings`, () => {
-    return HttpResponse.json({
-      items: [
-        {
-          ...validCalcutta,
-          hasEntry: true,
-          ranking: { rank: 1, totalEntries: 5, points: 150 },
-        },
-      ],
-    });
+  http.get(`${BASE}/calcuttas`, ({ request }) => {
+    const url = new URL(request.url);
+    if (url.searchParams.get('include') === 'rankings') {
+      return HttpResponse.json({
+        items: [
+          {
+            ...validCalcutta,
+            hasEntry: true,
+            ranking: { rank: 1, totalEntries: 5, points: 150 },
+          },
+        ],
+      });
+    }
+    return HttpResponse.json({ items: [validCalcutta] });
   }),
 
   http.get(`${BASE}/calcuttas/:id/dashboard`, () => {
@@ -88,10 +92,6 @@ export const calcuttaHandlers = [
     return HttpResponse.json(validCalcutta);
   }),
 
-  http.get(`${BASE}/calcuttas`, () => {
-    return HttpResponse.json({ items: [validCalcutta] });
-  }),
-
   http.post(`${BASE}/calcuttas/:id/entries`, () => {
     return HttpResponse.json(validEntry);
   }),
@@ -104,7 +104,7 @@ export const calcuttaHandlers = [
     return HttpResponse.json(validCalcutta);
   }),
 
-  http.patch(`${BASE}/entries/:id`, () => {
+  http.patch(`${BASE}/calcuttas/:calcuttaId/entries/:entryId`, () => {
     return HttpResponse.json(validEntry);
   }),
 

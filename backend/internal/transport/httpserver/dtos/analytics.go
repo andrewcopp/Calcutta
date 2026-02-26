@@ -73,7 +73,7 @@ type SeedInvestmentSummary struct {
 }
 
 type SeedInvestmentDistributionResponse struct {
-	Points    []SeedInvestmentPoint   `json:"points"`
+	Items     []SeedInvestmentPoint   `json:"items"`
 	Summaries []SeedInvestmentSummary `json:"summaries"`
 }
 
@@ -96,7 +96,7 @@ type BestTeam struct {
 }
 
 type BestTeamsResponse struct {
-	Teams []BestTeam `json:"teams"`
+	Items []BestTeam `json:"items"`
 }
 
 type BestInvestment struct {
@@ -118,7 +118,7 @@ type BestInvestment struct {
 }
 
 type BestInvestmentsResponse struct {
-	Investments []BestInvestment `json:"investments"`
+	Items []BestInvestment `json:"items"`
 }
 
 type InvestmentLeaderboardRow struct {
@@ -137,7 +137,7 @@ type InvestmentLeaderboardRow struct {
 }
 
 type InvestmentLeaderboardResponse struct {
-	Investments []InvestmentLeaderboardRow `json:"investments"`
+	Items []InvestmentLeaderboardRow `json:"items"`
 }
 
 type EntryLeaderboardRow struct {
@@ -153,7 +153,7 @@ type EntryLeaderboardRow struct {
 }
 
 type EntryLeaderboardResponse struct {
-	Entries []EntryLeaderboardRow `json:"entries"`
+	Items []EntryLeaderboardRow `json:"items"`
 }
 
 type CareerLeaderboardRow struct {
@@ -169,7 +169,7 @@ type CareerLeaderboardRow struct {
 }
 
 type CareerLeaderboardResponse struct {
-	Careers []CareerLeaderboardRow `json:"careers"`
+	Items []CareerLeaderboardRow `json:"items"`
 }
 
 type AnalyticsResponse struct {

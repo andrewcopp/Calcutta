@@ -14,6 +14,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// dummyHash is used for constant-time login regardless of whether the user exists.
+var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("timing-safe"), 12)
+
 type Result struct {
 	User             *models.User
 	AccessToken      string
@@ -45,6 +48,7 @@ func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddre
 		return nil, fmt.Errorf("getting user by email: %w", err)
 	}
 	if user == nil {
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 		return nil, &apperrors.UnauthorizedError{Message: "invalid credentials"}
 	}
 	ok, err := s.authRepo.IsUserActive(ctx, user.ID)
@@ -97,7 +101,7 @@ func (s *Service) Signup(ctx context.Context, email, firstName, lastName, passwo
 		return nil, &apperrors.AlreadyExistsError{Resource: "user", Field: "email", Value: email}
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), coreauth.BcryptCost)
 	if err != nil {
 		return nil, fmt.Errorf("hashing password: %w", err)
 	}

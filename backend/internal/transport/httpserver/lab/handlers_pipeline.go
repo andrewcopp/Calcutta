@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	applab "github.com/andrewcopp/Calcutta/backend/internal/app/lab"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/httperr"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
@@ -48,16 +47,7 @@ func (h *Handler) HandleStartPipeline(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.app.Lab.StartPipeline(r.Context(), id, req)
 	if err != nil {
-		switch err.(type) {
-		case *applab.PipelineAlreadyRunningError:
-			httperr.Write(w, r, http.StatusConflict, "pipeline_running", err.Error(), "")
-		case *applab.NoCalcuttasAvailableError:
-			httperr.Write(w, r, http.StatusBadRequest, "no_calcuttas", err.Error(), "")
-		case *applab.PipelineNotAvailableError:
-			httperr.Write(w, r, http.StatusServiceUnavailable, "pipeline_unavailable", err.Error(), "")
-		default:
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-		}
+		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
 
@@ -135,12 +125,7 @@ func (h *Handler) HandleCancelPipeline(w http.ResponseWriter, r *http.Request) {
 
 	err := h.app.Lab.CancelPipeline(r.Context(), id)
 	if err != nil {
-		switch err.(type) {
-		case *applab.PipelineNotCancellableError:
-			httperr.Write(w, r, http.StatusConflict, "not_cancellable", err.Error(), "")
-		default:
-			httperr.WriteFromErr(w, r, err, h.authUserID)
-		}
+		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
 

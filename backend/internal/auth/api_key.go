@@ -15,5 +15,5 @@ func NewAPIKeyFromReader(r io.Reader) (string, error) {
 	if _, err := io.ReadFull(r, b); err != nil {
 		return "", err
 	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
+	return "mmk_" + base64.RawURLEncoding.EncodeToString(b), nil
 }

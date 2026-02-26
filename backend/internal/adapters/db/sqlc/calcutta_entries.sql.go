@@ -39,6 +39,7 @@ SELECT
     name,
     user_id,
     calcutta_id,
+    status,
     created_at,
     updated_at,
     deleted_at
@@ -46,14 +47,26 @@ FROM core.entries
 WHERE id = $1 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetEntryByID(ctx context.Context, id string) (CoreEntry, error) {
+type GetEntryByIDRow struct {
+	ID         string
+	Name       string
+	UserID     pgtype.UUID
+	CalcuttaID string
+	Status     string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) GetEntryByID(ctx context.Context, id string) (GetEntryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getEntryByID, id)
-	var i CoreEntry
+	var i GetEntryByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.UserID,
 		&i.CalcuttaID,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -126,6 +139,7 @@ SELECT
     ce.name,
     ce.user_id,
     ce.calcutta_id,
+    ce.status,
     ce.created_at,
     ce.updated_at,
     ce.deleted_at,
@@ -141,6 +155,7 @@ type ListEntriesByCalcuttaIDRow struct {
 	Name        string
 	UserID      pgtype.UUID
 	CalcuttaID  string
+	Status      string
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	DeletedAt   pgtype.Timestamptz
@@ -161,6 +176,7 @@ func (q *Queries) ListEntriesByCalcuttaID(ctx context.Context, calcuttaID string
 			&i.Name,
 			&i.UserID,
 			&i.CalcuttaID,
+			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -174,4 +190,20 @@ func (q *Queries) ListEntriesByCalcuttaID(ctx context.Context, calcuttaID string
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateEntryStatus = `-- name: UpdateEntryStatus :exec
+UPDATE core.entries
+SET status = $2, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+type UpdateEntryStatusParams struct {
+	ID     string
+	Status string
+}
+
+func (q *Queries) UpdateEntryStatus(ctx context.Context, arg UpdateEntryStatusParams) error {
+	_, err := q.db.Exec(ctx, updateEntryStatus, arg.ID, arg.Status)
+	return err
 }

@@ -13,7 +13,7 @@ type Ports struct {
 	Entries         ports.EntryRepository
 	Payouts         ports.PayoutRepository
 	PortfolioReader ports.PortfolioReader
-	Rounds          ports.RoundRepository
+	ScoringRules    ports.ScoringRuleRepository
 	TeamReader      ports.TournamentTeamReader
 	Invitations     ports.CalcuttaInvitationRepository
 }
@@ -28,20 +28,20 @@ func New(ports Ports) *Service {
 	return &Service{ports: ports}
 }
 
-// CreateCalcuttaWithRounds creates a new calcutta and its associated rounds
-func (s *Service) CreateCalcuttaWithRounds(ctx context.Context, calcutta *models.Calcutta, rounds []*models.CalcuttaRound) error {
+// CreateCalcuttaWithScoringRules creates a new calcutta and its associated scoring rules.
+func (s *Service) CreateCalcuttaWithScoringRules(ctx context.Context, calcutta *models.Calcutta, rules []*models.ScoringRule) error {
 	if err := s.ports.Calcuttas.Create(ctx, calcutta); err != nil {
 		return fmt.Errorf("creating calcutta: %w", err)
 	}
 
-	for _, r := range rounds {
-		calcuttaRound := &models.CalcuttaRound{
-			CalcuttaID: calcutta.ID,
-			Round:      r.Round,
-			Points:     r.Points,
+	for _, r := range rules {
+		rule := &models.ScoringRule{
+			CalcuttaID:    calcutta.ID,
+			WinIndex:      r.WinIndex,
+			PointsAwarded: r.PointsAwarded,
 		}
-		if err := s.ports.Rounds.CreateRound(ctx, calcuttaRound); err != nil {
-			return fmt.Errorf("creating calcutta round: %w", err)
+		if err := s.ports.ScoringRules.CreateScoringRule(ctx, rule); err != nil {
+			return fmt.Errorf("creating scoring rule: %w", err)
 		}
 	}
 

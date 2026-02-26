@@ -31,7 +31,7 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 		Entries:         calcuttaRepo,
 		Payouts:         calcuttaRepo,
 		PortfolioReader: calcuttaRepo,
-		Rounds:          calcuttaRepo,
+		ScoringRules:    calcuttaRepo,
 		TeamReader:      calcuttaRepo,
 		Invitations:     invitationRepo,
 	})

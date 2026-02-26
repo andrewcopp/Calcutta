@@ -2,8 +2,8 @@ import { z } from 'zod';
 import {
   TournamentSchema,
   TournamentTeamSchema,
+  TournamentModeratorSchema,
   TournamentModeratorsResponseSchema,
-  GrantModeratorResponseSchema,
   CompetitionSchema,
   SeasonSchema,
   TournamentPredictionsSchema,
@@ -67,10 +67,9 @@ export const tournamentService = {
   },
 
   async grantTournamentModerator(tournamentId: string, email: string) {
-    const res = await apiClient.post(`/tournaments/${tournamentId}/moderators`, { email }, {
-      schema: GrantModeratorResponseSchema,
+    return apiClient.post(`/tournaments/${tournamentId}/moderators`, { email }, {
+      schema: TournamentModeratorSchema,
     });
-    return res.moderator;
   },
 
   async revokeTournamentModerator(tournamentId: string, userId: string): Promise<void> {
@@ -85,7 +84,7 @@ export const tournamentService = {
   },
 
   async getTournamentPredictions(tournamentId: string, batchId?: string) {
-    const params = batchId ? `?batch_id=${batchId}` : '';
+    const params = batchId ? `?batchId=${batchId}` : '';
     return apiClient.get(`/tournaments/${tournamentId}/predictions${params}`, {
       schema: TournamentPredictionsSchema,
     });

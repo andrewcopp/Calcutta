@@ -25,13 +25,13 @@ func (s *Service) ReinviteFromCalcutta(ctx context.Context, sourceCalcuttaID str
 		newCalcutta.MaxBidPoints = source.MaxBidPoints
 	}
 
-	sourceRounds, err := s.ports.Rounds.GetRounds(ctx, sourceCalcuttaID)
+	sourceScoringRules, err := s.ports.ScoringRules.GetScoringRules(ctx, sourceCalcuttaID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("getting source calcutta rounds: %w", err)
+		return nil, nil, fmt.Errorf("getting source scoring rules: %w", err)
 	}
 
-	if err := s.CreateCalcuttaWithRounds(ctx, newCalcutta, sourceRounds); err != nil {
-		return nil, nil, fmt.Errorf("creating calcutta with rounds: %w", err)
+	if err := s.CreateCalcuttaWithScoringRules(ctx, newCalcutta, sourceScoringRules); err != nil {
+		return nil, nil, fmt.Errorf("creating calcutta with scoring rules: %w", err)
 	}
 
 	userIDs, err := s.ports.Entries.GetDistinctUserIDsByCalcutta(ctx, sourceCalcuttaID)

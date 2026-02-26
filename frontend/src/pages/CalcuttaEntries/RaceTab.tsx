@@ -16,7 +16,7 @@ interface RaceTabProps {
 export function RaceTab({ entries, dashboard }: RaceTabProps) {
   const [sortMode, setSortMode] = useState<SortMode>('actual');
 
-  const hasProjections = dashboard.roundStandings.some((g) => g.entries.some((e) => e.projectedEv != null));
+  const hasProjections = dashboard.roundStandings.some((g) => g.entries.some((e) => e.expectedValue != null));
   const hasFavorites = dashboard.roundStandings.some((g) => g.entries.some((e) => e.projectedFavorites != null));
 
   const data = useMemo(

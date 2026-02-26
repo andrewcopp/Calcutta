@@ -83,9 +83,9 @@ func ToSeedInvestmentDistributionResponse(result *analytics.SeedInvestmentDistri
 
 	out := SeedInvestmentDistributionResponse{}
 
-	out.Points = make([]SeedInvestmentPoint, 0, len(result.Points))
+	out.Items = make([]SeedInvestmentPoint, 0, len(result.Points))
 	for _, p := range result.Points {
-		out.Points = append(out.Points, SeedInvestmentPoint{
+		out.Items = append(out.Items, SeedInvestmentPoint{
 			Seed:             p.Seed,
 			TournamentName:   p.TournamentName,
 			TournamentYear:   p.TournamentYear,
@@ -117,9 +117,9 @@ func ToSeedInvestmentDistributionResponse(result *analytics.SeedInvestmentDistri
 }
 
 func ToBestTeamsResponse(results []analytics.BestInvestmentResult) BestTeamsResponse {
-	out := BestTeamsResponse{Teams: make([]BestTeam, 0, len(results))}
+	out := BestTeamsResponse{Items: make([]BestTeam, 0, len(results))}
 	for _, bi := range results {
-		out.Teams = append(out.Teams, BestTeam{
+		out.Items = append(out.Items, BestTeam{
 			TournamentName:   bi.TournamentName,
 			TournamentYear:   bi.TournamentYear,
 			CalcuttaID:       bi.CalcuttaID,
@@ -141,9 +141,9 @@ func ToBestTeamsResponse(results []analytics.BestInvestmentResult) BestTeamsResp
 }
 
 func ToBestInvestmentsResponse(results []analytics.BestInvestmentResult) BestInvestmentsResponse {
-	out := BestInvestmentsResponse{Investments: make([]BestInvestment, 0, len(results))}
+	out := BestInvestmentsResponse{Items: make([]BestInvestment, 0, len(results))}
 	for _, bi := range results {
-		out.Investments = append(out.Investments, BestInvestment{
+		out.Items = append(out.Items, BestInvestment{
 			TournamentName:   bi.TournamentName,
 			TournamentYear:   bi.TournamentYear,
 			CalcuttaID:       bi.CalcuttaID,
@@ -165,9 +165,9 @@ func ToBestInvestmentsResponse(results []analytics.BestInvestmentResult) BestInv
 }
 
 func ToInvestmentLeaderboardResponse(results []analytics.InvestmentLeaderboardResult) InvestmentLeaderboardResponse {
-	out := InvestmentLeaderboardResponse{Investments: make([]InvestmentLeaderboardRow, 0, len(results))}
+	out := InvestmentLeaderboardResponse{Items: make([]InvestmentLeaderboardRow, 0, len(results))}
 	for _, inv := range results {
-		out.Investments = append(out.Investments, InvestmentLeaderboardRow{
+		out.Items = append(out.Items, InvestmentLeaderboardRow{
 			TournamentName:      inv.TournamentName,
 			TournamentYear:      inv.TournamentYear,
 			CalcuttaID:          inv.CalcuttaID,
@@ -186,9 +186,9 @@ func ToInvestmentLeaderboardResponse(results []analytics.InvestmentLeaderboardRe
 }
 
 func ToEntryLeaderboardResponse(results []analytics.EntryLeaderboardResult) EntryLeaderboardResponse {
-	out := EntryLeaderboardResponse{Entries: make([]EntryLeaderboardRow, 0, len(results))}
+	out := EntryLeaderboardResponse{Items: make([]EntryLeaderboardRow, 0, len(results))}
 	for _, e := range results {
-		out.Entries = append(out.Entries, EntryLeaderboardRow{
+		out.Items = append(out.Items, EntryLeaderboardRow{
 			TournamentName:    e.TournamentName,
 			TournamentYear:    e.TournamentYear,
 			CalcuttaID:        e.CalcuttaID,
@@ -204,9 +204,9 @@ func ToEntryLeaderboardResponse(results []analytics.EntryLeaderboardResult) Entr
 }
 
 func ToCareerLeaderboardResponse(results []analytics.CareerLeaderboardResult) CareerLeaderboardResponse {
-	out := CareerLeaderboardResponse{Careers: make([]CareerLeaderboardRow, 0, len(results))}
+	out := CareerLeaderboardResponse{Items: make([]CareerLeaderboardRow, 0, len(results))}
 	for _, c := range results {
-		out.Careers = append(out.Careers, CareerLeaderboardRow{
+		out.Items = append(out.Items, CareerLeaderboardRow{
 			EntryName:              c.EntryName,
 			Years:                  c.Years,
 			BestFinish:             c.BestFinish,

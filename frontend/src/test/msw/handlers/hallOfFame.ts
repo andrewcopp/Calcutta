@@ -5,7 +5,7 @@ const BASE = 'http://localhost:8080/api/v1';
 export const hallOfFameHandlers = [
   http.get(`${BASE}/hall-of-fame/best-teams`, () => {
     return HttpResponse.json({
-      teams: [
+      items: [
         {
           tournamentName: 'NCAA 2025',
           tournamentYear: 2025,
@@ -29,7 +29,7 @@ export const hallOfFameHandlers = [
 
   http.get(`${BASE}/hall-of-fame/best-investments`, () => {
     return HttpResponse.json({
-      investments: [
+      items: [
         {
           tournamentName: 'NCAA 2025',
           tournamentYear: 2025,
@@ -50,7 +50,7 @@ export const hallOfFameHandlers = [
 
   http.get(`${BASE}/hall-of-fame/best-entries`, () => {
     return HttpResponse.json({
-      entries: [
+      items: [
         {
           tournamentName: 'NCAA 2025',
           tournamentYear: 2025,
@@ -68,7 +68,7 @@ export const hallOfFameHandlers = [
 
   http.get(`${BASE}/hall-of-fame/best-careers`, () => {
     return HttpResponse.json({
-      careers: [
+      items: [
         {
           entryName: 'Test Player',
           wins: 3,

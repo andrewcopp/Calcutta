@@ -90,13 +90,11 @@ func (s *Server) grantCalcuttaCoManagerHandler(w http.ResponseWriter, r *http.Re
 	if user.Email != nil {
 		email = *user.Email
 	}
-	response.WriteJSON(w, http.StatusCreated, map[string]any{
-		"coManager": coManagerResponse{
-			ID:        user.ID,
-			Email:     email,
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-		},
+	response.WriteJSON(w, http.StatusCreated, coManagerResponse{
+		ID:        user.ID,
+		Email:     email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
 	})
 }
 

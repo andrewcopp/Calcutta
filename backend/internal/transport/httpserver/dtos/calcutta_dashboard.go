@@ -35,7 +35,7 @@ type RoundStandingEntry struct {
 	IsTied             bool     `json:"isTied"`
 	PayoutCents        int      `json:"payoutCents"`
 	InTheMoney         bool     `json:"inTheMoney"`
-	ProjectedEV        *float64 `json:"projectedEv,omitempty"`
+	ExpectedValue      *float64 `json:"expectedValue,omitempty"`
 	ProjectedFavorites *float64 `json:"projectedFavorites,omitempty"`
 }
 

@@ -15,9 +15,9 @@ import (
 
 func (h *Handler) HandleUpdateKenPomStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	tournamentID := vars["id"]
+	tournamentID := vars["tournamentId"]
 	if tournamentID == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "id")
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Tournament ID is required", "tournamentId")
 		return
 	}
 

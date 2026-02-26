@@ -6,15 +6,6 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 )
 
-// DeriveEntryStatus computes the entry status from its teams.
-// Only two states: "incomplete" (no bids) and "accepted" (has bids, validated at save time).
-func DeriveEntryStatus(teams []*models.CalcuttaEntryTeam) string {
-	if len(teams) == 0 {
-		return "incomplete"
-	}
-	return "accepted"
-}
-
 // ValidateEntry validates all bids for an entry according to the calcutta's rules.
 // This is a pure function that can be tested without mocking repositories.
 func ValidateEntry(calcutta *models.Calcutta, entry *models.CalcuttaEntry, teams []*models.CalcuttaEntryTeam) error {

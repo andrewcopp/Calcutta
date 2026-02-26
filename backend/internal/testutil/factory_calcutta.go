@@ -27,7 +27,7 @@ func NewEntry() *models.CalcuttaEntry {
 		Name:       "Test Entry",
 		UserID:     StringPtr("user-1"),
 		CalcuttaID: "calcutta-1",
-		Status:     "accepted",
+		Status:     "submitted",
 		CreatedAt:  DefaultTime,
 		UpdatedAt:  DefaultTime,
 	}
@@ -57,15 +57,15 @@ func NewPayout() *models.CalcuttaPayout {
 	}
 }
 
-// NewRound returns a fully-populated CalcuttaRound with sensible defaults.
-func NewRound() *models.CalcuttaRound {
-	return &models.CalcuttaRound{
-		ID:         "round-1",
-		CalcuttaID: "calcutta-1",
-		Round:      1,
-		Points:     1,
-		CreatedAt:  DefaultTime,
-		UpdatedAt:  DefaultTime,
+// NewScoringRule returns a fully-populated ScoringRule with sensible defaults.
+func NewScoringRule() *models.ScoringRule {
+	return &models.ScoringRule{
+		ID:            "scoring-rule-1",
+		CalcuttaID:    "calcutta-1",
+		WinIndex:      1,
+		PointsAwarded: 1,
+		CreatedAt:     DefaultTime,
+		UpdatedAt:     DefaultTime,
 	}
 }
 

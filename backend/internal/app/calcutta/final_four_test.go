@@ -67,8 +67,8 @@ func portfolioTeam(portfolioID, teamID string, ownership float64) *models.Calcut
 	}
 }
 
-func round(roundNum, points int) *models.CalcuttaRound {
-	return &models.CalcuttaRound{Round: roundNum, Points: points}
+func scoringRule(winIndex, pointsAwarded int) *models.ScoringRule {
+	return &models.ScoringRule{WinIndex: winIndex, PointsAwarded: pointsAwarded}
 }
 
 func payout(position, amountCents int) *models.CalcuttaPayout {
@@ -143,7 +143,7 @@ func TestThatEightOutcomesReturnedForCompleteFinalFour(t *testing.T) {
 		tournamentTeam("C", 5, 1, false),
 		tournamentTeam("D", 5, 1, false),
 	}
-	rounds := []*models.CalcuttaRound{round(1, 1)}
+	rounds := []*models.ScoringRule{scoringRule(1, 1)}
 	payouts := []*models.CalcuttaPayout{}
 
 	// WHEN computing Final Four outcomes
@@ -175,9 +175,9 @@ func TestThatChampionGetsExtraWinsInScoring(t *testing.T) {
 		tournamentTeam("D", 4, 1, false),
 	}
 	// Each round of progress = 10 points
-	rounds := []*models.CalcuttaRound{
-		round(1, 10), round(2, 10), round(3, 10), round(4, 10),
-		round(5, 10), round(6, 10), round(7, 10),
+	rounds := []*models.ScoringRule{
+		scoringRule(1, 10), scoringRule(2, 10), scoringRule(3, 10), scoringRule(4, 10),
+		scoringRule(5, 10), scoringRule(6, 10), scoringRule(7, 10),
 	}
 	payouts := []*models.CalcuttaPayout{}
 
@@ -216,9 +216,9 @@ func TestThatCompletedTournamentProducesSameResultsAsPreFinalFour(t *testing.T) 
 	entries := []*models.CalcuttaEntry{entry("e1")}
 	portfolios := []*models.CalcuttaPortfolio{portfolio("p1", "e1")}
 	pts := []*models.CalcuttaPortfolioTeam{portfolioTeam("p1", "A", 1.0)}
-	rounds := []*models.CalcuttaRound{
-		round(1, 10), round(2, 10), round(3, 10), round(4, 10),
-		round(5, 10), round(6, 10), round(7, 10),
+	rounds := []*models.ScoringRule{
+		scoringRule(1, 10), scoringRule(2, 10), scoringRule(3, 10), scoringRule(4, 10),
+		scoringRule(5, 10), scoringRule(6, 10), scoringRule(7, 10),
 	}
 	payouts := []*models.CalcuttaPayout{}
 
@@ -274,9 +274,9 @@ func TestThatStandingsIncludePayouts(t *testing.T) {
 		tournamentTeam("C", 5, 1, false),
 		tournamentTeam("D", 5, 1, false),
 	}
-	rounds := []*models.CalcuttaRound{
-		round(1, 10), round(2, 10), round(3, 10), round(4, 10),
-		round(5, 10), round(6, 10), round(7, 10),
+	rounds := []*models.ScoringRule{
+		scoringRule(1, 10), scoringRule(2, 10), scoringRule(3, 10), scoringRule(4, 10),
+		scoringRule(5, 10), scoringRule(6, 10), scoringRule(7, 10),
 	}
 	payoutsSlice := []*models.CalcuttaPayout{payout(1, 10000)}
 
@@ -308,7 +308,7 @@ func TestThatAllFourTeamsAppearAsChampion(t *testing.T) {
 		tournamentTeam("C", 5, 1, false),
 		tournamentTeam("D", 5, 1, false),
 	}
-	rounds := []*models.CalcuttaRound{round(1, 1)}
+	rounds := []*models.ScoringRule{scoringRule(1, 1)}
 	payouts := []*models.CalcuttaPayout{}
 
 	result := ComputeFinalFourOutcomes(bracket, entries, portfolios, pts, tts, rounds, payouts)
@@ -343,7 +343,7 @@ func TestThatRunnerUpIsOpposingSemifinalWinner(t *testing.T) {
 		tournamentTeam("C", 5, 1, false),
 		tournamentTeam("D", 5, 1, false),
 	}
-	rounds := []*models.CalcuttaRound{round(1, 1)}
+	rounds := []*models.ScoringRule{scoringRule(1, 1)}
 	payouts := []*models.CalcuttaPayout{}
 
 	result := ComputeFinalFourOutcomes(bracket, entries, portfolios, pts, tts, rounds, payouts)

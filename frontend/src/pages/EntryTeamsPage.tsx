@@ -146,8 +146,8 @@ export function EntryTeamsPage() {
             <Card variant="accent" padding="compact" className="mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
-                <Badge variant={currentUserEntry?.status === 'accepted' ? 'success' : 'secondary'}>
-                  {currentUserEntry?.status === 'accepted' ? 'Bids locked' : 'In Progress'}
+                <Badge variant={currentUserEntry?.status === 'submitted' ? 'success' : 'secondary'}>
+                  {currentUserEntry?.status === 'submitted' ? 'Bids locked' : 'In Progress'}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   {teams.length} teams &middot; {totalSpent} / {budgetPoints} credits
@@ -180,7 +180,7 @@ export function EntryTeamsPage() {
           <EntryRosterCard
             entryId={entryId!}
             calcuttaId={calcuttaId!}
-            entryStatus={currentUserEntry?.status ?? 'incomplete'}
+            entryStatus={currentUserEntry?.status ?? 'draft'}
             entryTeams={entryTeams}
             budgetPoints={dashboardQuery.data?.calcutta?.budgetPoints ?? 100}
             canEdit={biddingOpen && isOwnEntry}
