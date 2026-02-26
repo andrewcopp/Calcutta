@@ -9,8 +9,8 @@ SET statement_timeout = '60s';
 -- STEP 1: Drop derived views (they reference new names)
 -- =============================================================================
 
-DROP VIEW IF EXISTS derived.ownership_details;
 DROP VIEW IF EXISTS derived.ownership_summaries;
+DROP VIEW IF EXISTS derived.ownership_details;
 
 -- =============================================================================
 -- STEP 2: Revert grants scope_type

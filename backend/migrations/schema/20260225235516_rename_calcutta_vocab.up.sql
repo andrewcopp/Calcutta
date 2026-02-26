@@ -9,8 +9,8 @@ SET statement_timeout = '60s';
 -- STEP 1: Drop derived views (they reference old table/column names)
 -- =============================================================================
 
-DROP VIEW IF EXISTS derived.portfolio_teams;
 DROP VIEW IF EXISTS derived.portfolios;
+DROP VIEW IF EXISTS derived.portfolio_teams;
 
 -- =============================================================================
 -- STEP 2: Drop foreign keys that reference tables being renamed
