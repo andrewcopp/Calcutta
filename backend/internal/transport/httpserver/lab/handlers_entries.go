@@ -19,9 +19,9 @@ func (h *Handler) HandleListEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	investmentModelID := strings.TrimSpace(r.URL.Query().Get("investment_model_id"))
-	calcuttaID := strings.TrimSpace(r.URL.Query().Get("calcutta_id"))
-	startingStateKey := strings.TrimSpace(r.URL.Query().Get("starting_state_key"))
+	investmentModelID := strings.TrimSpace(r.URL.Query().Get("investmentModelId"))
+	calcuttaID := strings.TrimSpace(r.URL.Query().Get("calcuttaId"))
+	startingStateKey := strings.TrimSpace(r.URL.Query().Get("startingStateKey"))
 
 	filter := models.LabListEntriesFilter{}
 	if investmentModelID != "" {
@@ -75,15 +75,19 @@ func (h *Handler) HandleGetEntry(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, entry)
 }
 
-// HandleGetEntryByModelAndCalcutta handles GET /api/lab/models/:modelName/calcutta/:calcuttaId/entry
+// HandleGetEntryByModelAndCalcutta handles GET /api/lab/models/:id/calcutta/:calcuttaId/entry
 // Returns enriched entry data for the model/calcutta pair.
 func (h *Handler) HandleGetEntryByModelAndCalcutta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	modelName := strings.TrimSpace(vars["modelName"])
+	modelID := strings.TrimSpace(vars["id"])
 	calcuttaID := strings.TrimSpace(vars["calcuttaId"])
 
-	if modelName == "" {
-		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "modelName is required", "modelName")
+	if modelID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id is required", "id")
+		return
+	}
+	if _, err := uuid.Parse(modelID); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "id must be a valid UUID", "id")
 		return
 	}
 	if calcuttaID == "" {
@@ -99,9 +103,15 @@ func (h *Handler) HandleGetEntryByModelAndCalcutta(w http.ResponseWriter, r *htt
 		return
 	}
 
-	startingStateKey := strings.TrimSpace(r.URL.Query().Get("starting_state_key"))
+	model, err := h.app.Lab.GetInvestmentModel(r.Context(), modelID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
 
-	entry, err := h.app.Lab.GetEntryEnrichedByModelAndCalcutta(r.Context(), modelName, calcuttaID, startingStateKey)
+	startingStateKey := strings.TrimSpace(r.URL.Query().Get("startingStateKey"))
+
+	entry, err := h.app.Lab.GetEntryEnrichedByModelAndCalcutta(r.Context(), model.Name, calcuttaID, startingStateKey)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return

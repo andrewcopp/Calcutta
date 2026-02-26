@@ -71,7 +71,7 @@ describe('calcuttaService', () => {
       const teams = await calcuttaService.getEntryTeams('entry-1', 'calc-1');
 
       expect(teams).toHaveLength(1);
-      expect(teams[0].bid).toBe(10);
+      expect(teams[0].bidPoints).toBe(10);
     });
   });
 
@@ -108,7 +108,7 @@ describe('calcuttaService', () => {
 
   describe('updateEntry', () => {
     it('returns updated entry', async () => {
-      const entry = await calcuttaService.updateEntry('entry-1', [{ teamId: 'team-1', bid: 20 }]);
+      const entry = await calcuttaService.updateEntry('entry-1', [{ teamId: 'team-1', bidPoints: 20 }]);
 
       expect(entry.id).toBe('entry-1');
     });
@@ -118,8 +118,8 @@ describe('calcuttaService', () => {
     it('returns parsed payouts', async () => {
       const result = await calcuttaService.getPayouts('calc-1');
 
-      expect(result.payouts).toHaveLength(1);
-      expect(result.payouts[0].amountCents).toBe(10000);
+      expect(result).toHaveLength(1);
+      expect(result[0].amountCents).toBe(10000);
     });
   });
 
@@ -127,7 +127,7 @@ describe('calcuttaService', () => {
     it('returns replaced payouts', async () => {
       const result = await calcuttaService.replacePayouts('calc-1', [{ position: 1, amountCents: 10000 }]);
 
-      expect(result.payouts).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 });

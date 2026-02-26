@@ -60,8 +60,8 @@ export function CalcuttaSettingsPage() {
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'My Pools', href: '/calcuttas' },
-          { label: calcutta.name, href: `/calcuttas/${calcuttaId}` },
+          { label: 'My Pools', href: '/pools' },
+          { label: calcutta.name, href: `/pools/${calcuttaId}` },
           { label: 'Settings' },
         ]}
       />

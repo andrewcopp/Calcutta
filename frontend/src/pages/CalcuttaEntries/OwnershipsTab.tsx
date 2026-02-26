@@ -51,7 +51,7 @@ export function OwnershipsTab({
   const ownershipTeamsData = useMemo(() => {
     const byTeamSpend = new Map<string, number>();
     for (const entryTeam of allEntryTeams) {
-      const amount = entryTeam.bid;
+      const amount = entryTeam.bidPoints;
       if (amount <= 0) continue;
       byTeamSpend.set(entryTeam.teamId, (byTeamSpend.get(entryTeam.teamId) || 0) + amount);
     }

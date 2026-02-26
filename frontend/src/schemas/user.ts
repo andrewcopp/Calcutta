@@ -19,15 +19,6 @@ export const LoginRequestSchema = z.object({
 
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
-export const SignupRequestSchema = z.object({
-  email: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  password: z.string(),
-});
-
-export type SignupRequest = z.infer<typeof SignupRequestSchema>;
-
 export const AuthResponseSchema = z.object({
   user: UserSchema,
   accessToken: z.string(),

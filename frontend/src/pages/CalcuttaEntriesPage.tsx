@@ -98,7 +98,7 @@ export function CalcuttaEntriesPage() {
     try {
       const entry = await calcuttaService.createEntry(calcuttaId, `${user.firstName} ${user.lastName}`);
       toast.success('Entry created!');
-      navigate(`/calcuttas/${calcuttaId}/entries/${entry.id}/bid`);
+      navigate(`/pools/${calcuttaId}/entries/${entry.id}/bid`);
     } catch (err) {
       setCreateEntryError(err instanceof Error ? err.message : 'Failed to create entry');
       setIsCreatingEntry(false);
@@ -123,13 +123,13 @@ export function CalcuttaEntriesPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: 'My Pools', href: '/calcuttas' }, { label: calcuttaName }]} />
+      <Breadcrumb items={[{ label: 'My Pools', href: '/pools' }, { label: calcuttaName }]} />
 
       <PageHeader
         title={calcuttaName}
         actions={
           dashboardData?.abilities?.canEditSettings ? (
-            <Link to={`/calcuttas/${calcuttaId}/settings`}>
+            <Link to={`/pools/${calcuttaId}/settings`}>
               <Button variant="outline" size="sm">
                 Settings
               </Button>
@@ -148,16 +148,16 @@ export function CalcuttaEntriesPage() {
       {currentUserEntry &&
         (() => {
           const userTeams = allEntryTeams.filter((et) => et.entryId === currentUserEntry.id);
-          const totalSpent = userTeams.reduce((sum, et) => sum + et.bid, 0);
+          const totalSpent = userTeams.reduce((sum, et) => sum + et.bidPoints, 0);
           const budgetPoints = dashboardData?.calcutta?.budgetPoints ?? 100;
           return (
-            <Link to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`} className="block mb-6">
+            <Link to={`/pools/${calcuttaId}/entries/${currentUserEntry.id}`} className="block mb-6">
               <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
                     <Badge variant={currentUserEntry.status === 'accepted' ? 'success' : 'secondary'}>
-                      {currentUserEntry.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
+                      {currentUserEntry.status === 'accepted' ? 'Bids locked' : 'In Progress'}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {userTeams.length} teams &middot; {totalSpent} / {budgetPoints} credits

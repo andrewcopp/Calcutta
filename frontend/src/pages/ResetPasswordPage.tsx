@@ -50,7 +50,7 @@ export function ResetPasswordPage() {
     try {
       await resetPassword(token, password);
       setResetConsumed(true);
-      navigate('/calcuttas', { replace: true });
+      navigate('/pools', { replace: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to reset password. Please try again.';
       if (message.toLowerCase().includes('expired') || message.toLowerCase().includes('invalid')) {
@@ -98,7 +98,7 @@ export function ResetPasswordPage() {
               out first.
             </p>
             <div className="flex gap-3">
-              <Button variant="secondary" className="flex-1" onClick={() => navigate('/calcuttas')}>
+              <Button variant="secondary" className="flex-1" onClick={() => navigate('/pools')}>
                 Cancel
               </Button>
               <Button

@@ -54,7 +54,7 @@ export function InvestmentsTab({
     }
 
     for (const entryTeam of allEntryTeams) {
-      const amount = entryTeam.bid;
+      const amount = entryTeam.bidPoints;
       if (amount <= 0) continue;
 
       const row = byTeam.get(entryTeam.teamId);

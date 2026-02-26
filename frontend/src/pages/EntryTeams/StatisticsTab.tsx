@@ -22,7 +22,7 @@ export function StatisticsTab({ portfolios, portfolioTeams, teams, tournamentTea
 
   const portfolio = portfolios[0];
 
-  const totalInvestment = teams.reduce((sum, t) => sum + t.bid, 0);
+  const totalInvestment = teams.reduce((sum, t) => sum + t.bidPoints, 0);
   const actualPoints = portfolioTeams.reduce((sum, pt) => sum + pt.actualPoints, 0);
   const expectedPoints = portfolioTeams.reduce((sum, pt) => sum + pt.expectedPoints, 0);
 

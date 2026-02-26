@@ -114,8 +114,8 @@ export function useBidding() {
 
       const initialBids: Record<string, number> = {};
       entryTeams.forEach((entryTeam) => {
-        if (entryTeam.bid > 0) {
-          initialBids[entryTeam.teamId] = entryTeam.bid;
+        if (entryTeam.bidPoints > 0) {
+          initialBids[entryTeam.teamId] = entryTeam.bidPoints;
         }
       });
 
@@ -154,15 +154,15 @@ export function useBidding() {
   const usedTeamIds = useMemo(() => deriveUsedTeamIds(slots), [slots]);
 
   const updateEntryMutation = useMutation({
-    mutationFn: async (teamsPayload: Array<{ teamId: string; bid: number }>) => {
+    mutationFn: async (teamsPayload: Array<{ teamId: string; bidPoints: number }>) => {
       if (!entryId) throw new Error('Missing entry ID');
       return calcuttaService.updateEntry(entryId, teamsPayload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.dashboard(calcuttaId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.entryTeams(calcuttaId, entryId) });
-      toast.success('Entry submitted successfully!');
-      navigate(`/calcuttas/${calcuttaId}`);
+      toast.success('Bids saved successfully!');
+      navigate(`/pools/${calcuttaId}`);
     },
   });
 
@@ -232,9 +232,9 @@ export function useBidding() {
 
   const handleSubmit = () => {
     if (!isValid) return;
-    const teamsPayload = Object.entries(bidsByTeamId).map(([teamId, bid]) => ({
+    const teamsPayload = Object.entries(bidsByTeamId).map(([teamId, bidPoints]) => ({
       teamId,
-      bid,
+      bidPoints,
     }));
     updateEntryMutation.mutate(teamsPayload);
   };

@@ -37,26 +37,6 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
 }
 
-func (s *Server) signupHandler(w http.ResponseWriter, r *http.Request) {
-	var req dtos.SignupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", "")
-		return
-	}
-	if err := req.Validate(); err != nil {
-		httperr.WriteFromErr(w, r, err, authUserID)
-		return
-	}
-
-	res, err := s.app.Auth.Signup(r.Context(), req.Email, req.FirstName, req.LastName, req.Password, r.UserAgent(), r.RemoteAddr, time.Now())
-	if err != nil {
-		httperr.WriteFromErr(w, r, err, authUserID)
-		return
-	}
-	s.setRefreshCookie(w, res.RefreshToken, res.RefreshExpiresAt)
-	response.WriteJSON(w, http.StatusCreated, &dtos.AuthResponse{User: dtos.NewUserResponse(res.User), AccessToken: res.AccessToken})
-}
-
 func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("refresh_token")
 	if err != nil || c.Value == "" {

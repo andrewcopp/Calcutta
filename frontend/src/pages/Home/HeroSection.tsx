@@ -47,13 +47,13 @@ export function HeroSection({ scrollY, prefersReducedMotion, revealClass }: Hero
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3">
               <Link
-                to="/calcuttas/create"
+                to="/pools/create"
                 className="inline-flex items-center justify-center rounded-full bg-white px-7 py-3 font-semibold text-gray-900 transition-colors hover:bg-white/90"
               >
                 Create a pool
               </Link>
               <Link
-                to="/calcuttas"
+                to="/pools"
                 className="inline-flex items-center justify-center rounded-full bg-white/10 px-7 py-3 font-semibold text-white ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/15"
               >
                 Join a pool

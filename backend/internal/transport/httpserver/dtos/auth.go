@@ -22,29 +22,6 @@ func (r *LoginRequest) Validate() error {
 	return nil
 }
 
-type SignupRequest struct {
-	Email     string `json:"email"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Password  string `json:"password"`
-}
-
-func (r *SignupRequest) Validate() error {
-	if strings.TrimSpace(r.Email) == "" {
-		return ErrFieldRequired("email")
-	}
-	if strings.TrimSpace(r.FirstName) == "" {
-		return ErrFieldRequired("firstName")
-	}
-	if strings.TrimSpace(r.LastName) == "" {
-		return ErrFieldRequired("lastName")
-	}
-	if err := ValidatePassword(r.Password); err != nil {
-		return err
-	}
-	return nil
-}
-
 type AuthResponse struct {
 	User        *UserResponse `json:"user"`
 	AccessToken string        `json:"accessToken"`

@@ -32,7 +32,7 @@ export function useEntryOwnershipData({
   portfolios: CalcuttaPortfolio[];
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
   ownershipShowAllTeams: boolean;
-  sortBy: 'points' | 'ownership' | 'bid';
+  sortBy: 'points' | 'ownership' | 'bidPoints';
 }): EntryOwnershipData {
   const getPortfolioTeamData = useCallback(
     (teamId: string) => {
@@ -75,7 +75,7 @@ export function useEntryOwnershipData({
           id: `synthetic-${tt.id}`,
           entryId: entryId,
           teamId: tt.id,
-          bid: 0,
+          bidPoints: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           team: {
@@ -99,8 +99,8 @@ export function useEntryOwnershipData({
       const pointsB = portfolioTeamB?.actualPoints || 0;
       const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
       const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-      const bidA = a.bid;
-      const bidB = b.bid;
+      const bidA = a.bidPoints;
+      const bidB = b.bidPoints;
 
       if (sortBy === 'points') {
         if (pointsB !== pointsA) return pointsB - pointsA;

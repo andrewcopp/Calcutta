@@ -14,7 +14,7 @@ export function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const token = searchParams.get('token') ?? '';
-  const from = (location.state as { from?: string })?.from ?? '/calcuttas';
+  const from = (location.state as { from?: string })?.from ?? '/pools';
   const { user, acceptInvite, logout } = useUser();
 
   const [password, setPassword] = useState('');

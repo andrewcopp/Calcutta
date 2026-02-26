@@ -24,11 +24,11 @@ interface Evaluation {
 interface EvaluationsTabProps {
   evaluation: Evaluation | null;
   isLoading: boolean;
-  modelName: string;
+  modelId: string;
   calcuttaId: string;
 }
 
-export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }: EvaluationsTabProps) {
+export function EvaluationsTab({ evaluation, isLoading, modelId, calcuttaId }: EvaluationsTabProps) {
   const navigate = useNavigate();
 
   // Fetch entry results when we have an evaluation
@@ -42,7 +42,7 @@ export function EvaluationsTab({ evaluation, isLoading, modelName, calcuttaId }:
 
   const handleEntryClick = (entryResultId: string) => {
     navigate(
-      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry-results/${encodeURIComponent(entryResultId)}`,
+      `/lab/models/${encodeURIComponent(modelId)}/calcutta/${encodeURIComponent(calcuttaId)}/entry-results/${encodeURIComponent(entryResultId)}`,
     );
   };
 

@@ -28,20 +28,22 @@ const validEntryTeam = {
   id: 'et-1',
   entryId: 'entry-1',
   teamId: 'team-1',
-  bid: 10,
+  bidPoints: 10,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
 export const calcuttaHandlers = [
   http.get(`${BASE}/calcuttas/list-with-rankings`, () => {
-    return HttpResponse.json([
-      {
-        ...validCalcutta,
-        hasEntry: true,
-        ranking: { rank: 1, totalEntries: 5, points: 150 },
-      },
-    ]);
+    return HttpResponse.json({
+      items: [
+        {
+          ...validCalcutta,
+          hasEntry: true,
+          ranking: { rank: 1, totalEntries: 5, points: 150 },
+        },
+      ],
+    });
   }),
 
   http.get(`${BASE}/calcuttas/:id/dashboard`, () => {
@@ -78,7 +80,7 @@ export const calcuttaHandlers = [
 
   http.get(`${BASE}/calcuttas/:id/payouts`, () => {
     return HttpResponse.json({
-      payouts: [{ position: 1, amountCents: 10000 }],
+      items: [{ position: 1, amountCents: 10000 }],
     });
   }),
 
@@ -108,7 +110,7 @@ export const calcuttaHandlers = [
 
   http.put(`${BASE}/calcuttas/:id/payouts`, () => {
     return HttpResponse.json({
-      payouts: [{ position: 1, amountCents: 10000 }],
+      items: [{ position: 1, amountCents: 10000 }],
     });
   }),
 ];

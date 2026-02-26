@@ -31,20 +31,6 @@ describe('userService', () => {
     });
   });
 
-  describe('signup', () => {
-    it('returns user and stores credentials', async () => {
-      const user = await userService.signup({
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        password: 'pass',
-      });
-
-      expect(user.id).toBe('user-1');
-      expect(localStorage.getItem(USER_KEY)).toBeTruthy();
-    });
-  });
-
   describe('previewInvite', () => {
     it('returns invite preview', async () => {
       const preview = await userService.previewInvite('tok-abc');

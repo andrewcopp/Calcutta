@@ -56,7 +56,7 @@ export function StatisticsTab({
             </ResponsiveContainer>
           </div>
           <div className="mt-4 text-center">
-            <Link to={`/calcuttas/${calcuttaId}/teams`} className="text-primary hover:text-primary font-medium">
+            <Link to={`/pools/${calcuttaId}/teams`} className="text-primary hover:text-primary font-medium">
               View All Teams →
             </Link>
           </div>

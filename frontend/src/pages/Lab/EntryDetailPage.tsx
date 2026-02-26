@@ -20,8 +20,8 @@ import { EvaluationsTab } from './EntryDetail/EvaluationsTab';
 type EntryDetailTabId = 'predictions' | 'entry' | 'evaluations';
 
 export function EntryDetailPage() {
-  const { modelName, calcuttaId } = useParams<{
-    modelName: string;
+  const { modelId, calcuttaId } = useParams<{
+    modelId: string;
     calcuttaId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,9 +49,9 @@ export function EntryDetailPage() {
   const [showOnlyInvested, setShowOnlyInvested] = useState(false);
 
   const entryQuery = useQuery<EntryDetail | null>({
-    queryKey: queryKeys.lab.entries.byModelAndCalcutta(modelName, calcuttaId),
-    queryFn: () => labService.getEntryByModelAndCalcutta(modelName!, calcuttaId!),
-    enabled: Boolean(modelName && calcuttaId),
+    queryKey: queryKeys.lab.entries.byModelAndCalcutta(modelId, calcuttaId),
+    queryFn: () => labService.getEntryByModelAndCalcutta(modelId!, calcuttaId!),
+    enabled: Boolean(modelId && calcuttaId),
   });
 
   // For evaluations, we need the entry ID from the loaded entry
@@ -233,7 +233,7 @@ export function EntryDetailPage() {
           <EvaluationsTab
             evaluation={evaluation}
             isLoading={evaluationsQuery.isLoading}
-            modelName={entry.modelName}
+            modelId={entry.investmentModelId}
             calcuttaId={entry.calcuttaId}
           />
         </TabsContent>

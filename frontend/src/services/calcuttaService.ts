@@ -59,18 +59,23 @@ export const calcuttaService = {
   },
 
   async getCalcuttasWithRankings() {
-    return apiClient.get('/calcuttas/list-with-rankings', { schema: z.array(CalcuttaWithRankingSchema) });
+    const res = await apiClient.get('/calcuttas/list-with-rankings', {
+      schema: z.object({ items: z.array(CalcuttaWithRankingSchema) }),
+    });
+    return res.items;
   },
 
-  async updateEntry(entryId: string, teams: Array<{ teamId: string; bid: number }>) {
+  async updateEntry(entryId: string, teams: Array<{ teamId: string; bidPoints: number }>) {
     return apiClient.patch(`/entries/${entryId}`, { teams }, { schema: CalcuttaEntrySchema });
   },
 
   async getPayouts(calcuttaId: string) {
-    return apiClient.get(`/calcuttas/${calcuttaId}/payouts`, { schema: PayoutsResponseSchema });
+    const res = await apiClient.get(`/calcuttas/${calcuttaId}/payouts`, { schema: PayoutsResponseSchema });
+    return res.items;
   },
 
   async replacePayouts(calcuttaId: string, payouts: Array<{ position: number; amountCents: number }>) {
-    return apiClient.put(`/calcuttas/${calcuttaId}/payouts`, { payouts }, { schema: PayoutsResponseSchema });
+    const res = await apiClient.put(`/calcuttas/${calcuttaId}/payouts`, { payouts }, { schema: PayoutsResponseSchema });
+    return res.items;
   },
 };

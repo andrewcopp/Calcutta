@@ -7,7 +7,6 @@ export interface UserContextType {
   permissions: string[];
   permissionsLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
   acceptInvite: (token: string, password: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   logout: () => void;
@@ -56,12 +55,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await fetchPermissions();
   };
 
-  const signup = async (email: string, firstName: string, lastName: string, password: string) => {
-    const signedUpUser = await userService.signup({ email, firstName, lastName, password });
-    setUser(signedUpUser);
-    await fetchPermissions();
-  };
-
   const acceptInvite = async (token: string, password: string) => {
     const acceptedUser = await userService.acceptInvite(token, password);
     setUser(acceptedUser);
@@ -84,7 +77,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <UserContext.Provider
-      value={{ user, permissions, permissionsLoading, login, signup, acceptInvite, resetPassword, logout, hasPermission }}
+      value={{ user, permissions, permissionsLoading, login, acceptInvite, resetPassword, logout, hasPermission }}
     >
       {children}
     </UserContext.Provider>

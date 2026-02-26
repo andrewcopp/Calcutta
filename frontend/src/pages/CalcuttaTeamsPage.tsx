@@ -54,7 +54,7 @@ export function CalcuttaTeamsPage() {
       if (!entryTeam.team) continue;
       const existing = teamStatsMap.get(entryTeam.teamId);
       if (!existing) continue;
-      existing.totalInvestment += entryTeam.bid;
+      existing.totalInvestment += entryTeam.bidPoints;
     }
 
     for (const team of teamStatsMap.values()) {
@@ -96,15 +96,15 @@ export function CalcuttaTeamsPage() {
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'My Pools', href: '/calcuttas' },
-          { label: calcuttaName || 'Pool', href: `/calcuttas/${calcuttaId}` },
+          { label: 'My Pools', href: '/pools' },
+          { label: calcuttaName || 'Pool', href: `/pools/${calcuttaId}` },
           { label: 'Teams' },
         ]}
       />
       <PageHeader
         title={`${calcuttaName} - Teams`}
         actions={
-          <Link to={`/calcuttas/${calcuttaId}`} className="text-primary hover:text-primary">
+          <Link to={`/pools/${calcuttaId}`} className="text-primary hover:text-primary">
             ← Back to Pool
           </Link>
         }

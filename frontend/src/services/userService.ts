@@ -1,4 +1,4 @@
-import type { User, LoginRequest, SignupRequest } from '../schemas/user';
+import type { User, LoginRequest } from '../schemas/user';
 import { AuthResponseSchema, InvitePreviewSchema, PermissionsResponseSchema } from '../schemas/user';
 import { UserProfileResponseSchema } from '../schemas/admin';
 import { apiClient, USER_KEY, PERMISSIONS_KEY } from '../api/apiClient';
@@ -6,16 +6,6 @@ import { apiClient, USER_KEY, PERMISSIONS_KEY } from '../api/apiClient';
 export const userService = {
   async login(request: LoginRequest): Promise<User> {
     const res = await apiClient.post('/auth/login', request, {
-      credentials: 'include',
-      schema: AuthResponseSchema,
-    });
-    localStorage.setItem(USER_KEY, JSON.stringify(res.user));
-    apiClient.setAccessToken(res.accessToken);
-    return res.user;
-  },
-
-  async signup(request: SignupRequest): Promise<User> {
-    const res = await apiClient.post('/auth/signup', request, {
       credentials: 'include',
       schema: AuthResponseSchema,
     });

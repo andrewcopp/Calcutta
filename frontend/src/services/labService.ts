@@ -22,12 +22,12 @@ export const labService = {
     return apiClient.get('/lab/models/leaderboard', { schema: LeaderboardResponseSchema });
   },
 
-  async getEntryByModelAndCalcutta(modelName: string, calcuttaId: string, startingStateKey?: string) {
+  async getEntryByModelAndCalcutta(modelId: string, calcuttaId: string, startingStateKey?: string) {
     const q = new URLSearchParams();
-    if (startingStateKey) q.set('starting_state_key', startingStateKey);
+    if (startingStateKey) q.set('startingStateKey', startingStateKey);
     const suffix = q.toString() ? `?${q.toString()}` : '';
     return apiClient.get(
-      `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(calcuttaId)}/entry${suffix}`,
+      `/lab/models/${encodeURIComponent(modelId)}/calcutta/${encodeURIComponent(calcuttaId)}/entry${suffix}`,
       { schema: EntryDetailSchema },
     );
   },
@@ -40,9 +40,9 @@ export const labService = {
     offset?: number;
   }) {
     const q = new URLSearchParams();
-    if (params?.entryId) q.set('entry_id', params.entryId);
-    if (params?.investmentModelId) q.set('investment_model_id', params.investmentModelId);
-    if (params?.calcuttaId) q.set('calcutta_id', params.calcuttaId);
+    if (params?.entryId) q.set('entryId', params.entryId);
+    if (params?.investmentModelId) q.set('investmentModelId', params.investmentModelId);
+    if (params?.calcuttaId) q.set('calcuttaId', params.calcuttaId);
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
     const suffix = q.toString() ? `?${q.toString()}` : '';

@@ -71,8 +71,8 @@ func (r *CreateEntryRequest) Validate() error {
 }
 
 type UpdateEntryTeamRequest struct {
-	TeamID string `json:"teamId"`
-	Bid    int    `json:"bid"`
+	TeamID    string `json:"teamId"`
+	BidPoints int    `json:"bidPoints"`
 }
 
 type UpdateEntryRequest struct {
@@ -93,8 +93,8 @@ func (r *UpdateEntryRequest) Validate() error {
 		if strings.TrimSpace(t.TeamID) == "" {
 			return ErrFieldRequired("teamId")
 		}
-		if t.Bid <= 0 {
-			return ErrFieldInvalid("bid", "must be greater than 0")
+		if t.BidPoints <= 0 {
+			return ErrFieldInvalid("bidPoints", "must be greater than 0")
 		}
 	}
 	return nil
@@ -104,7 +104,7 @@ type EntryTeamResponse struct {
 	ID        string                  `json:"id"`
 	EntryID   string                  `json:"entryId"`
 	TeamID    string                  `json:"teamId"`
-	BidPoints int                     `json:"bid"`
+	BidPoints int                     `json:"bidPoints"`
 	CreatedAt time.Time               `json:"createdAt"`
 	UpdatedAt time.Time               `json:"updatedAt"`
 	Team      *TournamentTeamResponse `json:"team,omitempty"`

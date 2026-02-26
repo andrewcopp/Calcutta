@@ -159,7 +159,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas"
+              path="/pools"
               element={
                 <RouteErrorBoundary>
                   <CalcuttaListPage />
@@ -167,7 +167,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas/create"
+              path="/pools/create"
               element={
                 <ProtectedRoute>
                   <RouteErrorBoundary>
@@ -197,7 +197,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/lab/models/:modelName/calcutta/:calcuttaId"
+              path="/lab/models/:modelId/calcutta/:calcuttaId"
               element={
                 <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
                   <RouteErrorBoundary>
@@ -207,7 +207,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/lab/models/:modelName/calcutta/:calcuttaId/evaluations/:evaluationId"
+              path="/lab/models/:modelId/calcutta/:calcuttaId/evaluations/:evaluationId"
               element={
                 <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
                   <RouteErrorBoundary>
@@ -217,7 +217,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/lab/models/:modelName/calcutta/:calcuttaId/entry-results/:entryResultId"
+              path="/lab/models/:modelId/calcutta/:calcuttaId/entry-results/:entryResultId"
               element={
                 <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
                   <RouteErrorBoundary>
@@ -357,7 +357,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas/:calcuttaId"
+              path="/pools/:calcuttaId"
               element={
                 <RouteErrorBoundary>
                   <CalcuttaEntriesPage />
@@ -365,7 +365,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas/:calcuttaId/settings"
+              path="/pools/:calcuttaId/settings"
               element={
                 <ProtectedRoute>
                   <RouteErrorBoundary>
@@ -375,7 +375,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas/:calcuttaId/teams"
+              path="/pools/:calcuttaId/teams"
               element={
                 <RouteErrorBoundary>
                   <CalcuttaTeamsPage />
@@ -383,7 +383,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas/:calcuttaId/entries/:entryId"
+              path="/pools/:calcuttaId/entries/:entryId"
               element={
                 <RouteErrorBoundary>
                   <EntryTeamsPage />
@@ -391,7 +391,7 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/calcuttas/:calcuttaId/entries/:entryId/bid"
+              path="/pools/:calcuttaId/entries/:entryId/bid"
               element={
                 <ProtectedRoute>
                   <RouteErrorBoundary>

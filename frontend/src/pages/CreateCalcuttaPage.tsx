@@ -66,7 +66,7 @@ export function CreateCalcuttaPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.calcuttas.listWithRankings() }),
       ]);
       toast.success('Pool created!');
-      navigate('/calcuttas');
+      navigate('/pools');
     },
     onError: (error) => {
       setError(error instanceof Error ? error.message : 'Failed to create pool');
@@ -129,11 +129,11 @@ export function CreateCalcuttaPage() {
   return (
     <PageContainer>
       <div className="max-w-2xl mx-auto">
-        <Breadcrumb items={[{ label: 'My Pools', href: '/calcuttas' }, { label: 'Create' }]} />
+        <Breadcrumb items={[{ label: 'My Pools', href: '/pools' }, { label: 'Create' }]} />
         <PageHeader
           title="Start a New Pool"
           actions={
-            <Button variant="ghost" onClick={() => navigate('/calcuttas')}>
+            <Button variant="ghost" onClick={() => navigate('/pools')}>
               ← Back to My Pools
             </Button>
           }

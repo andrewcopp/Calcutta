@@ -19,8 +19,8 @@ export function OwnershipsTab({
 }: {
   ownershipShowAllTeams: boolean;
   setOwnershipShowAllTeams: (value: boolean) => void;
-  sortBy: 'points' | 'ownership' | 'bid';
-  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
+  sortBy: 'points' | 'ownership' | 'bidPoints';
+  setSortBy: (value: 'points' | 'ownership' | 'bidPoints') => void;
   ownershipLoading: boolean;
   ownershipTeamsData: CalcuttaEntryTeam[];
   getPortfolioTeamData: (teamId: string) => CalcuttaPortfolioTeam | undefined;
@@ -56,11 +56,11 @@ export function OwnershipsTab({
           <Select
             className="ml-2 w-auto"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bid')}
+            onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bidPoints')}
           >
             <option value="points">Points</option>
             <option value="ownership">Ownership</option>
-            <option value="bid">Bid Amount</option>
+            <option value="bidPoints">Bid Amount</option>
           </Select>
         </label>
       </div>

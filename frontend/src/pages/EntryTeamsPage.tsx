@@ -26,7 +26,7 @@ export function EntryTeamsPage() {
   const { entryId, calcuttaId } = useParams<{ entryId: string; calcuttaId: string }>();
 
   const [activeTab, setActiveTab] = useState('entry');
-  const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bid'>('points');
+  const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'bidPoints'>('points');
   const [investmentsSortBy, setInvestmentsSortBy] = useState<'total' | 'seed' | 'region' | 'team'>('total');
   const [showAllTeams, setShowAllTeams] = useState(false);
   const [ownershipShowAllTeams, setOwnershipShowAllTeams] = useState(false);
@@ -98,8 +98,8 @@ export function EntryTeamsPage() {
       <PageContainer>
         <Breadcrumb
           items={[
-            { label: 'My Pools', href: '/calcuttas' },
-            { label: calcuttaName, href: `/calcuttas/${calcuttaId}` },
+            { label: 'My Pools', href: '/pools' },
+            { label: calcuttaName, href: `/pools/${calcuttaId}` },
             { label: 'Portfolio' },
           ]}
         />
@@ -120,8 +120,8 @@ export function EntryTeamsPage() {
     <PageContainer>
       <Breadcrumb
         items={[
-          { label: 'My Pools', href: '/calcuttas' },
-          { label: calcuttaName, href: `/calcuttas/${calcuttaId}` },
+          { label: 'My Pools', href: '/pools' },
+          { label: calcuttaName, href: `/pools/${calcuttaId}` },
           { label: entryName || 'Portfolio' },
         ]}
       />
@@ -140,14 +140,14 @@ export function EntryTeamsPage() {
       {isOwnEntry &&
         !biddingOpen &&
         (() => {
-          const totalSpent = teams.reduce((sum, et) => sum + et.bid, 0);
+          const totalSpent = teams.reduce((sum, et) => sum + et.bidPoints, 0);
           const budgetPoints = dashboardQuery.data?.calcutta?.budgetPoints ?? 100;
           return (
             <Card variant="accent" padding="compact" className="mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
                 <Badge variant={currentUserEntry?.status === 'accepted' ? 'success' : 'secondary'}>
-                  {currentUserEntry?.status === 'accepted' ? 'Portfolio locked' : 'In Progress'}
+                  {currentUserEntry?.status === 'accepted' ? 'Bids locked' : 'In Progress'}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   {teams.length} teams &middot; {totalSpent} / {budgetPoints} credits

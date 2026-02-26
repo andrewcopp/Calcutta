@@ -1,9 +1,6 @@
 package httpserver
 
 import (
-	"net/http"
-	"strings"
-
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/basic"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/calcuttas"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/lab"
@@ -17,15 +14,6 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	if s.hasLocalAuth {
 		s.registerAuthRoutes(r)
 	}
-
-	// API v1 path rewrite: /api/v1/* → /api/* (both paths work identically).
-	// This is NOT a versioning strategy — it is a convenience alias so that
-	// clients using either prefix reach the same handlers.
-	r.PathPrefix("/api/v1/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req.URL.Path = "/api/" + strings.TrimPrefix(req.URL.Path, "/api/v1/")
-		req.RequestURI = req.URL.RequestURI()
-		r.ServeHTTP(w, req)
-	})
 
 	protected := r.NewRoute().Subrouter()
 	protected.Use(s.requireAuthMiddleware)
@@ -120,8 +108,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 func (s *Server) registerAuthRoutes(r *mux.Router) {
 	// Auth
 	r.HandleFunc("/api/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/auth/signup", s.signupHandler).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/auth/invite/preview", s.previewInviteHandler).Methods("GET", "OPTIONS")
+r.HandleFunc("/api/auth/invite/preview", s.previewInviteHandler).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/auth/invite/accept", s.acceptInviteHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/auth/forgot-password", s.forgotPasswordHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/auth/reset-password", s.resetPasswordHandler).Methods("POST", "OPTIONS")

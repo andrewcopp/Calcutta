@@ -104,9 +104,9 @@ export function useCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefi
       // Compute seed investment data
       const seedMap = new Map<number, number>();
       for (const team of entryTeams) {
-        if (!team.team?.seed || !team.bid) continue;
+        if (!team.team?.seed || !team.bidPoints) continue;
         const seed = team.team.seed;
-        seedMap.set(seed, (seedMap.get(seed) || 0) + team.bid);
+        seedMap.set(seed, (seedMap.get(seed) || 0) + team.bidPoints);
       }
       const seedData = Array.from(seedMap.entries())
         .map(([seed, totalInvestment]) => ({ seed, totalInvestment }))
@@ -125,7 +125,7 @@ export function useCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefi
   const schools = useMemo(() => dashboardData?.schools ?? [], [dashboardData?.schools]);
   const tournamentTeams = useMemo(() => dashboardData?.tournamentTeams ?? [], [dashboardData?.tournamentTeams]);
 
-  const totalInvestment = useMemo(() => allEntryTeams.reduce((sum, et) => sum + et.bid, 0), [allEntryTeams]);
+  const totalInvestment = useMemo(() => allEntryTeams.reduce((sum, et) => sum + et.bidPoints, 0), [allEntryTeams]);
 
   const totalReturns = useMemo(() => entries.reduce((sum, e) => sum + (e.totalPoints || 0), 0), [entries]);
 
@@ -152,7 +152,7 @@ export function useCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefi
       const schoolName = schoolNameById.get(team.schoolId) || 'Unknown School';
 
       // Calculate total investment for this team
-      const teamInvestment = allEntryTeams.filter((et) => et.teamId === team.id).reduce((sum, et) => sum + et.bid, 0);
+      const teamInvestment = allEntryTeams.filter((et) => et.teamId === team.id).reduce((sum, et) => sum + et.bidPoints, 0);
 
       // Calculate total points for this team
       const teamPoints = allCalcuttaPortfolioTeams

@@ -19,8 +19,8 @@ export function ReturnsTab({
   entryId: string;
   returnsShowAllTeams: boolean;
   setReturnsShowAllTeams: (value: boolean) => void;
-  sortBy: 'points' | 'ownership' | 'bid';
-  setSortBy: (value: 'points' | 'ownership' | 'bid') => void;
+  sortBy: 'points' | 'ownership' | 'bidPoints';
+  setSortBy: (value: 'points' | 'ownership' | 'bidPoints') => void;
   tournamentTeams: TournamentTeam[];
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
   teams: CalcuttaEntryTeam[];
@@ -44,11 +44,11 @@ export function ReturnsTab({
           <Select
             className="ml-2 w-auto"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bid')}
+            onChange={(e) => setSortBy(e.target.value as 'points' | 'ownership' | 'bidPoints')}
           >
             <option value="points">Points</option>
             <option value="ownership">Ownership</option>
-            <option value="bid">Bid Amount</option>
+            <option value="bidPoints">Bid Amount</option>
           </Select>
         </label>
       </div>
@@ -88,7 +88,7 @@ export function ReturnsTab({
                         id: `synthetic-${tt.id}`,
                         entryId: entryId,
                         teamId: tt.id,
-                        bid: 0,
+                        bidPoints: 0,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                         team: { ...tt, school: schoolMap.get(tt.schoolId) },
@@ -104,8 +104,8 @@ export function ReturnsTab({
                   const pointsB = portfolioTeamB?.actualPoints || 0;
                   const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
                   const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-                  const bidA = a.bid;
-                  const bidB = b.bid;
+                  const bidA = a.bidPoints;
+                  const bidB = b.bidPoints;
 
                   if (sortBy === 'points') {
                     if (pointsB !== pointsA) return pointsB - pointsA;

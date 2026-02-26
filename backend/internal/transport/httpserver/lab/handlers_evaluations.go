@@ -19,9 +19,9 @@ func (h *Handler) HandleListEvaluations(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	entryID := strings.TrimSpace(r.URL.Query().Get("entry_id"))
-	investmentModelID := strings.TrimSpace(r.URL.Query().Get("investment_model_id"))
-	calcuttaID := strings.TrimSpace(r.URL.Query().Get("calcutta_id"))
+	entryID := strings.TrimSpace(r.URL.Query().Get("entryId"))
+	investmentModelID := strings.TrimSpace(r.URL.Query().Get("investmentModelId"))
+	calcuttaID := strings.TrimSpace(r.URL.Query().Get("calcuttaId"))
 
 	filter := models.LabListEvaluationsFilter{}
 	if entryID != "" {

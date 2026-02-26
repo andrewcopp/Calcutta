@@ -15,7 +15,9 @@ import { formatPayoutX, formatPct } from '../../utils/labFormatters';
 import { formatDate } from '../../utils/format';
 
 export function EvaluationDetailPage() {
-  const { evaluationId } = useParams<{
+  const { modelId, calcuttaId, evaluationId } = useParams<{
+    modelId: string;
+    calcuttaId: string;
     evaluationId: string;
   }>();
   const navigate = useNavigate();
@@ -84,7 +86,7 @@ export function EvaluationDetailPage() {
                 className="text-primary hover:underline"
                 onClick={() =>
                   navigate(
-                    `/lab/models/${encodeURIComponent(evaluation.modelName)}/calcutta/${encodeURIComponent(evaluation.calcuttaId)}`,
+                    `/lab/models/${encodeURIComponent(modelId!)}/calcutta/${encodeURIComponent(calcuttaId!)}`,
                   )
                 }
               >

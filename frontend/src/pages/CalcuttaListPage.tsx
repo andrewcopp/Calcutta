@@ -31,7 +31,7 @@ export function CalcuttaListPage() {
       <PageContainer>
         <PageHeader
           title="My Pools"
-          actions={<Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>}
+          actions={<Button onClick={() => navigate('/pools/create')}>Start a New Pool</Button>}
         />
         <CalcuttaListSkeleton />
       </PageContainer>
@@ -53,7 +53,7 @@ export function CalcuttaListPage() {
     <PageContainer>
       <PageHeader
         title="My Pools"
-        actions={<Button onClick={() => navigate('/calcuttas/create')}>Start a New Pool</Button>}
+        actions={<Button onClick={() => navigate('/pools/create')}>Start a New Pool</Button>}
       />
 
       <div className="grid gap-4">
@@ -81,7 +81,7 @@ export function CalcuttaListPage() {
                 <Link to="/rules">
                   <Button variant="outline">Learn the Rules</Button>
                 </Link>
-                <Link to="/calcuttas/create">
+                <Link to="/pools/create">
                   <Button>Create a Pool</Button>
                 </Link>
               </div>
@@ -102,7 +102,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   // State C: Tournament started + has ranking → rank is the hero
   if (tournamentStarted && ranking) {
     return (
-      <Link to={`/calcuttas/${calcutta.id}`} className="block">
+      <Link to={`/pools/${calcutta.id}`} className="block">
         <Card variant="elevated" padding="compact" className="hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-2xl font-bold text-primary">
@@ -119,7 +119,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   // State D: Tournament started + no entry
   if (tournamentStarted) {
     return (
-      <Link to={`/calcuttas/${calcutta.id}`} className="block">
+      <Link to={`/pools/${calcutta.id}`} className="block">
         <Card padding="compact" className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">{calcutta.name}</h2>
@@ -134,7 +134,7 @@ function CalcuttaCard({ calcutta }: { calcutta: CalcuttaWithRanking }) {
   const countdown = calcutta.tournamentStartingAt ? formatRelativeTime(calcutta.tournamentStartingAt) : null;
 
   return (
-    <Link to={`/calcuttas/${calcutta.id}`} className="block">
+    <Link to={`/pools/${calcutta.id}`} className="block">
       <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
           <div>

@@ -59,7 +59,7 @@ export const CalcuttaEntryTeamSchema = z.object({
   id: z.string(),
   entryId: z.string(),
   teamId: z.string(),
-  bid: z.number(),
+  bidPoints: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
   team: EntryTeamNestedTeamSchema.optional(),
@@ -172,7 +172,7 @@ export const CalcuttaWithRankingSchema = CalcuttaSchema.extend({
 export type CalcuttaWithRanking = z.infer<typeof CalcuttaWithRankingSchema>;
 
 export const PayoutsResponseSchema = z.object({
-  payouts: z.array(
+  items: z.array(
     z.object({
       position: z.number(),
       amountCents: z.number(),

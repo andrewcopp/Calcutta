@@ -5,7 +5,7 @@ import { formatPayoutX } from '../../utils/labFormatters';
 
 type PipelineStatusTableProps = {
   calcuttas: CalcuttaPipelineStatus[];
-  modelName: string;
+  modelId: string;
   isLoading: boolean;
 };
 
@@ -45,7 +45,7 @@ function StageProgress({ stage }: { stage: string }) {
   );
 }
 
-export function PipelineStatusTable({ calcuttas, modelName, isLoading }: PipelineStatusTableProps) {
+export function PipelineStatusTable({ calcuttas, modelId, isLoading }: PipelineStatusTableProps) {
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -109,7 +109,7 @@ export function PipelineStatusTable({ calcuttas, modelName, isLoading }: Pipelin
                   onClick={() => {
                     if (canNavigate) {
                       navigate(
-                        `/lab/models/${encodeURIComponent(modelName)}/calcutta/${encodeURIComponent(c.calcuttaId)}`,
+                        `/lab/models/${encodeURIComponent(modelId)}/calcutta/${encodeURIComponent(c.calcuttaId)}`,
                       );
                     }
                   }}

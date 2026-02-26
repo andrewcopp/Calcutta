@@ -67,7 +67,7 @@ func (h *Handler) HandleListPayouts(w http.ResponseWriter, r *http.Request) {
 	for _, p := range payouts {
 		items = append(items, payoutItem{Position: p.Position, AmountCents: p.AmountCents})
 	}
-	response.WriteJSON(w, http.StatusOK, map[string]any{"payouts": items})
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
 func (h *Handler) HandleReplacePayouts(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +109,27 @@ func (h *Handler) HandleReplacePayouts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(req.Payouts) > 100 {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "too many payout positions", "payouts")
+		return
+	}
+	seen := make(map[int]bool, len(req.Payouts))
+	for _, p := range req.Payouts {
+		if p.Position < 1 {
+			httperr.Write(w, r, http.StatusBadRequest, "validation_error", "position must be >= 1", "position")
+			return
+		}
+		if p.AmountCents < 0 {
+			httperr.Write(w, r, http.StatusBadRequest, "validation_error", "amountCents cannot be negative", "amountCents")
+			return
+		}
+		if seen[p.Position] {
+			httperr.Write(w, r, http.StatusBadRequest, "validation_error", "duplicate position", "position")
+			return
+		}
+		seen[p.Position] = true
+	}
+
 	payouts := make([]*models.CalcuttaPayout, 0, len(req.Payouts))
 	for _, p := range req.Payouts {
 		payouts = append(payouts, &models.CalcuttaPayout{
@@ -133,7 +154,7 @@ func (h *Handler) HandleReplacePayouts(w http.ResponseWriter, r *http.Request) {
 	for _, p := range updated {
 		items = append(items, payoutItem{Position: p.Position, AmountCents: p.AmountCents})
 	}
-	response.WriteJSON(w, http.StatusOK, map[string]any{"payouts": items})
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
 func (h *Handler) HandleReinvite(w http.ResponseWriter, r *http.Request) {

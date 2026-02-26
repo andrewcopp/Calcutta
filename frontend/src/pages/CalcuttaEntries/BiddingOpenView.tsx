@@ -22,7 +22,7 @@ interface BiddingOpenViewProps {
   onCreateEntry: () => void;
 }
 
-const statusLabelMap: Record<string, string> = { incomplete: 'In Progress', accepted: 'Portfolio locked' };
+const statusLabelMap: Record<string, string> = { incomplete: 'In Progress', accepted: 'Bids locked' };
 const statusVariantMap: Record<string, string> = { incomplete: 'secondary', accepted: 'success' };
 
 export function BiddingOpenView({
@@ -42,13 +42,13 @@ export function BiddingOpenView({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: 'My Pools', href: '/calcuttas' }, { label: calcuttaName }]} />
+      <Breadcrumb items={[{ label: 'My Pools', href: '/pools' }, { label: calcuttaName }]} />
 
       <PageHeader
         title={calcuttaName}
         actions={
           canEditSettings ? (
-            <Link to={`/calcuttas/${calcuttaId}/settings`}>
+            <Link to={`/pools/${calcuttaId}/settings`}>
               <Button variant="outline" size="sm">
                 Settings
               </Button>
@@ -76,7 +76,7 @@ export function BiddingOpenView({
           </div>
         </Card>
       ) : (
-        <Link to={`/calcuttas/${calcuttaId}/entries/${currentUserEntry.id}`} className="block">
+        <Link to={`/pools/${calcuttaId}/entries/${currentUserEntry.id}`} className="block">
           <Card variant="accent" padding="compact" className="hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ export function BiddingOpenView({
 
       <div className="mt-4 text-sm text-muted-foreground text-center flex items-center justify-center gap-1.5">
         <IconUsers className="h-4 w-4" />
-        {totalEntries} {totalEntries === 1 ? 'portfolio' : 'portfolios'} submitted
+        {totalEntries} {totalEntries === 1 ? 'entry' : 'entries'} submitted
       </div>
     </PageContainer>
   );

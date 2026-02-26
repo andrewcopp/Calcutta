@@ -9,7 +9,7 @@ export function LoginPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useUser();
-  const from = (location.state as { from?: string })?.from ?? '/calcuttas';
+  const from = (location.state as { from?: string })?.from ?? '/pools';
   const expired = searchParams.get('expired') === 'true';
 
   useEffect(() => {

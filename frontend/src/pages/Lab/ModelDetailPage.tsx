@@ -214,7 +214,7 @@ export function ModelDetailPage() {
       <h2 className="text-lg font-semibold mb-3">Historical Calcuttas</h2>
       <PipelineStatusTable
         calcuttas={pipelineProgress?.calcuttas ?? []}
-        modelName={model.name}
+        modelId={model.id}
         isLoading={pipelineProgressQuery.isLoading}
       />
     </PageContainer>

@@ -12,13 +12,13 @@ export function CtaSection({ revealClass }: CtaSectionProps) {
           <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">Start a pool with friends</h2>
           <div className="mt-7 flex flex-col sm:flex-row gap-3">
             <Link
-              to="/calcuttas/create"
+              to="/pools/create"
               className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 font-semibold text-gray-900 transition-colors hover:bg-white/90"
             >
               Create a pool
             </Link>
             <Link
-              to="/calcuttas"
+              to="/pools"
               className="inline-flex items-center justify-center rounded-full bg-white/10 px-8 py-3 font-semibold text-white ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/15"
             >
               Join a pool

@@ -145,7 +145,7 @@ export function LeaderboardTab({ calcuttaId, entries, dashboard }: LeaderboardTa
         return (
           <Link
             key={entry.id}
-            to={`/calcuttas/${calcuttaId}/entries/${entry.id}`}
+            to={`/pools/${calcuttaId}/entries/${entry.id}`}
             className={`block p-4 rounded-lg shadow hover:shadow-md transition-shadow ${rowClass}`}
           >
             <div className="flex justify-between items-center">

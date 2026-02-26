@@ -23,8 +23,8 @@ export function EntryRosterCard({
   canEdit = true,
   title = 'Your Portfolio',
 }: EntryRosterCardProps) {
-  const sortedTeams = [...entryTeams].sort((a, b) => b.bid - a.bid);
-  const totalSpent = entryTeams.reduce((sum, et) => sum + et.bid, 0);
+  const sortedTeams = [...entryTeams].sort((a, b) => b.bidPoints - a.bidPoints);
+  const totalSpent = entryTeams.reduce((sum, et) => sum + et.bidPoints, 0);
 
   return (
     <Card variant="default" padding="none">
@@ -32,11 +32,11 @@ export function EntryRosterCard({
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <Badge variant={entryStatus === 'accepted' ? 'success' : 'secondary'}>
-            {entryStatus === 'accepted' ? 'Portfolio locked' : 'In Progress'}
+            {entryStatus === 'accepted' ? 'Bids locked' : 'In Progress'}
           </Badge>
         </div>
         {canEdit && (
-          <Link to={`/calcuttas/${calcuttaId}/entries/${entryId}/bid`}>
+          <Link to={`/pools/${calcuttaId}/entries/${entryId}/bid`}>
             <Button size="sm">Edit</Button>
           </Link>
         )}
@@ -48,7 +48,7 @@ export function EntryRosterCard({
             <span className="text-sm text-gray-800">
               {et.team?.school?.name ?? 'Unknown'} ({et.team?.region ?? '?'} - {et.team?.seed ?? '?'})
             </span>
-            <span className="text-sm font-medium text-blue-700">{et.bid} credits</span>
+            <span className="text-sm font-medium text-blue-700">{et.bidPoints} credits</span>
           </div>
         ))}
       </div>

@@ -20,13 +20,6 @@ export const userHandlers = [
     });
   }),
 
-  http.post(`${BASE}/auth/signup`, () => {
-    return HttpResponse.json({
-      user: validUser,
-      accessToken: 'tok-456',
-    });
-  }),
-
   http.get(`${BASE}/auth/invite/preview`, () => {
     return HttpResponse.json({
       firstName: 'Test',

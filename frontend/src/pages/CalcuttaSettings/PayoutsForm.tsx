@@ -34,7 +34,7 @@ export function PayoutsForm({ calcuttaId, onSuccess }: PayoutsFormProps) {
   // Initialize payout form when data loads
   useEffect(() => {
     if (payoutsData && !payoutRows) {
-      setPayoutRows(payoutsData.payouts.length > 0 ? [...payoutsData.payouts] : [{ position: 1, amountCents: 0 }]);
+      setPayoutRows(payoutsData.length > 0 ? [...payoutsData] : [{ position: 1, amountCents: 0 }]);
     }
   }, [payoutsData, payoutRows]);
 

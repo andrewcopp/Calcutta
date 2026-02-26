@@ -95,9 +95,9 @@ function computeCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefined
 
     const seedMap = new Map<number, number>();
     for (const team of entryTeams) {
-      if (!team.team?.seed || !team.bid) continue;
+      if (!team.team?.seed || !team.bidPoints) continue;
       const seed = team.team.seed;
-      seedMap.set(seed, (seedMap.get(seed) || 0) + team.bid);
+      seedMap.set(seed, (seedMap.get(seed) || 0) + team.bidPoints);
     }
     seedInvestmentData = Array.from(seedMap.entries())
       .map(([seed, totalInvestment]) => ({ seed, totalInvestment }))
@@ -112,7 +112,7 @@ function computeCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefined
   const schools = dashboardData?.schools ?? [];
   const tournamentTeams = dashboardData?.tournamentTeams ?? [];
 
-  const totalInvestment = allEntryTeams.reduce((sum, et) => sum + et.bid, 0);
+  const totalInvestment = allEntryTeams.reduce((sum, et) => sum + et.bidPoints, 0);
   const totalReturns = entries.reduce((sum, e) => sum + (e.totalPoints || 0), 0);
   const averageReturn = totalEntries > 0 ? totalReturns / totalEntries : 0;
 
@@ -130,7 +130,7 @@ function computeCalcuttaEntriesData(dashboardData: CalcuttaDashboard | undefined
   const teamROIData: TeamROIDatum[] = tournamentTeams
     .map((team) => {
       const schoolName = schoolNameById.get(team.schoolId) || 'Unknown School';
-      const teamInvestment = allEntryTeams.filter((et) => et.teamId === team.id).reduce((sum, et) => sum + et.bid, 0);
+      const teamInvestment = allEntryTeams.filter((et) => et.teamId === team.id).reduce((sum, et) => sum + et.bidPoints, 0);
       const teamPoints = allCalcuttaPortfolioTeams
         .filter((pt) => pt.teamId === team.id)
         .reduce((sum, pt) => sum + pt.actualPoints, 0);
@@ -322,9 +322,9 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       // GIVEN entry teams with bids of 15, 25, and 10
       const dashboard = makeDashboard({
         entryTeams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 15 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 25 }),
-          makeEntryTeam({ id: 'et3', entryId: 'e2', teamId: 't3', bid: 10 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 15 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 25 }),
+          makeEntryTeam({ id: 'et3', entryId: 'e2', teamId: 't3', bidPoints: 10 }),
         ],
       });
 
@@ -394,21 +394,21 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
             id: 'et1',
             entryId: 'e1',
             teamId: 't1',
-            bid: 10,
+            bidPoints: 10,
             team: { id: 't1', schoolId: 's1', seed: 1 },
           }),
           makeEntryTeam({
             id: 'et2',
             entryId: 'e2',
             teamId: 't2',
-            bid: 5,
+            bidPoints: 5,
             team: { id: 't2', schoolId: 's2', seed: 1 },
           }),
           makeEntryTeam({
             id: 'et3',
             entryId: 'e1',
             teamId: 't3',
-            bid: 20,
+            bidPoints: 20,
             team: { id: 't3', schoolId: 's3', seed: 8 },
           }),
         ],
@@ -428,7 +428,7 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       // GIVEN an entry team whose nested team has no seed
       const dashboard = makeDashboard({
         entryTeams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 10, team: { id: 't1', schoolId: 's1' } }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 10, team: { id: 't1', schoolId: 's1' } }),
         ],
       });
 
@@ -439,15 +439,15 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       expect(result.seedInvestmentData).toEqual([]);
     });
 
-    it('skips entry teams with zero bid', () => {
-      // GIVEN an entry team with bid=0
+    it('skips entry teams with zero bidPoints', () => {
+      // GIVEN an entry team with bidPoints=0
       const dashboard = makeDashboard({
         entryTeams: [
           makeEntryTeam({
             id: 'et1',
             entryId: 'e1',
             teamId: 't1',
-            bid: 0,
+            bidPoints: 0,
             team: { id: 't1', schoolId: 's1', seed: 1 },
           }),
         ],
@@ -467,7 +467,7 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
       const dashboard = makeDashboard({
         schools: [{ id: 's1', name: 'Duke' }],
         tournamentTeams: [makeTournamentTeam({ id: 't1', schoolId: 's1', seed: 1, region: 'East' })],
-        entryTeams: [makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 20 })],
+        entryTeams: [makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 20 })],
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         portfolioTeams: [makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', actualPoints: 100 })],
       });
@@ -505,8 +505,8 @@ describe('useCalcuttaEntriesData (pure transformation)', () => {
           makeTournamentTeam({ id: 't2', schoolId: 's2', seed: 2, region: 'East' }),
         ],
         entryTeams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 50 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 5 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 50 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 5 }),
         ],
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         portfolioTeams: [

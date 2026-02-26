@@ -64,7 +64,7 @@ function computeOwnershipTeamsData({
   portfolios: CalcuttaPortfolio[];
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
   ownershipShowAllTeams: boolean;
-  sortBy: 'points' | 'ownership' | 'bid';
+  sortBy: 'points' | 'ownership' | 'bidPoints';
 }): CalcuttaEntryTeam[] {
   if (activeTab !== 'ownerships') return [];
   if (!entryId) return [];
@@ -87,7 +87,7 @@ function computeOwnershipTeamsData({
         id: `synthetic-${tt.id}`,
         entryId: entryId,
         teamId: tt.id,
-        bid: 0,
+        bidPoints: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         team: {
@@ -111,8 +111,8 @@ function computeOwnershipTeamsData({
     const pointsB = portfolioTeamB?.actualPoints || 0;
     const ownershipA = portfolioTeamA?.ownershipPercentage || 0;
     const ownershipB = portfolioTeamB?.ownershipPercentage || 0;
-    const bidA = a.bid;
-    const bidB = b.bid;
+    const bidA = a.bidPoints;
+    const bidB = b.bidPoints;
 
     if (sortBy === 'points') {
       if (pointsB !== pointsA) return pointsB - pointsA;
@@ -147,7 +147,7 @@ interface OwnershipInput {
   portfolios: CalcuttaPortfolio[];
   allCalcuttaPortfolioTeams: CalcuttaPortfolioTeam[];
   ownershipShowAllTeams: boolean;
-  sortBy: 'points' | 'ownership' | 'bid';
+  sortBy: 'points' | 'ownership' | 'bidPoints';
 }
 
 function makeOwnershipInput(overrides: Partial<OwnershipInput> = {}): OwnershipInput {
@@ -445,7 +445,7 @@ describe('useEntryOwnershipData (pure transformation)', () => {
   describe('ownershipTeamsData with ownershipShowAllTeams=true', () => {
     it('returns existing entry team when a match exists in tournament teams', () => {
       // GIVEN a tournament team that the entry already has
-      const existingTeam = makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 25 });
+      const existingTeam = makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 25 });
       const input = makeOwnershipInput({
         ownershipShowAllTeams: true,
         teams: [existingTeam],
@@ -456,8 +456,8 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       // WHEN computing ownership teams data
       const result = computeOwnershipTeamsData(input);
 
-      // THEN the existing entry team (with its original bid) is used
-      expect(result[0].bid).toBe(25);
+      // THEN the existing entry team (with its original bidPoints) is used
+      expect(result[0].bidPoints).toBe(25);
     });
 
     it('creates synthetic entry team with zero bid for unowned tournament teams', () => {
@@ -472,8 +472,8 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       // WHEN computing ownership teams data
       const result = computeOwnershipTeamsData(input);
 
-      // THEN a synthetic team is created with bid=0
-      expect(result[0].bid).toBe(0);
+      // THEN a synthetic team is created with bidPoints=0
+      expect(result[0].bidPoints).toBe(0);
     });
 
     it('assigns synthetic team ID with "synthetic-" prefix', () => {
@@ -591,8 +591,8 @@ describe('useEntryOwnershipData (pure transformation)', () => {
         ownershipShowAllTeams: false,
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         teams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 5 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 20 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 5 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 20 }),
         ],
         allCalcuttaPortfolioTeams: [
           makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', ownershipPercentage: 0.5, actualPoints: 10 }),
@@ -603,7 +603,7 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       // WHEN computing ownership teams data
       const result = computeOwnershipTeamsData(input);
 
-      // THEN the team with the higher bid (t2) comes first
+      // THEN the team with the higher bidPoints (t2) comes first
       expect(result[0].teamId).toBe('t2');
     });
   });
@@ -659,15 +659,15 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       expect(result[0].teamId).toBe('t2');
     });
 
-    it('breaks points and ownership ties by bid descending', () => {
+    it('breaks points and ownership ties by bidPoints descending', () => {
       // GIVEN two teams with equal points and ownership but different bids
       const input = makeOwnershipInput({
         sortBy: 'points',
         ownershipShowAllTeams: false,
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         teams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 5 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 15 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 5 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 15 }),
         ],
         allCalcuttaPortfolioTeams: [
           makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', actualPoints: 40, ownershipPercentage: 0.5 }),
@@ -678,25 +678,25 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       // WHEN computing ownership teams data
       const result = computeOwnershipTeamsData(input);
 
-      // THEN the team with the higher bid (t2) comes first
+      // THEN the team with the higher bidPoints (t2) comes first
       expect(result[0].teamId).toBe('t2');
     });
   });
 
   // =========================================================================
-  // ownershipTeamsData -- sorting by bid
+  // ownershipTeamsData -- sorting by bidPoints
   // =========================================================================
 
-  describe('ownershipTeamsData sorting by bid', () => {
-    it('sorts teams by bid descending', () => {
+  describe('ownershipTeamsData sorting by bidPoints', () => {
+    it('sorts teams by bidPoints descending', () => {
       // GIVEN two teams with different bids
       const input = makeOwnershipInput({
-        sortBy: 'bid',
+        sortBy: 'bidPoints',
         ownershipShowAllTeams: false,
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         teams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 30 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 10 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 30 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 10 }),
         ],
         allCalcuttaPortfolioTeams: [
           makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', ownershipPercentage: 0.5 }),
@@ -707,19 +707,19 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       // WHEN computing ownership teams data
       const result = computeOwnershipTeamsData(input);
 
-      // THEN the team with the higher bid (t1) comes first
+      // THEN the team with the higher bidPoints (t1) comes first
       expect(result[0].teamId).toBe('t1');
     });
 
-    it('breaks bid ties by points descending', () => {
+    it('breaks bidPoints ties by points descending', () => {
       // GIVEN two teams with equal bids but different points
       const input = makeOwnershipInput({
-        sortBy: 'bid',
+        sortBy: 'bidPoints',
         ownershipShowAllTeams: false,
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         teams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 20 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 20 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 20 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 20 }),
         ],
         allCalcuttaPortfolioTeams: [
           makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', actualPoints: 15, ownershipPercentage: 0.5 }),
@@ -734,15 +734,15 @@ describe('useEntryOwnershipData (pure transformation)', () => {
       expect(result[0].teamId).toBe('t2');
     });
 
-    it('breaks bid and points ties by ownership descending', () => {
+    it('breaks bidPoints and points ties by ownership descending', () => {
       // GIVEN two teams with equal bids and points but different ownership
       const input = makeOwnershipInput({
-        sortBy: 'bid',
+        sortBy: 'bidPoints',
         ownershipShowAllTeams: false,
         portfolios: [makePortfolio({ id: 'p1', entryId: 'e1' })],
         teams: [
-          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bid: 20 }),
-          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bid: 20 }),
+          makeEntryTeam({ id: 'et1', entryId: 'e1', teamId: 't1', bidPoints: 20 }),
+          makeEntryTeam({ id: 'et2', entryId: 'e1', teamId: 't2', bidPoints: 20 }),
         ],
         allCalcuttaPortfolioTeams: [
           makePortfolioTeam({ id: 'pt1', portfolioId: 'p1', teamId: 't1', actualPoints: 40, ownershipPercentage: 0.3 }),

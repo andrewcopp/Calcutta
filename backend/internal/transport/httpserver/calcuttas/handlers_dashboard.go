@@ -329,7 +329,7 @@ func (h *Handler) HandleListCalcuttasWithRankings(w http.ResponseWriter, r *http
 		results = append(results, item)
 	}
 
-	response.WriteJSON(w, http.StatusOK, results)
+	response.WriteJSON(w, http.StatusOK, map[string]any{"items": results})
 }
 
 // computeRoundStandings computes standings at each round cap (0 through maxRound).

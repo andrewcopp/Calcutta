@@ -14,9 +14,9 @@ import { queryKeys } from '../../queryKeys';
 import { formatPayoutX, formatPct, getPayoutColor } from '../../utils/labFormatters';
 
 export function EntryProfilePage() {
-  const { entryResultId, modelName, calcuttaId } = useParams<{
+  const { entryResultId, modelId, calcuttaId } = useParams<{
     entryResultId: string;
-    modelName?: string;
+    modelId?: string;
     calcuttaId?: string;
   }>();
 
@@ -54,11 +54,11 @@ export function EntryProfilePage() {
       <Breadcrumb
         items={[
           { label: 'Lab', href: '/lab' },
-          ...(modelName && calcuttaId
+          ...(modelId && calcuttaId
             ? [
                 {
-                  label: decodeURIComponent(modelName),
-                  href: `/lab/models/${modelName}/calcutta/${calcuttaId}?tab=evaluations`,
+                  label: 'Entry Detail',
+                  href: `/lab/models/${modelId}/calcutta/${calcuttaId}?tab=evaluations`,
                 },
                 { label: profile.entryName },
               ]

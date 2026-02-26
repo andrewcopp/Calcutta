@@ -55,8 +55,8 @@ export const queryKeys = {
         ['lab', 'models', modelId ?? null, 'pipeline-progress'] as const,
     },
     entries: {
-      byModelAndCalcutta: (modelName: string | null | undefined, calcuttaId: string | null | undefined) =>
-        ['lab', 'entries', 'by-model-calcutta', modelName ?? null, calcuttaId ?? null] as const,
+      byModelAndCalcutta: (modelId: string | null | undefined, calcuttaId: string | null | undefined) =>
+        ['lab', 'entries', 'by-model-calcutta', modelId ?? null, calcuttaId ?? null] as const,
     },
     evaluations: {
       detail: (evaluationId: string | null | undefined) => ['lab', 'evaluations', evaluationId ?? null] as const,
@@ -64,7 +64,7 @@ export const queryKeys = {
         ['lab', 'evaluations', evaluationId ?? null, 'entries'] as const,
       summary: (evaluationId: string | null | undefined) =>
         ['lab', 'evaluations', evaluationId ?? null, 'summary'] as const,
-      byEntry: (entryId: string | null | undefined) => ['lab', 'evaluations', { entry_id: entryId ?? null }] as const,
+      byEntry: (entryId: string | null | undefined) => ['lab', 'evaluations', { entryId: entryId ?? null }] as const,
     },
     entryResults: {
       profile: (entryResultId: string | null | undefined) => ['lab', 'entry-results', entryResultId ?? null] as const,
