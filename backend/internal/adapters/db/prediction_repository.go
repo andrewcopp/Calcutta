@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/scoring"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/jackc/pgx/v5"
@@ -42,7 +44,7 @@ func (r *PredictionRepository) ListBatches(ctx context.Context, tournamentID str
 func (r *PredictionRepository) GetLatestBatch(ctx context.Context, tournamentID string) (*models.PredictionBatch, bool, error) {
 	row, err := r.q.GetLatestPredictionBatch(ctx, tournamentID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, nil
 		}
 		return nil, false, fmt.Errorf("getting latest prediction batch: %w", err)
@@ -58,8 +60,8 @@ func (r *PredictionRepository) GetLatestBatch(ctx context.Context, tournamentID 
 func (r *PredictionRepository) GetBatchSummary(ctx context.Context, batchID string) (*models.PredictionBatch, error) {
 	row, err := r.q.GetPredictionBatchByID(ctx, batchID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("batch not found: %s", batchID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, &apperrors.NotFoundError{Resource: "prediction batch", ID: batchID}
 		}
 		return nil, fmt.Errorf("getting batch summary: %w", err)
 	}

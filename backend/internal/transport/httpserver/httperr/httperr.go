@@ -7,6 +7,7 @@ import (
 
 	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/lab"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/tournament"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
@@ -96,6 +97,12 @@ func WriteFromErr(w http.ResponseWriter, r *http.Request, err error, authUserID 
 	var unauthorizedErr *apperrors.UnauthorizedError
 	if errors.As(err, &unauthorizedErr) {
 		Write(w, r, http.StatusUnauthorized, "unauthorized", unauthorizedErr.Error(), "")
+		return
+	}
+
+	var bracketValidationErr *tournament.BracketValidationError
+	if errors.As(err, &bracketValidationErr) {
+		WriteMultiError(w, r, http.StatusBadRequest, "bracket_validation_error", "Bracket validation failed", bracketValidationErr.Errors)
 		return
 	}
 

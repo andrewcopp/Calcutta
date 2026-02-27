@@ -4,15 +4,16 @@ package db_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
 	db "github.com/andrewcopp/Calcutta/backend/internal/adapters/db"
 	"github.com/andrewcopp/Calcutta/backend/internal/adapters/db/sqlc"
+	"github.com/andrewcopp/Calcutta/backend/internal/app/apperrors"
 	"github.com/andrewcopp/Calcutta/backend/internal/app/prediction"
 	"github.com/andrewcopp/Calcutta/backend/internal/models"
 	"github.com/andrewcopp/Calcutta/backend/internal/testutil"
@@ -686,12 +687,13 @@ func TestThatGetBatchSummaryReturnsErrorForNonexistentBatch(t *testing.T) {
 	// WHEN getting the batch summary
 	_, err := repo.GetBatchSummary(ctx, uuid.New().String())
 
-	// THEN an error containing "batch not found" is returned
+	// THEN a NotFoundError is returned
 	if err == nil {
 		t.Fatal("expected error for nonexistent batch, got nil")
 	}
-	if !strings.Contains(err.Error(), "batch not found") {
-		t.Errorf("expected error containing 'batch not found', got: %v", err)
+	var notFoundErr *apperrors.NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Errorf("expected *apperrors.NotFoundError, got: %T (%v)", err, err)
 	}
 }
 

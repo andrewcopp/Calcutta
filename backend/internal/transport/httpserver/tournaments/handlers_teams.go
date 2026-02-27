@@ -2,7 +2,6 @@ package tournaments
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 
@@ -170,11 +169,6 @@ func (h *Handler) HandleReplaceTeams(w http.ResponseWriter, r *http.Request) {
 
 	teams, err := h.app.Tournament.ReplaceTeams(r.Context(), tournamentID, inputs)
 	if err != nil {
-		var bve *apptournament.BracketValidationError
-		if errors.As(err, &bve) {
-			httperr.WriteMultiError(w, r, http.StatusBadRequest, "bracket_validation_error", "Bracket validation failed", bve.Errors)
-			return
-		}
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}

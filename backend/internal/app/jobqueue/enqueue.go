@@ -3,6 +3,7 @@ package jobqueue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -62,7 +63,7 @@ func (e *Enqueuer) Enqueue(ctx context.Context, kind string, paramsJSON json.Raw
 	`, kind, paramsJSON, priority, dedupKeyPtr).Scan(&jobID)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Deduplicated — job already exists
 			return &EnqueueResult{Enqueued: false}, nil
 		}

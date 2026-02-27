@@ -36,7 +36,7 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, core
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false, nil
 		}
-		return "", false, err
+		return "", false, fmt.Errorf("querying latest simulation batch for tournament %s: %w", coreTournamentID, err)
 	}
 	return batchID, true, nil
 }
