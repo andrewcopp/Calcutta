@@ -27,7 +27,6 @@ func NewPortfolio() *models.Portfolio {
 		Name:      "Test Portfolio",
 		UserID:    StringPtr("user-1"),
 		PoolID:    "pool-1",
-		Status:    "submitted",
 		CreatedAt: DefaultTime,
 		UpdatedAt: DefaultTime,
 	}

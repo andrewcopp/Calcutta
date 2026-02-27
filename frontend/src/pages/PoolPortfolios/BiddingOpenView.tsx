@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom';
 
 import type { Portfolio } from '../../schemas/pool';
-import { Alert } from '../../components/ui/Alert';
 import { Card } from '../../components/ui/Card';
 import { PageContainer, PageHeader } from '../../components/ui/Page';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { IconClock, IconUsers } from '../../components/ui/Icons';
 import { formatDate } from '../../utils/format';
@@ -17,13 +15,7 @@ interface BiddingOpenViewProps {
   canEditSettings?: boolean;
   tournamentStartingAt?: string;
   totalPortfolios: number;
-  isCreatingPortfolio: boolean;
-  createPortfolioError: string | null;
-  onCreatePortfolio: () => void;
 }
-
-const statusLabelMap: Record<string, string> = { draft: 'In Progress', submitted: 'Investments locked' };
-const statusVariantMap: Record<string, string> = { draft: 'secondary', submitted: 'success' };
 
 export function BiddingOpenView({
   poolId,
@@ -32,14 +24,7 @@ export function BiddingOpenView({
   canEditSettings,
   tournamentStartingAt,
   totalPortfolios,
-  isCreatingPortfolio,
-  createPortfolioError,
-  onCreatePortfolio,
 }: BiddingOpenViewProps) {
-  const portfolioStatus = currentUserPortfolio?.status ?? '';
-  const statusLabel = !currentUserPortfolio ? 'Not Started' : (statusLabelMap[portfolioStatus] ?? portfolioStatus);
-  const statusVariant = !currentUserPortfolio ? 'secondary' : (statusVariantMap[portfolioStatus] ?? 'secondary');
-
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: 'My Pools', href: '/pools' }, { label: poolName }]} />
@@ -57,22 +42,16 @@ export function BiddingOpenView({
         }
       />
 
-      {createPortfolioError && (
-        <Alert variant="error" className="mb-4">
-          {createPortfolioError}
-        </Alert>
-      )}
-
       {!currentUserPortfolio ? (
         <Card variant="accent" padding="compact">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
-              <Badge variant={statusVariant as 'secondary' | 'success' | 'warning'}>{statusLabel}</Badge>
+              <span className="text-sm text-muted-foreground">Not started</span>
             </div>
-            <Button onClick={onCreatePortfolio} disabled={isCreatingPortfolio} size="sm">
-              {isCreatingPortfolio ? 'Creating...' : 'Start Portfolio'}
-            </Button>
+            <Link to={`/pools/${poolId}/invest`}>
+              <Button size="sm">Start Investing</Button>
+            </Link>
           </div>
         </Card>
       ) : (
@@ -81,7 +60,6 @@ export function BiddingOpenView({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-foreground">{currentUserPortfolio.name}</h3>
-                <Badge variant={statusVariant as 'secondary' | 'success' | 'warning'}>{statusLabel}</Badge>
               </div>
               <svg
                 className="h-5 w-5 text-muted-foreground/60"

@@ -32,9 +32,9 @@ type PortfolioReader interface {
 }
 
 type PortfolioWriter interface {
-	CreatePortfolio(ctx context.Context, portfolio *models.Portfolio) error
+	CreatePortfolio(ctx context.Context, portfolio *models.Portfolio, investments []*models.Investment) error
 	ReplaceInvestments(ctx context.Context, portfolioID string, investments []*models.Investment) error
-	UpdatePortfolioStatus(ctx context.Context, id string, status string) error
+	SoftDeletePortfolio(ctx context.Context, id string) error
 }
 
 type PortfolioRepository interface {

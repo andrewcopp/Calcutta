@@ -6,6 +6,7 @@ import { tournamentService } from '../services/tournamentService';
 import { schoolService } from '../services/schoolService';
 import { queryKeys } from '../queryKeys';
 import { toast } from '../lib/toast';
+import { useUser } from '../contexts/UserContext';
 import { computeBudgetRemaining, computeTeamCount, computeValidationErrors } from '../utils/investmentValidation';
 import type { School } from '../schemas/school';
 import type { TournamentTeam } from '../schemas/tournament';
@@ -83,9 +84,12 @@ export function deriveUsedTeamIds(slots: InvestmentSlot[]): Set<string> {
 }
 
 export function useInvesting() {
-  const { poolId, portfolioId } = useParams<{ poolId: string; portfolioId: string }>();
+  const { poolId, portfolioId } = useParams<{ poolId: string; portfolioId?: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useUser();
+
+  const isCreating = !portfolioId;
 
   const [slots, setSlots] = useState<InvestmentSlot[]>([]);
   const initializedRef = useRef(false);
@@ -93,18 +97,21 @@ export function useInvesting() {
   const [isDirty, setIsDirty] = useState(false);
 
   const investingQuery = useQuery({
-    queryKey: queryKeys.investing.page(poolId, portfolioId),
-    enabled: Boolean(poolId && portfolioId),
+    queryKey: queryKeys.investing.page(poolId, portfolioId ?? null),
+    enabled: Boolean(poolId),
     queryFn: async () => {
-      if (!poolId || !portfolioId) {
+      if (!poolId) {
         throw new Error('Missing required parameters');
       }
 
-      const [pool, investments, schools] = await Promise.all([
+      const [pool, schools] = await Promise.all([
         poolService.getPool(poolId),
-        poolService.getInvestments(portfolioId, poolId),
         schoolService.getSchools(),
       ]);
+
+      const investments = portfolioId
+        ? await poolService.getInvestments(portfolioId, poolId)
+        : [];
 
       const tournamentTeams = await tournamentService.getTournamentTeams(pool.tournamentId);
 
@@ -193,6 +200,19 @@ export function useInvesting() {
     },
   });
 
+  const createPortfolioMutation = useMutation({
+    mutationFn: async (teamsPayload: Array<{ teamId: string; credits: number }>) => {
+      if (!poolId) throw new Error('Missing pool ID');
+      const name = user ? `${user.firstName} ${user.lastName}` : 'My Portfolio';
+      return poolService.createPortfolio(poolId, name, teamsPayload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pools.dashboard(poolId) });
+      toast.success('Portfolio created successfully!');
+      navigate(`/pools/${poolId}`);
+    },
+  });
+
   // Slot handlers
   const handleSlotSelect = useCallback(
     (slotIndex: number, teamId: string) => {
@@ -257,13 +277,15 @@ export function useInvesting() {
 
   const isValid = validationErrors.length === 0 && teamCount >= MIN_TEAMS && teamCount <= MAX_TEAMS;
 
+  const activeMutation = isCreating ? createPortfolioMutation : updatePortfolioMutation;
+
   const handleSubmit = () => {
     if (!isValid) return;
     const teamsPayload = Object.entries(investmentsByTeamId).map(([teamId, credits]) => ({
       teamId,
       credits,
     }));
-    updatePortfolioMutation.mutate(teamsPayload);
+    activeMutation.mutate(teamsPayload);
   };
 
   const handleCancel = () => {
@@ -278,10 +300,13 @@ export function useInvesting() {
     // IDs
     poolId,
     portfolioId,
+    isCreating,
 
     // Query state
     investingQuery,
     updatePortfolioMutation,
+    createPortfolioMutation,
+    activeMutation,
 
     // Pool config
     pool,

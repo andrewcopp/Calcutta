@@ -12,7 +12,6 @@ type PortfolioResponse struct {
 	Name           string    `json:"name"`
 	UserID         *string   `json:"userId,omitempty"`
 	PoolID         string    `json:"poolId"`
-	Status         string    `json:"status"`
 	TotalReturns   float64   `json:"totalReturns"`
 	FinishPosition int       `json:"finishPosition"`
 	InTheMoney     bool      `json:"inTheMoney"`
@@ -30,7 +29,6 @@ func NewPortfolioResponse(p *models.Portfolio, s *models.PortfolioStanding) *Por
 		Name:      p.Name,
 		UserID:    p.UserID,
 		PoolID:    p.PoolID,
-		Status:    p.Status,
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
 	}
@@ -59,13 +57,28 @@ func NewPortfolioListResponse(portfolios []*models.Portfolio, standingsByID map[
 }
 
 type CreatePortfolioRequest struct {
-	Name   string  `json:"name"`
-	UserID *string `json:"userId,omitempty"`
+	Name   string                   `json:"name"`
+	UserID *string                  `json:"userId,omitempty"`
+	Teams  []*UpdateInvestmentRequest `json:"teams"`
 }
 
 func (r *CreatePortfolioRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return ErrFieldRequired("name")
+	}
+	if len(r.Teams) == 0 {
+		return ErrFieldInvalid("teams", "at least one team must be provided")
+	}
+	for _, t := range r.Teams {
+		if t == nil {
+			return ErrFieldInvalid("teams", "team cannot be null")
+		}
+		if strings.TrimSpace(t.TeamID) == "" {
+			return ErrFieldRequired("teamId")
+		}
+		if t.Credits <= 0 {
+			return ErrFieldInvalid("credits", "must be greater than 0")
+		}
 	}
 	return nil
 }

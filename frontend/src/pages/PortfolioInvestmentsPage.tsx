@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EntryTeamsSkeleton } from '../components/skeletons/EntryTeamsSkeleton';
@@ -20,10 +21,13 @@ import { usePortfolioInvestmentsData } from '../hooks/usePortfolioInvestmentsDat
 import { usePortfolioOwnershipData } from '../hooks/usePortfolioOwnershipData';
 import { poolService } from '../services/poolService';
 import { queryKeys } from '../queryKeys';
+import { toast } from '../lib/toast';
 import { formatDate } from '../utils/format';
 
 export function PortfolioInvestmentsPage() {
   const { portfolioId, poolId } = useParams<{ portfolioId: string; poolId: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState('entry');
   const [sortBy, setSortBy] = useState<'points' | 'ownership' | 'credits'>('points');
@@ -68,6 +72,24 @@ export function PortfolioInvestmentsPage() {
     ownershipShowAllTeams,
     sortBy,
   });
+
+  const deletePortfolioMutation = useMutation({
+    mutationFn: async () => {
+      if (!poolId || !portfolioId) throw new Error('Missing IDs');
+      return poolService.deletePortfolio(poolId, portfolioId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pools.dashboard(poolId) });
+      toast.success('Portfolio deleted');
+      navigate(`/pools/${poolId}`);
+    },
+  });
+
+  const handleDeletePortfolio = () => {
+    const confirmed = window.confirm('Are you sure you want to delete your portfolio? This cannot be undone.');
+    if (!confirmed) return;
+    deletePortfolioMutation.mutate();
+  };
 
   if (!portfolioId || !poolId) {
     return (
@@ -146,9 +168,6 @@ export function PortfolioInvestmentsPage() {
             <Card variant="accent" padding="compact" className="mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
-                <Badge variant={currentUserPortfolio?.status === 'submitted' ? 'success' : 'secondary'}>
-                  {currentUserPortfolio?.status === 'submitted' ? 'Investments locked' : 'In Progress'}
-                </Badge>
                 <span className="text-sm text-muted-foreground">
                   {teams.length} teams &middot; {totalSpent} / {budgetCredits} credits
                 </span>
@@ -180,12 +199,29 @@ export function PortfolioInvestmentsPage() {
           <PortfolioRosterCard
             portfolioId={portfolioId!}
             poolId={poolId!}
-            portfolioStatus={currentUserPortfolio?.status ?? 'draft'}
             investments={portfolioInvestments}
             budgetCredits={dashboardQuery.data?.pool?.budgetCredits ?? 100}
             canEdit={investingOpen && isOwnPortfolio}
             title={portfolioTitle}
           />
+          {investingOpen && isOwnPortfolio && (
+            <div className="mt-4">
+              {deletePortfolioMutation.isError && (
+                <Alert variant="error" className="mb-2">
+                  {deletePortfolioMutation.error instanceof Error ? deletePortfolioMutation.error.message : 'Failed to delete portfolio'}
+                </Alert>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeletePortfolio}
+                disabled={deletePortfolioMutation.isPending}
+                loading={deletePortfolioMutation.isPending}
+              >
+                Delete Portfolio
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         {!investingOpen && (

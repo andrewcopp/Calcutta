@@ -274,7 +274,6 @@ type CorePortfolio struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	DeletedAt pgtype.Timestamptz
-	Status    string
 }
 
 type CoreRole struct {

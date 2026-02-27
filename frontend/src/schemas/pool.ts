@@ -31,7 +31,6 @@ export const PortfolioSchema = z.object({
   id: z.string(),
   name: z.string(),
   poolId: z.string(),
-  status: z.enum(['draft', 'submitted']).optional(),
   totalReturns: z.number().optional(),
   finishPosition: z.number().optional(),
   inTheMoney: z.boolean().optional(),

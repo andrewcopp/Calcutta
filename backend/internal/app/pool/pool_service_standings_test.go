@@ -12,7 +12,6 @@ func newTestPortfolio(id string, createdAt time.Time) *models.Portfolio {
 		ID:        id,
 		Name:      id,
 		PoolID:    "pool-1",
-		Status:    "submitted",
 		CreatedAt: createdAt,
 		UpdatedAt: createdAt,
 	}

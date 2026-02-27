@@ -11,9 +11,9 @@ import { useInvesting } from '../hooks/useInvesting';
 export function InvestingPage() {
   const {
     poolId,
-    portfolioId,
+    isCreating,
     investingQuery,
-    updatePortfolioMutation,
+    activeMutation,
     pool,
     BUDGET,
     MIN_INVESTMENT,
@@ -36,7 +36,7 @@ export function InvestingPage() {
     handleCancel,
   } = useInvesting();
 
-  if (!poolId || !portfolioId) {
+  if (!poolId) {
     return (
       <PageContainer>
         <Alert variant="error">Missing required parameters</Alert>
@@ -78,19 +78,19 @@ export function InvestingPage() {
             <Button variant="secondary" onClick={handleCancel}>Cancel</Button>
             <Button
               onClick={handleSubmit}
-              disabled={!isValid || updatePortfolioMutation.isPending}
-              loading={updatePortfolioMutation.isPending}
+              disabled={!isValid || activeMutation.isPending}
+              loading={activeMutation.isPending}
               title={!isValid && validationErrors.length > 0 ? validationErrors[0] : undefined}
             >
-              {updatePortfolioMutation.isPending ? 'Saving...' : 'Save Investments'}
+              {activeMutation.isPending ? 'Saving...' : isCreating ? 'Create Portfolio' : 'Save Investments'}
             </Button>
           </div>
         }
       />
 
-      {updatePortfolioMutation.isError && (
+      {activeMutation.isError && (
         <Alert variant="error" className="mb-4">
-          {updatePortfolioMutation.error instanceof Error ? updatePortfolioMutation.error.message : 'Failed to save investments'}
+          {activeMutation.error instanceof Error ? activeMutation.error.message : 'Failed to save investments'}
         </Alert>
       )}
 

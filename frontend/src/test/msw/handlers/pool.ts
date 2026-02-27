@@ -19,7 +19,6 @@ const validPortfolio = {
   id: 'portfolio-1',
   name: 'Test Portfolio',
   poolId: 'pool-1',
-  status: 'submitted' as const,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -110,6 +109,10 @@ export const poolHandlers = [
 
   http.patch(`${BASE}/pools/:poolId/portfolios/:portfolioId`, () => {
     return HttpResponse.json(validPortfolio);
+  }),
+
+  http.delete(`${BASE}/pools/:poolId/portfolios/:portfolioId`, () => {
+    return new HttpResponse(null, { status: 204 });
   }),
 
   http.put(`${BASE}/pools/:id/payouts`, () => {

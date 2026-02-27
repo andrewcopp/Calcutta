@@ -59,10 +59,17 @@ describe('poolService', () => {
 
   describe('createPortfolio', () => {
     it('returns created portfolio', async () => {
-      const portfolio = await poolService.createPortfolio('pool-1', 'My Portfolio');
+      const portfolio = await poolService.createPortfolio('pool-1', 'My Portfolio', [
+        { teamId: 'team-1', credits: 10 },
+      ]);
 
       expect(portfolio.id).toBe('portfolio-1');
-      expect(portfolio.status).toBe('submitted');
+    });
+  });
+
+  describe('deletePortfolio', () => {
+    it('completes without error', async () => {
+      await expect(poolService.deletePortfolio('pool-1', 'portfolio-1')).resolves.toBeUndefined();
     });
   });
 

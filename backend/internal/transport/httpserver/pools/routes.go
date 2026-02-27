@@ -14,6 +14,7 @@ type Handlers struct {
 	UpdatePool              http.HandlerFunc
 	ListPortfolios          http.HandlerFunc
 	CreatePortfolio         http.HandlerFunc
+	DeletePortfolio         http.HandlerFunc
 	CreateInvitation        http.HandlerFunc
 	ListInvitations         http.HandlerFunc
 	AcceptInvitation        http.HandlerFunc
@@ -48,4 +49,5 @@ func RegisterRoutes(r *mux.Router, h Handlers) {
 	r.HandleFunc("/api/v1/pools/{poolId:"+uuidPattern+"}/portfolios/{portfolioId:"+uuidPattern+"}/investments", h.ListInvestments).Methods("GET")
 	r.HandleFunc("/api/v1/pools/{poolId:"+uuidPattern+"}/portfolios/{portfolioId:"+uuidPattern+"}/ownership", h.ListOwnership).Methods("GET")
 	r.HandleFunc("/api/v1/pools/{poolId:"+uuidPattern+"}/portfolios/{portfolioId:"+uuidPattern+"}", h.UpdatePortfolio).Methods("PATCH")
+	r.HandleFunc("/api/v1/pools/{poolId:"+uuidPattern+"}/portfolios/{portfolioId:"+uuidPattern+"}", h.DeletePortfolio).Methods("DELETE")
 }

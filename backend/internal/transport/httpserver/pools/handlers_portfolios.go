@@ -74,15 +74,57 @@ func (h *Handler) HandleCreatePortfolio(w http.ResponseWriter, r *http.Request) 
 		Name:   strings.TrimSpace(req.Name),
 		UserID: portfolioUserID,
 		PoolID: poolID,
-		Status: "draft",
 	}
 
-	if err := h.app.Pool.CreatePortfolio(r.Context(), portfolio); err != nil {
+	investments := make([]*models.Investment, 0, len(req.Teams))
+	for _, t := range req.Teams {
+		investments = append(investments, &models.Investment{TeamID: t.TeamID, Credits: t.Credits})
+	}
+
+	if err := poolapp.ValidatePortfolio(pool, portfolio, investments); err != nil {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", err.Error(), "teams")
+		return
+	}
+
+	if err := h.app.Pool.CreatePortfolio(r.Context(), portfolio, investments); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
 	}
 
-	response.WriteJSON(w, http.StatusCreated, dtos.NewPortfolioResponse(portfolio, nil))
+	// Best-effort audit trail
+	snapshotEntries := make([]models.InvestmentSnapshotEntry, len(investments))
+	for i, inv := range investments {
+		snapshotEntries[i] = models.InvestmentSnapshotEntry{TeamID: inv.TeamID, Credits: inv.Credits}
+	}
+	reason := ""
+	if decision.IsAdmin {
+		reason = "admin_override"
+	}
+	snapshot := &models.InvestmentSnapshot{
+		PortfolioID: portfolio.ID,
+		ChangedBy:   userID,
+		Reason:      reason,
+		Investments: snapshotEntries,
+	}
+	if err := h.app.Pool.CreateInvestmentSnapshot(r.Context(), snapshot); err != nil {
+		slog.Error("failed to create investment snapshot", "portfolio_id", portfolio.ID, "error", err)
+	}
+
+	_, standings, err := h.app.Pool.GetPortfolios(r.Context(), poolID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	var standing *models.PortfolioStanding
+	for _, s := range standings {
+		if s.PortfolioID == portfolio.ID {
+			standing = s
+			break
+		}
+	}
+
+	response.WriteJSON(w, http.StatusCreated, dtos.NewPortfolioResponse(portfolio, standing))
 }
 
 func (h *Handler) HandleListPortfolios(w http.ResponseWriter, r *http.Request) {
@@ -316,11 +358,6 @@ func (h *Handler) HandleUpdatePortfolio(w http.ResponseWriter, r *http.Request) 
 		slog.Error("failed to create investment snapshot", "portfolio_id", portfolioID, "error", err)
 	}
 
-	if err := h.app.Pool.UpdatePortfolioStatus(r.Context(), portfolioID, "submitted"); err != nil {
-		httperr.WriteFromErr(w, r, err, h.authUserID)
-		return
-	}
-
 	updatedPortfolio, err := h.app.Pool.GetPortfolio(r.Context(), portfolioID)
 	if err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
@@ -342,4 +379,67 @@ func (h *Handler) HandleUpdatePortfolio(w http.ResponseWriter, r *http.Request) 
 	}
 
 	response.WriteJSON(w, http.StatusOK, dtos.NewPortfolioResponse(updatedPortfolio, standing))
+}
+
+func (h *Handler) HandleDeletePortfolio(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	poolID := vars["poolId"]
+	portfolioID := vars["portfolioId"]
+
+	if poolID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Pool ID is required", "poolId")
+		return
+	}
+	if portfolioID == "" {
+		httperr.Write(w, r, http.StatusBadRequest, "validation_error", "Portfolio ID is required", "portfolioId")
+		return
+	}
+
+	userID := ""
+	if h.authUserID != nil {
+		userID = h.authUserID(r.Context())
+	}
+	if userID == "" {
+		httperr.Write(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", "")
+		return
+	}
+
+	portfolio, err := h.app.Pool.GetPortfolio(r.Context(), portfolioID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if portfolio.PoolID != poolID {
+		httperr.Write(w, r, http.StatusNotFound, "not_found", "portfolio not found", "")
+		return
+	}
+
+	pool, err := h.app.Pool.GetPoolByID(r.Context(), portfolio.PoolID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	tournament, err := h.app.Tournament.GetByID(r.Context(), pool.TournamentID)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	decision, err := policy.CanDeletePortfolio(r.Context(), h.authz, userID, portfolio, pool, tournament, time.Now())
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+	if !decision.Allowed {
+		httperr.Write(w, r, decision.Status, decision.Code, decision.Message, "")
+		return
+	}
+
+	if err := h.app.Pool.SoftDeletePortfolio(r.Context(), portfolioID); err != nil {
+		httperr.WriteFromErr(w, r, err, h.authUserID)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

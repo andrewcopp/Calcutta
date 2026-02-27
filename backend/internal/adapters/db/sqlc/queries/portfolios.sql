@@ -37,7 +37,6 @@ SELECT
     p.name,
     p.user_id,
     p.pool_id,
-    p.status,
     p.created_at,
     p.updated_at,
     p.deleted_at,
@@ -53,7 +52,6 @@ SELECT
     name,
     user_id,
     pool_id,
-    status,
     created_at,
     updated_at,
     deleted_at
@@ -64,9 +62,9 @@ WHERE id = $1 AND deleted_at IS NULL;
 INSERT INTO core.portfolios (id, name, user_id, pool_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, NOW(), NOW());
 
--- name: UpdatePortfolioStatus :exec
+-- name: SoftDeletePortfolio :execrows
 UPDATE core.portfolios
-SET status = $2, updated_at = NOW()
+SET deleted_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListDistinctUserIDsByPoolID :many

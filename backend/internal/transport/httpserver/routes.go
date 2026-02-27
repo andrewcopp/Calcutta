@@ -64,6 +64,7 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		UpdatePool:              pHandler.HandleUpdatePool,
 		ListPortfolios:          pHandler.HandleListPortfolios,
 		CreatePortfolio:         pHandler.HandleCreatePortfolio,
+		DeletePortfolio:         pHandler.HandleDeletePortfolio,
 		CreateInvitation:        pHandler.HandleCreateInvitation,
 		ListInvitations:         pHandler.HandleListInvitations,
 		AcceptInvitation:        pHandler.HandleAcceptInvitation,

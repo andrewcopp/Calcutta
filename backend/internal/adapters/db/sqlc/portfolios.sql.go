@@ -39,7 +39,6 @@ SELECT
     name,
     user_id,
     pool_id,
-    status,
     created_at,
     updated_at,
     deleted_at
@@ -47,26 +46,14 @@ FROM core.portfolios
 WHERE id = $1 AND deleted_at IS NULL
 `
 
-type GetPortfolioByIDRow struct {
-	ID        string
-	Name      string
-	UserID    pgtype.UUID
-	PoolID    string
-	Status    string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	DeletedAt pgtype.Timestamptz
-}
-
-func (q *Queries) GetPortfolioByID(ctx context.Context, id string) (GetPortfolioByIDRow, error) {
+func (q *Queries) GetPortfolioByID(ctx context.Context, id string) (CorePortfolio, error) {
 	row := q.db.QueryRow(ctx, getPortfolioByID, id)
-	var i GetPortfolioByIDRow
+	var i CorePortfolio
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.UserID,
 		&i.PoolID,
-		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -139,7 +126,6 @@ SELECT
     p.name,
     p.user_id,
     p.pool_id,
-    p.status,
     p.created_at,
     p.updated_at,
     p.deleted_at,
@@ -155,7 +141,6 @@ type ListPortfoliosByPoolIDRow struct {
 	Name         string
 	UserID       pgtype.UUID
 	PoolID       string
-	Status       string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -176,7 +161,6 @@ func (q *Queries) ListPortfoliosByPoolID(ctx context.Context, poolID string) ([]
 			&i.Name,
 			&i.UserID,
 			&i.PoolID,
-			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -192,18 +176,16 @@ func (q *Queries) ListPortfoliosByPoolID(ctx context.Context, poolID string) ([]
 	return items, nil
 }
 
-const updatePortfolioStatus = `-- name: UpdatePortfolioStatus :exec
+const softDeletePortfolio = `-- name: SoftDeletePortfolio :execrows
 UPDATE core.portfolios
-SET status = $2, updated_at = NOW()
+SET deleted_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL
 `
 
-type UpdatePortfolioStatusParams struct {
-	ID     string
-	Status string
-}
-
-func (q *Queries) UpdatePortfolioStatus(ctx context.Context, arg UpdatePortfolioStatusParams) error {
-	_, err := q.db.Exec(ctx, updatePortfolioStatus, arg.ID, arg.Status)
-	return err
+func (q *Queries) SoftDeletePortfolio(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeletePortfolio, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

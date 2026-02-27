@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { Pool } from '../schemas/pool';
 import { Alert } from '../components/ui/Alert';
@@ -22,9 +21,6 @@ import { Button } from '../components/ui/Button';
 
 import { usePoolDashboard } from '../hooks/usePoolDashboard';
 import { usePoolPortfoliosData } from '../hooks/usePoolPortfoliosData';
-import { useUser } from '../contexts/UserContext';
-import { poolService } from '../services/poolService';
-import { toast } from '../lib/toast';
 
 import { formatDate } from '../utils/format';
 
@@ -35,11 +31,6 @@ export function PoolPortfoliosPage() {
   const tabParam = searchParams.get('tab');
   const activeTab = validTabs.includes(tabParam as (typeof validTabs)[number]) ? tabParam! : 'leaderboard';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
-  const [isCreatingPortfolio, setIsCreatingPortfolio] = useState(false);
-  const [createPortfolioError, setCreatePortfolioError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { user } = useUser();
-
   const dashboardQuery = usePoolDashboard(poolId);
   const dashboardData = dashboardQuery.data;
 
@@ -83,20 +74,6 @@ export function PoolPortfoliosPage() {
     );
   }
 
-  const handleCreatePortfolio = async () => {
-    if (!user || !poolId) return;
-    setIsCreatingPortfolio(true);
-    setCreatePortfolioError(null);
-    try {
-      const portfolio = await poolService.createPortfolio(poolId, `${user.firstName} ${user.lastName}`);
-      toast.success('Portfolio created!');
-      navigate(`/pools/${poolId}/portfolios/${portfolio.id}/invest`);
-    } catch (err) {
-      setCreatePortfolioError(err instanceof Error ? err.message : 'Failed to create portfolio');
-      setIsCreatingPortfolio(false);
-    }
-  };
-
   if (investingOpen) {
     return (
       <BiddingOpenView
@@ -106,9 +83,6 @@ export function PoolPortfoliosPage() {
         canEditSettings={dashboardData?.abilities?.canEditSettings}
         tournamentStartingAt={dashboardData?.tournamentStartingAt}
         totalPortfolios={dashboardData!.totalPortfolios}
-        isCreatingPortfolio={isCreatingPortfolio}
-        createPortfolioError={createPortfolioError}
-        onCreatePortfolio={handleCreatePortfolio}
       />
     );
   }
@@ -148,9 +122,6 @@ export function PoolPortfoliosPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-foreground">Your Portfolio</h3>
-                    <Badge variant={currentUserPortfolio.status === 'submitted' ? 'success' : 'secondary'}>
-                      {currentUserPortfolio.status === 'submitted' ? 'Investments locked' : 'In Progress'}
-                    </Badge>
                     <span className="text-sm text-muted-foreground">
                       {userInvestments.length} teams &middot; {totalSpent} / {budgetCredits} credits
                     </span>

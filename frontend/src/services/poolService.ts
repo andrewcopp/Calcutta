@@ -45,8 +45,12 @@ export const poolService = {
     return apiClient.patch(`/pools/${id}`, updates, { schema: PoolSchema });
   },
 
-  async createPortfolio(poolId: string, name: string) {
-    return apiClient.post(`/pools/${poolId}/portfolios`, { name }, { schema: PortfolioSchema });
+  async createPortfolio(poolId: string, name: string, teams: Array<{ teamId: string; credits: number }>) {
+    return apiClient.post(`/pools/${poolId}/portfolios`, { name, teams }, { schema: PortfolioSchema });
+  },
+
+  async deletePortfolio(poolId: string, portfolioId: string) {
+    return apiClient.delete(`/pools/${poolId}/portfolios/${portfolioId}`);
   },
 
   async getInvestments(portfolioId: string, poolId: string) {

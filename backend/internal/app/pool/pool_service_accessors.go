@@ -138,16 +138,16 @@ func (s *Service) GetPortfolio(ctx context.Context, id string) (*models.Portfoli
 	return s.ports.Portfolios.GetPortfolio(ctx, id)
 }
 
-func (s *Service) CreatePortfolio(ctx context.Context, portfolio *models.Portfolio) error {
-	return s.ports.Portfolios.CreatePortfolio(ctx, portfolio)
+func (s *Service) CreatePortfolio(ctx context.Context, portfolio *models.Portfolio, investments []*models.Investment) error {
+	return s.ports.Portfolios.CreatePortfolio(ctx, portfolio, investments)
 }
 
 func (s *Service) ReplaceInvestments(ctx context.Context, portfolioID string, investments []*models.Investment) error {
 	return s.ports.Portfolios.ReplaceInvestments(ctx, portfolioID, investments)
 }
 
-func (s *Service) UpdatePortfolioStatus(ctx context.Context, id string, status string) error {
-	return s.ports.Portfolios.UpdatePortfolioStatus(ctx, id, status)
+func (s *Service) SoftDeletePortfolio(ctx context.Context, id string) error {
+	return s.ports.Portfolios.SoftDeletePortfolio(ctx, id)
 }
 
 func (s *Service) GetOwnershipSummariesByPortfolio(ctx context.Context, portfolioID string) ([]*models.OwnershipSummary, error) {

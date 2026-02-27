@@ -391,6 +391,16 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
+              path="/pools/:poolId/invest"
+              element={
+                <ProtectedRoute>
+                  <RouteErrorBoundary>
+                    <InvestingPage />
+                  </RouteErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/pools/:poolId/portfolios/:portfolioId/invest"
               element={
                 <ProtectedRoute>

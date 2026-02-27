@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (r *PoolRepository) CreatePortfolio(ctx context.Context, portfolio *models.Portfolio) error {
+func (r *PoolRepository) CreatePortfolio(ctx context.Context, portfolio *models.Portfolio, investments []*models.Investment) error {
 	portfolio.ID = uuid.New().String()
 	now := time.Now()
 	portfolio.CreatedAt = now
@@ -30,18 +30,52 @@ func (r *PoolRepository) CreatePortfolio(ctx context.Context, portfolio *models.
 		userID = pgtype.UUID{Bytes: parsed, Valid: true}
 	}
 
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("beginning transaction to create portfolio: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	qtx := r.q.WithTx(tx)
+
 	params := sqlc.CreatePortfolioParams{
 		ID:     portfolio.ID,
 		Name:   portfolio.Name,
 		UserID: userID,
 		PoolID: portfolio.PoolID,
 	}
-	if err := r.q.CreatePortfolio(ctx, params); err != nil {
+	if err = qtx.CreatePortfolio(ctx, params); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return &apperrors.AlreadyExistsError{Resource: "portfolio", Field: "user_id"}
 		}
 		return fmt.Errorf("creating portfolio: %w", err)
+	}
+
+	for _, inv := range investments {
+		if inv == nil {
+			continue
+		}
+		id := uuid.New().String()
+		invParams := sqlc.CreateInvestmentParams{
+			ID:          id,
+			PortfolioID: portfolio.ID,
+			TeamID:      inv.TeamID,
+			Credits:     int32(inv.Credits),
+			CreatedAt:   pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt:   pgtype.Timestamptz{Time: now, Valid: true},
+		}
+		if err = qtx.CreateInvestment(ctx, invParams); err != nil {
+			return fmt.Errorf("creating investment for portfolio %s: %w", portfolio.ID, err)
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing transaction to create portfolio: %w", err)
 	}
 	return nil
 }
@@ -60,7 +94,6 @@ func (r *PoolRepository) GetPortfolios(ctx context.Context, poolID string) ([]*m
 			Name:      row.Name,
 			UserID:    uuidToPtrString(row.UserID),
 			PoolID:    row.PoolID,
-			Status:    row.Status,
 			CreatedAt: row.CreatedAt.Time,
 			UpdatedAt: row.UpdatedAt.Time,
 			DeletedAt: TimestamptzToPtrTime(row.DeletedAt),
@@ -84,7 +117,6 @@ func (r *PoolRepository) GetPortfolio(ctx context.Context, id string) (*models.P
 		Name:      row.Name,
 		UserID:    uuidToPtrString(row.UserID),
 		PoolID:    row.PoolID,
-		Status:    row.Status,
 		CreatedAt: row.CreatedAt.Time,
 		UpdatedAt: row.UpdatedAt.Time,
 		DeletedAt: TimestamptzToPtrTime(row.DeletedAt),
@@ -175,9 +207,13 @@ func (r *PoolRepository) GetInvestmentsByPortfolioIDs(ctx context.Context, portf
 	return out, nil
 }
 
-func (r *PoolRepository) UpdatePortfolioStatus(ctx context.Context, id string, status string) error {
-	if err := r.q.UpdatePortfolioStatus(ctx, sqlc.UpdatePortfolioStatusParams{ID: id, Status: status}); err != nil {
-		return fmt.Errorf("updating portfolio status for %s: %w", id, err)
+func (r *PoolRepository) SoftDeletePortfolio(ctx context.Context, id string) error {
+	rowsAffected, err := r.q.SoftDeletePortfolio(ctx, id)
+	if err != nil {
+		return fmt.Errorf("soft-deleting portfolio %s: %w", id, err)
+	}
+	if rowsAffected == 0 {
+		return &apperrors.NotFoundError{Resource: "portfolio", ID: id}
 	}
 	return nil
 }

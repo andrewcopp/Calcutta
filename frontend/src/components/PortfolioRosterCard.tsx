@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import type { Investment } from '../schemas/pool';
@@ -7,7 +6,6 @@ import type { Investment } from '../schemas/pool';
 interface PortfolioRosterCardProps {
   portfolioId: string;
   poolId: string;
-  portfolioStatus: string;
   investments: Investment[];
   budgetCredits: number;
   canEdit?: boolean;
@@ -17,7 +15,6 @@ interface PortfolioRosterCardProps {
 export function PortfolioRosterCard({
   portfolioId,
   poolId,
-  portfolioStatus,
   investments,
   budgetCredits,
   canEdit = true,
@@ -29,12 +26,7 @@ export function PortfolioRosterCard({
   return (
     <Card variant="default" padding="none">
       <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <Badge variant={portfolioStatus === 'submitted' ? 'success' : 'secondary'}>
-            {portfolioStatus === 'submitted' ? 'Investments locked' : 'In Progress'}
-          </Badge>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
         {canEdit && (
           <Link to={`/pools/${poolId}/portfolios/${portfolioId}/invest`}>
             <Button size="sm">Edit</Button>
