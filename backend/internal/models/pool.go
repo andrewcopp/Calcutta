@@ -7,6 +7,7 @@ const (
 	DefaultMinTeams              = 3
 	DefaultMaxTeams              = 10
 	DefaultMaxInvestmentCredits  = 50
+	DefaultBudgetCredits         = 100
 )
 
 // ApplyDefaults fills in zero-value constraint fields with sensible defaults.
@@ -19,6 +20,9 @@ func (p *Pool) ApplyDefaults() {
 	}
 	if p.MaxInvestmentCredits == 0 {
 		p.MaxInvestmentCredits = DefaultMaxInvestmentCredits
+	}
+	if p.BudgetCredits == 0 {
+		p.BudgetCredits = DefaultBudgetCredits
 	}
 }
 

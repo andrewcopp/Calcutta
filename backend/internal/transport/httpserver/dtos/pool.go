@@ -19,6 +19,7 @@ type CreatePoolRequest struct {
 	MinTeams             int                `json:"minTeams"`
 	MaxTeams             int                `json:"maxTeams"`
 	MaxInvestmentCredits int                `json:"maxInvestmentCredits"`
+	BudgetCredits        int                `json:"budgetCredits"`
 	ScoringRules         []ScoringRuleInput `json:"scoringRules"`
 }
 
@@ -55,6 +56,7 @@ func (r *CreatePoolRequest) ToModel() *models.Pool {
 		MinTeams:             r.MinTeams,
 		MaxTeams:             r.MaxTeams,
 		MaxInvestmentCredits: r.MaxInvestmentCredits,
+		BudgetCredits:        r.BudgetCredits,
 	}
 }
 
