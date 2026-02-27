@@ -69,7 +69,7 @@ export function usePoolPortfoliosData(dashboardData: PoolDashboard | undefined):
       const portfolioReturnsMap = new Map<string, number>();
       const ownershipToPortfolio = new Map(ownershipSummaries.map((p) => [p.id, p.portfolioId]));
       for (const pt of ownershipDetails) {
-        const portfolioId = ownershipToPortfolio.get(pt.ownershipSummaryId);
+        const portfolioId = ownershipToPortfolio.get(pt.portfolioId);
         if (portfolioId) {
           portfolioReturnsMap.set(portfolioId, (portfolioReturnsMap.get(portfolioId) || 0) + pt.actualReturns);
         }

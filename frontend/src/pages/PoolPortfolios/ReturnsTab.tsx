@@ -67,7 +67,7 @@ export function ReturnsTab({
 
     const teamPortfolioAgg = new Map<string, Map<string, { actual: number; expected: number }>>();
     for (const pt of allOwnershipDetails) {
-      const portfolioId = ownershipSummaryPortfolioIdById.get(pt.ownershipSummaryId);
+      const portfolioId = ownershipSummaryPortfolioIdById.get(pt.portfolioId);
       if (!portfolioId) continue;
       if (!teamPortfolioAgg.has(pt.teamId)) teamPortfolioAgg.set(pt.teamId, new Map());
       const byPortfolio = teamPortfolioAgg.get(pt.teamId)!;

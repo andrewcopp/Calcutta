@@ -63,7 +63,7 @@ function computePoolPortfoliosData(dashboardData: PoolDashboard | undefined): Po
     const portfolioReturnsMap = new Map<string, number>();
     const ownershipToPortfolio = new Map(ownershipSummaries.map((p) => [p.id, p.portfolioId]));
     for (const pt of ownershipDetails) {
-      const portfolioId = ownershipToPortfolio.get(pt.ownershipSummaryId);
+      const portfolioId = ownershipToPortfolio.get(pt.portfolioId);
       if (portfolioId) {
         portfolioReturnsMap.set(portfolioId, (portfolioReturnsMap.get(portfolioId) || 0) + pt.actualReturns);
       }
@@ -221,8 +221,8 @@ describe('usePoolPortfoliosData (pure transformation)', () => {
         portfolios: [makePortfolio({ id: 'p1', name: 'Alice' })],
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
         ownershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', actualReturns: 20 }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os1', teamId: 't2', actualReturns: 10 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', actualReturns: 20 }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os1', teamId: 't2', actualReturns: 10 }),
         ],
       });
 
@@ -234,7 +234,7 @@ describe('usePoolPortfoliosData (pure transformation)', () => {
       const dashboard = makeDashboard({
         portfolios: [makePortfolio({ id: 'p1', name: 'Alice', totalReturns: 50 })],
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
-        ownershipDetails: [makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', actualReturns: 10 })],
+        ownershipDetails: [makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', actualReturns: 10 })],
       });
 
       const result = computePoolPortfoliosData(dashboard);
@@ -378,7 +378,7 @@ describe('usePoolPortfoliosData (pure transformation)', () => {
         tournamentTeams: [makeTournamentTeam({ id: 't1', schoolId: 's1', seed: 1, region: 'East' })],
         investments: [makeInvestment({ id: 'i1', portfolioId: 'p1', teamId: 't1', credits: 20 })],
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
-        ownershipDetails: [makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', actualReturns: 100 })],
+        ownershipDetails: [makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', actualReturns: 100 })],
       });
 
       const result = computePoolPortfoliosData(dashboard);
@@ -411,8 +411,8 @@ describe('usePoolPortfoliosData (pure transformation)', () => {
         ],
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
         ownershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', actualReturns: 10 }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os1', teamId: 't2', actualReturns: 50 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', actualReturns: 10 }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os1', teamId: 't2', actualReturns: 50 }),
         ],
       });
 
@@ -426,7 +426,7 @@ describe('usePoolPortfoliosData (pure transformation)', () => {
         tournamentTeams: [makeTournamentTeam({ id: 't1', schoolId: 's1' })],
         investments: [],
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
-        ownershipDetails: [makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', actualReturns: 30 })],
+        ownershipDetails: [makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', actualReturns: 30 })],
       });
 
       const result = computePoolPortfoliosData(dashboard);
@@ -450,7 +450,7 @@ describe('usePoolPortfoliosData (pure transformation)', () => {
         schools: [{ id: 's1', name: 'Duke' }],
         ownershipDetails: [
           makeOwnershipDetail({
-            id: 'od1', ownershipSummaryId: 'os1', teamId: 't1',
+            id: 'od1', portfolioId: 'os1', teamId: 't1',
             team: { id: 't1', schoolId: 's1' },
           }),
         ],

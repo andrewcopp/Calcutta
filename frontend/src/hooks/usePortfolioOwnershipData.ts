@@ -38,7 +38,7 @@ export function usePortfolioOwnershipData({
     (teamId: string) => {
       const currentOwnershipSummaryId = ownershipSummaries[0]?.id;
       if (!currentOwnershipSummaryId) return undefined;
-      return allOwnershipDetails.find((pt) => pt.teamId === teamId && pt.ownershipSummaryId === currentOwnershipSummaryId);
+      return allOwnershipDetails.find((pt) => pt.teamId === teamId && pt.portfolioId === currentOwnershipSummaryId);
     },
     [allOwnershipDetails, ownershipSummaries],
   );
@@ -49,7 +49,7 @@ export function usePortfolioOwnershipData({
       const sortedInvestors = [...allInvestors].sort((a, b) => b.ownershipPercentage - a.ownershipPercentage);
 
       const userOwnershipSummary = ownershipSummaries[0];
-      const userRank = userOwnershipSummary ? sortedInvestors.findIndex((pt) => pt.ownershipSummaryId === userOwnershipSummary.id) + 1 : 0;
+      const userRank = userOwnershipSummary ? sortedInvestors.findIndex((pt) => pt.portfolioId === userOwnershipSummary.id) + 1 : 0;
 
       return {
         rank: userRank,

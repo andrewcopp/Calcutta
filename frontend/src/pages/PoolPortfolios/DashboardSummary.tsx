@@ -19,7 +19,7 @@ export function DashboardSummary({
 }: DashboardSummaryProps) {
   // Find user's ownership summary and details
   const userOwnershipSummary = ownershipSummaries.find((p) => p.portfolioId === currentPortfolio.id);
-  const userOwnershipDetails = userOwnershipSummary ? ownershipDetails.filter((pt) => pt.ownershipSummaryId === userOwnershipSummary.id) : [];
+  const userOwnershipDetails = userOwnershipSummary ? ownershipDetails.filter((pt) => pt.portfolioId === userOwnershipSummary.id) : [];
 
   // Position: rank by totalReturns
   const sortedPortfolios = [...portfolios].sort((a, b) => (b.totalReturns ?? 0) - (a.totalReturns ?? 0));

@@ -84,10 +84,10 @@ export function OwnershipsTab({
               .filter((pt) => pt.ownershipPercentage > 0)
               .sort((a, b) => b.ownershipPercentage - a.ownershipPercentage)
               .map((pt) => {
-                const name = ownershipSummaryNameById.get(pt.ownershipSummaryId) || `Portfolio ${pt.ownershipSummaryId.slice(0, 4)}`;
-                const isCurrent = pt.ownershipSummaryId === currentOwnershipSummaryId;
+                const name = ownershipSummaryNameById.get(pt.portfolioId) || `Portfolio ${pt.portfolioId.slice(0, 4)}`;
+                const isCurrent = pt.portfolioId === currentOwnershipSummaryId;
                 return {
-                  key: `${team.teamId}-${pt.ownershipSummaryId}`,
+                  key: `${team.teamId}-${pt.portfolioId}`,
                   name,
                   value: pt.ownershipPercentage * 100,
                   fill: isCurrent ? CURRENT_FILL : OTHER_FILL,
@@ -99,8 +99,8 @@ export function OwnershipsTab({
               .sort((a, b) => b.ownershipPercentage - a.ownershipPercentage)
               .slice(0, 3)
               .map((pt) => {
-                const ownershipSummary = allOwnershipSummaries.find((p) => p.id === pt.ownershipSummaryId);
-                const name = ownershipSummary?.portfolioName || `Portfolio ${pt.ownershipSummaryId.slice(0, 4)}`;
+                const ownershipSummary = allOwnershipSummaries.find((p) => p.id === pt.portfolioId);
+                const name = ownershipSummary?.portfolioName || `Portfolio ${pt.portfolioId.slice(0, 4)}`;
                 return {
                   name,
                   pct: pt.ownershipPercentage * 100,

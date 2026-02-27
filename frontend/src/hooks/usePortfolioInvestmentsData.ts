@@ -62,7 +62,7 @@ export function usePortfolioInvestmentsData(
     // Filter ownership details for this portfolio's ownership summaries
     const thisOwnershipSummaryIds = new Set(thisPortfolioOwnershipSummaries.map((p) => p.id));
     const thisOwnershipDetails: OwnershipDetail[] = ownershipDetails
-      .filter((pt) => thisOwnershipSummaryIds.has(pt.ownershipSummaryId))
+      .filter((pt) => thisOwnershipSummaryIds.has(pt.portfolioId))
       .map((pt) => ({
         ...pt,
         team: pt.team

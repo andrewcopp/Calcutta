@@ -5,7 +5,7 @@ import { TournamentTeamSchema } from './tournament';
 export const PoolAbilitiesSchema = z.object({
   canEditSettings: z.boolean(),
   canInviteUsers: z.boolean(),
-  canEditEntries: z.boolean(),
+  canEditPortfolios: z.boolean(),
   canManageCoManagers: z.boolean(),
 });
 
@@ -85,7 +85,7 @@ const OwnershipDetailNestedTeamSchema = z.object({
 
 export const OwnershipDetailSchema = z.object({
   id: z.string(),
-  ownershipSummaryId: z.string(),
+  portfolioId: z.string(),
   teamId: z.string(),
   ownershipPercentage: z.number(),
   actualReturns: z.number(),

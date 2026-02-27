@@ -67,7 +67,7 @@ export function OwnershipsTab({
         .slice()
         .sort((a, b) => b.ownershipPercentage - a.ownershipPercentage)
         .map((pt) => {
-          const ownershipSummary = allOwnershipSummaries.find((p) => p.id === pt.ownershipSummaryId);
+          const ownershipSummary = allOwnershipSummaries.find((p) => p.id === pt.portfolioId);
           const portfolioId = ownershipSummary?.portfolioId || '';
           const portfolioName =
             ownershipSummary?.portfolioName || (portfolioId ? portfolioNameById.get(portfolioId) : undefined) || 'Unknown Portfolio';

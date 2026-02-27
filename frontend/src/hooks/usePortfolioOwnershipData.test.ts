@@ -25,7 +25,7 @@ function computeGetOwnershipDetailData(
 ): OwnershipDetail | undefined {
   const currentOwnershipSummaryId = ownershipSummaries[0]?.id;
   if (!currentOwnershipSummaryId) return undefined;
-  return allOwnershipDetails.find((pt) => pt.teamId === teamId && pt.ownershipSummaryId === currentOwnershipSummaryId);
+  return allOwnershipDetails.find((pt) => pt.teamId === teamId && pt.portfolioId === currentOwnershipSummaryId);
 }
 
 function computeGetInvestorRanking(
@@ -37,7 +37,7 @@ function computeGetInvestorRanking(
   const sortedInvestors = [...allInvestors].sort((a, b) => b.ownershipPercentage - a.ownershipPercentage);
 
   const userOwnershipSummary = ownershipSummaries[0];
-  const userRank = userOwnershipSummary ? sortedInvestors.findIndex((pt) => pt.ownershipSummaryId === userOwnershipSummary.id) + 1 : 0;
+  const userRank = userOwnershipSummary ? sortedInvestors.findIndex((pt) => pt.portfolioId === userOwnershipSummary.id) + 1 : 0;
 
   return {
     rank: userRank,
@@ -72,7 +72,7 @@ function computeOwnershipTeamsData({
   const getOwnershipDetailData = (teamId: string): OwnershipDetail | undefined => {
     const currentOwnershipSummaryId = ownershipSummaries[0]?.id;
     if (!currentOwnershipSummaryId) return undefined;
-    return allOwnershipDetails.find((pt) => pt.teamId === teamId && pt.ownershipSummaryId === currentOwnershipSummaryId);
+    return allOwnershipDetails.find((pt) => pt.teamId === teamId && pt.portfolioId === currentOwnershipSummaryId);
   };
 
   let teamsToShow: Investment[];
@@ -185,7 +185,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('returns the ownership detail matching the first summary and the given team', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.75 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.75 }),
       ];
       const result = computeGetOwnershipDetailData('t1', ownershipSummaries, ownershipDetails);
       expect(result?.ownershipPercentage).toBe(0.75);
@@ -193,7 +193,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
 
     it('returns undefined when team is not in the first summary', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
-      const ownershipDetails = [makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os2', teamId: 't1' })];
+      const ownershipDetails = [makeOwnershipDetail({ id: 'od1', portfolioId: 'os2', teamId: 't1' })];
       const result = computeGetOwnershipDetailData('t1', ownershipSummaries, ownershipDetails);
       expect(result).toBeUndefined();
     });
@@ -204,8 +204,8 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
         makeOwnershipSummary({ id: 'os2', portfolioId: 'p2' }),
       ];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
-        makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os2', teamId: 't1', ownershipPercentage: 0.8 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
+        makeOwnershipDetail({ id: 'od2', portfolioId: 'os2', teamId: 't1', ownershipPercentage: 0.8 }),
       ];
       const result = computeGetOwnershipDetailData('t1', ownershipSummaries, ownershipDetails);
       expect(result?.ownershipPercentage).toBe(0.5);
@@ -213,7 +213,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
 
     it('returns undefined for a team that has no ownership detail record', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
-      const ownershipDetails = [makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1' })];
+      const ownershipDetails = [makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1' })];
       const result = computeGetOwnershipDetailData('t2', ownershipSummaries, ownershipDetails);
       expect(result).toBeUndefined();
     });
@@ -234,7 +234,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('returns rank 0 when ownershipSummaries array is empty', () => {
       const ownershipSummaries: OwnershipSummary[] = [];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
       ];
       const result = computeGetInvestorRanking('t1', ownershipSummaries, ownershipDetails);
       expect(result.rank).toBe(0);
@@ -243,9 +243,9 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('returns correct total count of investors for a team', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
-        makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os2', teamId: 't1', ownershipPercentage: 0.3 }),
-        makeOwnershipDetail({ id: 'od3', ownershipSummaryId: 'os3', teamId: 't1', ownershipPercentage: 0.2 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
+        makeOwnershipDetail({ id: 'od2', portfolioId: 'os2', teamId: 't1', ownershipPercentage: 0.3 }),
+        makeOwnershipDetail({ id: 'od3', portfolioId: 'os3', teamId: 't1', ownershipPercentage: 0.2 }),
       ];
       const result = computeGetInvestorRanking('t1', ownershipSummaries, ownershipDetails);
       expect(result.total).toBe(3);
@@ -254,9 +254,9 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('ranks the user first when they have the highest ownership', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.6 }),
-        makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os2', teamId: 't1', ownershipPercentage: 0.3 }),
-        makeOwnershipDetail({ id: 'od3', ownershipSummaryId: 'os3', teamId: 't1', ownershipPercentage: 0.1 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.6 }),
+        makeOwnershipDetail({ id: 'od2', portfolioId: 'os2', teamId: 't1', ownershipPercentage: 0.3 }),
+        makeOwnershipDetail({ id: 'od3', portfolioId: 'os3', teamId: 't1', ownershipPercentage: 0.1 }),
       ];
       const result = computeGetInvestorRanking('t1', ownershipSummaries, ownershipDetails);
       expect(result.rank).toBe(1);
@@ -265,8 +265,8 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('ranks the user second when another investor has higher ownership', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.3 }),
-        makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os2', teamId: 't1', ownershipPercentage: 0.7 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.3 }),
+        makeOwnershipDetail({ id: 'od2', portfolioId: 'os2', teamId: 't1', ownershipPercentage: 0.7 }),
       ];
       const result = computeGetInvestorRanking('t1', ownershipSummaries, ownershipDetails);
       expect(result.rank).toBe(2);
@@ -275,7 +275,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('ranks the user as sole investor when only one investor exists', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 1.0 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 1.0 }),
       ];
       const result = computeGetInvestorRanking('t1', ownershipSummaries, ownershipDetails);
       expect(result).toEqual({ rank: 1, total: 1 });
@@ -284,9 +284,9 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
     it('only counts investors for the specified team', () => {
       const ownershipSummaries = [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })];
       const ownershipDetails = [
-        makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
-        makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os2', teamId: 't1', ownershipPercentage: 0.5 }),
-        makeOwnershipDetail({ id: 'od3', ownershipSummaryId: 'os3', teamId: 't2', ownershipPercentage: 1.0 }),
+        makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
+        makeOwnershipDetail({ id: 'od2', portfolioId: 'os2', teamId: 't1', ownershipPercentage: 0.5 }),
+        makeOwnershipDetail({ id: 'od3', portfolioId: 'os3', teamId: 't2', ownershipPercentage: 1.0 }),
       ];
       const result = computeGetInvestorRanking('t1', ownershipSummaries, ownershipDetails);
       expect(result.total).toBe(2);
@@ -324,7 +324,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
         teams: [makeInvestment({ id: 'i1', portfolioId: 'p1', teamId: 't1' })],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);
@@ -337,7 +337,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
         teams: [makeInvestment({ id: 'i1', portfolioId: 'p1', teamId: 't1' })],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);
@@ -441,8 +441,8 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
           makeInvestment({ id: 'i2', portfolioId: 'p1', teamId: 't2' }),
         ],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.3 }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os1', teamId: 't2', ownershipPercentage: 0.7 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.3 }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os1', teamId: 't2', ownershipPercentage: 0.7 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);
@@ -459,8 +459,8 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
           makeInvestment({ id: 'i2', portfolioId: 'p1', teamId: 't2' }),
         ],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5, actualReturns: 10 }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os1', teamId: 't2', ownershipPercentage: 0.5, actualReturns: 30 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5, actualReturns: 10 }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os1', teamId: 't2', ownershipPercentage: 0.5, actualReturns: 30 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);
@@ -483,8 +483,8 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
           makeInvestment({ id: 'i2', portfolioId: 'p1', teamId: 't2' }),
         ],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', actualReturns: 50, ownershipPercentage: 0.5 }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os1', teamId: 't2', actualReturns: 80, ownershipPercentage: 0.5 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', actualReturns: 50, ownershipPercentage: 0.5 }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os1', teamId: 't2', actualReturns: 80, ownershipPercentage: 0.5 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);
@@ -507,8 +507,8 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
           makeInvestment({ id: 'i2', portfolioId: 'p1', teamId: 't2', credits: 10 }),
         ],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os1', teamId: 't2', ownershipPercentage: 0.5 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 0.5 }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os1', teamId: 't2', ownershipPercentage: 0.5 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);
@@ -541,7 +541,7 @@ describe('usePortfolioOwnershipData (pure transformation)', () => {
         ownershipSummaries: [makeOwnershipSummary({ id: 'os1', portfolioId: 'p1' })],
         teams: [makeInvestment({ id: 'i1', portfolioId: 'p1', teamId: 't1' })],
         allOwnershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1', ownershipPercentage: 1.0 }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1', ownershipPercentage: 1.0 }),
         ],
       });
       const result = computeOwnershipTeamsData(input);

@@ -57,7 +57,7 @@ export function makeOwnershipSummary(
 }
 
 export function makeOwnershipDetail(
-  overrides: Partial<OwnershipDetail> & { id: string; ownershipSummaryId: string; teamId: string },
+  overrides: Partial<OwnershipDetail> & { id: string; portfolioId: string; teamId: string },
 ): OwnershipDetail {
   return {
     ownershipPercentage: 1,

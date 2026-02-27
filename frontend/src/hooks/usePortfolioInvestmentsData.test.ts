@@ -59,7 +59,7 @@ function computePortfolioInvestmentsData(
 
   const thisOwnershipSummaryIds = new Set(thisPortfolioOwnershipSummaries.map((p) => p.id));
   const thisOwnershipDetails: OwnershipDetail[] = ownershipDetails
-    .filter((pt) => thisOwnershipSummaryIds.has(pt.ownershipSummaryId))
+    .filter((pt) => thisOwnershipSummaryIds.has(pt.portfolioId))
     .map((pt) => ({
       ...pt,
       team: pt.team
@@ -248,8 +248,8 @@ describe('usePortfolioInvestmentsData (pure transformation)', () => {
           makeOwnershipSummary({ id: 'os2', portfolioId: 'p2' }),
         ],
         ownershipDetails: [
-          makeOwnershipDetail({ id: 'od1', ownershipSummaryId: 'os1', teamId: 't1' }),
-          makeOwnershipDetail({ id: 'od2', ownershipSummaryId: 'os2', teamId: 't2' }),
+          makeOwnershipDetail({ id: 'od1', portfolioId: 'os1', teamId: 't1' }),
+          makeOwnershipDetail({ id: 'od2', portfolioId: 'os2', teamId: 't2' }),
         ],
       });
       const result = computePortfolioInvestmentsData(dashboard, 'p1');
@@ -295,7 +295,7 @@ describe('usePortfolioInvestmentsData (pure transformation)', () => {
         schools: [{ id: 's1', name: 'Duke' }],
         ownershipDetails: [
           makeOwnershipDetail({
-            id: 'od1', ownershipSummaryId: 'os1', teamId: 't1',
+            id: 'od1', portfolioId: 'os1', teamId: 't1',
             team: { id: 't1', schoolId: 's1' },
           }),
         ],
