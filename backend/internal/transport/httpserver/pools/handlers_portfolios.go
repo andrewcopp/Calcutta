@@ -74,6 +74,7 @@ func (h *Handler) HandleCreatePortfolio(w http.ResponseWriter, r *http.Request) 
 		Name:   strings.TrimSpace(req.Name),
 		UserID: portfolioUserID,
 		PoolID: poolID,
+		Status: "draft",
 	}
 
 	if err := h.app.Pool.CreatePortfolio(r.Context(), portfolio); err != nil {
