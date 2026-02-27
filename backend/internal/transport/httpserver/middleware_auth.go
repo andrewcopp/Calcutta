@@ -112,6 +112,30 @@ func (s *Server) requirePermission(permissionKey string, next http.HandlerFunc) 
 	}
 }
 
+// requirePermissionOr404 checks the given permission and returns 404 (not 401/403)
+// when the user is unauthenticated or unauthorized, making the endpoint invisible.
+func (s *Server) requirePermissionOr404(permissionKey string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := authUserID(r.Context())
+		if userID == "" {
+			httperr.Write(w, r, http.StatusNotFound, "not_found", "Not Found", "")
+			return
+		}
+
+		ok, err := s.authzRepo.HasPermission(r.Context(), userID, "global", "", permissionKey)
+		if err != nil {
+			httperr.WriteFromErr(w, r, err, authUserID)
+			return
+		}
+		if !ok {
+			httperr.Write(w, r, http.StatusNotFound, "not_found", "Not Found", "")
+			return
+		}
+
+		next(w, r)
+	}
+}
+
 // requirePermissionWithScope checks global grants first, then falls back to
 // a scoped grant extracted from the URL path variable.
 func (s *Server) requirePermissionWithScope(permissionKey, scopeType, pathVar string, next http.HandlerFunc) http.HandlerFunc {

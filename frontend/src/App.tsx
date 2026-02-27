@@ -76,19 +76,7 @@ const ResetPasswordPage = React.lazy(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
 );
 const RulesPage = React.lazy(() => import('./pages/RulesPage').then((m) => ({ default: m.RulesPage })));
-const LabPage = React.lazy(() => import('./pages/LabPage').then((m) => ({ default: m.LabPage })));
-const ModelDetailPage = React.lazy(() =>
-  import('./pages/Lab/ModelDetailPage').then((m) => ({ default: m.ModelDetailPage })),
-);
-const EntryDetailPage = React.lazy(() =>
-  import('./pages/Lab/EntryDetailPage').then((m) => ({ default: m.EntryDetailPage })),
-);
-const EvaluationDetailPage = React.lazy(() =>
-  import('./pages/Lab/EvaluationDetailPage').then((m) => ({ default: m.EvaluationDetailPage })),
-);
-const EntryProfilePage = React.lazy(() =>
-  import('./pages/Lab/EntryProfilePage').then((m) => ({ default: m.EntryProfilePage })),
-);
+const LazyLabRoutes = React.lazy(() => import('./routes/LabRoutes'));
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
@@ -177,53 +165,11 @@ const AppLayout: React.FC = () => {
               }
             />
             <Route
-              path="/lab"
+              path="/lab/*"
               element={
-                <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
-                  <RouteErrorBoundary>
-                    <LabPage />
-                  </RouteErrorBoundary>
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="/lab/models/:modelId"
-              element={
-                <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
-                  <RouteErrorBoundary>
-                    <ModelDetailPage />
-                  </RouteErrorBoundary>
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="/lab/models/:modelId/calcutta/:calcuttaId"
-              element={
-                <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
-                  <RouteErrorBoundary>
-                    <EntryDetailPage />
-                  </RouteErrorBoundary>
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="/lab/models/:modelId/calcutta/:calcuttaId/evaluations/:evaluationId"
-              element={
-                <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
-                  <RouteErrorBoundary>
-                    <EvaluationDetailPage />
-                  </RouteErrorBoundary>
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="/lab/models/:modelId/calcutta/:calcuttaId/entry-results/:entryResultId"
-              element={
-                <PermissionProtectedRoute permission={PERMISSIONS.LAB_READ}>
-                  <RouteErrorBoundary>
-                    <EntryProfilePage />
-                  </RouteErrorBoundary>
-                </PermissionProtectedRoute>
+                <Suspense fallback={<LoadingState />}>
+                  <LazyLabRoutes />
+                </Suspense>
               }
             />
             <Route

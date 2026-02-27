@@ -78,24 +78,24 @@ func (s *Server) registerProtectedRoutes(r *mux.Router) {
 		ReplacePayouts:          pHandler.HandleReplacePayouts,
 	})
 
-	// Lab endpoints (lab.* schema)
+	// Lab endpoints (lab.* schema) — returns 404 for unauthorized to hide existence
 	labHandler := lab.NewHandlerWithAuthUserID(s.app, authUserID)
 	lab.RegisterRoutes(r, lab.Handlers{
-		ListModels:                 s.requirePermission("lab.read", labHandler.HandleListModels),
-		GetModel:                   s.requirePermission("lab.read", labHandler.HandleGetModel),
-		GetLeaderboard:             s.requirePermission("lab.read", labHandler.HandleGetLeaderboard),
-		StartPipeline:              s.requirePermission("lab.write", labHandler.HandleStartPipeline),
-		GetModelPipelineProgress:   s.requirePermission("lab.read", labHandler.HandleGetModelPipelineProgress),
-		GetPipelineRun:             s.requirePermission("lab.read", labHandler.HandleGetPipelineRun),
-		CancelPipeline:             s.requirePermission("lab.write", labHandler.HandleCancelPipeline),
-		ListEntries:                s.requirePermission("lab.read", labHandler.HandleListEntries),
-		GetEntry:                   s.requirePermission("lab.read", labHandler.HandleGetEntry),
-		GetEntryByModelAndCalcutta: s.requirePermission("lab.read", labHandler.HandleGetEntryByModelAndCalcutta),
-		ListEvaluations:            s.requirePermission("lab.read", labHandler.HandleListEvaluations),
-		GetEvaluation:              s.requirePermission("lab.read", labHandler.HandleGetEvaluation),
-		GetEvaluationEntryResults:  s.requirePermission("lab.read", labHandler.HandleGetEvaluationEntryResults),
-		GetEvaluationEntryProfile:  s.requirePermission("lab.read", labHandler.HandleGetEvaluationEntryProfile),
-		GetEvaluationSummary:       s.requirePermission("lab.read", labHandler.HandleGetEvaluationSummary),
+		ListModels:                 s.requirePermissionOr404("lab.read", labHandler.HandleListModels),
+		GetModel:                   s.requirePermissionOr404("lab.read", labHandler.HandleGetModel),
+		GetLeaderboard:             s.requirePermissionOr404("lab.read", labHandler.HandleGetLeaderboard),
+		StartPipeline:              s.requirePermissionOr404("lab.write", labHandler.HandleStartPipeline),
+		GetModelPipelineProgress:   s.requirePermissionOr404("lab.read", labHandler.HandleGetModelPipelineProgress),
+		GetPipelineRun:             s.requirePermissionOr404("lab.read", labHandler.HandleGetPipelineRun),
+		CancelPipeline:             s.requirePermissionOr404("lab.write", labHandler.HandleCancelPipeline),
+		ListEntries:                s.requirePermissionOr404("lab.read", labHandler.HandleListEntries),
+		GetEntry:                   s.requirePermissionOr404("lab.read", labHandler.HandleGetEntry),
+		GetEntryByModelAndCalcutta: s.requirePermissionOr404("lab.read", labHandler.HandleGetEntryByModelAndCalcutta),
+		ListEvaluations:            s.requirePermissionOr404("lab.read", labHandler.HandleListEvaluations),
+		GetEvaluation:              s.requirePermissionOr404("lab.read", labHandler.HandleGetEvaluation),
+		GetEvaluationEntryResults:  s.requirePermissionOr404("lab.read", labHandler.HandleGetEvaluationEntryResults),
+		GetEvaluationEntryProfile:  s.requirePermissionOr404("lab.read", labHandler.HandleGetEvaluationEntryProfile),
+		GetEvaluationSummary:       s.requirePermissionOr404("lab.read", labHandler.HandleGetEvaluationSummary),
 	})
 
 	s.registerPoolCoManagerRoutes(r)
