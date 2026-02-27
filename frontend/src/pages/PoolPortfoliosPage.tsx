@@ -9,7 +9,6 @@ import { PageContainer, PageHeader } from '../components/ui/Page';
 import { LeaderboardSkeleton } from '../components/skeletons/LeaderboardSkeleton';
 import { LeaderboardTab } from './PoolPortfolios/LeaderboardTab';
 import { RaceTab } from './PoolPortfolios/RaceTab';
-import { StatisticsTab } from './PoolPortfolios/StatisticsTab';
 import { InvestmentsTab } from './PoolPortfolios/InvestmentsTab';
 import { ReturnsTab } from './PoolPortfolios/ReturnsTab';
 import { OwnershipsTab } from './PoolPortfolios/OwnershipsTab';
@@ -32,7 +31,7 @@ import { formatDate } from '../utils/format';
 export function PoolPortfoliosPage() {
   const { poolId } = useParams<{ poolId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const validTabs = ['leaderboard', 'race', 'bids', 'shares', 'scoring', 'statistics', 'final-four'] as const;
+  const validTabs = ['leaderboard', 'race', 'bids', 'shares', 'scoring', 'final-four'] as const;
   const tabParam = searchParams.get('tab');
   const activeTab = validTabs.includes(tabParam as (typeof validTabs)[number]) ? tabParam! : 'leaderboard';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
@@ -52,18 +51,11 @@ export function PoolPortfoliosPage() {
 
   const {
     portfolios,
-    totalPortfolios,
     allOwnershipSummaries,
     allOwnershipDetails,
     allInvestments,
-    seedInvestmentData,
     schools,
     tournamentTeams,
-    totalInvestment,
-    totalReturns,
-    averageReturn,
-    returnsStdDev,
-    teamROIData,
   } = usePoolPortfoliosData(dashboardData);
 
   if (!poolId) {
@@ -195,7 +187,6 @@ export function PoolPortfoliosPage() {
           <TabsTrigger value="bids">Investments</TabsTrigger>
           <TabsTrigger value="shares">Ownership</TabsTrigger>
           <TabsTrigger value="scoring">Returns</TabsTrigger>
-          <TabsTrigger value="statistics">The Field</TabsTrigger>
           {dashboardData?.finalFourOutcomes && dashboardData.finalFourOutcomes.length > 0 && (
             <TabsTrigger value="final-four">Final Four</TabsTrigger>
           )}
@@ -249,18 +240,6 @@ export function PoolPortfoliosPage() {
           />
         </TabsContent>
 
-        <TabsContent value="statistics">
-          <StatisticsTab
-            poolId={poolId}
-            totalPortfolios={totalPortfolios}
-            totalInvestment={totalInvestment}
-            totalReturns={totalReturns}
-            averageReturn={averageReturn}
-            returnsStdDev={returnsStdDev}
-            seedInvestmentData={seedInvestmentData}
-            teamROIData={teamROIData}
-          />
-        </TabsContent>
       </Tabs>
     </PageContainer>
   );
