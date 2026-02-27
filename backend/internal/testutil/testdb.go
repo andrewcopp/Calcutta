@@ -118,12 +118,13 @@ func TruncateAll(ctx context.Context, pool *pgxpool.Pool) error {
 			-- derived
 			derived.run_jobs,
 			-- core
-			core.entry_teams,
-			core.entries,
+			core.investment_snapshots,
+			core.investments,
+			core.portfolios,
 			core.payouts,
-			core.calcutta_scoring_rules,
-			core.calcutta_invitations,
-			core.calcuttas,
+			core.pool_scoring_rules,
+			core.pool_invitations,
+			core.pools,
 			core.team_kenpom_stats,
 			core.teams,
 			core.tournament_imports,

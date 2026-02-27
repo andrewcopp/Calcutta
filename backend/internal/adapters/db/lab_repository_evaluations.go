@@ -35,7 +35,7 @@ func (r *LabRepository) ListEvaluations(ctx context.Context, filter models.LabLi
 		FROM lab.evaluations ev
 		JOIN lab.entries e ON e.id = ev.entry_id
 		JOIN lab.investment_models im ON im.id = e.investment_model_id
-		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		JOIN core.pools c ON c.id = e.calcutta_id
 		WHERE ev.deleted_at IS NULL AND e.deleted_at IS NULL
 	`
 	args := []any{}
@@ -122,7 +122,7 @@ func (r *LabRepository) GetEvaluation(ctx context.Context, id string) (*models.L
 		FROM lab.evaluations ev
 		JOIN lab.entries e ON e.id = ev.entry_id
 		JOIN lab.investment_models im ON im.id = e.investment_model_id
-		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		JOIN core.pools c ON c.id = e.calcutta_id
 		WHERE ev.id = $1::uuid AND ev.deleted_at IS NULL AND e.deleted_at IS NULL
 	`
 
@@ -261,13 +261,13 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 			),
 			total_pool AS (
 				SELECT
-					cet.team_id,
-					SUM(cet.bid_points)::float AS total_bid
-				FROM core.entry_teams cet
-				JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-				WHERE ce.calcutta_id = $2::uuid
-					AND cet.deleted_at IS NULL
-				GROUP BY cet.team_id
+					inv.team_id,
+					SUM(inv.credits)::float AS total_bid
+				FROM core.investments inv
+				JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+				WHERE p.pool_id = $2::uuid
+					AND inv.deleted_at IS NULL
+				GROUP BY inv.team_id
 			)
 			SELECT
 				eb.team_id,
@@ -285,27 +285,27 @@ func (r *LabRepository) GetEvaluationEntryProfile(ctx context.Context, entryResu
 		`
 		rows, err = r.pool.Query(ctx, query, labEntryID, calcuttaID)
 	} else {
-		// Get bids from core.entries + core.entry_teams
+		// Get bids from core.portfolios + core.investments
 		query := `
 			WITH entry_bids AS (
 				SELECT
-					cet.team_id,
-					cet.bid_points
-				FROM core.entry_teams cet
-				JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-				WHERE ce.calcutta_id = $1::uuid
-					AND ce.name = $2
-					AND cet.deleted_at IS NULL
+					inv.team_id,
+					inv.credits AS bid_points
+				FROM core.investments inv
+				JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+				WHERE p.pool_id = $1::uuid
+					AND p.name = $2
+					AND inv.deleted_at IS NULL
 			),
 			total_pool AS (
 				SELECT
-					cet.team_id,
-					SUM(cet.bid_points)::float AS total_bid
-				FROM core.entry_teams cet
-				JOIN core.entries ce ON ce.id = cet.entry_id AND ce.deleted_at IS NULL
-				WHERE ce.calcutta_id = $1::uuid
-					AND cet.deleted_at IS NULL
-				GROUP BY cet.team_id
+					inv.team_id,
+					SUM(inv.credits)::float AS total_bid
+				FROM core.investments inv
+				JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+				WHERE p.pool_id = $1::uuid
+					AND inv.deleted_at IS NULL
+				GROUP BY inv.team_id
 			)
 			SELECT
 				eb.team_id,
@@ -388,7 +388,7 @@ func (r *LabRepository) GetBaselineEvaluation(ctx context.Context, calcuttaID, s
 		FROM lab.evaluations ev
 		JOIN lab.entries e ON e.id = ev.entry_id
 		JOIN lab.investment_models im ON im.id = e.investment_model_id
-		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		JOIN core.pools c ON c.id = e.calcutta_id
 		WHERE im.kind = 'naive_ev'
 			AND e.calcutta_id = $1::uuid
 			AND e.starting_state_key = $2

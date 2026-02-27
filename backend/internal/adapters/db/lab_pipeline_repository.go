@@ -256,7 +256,7 @@ func (r *LabRepository) GetHistoricalCalcuttaIDs(ctx context.Context) ([]string,
 
 	query := `
 		SELECT c.id::text
-		FROM core.calcuttas c
+		FROM core.pools c
 		JOIN core.tournaments t ON t.id = c.tournament_id
 		JOIN core.seasons s ON s.id = t.season_id
 		WHERE c.deleted_at IS NULL

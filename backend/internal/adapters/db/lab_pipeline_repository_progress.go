@@ -46,7 +46,7 @@ func (r *LabRepository) GetPipelineProgress(ctx context.Context, pipelineRunID s
 			CASE WHEN ev.id IS NOT NULL THEN true ELSE false END AS has_evaluation,
 			ev.mean_normalized_payout
 		FROM lab.pipeline_calcutta_runs pcr
-		JOIN core.calcuttas c ON c.id = pcr.calcutta_id
+		JOIN core.pools c ON c.id = pcr.calcutta_id
 		JOIN core.tournaments t ON t.id = c.tournament_id
 		JOIN core.seasons s ON s.id = t.season_id
 		LEFT JOIN lab.entries e ON e.id = pcr.entry_id AND e.deleted_at IS NULL
@@ -161,7 +161,7 @@ func (r *LabRepository) GetModelPipelineProgress(ctx context.Context, modelID st
 			pcr.progress,
 			pcr.progress_message,
 			pcr.error_message
-		FROM core.calcuttas c
+		FROM core.pools c
 		JOIN core.tournaments t ON t.id = c.tournament_id
 		JOIN core.seasons s ON s.id = t.season_id
 		LEFT JOIN lab.entries e ON e.calcutta_id = c.id

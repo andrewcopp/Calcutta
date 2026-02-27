@@ -34,7 +34,7 @@ func (r *LabRepository) ListEntries(ctx context.Context, filter models.LabListEn
 			(SELECT COUNT(*) FROM lab.evaluations ev WHERE ev.entry_id = e.id AND ev.deleted_at IS NULL)::int AS n_evaluations
 		FROM lab.entries e
 		JOIN lab.investment_models im ON im.id = e.investment_model_id
-		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		JOIN core.pools c ON c.id = e.calcutta_id
 		WHERE e.deleted_at IS NULL
 	`
 	args := []any{}
@@ -126,7 +126,7 @@ func (r *LabRepository) GetEntryRaw(ctx context.Context, id string) (*models.Lab
 			(SELECT COUNT(*) FROM lab.evaluations ev WHERE ev.entry_id = e.id AND ev.deleted_at IS NULL)::int AS n_evaluations
 		FROM lab.entries e
 		JOIN lab.investment_models im ON im.id = e.investment_model_id
-		JOIN core.calcuttas c ON c.id = e.calcutta_id
+		JOIN core.pools c ON c.id = e.calcutta_id
 		WHERE e.id = $1::uuid AND e.deleted_at IS NULL
 	`
 
@@ -243,11 +243,11 @@ func (r *LabRepository) loadTeamMap(ctx context.Context, tournamentID string) (m
 func (r *LabRepository) loadTotalPoolBudget(ctx context.Context, calcuttaID string) (int, error) {
 	var totalPoolBudget int
 	poolBudgetQuery := `
-		SELECT c.budget_points * COUNT(e.id)::int
-		FROM core.calcuttas c
-		LEFT JOIN core.entries e ON e.calcutta_id = c.id AND e.deleted_at IS NULL
+		SELECT c.budget_credits * COUNT(p.id)::int
+		FROM core.pools c
+		LEFT JOIN core.portfolios p ON p.pool_id = c.id AND p.deleted_at IS NULL
 		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
-		GROUP BY c.budget_points
+		GROUP BY c.budget_credits
 	`
 	if err := r.pool.QueryRow(ctx, poolBudgetQuery, calcuttaID).Scan(&totalPoolBudget); err != nil {
 		return 0, fmt.Errorf("failed to load total pool budget for calcutta %s: %w", calcuttaID, err)
