@@ -1,5 +1,7 @@
 FROM golang:1.24.2 AS builder
 
+ARG BUILD_SHA=dev
+
 WORKDIR /app
 
 # Copy go mod files
@@ -12,8 +14,12 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/workers ./cmd/workers \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+      -ldflags="-s -w -X github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver.version=${BUILD_SHA} -X main.version=${BUILD_SHA}" \
+      -o /out/api ./cmd/api \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+      -ldflags="-s -w -X main.version=${BUILD_SHA}" \
+      -o /out/workers ./cmd/workers \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
 
 FROM gcr.io/distroless/base-debian12:nonroot AS prod

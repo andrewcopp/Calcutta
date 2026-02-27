@@ -1,3 +1,5 @@
+import { captureSentryException } from '../sentry';
+
 class ApiError extends Error {
   status: number;
   body: unknown;
@@ -199,7 +201,15 @@ async function request<T>(path: string, options?: RequestOptions<T>): Promise<T>
           ? errorObj.message
           : response.statusText) || `Request failed with status ${response.status}`;
 
-    throw new ApiError(message, response.status, body);
+    const apiError = new ApiError(message, response.status, body);
+    if (response.status >= 500) {
+      captureSentryException(apiError, {
+        path: url,
+        method: (options?.method as string) || 'GET',
+        status: String(response.status),
+      });
+    }
+    throw apiError;
   }
 
   if (options?.schema) {

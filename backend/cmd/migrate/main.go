@@ -32,13 +32,14 @@ func run() error {
 	// Parse command line flags
 	up := flag.Bool("up", false, "Run migrations up")
 	down := flag.Bool("down", false, "Run migrations down")
+	steps := flag.Int("steps", 0, "Run N migration steps (positive=up, negative=down)")
 	force := flag.Int("force", 0, "Force schema migration version (clears dirty state)")
 	bootstrap := flag.Bool("bootstrap", false, "Bootstrap admin user after migrations")
 	flag.Parse()
 
 	// Check if at least one flag is set
-	if !*up && !*down && *force == 0 && !*bootstrap {
-		fmt.Println("Please specify either -up, -down, or -bootstrap flag")
+	if !*up && !*down && *steps == 0 && *force == 0 && !*bootstrap {
+		fmt.Println("Please specify either -up, -down, -steps, or -bootstrap flag")
 		flag.Usage()
 		return fmt.Errorf("no migration action specified")
 	}
@@ -69,6 +70,14 @@ func run() error {
 			return fmt.Errorf("error running schema migrations: %w", err)
 		}
 		fmt.Println("Schema migrations completed successfully")
+	}
+
+	if *steps != 0 {
+		fmt.Printf("Running %d migration step(s)...\n", *steps)
+		if err := m.Steps(*steps); err != nil && err != migrate.ErrNoChange {
+			return fmt.Errorf("error running migration steps: %w", err)
+		}
+		fmt.Println("Migration step(s) completed successfully")
 	}
 
 	if *down {

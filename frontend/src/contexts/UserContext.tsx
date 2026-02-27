@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { User } from '../schemas/user';
+import { setSentryUser } from '../sentry';
 import { userService } from '../services/userService';
 
 export interface UserContextType {
@@ -43,6 +44,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentUser = userService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      setSentryUser(currentUser.id);
       const storedPerms = userService.getStoredPermissions();
       setPermissions(storedPerms);
       void fetchPermissions();
@@ -52,18 +54,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     const loggedInUser = await userService.login({ email, password });
     setUser(loggedInUser);
+    setSentryUser(loggedInUser.id);
     await fetchPermissions();
   };
 
   const acceptInvite = async (token: string, password: string) => {
     const acceptedUser = await userService.acceptInvite(token, password);
     setUser(acceptedUser);
+    setSentryUser(acceptedUser.id);
     await fetchPermissions();
   };
 
   const resetPassword = async (token: string, password: string) => {
     const resetUser = await userService.resetPassword(token, password);
     setUser(resetUser);
+    setSentryUser(resetUser.id);
     await fetchPermissions();
   };
 
@@ -71,6 +76,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userService.logout();
     setUser(null);
     setPermissions([]);
+    setSentryUser(null);
   };
 
   const hasPermission = useCallback((permission: string) => permissions.includes(permission), [permissions]);

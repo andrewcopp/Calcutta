@@ -433,6 +433,8 @@ func LoadConfigFromEnv() (Config, error) {
 		PythonBin:                       pythonBin,
 		RunJobsMaxAttempts:              runJobsMaxAttempts,
 		WorkerID:                        workerID,
+		SentryDSN:                       strings.TrimSpace(os.Getenv("SENTRY_DSN")),
+		SentryEnvironment:               envString("SENTRY_ENVIRONMENT", env),
 		TrustProxyHeaders:               envBool("TRUST_PROXY_HEADERS", false),
 		CookieSecure:                    cookieSecure,
 		CookieSameSite:                  cookieSameSite,

@@ -17,6 +17,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// version is set at build time via -ldflags.
+var version = "dev"
+
 func Run() error {
 	slog.Info("server_initializing")
 
@@ -24,6 +27,12 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("config_load_failed: %w", err)
 	}
+
+	sentryCleanup, err := platform.InitSentry(cfg.SentryDSN, cfg.SentryEnvironment, version)
+	if err != nil {
+		return fmt.Errorf("sentry_init_failed: %w", err)
+	}
+	defer sentryCleanup()
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, &platform.PGXPoolOptions{
 		MaxConns:          cfg.PGXPoolMaxConns,
@@ -45,6 +54,7 @@ func Run() error {
 	// Router
 	r := mux.NewRouter()
 	r.Use(requestIDMiddleware)
+	r.Use(middleware.SentryMiddleware)
 	r.Use(middleware.SecurityHeadersMiddleware)
 	r.Use(server.loggingMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.AllowedOrigins))

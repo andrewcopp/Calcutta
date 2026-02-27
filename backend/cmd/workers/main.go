@@ -14,6 +14,9 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/platform"
 )
 
+// version is set at build time via -ldflags.
+var version = "dev"
+
 func main() {
 	platform.InitLogger()
 	if err := run(); err != nil {
@@ -40,6 +43,12 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("config_load_failed: %w", err)
 	}
+
+	sentryCleanup, err := platform.InitSentry(cfg.SentryDSN, cfg.SentryEnvironment, version)
+	if err != nil {
+		return fmt.Errorf("sentry_init_failed: %w", err)
+	}
+	defer sentryCleanup()
 
 	pool, err := platform.OpenPGXPool(context.Background(), cfg, nil)
 	if err != nil {

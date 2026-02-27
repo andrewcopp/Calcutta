@@ -10,6 +10,7 @@ import (
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/dtos"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/requestctx"
 	"github.com/andrewcopp/Calcutta/backend/internal/transport/httpserver/response"
+	"github.com/getsentry/sentry-go"
 )
 
 type apiError struct {
@@ -136,5 +137,14 @@ func WriteFromErr(w http.ResponseWriter, r *http.Request, err error, authUserID 
 		"user_id", userID,
 		"error", err.Error(),
 	)
+	if hub := sentry.GetHubFromContext(r.Context()); hub != nil {
+		hub.WithScope(func(scope *sentry.Scope) {
+			scope.SetTag("request_id", requestctx.GetRequestID(r.Context()))
+			scope.SetTag("method", r.Method)
+			scope.SetTag("path", r.URL.Path)
+			scope.SetTag("user_id", userID)
+			hub.CaptureException(err)
+		})
+	}
 	Write(w, r, http.StatusInternalServerError, "internal_error", "internal server error", "")
 }

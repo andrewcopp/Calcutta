@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import App from './App';
 import { ToastContainer } from './components/ui/ToastContainer';
+import { initSentry } from './sentry';
+
+initSentry();
 
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);

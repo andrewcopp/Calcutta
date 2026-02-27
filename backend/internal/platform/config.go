@@ -52,6 +52,10 @@ type Config struct {
 	// Proxy
 	TrustProxyHeaders bool
 
+	// Sentry
+	SentryDSN         string
+	SentryEnvironment string
+
 	// Environment
 	AppEnv string // "development" or "production"
 
