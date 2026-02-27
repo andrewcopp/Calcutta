@@ -113,8 +113,6 @@ func TruncateAll(ctx context.Context, pool *pgxpool.Pool) error {
 			compute.tournament_snapshots,
 			compute.predicted_team_values,
 			compute.prediction_batches,
-			compute.predicted_game_outcomes,
-			compute.game_outcome_runs,
 			-- derived
 			derived.run_jobs,
 			-- core

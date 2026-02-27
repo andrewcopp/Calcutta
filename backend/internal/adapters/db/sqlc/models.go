@@ -8,33 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type ComputeGameOutcomeRun struct {
-	ID           string
-	TournamentID string
-	ParamsJson   []byte
-	GitSha       *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	RunKey       string
-}
-
-type ComputePredictedGameOutcome struct {
-	ID           string
-	TournamentID string
-	GameID       string
-	Round        int32
-	Team1ID      string
-	Team2ID      string
-	PTeam1Wins   float64
-	PMatchup     float64
-	ModelVersion *string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-	RunID        pgtype.UUID
-}
-
 // Stores predicted expected points and round probabilities for each team (analogous to simulated_teams for simulations)
 type ComputePredictedTeamValue struct {
 	ID                string
