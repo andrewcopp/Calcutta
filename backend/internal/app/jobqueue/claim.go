@@ -148,8 +148,9 @@ func (c *Claimer) Fail(ctx context.Context, kind string, runID string, errMsg st
 }
 
 // Requeue puts a job back into the queue with status='queued' and an optional
-// retry_after delay. The attempt counter is NOT incremented (it was already
-// bumped on claim).
+// retry_after delay. The attempt counter is decremented to undo the bump from
+// claiming, since intentional requeues (e.g. waiting for dependencies) should
+// not count against maxAttempts.
 func (c *Claimer) Requeue(ctx context.Context, kind string, runID string, retryAfter time.Time) error {
 	var retryPtr *pgtype.Timestamptz
 	if !retryAfter.IsZero() {
@@ -158,6 +159,7 @@ func (c *Claimer) Requeue(ctx context.Context, kind string, runID string, retryA
 	_, err := c.pool.Exec(ctx, `
 		UPDATE derived.run_jobs
 		SET status = 'queued',
+			attempt = GREATEST(attempt - 1, 0),
 			claimed_at = NULL,
 			claimed_by = NULL,
 			retry_after = $3,
