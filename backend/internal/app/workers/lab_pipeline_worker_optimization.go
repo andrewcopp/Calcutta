@@ -134,8 +134,8 @@ func (w *LabPipelineWorker) fetchOptimizationConstraints(ctx context.Context, ca
 	var c optimizationConstraints
 
 	err := w.pool.QueryRow(ctx, `
-		SELECT min_teams, max_teams, max_bid
-		FROM core.calcuttas
+		SELECT min_teams, max_teams, max_investment_credits
+		FROM core.pools
 		WHERE id = $1::uuid AND deleted_at IS NULL
 	`, calcuttaID).Scan(&c.MinTeams, &c.MaxTeams, &c.MaxPerTeam)
 	if err != nil {
@@ -144,11 +144,11 @@ func (w *LabPipelineWorker) fetchOptimizationConstraints(ctx context.Context, ca
 	}
 
 	err = w.pool.QueryRow(ctx, `
-		SELECT c.budget_points * COUNT(e.id)::int
-		FROM core.calcuttas c
-		LEFT JOIN core.entries e ON e.calcutta_id = c.id AND e.deleted_at IS NULL
+		SELECT c.budget_credits * COUNT(p.id)::int
+		FROM core.pools c
+		LEFT JOIN core.portfolios p ON p.pool_id = c.id AND p.deleted_at IS NULL
 		WHERE c.id = $1::uuid AND c.deleted_at IS NULL
-		GROUP BY c.budget_points
+		GROUP BY c.budget_credits
 	`, calcuttaID).Scan(&c.TotalPoolBudget)
 	if err != nil {
 		slog.Error("lab_pipeline_worker failed to load total pool budget", "calcutta_id", calcuttaID, "error", err)

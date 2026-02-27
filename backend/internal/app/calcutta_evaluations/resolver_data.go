@@ -44,7 +44,7 @@ func (s *Service) getLatestTournamentSimulationBatchID(ctx context.Context, core
 func (s *Service) getCalcuttaContext(ctx context.Context, calcuttaID string) (*calcuttaContext, error) {
 	query := `
 		SELECT c.id, c.tournament_id
-		FROM core.calcuttas c
+		FROM core.pools c
 		WHERE c.id = $1::uuid
 			AND c.deleted_at IS NULL
 		LIMIT 1
@@ -108,8 +108,8 @@ func (s *Service) getSimulationsWithRules(ctx context.Context, tournamentID stri
 func (s *Service) loadCoreScoringRules(ctx context.Context, calcuttaID string) ([]scoring.Rule, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT win_index::int, points_awarded::int
-		FROM core.calcutta_scoring_rules
-		WHERE calcutta_id = $1::uuid
+		FROM core.pool_scoring_rules
+		WHERE pool_id = $1::uuid
 			AND deleted_at IS NULL
 		ORDER BY win_index ASC
 	`, calcuttaID)
@@ -136,7 +136,7 @@ func (s *Service) getPayoutStructure(ctx context.Context, calcuttaID string) (ma
 	query := `
 		SELECT position, amount_cents
 		FROM core.payouts
-		WHERE calcutta_id = $1
+		WHERE pool_id = $1
 		  AND deleted_at IS NULL
 		ORDER BY position
 	`
@@ -178,15 +178,15 @@ func (s *Service) getEntriesForLabEvaluation(
 ) (map[string]*Entry, error) {
 	query := `
 		SELECT
-			ce.name as entry_name,
-			cet.team_id,
-			cet.bid_points as bid_points
-		FROM core.entry_teams cet
-		JOIN core.entries ce ON cet.entry_id = ce.id
-		WHERE ce.calcutta_id = $1
-		  AND cet.deleted_at IS NULL
-		  AND ce.deleted_at IS NULL
-		  AND (ce.name != $2 OR $2 = '')
+			p.name as entry_name,
+			inv.team_id,
+			inv.credits as bid_points
+		FROM core.investments inv
+		JOIN core.portfolios p ON inv.portfolio_id = p.id
+		WHERE p.pool_id = $1
+		  AND inv.deleted_at IS NULL
+		  AND p.deleted_at IS NULL
+		  AND (p.name != $2 OR $2 = '')
 	`
 
 	rows, err := s.pool.Query(ctx, query, cc.CalcuttaID, excludedEntryName)

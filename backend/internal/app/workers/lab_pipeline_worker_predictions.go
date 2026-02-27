@@ -96,7 +96,7 @@ func (w *LabPipelineWorker) processGoPredictions(ctx context.Context, workerID s
 	// Get tournament_id from calcutta
 	var tournamentID string
 	err := w.pool.QueryRow(ctx, `
-		SELECT tournament_id::text FROM core.calcuttas WHERE id = $1::uuid AND deleted_at IS NULL
+		SELECT tournament_id::text FROM core.pools WHERE id = $1::uuid AND deleted_at IS NULL
 	`, params.CalcuttaID).Scan(&tournamentID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get tournament_id: %w", err)
@@ -214,13 +214,13 @@ func (w *LabPipelineWorker) processPythonPredictions(ctx context.Context, worker
 // getActualMarketShare returns the actual market share for each team based on real bids.
 func (w *LabPipelineWorker) getActualMarketShare(ctx context.Context, calcuttaID string, excludedEntryName string) (map[string]float64, error) {
 	query := `
-		SELECT et.team_id::text, SUM(et.bid_points)::float
-		FROM core.entry_teams et
-		JOIN core.entries e ON e.id = et.entry_id AND e.deleted_at IS NULL
-		WHERE e.calcutta_id = $1::uuid
-			AND et.deleted_at IS NULL
-			AND ($2 = '' OR e.name != $2)
-		GROUP BY et.team_id
+		SELECT inv.team_id::text, SUM(inv.credits)::float
+		FROM core.investments inv
+		JOIN core.portfolios p ON p.id = inv.portfolio_id AND p.deleted_at IS NULL
+		WHERE p.pool_id = $1::uuid
+			AND inv.deleted_at IS NULL
+			AND ($2 = '' OR p.name != $2)
+		GROUP BY inv.team_id
 	`
 
 	rows, err := w.pool.Query(ctx, query, calcuttaID, excludedEntryName)

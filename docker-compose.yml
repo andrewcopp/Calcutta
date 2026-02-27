@@ -83,12 +83,14 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - EXCLUDED_ENTRY_NAME=${EXCLUDED_ENTRY_NAME}
       - DEFAULT_N_SIMS=${DEFAULT_N_SIMS:-10000}
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_MODE=${AUTH_MODE:-legacy}
     depends_on:
       db:
         condition: service_healthy
       backend:
         condition: service_healthy
-    command: sh -c "pip install --break-system-packages -q -r /app/data-science/requirements.txt && go run ./cmd/workers -bundle-import-worker=false -lab-pipeline-worker=true"
+    command: sh -c "pip install --break-system-packages -q -r /app/data-science/requirements.txt && go run ./cmd/workers"
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'workers' || exit 1"]
       interval: 30s
