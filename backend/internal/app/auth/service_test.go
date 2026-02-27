@@ -42,6 +42,10 @@ func (r *fakeUserRepo) GetByExternalProvider(_ context.Context, _, _ string) (*m
 	return nil, nil
 }
 
+func (r *fakeUserRepo) GetByIDs(_ context.Context, _ []string) ([]*models.User, error) {
+	return nil, nil
+}
+
 func (r *fakeUserRepo) Create(_ context.Context, u *models.User) error {
 	if r.createFn != nil {
 		return r.createFn(nil, u)

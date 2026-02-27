@@ -73,6 +73,18 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 	return userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt), nil
 }
 
+func (r *UserRepository) GetByIDs(ctx context.Context, ids []string) ([]*models.User, error) {
+	rows, err := r.q.GetUsersByIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("getting users by ids: %w", err)
+	}
+	users := make([]*models.User, len(rows))
+	for i, row := range rows {
+		users[i] = userFromRow(row.ID, row.Email, row.FirstName, row.LastName, row.Status, row.PasswordHash, row.ExternalProvider, row.ExternalProviderID, row.CreatedAt, row.UpdatedAt, row.DeletedAt)
+	}
+	return users, nil
+}
+
 func (r *UserRepository) GetByExternalProvider(ctx context.Context, provider, providerID string) (*models.User, error) {
 	row, err := r.q.GetUserByExternalProvider(ctx, sqlc.GetUserByExternalProviderParams{
 		ExternalProvider:   &provider,

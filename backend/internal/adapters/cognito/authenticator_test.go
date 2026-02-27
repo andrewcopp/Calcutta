@@ -39,6 +39,9 @@ func (s *stubUserRepo) GetByID(_ context.Context, _ string) (*models.User, error
 func (s *stubUserRepo) GetByExternalProvider(_ context.Context, _, _ string) (*models.User, error) {
 	return s.byExtUser, s.byExtErr
 }
+func (s *stubUserRepo) GetByIDs(_ context.Context, _ []string) ([]*models.User, error) {
+	return nil, nil
+}
 func (s *stubUserRepo) Create(_ context.Context, u *models.User) error {
 	s.created = u
 	return nil

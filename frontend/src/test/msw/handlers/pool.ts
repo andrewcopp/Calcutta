@@ -55,6 +55,10 @@ export const poolHandlers = [
       pool: validPool,
       investingOpen: false,
       totalPortfolios: 1,
+      scoringRules: [
+        { winIndex: 1, pointsAwarded: 50 },
+        { winIndex: 2, pointsAwarded: 150 },
+      ],
       portfolios: [validPortfolio],
       investments: [validInvestment],
       ownershipSummaries: [],

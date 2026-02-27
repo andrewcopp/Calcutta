@@ -2,6 +2,7 @@ package pools
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -293,6 +294,25 @@ func (h *Handler) HandleUpdatePortfolio(w http.ResponseWriter, r *http.Request) 
 	if err := h.app.Pool.ReplaceInvestments(r.Context(), portfolioID, investments); err != nil {
 		httperr.WriteFromErr(w, r, err, h.authUserID)
 		return
+	}
+
+	// Best-effort audit trail
+	snapshotEntries := make([]models.InvestmentSnapshotEntry, len(investments))
+	for i, inv := range investments {
+		snapshotEntries[i] = models.InvestmentSnapshotEntry{TeamID: inv.TeamID, Credits: inv.Credits}
+	}
+	reason := ""
+	if decision.IsAdmin {
+		reason = "admin_override"
+	}
+	snapshot := &models.InvestmentSnapshot{
+		PortfolioID: portfolioID,
+		ChangedBy:   userID,
+		Reason:      reason,
+		Investments: snapshotEntries,
+	}
+	if err := h.app.Pool.CreateInvestmentSnapshot(r.Context(), snapshot); err != nil {
+		slog.Error("failed to create investment snapshot", "portfolio_id", portfolioID, "error", err)
 	}
 
 	if err := h.app.Pool.UpdatePortfolioStatus(r.Context(), portfolioID, "submitted"); err != nil {

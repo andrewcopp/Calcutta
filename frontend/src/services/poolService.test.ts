@@ -88,7 +88,7 @@ describe('poolService', () => {
     it('throws when dashboard missing pool', async () => {
       server.use(
         http.get(`${BASE}/pools/:id/dashboard`, () => {
-          return HttpResponse.json({ investingOpen: true, totalPortfolios: 0, portfolios: [], investments: [], ownershipSummaries: [], ownershipDetails: [], schools: [], tournamentTeams: [], roundStandings: [] });
+          return HttpResponse.json({ investingOpen: true, totalPortfolios: 0, scoringRules: [], portfolios: [], investments: [], ownershipSummaries: [], ownershipDetails: [], schools: [], tournamentTeams: [], roundStandings: [] });
         }),
       );
 

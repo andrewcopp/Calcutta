@@ -94,6 +94,10 @@ type PoolInvitationRepository interface {
 	PoolInvitationWriter
 }
 
+type InvestmentSnapshotWriter interface {
+	CreateInvestmentSnapshot(ctx context.Context, snapshot *models.InvestmentSnapshot) error
+}
+
 type TournamentTeamReader interface {
 	GetTournamentTeam(ctx context.Context, id string) (*models.TournamentTeam, error)
 }

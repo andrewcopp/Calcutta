@@ -193,3 +193,10 @@ func (s *Service) GetPayouts(ctx context.Context, poolID string) ([]*models.Pool
 func (s *Service) ReplacePayouts(ctx context.Context, poolID string, payouts []*models.PoolPayout) error {
 	return s.ports.Payouts.ReplacePayouts(ctx, poolID, payouts)
 }
+
+func (s *Service) CreateInvestmentSnapshot(ctx context.Context, snapshot *models.InvestmentSnapshot) error {
+	if s.ports.InvestmentSnapshots == nil {
+		return nil
+	}
+	return s.ports.InvestmentSnapshots.CreateInvestmentSnapshot(ctx, snapshot)
+}

@@ -13,6 +13,7 @@ type PoolDashboardResponse struct {
 	TotalPortfolios      int                         `json:"totalPortfolios"`
 	CurrentUserPortfolio *PortfolioResponse           `json:"currentUserPortfolio,omitempty"`
 	Abilities            *PoolAbilities               `json:"abilities,omitempty"`
+	ScoringRules         []*ScoringRuleResponse       `json:"scoringRules"`
 	Portfolios           []*PortfolioResponse         `json:"portfolios"`
 	Investments          []*InvestmentResponse        `json:"investments"`
 	OwnershipSummaries   []*OwnershipSummaryResponse  `json:"ownershipSummaries"`
@@ -21,6 +22,22 @@ type PoolDashboardResponse struct {
 	TournamentTeams      []*TournamentTeamResponse    `json:"tournamentTeams"`
 	RoundStandings       []*RoundStandingGroup        `json:"roundStandings"`
 	FinalFourOutcomes    []*FinalFourOutcomeResponse  `json:"finalFourOutcomes,omitempty"`
+}
+
+type ScoringRuleResponse struct {
+	WinIndex      int `json:"winIndex"`
+	PointsAwarded int `json:"pointsAwarded"`
+}
+
+func NewScoringRuleListResponse(rules []*models.ScoringRule) []*ScoringRuleResponse {
+	resp := make([]*ScoringRuleResponse, len(rules))
+	for i, r := range rules {
+		resp[i] = &ScoringRuleResponse{
+			WinIndex:      r.WinIndex,
+			PointsAwarded: r.PointsAwarded,
+		}
+	}
+	return resp
 }
 
 type RoundStandingGroup struct {

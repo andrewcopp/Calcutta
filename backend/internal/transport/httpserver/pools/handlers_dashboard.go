@@ -112,6 +112,7 @@ func (h *Handler) HandleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		InvestingOpen:        investingOpen,
 		TotalPortfolios:      len(portfolios),
 		Abilities:            computeAbilities(r.Context(), h.authz, userID, pool),
+		ScoringRules:         dtos.NewScoringRuleListResponse(scoringRules),
 		Schools:              dtos.NewSchoolListResponse(schools),
 		TournamentTeams:      tournamentTeamResponses,
 		RoundStandings:       []*dtos.RoundStandingGroup{},

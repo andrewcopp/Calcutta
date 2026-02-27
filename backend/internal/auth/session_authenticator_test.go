@@ -54,6 +54,9 @@ func (s *stubUserRepo) GetByExternalProvider(_ context.Context, provider, provid
 	}
 	return nil, nil
 }
+func (s *stubUserRepo) GetByIDs(_ context.Context, _ []string) ([]*models.User, error) {
+	return nil, nil
+}
 func (s *stubUserRepo) Create(_ context.Context, _ *models.User) error { return nil }
 func (s *stubUserRepo) Update(_ context.Context, _ *models.User) error { return nil }
 

@@ -60,3 +60,6 @@ invariants_*.txt
 *_output.txt
 core_sanity_post_*.txt
 docs/submissions_byom.md
+
+# One-time audit artifacts
+PRODUCTION_AUDIT_SUMMARY.md

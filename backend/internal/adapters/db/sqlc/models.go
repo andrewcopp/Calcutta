@@ -197,6 +197,17 @@ type CoreInvestment struct {
 	DeletedAt   pgtype.Timestamptz
 }
 
+type CoreInvestmentSnapshot struct {
+	ID          string
+	PortfolioID string
+	ChangedBy   string
+	Reason      string
+	Investments []byte
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
 type CorePayout struct {
 	ID          string
 	PoolID      string

@@ -9,13 +9,14 @@ import (
 )
 
 type Ports struct {
-	Pools           ports.PoolRepository
-	Portfolios      ports.PortfolioRepository
-	Payouts         ports.PayoutRepository
-	OwnershipReader ports.OwnershipReader
-	ScoringRules    ports.ScoringRuleRepository
-	TeamReader      ports.TournamentTeamReader
-	PoolInvitations ports.PoolInvitationRepository
+	Pools                ports.PoolRepository
+	Portfolios           ports.PortfolioRepository
+	Payouts              ports.PayoutRepository
+	OwnershipReader      ports.OwnershipReader
+	ScoringRules         ports.ScoringRuleRepository
+	TeamReader           ports.TournamentTeamReader
+	PoolInvitations      ports.PoolInvitationRepository
+	InvestmentSnapshots  ports.InvestmentSnapshotWriter
 }
 
 // Service handles business logic for investment pools

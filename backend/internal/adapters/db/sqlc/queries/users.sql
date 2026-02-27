@@ -30,3 +30,8 @@ WHERE id = $1;
 SELECT id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at, deleted_at
 FROM core.users
 WHERE external_provider = $1 AND external_provider_id = $2 AND deleted_at IS NULL;
+
+-- name: GetUsersByIDs :many
+SELECT id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at, deleted_at
+FROM core.users
+WHERE id = ANY(@ids::text[]) AND deleted_at IS NULL;

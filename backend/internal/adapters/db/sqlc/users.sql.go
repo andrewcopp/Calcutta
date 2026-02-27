@@ -167,6 +167,58 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 	return i, err
 }
 
+const getUsersByIDs = `-- name: GetUsersByIDs :many
+SELECT id, email, first_name, last_name, status, password_hash, external_provider, external_provider_id, created_at, updated_at, deleted_at
+FROM core.users
+WHERE id = ANY($1::text[]) AND deleted_at IS NULL
+`
+
+type GetUsersByIDsRow struct {
+	ID                 string
+	Email              *string
+	FirstName          string
+	LastName           string
+	Status             string
+	PasswordHash       *string
+	ExternalProvider   *string
+	ExternalProviderID *string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
+}
+
+func (q *Queries) GetUsersByIDs(ctx context.Context, ids []string) ([]GetUsersByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getUsersByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUsersByIDsRow
+	for rows.Next() {
+		var i GetUsersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.FirstName,
+			&i.LastName,
+			&i.Status,
+			&i.PasswordHash,
+			&i.ExternalProvider,
+			&i.ExternalProviderID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :exec
 UPDATE core.users
 SET

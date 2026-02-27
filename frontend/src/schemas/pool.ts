@@ -136,6 +136,13 @@ export const FinalFourOutcomeSchema = z.object({
 
 export type FinalFourOutcome = z.infer<typeof FinalFourOutcomeSchema>;
 
+export const ScoringRuleSchema = z.object({
+  winIndex: z.number(),
+  pointsAwarded: z.number(),
+});
+
+export type ScoringRule = z.infer<typeof ScoringRuleSchema>;
+
 export const PoolDashboardSchema = z.object({
   pool: PoolSchema,
   tournamentStartingAt: z.string().optional(),
@@ -143,6 +150,7 @@ export const PoolDashboardSchema = z.object({
   totalPortfolios: z.number(),
   currentUserPortfolio: PortfolioSchema.optional(),
   abilities: PoolAbilitiesSchema.optional(),
+  scoringRules: z.array(ScoringRuleSchema),
   portfolios: z.array(PortfolioSchema),
   investments: z.array(InvestmentSchema),
   ownershipSummaries: z.array(OwnershipSummarySchema),

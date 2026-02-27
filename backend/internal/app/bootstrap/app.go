@@ -26,14 +26,16 @@ func NewApp(pool *pgxpool.Pool, cfg platform.Config, authRepo *dbadapters.AuthRe
 
 	poolRepo := dbadapters.NewPoolRepository(pool)
 	invitationRepo := dbadapters.NewPoolInvitationRepository(pool)
+	snapshotRepo := dbadapters.NewInvestmentSnapshotRepository(pool)
 	poolService := apppool.New(apppool.Ports{
-		Pools:           poolRepo,
-		Portfolios:      poolRepo,
-		Payouts:         poolRepo,
-		OwnershipReader: poolRepo,
-		ScoringRules:    poolRepo,
-		TeamReader:      poolRepo,
-		PoolInvitations: invitationRepo,
+		Pools:               poolRepo,
+		Portfolios:          poolRepo,
+		Payouts:             poolRepo,
+		OwnershipReader:     poolRepo,
+		ScoringRules:        poolRepo,
+		TeamReader:          poolRepo,
+		PoolInvitations:     invitationRepo,
+		InvestmentSnapshots: snapshotRepo,
 	})
 
 	analyticsRepo := dbadapters.NewAnalyticsRepository(pool)

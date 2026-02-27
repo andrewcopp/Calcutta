@@ -33,16 +33,14 @@ func (s *Server) listTournamentModeratorsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	moderators := make([]moderatorResponse, 0, len(userIDs))
-	for _, uid := range userIDs {
-		user, err := s.userRepo.GetByID(r.Context(), uid)
-		if err != nil {
-			httperr.WriteFromErr(w, r, err, authUserID)
-			return
-		}
-		if user == nil {
-			continue
-		}
+	users, err := s.userRepo.GetByIDs(r.Context(), userIDs)
+	if err != nil {
+		httperr.WriteFromErr(w, r, err, authUserID)
+		return
+	}
+
+	moderators := make([]moderatorResponse, 0, len(users))
+	for _, user := range users {
 		email := ""
 		if user.Email != nil {
 			email = *user.Email
