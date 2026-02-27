@@ -185,22 +185,25 @@ func (r *LabRepository) GetEntryRaw(ctx context.Context, id string) (*models.Lab
 
 // GetEntryIDByModelAndCalcutta resolves an entry ID from a model name, calcutta ID, and starting state key.
 func (r *LabRepository) GetEntryIDByModelAndCalcutta(ctx context.Context, modelName, calcuttaID, startingStateKey string) (string, error) {
-	if startingStateKey == "" {
-		return "", errors.New("startingStateKey is required")
-	}
-
 	var entryID string
-	err := r.pool.QueryRow(ctx, `
+
+	query := `
 		SELECT e.id::text
 		FROM lab.entries e
 		JOIN lab.investment_models im ON im.id = e.investment_model_id AND im.deleted_at IS NULL
 		WHERE im.name = $1
 			AND e.calcutta_id = $2::uuid
-			AND e.starting_state_key = $3
-			AND e.deleted_at IS NULL
-		ORDER BY e.created_at DESC
-		LIMIT 1
-	`, modelName, calcuttaID, startingStateKey).Scan(&entryID)
+			AND e.deleted_at IS NULL`
+	args := []any{modelName, calcuttaID}
+
+	if startingStateKey != "" {
+		query += ` AND e.starting_state_key = $3`
+		args = append(args, startingStateKey)
+	}
+
+	query += ` ORDER BY e.created_at DESC LIMIT 1`
+
+	err := r.pool.QueryRow(ctx, query, args...).Scan(&entryID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", &apperrors.NotFoundError{Resource: "entry", ID: modelName + "/" + calcuttaID}
 	}

@@ -49,7 +49,7 @@ export function EntryDetailPage() {
   const [showOnlyInvested, setShowOnlyInvested] = useState(false);
 
   const entryQuery = useQuery<EntryDetail | null>({
-    queryKey: queryKeys.lab.entries.byModelAndCalcutta(modelId, calcuttaId),
+    queryKey: queryKeys.lab.entries.byModelAndPool(modelId, calcuttaId),
     queryFn: () => labService.getEntryByModelAndCalcutta(modelId!, calcuttaId!),
     enabled: Boolean(modelId && calcuttaId),
   });
