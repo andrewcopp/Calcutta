@@ -196,6 +196,12 @@ export const MergeHistoryResponseSchema = z.object({
 
 export type MergeHistoryResponse = z.infer<typeof MergeHistoryResponseSchema>;
 
+export const BatchMergeResponseSchema = z.object({
+  merges: z.array(UserMergeResponseSchema),
+});
+
+export type BatchMergeResponse = z.infer<typeof BatchMergeResponseSchema>;
+
 export const UserProfileResponseSchema = z.object({
   id: z.string(),
   email: z.string().nullable(),

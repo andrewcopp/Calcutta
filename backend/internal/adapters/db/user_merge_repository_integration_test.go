@@ -12,11 +12,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestThatMergeMovesEntriesFromSourceToTarget(t *testing.T) {
+func TestThatMergeMovesPortfoliosFromSourceToTarget(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
-	// GIVEN a stub user (source) with an entry and an active user (target)
+	// GIVEN a stub user (source) with a portfolio and an active user (target)
 	userRepo := db.NewUserRepository(pool)
 	mergeRepo := db.NewUserMergeRepository(pool)
 
@@ -25,8 +25,8 @@ func TestThatMergeMovesEntriesFromSourceToTarget(t *testing.T) {
 	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
 
 	tournamentID := seedTournament(t, ctx)
-	calcuttaID := seedCalcutta(t, ctx, tournamentID, source.ID)
-	seedEntry(t, ctx, calcuttaID, source.ID, "John's Entry")
+	poolID := seedPool(t, ctx, tournamentID, source.ID)
+	seedPortfolio(t, ctx, poolID, source.ID, "John's Portfolio")
 
 	// WHEN merging source into target
 	merge, err := mergeRepo.MergeUsers(ctx, source.ID, target.ID, admin.ID)
@@ -34,17 +34,17 @@ func TestThatMergeMovesEntriesFromSourceToTarget(t *testing.T) {
 		t.Fatalf("merge failed: %v", err)
 	}
 
-	// THEN the merge moved 1 entry
+	// THEN the merge moved 1 portfolio
 	if merge.EntriesMoved != 1 {
 		t.Errorf("expected 1 entry moved, got %d", merge.EntriesMoved)
 	}
 }
 
-func TestThatMergeSkipsEntryWhenTargetAlreadyHasEntryInSameCalcutta(t *testing.T) {
+func TestThatMergeSkipsPortfolioWhenTargetAlreadyHasPortfolioInSamePool(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
-	// GIVEN both source and target have entries in the same calcutta
+	// GIVEN both source and target have portfolios in the same pool
 	userRepo := db.NewUserRepository(pool)
 	mergeRepo := db.NewUserMergeRepository(pool)
 
@@ -53,9 +53,9 @@ func TestThatMergeSkipsEntryWhenTargetAlreadyHasEntryInSameCalcutta(t *testing.T
 	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
 
 	tournamentID := seedTournament(t, ctx)
-	calcuttaID := seedCalcutta(t, ctx, tournamentID, source.ID)
-	seedEntry(t, ctx, calcuttaID, source.ID, "Source Entry")
-	seedEntry(t, ctx, calcuttaID, target.ID, "Target Entry")
+	poolID := seedPool(t, ctx, tournamentID, source.ID)
+	seedPortfolio(t, ctx, poolID, source.ID, "Source Portfolio")
+	seedPortfolio(t, ctx, poolID, target.ID, "Target Portfolio")
 
 	// WHEN merging source into target
 	merge, err := mergeRepo.MergeUsers(ctx, source.ID, target.ID, admin.ID)
@@ -63,7 +63,7 @@ func TestThatMergeSkipsEntryWhenTargetAlreadyHasEntryInSameCalcutta(t *testing.T
 		t.Fatalf("merge failed: %v", err)
 	}
 
-	// THEN the merge moved 0 entries (target already has an entry)
+	// THEN the merge moved 0 portfolios (target already has one)
 	if merge.EntriesMoved != 0 {
 		t.Errorf("expected 0 entries moved, got %d", merge.EntriesMoved)
 	}
@@ -101,7 +101,7 @@ func TestThatMergeRecordsAuditTrailWithCorrectCounts(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
-	// GIVEN a stub user with an entry
+	// GIVEN a stub user with a portfolio
 	userRepo := db.NewUserRepository(pool)
 	mergeRepo := db.NewUserMergeRepository(pool)
 
@@ -110,8 +110,8 @@ func TestThatMergeRecordsAuditTrailWithCorrectCounts(t *testing.T) {
 	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
 
 	tournamentID := seedTournament(t, ctx)
-	calcuttaID := seedCalcutta(t, ctx, tournamentID, source.ID)
-	seedEntry(t, ctx, calcuttaID, source.ID, "Entry 1")
+	poolID := seedPool(t, ctx, tournamentID, source.ID)
+	seedPortfolio(t, ctx, poolID, source.ID, "Portfolio 1")
 
 	// WHEN merging
 	merge, err := mergeRepo.MergeUsers(ctx, source.ID, target.ID, admin.ID)
@@ -132,7 +132,7 @@ func TestThatMergeRecordsAuditTrailWithCorrectCounts(t *testing.T) {
 	}
 }
 
-func TestThatMergeFailsWhenSourceIsNotStub(t *testing.T) {
+func TestThatMergeSucceedsWhenSourceIsActiveUser(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
 
@@ -144,12 +144,12 @@ func TestThatMergeFailsWhenSourceIsNotStub(t *testing.T) {
 	target := seedUser(t, ctx, userRepo, "John", "Doe", "active")
 	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
 
-	// WHEN attempting to merge
+	// WHEN merging an active source into target
 	_, err := mergeRepo.MergeUsers(ctx, source.ID, target.ID, admin.ID)
 
-	// THEN it fails with an error
-	if err == nil {
-		t.Fatal("expected error when merging non-stub source")
+	// THEN it succeeds (no stub constraint)
+	if err != nil {
+		t.Fatalf("expected merge to succeed for active source, got: %v", err)
 	}
 }
 
@@ -174,6 +174,120 @@ func TestThatFindMergeCandidatesReturnsSameNameUsers(t *testing.T) {
 	// THEN only the other "John Doe" is returned
 	if len(candidates) != 1 {
 		t.Errorf("expected 1 merge candidate, got %d", len(candidates))
+	}
+}
+
+// ─── Batch Merge Tests ──────────────────────────────────────────────────────
+
+func TestThatBatchMergeMovesPortfoliosFromAllSourcesToTarget(t *testing.T) {
+	ctx := context.Background()
+	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
+
+	// GIVEN two source users each with a portfolio in different pools
+	userRepo := db.NewUserRepository(pool)
+	mergeRepo := db.NewUserMergeRepository(pool)
+
+	source1 := seedUser(t, ctx, userRepo, "John", "Doe", "stub")
+	source2 := seedUser(t, ctx, userRepo, "Johnny", "Doe", "stub")
+	target := seedUser(t, ctx, userRepo, "John", "Doe", "active")
+	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
+
+	tournamentID := seedTournament(t, ctx)
+	pool1 := seedPool(t, ctx, tournamentID, admin.ID)
+	pool2 := seedPool(t, ctx, tournamentID, admin.ID)
+	seedPortfolio(t, ctx, pool1, source1.ID, "Source1 Portfolio")
+	seedPortfolio(t, ctx, pool2, source2.ID, "Source2 Portfolio")
+
+	// WHEN batch merging both sources into target
+	merges, err := mergeRepo.BatchMergeUsers(ctx, []string{source1.ID, source2.ID}, target.ID, admin.ID)
+	if err != nil {
+		t.Fatalf("batch merge failed: %v", err)
+	}
+
+	// THEN both merges moved 1 portfolio each
+	totalMoved := 0
+	for _, m := range merges {
+		totalMoved += m.EntriesMoved
+	}
+	if totalMoved != 2 {
+		t.Errorf("expected 2 total entries moved, got %d", totalMoved)
+	}
+}
+
+func TestThatBatchMergeSoftDeletesAllSourceUsers(t *testing.T) {
+	ctx := context.Background()
+	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
+
+	// GIVEN two source users
+	userRepo := db.NewUserRepository(pool)
+	mergeRepo := db.NewUserMergeRepository(pool)
+
+	source1 := seedUser(t, ctx, userRepo, "John", "Doe", "stub")
+	source2 := seedUser(t, ctx, userRepo, "Johnny", "Doe", "active")
+	target := seedUser(t, ctx, userRepo, "John", "Doe", "active")
+	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
+
+	// WHEN batch merging
+	_, err := mergeRepo.BatchMergeUsers(ctx, []string{source1.ID, source2.ID}, target.ID, admin.ID)
+	if err != nil {
+		t.Fatalf("batch merge failed: %v", err)
+	}
+
+	// THEN both source users are soft-deleted
+	u1, _ := userRepo.GetByID(ctx, source1.ID)
+	if u1 != nil {
+		t.Error("expected source1 to be soft-deleted")
+	}
+	u2, _ := userRepo.GetByID(ctx, source2.ID)
+	if u2 != nil {
+		t.Error("expected source2 to be soft-deleted")
+	}
+}
+
+func TestThatBatchMergeRecordsAuditTrailPerSourceUser(t *testing.T) {
+	ctx := context.Background()
+	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
+
+	// GIVEN two source users
+	userRepo := db.NewUserRepository(pool)
+	mergeRepo := db.NewUserMergeRepository(pool)
+
+	source1 := seedUser(t, ctx, userRepo, "John", "Doe", "stub")
+	source2 := seedUser(t, ctx, userRepo, "Johnny", "Doe", "stub")
+	target := seedUser(t, ctx, userRepo, "John", "Doe", "active")
+	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
+
+	// WHEN batch merging
+	merges, err := mergeRepo.BatchMergeUsers(ctx, []string{source1.ID, source2.ID}, target.ID, admin.ID)
+	if err != nil {
+		t.Fatalf("batch merge failed: %v", err)
+	}
+
+	// THEN two audit records are returned
+	if len(merges) != 2 {
+		t.Errorf("expected 2 merge records, got %d", len(merges))
+	}
+}
+
+func TestThatBatchMergeFailsWhenTargetIsInSourceList(t *testing.T) {
+	ctx := context.Background()
+	t.Cleanup(func() { testutil.TruncateAll(ctx, pool) })
+
+	// GIVEN a user who appears in both source and target
+	userRepo := db.NewUserRepository(pool)
+	mergeRepo := db.NewUserMergeRepository(pool)
+
+	user1 := seedUser(t, ctx, userRepo, "John", "Doe", "active")
+	user2 := seedUser(t, ctx, userRepo, "Johnny", "Doe", "active")
+
+	admin := seedUser(t, ctx, userRepo, "Admin", "User", "active")
+
+	// WHEN batch merging with target in source list
+	_, err := mergeRepo.BatchMergeUsers(ctx, []string{user1.ID, user2.ID}, user1.ID, admin.ID)
+
+	// THEN it fails
+	if err == nil {
+		t.Fatal("expected error when target is in source list")
 	}
 }
 
@@ -217,30 +331,30 @@ func seedTournament(t *testing.T, ctx context.Context) string {
 	return id
 }
 
-func seedCalcutta(t *testing.T, ctx context.Context, tournamentID, ownerID string) string {
+func seedPool(t *testing.T, ctx context.Context, tournamentID, ownerID string) string {
 	t.Helper()
 	var id string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO core.calcuttas (tournament_id, owner_id, created_by, name)
+		INSERT INTO core.pools (tournament_id, owner_id, created_by, name)
 		VALUES ($1::uuid, $2::uuid, $2::uuid, $3)
 		RETURNING id
 	`, tournamentID, ownerID, "Test Pool "+uuid.New().String()[:8]).Scan(&id)
 	if err != nil {
-		t.Fatalf("creating calcutta: %v", err)
+		t.Fatalf("creating pool: %v", err)
 	}
 	return id
 }
 
-func seedEntry(t *testing.T, ctx context.Context, calcuttaID, userID, name string) string {
+func seedPortfolio(t *testing.T, ctx context.Context, poolID, userID, name string) string {
 	t.Helper()
 	var id string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO core.entries (calcutta_id, user_id, name)
+		INSERT INTO core.portfolios (pool_id, user_id, name)
 		VALUES ($1::uuid, $2::uuid, $3)
 		RETURNING id
-	`, calcuttaID, userID, name).Scan(&id)
+	`, poolID, userID, name).Scan(&id)
 	if err != nil {
-		t.Fatalf("creating entry: %v", err)
+		t.Fatalf("creating portfolio: %v", err)
 	}
 	return id
 }

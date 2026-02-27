@@ -13,6 +13,7 @@ import {
   MergeCandidatesListResponseSchema,
   UserMergeResponseSchema,
   MergeHistoryResponseSchema,
+  BatchMergeResponseSchema,
 } from '../schemas/admin';
 
 export const adminService = {
@@ -106,5 +107,9 @@ export const adminService = {
 
   async listMergeHistory(userId: string) {
     return apiClient.get(`/admin/users/${userId}/merges`, { schema: MergeHistoryResponseSchema });
+  },
+
+  async batchMergeUsers(sourceUserIds: string[], targetUserId: string) {
+    return apiClient.post('/admin/users/batch-merge', { sourceUserIds, targetUserId }, { schema: BatchMergeResponseSchema });
   },
 };

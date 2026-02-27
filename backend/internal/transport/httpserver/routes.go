@@ -19,8 +19,8 @@ func (s *Server) RegisterRoutes(r *mux.Router) {
 	protected.Use(s.requireAuthMiddleware)
 	s.registerAdminTournamentImportRoutes(protected)
 	s.registerAdminAPIKeyRoutes(protected)
-	s.registerAdminUsersRoutes(protected)
 	s.registerAdminUserMergeRoutes(protected)
+	s.registerAdminUsersRoutes(protected)
 	s.registerProtectedRoutes(protected)
 }
 

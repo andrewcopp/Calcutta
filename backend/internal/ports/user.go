@@ -17,6 +17,7 @@ type UserRepository interface {
 
 type UserMergeRepository interface {
 	MergeUsers(ctx context.Context, sourceUserID, targetUserID, mergedBy string) (*models.UserMerge, error)
+	BatchMergeUsers(ctx context.Context, sourceUserIDs []string, targetUserID, mergedBy string) ([]*models.UserMerge, error)
 	ListStubUsers(ctx context.Context) ([]*models.User, error)
 	FindMergeCandidates(ctx context.Context, userID string) ([]*models.User, error)
 	ListMergeHistory(ctx context.Context, userID string) ([]*models.UserMerge, error)

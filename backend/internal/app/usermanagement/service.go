@@ -31,6 +31,10 @@ func (s *Service) MergeUsers(ctx context.Context, sourceUserID, targetUserID, me
 	return s.ports.Merges.MergeUsers(ctx, sourceUserID, targetUserID, mergedBy)
 }
 
+func (s *Service) BatchMergeUsers(ctx context.Context, sourceUserIDs []string, targetUserID, mergedBy string) ([]*models.UserMerge, error) {
+	return s.ports.Merges.BatchMergeUsers(ctx, sourceUserIDs, targetUserID, mergedBy)
+}
+
 func (s *Service) ListMergeHistory(ctx context.Context, userID string) ([]*models.UserMerge, error) {
 	return s.ports.Merges.ListMergeHistory(ctx, userID)
 }

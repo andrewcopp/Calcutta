@@ -86,3 +86,12 @@ func NewUserMergeResponse(m *models.UserMerge) UserMergeResponse {
 type MergeHistoryResponse struct {
 	Items []UserMergeResponse `json:"items"`
 }
+
+type BatchMergeUsersRequest struct {
+	SourceUserIDs []string `json:"sourceUserIds"`
+	TargetUserID  string   `json:"targetUserId"`
+}
+
+type BatchMergeResponse struct {
+	Merges []UserMergeResponse `json:"merges"`
+}
