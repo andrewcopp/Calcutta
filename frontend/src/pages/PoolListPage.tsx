@@ -108,7 +108,7 @@ function PoolCard({ pool }: { pool: PoolWithRanking }) {
             <span className="text-2xl font-bold text-primary">
               #{ranking.rank} of {ranking.totalPortfolios}
             </span>
-            <span className="text-lg font-semibold">{ranking.points.toFixed(2)} returns</span>
+            <span className="text-lg font-semibold">{ranking.returns.toFixed(2)} returns</span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">{pool.name}</p>
         </Card>

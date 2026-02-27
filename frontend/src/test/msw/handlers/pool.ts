@@ -42,7 +42,7 @@ export const poolHandlers = [
           {
             ...validPool,
             hasPortfolio: true,
-            ranking: { rank: 1, totalPortfolios: 5, points: 150 },
+            ranking: { rank: 1, totalPortfolios: 5, returns: 150 },
           },
         ],
       });

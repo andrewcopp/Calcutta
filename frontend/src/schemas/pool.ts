@@ -166,7 +166,7 @@ export type PoolDashboard = z.infer<typeof PoolDashboardSchema>;
 export const PoolRankingSchema = z.object({
   rank: z.number(),
   totalPortfolios: z.number(),
-  points: z.number(),
+  returns: z.number(),
 });
 
 export type PoolRanking = z.infer<typeof PoolRankingSchema>;
