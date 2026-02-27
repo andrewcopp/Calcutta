@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -132,74 +133,31 @@ func (s *Service) loadTeams(ctx context.Context, coreTournamentID string) ([]*mo
 	return out, nil
 }
 
-func (s *Service) loadPredictedGameOutcomesForTournament(ctx context.Context, tournamentID string, gameOutcomeRunID *string) (*string, map[MatchupKey]float64, int, error) {
-	if gameOutcomeRunID != nil && *gameOutcomeRunID != "" {
-		out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, *gameOutcomeRunID)
-		if err != nil {
-			return nil, nil, 0, fmt.Errorf("loading predicted game outcomes by run id: %w", err)
-		}
-		if n == 0 {
-			return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *gameOutcomeRunID)
-		}
-		return gameOutcomeRunID, out, n, nil
-	}
-
-	var latestRunID string
-	if err := s.pool.QueryRow(ctx, `
-		SELECT id
-		FROM compute.game_outcome_runs
+// loadGameOutcomeSpecFromPredictionBatch queries the latest prediction batch
+// for the tournament and returns its game_outcome_spec_json as a winprob.Model.
+func (s *Service) loadGameOutcomeSpecFromPredictionBatch(ctx context.Context, coreTournamentID string) (*winprob.Model, error) {
+	var specJSON []byte
+	err := s.pool.QueryRow(ctx, `
+		SELECT game_outcome_spec_json
+		FROM compute.prediction_batches
 		WHERE tournament_id = $1::uuid
+			AND game_outcome_spec_json IS NOT NULL
 			AND deleted_at IS NULL
 		ORDER BY created_at DESC
 		LIMIT 1
-	`, tournamentID).Scan(&latestRunID); err != nil {
+	`, coreTournamentID).Scan(&specJSON)
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, 0, fmt.Errorf("no game_outcome_runs found for tournament_id=%s", tournamentID)
+			return nil, fmt.Errorf("no prediction batch with game_outcome_spec found for tournament_id=%s", coreTournamentID)
 		}
-		return nil, nil, 0, fmt.Errorf("querying latest game outcome run: %w", err)
+		return nil, fmt.Errorf("querying prediction batch spec: %w", err)
 	}
 
-	ptr := &latestRunID
-	out, n, err := s.loadPredictedGameOutcomesByRunID(ctx, latestRunID)
-	if err != nil {
-		return nil, nil, 0, fmt.Errorf("loading predicted game outcomes by run id: %w", err)
+	var spec winprob.Model
+	if err := json.Unmarshal(specJSON, &spec); err != nil {
+		return nil, fmt.Errorf("unmarshalling game_outcome_spec_json: %w", err)
 	}
-	if n == 0 {
-		return nil, nil, 0, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", latestRunID)
-	}
-	return ptr, out, n, nil
-}
-
-func (s *Service) loadPredictedGameOutcomesByRunID(ctx context.Context, runID string) (map[MatchupKey]float64, int, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT game_id, team1_id, team2_id, p_team1_wins
-		FROM compute.predicted_game_outcomes
-		WHERE run_id = $1::uuid
-			AND deleted_at IS NULL
-	`, runID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("querying predicted game outcomes: %w", err)
-	}
-	defer rows.Close()
-
-	out := make(map[MatchupKey]float64)
-	n := 0
-	for rows.Next() {
-		var gameID string
-		var t1 string
-		var t2 string
-		var p float64
-		if err := rows.Scan(&gameID, &t1, &t2, &p); err != nil {
-			return nil, 0, fmt.Errorf("scanning predicted game outcome: %w", err)
-		}
-		n++
-		out[MatchupKey{GameID: gameID, Team1ID: t1, Team2ID: t2}] = p
-		out[MatchupKey{GameID: gameID, Team1ID: t2, Team2ID: t1}] = 1.0 - p
-	}
-	if rows.Err() != nil {
-		return nil, 0, fmt.Errorf("iterating predicted game outcomes: %w", rows.Err())
-	}
-	return out, n, nil
+	return &spec, nil
 }
 
 func (s *Service) lockInFirstFourResults(

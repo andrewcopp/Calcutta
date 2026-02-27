@@ -48,7 +48,6 @@ type RunParams struct {
 	BatchSize            int
 	ProbabilitySourceKey string
 	StartingStateKey     string
-	GameOutcomeRunID     *string
 	GameOutcomeSpec      *winprob.Model
 }
 
@@ -238,8 +237,8 @@ func (s *Service) loadBracketAndProbabilities(ctx context.Context, p RunParams) 
 	}, nil
 }
 
-// resolveProbabilities builds either a KenPom-based provider or loads predicted
-// game outcome probabilities from the database.
+// resolveProbabilities builds a KenPom-based provider using the explicitly
+// provided spec, or falls back to the latest prediction batch's spec.
 func (s *Service) resolveProbabilities(
 	ctx context.Context,
 	coreTournamentID string,
@@ -249,7 +248,12 @@ func (s *Service) resolveProbabilities(
 	if p.GameOutcomeSpec != nil {
 		return s.resolveKenPomProbabilities(ctx, coreTournamentID, br, p)
 	}
-	return s.resolvePredictedProbabilities(ctx, coreTournamentID, br, p)
+	spec, err := s.loadGameOutcomeSpecFromPredictionBatch(ctx, coreTournamentID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolving probability model from predictions: %w", err)
+	}
+	p.GameOutcomeSpec = spec
+	return s.resolveKenPomProbabilities(ctx, coreTournamentID, br, p)
 }
 
 func (s *Service) resolveKenPomProbabilities(
@@ -277,30 +281,6 @@ func (s *Service) resolveKenPomProbabilities(
 	}
 	provider := KenPomProvider{Spec: p.GameOutcomeSpec, NetByTeamID: netByTeamID, Overrides: overrides}
 	return provider, nil, nil
-}
-
-func (s *Service) resolvePredictedProbabilities(
-	ctx context.Context,
-	coreTournamentID string,
-	br *models.BracketStructure,
-	p RunParams,
-) (ProbabilityProvider, map[MatchupKey]float64, error) {
-	selectedGameOutcomeRunID, loaded, nPredRows, err := s.loadPredictedGameOutcomesForTournament(ctx, coreTournamentID, p.GameOutcomeRunID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("loading predicted game outcomes: %w", err)
-	}
-	if nPredRows == 0 {
-		if selectedGameOutcomeRunID != nil {
-			return nil, nil, fmt.Errorf("no predicted_game_outcomes found for run_id=%s", *selectedGameOutcomeRunID)
-		}
-		return nil, nil, fmt.Errorf("no predicted_game_outcomes found for tournament_id=%s", coreTournamentID)
-	}
-	if p.StartingStateKey == "post_first_four" {
-		if err := s.lockInFirstFourResults(ctx, br, loaded); err != nil {
-			return nil, nil, fmt.Errorf("locking in first four results: %w", err)
-		}
-	}
-	return nil, loaded, nil
 }
 
 // createSnapshotAndBatch persists the tournament state snapshot and creates the
