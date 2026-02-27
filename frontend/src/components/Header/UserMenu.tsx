@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { useHasAnyPermission } from '../../hooks/useHasAnyPermission';
 import { ADMIN_PERMISSIONS } from '../../constants/permissions';
@@ -13,6 +13,7 @@ import {
 
 export function UserMenu() {
   const { user, logout } = useUser();
+  const navigate = useNavigate();
   const canAccessAdmin = useHasAnyPermission(ADMIN_PERMISSIONS);
 
   if (!user) {
@@ -45,7 +46,7 @@ export function UserMenu() {
             <Link to="/admin">Admin Console</Link>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => logout()}>
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => { logout(); navigate('/login'); }}>
           Logout
         </DropdownMenuItem>
       </DropdownMenuContent>
