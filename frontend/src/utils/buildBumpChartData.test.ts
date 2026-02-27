@@ -62,7 +62,7 @@ describe('buildBumpChartData', () => {
     expect(aliceRound1).toBe(1);
   });
 
-  it('assigns same rank to tied entries', () => {
+  it('breaks ties by name when no EV available', () => {
     const entries = [
       makePortfolio({ id: 'e1', name: 'Alice' }),
       makePortfolio({ id: 'e2', name: 'Bob' }),
@@ -83,7 +83,8 @@ describe('buildBumpChartData', () => {
     const result = buildBumpChartData(entries, standings, 'actual');
     const aliceRank = result.find((s) => s.id === 'Alice')!.data[1].y;
     const bobRank = result.find((s) => s.id === 'Bob')!.data[1].y;
-    expect(aliceRank).toBe(bobRank);
+    expect(aliceRank).toBe(1);
+    expect(bobRank).toBe(2);
   });
 
   it('produces one data point per round per entry', () => {
@@ -157,7 +158,7 @@ describe('tiebreaker', () => {
     expect(result.find((s) => s.id === 'Bob')!.data[1].y).toBe(1);
   });
 
-  it('preserves tied ranks when no projected EV available', () => {
+  it('breaks ties by name when no projected EV available', () => {
     // GIVEN two entries with same points and no EV
     const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
@@ -174,13 +175,12 @@ describe('tiebreaker', () => {
     // WHEN building chart data in actual mode
     const result = buildBumpChartData(entries, standings, 'actual');
 
-    // THEN both entries share rank 1
-    expect(result.find((s) => s.id === 'Alice')!.data[1].y).toBe(
-      result.find((s) => s.id === 'Bob')!.data[1].y,
-    );
+    // THEN Alice ranks first alphabetically
+    expect(result.find((s) => s.id === 'Alice')!.data[1].y).toBe(1);
+    expect(result.find((s) => s.id === 'Bob')!.data[1].y).toBe(2);
   });
 
-  it('does not use EV tiebreaker in projected mode', () => {
+  it('breaks projected mode ties by name', () => {
     // GIVEN two entries with same projected EV
     const entries = [makePortfolio({ id: 'e1', name: 'Alice' }), makePortfolio({ id: 'e2', name: 'Bob' })];
     const standings = [
@@ -197,10 +197,9 @@ describe('tiebreaker', () => {
     // WHEN building chart data in projected mode
     const result = buildBumpChartData(entries, standings, 'projected');
 
-    // THEN both share rank 1 at round 0 (same EV is the primary metric, no tiebreaker)
-    expect(result.find((s) => s.id === 'Alice')!.data[0].y).toBe(
-      result.find((s) => s.id === 'Bob')!.data[0].y,
-    );
+    // THEN Alice ranks first alphabetically at round 0 (same EV, name breaks tie)
+    expect(result.find((s) => s.id === 'Alice')!.data[0].y).toBe(1);
+    expect(result.find((s) => s.id === 'Bob')!.data[0].y).toBe(2);
   });
 });
 

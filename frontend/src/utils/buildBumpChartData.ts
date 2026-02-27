@@ -30,11 +30,18 @@ function metricForPortfolio(
 function rankEntries(
   values: { id: string; value: number }[],
   tiebreaker?: Map<string, number>,
+  nameFallback?: Map<string, string>,
 ): Map<string, number> {
   const sorted = [...values].sort((a, b) => {
     if (b.value !== a.value) return b.value - a.value;
     if (tiebreaker) {
-      return (tiebreaker.get(b.id) ?? 0) - (tiebreaker.get(a.id) ?? 0);
+      const diff = (tiebreaker.get(b.id) ?? 0) - (tiebreaker.get(a.id) ?? 0);
+      if (diff !== 0) return diff;
+    }
+    if (nameFallback) {
+      const nameA = nameFallback.get(a.id) ?? '';
+      const nameB = nameFallback.get(b.id) ?? '';
+      return nameA.localeCompare(nameB);
     }
     return 0;
   });
@@ -46,7 +53,11 @@ function rankEntries(
       const curr = sorted[i];
       const prevTb = tiebreaker?.get(prev.id) ?? 0;
       const currTb = tiebreaker?.get(curr.id) ?? 0;
-      if (curr.value < prev.value || (tiebreaker && currTb < prevTb)) {
+      const tbDiff = prevTb !== currTb;
+      const prevName = nameFallback?.get(prev.id) ?? '';
+      const currName = nameFallback?.get(curr.id) ?? '';
+      const nameDiff = nameFallback && prevName !== currName;
+      if (curr.value < prev.value || (tiebreaker && tbDiff) || nameDiff) {
         rank = i + 1;
       }
     }
@@ -84,7 +95,7 @@ export function buildBumpChartData(
     }));
 
     let tiebreaker: Map<string, number> | undefined;
-    if (mode === 'actual') {
+    if (mode !== 'projected') {
       const evMap = new Map<string, number>();
       for (const e of group.entries) {
         if (e.expectedValue != null) {
@@ -96,7 +107,7 @@ export function buildBumpChartData(
       }
     }
 
-    const ranks = rankEntries(values, tiebreaker);
+    const ranks = rankEntries(values, tiebreaker, nameById);
 
     for (const entry of entries) {
       const data = seriesMap.get(entry.id);
